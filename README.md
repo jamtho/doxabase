@@ -31,3 +31,19 @@ Run tests:
 ```bash
 uv run pytest
 ```
+
+## Minimal Capsule Example
+
+```python
+from doxybase import DoxyBase
+
+db = DoxyBase.create(".doxybase.sqlite", overwrite=True)
+db.import_trig("examples/manifest-prototype-rc/ais.trig")
+db.import_trig("examples/manifest-prototype-rc/polymarket.trig")
+
+overview = db.graph_overview()
+tables = db.list_entities(type="rc:Table", graph="map")
+validation = db.validate_graph(scope="all")
+```
+
+The capsule seeds immutable `base_ontology` and `base_shapes` graphs from `ontology/rc_core.ttl` and `ontology/rc_shapes.ttl`. Project imports can write to mutable graph roles such as `map`, `ontology`, `observations`, `evidence`, `shapes`, and `history`.
