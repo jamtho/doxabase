@@ -1,0 +1,379 @@
+@prefix ais:     <https://richcanopy.org/example/manifest/ais#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix rc:      <https://richcanopy.org/ns/rc#> .
+@prefix rcg:     <https://richcanopy.org/graph/> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+rcg:ontology {
+    ais:MMSI a rc:ValueType ;
+        rdfs:label "Maritime Mobile Service Identity" ;
+        rdfs:comment "Nine-digit vessel identifier assigned by flag state. Mostly identifies a vessel, but has known reuse and data-quality failure modes." ;
+        rc:requiredPhysicalType rc:Integer ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 100000000 ;
+            rc:maxInclusive 799999999
+        ] ;
+        rc:computationalProfile rc:SchemaCheckOnly ;
+        rdfs:seeAlso <https://www.itu.int/rec/R-REC-M.585/en> .
+
+    ais:IMONumber a rc:ValueType ;
+        rdfs:label "IMO Ship Identification Number" ;
+        rdfs:comment "Seven-digit vessel number. More stable than MMSI, but not always present in AIS data." ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    ais:WGS84Latitude a rc:ValueType ;
+        rdfs:label "WGS84 Latitude" ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:unit "degrees" ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive -90.0 ;
+            rc:maxInclusive 90.0
+        ] .
+
+    ais:WGS84Longitude a rc:ValueType ;
+        rdfs:label "WGS84 Longitude" ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:unit "degrees" ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive -180.0 ;
+            rc:maxInclusive 180.0
+        ] .
+
+    ais:WGS84CoordinatePair a rc:ValueType ;
+        rdfs:label "WGS84 Coordinate Pair (lat, lon)" ;
+        rdfs:comment "A pair of columns jointly representing a WGS84 position." .
+
+    ais:SpeedOverGround a rc:ValueType ;
+        rdfs:label "Speed Over Ground" ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:unit "knots" ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 0.0 ;
+            rc:maxInclusive 102.2
+        ] ;
+        rdfs:comment "AIS speed over ground. Null or NaN means not available." .
+
+    ais:AISTimestamp a rc:ValueType ;
+        rdfs:label "AIS Broadcast Timestamp" ;
+        rc:requiredPhysicalType rc:TimestampTZ ;
+        rdfs:comment "Timestamp of the AIS broadcast, in UTC." .
+
+    ais:AISRawTimestampString a rc:ValueType ;
+        rdfs:label "Raw AIS Timestamp String" ;
+        rc:requiredPhysicalType rc:Varchar ;
+        rdfs:comment "Original timestamp string from the NOAA CSV before parsing." .
+
+    ais:PartitionDate a rc:ValueType ;
+        rdfs:label "Partition Date" ;
+        rc:requiredPhysicalType rc:Date ;
+        rdfs:comment "Date value constant within each file, matching the file's partition." .
+
+    ais:WKBPoint a rc:ValueType ;
+        rdfs:label "Well-Known Binary Point Geometry" ;
+        rc:requiredPhysicalType rc:Blob ;
+        rdfs:comment "WKB-encoded point geometry. CRS: WGS84 / EPSG:4326." .
+
+    ais:H3Resolution15 a rc:ValueType ;
+        rdfs:label "H3 Cell Index at Resolution 15" ;
+        rc:requiredPhysicalType rc:UBigInt ;
+        rdfs:comment "Uber H3 cell index at resolution 15." .
+
+    ais:MessageCount a rc:ValueType ;
+        rdfs:label "Count of AIS Messages" ;
+        rc:requiredPhysicalType rc:BigInt ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 1
+        ] .
+
+    ais:DistanceMetres a rc:ValueType ;
+        rdfs:label "Distance in Metres" ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:unit "metres" ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 0.0
+        ] .
+
+    ais:DurationSeconds a rc:ValueType ;
+        rdfs:label "Duration in Seconds" ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:unit "seconds" ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 0.0
+        ] .
+
+    ais:ParseTimestamp a rdfs:Resource ;
+        rdfs:label "Parse AIS timestamp string" .
+
+    ais:PointFromWGS84 a rdfs:Resource ;
+        rdfs:label "Construct WKB point from WGS84 coordinates" .
+
+    ais:H3IndexFromWGS84Res15 a rdfs:Resource ;
+        rdfs:label "H3 index from WGS84 coordinates at resolution 15" .
+
+    ais:DurationBetweenExtrema a rdfs:Resource ;
+        rdfs:label "Duration between min and max timestamps" ;
+        rc:computationalProfile rc:FullScanRequired .
+
+    ais:HaversineFirstToLast a rdfs:Resource ;
+        rdfs:label "Haversine distance from first to last position" ;
+        rc:computationalProfile rc:SequentialScan .
+}
+
+rcg:map {
+    ais:DailyBroadcasts a rc:Dataset, rc:Table ;
+        rdfs:label "AIS Daily Broadcast Positions" ;
+        rdfs:comment "One Parquet file per day containing preprocessed NOAA Marine Cadastre AIS vessel position reports." ;
+        rc:rowSemantics rc:EventRow ;
+        rc:schemaStability rc:FixedSchema ;
+        rc:hasColumn
+            ais:bc_mmsi ,
+            ais:bc_date ,
+            ais:bc_base_date_time ,
+            ais:bc_latitude ,
+            ais:bc_longitude ,
+            ais:bc_sog ,
+            ais:bc_timestamp ,
+            ais:bc_geometry ,
+            ais:bc_h3_res15 ;
+        rc:hasColumnGroup ais:bc_position ;
+        rc:hasPhysicalLayout ais:bc_layout ;
+        rc:partitionedBy ais:daily_date_partition ;
+        rc:hasProvenance ais:noaa_provenance ;
+        rc:hasKnownCaveat
+            ais:caveat_missing_positions ,
+            ais:caveat_denormalized ,
+            ais:caveat_mmsi_identity .
+
+    ais:bc_mmsi a rc:Column ;
+        rc:columnName "mmsi" ;
+        rc:physicalType rc:Integer ;
+        rc:valueType ais:MMSI ;
+        rc:nullable true .
+
+    ais:bc_date a rc:Column ;
+        rc:columnName "date" ;
+        rc:physicalType rc:Date ;
+        rc:valueType ais:PartitionDate ;
+        rc:nullable true .
+
+    ais:bc_base_date_time a rc:Column ;
+        rc:columnName "base_date_time" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType ais:AISRawTimestampString ;
+        rc:nullable true .
+
+    ais:bc_latitude a rc:Column ;
+        rc:columnName "latitude" ;
+        rc:physicalType rc:Double ;
+        rc:valueType ais:WGS84Latitude ;
+        rc:nullable true ;
+        rc:memberOf ais:bc_position .
+
+    ais:bc_longitude a rc:Column ;
+        rc:columnName "longitude" ;
+        rc:physicalType rc:Double ;
+        rc:valueType ais:WGS84Longitude ;
+        rc:nullable true ;
+        rc:memberOf ais:bc_position .
+
+    ais:bc_sog a rc:Column ;
+        rc:columnName "sog" ;
+        rc:physicalType rc:Double ;
+        rc:valueType ais:SpeedOverGround ;
+        rc:nullable true .
+
+    ais:bc_timestamp a rc:Column ;
+        rc:columnName "timestamp" ;
+        rc:physicalType rc:TimestampTZ ;
+        rc:valueType ais:AISTimestamp ;
+        rc:nullable true .
+
+    ais:bc_geometry a rc:Column ;
+        rc:columnName "geometry" ;
+        rc:physicalType rc:Blob ;
+        rc:valueType ais:WKBPoint ;
+        rc:nullable true .
+
+    ais:bc_h3_res15 a rc:Column ;
+        rc:columnName "h3_res15" ;
+        rc:physicalType rc:UBigInt ;
+        rc:valueType ais:H3Resolution15 ;
+        rc:nullable true .
+
+    ais:bc_position a rc:ColumnGroup ;
+        rc:groupValueType ais:WGS84CoordinatePair ;
+        rc:groupMember ais:bc_latitude, ais:bc_longitude .
+
+    ais:derive_timestamp a rc:Derivation ;
+        rdfs:comment "timestamp is parsed from base_date_time." ;
+        rc:derivedColumn ais:bc_timestamp ;
+        rc:sourceColumn ais:bc_base_date_time ;
+        rc:derivationFunction ais:ParseTimestamp ;
+        rc:hasDerivationProperty rc:Deterministic, rc:Invertible .
+
+    ais:derive_geometry a rc:Derivation ;
+        rdfs:comment "geometry is a WKB point constructed from latitude and longitude." ;
+        rc:derivedColumn ais:bc_geometry ;
+        rc:sourceColumn ais:bc_latitude, ais:bc_longitude ;
+        rc:derivationFunction ais:PointFromWGS84 ;
+        rc:hasDerivationProperty rc:Deterministic, rc:Invertible .
+
+    ais:derive_h3 a rc:Derivation ;
+        rdfs:comment "h3_res15 is computed from latitude and longitude at H3 resolution 15." ;
+        rc:derivedColumn ais:bc_h3_res15 ;
+        rc:sourceColumn ais:bc_latitude, ais:bc_longitude ;
+        rc:derivationFunction ais:H3IndexFromWGS84Res15 ;
+        rc:hasDerivationProperty rc:Deterministic, rc:Lossy .
+
+    ais:bc_layout a rc:PhysicalLayout ;
+        rc:fileFormat rc:Parquet ;
+        rc:hasRowOrdering ais:bc_ordering .
+
+    ais:bc_ordering a rc:RowOrdering ;
+        rc:hasOrderingKey [
+            a rc:OrderingKey ;
+            rc:keyColumn ais:bc_mmsi ;
+            rc:keyDirection rc:Ascending ;
+            rc:keyPrecedence 1 ;
+            rc:orderingSemantic rc:ClusteringForIndex
+        ] ;
+        rc:hasOrderingKey [
+            a rc:OrderingKey ;
+            rc:keyColumn ais:bc_timestamp ;
+            rc:keyDirection rc:Ascending ;
+            rc:keyPrecedence 2 ;
+            rc:orderingSemantic rc:MeaningfulSequence
+        ] .
+
+    ais:daily_date_partition a rc:PartitionScheme ;
+        rc:partitionColumn ais:bc_date ;
+        rc:partitionGranularity rc:Daily ;
+        rc:pathTemplate "broadcasts/{year}/ais-{date}.parquet" ;
+        rc:redundantPartitionKey ais:bc_date .
+
+    ais:DailyIndex a rc:Dataset, rc:Table ;
+        rdfs:label "AIS Daily Vessel Index" ;
+        rdfs:comment "One Parquet file per day, one row per MMSI observed that day. Summarises daily broadcast data." ;
+        rc:rowSemantics rc:AggregateRow ;
+        rc:schemaStability rc:FixedSchema ;
+        rc:hasColumn
+            ais:ix_mmsi ,
+            ais:ix_date ,
+            ais:ix_message_count ,
+            ais:ix_first_timestamp ,
+            ais:ix_last_timestamp ,
+            ais:ix_distance_m ;
+        rc:partitionedBy ais:daily_date_partition ;
+        rc:hasPhysicalLayout [
+            a rc:PhysicalLayout ;
+            rc:fileFormat rc:Parquet
+        ] ;
+        rc:companionOf ais:DailyBroadcasts .
+
+    ais:ix_mmsi a rc:Column ;
+        rc:columnName "mmsi" ;
+        rc:physicalType rc:Integer ;
+        rc:valueType ais:MMSI .
+
+    ais:ix_date a rc:Column ;
+        rc:columnName "date" ;
+        rc:physicalType rc:Date ;
+        rc:valueType ais:PartitionDate .
+
+    ais:ix_message_count a rc:Column ;
+        rc:columnName "message_count" ;
+        rc:physicalType rc:BigInt ;
+        rc:valueType ais:MessageCount .
+
+    ais:ix_first_timestamp a rc:Column ;
+        rc:columnName "first_timestamp" ;
+        rc:physicalType rc:TimestampTZ ;
+        rc:valueType ais:AISTimestamp .
+
+    ais:ix_last_timestamp a rc:Column ;
+        rc:columnName "last_timestamp" ;
+        rc:physicalType rc:TimestampTZ ;
+        rc:valueType ais:AISTimestamp .
+
+    ais:ix_distance_m a rc:Column ;
+        rc:columnName "distance_m" ;
+        rc:physicalType rc:Double ;
+        rc:valueType ais:DistanceMetres .
+
+    ais:broadcasts_to_index a rc:Aggregation ;
+        rc:sourceDataset ais:DailyBroadcasts ;
+        rc:targetDataset ais:DailyIndex ;
+        rc:groupByColumn ais:bc_mmsi ;
+        rdfs:comment "The daily index is a per-MMSI aggregation of the daily broadcasts within each daily partition." ;
+        rc:hasAggregatedColumn [
+            a rc:AggregatedColumn ;
+            rc:targetColumn ais:ix_message_count ;
+            rc:aggregationSourceColumn ais:bc_mmsi ;
+            rc:aggregationFunction rc:Count
+        ] ;
+        rc:hasAggregatedColumn [
+            a rc:AggregatedColumn ;
+            rc:targetColumn ais:ix_first_timestamp ;
+            rc:aggregationSourceColumn ais:bc_timestamp ;
+            rc:aggregationFunction rc:Min
+        ] ;
+        rc:hasAggregatedColumn [
+            a rc:AggregatedColumn ;
+            rc:targetColumn ais:ix_last_timestamp ;
+            rc:aggregationSourceColumn ais:bc_timestamp ;
+            rc:aggregationFunction rc:Max
+        ] ;
+        rc:hasAggregatedColumn [
+            a rc:AggregatedColumn ;
+            rc:targetColumn ais:ix_distance_m ;
+            rc:aggregationSourceColumn ais:bc_latitude, ais:bc_longitude ;
+            rc:withinGroupOrdering ais:bc_timestamp ;
+            rc:aggregationFunction ais:HaversineFirstToLast
+        ] .
+
+    ais:noaa_provenance a rc:Provenance ;
+        rc:source <https://marinecadastre.gov/ais/> ;
+        rc:sourceDescription "NOAA Marine Cadastre AIS data, published as compressed daily CSV files and locally converted to Parquet." ;
+        rc:hasTransformation [
+            a rc:Transformation ;
+            rc:transformationType "local_preprocessing" ;
+            rc:transformationDescription "CSV-to-Parquet conversion with parsed timestamp, WKB point, H3 index, partition date column, and MMSI/timestamp ordering."
+        ] .
+
+    ais:caveat_missing_positions a rc:KnownCaveat ;
+        rc:caveatDescription "Temporal gaps exist within vessel trajectories due to NOAA downsampling." ;
+        rc:impact "Distance and duration calculations may underestimate true values." ;
+        rc:severity rc:Moderate .
+
+    ais:caveat_denormalized a rc:KnownCaveat ;
+        rc:caveatDescription "Static vessel data is denormalized into position rows and may vary across broadcasts." ;
+        rc:impact "Static fields in any single row may be stale or inconsistent with other rows." ;
+        rc:severity rc:Minor .
+
+    ais:caveat_mmsi_identity a rc:KnownCaveat ;
+        rc:caveatDescription "MMSI does not reliably identify a single vessel because of reuse, sharing, default values, and spoofing." ;
+        rc:impact "Grouping by MMSI may conflate different vessels." ;
+        rc:severity rc:Moderate .
+}
+
+rcg:observations {
+    ais:obs_ais_manifest_conversion a rc:Observation ;
+        rc:observedAt "2026-05-30T00:00:00Z"^^xsd:dateTime ;
+        rc:observedAsset ais:DailyBroadcasts ;
+        rc:summary "Converted representative AIS Manifest description content into RC graph roles; no fresh data profile was run." ;
+        rc:evidence ais:evidence_ais_manifest_source .
+}
+
+rcg:evidence {
+    ais:evidence_ais_manifest_source a rc:Evidence ;
+        rc:summary "Source fixture converted from ../manifest-prototype/descriptions/ais_description.ttl." ;
+        dcterms:source "../manifest-prototype/descriptions/ais_description.ttl" .
+}

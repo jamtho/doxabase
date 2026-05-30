@@ -1,0 +1,495 @@
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix pm:      <https://richcanopy.org/example/manifest/polymarket#> .
+@prefix rc:      <https://richcanopy.org/ns/rc#> .
+@prefix rcg:     <https://richcanopy.org/graph/> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+rcg:ontology {
+    pm:MarketId a rc:ValueType ;
+        rdfs:label "Polymarket Market ID" ;
+        rdfs:comment "Unique identifier for a prediction market on Polymarket's Gamma API." ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    pm:ConditionId a rc:ValueType ;
+        rdfs:label "On-Chain Condition ID" ;
+        rdfs:comment "Hex-encoded blockchain condition identifier linking a market to on-chain resolution and trading data." ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    pm:CLOBTokenId a rc:ValueType ;
+        rdfs:label "CLOB Token ID" ;
+        rdfs:comment "Identifier for a tradable outcome token on Polymarket's central limit order book." ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    pm:ProxyWallet a rc:ValueType ;
+        rdfs:label "Proxy Wallet Address" ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    pm:TransactionHash a rc:ValueType ;
+        rdfs:label "Transaction Hash" ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    pm:Slug a rc:ValueType ;
+        rdfs:label "URL Slug" ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    pm:Probability a rc:ValueType ;
+        rdfs:label "Probability" ;
+        rdfs:comment "Price interpreted as market-implied probability." ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 0.0 ;
+            rc:maxInclusive 1.0
+        ] .
+
+    pm:USDAmount a rc:ValueType ;
+        rdfs:label "USD Amount" ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:unit "USD" ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 0.0
+        ] .
+
+    pm:PriceSpread a rc:ValueType ;
+        rdfs:label "Bid-Ask Spread" ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 0.0
+        ] .
+
+    pm:TradeSide a rc:ValueType ;
+        rdfs:label "Trade Side" ;
+        rdfs:comment "Direction of a trade." ;
+        rc:requiredPhysicalType rc:Varchar ;
+        rc:hasAllowedValues [
+            a rc:AllowedValues ;
+            rc:allowedValue "BUY", "SELL"
+        ] .
+
+    pm:OutcomeIndex a rc:ValueType ;
+        rdfs:label "Outcome Index" ;
+        rc:requiredPhysicalType rc:Double ;
+        rc:valueRange [
+            a rc:ValueRange ;
+            rc:minInclusive 0
+        ] .
+
+    pm:MarketCategory a rc:ValueType ;
+        rdfs:label "Market Category" ;
+        rc:requiredPhysicalType rc:Varchar ;
+        rc:hasAllowedValues [
+            a rc:AllowedValues ;
+            rdfs:comment "Representative values, not exhaustive." ;
+            rc:allowedValue "Politics", "Sports", "Crypto", "Pop Culture", "Business", "Science"
+        ] .
+
+    pm:JSONArray a rc:ValueType ;
+        rdfs:label "JSON-Serialized Array" ;
+        rdfs:comment "A Varchar column whose content is a JSON-encoded array." ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    pm:FetchTimestamp a rc:ValueType ;
+        rdfs:label "Fetch Timestamp" ;
+        rdfs:comment "Unix epoch float injected by the fetcher at collection time." ;
+        rc:requiredPhysicalType rc:Double .
+
+    pm:DataSourceLabel a rc:ValueType ;
+        rdfs:label "Data Source Label" ;
+        rc:requiredPhysicalType rc:Varchar .
+
+    pm:SpreadFromBidAsk a rdfs:Resource ;
+        rdfs:label "Spread = bestAsk - bestBid" .
+
+    pm:FetcherTimestampInjection a rdfs:Resource ;
+        rdfs:label "Fetcher timestamp injection" .
+}
+
+rcg:map {
+    pm:MarketSnapshots a rc:Dataset, rc:Table ;
+        rdfs:label "Gamma Market Snapshots" ;
+        rdfs:comment "Hourly snapshots of active Polymarket markets from the Gamma API." ;
+        rc:rowSemantics rc:SnapshotRow ;
+        rc:entityKey pm:mkt_id ;
+        rc:snapshotTimestamp pm:mkt_fetched_at ;
+        rc:schemaStability rc:InferredSchema ;
+        rc:hasColumn
+            pm:mkt_fetched_at ,
+            pm:mkt_source ,
+            pm:mkt_id ,
+            pm:mkt_condition_id ,
+            pm:mkt_outcomes ,
+            pm:mkt_clob_token_ids ,
+            pm:mkt_best_bid ,
+            pm:mkt_best_ask ,
+            pm:mkt_spread ,
+            pm:mkt_category ;
+        rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:partitionedBy pm:hourly_hive_partition ;
+        rc:pathTemplate "data/parquet/gamma/markets/dt={date}/hour={hour}.parquet" ;
+        rc:hasProvenance pm:polymarket_provenance ;
+        rc:hasKnownCaveat
+            pm:caveat_schema_inferred ,
+            pm:caveat_snapshot_dedup ,
+            pm:caveat_json_in_strings .
+
+    pm:mkt_fetched_at a rc:Column ;
+        rc:columnName "_fetched_at" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:FetchTimestamp ;
+        rc:nullable false .
+
+    pm:mkt_source a rc:Column ;
+        rc:columnName "_source" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:DataSourceLabel ;
+        rc:nullable false .
+
+    pm:mkt_id a rc:Column ;
+        rc:columnName "id" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:MarketId ;
+        rc:nullable false .
+
+    pm:mkt_condition_id a rc:Column ;
+        rc:columnName "conditionId" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:ConditionId ;
+        rc:nullable true .
+
+    pm:mkt_outcomes a rc:Column ;
+        rc:columnName "outcomes" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:JSONArray ;
+        rc:nullable true ;
+        rc:embeddedStructure [
+            a rc:EmbeddedStructure ;
+            rc:embeddedFormat rc:JSONEncoding ;
+            rc:embeddedElementType "array<string>"
+        ] .
+
+    pm:mkt_clob_token_ids a rc:Column ;
+        rc:columnName "clobTokenIds" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:JSONArray ;
+        rc:nullable true ;
+        rc:embeddedStructure [
+            a rc:EmbeddedStructure ;
+            rc:embeddedFormat rc:JSONEncoding ;
+            rc:embeddedElementType "array<string>"
+        ] .
+
+    pm:mkt_best_bid a rc:Column ;
+        rc:columnName "bestBid" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:Probability ;
+        rc:nullable true .
+
+    pm:mkt_best_ask a rc:Column ;
+        rc:columnName "bestAsk" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:Probability ;
+        rc:nullable true .
+
+    pm:mkt_spread a rc:Column ;
+        rc:columnName "spread" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:PriceSpread ;
+        rc:nullable true .
+
+    pm:mkt_category a rc:Column ;
+        rc:columnName "category" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:MarketCategory ;
+        rc:nullable true .
+
+    pm:PriceSnapshots a rc:Dataset, rc:Table ;
+        rdfs:label "CLOB Price Snapshots" ;
+        rdfs:comment "Hourly snapshots of CLOB token prices and midpoints." ;
+        rc:rowSemantics rc:SnapshotRow ;
+        rc:entityKey pm:px_token_id ;
+        rc:snapshotTimestamp pm:px_fetched_at ;
+        rc:schemaStability rc:InferredSchema ;
+        rc:hasColumn pm:px_fetched_at, pm:px_token_id, pm:px_price ;
+        rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:partitionedBy pm:hourly_hive_partition ;
+        rc:pathTemplate "data/parquet/clob/prices/dt={date}/hour={hour}.parquet" ;
+        rc:hasProvenance pm:polymarket_provenance ;
+        rc:hasKnownCaveat pm:caveat_schema_inferred, pm:caveat_mixed_type_price .
+
+    pm:px_fetched_at a rc:Column ;
+        rc:columnName "_fetched_at" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:FetchTimestamp ;
+        rc:nullable false .
+
+    pm:px_token_id a rc:Column ;
+        rc:columnName "token_id" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:CLOBTokenId ;
+        rc:nullable false .
+
+    pm:px_price a rc:Column ;
+        rc:columnName "price" ;
+        rc:physicalType rc:Varchar ;
+        rc:nullable true ;
+        rdfs:comment "Should usually be a probability-like float, but some batches contain API error objects." .
+
+    pm:OrderbookSnapshots a rc:Dataset, rc:Table ;
+        rdfs:label "CLOB Orderbook Snapshots" ;
+        rc:rowSemantics rc:SnapshotRow ;
+        rc:entityKey pm:ob_asset_id ;
+        rc:snapshotTimestamp pm:ob_fetched_at ;
+        rc:schemaStability rc:InferredSchema ;
+        rc:hasColumn pm:ob_fetched_at, pm:ob_asset_id, pm:ob_market, pm:ob_bids ;
+        rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:partitionedBy pm:hourly_hive_partition ;
+        rc:pathTemplate "data/parquet/clob/books/dt={date}/hour={hour}.parquet" ;
+        rc:hasProvenance pm:polymarket_provenance ;
+        rc:hasKnownCaveat pm:caveat_schema_inferred, pm:caveat_json_in_strings .
+
+    pm:ob_fetched_at a rc:Column ;
+        rc:columnName "_fetched_at" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:FetchTimestamp ;
+        rc:nullable false .
+
+    pm:ob_asset_id a rc:Column ;
+        rc:columnName "asset_id" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:CLOBTokenId ;
+        rc:nullable false .
+
+    pm:ob_market a rc:Column ;
+        rc:columnName "market" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:ConditionId ;
+        rc:nullable true .
+
+    pm:ob_bids a rc:Column ;
+        rc:columnName "bids" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:JSONArray ;
+        rc:nullable true ;
+        rc:embeddedStructure [
+            a rc:EmbeddedStructure ;
+            rc:embeddedFormat rc:JSONEncoding ;
+            rc:embeddedElementType "array<{price: string, size: string}>"
+        ] .
+
+    pm:Trades a rc:Dataset, rc:Table ;
+        rdfs:label "Trade Events" ;
+        rdfs:comment "Hourly files of recent trades from the Data API." ;
+        rc:rowSemantics rc:EventRow ;
+        rc:schemaStability rc:InferredSchema ;
+        rc:hasColumn
+            pm:tr_fetched_at ,
+            pm:tr_condition_id ,
+            pm:tr_asset ,
+            pm:tr_side ,
+            pm:tr_price ,
+            pm:tr_transaction_hash ;
+        rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:partitionedBy pm:hourly_hive_partition ;
+        rc:pathTemplate "data/parquet/data_api/trades/dt={date}/hour={hour}.parquet" ;
+        rc:hasProvenance pm:polymarket_provenance ;
+        rc:hasKnownCaveat pm:caveat_schema_inferred, pm:caveat_duplicate_trades .
+
+    pm:tr_fetched_at a rc:Column ;
+        rc:columnName "_fetched_at" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:FetchTimestamp ;
+        rc:nullable false .
+
+    pm:tr_condition_id a rc:Column ;
+        rc:columnName "conditionId" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:ConditionId ;
+        rc:nullable true .
+
+    pm:tr_asset a rc:Column ;
+        rc:columnName "asset" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:CLOBTokenId ;
+        rc:nullable true .
+
+    pm:tr_side a rc:Column ;
+        rc:columnName "side" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:TradeSide ;
+        rc:nullable true .
+
+    pm:tr_price a rc:Column ;
+        rc:columnName "price" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:Probability ;
+        rc:nullable true .
+
+    pm:tr_transaction_hash a rc:Column ;
+        rc:columnName "transactionHash" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:TransactionHash ;
+        rc:nullable true .
+
+    pm:HolderSnapshots a rc:Dataset, rc:Table ;
+        rdfs:label "Token Holder Snapshots" ;
+        rdfs:comment "Hourly snapshots of top holders per token, keyed by condition_id plus token." ;
+        rc:rowSemantics rc:SnapshotRow ;
+        rc:entityKey pm:hld_condition_id, pm:hld_token ;
+        rc:snapshotTimestamp pm:hld_fetched_at ;
+        rc:schemaStability rc:InferredSchema ;
+        rc:hasColumn pm:hld_fetched_at, pm:hld_condition_id, pm:hld_token, pm:hld_holders ;
+        rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:partitionedBy pm:hourly_hive_partition ;
+        rc:pathTemplate "data/parquet/data_api/holders/dt={date}/hour={hour}.parquet" ;
+        rc:hasProvenance pm:polymarket_provenance ;
+        rc:hasKnownCaveat pm:caveat_schema_inferred, pm:caveat_snapshot_dedup .
+
+    pm:hld_fetched_at a rc:Column ;
+        rc:columnName "_fetched_at" ;
+        rc:physicalType rc:Double ;
+        rc:valueType pm:FetchTimestamp ;
+        rc:nullable false .
+
+    pm:hld_condition_id a rc:Column ;
+        rc:columnName "condition_id" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:ConditionId ;
+        rc:nullable false .
+
+    pm:hld_token a rc:Column ;
+        rc:columnName "token" ;
+        rc:physicalType rc:Varchar ;
+        rc:valueType pm:CLOBTokenId ;
+        rc:nullable false .
+
+    pm:hld_holders a rc:Column ;
+        rc:columnName "holders" ;
+        rc:physicalType rc:Varchar ;
+        rc:nullable true ;
+        rc:embeddedStructure [
+            a rc:EmbeddedStructure ;
+            rc:embeddedFormat rc:JSONEncoding ;
+            rc:embeddedElementType "array<{proxyWallet: string, amount: float, outcomeIndex: int}>"
+        ] .
+
+    pm:derive_spread a rc:Derivation ;
+        rdfs:comment "Market spread is computed as bestAsk minus bestBid." ;
+        rc:derivedColumn pm:mkt_spread ;
+        rc:sourceColumn pm:mkt_best_ask, pm:mkt_best_bid ;
+        rc:derivationFunction pm:SpreadFromBidAsk ;
+        rc:hasDerivationProperty rc:Deterministic, rc:Invertible .
+
+    pm:derive_fetched_at a rc:Derivation ;
+        rdfs:comment "_fetched_at is injected by the fetcher at collection time." ;
+        rc:derivedColumn pm:mkt_fetched_at ;
+        rc:derivationFunction pm:FetcherTimestampInjection ;
+        rc:hasDerivationProperty rc:Deterministic .
+
+    pm:snapshot_layout a rc:PhysicalLayout ;
+        rc:fileFormat rc:Parquet ;
+        rdfs:comment "All converted Polymarket datasets use zstd-compressed Parquet files with no meaningful row ordering." .
+
+    pm:hourly_hive_partition a rc:CompositePartitionScheme ;
+        rc:pathTemplate "data/parquet/{stream}/dt={date}/hour={hour}.parquet" ;
+        rdfs:comment "Two-level Hive partitioning: dt=YYYY-MM-DD/hour=HH. Partition values live in the path, not data columns." ;
+        rc:hasPartitionLevel [
+            a rc:PartitionLevel ;
+            rc:levelPrecedence 1 ;
+            rc:levelColumn "dt" ;
+            rc:levelGranularity rc:Daily
+        ] ;
+        rc:hasPartitionLevel [
+            a rc:PartitionLevel ;
+            rc:levelPrecedence 2 ;
+            rc:levelColumn "hour" ;
+            rc:levelGranularity rc:Hourly
+        ] .
+
+    pm:polymarket_provenance a rc:Provenance ;
+        rc:source <https://polymarket.com> ;
+        rc:sourceDescription "Data collected from Polymarket Gamma, CLOB, and Data APIs, then compacted from JSONL to hourly Parquet." ;
+        rc:hasTransformation [
+            a rc:Transformation ;
+            rc:transformationType "collection" ;
+            rc:transformationDescription "HTTP polling appends rows with _fetched_at and _source metadata."
+        ] ;
+        rc:hasTransformation [
+            a rc:Transformation ;
+            rc:transformationType "compaction" ;
+            rc:transformationDescription "Hourly JSONL files are compacted to Parquet using Polars-inferred schemas."
+        ] .
+
+    pm:caveat_schema_inferred a rc:KnownCaveat ;
+        rc:caveatDescription "Parquet schemas are inferred by Polars from JSON rather than declared." ;
+        rc:impact "Column presence and physical types may vary between files." ;
+        rc:severity rc:Moderate .
+
+    pm:caveat_snapshot_dedup a rc:KnownCaveat ;
+        rc:caveatDescription "Snapshot datasets can contain repeated entity states within a single hourly file." ;
+        rc:impact "Consumers must deduplicate by entity key plus fetch time for point-in-time snapshots." ;
+        rc:severity rc:Moderate .
+
+    pm:caveat_json_in_strings a rc:KnownCaveat ;
+        rc:caveatDescription "Several columns store structured data as JSON strings rather than native Parquet nested types." ;
+        rc:impact "Consumers must parse JSON before use; nested fields cannot benefit from Parquet type checking." ;
+        rc:severity rc:Minor .
+
+    pm:caveat_mixed_type_price a rc:KnownCaveat ;
+        rc:caveatDescription "The CLOB price column may contain either a float-like value or an API error object string." ;
+        rc:impact "Price analysis must filter or coerce invalid rows." ;
+        rc:severity rc:Moderate .
+
+    pm:caveat_duplicate_trades a rc:KnownCaveat ;
+        rc:caveatDescription "Recent-trade polling windows can overlap, producing duplicate trades across polls." ;
+        rc:impact "Consumers should deduplicate by transaction hash before aggregation." ;
+        rc:severity rc:Moderate .
+
+    pm:fk_trades_to_markets a rc:ForeignKey ;
+        rdfs:label "Trades to Markets via conditionId" ;
+        rc:foreignKeyFrom pm:tr_condition_id ;
+        rc:foreignKeyTo pm:mkt_condition_id ;
+        rc:referentialIntegrity rc:PartialIntegrity .
+
+    pm:fk_trades_to_prices a rc:ForeignKey ;
+        rdfs:label "Trades to Prices via token id" ;
+        rc:foreignKeyFrom pm:tr_asset ;
+        rc:foreignKeyTo pm:px_token_id ;
+        rc:referentialIntegrity rc:PartialIntegrity .
+
+    pm:fk_holders_to_markets a rc:ForeignKey ;
+        rdfs:label "Holders to Markets via condition_id" ;
+        rc:foreignKeyFrom pm:hld_condition_id ;
+        rc:foreignKeyTo pm:mkt_condition_id ;
+        rc:referentialIntegrity rc:PartialIntegrity .
+
+    pm:fk_books_to_markets a rc:ForeignKey ;
+        rdfs:label "Books to Markets via market condition id" ;
+        rc:foreignKeyFrom pm:ob_market ;
+        rc:foreignKeyTo pm:mkt_condition_id ;
+        rc:referentialIntegrity rc:PartialIntegrity .
+
+    pm:same_entity_condition_id a rc:SharedIdentifier ;
+        rdfs:label "Condition ID identifies the same market across datasets" ;
+        rc:identifyingColumn pm:mkt_condition_id, pm:tr_condition_id, pm:hld_condition_id, pm:ob_market .
+
+    pm:same_entity_clob_token a rc:SharedIdentifier ;
+        rdfs:label "CLOB token ID identifies the same token across datasets" ;
+        rc:identifyingColumn pm:px_token_id, pm:ob_asset_id, pm:tr_asset, pm:hld_token .
+}
+
+rcg:observations {
+    pm:obs_polymarket_manifest_conversion a rc:Observation ;
+        rc:observedAt "2026-05-30T00:00:00Z"^^xsd:dateTime ;
+        rc:observedAsset pm:MarketSnapshots ;
+        rc:summary "Converted representative Polymarket Manifest description content into RC graph roles; no fresh data profile was run." ;
+        rc:evidence pm:evidence_polymarket_manifest_source .
+}
+
+rcg:evidence {
+    pm:evidence_polymarket_manifest_source a rc:Evidence ;
+        rc:summary "Source fixture converted from ../manifest-prototype/descriptions/polymarket_description.ttl." ;
+        dcterms:source "../manifest-prototype/descriptions/polymarket_description.ttl" .
+}
