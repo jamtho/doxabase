@@ -1,0 +1,30 @@
+# Ontology Primer
+
+The Rich Canopy base ontology uses the `rc:` prefix:
+
+```text
+https://richcanopy.org/ns/rc#
+```
+
+It is a small shared vocabulary for data-project modelling. It is not a closed world and not a complete model of all possible data domains.
+
+Use `rc:` terms for shared structural concepts:
+
+- `rc:Dataset`, `rc:Table`, `rc:Column`, `rc:ColumnGroup`
+- `rc:ValueType`, `rc:PhysicalType`, `rc:AllowedValues`, `rc:ValueRange`
+- `rc:ForeignKey`, `rc:SharedIdentifier`, `rc:Derivation`, `rc:Aggregation`
+- `rc:KnownCaveat`, `rc:Observation`, `rc:Evidence`
+- `rc:PhysicalLayout`, `rc:PartitionScheme`, `rc:RowOrdering`
+
+Use project namespaces for domain-specific ideas:
+
+- AIS value types can live under `ais:`.
+- Polymarket value types can live under `pm:`.
+- A client project can define any namespace it needs.
+
+Useful distinction:
+
+- Declared allowed values belong to the model, using `rc:AllowedValues`.
+- Observed values from a profiler belong to observations, using `rc:Observation` or `rc:ProfileObservation`.
+
+The base SHACL shapes validate common authoring mistakes in `rc:` usage. They are open and do not reject client-defined terms.
