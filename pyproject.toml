@@ -1,0 +1,13 @@
+[project]
+name = "doxybase"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "pyshacl>=0.31.0",
+    "pytest>=9.0.3",
+    "rdflib>=7.6.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
