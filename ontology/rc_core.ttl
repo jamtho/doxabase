@@ -1,0 +1,778 @@
+@prefix rc:      <https://richcanopy.org/ns/rc#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+<https://richcanopy.org/ns/rc>
+    a owl:Ontology ;
+    dcterms:title "Rich Canopy base ontology" ;
+    dcterms:description "A small, extensible vocabulary for describing data assets, information models, observations, evidence, and caveats in Rich Canopy projects." ;
+    owl:versionInfo "0.1.0-draft" .
+
+# -----------------------------------------------------------------------------
+# Data assets
+# -----------------------------------------------------------------------------
+
+rc:DataAsset a rdfs:Class ;
+    rdfs:comment "Any data-bearing asset that a project may describe, map, profile, or use as evidence." .
+
+rc:Dataset a rdfs:Class ;
+    rdfs:subClassOf rc:DataAsset ;
+    rdfs:comment "A logical collection of data. A dataset may be a database, data lake, file collection, table-like resource, API-backed source, or another project-defined asset." .
+
+rc:Database a rdfs:Class ;
+    rdfs:subClassOf rc:DataAsset ;
+    rdfs:comment "A database, warehouse, catalog, cluster, or similar container of data resources." .
+
+rc:DataFile a rdfs:Class ;
+    rdfs:subClassOf rc:DataAsset ;
+    rdfs:comment "A single physical or addressable data file." .
+
+rc:Table a rdfs:Class ;
+    rdfs:subClassOf rc:DataAsset ;
+    rdfs:comment "A logical tabular structure with rows and columns. SQL tables, views, dataframes, query results, CSV files, and Parquet files may all be tables when appropriate." .
+
+rc:DataFrame a rdfs:Class ;
+    rdfs:subClassOf rc:Table ;
+    rdfs:comment "An in-memory or dataframe-library-backed table." .
+
+rc:Column a rdfs:Class ;
+    rdfs:comment "A column in a logical tabular structure." .
+
+rc:ColumnGroup a rdfs:Class ;
+    rdfs:comment "A named group of columns that together carry a composite meaning." .
+
+rc:hasColumn a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:Column ;
+    rdfs:comment "Links a data asset or table-like resource to a column." .
+
+rc:hasColumnGroup a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:ColumnGroup ;
+    rdfs:comment "Links a data asset or table-like resource to a composite column group." .
+
+rc:columnName a rdf:Property ;
+    rdfs:domain rc:Column ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The physical or source-level column name." .
+
+rc:memberOf a rdf:Property ;
+    rdfs:domain rc:Column ;
+    rdfs:range rc:ColumnGroup ;
+    rdfs:comment "Links a column to a column group it participates in." .
+
+rc:groupMember a rdf:Property ;
+    rdfs:domain rc:ColumnGroup ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A column that participates in a column group." .
+
+rc:groupValueType a rdf:Property ;
+    rdfs:domain rc:ColumnGroup ;
+    rdfs:range rc:ValueType ;
+    rdfs:comment "The composite value type carried by a column group." .
+
+rc:memberRole a rdf:Property ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The role a column plays within a column group." .
+
+rc:physicalType a rdf:Property ;
+    rdfs:domain rc:Column ;
+    rdfs:range rc:PhysicalType ;
+    rdfs:comment "The storage-level or source-level type of values in a column." .
+
+rc:valueType a rdf:Property ;
+    rdfs:domain rc:Column ;
+    rdfs:range rc:ValueType ;
+    rdfs:comment "The project/domain meaningful type of values in a column." .
+
+rc:nullable a rdf:Property ;
+    rdfs:domain rc:Column ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether null values are expected or permitted." .
+
+rc:rowSemantics a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:RowSemanticsType ;
+    rdfs:comment "What each row in a table-like asset represents." .
+
+rc:entityKey a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A column that identifies the recurring entity described by rows in a table-like asset." .
+
+rc:snapshotTimestamp a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A column that identifies the point in time for each row or snapshot." .
+
+rc:schemaStability a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:SchemaStabilityLevel ;
+    rdfs:comment "How stable the source schema is expected to be." .
+
+rc:rowCountSnapshot a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Observed or asserted row count at a point in time. This is a snapshot, not a standing guarantee." .
+
+rc:pathTemplate a rdf:Property ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A path or URI template for locating files, partitions, tables, or other data resources." .
+
+# -----------------------------------------------------------------------------
+# Physical and value types
+# -----------------------------------------------------------------------------
+
+rc:PhysicalType a rdfs:Class ;
+    rdfs:comment "A storage-level data type." .
+
+rc:ValueType a rdfs:Class ;
+    rdfs:comment "A domain-meaningful value type. Client projects are expected to define their own value types freely." .
+
+rc:ValueRange a rdfs:Class ;
+    rdfs:comment "A range constraint for values." .
+
+rc:AllowedValues a rdfs:Class ;
+    rdfs:comment "A declared set of permitted values. This is distinct from observed values found during profiling." .
+
+rc:EmbeddedStructure a rdfs:Class ;
+    rdfs:comment "A description of structured content embedded inside a scalar value, such as JSON encoded in a string column." .
+
+rc:DataEncodingFormat a rdfs:Class ;
+    rdfs:comment "An encoding format for embedded structured data." .
+
+rc:requiredPhysicalType a rdf:Property ;
+    rdfs:domain rc:ValueType ;
+    rdfs:range rc:PhysicalType ;
+    rdfs:comment "The physical type a value type must use." .
+
+rc:acceptablePhysicalType a rdf:Property ;
+    rdfs:domain rc:ValueType ;
+    rdfs:range rc:PhysicalType ;
+    rdfs:comment "A physical type acceptable for a value type when multiple storage representations are valid." .
+
+rc:valueRange a rdf:Property ;
+    rdfs:domain rc:ValueType ;
+    rdfs:range rc:ValueRange ;
+    rdfs:comment "Links a value type to a valid value range." .
+
+rc:minInclusive a rdf:Property ;
+    rdfs:domain rc:ValueRange ;
+    rdfs:comment "Inclusive lower bound for a value range." .
+
+rc:maxInclusive a rdf:Property ;
+    rdfs:domain rc:ValueRange ;
+    rdfs:comment "Inclusive upper bound for a value range." .
+
+rc:minExclusive a rdf:Property ;
+    rdfs:domain rc:ValueRange ;
+    rdfs:comment "Exclusive lower bound for a value range." .
+
+rc:maxExclusive a rdf:Property ;
+    rdfs:domain rc:ValueRange ;
+    rdfs:comment "Exclusive upper bound for a value range." .
+
+rc:unit a rdf:Property ;
+    rdfs:domain rc:ValueType ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A unit of measure for values of this type." .
+
+rc:identifierNamespace a rdf:Property ;
+    rdfs:domain rc:ValueType ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A namespace or population identifier for comparable entity identifiers." .
+
+rc:hasAllowedValues a rdf:Property ;
+    rdfs:domain rc:ValueType ;
+    rdfs:range rc:AllowedValues ;
+    rdfs:comment "Links a value type to its declared allowed values." .
+
+rc:allowedValue a rdf:Property ;
+    rdfs:domain rc:AllowedValues ;
+    rdfs:comment "One declared permitted value." .
+
+rc:embeddedStructure a rdf:Property ;
+    rdfs:domain rc:Column ;
+    rdfs:range rc:EmbeddedStructure ;
+    rdfs:comment "Declares that a column contains structured content encoded inside a scalar value." .
+
+rc:embeddedFormat a rdf:Property ;
+    rdfs:domain rc:EmbeddedStructure ;
+    rdfs:range rc:DataEncodingFormat ;
+    rdfs:comment "The encoding format of embedded structured content." .
+
+rc:embeddedElementType a rdf:Property ;
+    rdfs:domain rc:EmbeddedStructure ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A compact description of the inner element or schema shape." .
+
+rc:caseConvention a rdf:Property ;
+    rdfs:domain rc:Column ;
+    rdfs:range rc:CaseConvention ;
+    rdfs:comment "Casing convention for string values in a column." .
+
+rc:narrowerThan a rdf:Property ;
+    rdfs:domain rc:PhysicalType ;
+    rdfs:range rc:PhysicalType ;
+    rdfs:comment "This physical type can safely widen to the target physical type." .
+
+rc:Boolean     a rc:PhysicalType ; rdfs:label "BOOLEAN" .
+rc:Integer     a rc:PhysicalType ; rdfs:label "INTEGER" .
+rc:BigInt      a rc:PhysicalType ; rdfs:label "BIGINT" .
+rc:UBigInt     a rc:PhysicalType ; rdfs:label "UBIGINT" .
+rc:Float       a rc:PhysicalType ; rdfs:label "FLOAT" .
+rc:Double      a rc:PhysicalType ; rdfs:label "DOUBLE" .
+rc:Decimal     a rc:PhysicalType ; rdfs:label "DECIMAL" .
+rc:Varchar     a rc:PhysicalType ; rdfs:label "VARCHAR" .
+rc:Text        a rc:PhysicalType ; rdfs:label "TEXT" .
+rc:Date        a rc:PhysicalType ; rdfs:label "DATE" .
+rc:Timestamp   a rc:PhysicalType ; rdfs:label "TIMESTAMP" .
+rc:TimestampTZ a rc:PhysicalType ; rdfs:label "TIMESTAMP WITH TIME ZONE" .
+rc:Blob        a rc:PhysicalType ; rdfs:label "BLOB" .
+rc:JSONValue   a rc:PhysicalType ; rdfs:label "JSON" .
+rc:Struct      a rc:PhysicalType ; rdfs:label "STRUCT" .
+rc:IntegerList a rc:PhysicalType ; rdfs:label "INTEGER[]" .
+rc:DoubleList  a rc:PhysicalType ; rdfs:label "DOUBLE[]" .
+rc:VarcharList a rc:PhysicalType ; rdfs:label "VARCHAR[]" .
+
+rc:Integer rc:narrowerThan rc:BigInt .
+rc:BigInt rc:narrowerThan rc:Double .
+rc:Float rc:narrowerThan rc:Double .
+
+rc:CaseConvention a rdfs:Class ;
+    rdfs:comment "Casing applied to string values." .
+
+rc:UpperCase a rc:CaseConvention ; rdfs:label "uppercase" .
+rc:LowerCase a rc:CaseConvention ; rdfs:label "lowercase" .
+rc:MixedCase a rc:CaseConvention ; rdfs:label "mixed-case" .
+
+rc:JSONEncoding a rc:DataEncodingFormat ; rdfs:label "json" .
+rc:CSVEncoding a rc:DataEncodingFormat ; rdfs:label "csv" .
+
+# -----------------------------------------------------------------------------
+# Row and schema interpretation
+# -----------------------------------------------------------------------------
+
+rc:RowSemanticsType a rdfs:Class ;
+    rdfs:comment "The semantic meaning of a single row." .
+
+rc:EventRow a rc:RowSemanticsType ;
+    rdfs:comment "Each row is an independent event or observation." .
+
+rc:SnapshotRow a rc:RowSemanticsType ;
+    rdfs:comment "Each row is a point-in-time observation of a recurring entity." .
+
+rc:AggregateRow a rc:RowSemanticsType ;
+    rdfs:comment "Each row summarizes a group of source rows." .
+
+rc:DimensionRow a rc:RowSemanticsType ;
+    rdfs:comment "Each row describes a relatively stable entity or dimension member." .
+
+rc:SchemaStabilityLevel a rdfs:Class ;
+    rdfs:comment "Expected stability of an asset's schema." .
+
+rc:FixedSchema a rc:SchemaStabilityLevel ;
+    rdfs:comment "The schema is declared and expected to remain fixed." .
+
+rc:InferredSchema a rc:SchemaStabilityLevel ;
+    rdfs:comment "The schema is inferred from observed data and may vary with content." .
+
+rc:VariableSchema a rc:SchemaStabilityLevel ;
+    rdfs:comment "The schema is expected to change as the upstream source evolves." .
+
+# -----------------------------------------------------------------------------
+# Relationships, derivations, and constraints
+# -----------------------------------------------------------------------------
+
+rc:Relationship a rdfs:Class ;
+    rdfs:comment "A relationship between data assets, columns, values, or project entities." .
+
+rc:ForeignKey a rdfs:Class ;
+    rdfs:subClassOf rc:Relationship ;
+    rdfs:comment "A referential relationship from one column to another." .
+
+rc:SharedIdentifier a rdfs:Class ;
+    rdfs:subClassOf rc:Relationship ;
+    rdfs:comment "A declaration that multiple columns carry identifiers for the same logical entity or join population. This is not owl:sameAs." .
+
+rc:Derivation a rdfs:Class ;
+    rdfs:subClassOf rc:Relationship ;
+    rdfs:comment "A declaration that one column, table, dataset, or value is derived from others." .
+
+rc:Aggregation a rdfs:Class ;
+    rdfs:subClassOf rc:Relationship ;
+    rdfs:comment "A declaration that a target asset or column is derived by grouping and aggregating a source." .
+
+rc:AggregatedColumn a rdfs:Class ;
+    rdfs:comment "A per-column mapping inside an aggregation relationship." .
+
+rc:Constraint a rdfs:Class ;
+    rdfs:comment "A project-level expectation, invariant, or rule that may be checked or cited." .
+
+rc:ComputationalProfile a rdfs:Class ;
+    rdfs:comment "A coarse description of the cost or method needed to verify a constraint or claim." .
+
+rc:DerivationProperty a rdfs:Class ;
+    rdfs:comment "A property of a derivation, such as deterministic, invertible, or lossy." .
+
+rc:foreignKeyFrom a rdf:Property ;
+    rdfs:domain rc:ForeignKey ;
+    rdfs:range rc:Column ;
+    rdfs:comment "The referencing column in a foreign-key relationship." .
+
+rc:foreignKeyTo a rdf:Property ;
+    rdfs:domain rc:ForeignKey ;
+    rdfs:range rc:Column ;
+    rdfs:comment "The referenced column in a foreign-key relationship." .
+
+rc:referentialIntegrity a rdf:Property ;
+    rdfs:domain rc:ForeignKey ;
+    rdfs:range rc:ReferentialIntegrityLevel ;
+    rdfs:comment "Expected referential-integrity level." .
+
+rc:declared a rdf:Property ;
+    rdfs:domain rc:ForeignKey ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether the relationship is declared and enforced in the upstream system." .
+
+rc:ReferentialIntegrityLevel a rdfs:Class ;
+    rdfs:comment "Expected integrity level for referential relationships." .
+
+rc:StrictIntegrity a rc:ReferentialIntegrityLevel ;
+    rdfs:comment "Every source value is expected to exist in the target." .
+
+rc:EventualIntegrity a rc:ReferentialIntegrityLevel ;
+    rdfs:comment "Source values may be temporarily missing but are expected to resolve." .
+
+rc:PartialIntegrity a rc:ReferentialIntegrityLevel ;
+    rdfs:comment "Some source values may never resolve in the target." .
+
+rc:identifyingColumn a rdf:Property ;
+    rdfs:domain rc:SharedIdentifier ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A column that participates in a shared-identifier relationship." .
+
+rc:sourceDataset a rdf:Property ;
+    rdfs:range rc:DataAsset ;
+    rdfs:comment "The source dataset or data asset in a relationship." .
+
+rc:targetDataset a rdf:Property ;
+    rdfs:range rc:DataAsset ;
+    rdfs:comment "The target dataset or data asset in a relationship." .
+
+rc:sourceColumn a rdf:Property ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A source column used by a relationship, derivation, or aggregation." .
+
+rc:targetColumn a rdf:Property ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A target column produced by a relationship, derivation, or aggregation." .
+
+rc:derivedColumn a rdf:Property ;
+    rdfs:domain rc:Derivation ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A column produced by a derivation." .
+
+rc:derivationFunction a rdf:Property ;
+    rdfs:domain rc:Derivation ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "A URI identifying the derivation function." .
+
+rc:hasDerivationProperty a rdf:Property ;
+    rdfs:domain rc:Derivation ;
+    rdfs:range rc:DerivationProperty ;
+    rdfs:comment "Links a derivation to one of its declared properties." .
+
+rc:groupByColumn a rdf:Property ;
+    rdfs:domain rc:Aggregation ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A source column used to group rows for an aggregation." .
+
+rc:hasAggregatedColumn a rdf:Property ;
+    rdfs:domain rc:Aggregation ;
+    rdfs:range rc:AggregatedColumn ;
+    rdfs:comment "Links an aggregation relationship to one target-column mapping." .
+
+rc:aggregationSourceColumn a rdf:Property ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A source column used as an input to an aggregation." .
+
+rc:aggregationFunction a rdf:Property ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "A URI identifying the aggregation function." .
+
+rc:withinGroupOrdering a rdf:Property ;
+    rdfs:domain rc:AggregatedColumn ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A column that defines ordering within groups for an order-sensitive aggregation." .
+
+rc:computationalProfile a rdf:Property ;
+    rdfs:range rc:ComputationalProfile ;
+    rdfs:comment "The expected cost or method needed to verify a constraint or claim." .
+
+rc:companionOf a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:DataAsset ;
+    rdfs:comment "Links data assets that are co-maintained or intended to be consumed together." .
+
+rc:SchemaCheckOnly a rc:ComputationalProfile ;
+    rdfs:comment "Checkable from schema or metadata alone." .
+
+rc:PerValueCheck a rc:ComputationalProfile ;
+    rdfs:comment "Requires checking individual values." .
+
+rc:FullScanRequired a rc:ComputationalProfile ;
+    rdfs:comment "Requires scanning the full column, file, table, or dataset." .
+
+rc:SequentialScan a rc:ComputationalProfile ;
+    rdfs:comment "Requires reading values in order." .
+
+rc:ExternalService a rc:ComputationalProfile ;
+    rdfs:comment "Requires calling an external service." .
+
+rc:Deterministic a rc:DerivationProperty ;
+    rdfs:comment "Same inputs always produce the same output." .
+
+rc:Invertible a rc:DerivationProperty ;
+    rdfs:comment "The derivation can be reversed." .
+
+rc:Lossy a rc:DerivationProperty ;
+    rdfs:comment "The derivation loses information." .
+
+rc:Min a rdfs:Resource ; rdfs:label "MIN" .
+rc:Max a rdfs:Resource ; rdfs:label "MAX" .
+rc:Mean a rdfs:Resource ; rdfs:label "MEAN / AVG" .
+rc:Sum a rdfs:Resource ; rdfs:label "SUM" .
+rc:Count a rdfs:Resource ; rdfs:label "COUNT" .
+rc:CountDistinct a rdfs:Resource ; rdfs:label "COUNT DISTINCT" .
+rc:DistinctList a rdfs:Resource ; rdfs:label "LIST of DISTINCT values" .
+rc:First a rdfs:Resource ; rdfs:label "FIRST" .
+rc:Last a rdfs:Resource ; rdfs:label "LAST" .
+
+# -----------------------------------------------------------------------------
+# Physical layout
+# -----------------------------------------------------------------------------
+
+rc:PhysicalLayout a rdfs:Class ;
+    rdfs:comment "How a data asset is physically arranged or stored." .
+
+rc:FileFormat a rdfs:Class ;
+    rdfs:comment "A storage or serialization format." .
+
+rc:RowOrdering a rdfs:Class ;
+    rdfs:comment "A known ordering of rows or records." .
+
+rc:OrderingKey a rdfs:Class ;
+    rdfs:comment "One key used to define a row ordering." .
+
+rc:SortDirection a rdfs:Class ;
+    rdfs:comment "Direction of a sort key." .
+
+rc:OrderingSemanticType a rdfs:Class ;
+    rdfs:comment "Why an ordering exists or how it should be interpreted." .
+
+rc:PartitionScheme a rdfs:Class ;
+    rdfs:comment "A description of how a data asset is partitioned." .
+
+rc:CompositePartitionScheme a rdfs:Class ;
+    rdfs:subClassOf rc:PartitionScheme ;
+    rdfs:comment "A partition scheme with multiple partition dimensions." .
+
+rc:PartitionLevel a rdfs:Class ;
+    rdfs:comment "A single dimension in a composite partition scheme." .
+
+rc:TemporalGranularity a rdfs:Class ;
+    rdfs:comment "Granularity of a temporal partition or level." .
+
+rc:hasPhysicalLayout a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:PhysicalLayout ;
+    rdfs:comment "Links a data asset to its physical layout." .
+
+rc:fileFormat a rdf:Property ;
+    rdfs:domain rc:PhysicalLayout ;
+    rdfs:range rc:FileFormat ;
+    rdfs:comment "The file, table, or serialization format." .
+
+rc:hasRowOrdering a rdf:Property ;
+    rdfs:domain rc:PhysicalLayout ;
+    rdfs:range rc:RowOrdering ;
+    rdfs:comment "Links a physical layout to a known row ordering." .
+
+rc:hasOrderingKey a rdf:Property ;
+    rdfs:domain rc:RowOrdering ;
+    rdfs:range rc:OrderingKey ;
+    rdfs:comment "Links a row ordering to one of its keys." .
+
+rc:keyColumn a rdf:Property ;
+    rdfs:domain rc:OrderingKey ;
+    rdfs:range rc:Column ;
+    rdfs:comment "The column used as an ordering key." .
+
+rc:keyDirection a rdf:Property ;
+    rdfs:domain rc:OrderingKey ;
+    rdfs:range rc:SortDirection ;
+    rdfs:comment "The direction of an ordering key." .
+
+rc:keyPrecedence a rdf:Property ;
+    rdfs:domain rc:OrderingKey ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "The precedence of an ordering key, where 1 is primary." .
+
+rc:orderingSemantic a rdf:Property ;
+    rdfs:domain rc:OrderingKey ;
+    rdfs:range rc:OrderingSemanticType ;
+    rdfs:comment "Why this ordering exists." .
+
+rc:partitionedBy a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:PartitionScheme ;
+    rdfs:comment "Declares how a data asset is partitioned." .
+
+rc:partitionColumn a rdf:Property ;
+    rdfs:domain rc:PartitionScheme ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A column whose values determine partition placement." .
+
+rc:partitionGranularity a rdf:Property ;
+    rdfs:domain rc:PartitionScheme ;
+    rdfs:range rc:TemporalGranularity ;
+    rdfs:comment "Temporal granularity of a partition scheme." .
+
+rc:redundantPartitionKey a rdf:Property ;
+    rdfs:domain rc:PartitionScheme ;
+    rdfs:range rc:Column ;
+    rdfs:comment "A data column whose value duplicates or reflects the partition key." .
+
+rc:hasPartitionLevel a rdf:Property ;
+    rdfs:domain rc:CompositePartitionScheme ;
+    rdfs:range rc:PartitionLevel ;
+    rdfs:comment "Links a composite partition scheme to one of its levels." .
+
+rc:levelPrecedence a rdf:Property ;
+    rdfs:domain rc:PartitionLevel ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Ordering of partition levels, where 1 is outermost." .
+
+rc:levelColumn a rdf:Property ;
+    rdfs:domain rc:PartitionLevel ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The partition-key name for this level." .
+
+rc:levelGranularity a rdf:Property ;
+    rdfs:domain rc:PartitionLevel ;
+    rdfs:range rc:TemporalGranularity ;
+    rdfs:comment "Granularity of this partition level." .
+
+rc:Parquet a rc:FileFormat ; rdfs:label "Parquet" .
+rc:CSV a rc:FileFormat ; rdfs:label "CSV" .
+rc:TSV a rc:FileFormat ; rdfs:label "TSV" .
+rc:ORC a rc:FileFormat ; rdfs:label "ORC" .
+rc:JSON a rc:FileFormat ; rdfs:label "JSON" .
+rc:JSONL a rc:FileFormat ; rdfs:label "JSONL" .
+rc:NDJSON a rc:FileFormat ; rdfs:label "NDJSON" .
+rc:PlainText a rc:FileFormat ; rdfs:label "Plain Text" .
+rc:Markdown a rc:FileFormat ; rdfs:label "Markdown" .
+rc:PostgreSQLTable a rc:FileFormat ; rdfs:label "PostgreSQL Table" .
+rc:SQLiteTable a rc:FileFormat ; rdfs:label "SQLite Table" .
+rc:MySQLTable a rc:FileFormat ; rdfs:label "MySQL Table" .
+
+rc:Ascending a rc:SortDirection ; rdfs:label "ascending" .
+rc:Descending a rc:SortDirection ; rdfs:label "descending" .
+
+rc:ClusteringForIndex a rc:OrderingSemanticType ;
+    rdfs:comment "Ordering groups values for index or storage efficiency." .
+
+rc:MeaningfulSequence a rc:OrderingSemanticType ;
+    rdfs:comment "Ordering carries domain meaning, such as temporal sequence." .
+
+rc:PerformanceOnly a rc:OrderingSemanticType ;
+    rdfs:comment "Ordering exists solely for query performance." .
+
+rc:Daily a rc:TemporalGranularity ; rdfs:label "daily" .
+rc:Hourly a rc:TemporalGranularity ; rdfs:label "hourly" .
+rc:Monthly a rc:TemporalGranularity ; rdfs:label "monthly" .
+rc:ByValue a rc:TemporalGranularity ; rdfs:label "by value" .
+
+# -----------------------------------------------------------------------------
+# Observations, evidence, and lightweight provenance
+# -----------------------------------------------------------------------------
+
+rc:Observation a rdfs:Class ;
+    rdfs:comment "A point-in-time, tentative, or source-scoped finding." .
+
+rc:ProfileObservation a rdfs:Class ;
+    rdfs:subClassOf rc:Observation ;
+    rdfs:comment "An observation produced by profiling a data asset, table, file, or column." .
+
+rc:Evidence a rdfs:Class ;
+    rdfs:comment "A record that supports an observation or map assertion." .
+
+rc:Provenance a rdfs:Class ;
+    rdfs:comment "Lightweight source and transformation information for a data asset." .
+
+rc:Transformation a rdfs:Class ;
+    rdfs:comment "A transformation applied to create, clean, move, or derive data." .
+
+rc:VerificationAttestation a rdfs:Class ;
+    rdfs:comment "A record of a validation or verification run." .
+
+rc:VerificationResultValue a rdfs:Class ;
+    rdfs:comment "Outcome of a verification run." .
+
+rc:observedAt a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "When an observation was made." .
+
+rc:observedBy a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "The agent, tool, process, or person that made an observation." .
+
+rc:observedAsset a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range rc:DataAsset ;
+    rdfs:comment "The data asset observed." .
+
+rc:observedColumn a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range rc:Column ;
+    rdfs:comment "The column observed." .
+
+rc:sampleSize a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Number of records, rows, values, or items sampled for an observation." .
+
+rc:rowCount a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Observed row count." .
+
+rc:nullCount a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Observed null count." .
+
+rc:distinctCount a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Observed distinct-value count." .
+
+rc:observedValue a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:comment "A value observed during profiling. This is not a declared allowed value." .
+
+rc:valueFrequency a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:comment "Observed frequency for a value or value bucket." .
+
+rc:evidence a rdf:Property ;
+    rdfs:range rc:Evidence ;
+    rdfs:comment "Links an observation or assertion to supporting evidence." .
+
+rc:summary a rdf:Property ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A concise human-readable summary." .
+
+rc:hasProvenance a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:Provenance ;
+    rdfs:comment "Links a data asset to lightweight provenance information." .
+
+rc:source a rdf:Property ;
+    rdfs:domain rc:Provenance ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "The upstream source resource." .
+
+rc:sourceDescription a rdf:Property ;
+    rdfs:domain rc:Provenance ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A free-text description of the upstream source." .
+
+rc:hasTransformation a rdf:Property ;
+    rdfs:domain rc:Provenance ;
+    rdfs:range rc:Transformation ;
+    rdfs:comment "Links provenance to a transformation." .
+
+rc:transformationType a rdf:Property ;
+    rdfs:domain rc:Transformation ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A compact type or category for a transformation." .
+
+rc:transformationDescription a rdf:Property ;
+    rdfs:domain rc:Transformation ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A human-readable description of a transformation." .
+
+rc:verifiedConstraint a rdf:Property ;
+    rdfs:domain rc:VerificationAttestation ;
+    rdfs:range rc:Constraint .
+
+rc:verifiedAsset a rdf:Property ;
+    rdfs:domain rc:VerificationAttestation ;
+    rdfs:range rc:DataAsset .
+
+rc:verificationTime a rdf:Property ;
+    rdfs:domain rc:VerificationAttestation ;
+    rdfs:range xsd:dateTime .
+
+rc:verificationResult a rdf:Property ;
+    rdfs:domain rc:VerificationAttestation ;
+    rdfs:range rc:VerificationResultValue .
+
+rc:verificationTool a rdf:Property ;
+    rdfs:domain rc:VerificationAttestation ;
+    rdfs:range rdfs:Resource .
+
+rc:verificationDetails a rdf:Property ;
+    rdfs:domain rc:VerificationAttestation ;
+    rdfs:range xsd:string .
+
+rc:Pass a rc:VerificationResultValue ; rdfs:label "pass" .
+rc:Fail a rc:VerificationResultValue ; rdfs:label "fail" .
+rc:Partial a rc:VerificationResultValue ; rdfs:label "partial" .
+rc:Error a rc:VerificationResultValue ; rdfs:label "error" .
+
+# -----------------------------------------------------------------------------
+# Caveats
+# -----------------------------------------------------------------------------
+
+rc:KnownCaveat a rdfs:Class ;
+    rdfs:comment "A known caveat, deficiency, unstable assumption, broken expectation, or non-obvious interpretation rule." .
+
+rc:SeverityLevel a rdfs:Class ;
+    rdfs:comment "Severity of a caveat or validation finding." .
+
+rc:hasKnownCaveat a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:KnownCaveat ;
+    rdfs:comment "Links a data asset to a known caveat." .
+
+rc:caveatDescription a rdf:Property ;
+    rdfs:domain rc:KnownCaveat ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Description of a caveat." .
+
+rc:violatedExpectation a rdf:Property ;
+    rdfs:domain rc:KnownCaveat ;
+    rdfs:range rc:Constraint ;
+    rdfs:comment "The expectation, rule, or constraint that does not hold." .
+
+rc:impact a rdf:Property ;
+    rdfs:domain rc:KnownCaveat ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Downstream impact of a caveat." .
+
+rc:severity a rdf:Property ;
+    rdfs:range rc:SeverityLevel ;
+    rdfs:comment "Severity of a caveat or validation finding." .
+
+rc:Minor a rc:SeverityLevel ; rdfs:label "minor" .
+rc:Moderate a rc:SeverityLevel ; rdfs:label "moderate" .
+rc:Severe a rc:SeverityLevel ; rdfs:label "severe" .

@@ -1,0 +1,494 @@
+@prefix rc:   <https://richcanopy.org/ns/rc#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# Rich Canopy base SHACL shapes.
+#
+# These shapes validate common authoring mistakes in graphs that choose to use
+# rc: terms. They are intentionally open: they do not use sh:closed, they do not
+# reject client-defined properties, and they should be run as an explicit
+# diagnostic rather than as a mandatory V1 commit gate.
+
+rc:DataAssetShape a sh:NodeShape ;
+    sh:targetClass rc:DataAsset ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "A data asset should have at most one string rdfs:label." ;
+    ] ;
+    sh:property [
+        sh:path rc:rowCountSnapshot ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "rowCountSnapshot must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:schemaStability ;
+        sh:maxCount 1 ;
+        sh:in ( rc:FixedSchema rc:InferredSchema rc:VariableSchema ) ;
+        sh:message "schemaStability must be FixedSchema, InferredSchema, or VariableSchema." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasKnownCaveat ;
+        sh:nodeKind sh:IRI ;
+        sh:message "hasKnownCaveat values should be named caveat resources." ;
+    ] .
+
+rc:TableShape a sh:NodeShape ;
+    sh:targetClass rc:Table ;
+    sh:property [
+        sh:path rc:hasColumn ;
+        sh:nodeKind sh:IRI ;
+        sh:message "Table columns should be named column resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:rowSemantics ;
+        sh:maxCount 1 ;
+        sh:in ( rc:EventRow rc:SnapshotRow rc:AggregateRow rc:DimensionRow ) ;
+        sh:message "rowSemantics must be EventRow, SnapshotRow, AggregateRow, or DimensionRow." ;
+    ] ;
+    sh:property [
+        sh:path rc:entityKey ;
+        sh:nodeKind sh:IRI ;
+        sh:message "entityKey values should be named column resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:snapshotTimestamp ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "snapshotTimestamp should be a named column resource." ;
+    ] .
+
+rc:ColumnShape a sh:NodeShape ;
+    sh:targetClass rc:Column ;
+    sh:property [
+        sh:path rc:columnName ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "columnName must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:physicalType ;
+        sh:maxCount 1 ;
+        sh:class rc:PhysicalType ;
+        sh:message "physicalType must be an rc:PhysicalType." ;
+    ] ;
+    sh:property [
+        sh:path rc:valueType ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "valueType should point to a named value-type resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:nullable ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+        sh:message "nullable must be a boolean if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:caseConvention ;
+        sh:maxCount 1 ;
+        sh:in ( rc:UpperCase rc:LowerCase rc:MixedCase ) ;
+        sh:message "caseConvention must be UpperCase, LowerCase, or MixedCase." ;
+    ] ;
+    sh:property [
+        sh:path rc:embeddedStructure ;
+        sh:maxCount 1 ;
+        sh:node rc:EmbeddedStructureShape ;
+        sh:message "embeddedStructure must match rc:EmbeddedStructureShape." ;
+    ] .
+
+rc:ColumnGroupShape a sh:NodeShape ;
+    sh:targetClass rc:ColumnGroup ;
+    sh:property [
+        sh:path rc:groupMember ;
+        sh:nodeKind sh:IRI ;
+        sh:message "groupMember values should be named column resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:groupValueType ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "groupValueType should point to a named value-type resource." ;
+    ] .
+
+rc:ValueTypeShape a sh:NodeShape ;
+    sh:targetClass rc:ValueType ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "A value type should have at most one string rdfs:label." ;
+    ] ;
+    sh:property [
+        sh:path rc:requiredPhysicalType ;
+        sh:maxCount 1 ;
+        sh:class rc:PhysicalType ;
+        sh:message "requiredPhysicalType must be an rc:PhysicalType." ;
+    ] ;
+    sh:property [
+        sh:path rc:acceptablePhysicalType ;
+        sh:class rc:PhysicalType ;
+        sh:message "acceptablePhysicalType values must be rc:PhysicalType resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:valueRange ;
+        sh:maxCount 1 ;
+        sh:node rc:ValueRangeShape ;
+        sh:message "valueRange must match rc:ValueRangeShape." ;
+    ] ;
+    sh:property [
+        sh:path rc:unit ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "unit must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:identifierNamespace ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "identifierNamespace must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasAllowedValues ;
+        sh:maxCount 1 ;
+        sh:node rc:AllowedValuesShape ;
+        sh:message "hasAllowedValues must match rc:AllowedValuesShape." ;
+    ] .
+
+rc:ValueRangeShape a sh:NodeShape ;
+    sh:targetClass rc:ValueRange ;
+    sh:or (
+        [ sh:property [ sh:path rc:minInclusive ; sh:minCount 1 ] ]
+        [ sh:property [ sh:path rc:maxInclusive ; sh:minCount 1 ] ]
+        [ sh:property [ sh:path rc:minExclusive ; sh:minCount 1 ] ]
+        [ sh:property [ sh:path rc:maxExclusive ; sh:minCount 1 ] ]
+    ) ;
+    sh:property [
+        sh:path rc:minInclusive ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path rc:maxInclusive ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path rc:minExclusive ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path rc:maxExclusive ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:message "ValueRange must declare at least one bound." .
+
+rc:AllowedValuesShape a sh:NodeShape ;
+    sh:targetClass rc:AllowedValues ;
+    sh:property [
+        sh:path rc:allowedValue ;
+        sh:minCount 1 ;
+        sh:message "AllowedValues must declare at least one allowedValue." ;
+    ] .
+
+rc:EmbeddedStructureShape a sh:NodeShape ;
+    sh:targetClass rc:EmbeddedStructure ;
+    sh:property [
+        sh:path rc:embeddedFormat ;
+        sh:maxCount 1 ;
+        sh:class rc:DataEncodingFormat ;
+        sh:message "embeddedFormat must be an rc:DataEncodingFormat." ;
+    ] ;
+    sh:property [
+        sh:path rc:embeddedElementType ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "embeddedElementType must be a string if declared." ;
+    ] .
+
+rc:ForeignKeyShape a sh:NodeShape ;
+    sh:targetClass rc:ForeignKey ;
+    sh:property [
+        sh:path rc:foreignKeyFrom ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "ForeignKey must have exactly one named foreignKeyFrom column." ;
+    ] ;
+    sh:property [
+        sh:path rc:foreignKeyTo ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "ForeignKey must have exactly one named foreignKeyTo column." ;
+    ] ;
+    sh:property [
+        sh:path rc:declared ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+        sh:message "declared must be a boolean if supplied." ;
+    ] ;
+    sh:property [
+        sh:path rc:referentialIntegrity ;
+        sh:maxCount 1 ;
+        sh:in ( rc:StrictIntegrity rc:EventualIntegrity rc:PartialIntegrity ) ;
+        sh:message "referentialIntegrity must be StrictIntegrity, EventualIntegrity, or PartialIntegrity." ;
+    ] .
+
+rc:SharedIdentifierShape a sh:NodeShape ;
+    sh:targetClass rc:SharedIdentifier ;
+    sh:property [
+        sh:path rc:identifyingColumn ;
+        sh:minCount 2 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "SharedIdentifier should link at least two named identifying columns." ;
+    ] .
+
+rc:DerivationShape a sh:NodeShape ;
+    sh:targetClass rc:Derivation ;
+    sh:property [
+        sh:path rc:derivedColumn ;
+        sh:nodeKind sh:IRI ;
+        sh:message "derivedColumn values should be named column resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:sourceColumn ;
+        sh:nodeKind sh:IRI ;
+        sh:message "sourceColumn values should be named column resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasDerivationProperty ;
+        sh:in ( rc:Deterministic rc:Invertible rc:Lossy ) ;
+        sh:message "hasDerivationProperty values should be Deterministic, Invertible, or Lossy." ;
+    ] .
+
+rc:AggregationShape a sh:NodeShape ;
+    sh:targetClass rc:Aggregation ;
+    sh:property [
+        sh:path rc:sourceDataset ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "sourceDataset should be a named data asset resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:targetDataset ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "targetDataset should be a named data asset resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:groupByColumn ;
+        sh:nodeKind sh:IRI ;
+        sh:message "groupByColumn values should be named column resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasAggregatedColumn ;
+        sh:node rc:AggregatedColumnShape ;
+        sh:message "hasAggregatedColumn values should match rc:AggregatedColumnShape." ;
+    ] .
+
+rc:AggregatedColumnShape a sh:NodeShape ;
+    sh:targetClass rc:AggregatedColumn ;
+    sh:property [
+        sh:path rc:targetColumn ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "AggregatedColumn must name exactly one targetColumn." ;
+    ] ;
+    sh:property [
+        sh:path rc:aggregationSourceColumn ;
+        sh:nodeKind sh:IRI ;
+        sh:message "aggregationSourceColumn values should be named column resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:withinGroupOrdering ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "withinGroupOrdering should be a named column resource." ;
+    ] .
+
+rc:PhysicalLayoutShape a sh:NodeShape ;
+    sh:targetClass rc:PhysicalLayout ;
+    sh:property [
+        sh:path rc:fileFormat ;
+        sh:maxCount 1 ;
+        sh:class rc:FileFormat ;
+        sh:message "fileFormat must be an rc:FileFormat if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasRowOrdering ;
+        sh:maxCount 1 ;
+        sh:node rc:RowOrderingShape ;
+        sh:message "hasRowOrdering must match rc:RowOrderingShape." ;
+    ] .
+
+rc:RowOrderingShape a sh:NodeShape ;
+    sh:targetClass rc:RowOrdering ;
+    sh:property [
+        sh:path rc:hasOrderingKey ;
+        sh:node rc:OrderingKeyShape ;
+        sh:message "hasOrderingKey values must match rc:OrderingKeyShape." ;
+    ] .
+
+rc:OrderingKeyShape a sh:NodeShape ;
+    sh:targetClass rc:OrderingKey ;
+    sh:property [
+        sh:path rc:keyColumn ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "OrderingKey must name exactly one keyColumn." ;
+    ] ;
+    sh:property [
+        sh:path rc:keyDirection ;
+        sh:maxCount 1 ;
+        sh:in ( rc:Ascending rc:Descending ) ;
+        sh:message "keyDirection must be Ascending or Descending." ;
+    ] ;
+    sh:property [
+        sh:path rc:keyPrecedence ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "keyPrecedence must be an integer greater than or equal to 1." ;
+    ] .
+
+rc:PartitionSchemeShape a sh:NodeShape ;
+    sh:targetClass rc:PartitionScheme ;
+    sh:property [
+        sh:path rc:partitionColumn ;
+        sh:nodeKind sh:IRI ;
+        sh:message "partitionColumn values should be named column resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:partitionGranularity ;
+        sh:maxCount 1 ;
+        sh:in ( rc:Daily rc:Hourly rc:Monthly rc:ByValue ) ;
+        sh:message "partitionGranularity must be Daily, Hourly, Monthly, or ByValue." ;
+    ] .
+
+rc:PartitionLevelShape a sh:NodeShape ;
+    sh:targetClass rc:PartitionLevel ;
+    sh:property [
+        sh:path rc:levelPrecedence ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "levelPrecedence must be an integer greater than or equal to 1." ;
+    ] ;
+    sh:property [
+        sh:path rc:levelColumn ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "levelColumn must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:levelGranularity ;
+        sh:maxCount 1 ;
+        sh:in ( rc:Daily rc:Hourly rc:Monthly rc:ByValue ) ;
+        sh:message "levelGranularity must be Daily, Hourly, Monthly, or ByValue." ;
+    ] .
+
+rc:ProfileObservationShape a sh:NodeShape ;
+    sh:targetClass rc:ProfileObservation ;
+    sh:property [
+        sh:path rc:observedAt ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+        sh:message "observedAt must be an xsd:dateTime if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:observedAsset ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "observedAsset should be a named data asset resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:observedColumn ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "observedColumn should be a named column resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:sampleSize ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "sampleSize must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:rowCount ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "rowCount must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:nullCount ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "nullCount must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:distinctCount ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "distinctCount must be a non-negative integer." ;
+    ] .
+
+rc:EvidenceShape a sh:NodeShape ;
+    sh:targetClass rc:Evidence ;
+    sh:property [
+        sh:path rc:summary ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "Evidence summary must be a single string if declared." ;
+    ] .
+
+rc:KnownCaveatShape a sh:NodeShape ;
+    sh:targetClass rc:KnownCaveat ;
+    sh:property [
+        sh:path rc:caveatDescription ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "caveatDescription must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:impact ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "impact must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:severity ;
+        sh:maxCount 1 ;
+        sh:in ( rc:Minor rc:Moderate rc:Severe ) ;
+        sh:message "severity must be Minor, Moderate, or Severe." ;
+    ] .
+
+rc:VerificationAttestationShape a sh:NodeShape ;
+    sh:targetClass rc:VerificationAttestation ;
+    sh:property [
+        sh:path rc:verificationTime ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+        sh:message "verificationTime must be an xsd:dateTime if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:verificationResult ;
+        sh:maxCount 1 ;
+        sh:in ( rc:Pass rc:Fail rc:Partial rc:Error ) ;
+        sh:message "verificationResult must be Pass, Fail, Partial, or Error." ;
+    ] ;
+    sh:property [
+        sh:path rc:verificationDetails ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "verificationDetails must be a string if declared." ;
+    ] .
