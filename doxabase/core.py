@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import warnings
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,6 +28,17 @@ GraphName = TypingLiteral[
 ROOT = Path(__file__).resolve().parents[1]
 BASE_ONTOLOGY_PATH = ROOT / "ontology" / "rc_core.ttl"
 BASE_SHAPES_PATH = ROOT / "ontology" / "rc_shapes.ttl"
+
+SEARCH_INDEX_SQL = """
+CREATE VIRTUAL TABLE IF NOT EXISTS literal_search USING fts5(
+    graph UNINDEXED,
+    subject UNINDEXED,
+    subject_kind UNINDEXED,
+    predicate UNINDEXED,
+    text,
+    tokenize = 'unicode61'
+)
+"""
 
 RCG_PREFIX = "https://richcanopy.org/graph/"
 
@@ -243,6 +255,7 @@ class DoxaBase:
         self.path = Path(path)
         self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
+        self._search_index_error: str | None = None
         if initialize:
             self._ensure_schema()
             self._ensure_default_graphs()
@@ -751,7 +764,7 @@ class DoxaBase:
         self._ensure_mutable(graph, allow_immutable=allow_immutable)
         self._conn.execute("DELETE FROM quads WHERE graph = ?", (graph,))
         self._conn.commit()
-        self._rebuild_search_index()
+        self._rebuild_search_index(raise_on_failure=False)
 
     def validate_graph(
         self,
@@ -857,16 +870,9 @@ class DoxaBase:
             CREATE INDEX IF NOT EXISTS quads_gspo ON quads(graph, subject, predicate, object);
             CREATE INDEX IF NOT EXISTS quads_graph ON quads(graph);
 
-            CREATE VIRTUAL TABLE IF NOT EXISTS literal_search USING fts5(
-                graph UNINDEXED,
-                subject UNINDEXED,
-                subject_kind UNINDEXED,
-                predicate UNINDEXED,
-                text,
-                tokenize = 'unicode61'
-            );
             """
         )
+        self._create_search_index()
         self._conn.commit()
         self._rebuild_search_index()
 
@@ -943,11 +949,30 @@ class DoxaBase:
         )
         self._conn.commit()
         inserted = self.triple_count(graph) - before
-        self._rebuild_search_index()
+        self._rebuild_search_index(raise_on_failure=False)
         return inserted
 
-    def _rebuild_search_index(self) -> None:
-        self._conn.execute("DELETE FROM literal_search")
+    def _create_search_index(self) -> None:
+        self._conn.execute(SEARCH_INDEX_SQL)
+
+    def _rebuild_search_index(self, *, raise_on_failure: bool = True) -> None:
+        try:
+            self._rebuild_search_index_once()
+            self._search_index_error = None
+        except sqlite3.Error as exc:
+            self._conn.rollback()
+            self._search_index_error = str(exc)
+            message = (
+                "DoxaBase search index rebuild failed; graph data was preserved, "
+                "but lexical search may be stale or unavailable."
+            )
+            if raise_on_failure:
+                raise DoxaBaseError(message) from exc
+            warnings.warn(message, RuntimeWarning, stacklevel=2)
+
+    def _rebuild_search_index_once(self) -> None:
+        self._conn.execute("DROP TABLE IF EXISTS literal_search")
+        self._create_search_index()
         self._conn.execute(
             """
             INSERT INTO literal_search

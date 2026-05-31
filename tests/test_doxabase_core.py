@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 
 import pytest
@@ -169,6 +170,77 @@ def test_search_finds_recorded_observation_and_evidence(tmp_path: Path) -> None:
     assert observations.matches[0].types == [RC + "Observation"]
     assert evidence.matches[0].iri == record.evidence_iri
     assert evidence.matches[0].graph == "evidence"
+
+
+def test_scratch_capsule_observation_write_recovers_search_index(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "doxabase-enron-fieldtrial.sqlite")
+    db._conn.execute("DROP TABLE literal_search_data")
+    db._conn.commit()
+
+    record = db.record_observation(
+        summary="Enron EML messages are the richer analyst-facing table.",
+        evidence_summary="README documents EML parsing as including bodies and reply analysis.",
+        evidence_sources=[
+            "/home/james/github.com/jamtho/enron-emails/README.md",
+        ],
+    )
+
+    assert record.evidence_iri is not None
+    assert db.search("richer analyst", graph="observations").matches[0].iri == (
+        record.observation_iri
+    )
+    assert db.search("reply analysis", graph="evidence").matches[0].iri == (
+        record.evidence_iri
+    )
+
+
+def test_search_index_survives_repeated_rebuilds_after_scratch_import(
+    tmp_path: Path,
+) -> None:
+    capsule = tmp_path / "capsule.sqlite"
+    db = DoxaBase.create(capsule)
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:EnronEmails a rc:Dataset ;
+            rdfs:label "Enron Emails" ;
+            rc:summary "README-derived scratch map for the Enron email corpus." .
+        """,
+        graph="map",
+    )
+    db.record_observation(
+        summary="Enron EML messages include body_top and reply depth fields.",
+        evidence_summary="README EML pipeline section.",
+        evidence_sources=["/home/james/github.com/jamtho/enron-emails/README.md"],
+    )
+    db.close()
+
+    reopened = DoxaBase(capsule)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        record = reopened.record_observation(
+            summary="Enron embeddings join to messages by doc_id.",
+            evidence_summary="README embeddings section.",
+            evidence_sources=[
+                "/home/james/github.com/jamtho/enron-emails/README.md",
+            ],
+        )
+
+    runtime_warnings = [
+        warning
+        for warning in caught
+        if issubclass(warning.category, RuntimeWarning)
+    ]
+    assert runtime_warnings == []
+    assert reopened.search("doc_id", graph="observations").matches[0].iri == (
+        record.observation_iri
+    )
+    reopened.close()
 
 
 def test_search_index_updates_after_graph_clear(tmp_path: Path) -> None:
