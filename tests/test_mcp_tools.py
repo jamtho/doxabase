@@ -46,3 +46,17 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert overview["key_counts"]["tables"] >= 7
     assert tables["count"] >= 7
     assert validation["conforms"] is True
+
+
+def test_fixture_loading_replace_keeps_all_fixtures(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+
+    load_result = load_example_fixtures_tool(db, replace=True)
+    tables = list_entities_tool(db, type="rc:Table", graph="map")
+    labels = {entity["label"] for entity in tables["entities"]}
+
+    assert load_result["replace"] is True
+    assert "AIS Daily Broadcast Positions" in labels
+    assert "AIS Daily Vessel Index" in labels
+    assert "Gamma Market Snapshots" in labels
+    assert "Trade Events" in labels

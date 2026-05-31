@@ -4,8 +4,10 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from rdflib import Dataset
+
 from doxybase.agent_docs import get_agent_doc, list_agent_docs
-from doxybase.core import DoxyBase, ROOT
+from doxybase.core import DoxyBase, RCG_PREFIX, ROOT
 
 EXAMPLE_FIXTURES = (
     ROOT / "examples" / "manifest-prototype-rc" / "ais.trig",
@@ -67,8 +69,11 @@ def import_trig_tool(
 def load_example_fixtures_tool(db: DoxyBase, replace: bool = False) -> dict[str, Any]:
     results = []
     totals: dict[str, int] = {}
+    if replace:
+        for graph in _fixture_graph_roles(EXAMPLE_FIXTURES):
+            db.clear_graph(graph)
     for fixture in EXAMPLE_FIXTURES:
-        imported = db.import_trig(fixture, replace=replace)
+        imported = db.import_trig(fixture, replace=False)
         for graph, count in imported.items():
             totals[graph] = totals.get(graph, 0) + count
         results.append(
@@ -103,3 +108,21 @@ def _resolve_path(path: str) -> Path:
     if candidate.is_absolute():
         return candidate
     return ROOT / candidate
+
+
+def _fixture_graph_roles(fixtures: tuple[Path, ...]) -> list[str]:
+    roles: list[str] = []
+    for fixture in fixtures:
+        dataset = Dataset()
+        dataset.parse(fixture, format="trig")
+        for context in dataset.graphs():
+            if len(context) == 0:
+                continue
+            identifier = str(context.identifier)
+            role = (
+                identifier.removeprefix(RCG_PREFIX)
+                if identifier.startswith(RCG_PREFIX)
+                else identifier
+            )
+            roles.append(role)
+    return list(dict.fromkeys(roles))

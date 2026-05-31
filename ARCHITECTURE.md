@@ -204,7 +204,6 @@ Expected state at the time of writing:
 - The MCP interface exposes inspection and validation, not graph editing or context slices.
 - There is no bounded dataset/table description API, so agents may need to read fixture files directly to recover columns, physical layout, caveats, and provenance.
 - There is no first-class observation/evidence writer; agents currently need to author RDF/TriG and import it.
-- Example fixture loading with `replace=True` clears graph roles per fixture import, which can leave only the last fixture data in shared mutable roles.
 - The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and non-secret storage metadata are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
 
@@ -214,11 +213,10 @@ Recommended next implementation steps:
 
 1. Add bounded dataset/table description, either as a focused `describe_dataset()` API or as the first policy for `preview_context_graph()` and `get_context_graph()`.
 2. Add observation recording as graph resources with linked evidence.
-3. Tighten multi-fixture replacement semantics so `replace=True` clears each targeted role once before appending all fixtures, or returns an explicit warning.
-4. Add lexical search over labels, comments, evidence summaries, and observation notes.
-5. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
-6. Add slice metadata and revision scaffolding.
-7. Add MCP tools for context retrieval after the Python API is stable.
+3. Add lexical search over labels, comments, evidence summaries, and observation notes.
+4. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
+5. Add slice metadata and revision scaffolding.
+6. Add MCP tools for context retrieval after the Python API is stable.
 
 ## AIS/DuckDB Pressure Points
 

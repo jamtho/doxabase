@@ -32,7 +32,7 @@ Imports a TriG file into graph roles. Fixture graph IRIs such as `https://richca
 
 Convenience tool that imports the AIS and Polymarket RC fixtures.
 
-When called with `replace=true`, replacement is applied during each fixture import. Because the bundled fixtures share graph roles such as `map`, `ontology`, `observations`, and `evidence`, the later fixture can clear data imported by the earlier fixture. Until this behavior is tightened, prefer loading example fixtures without replacement unless you are prepared to re-import earlier fixtures.
+When called with `replace=true`, DoxyBase clears the graph roles used by the bundled fixture set once, then imports all fixtures into those roles. This resets the example fixture data without letting later fixtures erase earlier fixtures.
 
 `doxybase.validate_graph`
 
