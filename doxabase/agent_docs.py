@@ -71,6 +71,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "executable-catalog.md",
     ),
     AgentDoc(
+        id="field_trials",
+        title="Agent Field Trials",
+        description="How to run bounded sub-agent trials and turn friction into product signal.",
+        path=DOCS_DIR / "field-trials.md",
+    ),
+    AgentDoc(
         id="api_reference",
         title="API Reference",
         description="Small Python API reference for the current implementation.",

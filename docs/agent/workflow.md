@@ -3,7 +3,7 @@
 Use this sequence when arriving cold in a DoxaBase capsule.
 
 1. Call `doxabase.list_docs`.
-2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `observation_rdf`, and `executable_catalog` if you do not know the project conventions.
+2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `observation_rdf`, `executable_catalog`, and `field_trials` if you do not know the project conventions.
 3. Call `doxabase.graph_overview` to inspect named graphs, counts, common classes, and predicates.
 4. Call `doxabase.search` when you have a remembered term, caveat, column name, source note, or question-shaped keyword.
 5. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.

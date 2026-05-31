@@ -71,6 +71,7 @@ Not implemented yet:
 
 - `doxabase_design_docs/` - V1 design brief, API sketch, storage sketch, and ontology notes.
 - `docs/agent/` - short operational docs exposed through MCP.
+- `docs/agent/field-trials.md` - playbook for running bounded sub-agent product trials.
 - `doxabase/` - Python package.
 - `ontology/rc_core.ttl` - draft immutable `rc:` base ontology seed graph.
 - `ontology/rc_shapes.ttl` - draft immutable open SHACL shape seed graph.
