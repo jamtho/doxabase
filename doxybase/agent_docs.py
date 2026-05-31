@@ -47,6 +47,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "mcp-tools.md",
     ),
     AgentDoc(
+        id="observation_recording",
+        title="Observation Recording",
+        description="How to record point-in-time findings and linked evidence.",
+        path=DOCS_DIR / "observation-recording.md",
+    ),
+    AgentDoc(
         id="api_reference",
         title="API Reference",
         description="Small Python API reference for the current implementation.",

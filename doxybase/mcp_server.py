@@ -15,13 +15,14 @@ from doxybase.mcp_tools import (
     list_docs_tool,
     list_entities_tool,
     load_example_fixtures_tool,
+    record_observation_tool,
     validate_graph_tool,
 )
 
 SERVER_INSTRUCTIONS = """DoxyBase is a local RDF memory capsule for data projects.
 Start with doxybase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, bounded dataset description, import, fixture loading, and validation; context slicing is not implemented yet."""
+Current V1 tools support inspection, bounded dataset description, observation recording, import, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
@@ -70,6 +71,39 @@ def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
         """Return bounded schema, layout, caveat, and provenance context for one dataset."""
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxybase.record_observation")
+    def record_observation(
+        summary: str,
+        observation_type: str = "observation",
+        observed_asset: str | None = None,
+        observed_column: str | None = None,
+        observed_at: str | None = None,
+        observed_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: list[str] | None = None,
+        sample_size: int | None = None,
+        row_count: int | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+    ) -> dict[str, Any]:
+        """Record a structured observation, optionally linked to evidence."""
+
+        return record_observation_tool(
+            db,
+            summary=summary,
+            observation_type=observation_type,
+            observed_asset=observed_asset,
+            observed_column=observed_column,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            sample_size=sample_size,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+        )
 
     @server.tool(name="doxybase.import_trig")
     def import_trig(path: str, replace: bool = False) -> dict[str, Any]:

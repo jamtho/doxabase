@@ -10,6 +10,7 @@ from doxybase.mcp_tools import (
     list_docs_tool,
     list_entities_tool,
     load_example_fixtures_tool,
+    record_observation_tool,
     validate_graph_tool,
 )
 
@@ -24,6 +25,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxybase.graph_overview" in tool_names
     assert "doxybase.list_entities" in tool_names
     assert "doxybase.describe_dataset" in tool_names
+    assert "doxybase.record_observation" in tool_names
     assert "doxybase.load_example_fixtures" in tool_names
     assert "doxybase.validate_graph" in tool_names
 
@@ -73,6 +75,27 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         and "Parquet schemas are inferred" in caveat["description"]
         for caveat in result["caveats"]
     )
+
+
+def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+
+    result = record_observation_tool(
+        db,
+        summary="MCP helper wrote a structured observation.",
+        observed_by="urn:doxybase:test-agent",
+        evidence_summary="Evidence written by the MCP helper test.",
+        evidence_sources=["tests/test_mcp_tools.py"],
+    )
+
+    assert result["observation_iri"].startswith(
+        "https://richcanopy.org/doxybase/generated/observation/"
+    )
+    assert result["observation_type"] == "observation"
+    assert result["evidence_iri"] is not None
+    assert result["observation_triples"] > 0
+    assert result["evidence_triples"] > 0
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
 def test_fixture_loading_replace_keeps_all_fixtures(tmp_path: Path) -> None:

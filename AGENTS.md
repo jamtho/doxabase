@@ -121,9 +121,8 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add first-class observation and evidence recording.
-2. Add lexical search over labels, comments, evidence summaries, and observation
+1. Add lexical search over labels, comments, evidence summaries, and observation
    notes.
-3. Add non-secret executable catalog metadata for physical layouts and storage
+2. Add non-secret executable catalog metadata for physical layouts and storage
    access patterns.
-4. Add graph slice/revision metadata and broader MCP context retrieval tools.
+3. Add graph slice/revision metadata and broader MCP context retrieval tools.

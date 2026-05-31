@@ -1,12 +1,15 @@
 from pathlib import Path
 
 import pytest
+from rdflib import Literal, URIRef
+from rdflib.namespace import DCTERMS, RDF
 
 from doxybase import DoxyBase, DoxyBaseError, ImmutableGraphError
 
 ROOT = Path(__file__).resolve().parents[1]
 AIS_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "ais.trig"
 POLYMARKET_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "polymarket.trig"
+RC = "https://richcanopy.org/ns/rc#"
 
 
 def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
@@ -139,3 +142,64 @@ def test_validate_graph_uses_base_and_project_shapes(tmp_path: Path) -> None:
 
     assert result.conforms, result.report_text
     assert result.result_count == 0
+
+
+def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+    before = db.graph_overview().key_counts["observations"]
+
+    result = db.record_observation(
+        summary="AIS daily broadcasts were sampled for row coverage.",
+        observation_type="profile",
+        observed_asset="https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
+        observed_at="2026-05-31T12:00:00Z",
+        observed_by="urn:doxybase:test-agent",
+        evidence_summary="Synthetic test evidence for the observation writer.",
+        evidence_sources=["tests/test_doxybase_core.py"],
+        row_count=123,
+        distinct_count=45,
+    )
+
+    assert result.observation_type == "profile"
+    assert result.evidence_iri is not None
+    assert result.observation_triples > 0
+    assert result.evidence_triples > 0
+    assert db.graph_overview().key_counts["observations"] == before + 1
+
+    observations = db.to_graph(["observations"])
+    evidence = db.to_graph(["evidence"])
+    observation_iri = URIRef(result.observation_iri)
+    evidence_iri = URIRef(result.evidence_iri)
+
+    assert (observation_iri, RDF.type, URIRef(RC + "ProfileObservation")) in observations
+    assert (
+        observation_iri,
+        URIRef(RC + "rowCount"),
+        Literal(123),
+    ) in observations
+    assert (
+        observation_iri,
+        URIRef(RC + "evidence"),
+        evidence_iri,
+    ) in observations
+    assert (evidence_iri, RDF.type, URIRef(RC + "Evidence")) in evidence
+    assert (
+        evidence_iri,
+        DCTERMS.source,
+        Literal("tests/test_doxybase_core.py"),
+    ) in evidence
+
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxyBaseError, match="summary"):
+        db.record_observation("   ")
+    with pytest.raises(DoxyBaseError, match="row_count"):
+        db.record_observation("Bad count", row_count=-1)
+    with pytest.raises(DoxyBaseError, match="observation_type"):
+        db.record_observation("Bad type", observation_type="note")  # type: ignore[arg-type]

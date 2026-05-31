@@ -84,6 +84,7 @@ DoxyBase.import_trig(source, replace=False)
 DoxyBase.graph_overview(limit=100)
 DoxyBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
 DoxyBase.describe_dataset(iri, graph="map")
+DoxyBase.record_observation(summary, ...)
 DoxyBase.validate_graph(scope="map", limit_results=100)
 DoxyBase.to_graph(graphs=None)
 ```
@@ -138,6 +139,7 @@ Current MCP tools:
 - `doxybase.graph_overview`
 - `doxybase.list_entities`
 - `doxybase.describe_dataset`
+- `doxybase.record_observation`
 - `doxybase.import_trig`
 - `doxybase.load_example_fixtures`
 - `doxybase.validate_graph`
@@ -155,6 +157,7 @@ The MCP docs tools expose these docs:
 - `agent_workflow`
 - `ontology_primer`
 - `mcp_tools`
+- `observation_recording`
 - `api_reference`
 - `fixture_notes`
 
@@ -204,7 +207,6 @@ Expected state at the time of writing:
 - There is no bounded context graph retrieval yet.
 - There is no search/FTS yet.
 - The MCP interface exposes inspection and validation, not graph editing or context slices.
-- There is no first-class observation/evidence writer; agents currently need to author RDF/TriG and import it.
 - The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and non-secret storage metadata are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
 
@@ -212,11 +214,18 @@ Expected state at the time of writing:
 
 Recommended next implementation steps:
 
-1. Add observation recording as graph resources with linked evidence.
-2. Add lexical search over labels, comments, evidence summaries, and observation notes.
-3. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
-4. Add slice metadata and revision scaffolding.
-5. Add broader context graph retrieval after the focused dataset description API has settled.
+1. Add lexical search over labels, comments, evidence summaries, and observation notes.
+2. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
+3. Add slice metadata and revision scaffolding.
+4. Add broader context graph retrieval after the focused dataset description API has settled.
+
+## Observation Recording Model
+
+`record_observation()` writes structured `rc:Observation` or `rc:ProfileObservation` resources into the `observations` graph. If evidence fields are supplied, it also writes one linked `rc:Evidence` resource into the `evidence` graph.
+
+This keeps routine online findings in RDF without requiring agents to hand-author TriG. The V1 writer deliberately accepts structured fields rather than arbitrary RDF snippets; graph revision APIs can handle richer edits later.
+
+Use observations for point-in-time or source-scoped findings. Consolidated, durable knowledge still belongs in `map`, ideally with links back to supporting observations or evidence when that provenance matters.
 
 ## AIS/DuckDB Pressure Points
 
@@ -228,4 +237,4 @@ The session showed that DoxyBase can preserve semantic context, caveats, profile
 - dataset-specific path templates and storage layout, including distinct broadcast and index layouts;
 - non-secret storage connection metadata such as bucket, prefix, endpoint profile, and path-style access requirements;
 - caveats that should travel with generated queries and results;
-- a direct way to record query outputs as observations with evidence.
+- richer ways to consolidate query outputs from observations into durable map assertions.

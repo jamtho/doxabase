@@ -59,6 +59,38 @@ def describe_dataset_tool(
     return asdict(db.describe_dataset(iri=iri, graph=graph))
 
 
+def record_observation_tool(
+    db: DoxyBase,
+    summary: str,
+    observation_type: str = "observation",
+    observed_asset: str | None = None,
+    observed_column: str | None = None,
+    observed_at: str | None = None,
+    observed_by: str | None = None,
+    evidence_summary: str | None = None,
+    evidence_sources: list[str] | None = None,
+    sample_size: int | None = None,
+    row_count: int | None = None,
+    null_count: int | None = None,
+    distinct_count: int | None = None,
+) -> dict[str, Any]:
+    result = db.record_observation(
+        summary=summary,
+        observation_type=observation_type,  # type: ignore[arg-type]
+        observed_asset=observed_asset,
+        observed_column=observed_column,
+        observed_at=observed_at,
+        observed_by=observed_by,
+        evidence_summary=evidence_summary,
+        evidence_sources=evidence_sources,
+        sample_size=sample_size,
+        row_count=row_count,
+        null_count=null_count,
+        distinct_count=distinct_count,
+    )
+    return asdict(result)
+
+
 def import_trig_tool(
     db: DoxyBase,
     path: str,

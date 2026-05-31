@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable, Literal as TypingLiteral
+from uuid import uuid4
 
 from pyshacl import validate
 from rdflib import BNode, Dataset, Graph, Literal, URIRef
-from rdflib.namespace import RDF, RDFS
+from rdflib.namespace import DCTERMS, RDF, RDFS, XSD
 from rdflib.term import Identifier, Node
 
 GraphName = TypingLiteral[
@@ -165,6 +166,15 @@ class DatasetDescription:
     caveats: list[ResourceSummary]
     provenance: list[ResourceSummary]
     related_datasets: list[RelatedDatasetDescription]
+
+
+@dataclass(frozen=True)
+class ObservationRecord:
+    observation_iri: str
+    observation_type: str
+    evidence_iri: str | None
+    observation_triples: int
+    evidence_triples: int
 
 
 @dataclass(frozen=True)
@@ -420,6 +430,151 @@ class DoxyBase:
                 for provenance_iri in self._objects(data_graphs, dataset_iri, "rc:hasProvenance")
             ],
             related_datasets=self._related_datasets(dataset_iri, data_graphs, lookup_graphs),
+        )
+
+    def record_observation(
+        self,
+        summary: str,
+        *,
+        observation_type: TypingLiteral["observation", "profile"] = "observation",
+        observed_asset: str | None = None,
+        observed_column: str | None = None,
+        observed_at: datetime | str | None = None,
+        observed_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: Iterable[str] | None = None,
+        sample_size: int | None = None,
+        row_count: int | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+        observation_iri: str | None = None,
+        evidence_iri: str | None = None,
+    ) -> ObservationRecord:
+        if not summary.strip():
+            raise DoxyBaseError("Observation summary must not be empty")
+        observation_class = {
+            "observation": "rc:Observation",
+            "profile": "rc:ProfileObservation",
+        }.get(observation_type)
+        if observation_class is None:
+            raise DoxyBaseError(
+                "observation_type must be either 'observation' or 'profile'"
+            )
+        for name, value in {
+            "sample_size": sample_size,
+            "row_count": row_count,
+            "null_count": null_count,
+            "distinct_count": distinct_count,
+        }.items():
+            self._ensure_non_negative(name, value)
+
+        evidence_source_values = (
+            [evidence_sources]
+            if isinstance(evidence_sources, str)
+            else list(evidence_sources or [])
+        )
+        should_write_evidence = bool(
+            evidence_summary or evidence_source_values or evidence_iri
+        )
+        observation_subject = URIRef(observation_iri or self._mint_iri("observation"))
+        evidence_subject = (
+            URIRef(evidence_iri or self._mint_iri("evidence"))
+            if should_write_evidence
+            else None
+        )
+
+        observation_graph = Graph()
+        self._bind_prefixes(observation_graph)
+        observation_graph.add(
+            (observation_subject, RDF.type, URIRef(self.expand_iri(observation_class)))
+        )
+        observation_graph.add(
+            (observation_subject, URIRef(self.expand_iri("rc:summary")), Literal(summary))
+        )
+        observation_graph.add(
+            (
+                observation_subject,
+                URIRef(self.expand_iri("rc:observedAt")),
+                self._datetime_literal(observed_at),
+            )
+        )
+        if observed_asset is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedAsset")),
+                    URIRef(self.expand_iri(observed_asset)),
+                )
+            )
+        if observed_column is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedColumn")),
+                    URIRef(self.expand_iri(observed_column)),
+                )
+            )
+        if observed_by is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedBy")),
+                    self._resource_or_literal(observed_by),
+                )
+            )
+        for predicate, value in (
+            ("rc:sampleSize", sample_size),
+            ("rc:rowCount", row_count),
+            ("rc:nullCount", null_count),
+            ("rc:distinctCount", distinct_count),
+        ):
+            if value is not None:
+                observation_graph.add(
+                    (
+                        observation_subject,
+                        URIRef(self.expand_iri(predicate)),
+                        Literal(value, datatype=XSD.integer),
+                    )
+                )
+        if evidence_subject is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:evidence")),
+                    evidence_subject,
+                )
+            )
+
+        evidence_triples = 0
+        if evidence_subject is not None:
+            evidence_graph = Graph()
+            self._bind_prefixes(evidence_graph)
+            evidence_graph.add(
+                (
+                    evidence_subject,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:Evidence")),
+                )
+            )
+            if evidence_summary:
+                evidence_graph.add(
+                    (
+                        evidence_subject,
+                        URIRef(self.expand_iri("rc:summary")),
+                        Literal(evidence_summary),
+                    )
+                )
+            for source in evidence_source_values:
+                evidence_graph.add((evidence_subject, DCTERMS.source, Literal(source)))
+            evidence_triples = self._insert_graph("evidence", evidence_graph)
+
+        observation_triples = self._insert_graph("observations", observation_graph)
+        return ObservationRecord(
+            observation_iri=str(observation_subject),
+            observation_type=observation_type,
+            evidence_iri=str(evidence_subject) if evidence_subject is not None else None,
+            observation_triples=observation_triples,
+            evidence_triples=evidence_triples,
         )
 
     def import_turtle(
@@ -991,6 +1146,42 @@ class DoxyBase:
 
     def _types_from_graphs(self, graphs: list[str], subject: str) -> list[str]:
         return self._objects(graphs, subject, str(RDF.type))
+
+    def _mint_iri(self, kind: str) -> str:
+        return f"https://richcanopy.org/doxybase/generated/{kind}/{uuid4()}"
+
+    def _bind_prefixes(self, graph: Graph) -> None:
+        for prefix, namespace in PREFIXES.items():
+            graph.bind(prefix, namespace)
+
+    def _datetime_literal(self, value: datetime | str | None) -> Literal:
+        if value is None:
+            dt = datetime.now(UTC)
+        elif isinstance(value, datetime):
+            dt = value
+        else:
+            text = value.strip()
+            if text.endswith("Z"):
+                text = f"{text[:-1]}+00:00"
+            try:
+                dt = datetime.fromisoformat(text)
+            except ValueError as exc:
+                raise DoxyBaseError(
+                    "observed_at must be an ISO 8601 datetime"
+                ) from exc
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return Literal(dt.astimezone(UTC).isoformat(), datatype=XSD.dateTime)
+
+    def _resource_or_literal(self, value: str) -> Identifier:
+        expanded = self.expand_iri(value)
+        if "://" in expanded or expanded.startswith("urn:") or ":" in value:
+            return URIRef(expanded)
+        return Literal(value)
+
+    def _ensure_non_negative(self, name: str, value: int | None) -> None:
+        if value is not None and value < 0:
+            raise DoxyBaseError(f"{name} must be non-negative")
 
     def _graph_filter(self, graphs: list[str], *, alias: str | None = None) -> tuple[str, list[str]]:
         if not graphs:

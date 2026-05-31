@@ -25,10 +25,12 @@ The current best structured map of the project/data world: datasets, tables, col
 `observations`
 
 Point-in-time or tentative findings: profiling results, observed counts, candidate joins, raw notes, failed assumptions, exploratory discoveries, and agent-run observations.
+Use `record_observation()` for routine structured observation writes.
 
 `evidence`
 
 Support for observations or map assertions: source files, query text, URLs, hashes, evidence summaries, validation reports, and samples.
+`record_observation()` can create a linked evidence resource when evidence fields are supplied.
 
 `shapes`
 

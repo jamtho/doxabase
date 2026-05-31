@@ -26,6 +26,10 @@ Lists entities by RDF type, graph role, optional text filter, limit, and offset.
 
 Returns bounded context for one dataset/table IRI: columns, physical/value types, path templates, layouts, partitions, caveats, provenance, and directly related datasets.
 
+`doxybase.record_observation`
+
+Records a structured observation in the `observations` graph. Optional evidence fields create a linked `rc:Evidence` resource in the `evidence` graph. Use this for point-in-time findings, profile counts, query outputs, and workflow notes that should remain available to later agents.
+
 ## Import and Validation
 
 `doxybase.import_trig`

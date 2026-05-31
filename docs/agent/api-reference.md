@@ -31,11 +31,20 @@ db.import_trig("path/to/file.trig")
 overview = db.graph_overview(limit=100)
 tables = db.list_entities(type="rc:Table", graph="map", limit=100)
 dataset = db.describe_dataset(tables.entities[0].iri)
+observation = db.record_observation(
+    summary="Dataset was inspected during the current workflow.",
+    observed_asset=dataset.iri,
+    evidence_summary="Recorded from the API reference example.",
+)
 ```
 
 `describe_dataset()` returns bounded context for one dataset/table: columns,
 physical/value types, path templates, physical layouts, partition schemes,
 caveats, provenance, and directly related datasets.
+
+`record_observation()` writes a structured `rc:Observation` or
+`rc:ProfileObservation` to the `observations` graph. When evidence fields are
+supplied, it also writes a linked `rc:Evidence` resource to the `evidence` graph.
 
 ## Validate
 
