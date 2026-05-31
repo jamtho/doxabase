@@ -210,6 +210,45 @@ class ObservationRecord:
 
 
 @dataclass(frozen=True)
+class ClaimObservationRecord:
+    observation_iri: str
+    claim_iri: str
+    evidence_iri: str
+    source_span_iri: str | None
+    observation_triples: int
+    evidence_triples: int
+
+
+@dataclass(frozen=True)
+class ResourceTriple:
+    graph: str
+    subject: str
+    subject_kind: str
+    subject_label: str | None
+    subject_types: list[str]
+    predicate: str
+    predicate_label: str | None
+    object: str
+    object_kind: str
+    object_label: str | None
+    object_types: list[str]
+    object_datatype: str | None
+    object_lang: str | None
+
+
+@dataclass(frozen=True)
+class ResourceContext:
+    iri: str
+    graph: str | None
+    label: str | None
+    description: str | None
+    types: list[str]
+    outgoing: list[ResourceTriple]
+    incoming: list[ResourceTriple]
+    limit: int
+
+
+@dataclass(frozen=True)
 class SearchMatch:
     iri: str
     graph: str
@@ -339,6 +378,9 @@ class DoxaBase:
             "columns": self._count_type("rc:Column"),
             "observations": self._count_type("rc:Observation")
             + self._count_type("rc:ProfileObservation"),
+            "claims": self._count_type("rc:Claim"),
+            "evidence": self._count_type("rc:Evidence"),
+            "source_spans": self._count_type("rc:SourceSpan"),
             "storage_accesses": self._count_type("rc:StorageAccess"),
             "shapes": self._count_type("sh:NodeShape"),
         }
@@ -389,13 +431,13 @@ class DoxaBase:
                         FROM quads ql
                         WHERE ql.graph = q.graph
                           AND ql.subject = q.subject
-                          AND ql.predicate = ?
+                          AND ql.object_kind = 'literal'
                           AND lower(ql.object) LIKE ?
                     )
                 )
             """
             needle = f"%{text.lower()}%"
-            params.extend([needle, str(RDFS.label), needle])
+            params.extend([needle, needle])
 
         params.extend([limit, offset])
         rows = self._conn.execute(
@@ -423,6 +465,43 @@ class DoxaBase:
             for row in rows
         ]
         return EntityList(entities=entities, limit=limit, offset=offset)
+
+    def describe_resource(
+        self,
+        iri: str,
+        *,
+        graph: str | None = None,
+        include_incoming: bool = True,
+        limit: int = 100,
+    ) -> ResourceContext:
+        if limit < 1:
+            raise DoxaBaseError("Resource context limit must be at least 1")
+        resource_iri = self.expand_iri(iri)
+        graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(graphs)
+        return ResourceContext(
+            iri=resource_iri,
+            graph=graph,
+            label=self._display_label_from_graphs(lookup_graphs, resource_iri),
+            description=self._description_from_graphs(lookup_graphs, resource_iri),
+            types=self._types_from_graphs(graphs, resource_iri),
+            outgoing=self._resource_triples(
+                graphs,
+                subject=resource_iri,
+                limit=limit,
+            ),
+            incoming=(
+                self._resource_triples(
+                    graphs,
+                    object_value=resource_iri,
+                    object_kind="uri",
+                    limit=limit,
+                )
+                if include_incoming
+                else []
+            ),
+            limit=limit,
+        )
 
     def search(
         self,
@@ -705,6 +784,290 @@ class DoxaBase:
             observation_iri=str(observation_subject),
             observation_type=observation_type,
             evidence_iri=str(evidence_subject) if evidence_subject is not None else None,
+            observation_triples=observation_triples,
+            evidence_triples=evidence_triples,
+        )
+
+    def record_claim_observation(
+        self,
+        summary: str,
+        *,
+        claim_text: str,
+        claim_kind: str,
+        claim_targets: Iterable[str] | str,
+        observed_asset: str | None = None,
+        observed_column: str | None = None,
+        observed_at: datetime | str | None = None,
+        observed_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        source_path: str | None = None,
+        source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        source_kind: str | None = None,
+        confidence: str | None = "rc:MediumConfidence",
+        observation_status: str | None = "rc:Tentative",
+        proposed_assertions: Iterable[str] | str | None = None,
+        observation_iri: str | None = None,
+        claim_iri: str | None = None,
+        evidence_iri: str | None = None,
+        source_span_iri: str | None = None,
+    ) -> ClaimObservationRecord:
+        if not summary.strip():
+            raise DoxaBaseError("Observation summary must not be empty")
+        if not claim_text.strip():
+            raise DoxaBaseError("Claim text must not be empty")
+        claim_kind_value = claim_kind.strip()
+        if not claim_kind_value:
+            raise DoxaBaseError("claim_kind must not be empty")
+        confidence_value = (
+            confidence.strip()
+            if confidence and confidence.strip()
+            else None
+        )
+        observation_status_value = (
+            observation_status.strip()
+            if observation_status and observation_status.strip()
+            else None
+        )
+        source_kind_value = (
+            source_kind.strip()
+            if source_kind and source_kind.strip()
+            else None
+        )
+        claim_target_values = self._string_values(
+            "claim_targets",
+            claim_targets,
+            required=True,
+        )
+        evidence_source_values = self._string_values(
+            "evidence_sources",
+            evidence_sources,
+        )
+        source_path_value = (
+            source_path.strip()
+            if source_path and source_path.strip()
+            else None
+        )
+        source_section_value = (
+            source_section.strip()
+            if source_section and source_section.strip()
+            else None
+        )
+        proposed_assertion_values = self._string_values(
+            "proposed_assertions",
+            proposed_assertions,
+        )
+        if not evidence_source_values and source_path_value is None:
+            raise DoxaBaseError(
+                "record_claim_observation requires evidence_sources or source_path"
+            )
+        for name, value in {"start_line": start_line, "end_line": end_line}.items():
+            if value is not None and value < 1:
+                raise DoxaBaseError(f"{name} must be a positive one-based line number")
+
+        observation_subject = URIRef(observation_iri or self._mint_iri("observation"))
+        claim_subject = URIRef(claim_iri or self._mint_iri("claim"))
+        evidence_subject = URIRef(evidence_iri or self._mint_iri("evidence"))
+        source_span_subject = (
+            URIRef(source_span_iri or self._mint_iri("source-span"))
+            if source_path_value is not None
+            else None
+        )
+
+        observation_graph = Graph()
+        self._bind_prefixes(observation_graph)
+        observation_graph.add(
+            (observation_subject, RDF.type, URIRef(self.expand_iri("rc:Observation")))
+        )
+        observation_graph.add(
+            (observation_subject, URIRef(self.expand_iri("rc:summary")), Literal(summary))
+        )
+        observation_graph.add(
+            (
+                observation_subject,
+                URIRef(self.expand_iri("rc:observedAt")),
+                self._datetime_literal(observed_at),
+            )
+        )
+        observation_graph.add(
+            (
+                observation_subject,
+                URIRef(self.expand_iri("rc:evidence")),
+                evidence_subject,
+            )
+        )
+        observation_graph.add(
+            (
+                observation_subject,
+                URIRef(self.expand_iri("rc:hasClaim")),
+                claim_subject,
+            )
+        )
+        if observation_status_value is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observationStatus")),
+                    URIRef(self.expand_iri(observation_status_value)),
+                )
+            )
+        if observed_asset is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedAsset")),
+                    URIRef(self.expand_iri(observed_asset)),
+                )
+            )
+        if observed_column is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedColumn")),
+                    URIRef(self.expand_iri(observed_column)),
+                )
+            )
+        if observed_by is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedBy")),
+                    self._resource_or_literal(observed_by),
+                )
+            )
+
+        observation_graph.add(
+            (claim_subject, RDF.type, URIRef(self.expand_iri("rc:Claim")))
+        )
+        observation_graph.add(
+            (
+                claim_subject,
+                URIRef(self.expand_iri("rc:claimKind")),
+                URIRef(self.expand_iri(claim_kind_value)),
+            )
+        )
+        observation_graph.add(
+            (
+                claim_subject,
+                URIRef(self.expand_iri("rc:claimText")),
+                Literal(claim_text),
+            )
+        )
+        for target in claim_target_values:
+            observation_graph.add(
+                (
+                    claim_subject,
+                    URIRef(self.expand_iri("rc:claimTarget")),
+                    URIRef(self.expand_iri(target)),
+                )
+            )
+        if confidence_value is not None:
+            observation_graph.add(
+                (
+                    claim_subject,
+                    URIRef(self.expand_iri("rc:confidence")),
+                    URIRef(self.expand_iri(confidence_value)),
+                )
+            )
+        if observation_status_value is not None:
+            observation_graph.add(
+                (
+                    claim_subject,
+                    URIRef(self.expand_iri("rc:observationStatus")),
+                    URIRef(self.expand_iri(observation_status_value)),
+                )
+            )
+        for assertion in proposed_assertion_values:
+            observation_graph.add(
+                (
+                    claim_subject,
+                    URIRef(self.expand_iri("rc:proposedAssertion")),
+                    URIRef(self.expand_iri(assertion)),
+                )
+            )
+
+        evidence_graph = Graph()
+        self._bind_prefixes(evidence_graph)
+        evidence_graph.add(
+            (evidence_subject, RDF.type, URIRef(self.expand_iri("rc:Evidence")))
+        )
+        if evidence_summary:
+            evidence_graph.add(
+                (
+                    evidence_subject,
+                    URIRef(self.expand_iri("rc:summary")),
+                    Literal(evidence_summary),
+                )
+            )
+        for source in evidence_source_values:
+            evidence_graph.add((evidence_subject, DCTERMS.source, Literal(source)))
+        if source_path_value is not None:
+            assert source_span_subject is not None
+            evidence_graph.add(
+                (
+                    evidence_subject,
+                    URIRef(self.expand_iri("rc:sourceSpan")),
+                    source_span_subject,
+                )
+            )
+            evidence_graph.add(
+                (
+                    source_span_subject,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:SourceSpan")),
+                )
+            )
+            evidence_graph.add(
+                (
+                    source_span_subject,
+                    URIRef(self.expand_iri("rc:sourcePath")),
+                    Literal(source_path_value),
+                )
+            )
+            if source_section_value:
+                evidence_graph.add(
+                    (
+                        source_span_subject,
+                        URIRef(self.expand_iri("rc:sourceSection")),
+                        Literal(source_section_value),
+                    )
+                )
+            if start_line is not None:
+                evidence_graph.add(
+                    (
+                        source_span_subject,
+                        URIRef(self.expand_iri("rc:startLine")),
+                        Literal(start_line, datatype=XSD.integer),
+                    )
+                )
+            if end_line is not None:
+                evidence_graph.add(
+                    (
+                        source_span_subject,
+                        URIRef(self.expand_iri("rc:endLine")),
+                        Literal(end_line, datatype=XSD.integer),
+                    )
+                )
+            if source_kind_value is not None:
+                evidence_graph.add(
+                    (
+                        source_span_subject,
+                        URIRef(self.expand_iri("rc:sourceKind")),
+                        URIRef(self.expand_iri(source_kind_value)),
+                    )
+                )
+
+        evidence_triples = self._insert_graph("evidence", evidence_graph)
+        observation_triples = self._insert_graph("observations", observation_graph)
+        return ClaimObservationRecord(
+            observation_iri=str(observation_subject),
+            claim_iri=str(claim_subject),
+            evidence_iri=str(evidence_subject),
+            source_span_iri=(
+                str(source_span_subject) if source_span_subject is not None else None
+            ),
             observation_triples=observation_triples,
             evidence_triples=evidence_triples,
         )
@@ -1368,6 +1731,7 @@ class DoxaBase:
         return (
             self._label_from_graphs(graphs, subject)
             or self._first_object(graphs, subject, "rc:summary")
+            or self._first_object(graphs, subject, "rc:claimText")
             or self._description_from_graphs(graphs, subject)
         )
 
@@ -1409,6 +1773,102 @@ class DoxaBase:
     def _ensure_non_negative(self, name: str, value: int | None) -> None:
         if value is not None and value < 0:
             raise DoxaBaseError(f"{name} must be non-negative")
+
+    def _string_values(
+        self,
+        name: str,
+        value: Iterable[str] | str | None,
+        *,
+        required: bool = False,
+    ) -> list[str]:
+        if value is None:
+            values: list[str] = []
+        elif isinstance(value, str):
+            values = [value]
+        else:
+            values = list(value)
+        cleaned = [item.strip() for item in values if item.strip()]
+        if required and not cleaned:
+            raise DoxaBaseError(f"{name} must contain at least one non-empty value")
+        return cleaned
+
+    def _resource_triples(
+        self,
+        graphs: list[str],
+        *,
+        subject: str | None = None,
+        object_value: str | None = None,
+        object_kind: str | None = None,
+        limit: int = 100,
+    ) -> list[ResourceTriple]:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        filters: list[str] = []
+        params: list[Any] = []
+        if subject is not None:
+            filters.append("q.subject = ?")
+            params.append(subject)
+        if object_value is not None:
+            filters.append("q.object = ?")
+            params.append(object_value)
+        if object_kind is not None:
+            filters.append("q.object_kind = ?")
+            params.append(object_kind)
+        if not filters:
+            raise DoxaBaseError("Resource triple lookup requires subject or object")
+        where = " AND ".join(filters)
+        rows = self._conn.execute(
+            f"""
+            SELECT
+                q.graph,
+                q.subject,
+                q.subject_kind,
+                q.predicate,
+                q.object,
+                q.object_kind,
+                q.datatype,
+                q.lang
+            FROM quads q
+            WHERE {where}
+              {graph_filter}
+            ORDER BY q.graph, q.subject, q.predicate, q.object
+            LIMIT ?
+            """,
+            [*params, *graph_params, limit],
+        ).fetchall()
+        return [self._resource_triple_from_row(row) for row in rows]
+
+    def _resource_triple_from_row(self, row: sqlite3.Row) -> ResourceTriple:
+        lookup_graphs = self._lookup_graphs([row["graph"]])
+        object_is_resource = row["object_kind"] in {"uri", "bnode"}
+        return ResourceTriple(
+            graph=row["graph"],
+            subject=row["subject"],
+            subject_kind=row["subject_kind"],
+            subject_label=self._display_label_from_graphs(
+                lookup_graphs,
+                row["subject"],
+            ),
+            subject_types=self._types_from_graphs(lookup_graphs, row["subject"]),
+            predicate=row["predicate"],
+            predicate_label=self._label_from_graphs(
+                self._expand_graphs(["ontology"]),
+                row["predicate"],
+            ),
+            object=row["object"],
+            object_kind=row["object_kind"],
+            object_label=(
+                self._display_label_from_graphs(lookup_graphs, row["object"])
+                if object_is_resource
+                else None
+            ),
+            object_types=(
+                self._types_from_graphs(lookup_graphs, row["object"])
+                if object_is_resource
+                else []
+            ),
+            object_datatype=row["datatype"],
+            object_lang=row["lang"],
+        )
 
     def _graph_filter(self, graphs: list[str], *, alias: str | None = None) -> tuple[str, list[str]]:
         if not graphs:

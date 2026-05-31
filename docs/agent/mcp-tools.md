@@ -21,6 +21,15 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 `doxabase.list_entities`
 
 Lists entities by RDF type, graph role, optional text filter, limit, and offset. Start with `type="rc:Table"` and `graph="map"`.
+For type-aware retrieval, use types such as `rc:Claim`, `rc:Evidence`, or
+`rc:SourceSpan`; the text filter searches literal facts attached to each
+resource, not only labels.
+
+`doxabase.describe_resource`
+
+Returns outgoing and incoming triples for one resource, with available labels
+and RDF types. Use it after `list_entities` when lexical search found a resource
+but you need its structured claim/evidence/source-span context.
 
 `doxabase.search`
 
@@ -33,6 +42,13 @@ Returns bounded context for one dataset/table IRI: columns, physical/value types
 `doxabase.record_observation`
 
 Records a structured observation in the `observations` graph. Optional evidence fields create a linked `rc:Evidence` resource in the `evidence` graph. Use this for point-in-time findings, profile counts, query outputs, and workflow notes that should remain available to later agents.
+
+`doxabase.record_claim_observation`
+
+Records the common richer pattern: one `rc:Observation`, one linked `rc:Claim`,
+one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use this for caveat,
+join, schema, transformation, access, profile, or interpretation claims that are
+more structured than a note but do not require hand-authored TriG.
 
 ## Import and Validation
 

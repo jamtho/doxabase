@@ -31,12 +31,24 @@ db.import_trig("path/to/file.trig")
 overview = db.graph_overview(limit=100)
 tables = db.list_entities(type="rc:Table", graph="map", limit=100)
 dataset = db.describe_dataset(tables.entities[0].iri)
+claims = db.list_entities(type="rc:Claim", graph="observations", text="join")
 matches = db.search("MMSI vessel", graph="map", limit=10)
 observation = db.record_observation(
     summary="Dataset was inspected during the current workflow.",
     observed_asset=dataset.iri,
     evidence_summary="Recorded from the API reference example.",
+    evidence_sources=["docs/agent/api-reference.md"],
 )
+claim = db.record_claim_observation(
+    summary="Example source-backed join claim.",
+    claim_text="The child table joins to the parent table by parent_doc_id.",
+    claim_kind="rc:JoinClaim",
+    claim_targets=["https://example.test/project#parent_doc_id"],
+    evidence_summary="Recorded from the API reference example.",
+    source_path="docs/agent/api-reference.md",
+    source_kind="rc:DocumentationSource",
+)
+context = db.describe_resource(claim.claim_iri, graph="observations")
 ```
 
 `describe_dataset()` returns bounded context for one dataset/table: columns,
@@ -47,6 +59,15 @@ datasets.
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are
 supplied, it also writes a linked `rc:Evidence` resource to the `evidence` graph.
+
+`record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
+one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common
+claim-shaped observation pattern without hand-authoring TriG.
+
+`describe_resource()` returns outgoing and incoming triples for one resource.
+Use it after `list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence")`,
+or `list_entities(type="rc:SourceSpan")` when you need structured context rather
+than a lexical search result.
 
 `search()` lexically searches literal RDF claims and returns matched resources,
 their graph role, RDF types, matched predicate, matched text, and snippet. Use

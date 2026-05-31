@@ -47,8 +47,10 @@ Implemented:
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
+- `describe_resource()` for type-aware retrieval workflows over RDF resources.
 - `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
 - `record_observation()` for first-class observation and evidence resources.
+- `record_claim_observation()` for common observation, claim, evidence, and source-span capture.
 - Agent-authored observation RDF vocabulary for structured claims, source spans, confidence, and status.
 - Stricter SHACL validation for observation/evidence/claim resources.
 - Non-secret storage access metadata for physical query planning.
@@ -137,9 +139,11 @@ Useful first tool calls for an agent:
 5. `doxabase.graph_overview`
 6. `doxabase.search` for remembered terms, caveats, observations, or evidence
 7. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
-8. `doxabase.describe_dataset` with a table IRI from `list_entities`
-9. `doxabase.record_observation` for useful point-in-time findings
-10. `doxabase.validate_graph` with `scope="all"`
+8. `doxabase.describe_resource` for typed resources such as `rc:Claim` or `rc:Evidence`
+9. `doxabase.describe_dataset` with a table IRI from `list_entities`
+10. `doxabase.record_observation` for useful point-in-time findings
+11. `doxabase.record_claim_observation` for structured claim observations
+12. `doxabase.validate_graph` with `scope="all"`
 
 Current MCP tools:
 
@@ -148,8 +152,10 @@ Current MCP tools:
 - `doxabase.graph_overview`
 - `doxabase.search`
 - `doxabase.list_entities`
+- `doxabase.describe_resource`
 - `doxabase.describe_dataset`
 - `doxabase.record_observation`
+- `doxabase.record_claim_observation`
 - `doxabase.import_trig`
 - `doxabase.load_example_fixtures`
 - `doxabase.validate_graph`

@@ -76,6 +76,10 @@ base observation vocabulary. Use that lane for structured caveat, join,
 transformation, access, source-span, or proposed-map claims. See
 `observation_rdf` for examples.
 
+For the common middle case, use `doxabase.record_claim_observation`. It writes
+the standard `rc:Observation` + `rc:Claim` + `rc:Evidence` + optional
+`rc:SourceSpan` pattern without requiring hand-authored TriG.
+
 The writer adds graph triples only after validating basic inputs such as summary
 presence, observation type, ISO datetime syntax, and non-negative counts.
 

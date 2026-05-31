@@ -51,6 +51,22 @@ def list_entities_tool(
     }
 
 
+def describe_resource_tool(
+    db: DoxaBase,
+    iri: str,
+    graph: str | None = None,
+    include_incoming: bool = True,
+    limit: int = 100,
+) -> dict[str, Any]:
+    result = db.describe_resource(
+        iri=iri,
+        graph=graph,
+        include_incoming=include_incoming,
+        limit=limit,
+    )
+    return asdict(result)
+
+
 def describe_dataset_tool(
     db: DoxaBase,
     iri: str,
@@ -87,6 +103,50 @@ def record_observation_tool(
         row_count=row_count,
         null_count=null_count,
         distinct_count=distinct_count,
+    )
+    return asdict(result)
+
+
+def record_claim_observation_tool(
+    db: DoxaBase,
+    summary: str,
+    claim_text: str,
+    claim_kind: str,
+    claim_targets: list[str],
+    observed_asset: str | None = None,
+    observed_column: str | None = None,
+    observed_at: str | None = None,
+    observed_by: str | None = None,
+    evidence_summary: str | None = None,
+    evidence_sources: list[str] | None = None,
+    source_path: str | None = None,
+    source_section: str | None = None,
+    start_line: int | None = None,
+    end_line: int | None = None,
+    source_kind: str | None = None,
+    confidence: str | None = "rc:MediumConfidence",
+    observation_status: str | None = "rc:Tentative",
+    proposed_assertions: list[str] | None = None,
+) -> dict[str, Any]:
+    result = db.record_claim_observation(
+        summary=summary,
+        claim_text=claim_text,
+        claim_kind=claim_kind,
+        claim_targets=claim_targets,
+        observed_asset=observed_asset,
+        observed_column=observed_column,
+        observed_at=observed_at,
+        observed_by=observed_by,
+        evidence_summary=evidence_summary,
+        evidence_sources=evidence_sources,
+        source_path=source_path,
+        source_section=source_section,
+        start_line=start_line,
+        end_line=end_line,
+        source_kind=source_kind,
+        confidence=confidence,
+        observation_status=observation_status,
+        proposed_assertions=proposed_assertions,
     )
     return asdict(result)
 

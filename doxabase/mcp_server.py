@@ -9,12 +9,14 @@ from mcp.server.fastmcp import FastMCP
 from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     describe_dataset_tool,
+    describe_resource_tool,
     get_doc_tool,
     graph_overview_tool,
     import_trig_tool,
     list_docs_tool,
     list_entities_tool,
     load_example_fixtures_tool,
+    record_claim_observation_tool,
     record_observation_tool,
     search_tool,
     validate_graph_tool,
@@ -23,7 +25,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, lexical search, bounded dataset/storage description, observation recording, import, fixture loading, and validation; context slicing is not implemented yet."""
+Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, observation and claim recording, import, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -73,6 +75,23 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
 
+    @server.tool(name="doxabase.describe_resource")
+    def describe_resource(
+        iri: str,
+        graph: str | None = None,
+        include_incoming: bool = True,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """Return outgoing and incoming RDF triples for one resource."""
+
+        return describe_resource_tool(
+            db,
+            iri=iri,
+            graph=graph,
+            include_incoming=include_incoming,
+            limit=limit,
+        )
+
     @server.tool(name="doxabase.record_observation")
     def record_observation(
         summary: str,
@@ -104,6 +123,51 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             row_count=row_count,
             null_count=null_count,
             distinct_count=distinct_count,
+        )
+
+    @server.tool(name="doxabase.record_claim_observation")
+    def record_claim_observation(
+        summary: str,
+        claim_text: str,
+        claim_kind: str,
+        claim_targets: list[str],
+        observed_asset: str | None = None,
+        observed_column: str | None = None,
+        observed_at: str | None = None,
+        observed_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: list[str] | None = None,
+        source_path: str | None = None,
+        source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        source_kind: str | None = None,
+        confidence: str | None = "rc:MediumConfidence",
+        observation_status: str | None = "rc:Tentative",
+        proposed_assertions: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record an observation with one structured claim, evidence, and optional source span."""
+
+        return record_claim_observation_tool(
+            db,
+            summary=summary,
+            claim_text=claim_text,
+            claim_kind=claim_kind,
+            claim_targets=claim_targets,
+            observed_asset=observed_asset,
+            observed_column=observed_column,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            source_path=source_path,
+            source_section=source_section,
+            start_line=start_line,
+            end_line=end_line,
+            source_kind=source_kind,
+            confidence=confidence,
+            observation_status=observation_status,
+            proposed_assertions=proposed_assertions,
         )
 
     @server.tool(name="doxabase.search")

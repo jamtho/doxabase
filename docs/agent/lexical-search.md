@@ -24,6 +24,11 @@ human-facing text such as:
 The index is derivative. The RDF quads remain the source of truth, and the
 search index is rebuilt from them after graph writes and clears.
 
+Search is lexical, not type-aware. To browse resources by RDF class, use
+`doxabase.list_entities` with `type="rc:Claim"`, `type="rc:Evidence"`, or another
+class, then call `doxabase.describe_resource` for the resource you want to
+inspect.
+
 ## What A Match Means
 
 `doxabase.search` returns matched resources, not detached text snippets. Each

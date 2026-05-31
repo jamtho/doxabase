@@ -6,10 +6,12 @@ from doxabase import DoxaBase
 from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     describe_dataset_tool,
+    describe_resource_tool,
     graph_overview_tool,
     list_docs_tool,
     list_entities_tool,
     load_example_fixtures_tool,
+    record_claim_observation_tool,
     record_observation_tool,
     search_tool,
     validate_graph_tool,
@@ -26,7 +28,9 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.graph_overview" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
+    assert "doxabase.describe_resource" in tool_names
     assert "doxabase.record_observation" in tool_names
+    assert "doxabase.record_claim_observation" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
@@ -101,6 +105,48 @@ def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> No
     assert result["evidence_iri"] is not None
     assert result["observation_triples"] > 0
     assert result["evidence_triples"] > 0
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_record_claim_observation_tool_and_resource_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    result = record_claim_observation_tool(
+        db,
+        summary="MCP helper wrote a structured claim observation.",
+        claim_text="The embeddings output joins to eml_messages by doc_id.",
+        claim_kind="rc:JoinClaim",
+        claim_targets=[
+            "https://example.test/enron#eml_embeddings_body_top_doc_id",
+            "https://example.test/enron#eml_messages_doc_id",
+        ],
+        evidence_summary="README embeddings section.",
+        source_path="/home/james/github.com/jamtho/enron-emails/README.md",
+        source_section="Embeddings",
+        source_kind="rc:DocumentationSource",
+        confidence="rc:HighConfidence",
+        observation_status="rc:Checked",
+    )
+    claims = list_entities_tool(
+        db,
+        type="rc:Claim",
+        graph="observations",
+        text="doc_id",
+    )
+    context = describe_resource_tool(
+        db,
+        iri=result["claim_iri"],
+        graph="observations",
+    )
+
+    assert result["claim_iri"] in {claim["iri"] for claim in claims["entities"]}
+    assert context["label"] == "The embeddings output joins to eml_messages by doc_id."
+    assert any(
+        triple["predicate"] == "https://richcanopy.org/ns/rc#claimKind"
+        for triple in context["outgoing"]
+    )
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

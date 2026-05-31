@@ -10,6 +10,12 @@ Use agent-authored RDF when the observation is more nuanced: a caveat, join
 claim, transformation claim, access finding, source-span citation, or a proposed
 map assertion that may later be systematised.
 
+For the common richer pattern, prefer `doxabase.record_claim_observation`: it
+writes one `rc:Observation`, one linked `rc:Claim`, one `rc:Evidence`, and
+optionally one `rc:SourceSpan`. Drop to hand-authored RDF when you need multiple
+claims, unusual relationships, custom project vocabulary, or a proposed
+assertion graph that the helper cannot express cleanly.
+
 ## Graph Placement
 
 Put agent-authored observation RDF in these graph roles:
@@ -125,3 +131,6 @@ Use `record_observation` when the finding is simple and the structure would add
 little value. A pile of small notes should not become hand-authored RDF just for
 ceremony. Use RDF when structure will help the next agent retrieve, compare, or
 promote the claim.
+
+Use `record_claim_observation` for the middle ground: one structured claim with
+ordinary evidence and source-span support.

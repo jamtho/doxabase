@@ -324,6 +324,79 @@ def test_agent_authored_observation_rdf_requires_evidence(tmp_path: Path) -> Non
     )
 
 
+def test_record_claim_observation_writes_common_rdf_pattern(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    result = db.record_claim_observation(
+        summary="The Enron body_top column is transformed message text.",
+        claim_text="body_top stores text above reply separators after footer stripping.",
+        claim_kind="rc:TransformationClaim",
+        claim_targets=["https://example.test/enron#eml_messages_body_top"],
+        observed_asset="https://example.test/enron#eml_messages",
+        observed_at="2026-05-31T00:00:00Z",
+        observed_by="urn:doxabase:test-agent",
+        evidence_summary="README body processing section.",
+        source_path="/home/james/github.com/jamtho/enron-emails/README.md",
+        source_section="Body processing",
+        start_line=186,
+        end_line=191,
+        source_kind="rc:DocumentationSource",
+        confidence="rc:HighConfidence",
+        observation_status="rc:Checked",
+        proposed_assertions=[
+            "https://example.test/enron#body_top_transformation_caveat",
+        ],
+    )
+
+    assert result.claim_iri.startswith(
+        "https://richcanopy.org/doxabase/generated/claim/"
+    )
+    assert result.source_span_iri is not None
+    assert result.observation_triples > 0
+    assert result.evidence_triples > 0
+    assert db.validate_graph(scope="all").conforms
+
+    claims = db.list_entities(
+        type="rc:Claim",
+        graph="observations",
+        text="reply separators",
+    )
+    assert [claim.iri for claim in claims.entities] == [result.claim_iri]
+
+    context = db.describe_resource(result.claim_iri, graph="observations")
+    outgoing_predicates = {triple.predicate for triple in context.outgoing}
+
+    assert context.label == (
+        "body_top stores text above reply separators after footer stripping."
+    )
+    assert "https://richcanopy.org/ns/rc#claimKind" in outgoing_predicates
+    assert "https://richcanopy.org/ns/rc#claimTarget" in outgoing_predicates
+    assert any(
+        triple.subject == result.observation_iri
+        and triple.predicate == "https://richcanopy.org/ns/rc#hasClaim"
+        for triple in context.incoming
+    )
+
+    evidence_context = db.describe_resource(result.evidence_iri, graph="evidence")
+    assert any(
+        triple.predicate == "https://richcanopy.org/ns/rc#sourceSpan"
+        and triple.object == result.source_span_iri
+        for triple in evidence_context.outgoing
+    )
+
+
+def test_record_claim_observation_requires_source(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="evidence_sources or source_path"):
+        db.record_claim_observation(
+            summary="Missing evidence source.",
+            claim_text="This claim should be rejected before RDF is written.",
+            claim_kind="rc:CaveatClaim",
+            claim_targets=["https://example.test/enron#eml_messages"],
+            evidence_summary="Summary alone is not enough for source-backed evidence.",
+        )
+
+
 def test_search_index_updates_after_graph_clear(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

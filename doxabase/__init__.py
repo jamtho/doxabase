@@ -1,5 +1,6 @@
 from doxabase.core import (
     ColumnDescription,
+    ClaimObservationRecord,
     DatasetDescription,
     DoxaBase,
     DoxaBaseError,
@@ -12,7 +13,9 @@ from doxabase.core import (
     PartitionDescription,
     PhysicalLayoutDescription,
     RelatedDatasetDescription,
+    ResourceContext,
     ResourceSummary,
+    ResourceTriple,
     SearchMatch,
     SearchResults,
     StorageAccessDescription,
@@ -21,6 +24,7 @@ from doxabase.core import (
 
 __all__ = [
     "ColumnDescription",
+    "ClaimObservationRecord",
     "DatasetDescription",
     "DoxaBase",
     "DoxaBaseError",
@@ -33,7 +37,9 @@ __all__ = [
     "PartitionDescription",
     "PhysicalLayoutDescription",
     "RelatedDatasetDescription",
+    "ResourceContext",
     "ResourceSummary",
+    "ResourceTriple",
     "SearchMatch",
     "SearchResults",
     "StorageAccessDescription",

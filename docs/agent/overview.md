@@ -17,8 +17,10 @@ Current implementation status:
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
+- `describe_resource()` for type-aware retrieval workflows over RDF resources.
 - `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
 - `record_observation()` for point-in-time findings and linked evidence.
+- `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.
 - Agent-authored observation RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
