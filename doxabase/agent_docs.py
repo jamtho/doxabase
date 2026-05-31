@@ -18,7 +18,7 @@ class AgentDoc:
 DOCS: tuple[AgentDoc, ...] = (
     AgentDoc(
         id="overview",
-        title="DoxyBase Agent Overview",
+        title="DoxaBase Agent Overview",
         description="High-level purpose, current implementation status, and V1 limits.",
         path=DOCS_DIR / "overview.md",
     ),

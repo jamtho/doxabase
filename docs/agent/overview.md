@@ -1,12 +1,12 @@
-# DoxyBase Agent Overview
+# DoxaBase Agent Overview
 
-DoxyBase is a local RDF memory capsule for data projects.
+DoxaBase is a local RDF memory capsule for data projects.
 
 The agent-facing contract is:
 
-> The agent supplies semantic judgement; DoxyBase supplies graph mechanics.
+> The agent supplies semantic judgement; DoxaBase supplies graph mechanics.
 
-DoxyBase stores named RDF graphs in a local SQLite file. It ships a small Rich Canopy base ontology under the `rc:` prefix and open SHACL shapes for basic validation. Client projects can extend the ontology freely with their own namespaces and RDF patterns.
+DoxaBase stores named RDF graphs in a local SQLite file. It ships a small Rich Canopy base ontology under the `rc:` prefix and open SHACL shapes for basic validation. Client projects can extend the ontology freely with their own namespaces and RDF patterns.
 
 Current implementation status:
 

@@ -12,7 +12,7 @@ The purpose is to test whether the base ontology can carry real project-specific
 
 ## Graph Roles
 
-The TriG fixtures use these graph IRIs as stand-ins for DoxyBase graph roles:
+The TriG fixtures use these graph IRIs as stand-ins for DoxaBase graph roles:
 
 - `rcg:ontology` for project/domain value types and functions.
 - `rcg:map` for the current project data map.

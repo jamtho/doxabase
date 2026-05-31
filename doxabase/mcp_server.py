@@ -6,8 +6,8 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from doxybase import DoxyBase
-from doxybase.mcp_tools import (
+from doxabase import DoxaBase
+from doxabase.mcp_tools import (
     describe_dataset_tool,
     get_doc_tool,
     graph_overview_tool,
@@ -20,35 +20,35 @@ from doxybase.mcp_tools import (
     validate_graph_tool,
 )
 
-SERVER_INSTRUCTIONS = """DoxyBase is a local RDF memory capsule for data projects.
-Start with doxybase.list_docs, then read overview, graph_roles, and agent_workflow.
+SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
+Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
 Current V1 tools support inspection, lexical search, bounded dataset description, observation recording, import, fixture loading, and validation; context slicing is not implemented yet."""
 
 
-def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
-    db = DoxyBase.create(capsule_path, overwrite=False)
-    server = FastMCP("doxybase", instructions=SERVER_INSTRUCTIONS)
+def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
+    db = DoxaBase.create(capsule_path, overwrite=False)
+    server = FastMCP("doxabase", instructions=SERVER_INSTRUCTIONS)
 
-    @server.tool(name="doxybase.list_docs")
+    @server.tool(name="doxabase.list_docs")
     def list_docs() -> dict[str, Any]:
-        """List short agent-facing DoxyBase docs available through MCP."""
+        """List short agent-facing DoxaBase docs available through MCP."""
 
         return list_docs_tool()
 
-    @server.tool(name="doxybase.get_doc")
+    @server.tool(name="doxabase.get_doc")
     def get_doc(doc_id: str, max_chars: int = 12000) -> dict[str, Any]:
         """Return one agent-facing markdown doc by ID."""
 
         return get_doc_tool(doc_id, max_chars=max_chars)
 
-    @server.tool(name="doxybase.graph_overview")
+    @server.tool(name="doxabase.graph_overview")
     def graph_overview(limit: int = 100) -> dict[str, Any]:
         """Return named graph counts, common classes, predicates, and key counts."""
 
         return graph_overview_tool(db, limit=limit)
 
-    @server.tool(name="doxybase.list_entities")
+    @server.tool(name="doxabase.list_entities")
     def list_entities(
         type: str | None = None,
         graph: str | None = "map",
@@ -67,13 +67,13 @@ def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
             offset=offset,
         )
 
-    @server.tool(name="doxybase.describe_dataset")
+    @server.tool(name="doxabase.describe_dataset")
     def describe_dataset(iri: str, graph: str | None = "map") -> dict[str, Any]:
         """Return bounded schema, layout, caveat, and provenance context for one dataset."""
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
 
-    @server.tool(name="doxybase.record_observation")
+    @server.tool(name="doxabase.record_observation")
     def record_observation(
         summary: str,
         observation_type: str = "observation",
@@ -106,7 +106,7 @@ def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
             distinct_count=distinct_count,
         )
 
-    @server.tool(name="doxybase.search")
+    @server.tool(name="doxabase.search")
     def search(
         query: str,
         graph: str | None = None,
@@ -123,19 +123,19 @@ def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
             offset=offset,
         )
 
-    @server.tool(name="doxybase.import_trig")
+    @server.tool(name="doxabase.import_trig")
     def import_trig(path: str, replace: bool = False) -> dict[str, Any]:
-        """Import a TriG file into DoxyBase graph roles."""
+        """Import a TriG file into DoxaBase graph roles."""
 
         return import_trig_tool(db, path=path, replace=replace)
 
-    @server.tool(name="doxybase.load_example_fixtures")
+    @server.tool(name="doxabase.load_example_fixtures")
     def load_example_fixtures(replace: bool = False) -> dict[str, Any]:
         """Import the bundled AIS and Polymarket RC fixture graphs."""
 
         return load_example_fixtures_tool(db, replace=replace)
 
-    @server.tool(name="doxybase.validate_graph")
+    @server.tool(name="doxabase.validate_graph")
     def validate_graph(scope: str = "map", limit_results: int = 100) -> dict[str, Any]:
         """Run SHACL validation for map, ontology, shapes, or all graph scope."""
 
@@ -145,11 +145,11 @@ def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the DoxyBase MCP server.")
+    parser = argparse.ArgumentParser(description="Run the DoxaBase MCP server.")
     parser.add_argument(
         "--capsule",
-        default=".doxybase.sqlite",
-        help="SQLite capsule path. Defaults to .doxybase.sqlite in the current directory.",
+        default=".doxabase.sqlite",
+        help="SQLite capsule path. Defaults to .doxabase.sqlite in the current directory.",
     )
     parser.add_argument(
         "--transport",

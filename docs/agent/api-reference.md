@@ -3,13 +3,13 @@
 Current Python API entry point:
 
 ```python
-from doxybase import DoxyBase
+from doxabase import DoxaBase
 ```
 
 ## Create or Open a Capsule
 
 ```python
-db = DoxyBase.create(".doxybase.sqlite", overwrite=True)
+db = DoxaBase.create(".doxabase.sqlite", overwrite=True)
 ```
 
 This initializes the SQLite schema, registers default graph roles, and seeds immutable `base_ontology` and `base_shapes`.

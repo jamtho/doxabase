@@ -1,8 +1,8 @@
-from doxybase.core import (
+from doxabase.core import (
     ColumnDescription,
     DatasetDescription,
-    DoxyBase,
-    DoxyBaseError,
+    DoxaBase,
+    DoxaBaseError,
     EntityList,
     EntityRow,
     GraphOverview,
@@ -21,8 +21,8 @@ from doxybase.core import (
 __all__ = [
     "ColumnDescription",
     "DatasetDescription",
-    "DoxyBase",
-    "DoxyBaseError",
+    "DoxaBase",
+    "DoxaBaseError",
     "EntityList",
     "EntityRow",
     "GraphOverview",

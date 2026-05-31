@@ -1,25 +1,25 @@
-# DoxyBase Architecture
+# DoxaBase Architecture
 
 This document orients future agents working in the repository. It describes what exists now, the main boundaries, and the near-term design direction.
 
 ## Purpose
 
-DoxyBase is a local RDF memory capsule for data projects.
+DoxaBase is a local RDF memory capsule for data projects.
 
-The library does not contain an LLM and does not try to decide semantics itself. Agents supply semantic judgement. DoxyBase supplies storage, parsing, named graph mechanics, graph inspection, and explicit validation.
+The library does not contain an LLM and does not try to decide semantics itself. Agents supply semantic judgement. DoxaBase supplies storage, parsing, named graph mechanics, graph inspection, and explicit validation.
 
 ## Repository Map
 
-- `doxybase/`: runtime Python package.
-- `doxybase/core.py`: SQLite-backed capsule implementation.
-- `doxybase/mcp_server.py`: thin MCP server over the current Python API.
-- `doxybase/mcp_tools.py`: JSON-like helper functions used by MCP tools and tests.
-- `doxybase/agent_docs.py`: registry for short agent-facing docs.
+- `doxabase/`: runtime Python package.
+- `doxabase/core.py`: SQLite-backed capsule implementation.
+- `doxabase/mcp_server.py`: thin MCP server over the current Python API.
+- `doxabase/mcp_tools.py`: JSON-like helper functions used by MCP tools and tests.
+- `doxabase/agent_docs.py`: registry for short agent-facing docs.
 - `docs/agent/`: operational docs exposed through MCP.
 - `ontology/rc_core.ttl`: immutable Rich Canopy base ontology seed graph.
 - `ontology/rc_shapes.ttl`: immutable open SHACL shape seed graph.
 - `examples/manifest-prototype-rc/`: representative RC fixtures converted from the Manifest prototype.
-- `doxybase_design_docs/`: design docs and V1/V2 direction.
+- `doxabase_design_docs/`: design docs and V1/V2 direction.
 - `tools/validate_rdf.py`: repository validation script for ontology and fixtures.
 - `tests/`: pytest coverage for RDF assets, core storage/API, docs, and MCP helpers.
 
@@ -28,10 +28,10 @@ The library does not contain an LLM and does not try to decide semantics itself.
 The central runtime object is:
 
 ```python
-from doxybase import DoxyBase
+from doxabase import DoxaBase
 ```
 
-A `DoxyBase` instance owns one SQLite file, defaulting to `.doxybase.sqlite`.
+A `DoxaBase` instance owns one SQLite file, defaulting to `.doxabase.sqlite`.
 
 On creation, it:
 
@@ -50,7 +50,7 @@ This is not a custom RDF engine. It is a small local graph memory with enough st
 
 ## Named Graph Roles
 
-DoxyBase distinguishes immutable shipped seed graphs from mutable project graphs.
+DoxaBase distinguishes immutable shipped seed graphs from mutable project graphs.
 
 Immutable:
 
@@ -78,16 +78,16 @@ Ordinary imports reject writes to immutable seed graphs unless internal seeding 
 Implemented:
 
 ```python
-DoxyBase.create(path, overwrite=False, seed=True)
-DoxyBase.import_turtle(source, graph="map", replace=False)
-DoxyBase.import_trig(source, replace=False)
-DoxyBase.graph_overview(limit=100)
-DoxyBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
-DoxyBase.search(query, graph=None, limit=20, offset=0)
-DoxyBase.describe_dataset(iri, graph="map")
-DoxyBase.record_observation(summary, ...)
-DoxyBase.validate_graph(scope="map", limit_results=100)
-DoxyBase.to_graph(graphs=None)
+DoxaBase.create(path, overwrite=False, seed=True)
+DoxaBase.import_turtle(source, graph="map", replace=False)
+DoxaBase.import_trig(source, replace=False)
+DoxaBase.graph_overview(limit=100)
+DoxaBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
+DoxaBase.search(query, graph=None, limit=20, offset=0)
+DoxaBase.describe_dataset(iri, graph="map")
+DoxaBase.record_observation(summary, ...)
+DoxaBase.validate_graph(scope="map", limit_results=100)
+DoxaBase.to_graph(graphs=None)
 ```
 
 `import_trig()` maps fixture graph IRIs such as:
@@ -137,7 +137,7 @@ Current shapes are open. They validate common authoring mistakes for `rc:` terms
 
 ## MCP Layer
 
-The MCP server is intentionally thin. It lives in `doxybase/mcp_server.py` and uses the official Python MCP SDK:
+The MCP server is intentionally thin. It lives in `doxabase/mcp_server.py` and uses the official Python MCP SDK:
 
 ```python
 from mcp.server.fastmcp import FastMCP
@@ -146,29 +146,29 @@ from mcp.server.fastmcp import FastMCP
 Run it with:
 
 ```bash
-uv run python -m doxybase.mcp_server --capsule .doxybase.sqlite
+uv run python -m doxabase.mcp_server --capsule .doxabase.sqlite
 ```
 
 Default transport is stdio.
 
 Current MCP tools:
 
-- `doxybase.list_docs`
-- `doxybase.get_doc`
-- `doxybase.graph_overview`
-- `doxybase.search`
-- `doxybase.list_entities`
-- `doxybase.describe_dataset`
-- `doxybase.record_observation`
-- `doxybase.import_trig`
-- `doxybase.load_example_fixtures`
-- `doxybase.validate_graph`
+- `doxabase.list_docs`
+- `doxabase.get_doc`
+- `doxabase.graph_overview`
+- `doxabase.search`
+- `doxabase.list_entities`
+- `doxabase.describe_dataset`
+- `doxabase.record_observation`
+- `doxabase.import_trig`
+- `doxabase.load_example_fixtures`
+- `doxabase.validate_graph`
 
-Tool functions delegate to `doxybase/mcp_tools.py`. Keep business logic there or in `DoxyBase`, not inside nested MCP decorators, so behavior remains testable without a running MCP client.
+Tool functions delegate to `doxabase/mcp_tools.py`. Keep business logic there or in `DoxaBase`, not inside nested MCP decorators, so behavior remains testable without a running MCP client.
 
 ## Agent Docs
 
-Agent docs live in `docs/agent/` and are registered in `doxybase/agent_docs.py`.
+Agent docs live in `docs/agent/` and are registered in `doxabase/agent_docs.py`.
 
 The MCP docs tools expose these docs:
 
@@ -250,9 +250,9 @@ Use observations for point-in-time or source-scoped findings. Consolidated, dura
 
 ## AIS/DuckDB Pressure Points
 
-The AIS DuckDB handoff notes in `docs/agent/ais-duckdb-doxybase-observations.md` are a useful current pressure test for the architecture.
+The AIS DuckDB handoff notes from earlier exploratory work are a useful current pressure test for the architecture.
 
-The session showed that DoxyBase can preserve semantic context, caveats, profile observations, and evidence, but it is not yet enough to drive executable analytics by itself. The successful DuckDB query depended on richer local documentation for the real AIS Parquet schemas and MinIO layout. To support DoxyBase-driven query planning, future graph content and APIs need to continue improving:
+The session showed that DoxaBase can preserve semantic context, caveats, profile observations, and evidence, but it is not yet enough to drive executable analytics by itself. The successful DuckDB query depended on richer local documentation for the real AIS Parquet schemas and MinIO layout. To support DoxaBase-driven query planning, future graph content and APIs need to continue improving:
 
 - full logical and physical schemas for the relevant datasets;
 - dataset-specific path templates and storage layout, including distinct broadcast and index layouts;

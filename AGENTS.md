@@ -1,7 +1,7 @@
 # Agent Guide
 
-This repository is DoxyBase: a small local RDF memory capsule for data projects.
-Agents supply semantic judgement; DoxyBase supplies storage, parsing, named graph
+This repository is DoxaBase: a small local RDF memory capsule for data projects.
+Agents supply semantic judgement; DoxaBase supplies storage, parsing, named graph
 mechanics, graph inspection, and explicit validation.
 
 These notes are meant to reduce rediscovery, not replace judgement. If the code,
@@ -35,12 +35,12 @@ Read these first when arriving cold:
 3. `docs/agent/overview.md`, `docs/agent/graph-roles.md`, and `docs/agent/workflow.md`
    for operational graph conventions.
 
-Use the DoxyBase MCP docs tools when available:
+Use the DoxaBase MCP docs tools when available:
 
-1. `doxybase.list_docs`
-2. `doxybase.get_doc` with `doc_id="overview"`
-3. `doxybase.get_doc` with `doc_id="graph_roles"`
-4. `doxybase.graph_overview`
+1. `doxabase.list_docs`
+2. `doxabase.get_doc` with `doc_id="overview"`
+3. `doxabase.get_doc` with `doc_id="graph_roles"`
+4. `doxabase.graph_overview`
 
 ## Daily Commands
 
@@ -61,12 +61,12 @@ finishing.
 
 ## Working In The Codebase
 
-- `doxybase/core.py` owns storage and graph behavior.
-- `doxybase/mcp_tools.py` owns testable MCP-callable business logic.
-- `doxybase/mcp_server.py` should stay thin.
+- `doxabase/core.py` owns storage and graph behavior.
+- `doxabase/mcp_tools.py` owns testable MCP-callable business logic.
+- `doxabase/mcp_server.py` should stay thin.
 - `docs/agent/` contains short agent-facing docs; register new docs in
-  `doxybase/agent_docs.py`.
-- `doxybase_design_docs/` and `ARCHITECTURE.md` hold broader direction.
+  `doxabase/agent_docs.py`.
+- `doxabase_design_docs/` and `ARCHITECTURE.md` hold broader direction.
 
 Use type hints generously; they help both humans and agents understand graph
 payloads, helper contracts, and return shapes. Keep MCP responses easy to
@@ -78,7 +78,7 @@ rationale, validation assumptions, data caveats, invariants, or why an apparentl
 simpler approach is not right here. Avoid comments that only restate obvious
 Python syntax.
 
-## Rules For Building Graphs With DoxyBase
+## Rules For Building Graphs With DoxaBase
 
 - Do not write ordinary user/project facts to immutable seed graphs:
   `base_ontology` and `base_shapes`.
@@ -100,18 +100,18 @@ be treated as a full executable catalog.
 
 Graph version storage and revision workflows are planned but not implemented in
 the current runtime. For the longer plan, see
-`doxybase_design_docs/03-doxybase-v1-storage-schema.md` and the revision model
-in `doxybase_design_docs/01-doxybase-v1-design-brief.md`.
+`doxabase_design_docs/03-doxabase-v1-storage-schema.md` and the revision model
+in `doxabase_design_docs/01-doxabase-v1-design-brief.md`.
 
 ## Repository Hygiene
 
-Do not commit local capsule files such as `.doxybase.sqlite`, credentials, or
+Do not commit local capsule files such as `.doxabase.sqlite`, credentials, or
 local credential notes unless explicitly asked. Be careful with untracked session
 artifacts under `docs/agent/` and `examples/session-observations/`; include them
 only when the user wants the observations preserved in git.
 
 If changing fixture behavior, update tests and the relevant agent docs. If adding
-new agent docs, update both `docs/agent/` and `doxybase/agent_docs.py`.
+new agent docs, update both `docs/agent/` and `doxabase/agent_docs.py`.
 
 Commit messages should explain the rationale, not just the file touched. A short
 body is helpful when the change affects graph semantics, fixture behavior,

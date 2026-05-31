@@ -4,7 +4,7 @@ import pytest
 from rdflib import Literal, URIRef
 from rdflib.namespace import DCTERMS, RDF
 
-from doxybase import DoxyBase, DoxyBaseError, ImmutableGraphError
+from doxabase import DoxaBase, DoxaBaseError, ImmutableGraphError
 
 ROOT = Path(__file__).resolve().parents[1]
 AIS_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "ais.trig"
@@ -13,7 +13,7 @@ RC = "https://richcanopy.org/ns/rc#"
 
 
 def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
@@ -25,14 +25,14 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
 
 
 def test_immutable_seed_graphs_reject_normal_imports(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
     with pytest.raises(ImmutableGraphError):
         db.import_turtle("@prefix ex: <https://example.test/> . ex:s ex:p ex:o .", graph="base_ontology")
 
 
 def test_import_trig_maps_graph_iris_to_roles(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     imported = db.import_trig(AIS_FIXTURE)
 
     assert imported == {
@@ -46,7 +46,7 @@ def test_import_trig_maps_graph_iris_to_roles(tmp_path: Path) -> None:
 
 
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
     db.import_trig(POLYMARKET_FIXTURE)
 
@@ -60,7 +60,7 @@ def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:
 
 
 def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
 
     description = db.describe_dataset(
@@ -96,15 +96,15 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
 
 
 def test_describe_dataset_reports_missing_dataset(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
 
-    with pytest.raises(DoxyBaseError, match="was not found"):
+    with pytest.raises(DoxaBaseError, match="was not found"):
         db.describe_dataset("https://richcanopy.org/example/manifest/ais#MissingDataset")
 
 
 def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
 
     description = db.describe_dataset(
@@ -119,7 +119,7 @@ def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> 
 
 
 def test_search_finds_fixture_literals_with_resource_context(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
 
     results = db.search("MMSI vessel", graph="map", limit=10)
@@ -138,11 +138,11 @@ def test_search_finds_fixture_literals_with_resource_context(tmp_path: Path) -> 
 
 
 def test_search_finds_recorded_observation_and_evidence(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     record = db.record_observation(
         summary="Handover lore says this hidden join relies on source ordering.",
         evidence_summary="Notebook evidence captured during dataset takeover.",
-        evidence_sources=["tests/test_doxybase_core.py"],
+        evidence_sources=["tests/test_doxabase_core.py"],
     )
 
     observations = db.search("hidden join", graph="observations")
@@ -158,7 +158,7 @@ def test_search_finds_recorded_observation_and_evidence(tmp_path: Path) -> None:
 
 
 def test_search_index_updates_after_graph_clear(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
 
     assert db.search("downsampling", graph="map").matches
@@ -169,16 +169,16 @@ def test_search_index_updates_after_graph_clear(tmp_path: Path) -> None:
 
 
 def test_search_rejects_invalid_queries(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
-    with pytest.raises(DoxyBaseError, match="Search query"):
+    with pytest.raises(DoxaBaseError, match="Search query"):
         db.search("   ")
-    with pytest.raises(DoxyBaseError, match="searchable token"):
+    with pytest.raises(DoxaBaseError, match="searchable token"):
         db.search("...")
 
 
 def test_graph_overview_counts_imported_fixtures(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
     db.import_trig(POLYMARKET_FIXTURE)
 
@@ -193,7 +193,7 @@ def test_graph_overview_counts_imported_fixtures(tmp_path: Path) -> None:
 
 
 def test_validate_graph_uses_base_and_project_shapes(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
     db.import_trig(POLYMARKET_FIXTURE)
 
@@ -204,7 +204,7 @@ def test_validate_graph_uses_base_and_project_shapes(tmp_path: Path) -> None:
 
 
 def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
     before = db.graph_overview().key_counts["observations"]
 
@@ -213,9 +213,9 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
         observation_type="profile",
         observed_asset="https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
         observed_at="2026-05-31T12:00:00Z",
-        observed_by="urn:doxybase:test-agent",
+        observed_by="urn:doxabase:test-agent",
         evidence_summary="Synthetic test evidence for the observation writer.",
-        evidence_sources=["tests/test_doxybase_core.py"],
+        evidence_sources=["tests/test_doxabase_core.py"],
         row_count=123,
         distinct_count=45,
     )
@@ -246,7 +246,7 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
     assert (
         evidence_iri,
         DCTERMS.source,
-        Literal("tests/test_doxybase_core.py"),
+        Literal("tests/test_doxabase_core.py"),
     ) in evidence
 
     validation = db.validate_graph(scope="all")
@@ -254,11 +254,11 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
 
 
 def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
-    with pytest.raises(DoxyBaseError, match="summary"):
+    with pytest.raises(DoxaBaseError, match="summary"):
         db.record_observation("   ")
-    with pytest.raises(DoxyBaseError, match="row_count"):
+    with pytest.raises(DoxaBaseError, match="row_count"):
         db.record_observation("Bad count", row_count=-1)
-    with pytest.raises(DoxyBaseError, match="observation_type"):
+    with pytest.raises(DoxaBaseError, match="observation_type"):
         db.record_observation("Bad type", observation_type="note")  # type: ignore[arg-type]

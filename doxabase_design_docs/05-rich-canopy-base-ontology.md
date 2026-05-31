@@ -1,16 +1,16 @@
-# Rich Canopy Base Ontology for DoxyBase
+# Rich Canopy Base Ontology for DoxaBase
 
 ## Purpose
 
-DoxyBase should ship with a small Rich Canopy base ontology under the `rc:` prefix.
+DoxaBase should ship with a small Rich Canopy base ontology under the `rc:` prefix.
 
-The base ontology is a helpful kernel for describing data projects, not a closed world and not a complete theory of data. Clients must be able to extend the graph in any direction that suits their project. DoxyBase should accept arbitrary parse-valid RDF, whether or not it uses `rc:` terms.
+The base ontology is a helpful kernel for describing data projects, not a closed world and not a complete theory of data. Clients must be able to extend the graph in any direction that suits their project. DoxaBase should accept arbitrary parse-valid RDF, whether or not it uses `rc:` terms.
 
 The base ontology gives agents shared handles for common data-modeling facts: data assets, tables, columns, semantic value types, joins, profile observations, known caveats, physical layout, and evidence. Clients get more built-in retrieval and validation help when they use these terms, but they are not forced to model everything this way.
 
 ## Design Posture
 
-Use `rc:` for Rich Canopy vocabulary terms. DoxyBase is part of the Rich Canopy cluster, so there should not be a separate `doxy:` vocabulary for the client-facing data model in V1.
+Use `rc:` for Rich Canopy vocabulary terms. DoxaBase is part of the Rich Canopy cluster, so there should not be a separate `doxa:` vocabulary for the client-facing data model in V1.
 
 Reuse established RDF vocabularies when the cost is low:
 
@@ -25,7 +25,7 @@ Avoid heavy dependency on large external ontologies in V1. In particular, do not
 
 ## Inspiration
 
-The reference project is `../manifest-prototype`. Its Manifest vocabulary has the right broad shape but should be ported intentionally, not blindly renamed. DoxyBase should keep the useful modelling patterns and take the chance to improve names where helpful.
+The reference project is `../manifest-prototype`. Its Manifest vocabulary has the right broad shape but should be ported intentionally, not blindly renamed. DoxaBase should keep the useful modelling patterns and take the chance to improve names where helpful.
 
 Patterns worth preserving:
 
@@ -40,7 +40,7 @@ The fixtures in `../examples/manifest-prototype-rc/` are representative ports of
 
 ## Default Graph Placement
 
-DoxyBase V1 should distinguish shipped immutable seed graphs from project-owned mutable graphs.
+DoxaBase V1 should distinguish shipped immutable seed graphs from project-owned mutable graphs.
 
 Shipped seed graphs:
 
@@ -71,11 +71,11 @@ V1 should reject ordinary graph revisions that target `base_ontology` or `base_s
 
 ### `base_ontology`
 
-The immutable Rich Canopy vocabulary shipped with DoxyBase. In this repo, the starter file is `../ontology/rc_core.ttl` relative to this docs folder.
+The immutable Rich Canopy vocabulary shipped with DoxaBase. In this repo, the starter file is `../ontology/rc_core.ttl` relative to this docs folder.
 
 ### `base_shapes`
 
-The immutable SHACL shapes shipped with DoxyBase. In this repo, the starter file is `../ontology/rc_shapes.ttl` relative to this docs folder.
+The immutable SHACL shapes shipped with DoxaBase. In this repo, the starter file is `../ontology/rc_shapes.ttl` relative to this docs folder.
 
 ### `ontology`
 
@@ -348,7 +348,7 @@ Guidelines:
 - document conditional expectations instead of reaching for SPARQL-based SHACL unless a strong use case appears
 - allow client-defined classes/properties to coexist without validation failure
 
-This matches DoxyBase's product posture: parse-valid RDF is mandatory, SHACL is an explicit diagnostic operation, and agents/clients retain freedom to evolve their model.
+This matches DoxaBase's product posture: parse-valid RDF is mandatory, SHACL is an explicit diagnostic operation, and agents/clients retain freedom to evolve their model.
 
 ## V1 Deliverable
 

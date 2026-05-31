@@ -1,1 +1,1 @@
-"""Repository-local tooling for DoxyBase design assets."""
+"""Repository-local tooling for DoxaBase design assets."""

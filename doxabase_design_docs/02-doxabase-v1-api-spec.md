@@ -1,4 +1,4 @@
-# DoxyBase V1 API Spec
+# DoxaBase V1 API Spec
 
 ## Python API Shape
 
@@ -7,7 +7,7 @@ Names may change, but this is the target V1 shape.
 ```python
 from typing import Literal
 
-class DoxyBase:
+class DoxaBase:
     def graph_overview(
         self,
         limit: int = 100,
@@ -253,21 +253,21 @@ If exposing via MCP, keep the tool surface small.
 Suggested tools:
 
 ```text
-doxybase.graph_overview
-doxybase.list_entities
-doxybase.search
-doxybase.preview_context_graph
-doxybase.get_context_graph
-doxybase.record_observation
-doxybase.submit_graph_revision
-doxybase.validate_graph
+doxabase.graph_overview
+doxabase.list_entities
+doxabase.search
+doxabase.preview_context_graph
+doxabase.get_context_graph
+doxabase.record_observation
+doxabase.submit_graph_revision
+doxabase.validate_graph
 ```
 
 Optional:
 
 ```text
-doxybase.list_context_policies
-doxybase.describe_context_policy
+doxabase.list_context_policies
+doxabase.describe_context_policy
 ```
 
 Do not create one MCP tool per tiny graph operation. Use parameterised tools.

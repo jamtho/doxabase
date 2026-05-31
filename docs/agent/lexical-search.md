@@ -2,7 +2,7 @@
 
 Search makes captured lore cheap to rediscover.
 
-DoxyBase stores claims as RDF, but agents do not usually arrive knowing the
+DoxaBase stores claims as RDF, but agents do not usually arrive knowing the
 right resource IRI, graph role, or predicate. Lexical search is the low-friction
 way to ask, "Have we already noticed something about this?"
 
@@ -25,7 +25,7 @@ search index is rebuilt from them after graph writes and clears.
 
 ## What A Match Means
 
-`doxybase.search` returns matched resources, not detached text snippets. Each
+`doxabase.search` returns matched resources, not detached text snippets. Each
 match includes:
 
 - graph role
@@ -76,7 +76,7 @@ matches = db.search("MMSI vessel", graph="map", limit=10)
 MCP:
 
 ```text
-doxybase.search(query="Parquet schemas", graph="map", limit=5)
+doxabase.search(query="Parquet schemas", graph="map", limit=5)
 ```
 
 After finding a candidate, inspect the surrounding resource with the most

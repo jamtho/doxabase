@@ -65,11 +65,11 @@ DEFAULT_GRAPHS: tuple[tuple[str, str, bool, bool, Path | None], ...] = (
 )
 
 
-class DoxyBaseError(Exception):
-    """Base exception for DoxyBase runtime errors."""
+class DoxaBaseError(Exception):
+    """Base exception for DoxaBase runtime errors."""
 
 
-class ImmutableGraphError(DoxyBaseError):
+class ImmutableGraphError(DoxaBaseError):
     """Raised when a caller tries to mutate an immutable graph."""
 
 
@@ -207,7 +207,7 @@ class ValidationResult:
     scope: str
 
 
-class DoxyBase:
+class DoxaBase:
     """A small SQLite-backed RDF memory capsule.
 
     V1 stores RDF terms as strings in a simple quad table. RDFLib handles
@@ -216,7 +216,7 @@ class DoxyBase:
 
     def __init__(
         self,
-        path: str | Path = ".doxybase.sqlite",
+        path: str | Path = ".doxabase.sqlite",
         *,
         initialize: bool = True,
         seed: bool = True,
@@ -233,11 +233,11 @@ class DoxyBase:
     @classmethod
     def create(
         cls,
-        path: str | Path = ".doxybase.sqlite",
+        path: str | Path = ".doxabase.sqlite",
         *,
         overwrite: bool = False,
         seed: bool = True,
-    ) -> "DoxyBase":
+    ) -> "DoxaBase":
         db_path = Path(path)
         if overwrite and db_path.exists():
             db_path.unlink()
@@ -246,7 +246,7 @@ class DoxyBase:
     def close(self) -> None:
         self._conn.close()
 
-    def __enter__(self) -> "DoxyBase":
+    def __enter__(self) -> "DoxaBase":
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -400,11 +400,11 @@ class DoxyBase:
         offset: int = 0,
     ) -> SearchResults:
         if not query.strip():
-            raise DoxyBaseError("Search query must not be empty")
+            raise DoxaBaseError("Search query must not be empty")
         if limit < 1:
-            raise DoxyBaseError("Search limit must be at least 1")
+            raise DoxaBaseError("Search limit must be at least 1")
         if offset < 0:
-            raise DoxyBaseError("Search offset must be non-negative")
+            raise DoxaBaseError("Search offset must be non-negative")
 
         fts_query = _fts_query(query)
         graphs = self._expand_graphs([graph] if graph else None)
@@ -460,7 +460,7 @@ class DoxyBase:
         lookup_graphs = self._lookup_graphs(data_graphs)
         if not self._subject_exists(dataset_iri, data_graphs):
             graph_label = graph if graph is not None else "all graphs"
-            raise DoxyBaseError(f"Dataset '{iri}' was not found in {graph_label}")
+            raise DoxaBaseError(f"Dataset '{iri}' was not found in {graph_label}")
 
         columns = [
             self._describe_column(column_iri, data_graphs, lookup_graphs)
@@ -536,13 +536,13 @@ class DoxyBase:
         evidence_iri: str | None = None,
     ) -> ObservationRecord:
         if not summary.strip():
-            raise DoxyBaseError("Observation summary must not be empty")
+            raise DoxaBaseError("Observation summary must not be empty")
         observation_class = {
             "observation": "rc:Observation",
             "profile": "rc:ProfileObservation",
         }.get(observation_type)
         if observation_class is None:
-            raise DoxyBaseError(
+            raise DoxaBaseError(
                 "observation_type must be either 'observation' or 'profile'"
             )
         for name, value in {
@@ -1266,7 +1266,7 @@ class DoxyBase:
         return self._objects(graphs, subject, str(RDF.type))
 
     def _mint_iri(self, kind: str) -> str:
-        return f"https://richcanopy.org/doxybase/generated/{kind}/{uuid4()}"
+        return f"https://richcanopy.org/doxabase/generated/{kind}/{uuid4()}"
 
     def _bind_prefixes(self, graph: Graph) -> None:
         for prefix, namespace in PREFIXES.items():
@@ -1284,7 +1284,7 @@ class DoxyBase:
             try:
                 dt = datetime.fromisoformat(text)
             except ValueError as exc:
-                raise DoxyBaseError(
+                raise DoxaBaseError(
                     "observed_at must be an ISO 8601 datetime"
                 ) from exc
         if dt.tzinfo is None:
@@ -1299,7 +1299,7 @@ class DoxyBase:
 
     def _ensure_non_negative(self, name: str, value: int | None) -> None:
         if value is not None and value < 0:
-            raise DoxyBaseError(f"{name} must be non-negative")
+            raise DoxaBaseError(f"{name} must be non-negative")
 
     def _graph_filter(self, graphs: list[str], *, alias: str | None = None) -> tuple[str, list[str]]:
         if not graphs:
@@ -1347,7 +1347,7 @@ def _now() -> str:
 def _fts_query(query: str) -> str:
     tokens = re.findall(r"[A-Za-z0-9]+", query)
     if not tokens:
-        raise DoxyBaseError("Search query must contain at least one searchable token")
+        raise DoxaBaseError("Search query must contain at least one searchable token")
     return " AND ".join(f"{token.lower()}*" for token in tokens)
 
 

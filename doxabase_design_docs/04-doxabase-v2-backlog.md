@@ -1,4 +1,4 @@
-# DoxyBase V2 Backlog
+# DoxaBase V2 Backlog
 
 These are deliberate deferrals from V1.
 
@@ -48,7 +48,7 @@ commit_revision()
 - Proposal/rationale packs.
 - Human review mode.
 - Multi-user governance.
-- Query generation workflows that combine DoxyBase semantic context with an execution backend such as DuckDB.
+- Query generation workflows that combine DoxaBase semantic context with an execution backend such as DuckDB.
 - Result-capture workflows that record query outputs as observations linked to query, storage, and result evidence.
 
 ## Executable Catalog

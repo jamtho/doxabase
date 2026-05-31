@@ -1,11 +1,11 @@
-# DoxyBase
+# DoxaBase
 
-DoxyBase is a local, agent-operated RDF memory capsule for data projects.
+DoxaBase is a local, agent-operated RDF memory capsule for data projects.
 
 The core idea is that useful knowledge about data rarely arrives fully
 systematised. Agents and humans notice things while working: row-count facts,
 schema caveats, source quirks, query results, suspected joins, broken
-assumptions, and interpretations that may or may not hold tomorrow. DoxyBase
+assumptions, and interpretations that may or may not hold tomorrow. DoxaBase
 gives those claims somewhere durable to live as RDF, without requiring every
 claim to be promoted immediately into stable project structure.
 
@@ -17,7 +17,7 @@ It is built around a two-phase loop:
    project map, ontology terms, shapes, caveats, and revision history.
 
 The graph is deliberately open-ended: projects can record arbitrary RDF claims
-about datasets. At the same time, DoxyBase ships a small Rich Canopy `rc:`
+about datasets. At the same time, DoxaBase ships a small Rich Canopy `rc:`
 ontology for common dataset concepts such as assets, tables, columns, physical
 layouts, caveats, observations, evidence, and provenance. That shared structure
 is meant to make knowledge portable across projects without forcing every
@@ -26,14 +26,14 @@ project into a closed schema.
 Another image for the project is the handover conversation you wish came with
 every complex dataset. When you inherit data, you need more than field names:
 you want the hidden facts, local caveats, awkward history, and the mindset
-behind how the dataset was created. DoxyBase tries to make that lore cheap to
+behind how the dataset was created. DoxaBase tries to make that lore cheap to
 transfer one-to-many: once a human or agent has worked something out, the claim,
 evidence, caveat, and rationale can be recorded for every future reader.
 
 The implementation is intentionally small: a Python package backed by a local
 SQLite file, with RDFLib handling parsing and pySHACL handling explicit
 validation. There is no embedded LLM in the library. Agents supply semantic
-judgement; DoxyBase supplies graph mechanics, storage, retrieval affordances,
+judgement; DoxaBase supplies graph mechanics, storage, retrieval affordances,
 and validation.
 
 ## Current Status
@@ -63,9 +63,9 @@ Not implemented yet:
 
 ## Layout
 
-- `doxybase_design_docs/` - V1 design brief, API sketch, storage sketch, and ontology notes.
+- `doxabase_design_docs/` - V1 design brief, API sketch, storage sketch, and ontology notes.
 - `docs/agent/` - short operational docs exposed through MCP.
-- `doxybase/` - Python package.
+- `doxabase/` - Python package.
 - `ontology/rc_core.ttl` - draft immutable `rc:` base ontology seed graph.
 - `ontology/rc_shapes.ttl` - draft immutable open SHACL shape seed graph.
 - `examples/manifest-prototype-rc/` - representative AIS and Polymarket fixtures converted from Manifest vocabulary to `rc:`.
@@ -96,9 +96,9 @@ uv run pytest
 ## Python Capsule Example
 
 ```python
-from doxybase import DoxyBase
+from doxabase import DoxaBase
 
-db = DoxyBase.create(".doxybase.sqlite", overwrite=True)
+db = DoxaBase.create(".doxabase.sqlite", overwrite=True)
 db.import_trig("examples/manifest-prototype-rc/ais.trig")
 db.import_trig("examples/manifest-prototype-rc/polymarket.trig")
 
@@ -121,34 +121,34 @@ The capsule seeds immutable `base_ontology` and `base_shapes` graphs from `ontol
 Run the stdio MCP server:
 
 ```bash
-uv run python -m doxybase.mcp_server --capsule .doxybase.sqlite
+uv run python -m doxabase.mcp_server --capsule .doxabase.sqlite
 ```
 
 Useful first tool calls for an agent:
 
-1. `doxybase.list_docs`
-2. `doxybase.get_doc` with `doc_id="overview"`
-3. `doxybase.get_doc` with `doc_id="graph_roles"`
-4. `doxybase.load_example_fixtures`
-5. `doxybase.graph_overview`
-6. `doxybase.search` for remembered terms, caveats, observations, or evidence
-7. `doxybase.list_entities` with `type="rc:Table"` and `graph="map"`
-8. `doxybase.describe_dataset` with a table IRI from `list_entities`
-9. `doxybase.record_observation` for useful point-in-time findings
-10. `doxybase.validate_graph` with `scope="all"`
+1. `doxabase.list_docs`
+2. `doxabase.get_doc` with `doc_id="overview"`
+3. `doxabase.get_doc` with `doc_id="graph_roles"`
+4. `doxabase.load_example_fixtures`
+5. `doxabase.graph_overview`
+6. `doxabase.search` for remembered terms, caveats, observations, or evidence
+7. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
+8. `doxabase.describe_dataset` with a table IRI from `list_entities`
+9. `doxabase.record_observation` for useful point-in-time findings
+10. `doxabase.validate_graph` with `scope="all"`
 
 Current MCP tools:
 
-- `doxybase.list_docs`
-- `doxybase.get_doc`
-- `doxybase.graph_overview`
-- `doxybase.search`
-- `doxybase.list_entities`
-- `doxybase.describe_dataset`
-- `doxybase.record_observation`
-- `doxybase.import_trig`
-- `doxybase.load_example_fixtures`
-- `doxybase.validate_graph`
+- `doxabase.list_docs`
+- `doxabase.get_doc`
+- `doxabase.graph_overview`
+- `doxabase.search`
+- `doxabase.list_entities`
+- `doxabase.describe_dataset`
+- `doxabase.record_observation`
+- `doxabase.import_trig`
+- `doxabase.load_example_fixtures`
+- `doxabase.validate_graph`
 
 ## Graph Roles
 

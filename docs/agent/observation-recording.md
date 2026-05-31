@@ -1,6 +1,6 @@
 # Observation Recording
 
-DoxyBase distinguishes current project knowledge from point-in-time findings.
+DoxaBase distinguishes current project knowledge from point-in-time findings.
 
 Use the `map` graph for consolidated facts that should describe the current best
 understanding of a dataset. Use the `observations` graph for things an agent,
@@ -11,7 +11,7 @@ promoted, summarized, contradicted, or used as evidence for a map update.
 
 ## Observation Resources
 
-`doxybase.record_observation` writes an `rc:Observation` or
+`doxabase.record_observation` writes an `rc:Observation` or
 `rc:ProfileObservation` resource to the `observations` graph.
 
 Use `observation_type="observation"` for general findings:
@@ -50,11 +50,11 @@ Do not put credentials or secrets in evidence summaries or sources.
 
 ## Identifiers
 
-If no IRI is supplied, DoxyBase mints generated observation and evidence IRIs
+If no IRI is supplied, DoxaBase mints generated observation and evidence IRIs
 under:
 
 ```text
-https://richcanopy.org/doxybase/generated/
+https://richcanopy.org/doxabase/generated/
 ```
 
 Callers may provide `observation_iri` or `evidence_iri` when they need stable
@@ -77,7 +77,7 @@ db.record_observation(
     observation_type="profile",
     observed_asset="https://richcanopy.org/example/manifest/ais#DailyIndex",
     observed_at="2026-05-31T00:00:00Z",
-    observed_by="urn:doxybase:codex-agent",
+    observed_by="urn:doxabase:codex-agent",
     evidence_summary="DuckDB scan over local AIS daily index Parquet files.",
     evidence_sources=["s3://ais-noaa/index/*/*.parquet"],
     row_count=14638201,

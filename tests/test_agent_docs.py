@@ -1,4 +1,4 @@
-from doxybase.agent_docs import get_agent_doc, list_agent_docs
+from doxabase.agent_docs import get_agent_doc, list_agent_docs
 
 
 def test_list_agent_docs_contains_operational_docs() -> None:

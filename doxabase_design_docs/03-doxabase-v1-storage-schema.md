@@ -1,13 +1,13 @@
-# DoxyBase V1 Storage Schema Sketch
+# DoxaBase V1 Storage Schema Sketch
 
 ## Storage Goal
 
-DoxyBase uses a single SQLite file as a local memory capsule.
+DoxaBase uses a single SQLite file as a local memory capsule.
 
 Default path:
 
 ```text
-.doxybase.sqlite
+.doxabase.sqlite
 ```
 
 The conceptual model is RDF/named graphs. SQLite is the implementation container.

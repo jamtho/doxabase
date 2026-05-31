@@ -6,8 +6,8 @@ from typing import Any
 
 from rdflib import Dataset
 
-from doxybase.agent_docs import get_agent_doc, list_agent_docs
-from doxybase.core import DoxyBase, RCG_PREFIX, ROOT
+from doxabase.agent_docs import get_agent_doc, list_agent_docs
+from doxabase.core import DoxaBase, RCG_PREFIX, ROOT
 
 EXAMPLE_FIXTURES = (
     ROOT / "examples" / "manifest-prototype-rc" / "ais.trig",
@@ -23,7 +23,7 @@ def get_doc_tool(doc_id: str, max_chars: int = 12000) -> dict[str, Any]:
     return get_agent_doc(doc_id, max_chars=max_chars)
 
 
-def graph_overview_tool(db: DoxyBase, limit: int = 100) -> dict[str, Any]:
+def graph_overview_tool(db: DoxaBase, limit: int = 100) -> dict[str, Any]:
     overview = db.graph_overview(limit=limit)
     return {
         "named_graphs": [asdict(graph) for graph in overview.named_graphs],
@@ -35,7 +35,7 @@ def graph_overview_tool(db: DoxyBase, limit: int = 100) -> dict[str, Any]:
 
 
 def list_entities_tool(
-    db: DoxyBase,
+    db: DoxaBase,
     type: str | None = None,
     graph: str | None = "map",
     text: str | None = None,
@@ -52,7 +52,7 @@ def list_entities_tool(
 
 
 def describe_dataset_tool(
-    db: DoxyBase,
+    db: DoxaBase,
     iri: str,
     graph: str | None = "map",
 ) -> dict[str, Any]:
@@ -60,7 +60,7 @@ def describe_dataset_tool(
 
 
 def record_observation_tool(
-    db: DoxyBase,
+    db: DoxaBase,
     summary: str,
     observation_type: str = "observation",
     observed_asset: str | None = None,
@@ -92,7 +92,7 @@ def record_observation_tool(
 
 
 def search_tool(
-    db: DoxyBase,
+    db: DoxaBase,
     query: str,
     graph: str | None = None,
     limit: int = 20,
@@ -110,7 +110,7 @@ def search_tool(
 
 
 def import_trig_tool(
-    db: DoxyBase,
+    db: DoxaBase,
     path: str,
     replace: bool = False,
 ) -> dict[str, Any]:
@@ -124,7 +124,7 @@ def import_trig_tool(
     }
 
 
-def load_example_fixtures_tool(db: DoxyBase, replace: bool = False) -> dict[str, Any]:
+def load_example_fixtures_tool(db: DoxaBase, replace: bool = False) -> dict[str, Any]:
     results = []
     totals: dict[str, int] = {}
     if replace:
@@ -149,7 +149,7 @@ def load_example_fixtures_tool(db: DoxyBase, replace: bool = False) -> dict[str,
 
 
 def validate_graph_tool(
-    db: DoxyBase,
+    db: DoxaBase,
     scope: str = "map",
     limit_results: int = 100,
 ) -> dict[str, Any]:

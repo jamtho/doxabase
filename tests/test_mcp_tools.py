@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from doxybase import DoxyBase
-from doxybase.mcp_server import build_server
-from doxybase.mcp_tools import (
+from doxabase import DoxaBase
+from doxabase.mcp_server import build_server
+from doxabase.mcp_tools import (
     describe_dataset_tool,
     graph_overview_tool,
     list_docs_tool,
@@ -21,15 +21,15 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     server = build_server(tmp_path / "mcp.sqlite")
     tool_names = {tool.name for tool in await server.list_tools()}
 
-    assert "doxybase.list_docs" in tool_names
-    assert "doxybase.get_doc" in tool_names
-    assert "doxybase.graph_overview" in tool_names
-    assert "doxybase.list_entities" in tool_names
-    assert "doxybase.describe_dataset" in tool_names
-    assert "doxybase.record_observation" in tool_names
-    assert "doxybase.search" in tool_names
-    assert "doxybase.load_example_fixtures" in tool_names
-    assert "doxybase.validate_graph" in tool_names
+    assert "doxabase.list_docs" in tool_names
+    assert "doxabase.get_doc" in tool_names
+    assert "doxabase.graph_overview" in tool_names
+    assert "doxabase.list_entities" in tool_names
+    assert "doxabase.describe_dataset" in tool_names
+    assert "doxabase.record_observation" in tool_names
+    assert "doxabase.search" in tool_names
+    assert "doxabase.load_example_fixtures" in tool_names
+    assert "doxabase.validate_graph" in tool_names
 
 
 def test_doc_tools_return_json_like_payloads() -> None:
@@ -41,7 +41,7 @@ def test_doc_tools_return_json_like_payloads() -> None:
 
 
 def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
     load_result = load_example_fixtures_tool(db)
     overview = graph_overview_tool(db)
@@ -55,7 +55,7 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
 
 
 def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)
 
     result = describe_dataset_tool(
@@ -80,18 +80,18 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
 
 
 def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
     result = record_observation_tool(
         db,
         summary="MCP helper wrote a structured observation.",
-        observed_by="urn:doxybase:test-agent",
+        observed_by="urn:doxabase:test-agent",
         evidence_summary="Evidence written by the MCP helper test.",
         evidence_sources=["tests/test_mcp_tools.py"],
     )
 
     assert result["observation_iri"].startswith(
-        "https://richcanopy.org/doxybase/generated/observation/"
+        "https://richcanopy.org/doxabase/generated/observation/"
     )
     assert result["observation_type"] == "observation"
     assert result["evidence_iri"] is not None
@@ -101,7 +101,7 @@ def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> No
 
 
 def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)
 
     result = search_tool(db, query="Parquet schemas", graph="map", limit=5)
@@ -117,7 +117,7 @@ def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
 
 
 def test_fixture_loading_replace_keeps_all_fixtures(tmp_path: Path) -> None:
-    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
     load_result = load_example_fixtures_tool(db, replace=True)
     tables = list_entities_tool(db, type="rc:Table", graph="map")

@@ -21,7 +21,7 @@ For example:
 - `https://richcanopy.org/graph/observations`
 - `https://richcanopy.org/graph/evidence`
 
-`DoxyBase.import_trig()` and the MCP import tools map those IRIs to local graph role names.
+`DoxaBase.import_trig()` and the MCP import tools map those IRIs to local graph role names.
 
 These fixtures are representative tests, not full mechanical conversions. They are useful for checking whether agents can discover tables, columns, value types, joins, caveats, and validation state.
 

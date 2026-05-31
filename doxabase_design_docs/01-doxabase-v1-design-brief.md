@@ -1,14 +1,14 @@
-# DoxyBase V1 Design Brief for Codex
+# DoxaBase V1 Design Brief for Codex
 
 ## Project Name
 
-The project name is **DoxyBase**.
+The project name is **DoxaBase**.
 
-DoxyBase sits under the broader **Rich Canopy** brand. Shared vocabulary terms should use the `rc:` RDF/IRI prefix.
+DoxaBase sits under the broader **Rich Canopy** brand. Shared vocabulary terms should use the `rc:` RDF/IRI prefix.
 
 ## Purpose
 
-DoxyBase is a local, agent-operated RDF memory capsule for data projects.
+DoxaBase is a local, agent-operated RDF memory capsule for data projects.
 
 It lets agents record observations about datasets, consolidate those observations into a living RDF knowledge graph, retrieve bounded graph slices while doing later analytical work, and revise the graph safely over time.
 
@@ -22,19 +22,19 @@ This is not a general metadata catalogue, and not a hosted graph database. V1 is
 
 Frontier LLM agents are unexpectedly good at working with RDF and knowledge graphs. They can read large RDF fragments, infer viable graph structures from messy notes, and make sensible graph edits.
 
-DoxyBase should lean into that capability.
+DoxaBase should lean into that capability.
 
-The library should not answer every semantic question itself. There is no LLM inside the library. The client agent supplies semantic judgement. DoxyBase supplies graph storage, retrieval, slicing, versioning, parse validation, observation capture, and optional SHACL validation.
+The library should not answer every semantic question itself. There is no LLM inside the library. The client agent supplies semantic judgement. DoxaBase supplies graph storage, retrieval, slicing, versioning, parse validation, observation capture, and optional SHACL validation.
 
 The agent-facing contract is:
 
-> Agent supplies semantic intent; DoxyBase supplies graph mechanics.
+> Agent supplies semantic intent; DoxaBase supplies graph mechanics.
 
 ## Rich Canopy Base Ontology
 
 V1 should include a small, extensible Rich Canopy base ontology under the `rc:` prefix.
 
-This ontology is a helpful kernel for data-project modelling, not a closed world. Clients may add arbitrary classes, properties, vocabularies, and RDF patterns that suit their domain. DoxyBase should accept arbitrary parse-valid RDF; projects get more built-in retrieval and validation help when they use `rc:` terms, but they are not forced into them.
+This ontology is a helpful kernel for data-project modelling, not a closed world. Clients may add arbitrary classes, properties, vocabularies, and RDF patterns that suit their domain. DoxaBase should accept arbitrary parse-valid RDF; projects get more built-in retrieval and validation help when they use `rc:` terms, but they are not forced into them.
 
 The base ontology direction is described in `05-rich-canopy-base-ontology.md`. Starter seed files live at `../ontology/rc_core.ttl` and `../ontology/rc_shapes.ttl` relative to this docs folder.
 
@@ -44,13 +44,13 @@ There are two immutable seed graph roles and six project-owned graph roles.
 
 ### 1. Base Ontology Graph
 
-The immutable Rich Canopy vocabulary shipped with DoxyBase.
+The immutable Rich Canopy vocabulary shipped with DoxaBase.
 
 This graph contains the starter `rc:` classes, properties, and named individuals. It should be loaded into the memory capsule as a named graph but not revised through normal project graph edits.
 
 ### 2. Base Shapes Graph
 
-The immutable SHACL shapes shipped with DoxyBase.
+The immutable SHACL shapes shipped with DoxaBase.
 
 These shapes validate common authoring mistakes for `rc:` terms. They are open and diagnostic; they are not a closed-world schema and should not block every V1 edit.
 
@@ -90,7 +90,7 @@ V1 may implement this minimally, but the storage model should leave room for it.
 
 ## Online and Offline Phases
 
-DoxyBase supports two broad modes of agent behaviour.
+DoxaBase supports two broad modes of agent behaviour.
 
 ### Online noticing
 
@@ -147,7 +147,7 @@ Use a single SQLite file as the project memory capsule.
 Default path example:
 
 ```text
-.doxybase.sqlite
+.doxabase.sqlite
 ```
 
 The conceptual model is RDF/named graphs. SQLite is only the local storage container and index.

@@ -1,6 +1,6 @@
 # Graph Roles
 
-DoxyBase uses named graph roles to separate stable vocabulary from project facts, observations, evidence, and validation shapes.
+DoxaBase uses named graph roles to separate stable vocabulary from project facts, observations, evidence, and validation shapes.
 
 ## Immutable Seed Graphs
 
