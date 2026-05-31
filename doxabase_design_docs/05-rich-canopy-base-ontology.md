@@ -182,6 +182,7 @@ rc:snapshotTimestamp
 rc:schemaStability
 rc:rowCountSnapshot
 rc:pathTemplate
+rc:hasStorageAccess
 ```
 
 `rc:valueType` is the renamed equivalent of Manifest's `mnf:semanticType`: the domain-meaningful type of values in a column. Client projects can define any number of their own value types.
@@ -264,14 +265,23 @@ Suggested starting classes:
 ```text
 rc:PhysicalLayout
 rc:FileFormat
+rc:CompressionCodec
 rc:RowOrdering
 rc:OrderingKey
 rc:PartitionScheme
 rc:CompositePartitionScheme
 rc:PartitionLevel
+rc:StorageAccess
+rc:StorageProtocol
+rc:AccessMode
 ```
 
 These terms are useful but should stay optional. Many assets have no known or meaningful ordering, no partition scheme, or no file-like layout.
+
+Storage access terms describe non-secret execution context: protocol, storage
+root, bucket/prefix, endpoint profile, path-style access, credential reference,
+and intended access mode. They should help agents plan queries while keeping
+actual secrets and user-specific runtime configuration outside the graph.
 
 ### Observations and Profiles
 

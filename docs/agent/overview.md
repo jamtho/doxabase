@@ -17,8 +17,9 @@ Current implementation status:
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
-- `describe_dataset()` for bounded table schema, layout, caveat, and provenance context.
+- `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
 - `record_observation()` for point-in-time findings and linked evidence.
+- Non-secret storage access metadata for physical query planning.
 - MCP tools for docs, overview, search, listing, dataset description, observation recording, import, validation, and fixture loading.
 
 Important V1 limits:
@@ -26,5 +27,6 @@ Important V1 limits:
 - No context slicing yet.
 - No revision/diff workflow yet.
 - No full SPARQL endpoint.
+- No direct query generation or execution helpers yet.
 - No embedded LLM, semantic search, or embedding index.
 - SHACL validation is explicit and diagnostic, not a commit gate.

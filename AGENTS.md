@@ -121,8 +121,7 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add non-secret executable catalog metadata for physical layouts and storage
-   access patterns.
-2. Add graph slice/revision metadata and broader MCP context retrieval tools.
+1. Add graph slice/revision metadata and broader MCP context retrieval tools.
+2. Add query-planning helpers that consume storage access metadata.
 3. Consider semantic or hybrid search later, once the literal RDF search surface
    has enough real usage.

@@ -59,6 +59,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "lexical-search.md",
     ),
     AgentDoc(
+        id="executable_catalog",
+        title="Executable Catalog Metadata",
+        description="How to model non-secret storage access facts for query planning and handoff.",
+        path=DOCS_DIR / "executable-catalog.md",
+    ),
+    AgentDoc(
         id="api_reference",
         title="API Reference",
         description="Small Python API reference for the current implementation.",

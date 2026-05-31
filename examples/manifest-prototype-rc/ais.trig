@@ -145,6 +145,7 @@ rcg:map {
             ais:bc_h3_res15 ;
         rc:hasColumnGroup ais:bc_position ;
         rc:hasPhysicalLayout ais:bc_layout ;
+        rc:hasStorageAccess ais:ais_object_store_access ;
         rc:partitionedBy ais:daily_date_partition ;
         rc:hasProvenance ais:noaa_provenance ;
         rc:hasKnownCaveat
@@ -235,6 +236,7 @@ rcg:map {
 
     ais:bc_layout a rc:PhysicalLayout ;
         rc:fileFormat rc:Parquet ;
+        rc:compressionCodec rc:ZstdCompression ;
         rc:hasRowOrdering ais:bc_ordering .
 
     ais:bc_ordering a rc:RowOrdering ;
@@ -259,6 +261,18 @@ rcg:map {
         rc:pathTemplate "broadcasts/{year}/ais-{date}.parquet" ;
         rc:redundantPartitionKey ais:bc_date .
 
+    ais:ais_object_store_access a rc:StorageAccess ;
+        rdfs:label "AIS local object-store access profile" ;
+        rdfs:comment "Non-secret S3-compatible access facts for the AIS Parquet layout. Endpoint and credential details are resolved outside the graph." ;
+        rc:storageProtocol rc:S3CompatibleStorage ;
+        rc:storageRoot "s3://ais-noaa/" ;
+        rc:endpointProfile "local-minio" ;
+        rc:bucketName "ais-noaa" ;
+        rc:region "local" ;
+        rc:pathStyleAccess true ;
+        rc:credentialReference "profile:ais-readonly" ;
+        rc:accessMode rc:ReadOnlyAccess .
+
     ais:DailyIndex a rc:Dataset, rc:Table ;
         rdfs:label "AIS Daily Vessel Index" ;
         rdfs:comment "One Parquet file per day, one row per MMSI observed that day. Summarises daily broadcast data." ;
@@ -272,9 +286,11 @@ rcg:map {
             ais:ix_last_timestamp ,
             ais:ix_distance_m ;
         rc:partitionedBy ais:daily_date_partition ;
+        rc:hasStorageAccess ais:ais_object_store_access ;
         rc:hasPhysicalLayout [
             a rc:PhysicalLayout ;
-            rc:fileFormat rc:Parquet
+            rc:fileFormat rc:Parquet ;
+            rc:compressionCodec rc:ZstdCompression
         ] ;
         rc:companionOf ais:DailyBroadcasts .
 

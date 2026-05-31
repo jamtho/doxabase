@@ -18,6 +18,7 @@ human-facing text such as:
 - `rc:sourceDescription`
 - `rc:columnName`
 - `rc:pathTemplate`
+- storage roots, bucket names, endpoint profiles, and credential references
 - evidence source strings
 
 The index is derivative. The RDF quads remain the source of truth, and the

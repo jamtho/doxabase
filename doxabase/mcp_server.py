@@ -23,7 +23,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, lexical search, bounded dataset description, observation recording, import, fixture loading, and validation; context slicing is not implemented yet."""
+Current V1 tools support inspection, lexical search, bounded dataset/storage description, observation recording, import, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -69,7 +69,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
 
     @server.tool(name="doxabase.describe_dataset")
     def describe_dataset(iri: str, graph: str | None = "map") -> dict[str, Any]:
-        """Return bounded schema, layout, caveat, and provenance context for one dataset."""
+        """Return bounded schema, layout, storage access, caveat, and provenance context."""
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
 

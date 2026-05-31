@@ -48,7 +48,7 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     tables = list_entities_tool(db, type="rc:Table", graph="map")
     validation = validate_graph_tool(db, scope="all")
 
-    assert load_result["total_imported"] == 735
+    assert load_result["total_imported"] == 762
     assert overview["key_counts"]["tables"] >= 7
     assert tables["count"] >= 7
     assert validation["conforms"] is True
@@ -72,6 +72,10 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         "bestBid",
         "bestAsk",
     }
+    assert result["physical_layouts"][0]["compression_codec"]["label"] == "zstd"
+    assert result["storage_accesses"][0]["storage_protocol"]["label"] == "local filesystem"
+    assert result["storage_accesses"][0]["storage_root"] == "data/parquet"
+    assert result["storage_accesses"][0]["access_mode"]["label"] == "read-only"
     assert any(
         caveat["description"]
         and "Parquet schemas are inferred" in caveat["description"]

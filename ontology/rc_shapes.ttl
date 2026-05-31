@@ -36,6 +36,11 @@ rc:DataAssetShape a sh:NodeShape ;
         sh:path rc:hasKnownCaveat ;
         sh:nodeKind sh:IRI ;
         sh:message "hasKnownCaveat values should be named caveat resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasStorageAccess ;
+        sh:nodeKind sh:IRI ;
+        sh:message "hasStorageAccess values should be named storage access resources." ;
     ] .
 
 rc:TableShape a sh:NodeShape ;
@@ -320,6 +325,12 @@ rc:PhysicalLayoutShape a sh:NodeShape ;
         sh:message "fileFormat must be an rc:FileFormat if declared." ;
     ] ;
     sh:property [
+        sh:path rc:compressionCodec ;
+        sh:maxCount 1 ;
+        sh:class rc:CompressionCodec ;
+        sh:message "compressionCodec must be an rc:CompressionCodec if declared." ;
+    ] ;
+    sh:property [
         sh:path rc:hasRowOrdering ;
         sh:maxCount 1 ;
         sh:node rc:RowOrderingShape ;
@@ -391,6 +402,68 @@ rc:PartitionLevelShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:in ( rc:Daily rc:Hourly rc:Monthly rc:ByValue ) ;
         sh:message "levelGranularity must be Daily, Hourly, Monthly, or ByValue." ;
+    ] .
+
+rc:StorageAccessShape a sh:NodeShape ;
+    sh:targetClass rc:StorageAccess ;
+    sh:property [
+        sh:path rc:storageProtocol ;
+        sh:maxCount 1 ;
+        sh:class rc:StorageProtocol ;
+        sh:message "storageProtocol must be an rc:StorageProtocol if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:storageRoot ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "storageRoot must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:endpointProfile ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "endpointProfile must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:bucketName ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "bucketName must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:keyPrefix ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "keyPrefix must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:region ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "region must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:pathStyleAccess ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+        sh:message "pathStyleAccess must be a boolean if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:credentialReference ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "credentialReference must be a non-secret string reference if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:accessMode ;
+        sh:maxCount 1 ;
+        sh:class rc:AccessMode ;
+        sh:message "accessMode must be an rc:AccessMode if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:pathTemplate ;
+        sh:datatype xsd:string ;
+        sh:message "Storage access pathTemplate values must be strings." ;
     ] .
 
 rc:ProfileObservationShape a sh:NodeShape ;

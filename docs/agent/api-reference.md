@@ -40,8 +40,9 @@ observation = db.record_observation(
 ```
 
 `describe_dataset()` returns bounded context for one dataset/table: columns,
-physical/value types, path templates, physical layouts, partition schemes,
-caveats, provenance, and directly related datasets.
+physical/value types, path templates, physical layouts, storage access
+descriptions, partition schemes, caveats, provenance, and directly related
+datasets.
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are

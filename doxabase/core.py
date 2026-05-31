@@ -131,6 +131,24 @@ class PhysicalLayoutDescription:
     label: str | None
     description: str | None
     file_format: ResourceSummary | None
+    compression_codec: ResourceSummary | None
+
+
+@dataclass(frozen=True)
+class StorageAccessDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    storage_protocol: ResourceSummary | None
+    access_mode: ResourceSummary | None
+    storage_root: str | None
+    endpoint_profile: str | None
+    bucket_name: str | None
+    key_prefix: str | None
+    region: str | None
+    path_style_access: bool | None
+    credential_reference: str | None
+    path_templates: list[str]
 
 
 @dataclass(frozen=True)
@@ -163,6 +181,7 @@ class DatasetDescription:
     columns: list[ColumnDescription]
     path_templates: list[str]
     physical_layouts: list[PhysicalLayoutDescription]
+    storage_accesses: list[StorageAccessDescription]
     partition_schemes: list[PartitionDescription]
     caveats: list[ResourceSummary]
     provenance: list[ResourceSummary]
@@ -307,6 +326,7 @@ class DoxaBase:
             "columns": self._count_type("rc:Column"),
             "observations": self._count_type("rc:Observation")
             + self._count_type("rc:ProfileObservation"),
+            "storage_accesses": self._count_type("rc:StorageAccess"),
             "shapes": self._count_type("sh:NodeShape"),
         }
         return GraphOverview(
@@ -472,17 +492,30 @@ class DoxaBase:
             self._describe_physical_layout(layout_iri, data_graphs, lookup_graphs)
             for layout_iri in self._objects(data_graphs, dataset_iri, "rc:hasPhysicalLayout")
         ]
+        storage_accesses = [
+            self._describe_storage_access(access_iri, data_graphs, lookup_graphs)
+            for access_iri in self._objects(data_graphs, dataset_iri, "rc:hasStorageAccess")
+        ]
         partition_schemes = [
             self._describe_partition(partition_iri, data_graphs, lookup_graphs)
             for partition_iri in self._objects(data_graphs, dataset_iri, "rc:partitionedBy")
         ]
         direct_path_templates = self._objects(data_graphs, dataset_iri, "rc:pathTemplate")
+        access_path_templates = [
+            path_template
+            for storage_access in storage_accesses
+            for path_template in storage_access.path_templates
+        ]
         partition_path_templates = [
             partition.path_template
             for partition in partition_schemes
             if partition.path_template is not None
         ]
-        path_templates = list(dict.fromkeys(direct_path_templates + partition_path_templates))
+        path_templates = list(
+            dict.fromkeys(
+                direct_path_templates + partition_path_templates + access_path_templates
+            )
+        )
 
         return DatasetDescription(
             iri=dataset_iri,
@@ -493,6 +526,7 @@ class DoxaBase:
             columns=columns,
             path_templates=path_templates,
             physical_layouts=physical_layouts,
+            storage_accesses=storage_accesses,
             partition_schemes=partition_schemes,
             caveats=[
                 self._resource_summary(
@@ -1070,6 +1104,11 @@ class DoxaBase:
         lookup_graphs: list[str],
     ) -> PhysicalLayoutDescription:
         file_format = self._first_object(data_graphs, layout_iri, "rc:fileFormat")
+        compression_codec = self._first_object(
+            data_graphs,
+            layout_iri,
+            "rc:compressionCodec",
+        )
         return PhysicalLayoutDescription(
             iri=layout_iri,
             label=self._label_from_graphs(lookup_graphs, layout_iri),
@@ -1079,6 +1118,51 @@ class DoxaBase:
                 if file_format is not None
                 else None
             ),
+            compression_codec=(
+                self._resource_summary(lookup_graphs, compression_codec)
+                if compression_codec is not None
+                else None
+            ),
+        )
+
+    def _describe_storage_access(
+        self,
+        access_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> StorageAccessDescription:
+        storage_protocol = self._first_object(data_graphs, access_iri, "rc:storageProtocol")
+        access_mode = self._first_object(data_graphs, access_iri, "rc:accessMode")
+        return StorageAccessDescription(
+            iri=access_iri,
+            label=self._label_from_graphs(lookup_graphs, access_iri),
+            description=self._description_from_graphs(lookup_graphs, access_iri),
+            storage_protocol=(
+                self._resource_summary(lookup_graphs, storage_protocol)
+                if storage_protocol is not None
+                else None
+            ),
+            access_mode=(
+                self._resource_summary(lookup_graphs, access_mode)
+                if access_mode is not None
+                else None
+            ),
+            storage_root=self._first_object(data_graphs, access_iri, "rc:storageRoot"),
+            endpoint_profile=self._first_object(data_graphs, access_iri, "rc:endpointProfile"),
+            bucket_name=self._first_object(data_graphs, access_iri, "rc:bucketName"),
+            key_prefix=self._first_object(data_graphs, access_iri, "rc:keyPrefix"),
+            region=self._first_object(data_graphs, access_iri, "rc:region"),
+            path_style_access=self._bool_object(
+                data_graphs,
+                access_iri,
+                "rc:pathStyleAccess",
+            ),
+            credential_reference=self._first_object(
+                data_graphs,
+                access_iri,
+                "rc:credentialReference",
+            ),
+            path_templates=self._objects(data_graphs, access_iri, "rc:pathTemplate"),
         )
 
     def _describe_partition(

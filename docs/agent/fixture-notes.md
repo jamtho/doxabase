@@ -23,8 +23,8 @@ For example:
 
 `DoxaBase.import_trig()` and the MCP import tools map those IRIs to local graph role names.
 
-These fixtures are representative tests, not full mechanical conversions. They are useful for checking whether agents can discover tables, columns, value types, joins, caveats, and validation state.
+These fixtures are representative tests, not full mechanical conversions. They are useful for checking whether agents can discover tables, columns, value types, joins, caveats, physical layout, storage access, and validation state.
 
-The AIS fixture is intentionally reduced. It does not currently represent the full real AIS broadcast or daily-index Parquet schemas, and it should not be treated as a complete executable data catalog. In particular, the real data includes vessel identity columns that are not present in the fixture.
+The AIS fixture is intentionally reduced. It includes representative non-secret storage access metadata, but it does not currently represent the full real AIS broadcast or daily-index Parquet schemas. In particular, the real data includes vessel identity columns that are not present in the fixture.
 
 The AIS `DailyIndex` fixture currently shares the broadcast partition path pattern. The real daily index layout may use a distinct `index/{year}/...` prefix, so agents should verify physical layout metadata before generating executable queries.

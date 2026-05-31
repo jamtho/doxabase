@@ -454,7 +454,7 @@ rc:First a rdfs:Resource ; rdfs:label "FIRST" .
 rc:Last a rdfs:Resource ; rdfs:label "LAST" .
 
 # -----------------------------------------------------------------------------
-# Physical layout
+# Physical layout and storage access
 # -----------------------------------------------------------------------------
 
 rc:PhysicalLayout a rdfs:Class ;
@@ -462,6 +462,9 @@ rc:PhysicalLayout a rdfs:Class ;
 
 rc:FileFormat a rdfs:Class ;
     rdfs:comment "A storage or serialization format." .
+
+rc:CompressionCodec a rdfs:Class ;
+    rdfs:comment "A compression codec used by a physical layout or file set." .
 
 rc:RowOrdering a rdfs:Class ;
     rdfs:comment "A known ordering of rows or records." .
@@ -488,6 +491,15 @@ rc:PartitionLevel a rdfs:Class ;
 rc:TemporalGranularity a rdfs:Class ;
     rdfs:comment "Granularity of a temporal partition or level." .
 
+rc:StorageAccess a rdfs:Class ;
+    rdfs:comment "A non-secret description of how to access a data asset's physical storage." .
+
+rc:StorageProtocol a rdfs:Class ;
+    rdfs:comment "A storage or access protocol such as local filesystem, S3-compatible object storage, HTTPS, or database access." .
+
+rc:AccessMode a rdfs:Class ;
+    rdfs:comment "Whether a storage access pattern is read-only, read-write, or otherwise constrained." .
+
 rc:hasPhysicalLayout a rdf:Property ;
     rdfs:domain rc:DataAsset ;
     rdfs:range rc:PhysicalLayout ;
@@ -497,6 +509,11 @@ rc:fileFormat a rdf:Property ;
     rdfs:domain rc:PhysicalLayout ;
     rdfs:range rc:FileFormat ;
     rdfs:comment "The file, table, or serialization format." .
+
+rc:compressionCodec a rdf:Property ;
+    rdfs:domain rc:PhysicalLayout ;
+    rdfs:range rc:CompressionCodec ;
+    rdfs:comment "The compression codec used by files in this layout." .
 
 rc:hasRowOrdering a rdf:Property ;
     rdfs:domain rc:PhysicalLayout ;
@@ -568,6 +585,56 @@ rc:levelGranularity a rdf:Property ;
     rdfs:range rc:TemporalGranularity ;
     rdfs:comment "Granularity of this partition level." .
 
+rc:hasStorageAccess a rdf:Property ;
+    rdfs:domain rc:DataAsset ;
+    rdfs:range rc:StorageAccess ;
+    rdfs:comment "Links a data asset to a non-secret storage access description." .
+
+rc:storageProtocol a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range rc:StorageProtocol ;
+    rdfs:comment "The protocol or storage family used to access the data." .
+
+rc:storageRoot a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A non-secret root URI, root path, or logical storage root for the asset." .
+
+rc:endpointProfile a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A non-secret named endpoint profile resolved by local runtime configuration outside the graph." .
+
+rc:bucketName a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The non-secret bucket or container name when applicable." .
+
+rc:keyPrefix a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The non-secret key prefix or directory prefix when applicable." .
+
+rc:region a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The non-secret region or locality hint when applicable." .
+
+rc:pathStyleAccess a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether S3-compatible access requires path-style URLs." .
+
+rc:credentialReference a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A non-secret reference to credential material or runtime auth configuration stored outside the graph." .
+
+rc:accessMode a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range rc:AccessMode ;
+    rdfs:comment "The intended access mode for this storage description." .
+
 rc:Parquet a rc:FileFormat ; rdfs:label "Parquet" .
 rc:CSV a rc:FileFormat ; rdfs:label "CSV" .
 rc:TSV a rc:FileFormat ; rdfs:label "TSV" .
@@ -580,6 +647,19 @@ rc:Markdown a rc:FileFormat ; rdfs:label "Markdown" .
 rc:PostgreSQLTable a rc:FileFormat ; rdfs:label "PostgreSQL Table" .
 rc:SQLiteTable a rc:FileFormat ; rdfs:label "SQLite Table" .
 rc:MySQLTable a rc:FileFormat ; rdfs:label "MySQL Table" .
+
+rc:SnappyCompression a rc:CompressionCodec ; rdfs:label "snappy" .
+rc:ZstdCompression a rc:CompressionCodec ; rdfs:label "zstd" .
+rc:GzipCompression a rc:CompressionCodec ; rdfs:label "gzip" .
+rc:Uncompressed a rc:CompressionCodec ; rdfs:label "uncompressed" .
+
+rc:LocalFilesystemStorage a rc:StorageProtocol ; rdfs:label "local filesystem" .
+rc:S3CompatibleStorage a rc:StorageProtocol ; rdfs:label "S3-compatible object storage" .
+rc:HTTPSStorage a rc:StorageProtocol ; rdfs:label "HTTPS" .
+rc:DatabaseStorage a rc:StorageProtocol ; rdfs:label "database connection" .
+
+rc:ReadOnlyAccess a rc:AccessMode ; rdfs:label "read-only" .
+rc:ReadWriteAccess a rc:AccessMode ; rdfs:label "read-write" .
 
 rc:Ascending a rc:SortDirection ; rdfs:label "ascending" .
 rc:Descending a rc:SortDirection ; rdfs:label "descending" .

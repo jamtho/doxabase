@@ -127,6 +127,7 @@ rcg:map {
             pm:mkt_spread ,
             pm:mkt_category ;
         rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:hasStorageAccess pm:local_parquet_access ;
         rc:partitionedBy pm:hourly_hive_partition ;
         rc:pathTemplate "data/parquet/gamma/markets/dt={date}/hour={hour}.parquet" ;
         rc:hasProvenance pm:polymarket_provenance ;
@@ -214,6 +215,7 @@ rcg:map {
         rc:schemaStability rc:InferredSchema ;
         rc:hasColumn pm:px_fetched_at, pm:px_token_id, pm:px_price ;
         rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:hasStorageAccess pm:local_parquet_access ;
         rc:partitionedBy pm:hourly_hive_partition ;
         rc:pathTemplate "data/parquet/clob/prices/dt={date}/hour={hour}.parquet" ;
         rc:hasProvenance pm:polymarket_provenance ;
@@ -245,6 +247,7 @@ rcg:map {
         rc:schemaStability rc:InferredSchema ;
         rc:hasColumn pm:ob_fetched_at, pm:ob_asset_id, pm:ob_market, pm:ob_bids ;
         rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:hasStorageAccess pm:local_parquet_access ;
         rc:partitionedBy pm:hourly_hive_partition ;
         rc:pathTemplate "data/parquet/clob/books/dt={date}/hour={hour}.parquet" ;
         rc:hasProvenance pm:polymarket_provenance ;
@@ -292,6 +295,7 @@ rcg:map {
             pm:tr_price ,
             pm:tr_transaction_hash ;
         rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:hasStorageAccess pm:local_parquet_access ;
         rc:partitionedBy pm:hourly_hive_partition ;
         rc:pathTemplate "data/parquet/data_api/trades/dt={date}/hour={hour}.parquet" ;
         rc:hasProvenance pm:polymarket_provenance ;
@@ -342,6 +346,7 @@ rcg:map {
         rc:schemaStability rc:InferredSchema ;
         rc:hasColumn pm:hld_fetched_at, pm:hld_condition_id, pm:hld_token, pm:hld_holders ;
         rc:hasPhysicalLayout pm:snapshot_layout ;
+        rc:hasStorageAccess pm:local_parquet_access ;
         rc:partitionedBy pm:hourly_hive_partition ;
         rc:pathTemplate "data/parquet/data_api/holders/dt={date}/hour={hour}.parquet" ;
         rc:hasProvenance pm:polymarket_provenance ;
@@ -390,7 +395,15 @@ rcg:map {
 
     pm:snapshot_layout a rc:PhysicalLayout ;
         rc:fileFormat rc:Parquet ;
+        rc:compressionCodec rc:ZstdCompression ;
         rdfs:comment "All converted Polymarket datasets use zstd-compressed Parquet files with no meaningful row ordering." .
+
+    pm:local_parquet_access a rc:StorageAccess ;
+        rdfs:label "Local Polymarket Parquet directory" ;
+        rdfs:comment "Non-secret local filesystem access facts for the converted Parquet lake." ;
+        rc:storageProtocol rc:LocalFilesystemStorage ;
+        rc:storageRoot "data/parquet" ;
+        rc:accessMode rc:ReadOnlyAccess .
 
     pm:hourly_hive_partition a rc:CompositePartitionScheme ;
         rc:pathTemplate "data/parquet/{stream}/dt={date}/hour={hour}.parquet" ;

@@ -15,6 +15,7 @@ from doxabase.core import (
     ResourceSummary,
     SearchMatch,
     SearchResults,
+    StorageAccessDescription,
     ValidationResult,
 )
 
@@ -35,5 +36,6 @@ __all__ = [
     "ResourceSummary",
     "SearchMatch",
     "SearchResults",
+    "StorageAccessDescription",
     "ValidationResult",
 ]

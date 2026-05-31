@@ -179,6 +179,7 @@ The MCP docs tools expose these docs:
 - `mcp_tools`
 - `observation_recording`
 - `lexical_search`
+- `executable_catalog`
 - `api_reference`
 - `fixture_notes`
 
@@ -196,7 +197,22 @@ Design posture:
 
 The base shapes are in `ontology/rc_shapes.ttl`.
 
-The Manifest prototype fixtures in `examples/manifest-prototype-rc/` are the current pressure test for the ontology. They exercise data assets, tables, columns, value types, embedded structures, caveats, layout, partitioning, derivations, aggregations, foreign keys, and shared identifiers.
+The Manifest prototype fixtures in `examples/manifest-prototype-rc/` are the current pressure test for the ontology. They exercise data assets, tables, columns, value types, embedded structures, caveats, layout, storage access, partitioning, derivations, aggregations, foreign keys, and shared identifiers.
+
+## Executable Catalog Metadata
+
+DoxaBase records non-secret physical access facts so agents can plan queries
+without relying entirely on out-of-band notes.
+
+`rc:StorageAccess` resources hang off data assets through
+`rc:hasStorageAccess`. They may describe protocol, storage root, bucket/prefix,
+endpoint profile, path-style S3 requirements, credential references, and access
+mode. Secrets do not belong in the graph; credential and endpoint fields are
+names that local runtime configuration resolves.
+
+Physical layout resources can also record `rc:compressionCodec`. Query planning
+should combine storage access, path templates, partition schemes, physical
+layout, caveats, and provenance.
 
 ## Tests and Validation Commands
 
@@ -214,10 +230,10 @@ uv run python tools/validate_rdf.py
 
 Expected state at the time of writing:
 
-- `rc_core.ttl`: 625 triples.
-- `rc_shapes.ttl`: 471 triples.
-- `ais.trig`: 306 quads.
-- `polymarket.trig`: 429 quads.
+- `rc_core.ttl`: 697 triples.
+- `rc_shapes.ttl`: 531 triples.
+- `ais.trig`: 321 quads.
+- `polymarket.trig`: 441 quads.
 - All fixtures conform to base SHACL shapes.
 
 ## Known Technical Debt
@@ -228,16 +244,16 @@ Expected state at the time of writing:
 - There is no bounded context graph retrieval yet.
 - Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.
 - The MCP interface exposes inspection and validation, not graph editing or context slices.
-- The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and non-secret storage metadata are richer than the current graph.
+- The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and storage layout are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
 
 ## Near-Term Build Order
 
 Recommended next implementation steps:
 
-1. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
-2. Add slice metadata and revision scaffolding.
-3. Add broader context graph retrieval after the focused dataset description and lexical search APIs have settled.
+1. Add slice metadata and revision scaffolding.
+2. Add broader context graph retrieval after the focused dataset description and lexical search APIs have settled.
+3. Add query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.
 
 ## Observation Recording Model

@@ -47,8 +47,9 @@ Implemented:
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
-- `describe_dataset()` for bounded table schema, layout, caveat, and provenance context.
+- `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
 - `record_observation()` for first-class observation and evidence resources.
+- Non-secret storage access metadata for physical query planning.
 - Draft Rich Canopy `rc:` base ontology and open SHACL shapes.
 - Representative AIS and Polymarket fixtures converted from the Manifest prototype.
 - Thin MCP server for agent use.
@@ -58,6 +59,7 @@ Not implemented yet:
 
 - Context graph slicing.
 - Graph revision/diff workflow.
+- Query generation or execution helpers.
 - Full SPARQL endpoint.
 - MCP tools for graph context slicing or graph revision.
 
@@ -175,7 +177,7 @@ Logical includes:
 
 The next useful implementation steps are:
 
-1. Add non-secret executable catalog metadata, such as storage layout, bucket/prefix, endpoint profile, and access-mode facts, so query-generation tools do not depend on out-of-band docs.
-2. Add graph slice/revision metadata.
-3. Expand MCP tools around context retrieval once the Python API is ready.
+1. Add graph slice/revision metadata.
+2. Expand MCP tools around context retrieval once the Python API is ready.
+3. Consider query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, after the lexical RDF search surface has settled.
