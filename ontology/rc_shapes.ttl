@@ -1,4 +1,5 @@
 @prefix rc:   <https://richcanopy.org/ns/rc#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
@@ -466,8 +467,34 @@ rc:StorageAccessShape a sh:NodeShape ;
         sh:message "Storage access pathTemplate values must be strings." ;
     ] .
 
-rc:ProfileObservationShape a sh:NodeShape ;
-    sh:targetClass rc:ProfileObservation ;
+rc:ObservationShape a sh:NodeShape ;
+    sh:targetClass rc:Observation ;
+    sh:property [
+        sh:path rc:summary ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "Observation resources must have exactly one string summary." ;
+    ] ;
+    sh:property [
+        sh:path rc:evidence ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Evidence ;
+        sh:message "Observation resources should link to at least one named Evidence resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasClaim ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Claim ;
+        sh:message "hasClaim values should be named Claim resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:observationStatus ;
+        sh:maxCount 1 ;
+        sh:in ( rc:Tentative rc:Checked rc:Contradicted rc:Promoted ) ;
+        sh:message "observationStatus must be Tentative, Checked, Contradicted, or Promoted." ;
+    ] ;
     sh:property [
         sh:path rc:observedAt ;
         sh:maxCount 1 ;
@@ -485,7 +512,10 @@ rc:ProfileObservationShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:nodeKind sh:IRI ;
         sh:message "observedColumn should be a named column resource." ;
-    ] ;
+    ] .
+
+rc:ProfileObservationShape a sh:NodeShape ;
+    sh:targetClass rc:ProfileObservation ;
     sh:property [
         sh:path rc:sampleSize ;
         sh:maxCount 1 ;
@@ -515,13 +545,110 @@ rc:ProfileObservationShape a sh:NodeShape ;
         sh:message "distinctCount must be a non-negative integer." ;
     ] .
 
+rc:ClaimShape a sh:NodeShape ;
+    sh:targetClass rc:Claim ;
+    sh:property [
+        sh:path rc:claimKind ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class rc:ClaimKind ;
+        sh:message "Claim resources must declare exactly one rc:ClaimKind." ;
+    ] ;
+    sh:property [
+        sh:path rc:claimText ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "Claim resources must have exactly one string claimText." ;
+    ] ;
+    sh:property [
+        sh:path rc:claimTarget ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "Claim resources should name at least one claimTarget IRI." ;
+    ] ;
+    sh:property [
+        sh:path rc:confidence ;
+        sh:maxCount 1 ;
+        sh:in ( rc:LowConfidence rc:MediumConfidence rc:HighConfidence ) ;
+        sh:message "confidence must be LowConfidence, MediumConfidence, or HighConfidence." ;
+    ] ;
+    sh:property [
+        sh:path rc:observationStatus ;
+        sh:maxCount 1 ;
+        sh:in ( rc:Tentative rc:Checked rc:Contradicted rc:Promoted ) ;
+        sh:message "claim observationStatus must be Tentative, Checked, Contradicted, or Promoted." ;
+    ] ;
+    sh:property [
+        sh:path rc:proposedAssertion ;
+        sh:nodeKind sh:IRI ;
+        sh:message "proposedAssertion values should be named resources." ;
+    ] .
+
 rc:EvidenceShape a sh:NodeShape ;
     sh:targetClass rc:Evidence ;
+    sh:or (
+        [
+            sh:property [
+                sh:path dcterms:source ;
+                sh:minCount 1 ;
+            ]
+        ]
+        [
+            sh:property [
+                sh:path rc:sourceSpan ;
+                sh:minCount 1 ;
+            ]
+        ]
+    ) ;
     sh:property [
         sh:path rc:summary ;
         sh:maxCount 1 ;
         sh:datatype xsd:string ;
         sh:message "Evidence summary must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:sourceSpan ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:SourceSpan ;
+        sh:message "sourceSpan values should be named SourceSpan resources." ;
+    ] ;
+    sh:message "Evidence must identify a source using dcterms:source or rc:sourceSpan." .
+
+rc:SourceSpanShape a sh:NodeShape ;
+    sh:targetClass rc:SourceSpan ;
+    sh:property [
+        sh:path rc:sourcePath ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "SourceSpan must have exactly one string sourcePath." ;
+    ] ;
+    sh:property [
+        sh:path rc:sourceSection ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "sourceSection must be a string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:startLine ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "startLine must be a one-based positive integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:endLine ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "endLine must be a one-based positive integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:sourceKind ;
+        sh:maxCount 1 ;
+        sh:class rc:SourceKind ;
+        sh:message "sourceKind must be an rc:SourceKind if declared." ;
     ] .
 
 rc:KnownCaveatShape a sh:NodeShape ;

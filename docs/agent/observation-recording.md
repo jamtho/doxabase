@@ -48,6 +48,11 @@ Evidence should explain how the observation was produced:
 
 Do not put credentials or secrets in evidence summaries or sources.
 
+The base observation SHACL expects observations to link to evidence. The helper
+can still create a bare observation when a caller omits evidence fields, but that
+is mainly for scratch notes; prefer evidence-backed observations when you expect
+the capsule to validate cleanly.
+
 ## Identifiers
 
 If no IRI is supplied, DoxaBase mints generated observation and evidence IRIs
@@ -60,11 +65,16 @@ https://richcanopy.org/doxabase/generated/
 Callers may provide `observation_iri` or `evidence_iri` when they need stable
 project-specific identifiers.
 
-## V1 Shape
+## Two Observation Lanes
 
-The V1 writer accepts structured fields rather than arbitrary RDF snippets. This
+The helper accepts structured fields rather than arbitrary RDF snippets. This
 keeps routine observation capture safe, parse-valid, and easy to expose through
-MCP. Richer graph-editing APIs can come later through the graph revision model.
+MCP.
+
+For nuanced findings, agents may also author observation RDF directly using the
+base observation vocabulary. Use that lane for structured caveat, join,
+transformation, access, source-span, or proposed-map claims. See
+`observation_rdf` for examples.
 
 The writer adds graph triples only after validating basic inputs such as summary
 presence, observation type, ISO datetime syntax, and non-negative counts.

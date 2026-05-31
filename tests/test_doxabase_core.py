@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 697
+    assert graphs["base_ontology"].triple_count == 807
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 531
+    assert graphs["base_shapes"].triple_count == 657
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
 
@@ -241,6 +241,87 @@ def test_search_index_survives_repeated_rebuilds_after_scratch_import(
         record.observation_iri
     )
     reopened.close()
+
+
+def test_agent_authored_observation_rdf_imports_and_validates(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    imported = db.import_trig(
+        """
+        @prefix enron: <https://example.test/enron#> .
+        @prefix rc:    <https://richcanopy.org/ns/rc#> .
+        @prefix rcg:   <https://richcanopy.org/graph/> .
+        @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+        rcg:map {
+            enron:eml_messages a rc:Table ;
+                rdfs:label "eml_messages.parquet" .
+
+            enron:body_top a rc:Column ;
+                rc:columnName "body_top" .
+        }
+
+        rcg:observations {
+            enron:obs_body_top_transformation a rc:Observation ;
+                rc:summary "body_top is cleaned message text, not raw email text." ;
+                rc:observedAt "2026-05-31T00:00:00Z"^^xsd:dateTime ;
+                rc:observedAsset enron:eml_messages ;
+                rc:observationStatus rc:Checked ;
+                rc:evidence enron:evidence_readme_body_processing ;
+                rc:hasClaim enron:claim_body_top_transformation .
+
+            enron:claim_body_top_transformation a rc:Claim ;
+                rc:claimKind rc:TransformationClaim ;
+                rc:claimTarget enron:body_top ;
+                rc:claimText "The body_top column stores text above reply separators after footer stripping." ;
+                rc:confidence rc:HighConfidence ;
+                rc:observationStatus rc:Checked ;
+                rc:proposedAssertion enron:body_top_transformation_caveat .
+        }
+
+        rcg:evidence {
+            enron:evidence_readme_body_processing a rc:Evidence ;
+                rc:summary "Enron README body processing section." ;
+                rc:sourceSpan enron:span_readme_body_processing .
+
+            enron:span_readme_body_processing a rc:SourceSpan ;
+                rc:sourceKind rc:DocumentationSource ;
+                rc:sourcePath "/home/james/github.com/jamtho/enron-emails/README.md" ;
+                rc:sourceSection "Body processing" ;
+                rc:startLine 186 ;
+                rc:endLine 191 .
+        }
+        """
+    )
+
+    assert imported["observations"] > 0
+    assert imported["evidence"] > 0
+    assert db.validate_graph(scope="all").conforms
+    assert db.search("reply separators", graph="observations").matches
+    assert db.search("Body processing", graph="evidence").matches
+
+
+def test_agent_authored_observation_rdf_requires_evidence(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix enron: <https://example.test/enron#> .
+        @prefix rc:    <https://richcanopy.org/ns/rc#> .
+        @prefix rcg:   <https://richcanopy.org/graph/> .
+
+        rcg:observations {
+            enron:obs_without_evidence a rc:Observation ;
+                rc:summary "This observation should fail stricter observation validation." .
+        }
+        """
+    )
+
+    validation = db.validate_graph(scope="all")
+
+    assert not validation.conforms
+    assert "Observation resources should link to at least one named Evidence" in (
+        validation.report_text
+    )
 
 
 def test_search_index_updates_after_graph_clear(tmp_path: Path) -> None:

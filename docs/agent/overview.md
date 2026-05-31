@@ -19,6 +19,8 @@ Current implementation status:
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
 - `record_observation()` for point-in-time findings and linked evidence.
+- Agent-authored observation RDF for structured claims, source spans, confidence, and status.
+- Stricter SHACL checks for observation, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
 - MCP tools for docs, overview, search, listing, dataset description, observation recording, import, validation, and fixture loading.
 

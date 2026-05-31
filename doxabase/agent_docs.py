@@ -53,6 +53,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "observation-recording.md",
     ),
     AgentDoc(
+        id="observation_rdf",
+        title="Agent-Authored Observation RDF",
+        description="How to express nuanced observations, claims, and source spans as RDF.",
+        path=DOCS_DIR / "observation-rdf.md",
+    ),
+    AgentDoc(
         id="lexical_search",
         title="Lexical Search",
         description="How search helps agents rediscover claims, caveats, observations, and evidence.",

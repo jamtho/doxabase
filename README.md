@@ -49,6 +49,8 @@ Implemented:
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
 - `record_observation()` for first-class observation and evidence resources.
+- Agent-authored observation RDF vocabulary for structured claims, source spans, confidence, and status.
+- Stricter SHACL validation for observation/evidence/claim resources.
 - Non-secret storage access metadata for physical query planning.
 - Draft Rich Canopy `rc:` base ontology and open SHACL shapes.
 - Representative AIS and Polymarket fixtures converted from the Manifest prototype.

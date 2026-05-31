@@ -692,6 +692,24 @@ rc:ProfileObservation a rdfs:Class ;
 rc:Evidence a rdfs:Class ;
     rdfs:comment "A record that supports an observation or map assertion." .
 
+rc:Claim a rdfs:Class ;
+    rdfs:comment "A structured claim made by an observation. Claims let agents express nuanced dataset lore as RDF rather than only prose." .
+
+rc:ClaimKind a rdfs:Class ;
+    rdfs:comment "Controlled category for the kind of claim an observation is making." .
+
+rc:ConfidenceLevel a rdfs:Class ;
+    rdfs:comment "Controlled confidence level for an observed claim." .
+
+rc:ObservationStatus a rdfs:Class ;
+    rdfs:comment "Lifecycle status for an observation or claim." .
+
+rc:SourceSpan a rdfs:Class ;
+    rdfs:comment "A bounded location in a source document, query, code file, data sample, or external resource." .
+
+rc:SourceKind a rdfs:Class ;
+    rdfs:comment "Controlled category for the kind of source used as evidence." .
+
 rc:Provenance a rdfs:Class ;
     rdfs:comment "Lightweight source and transformation information for a data asset." .
 
@@ -756,6 +774,82 @@ rc:evidence a rdf:Property ;
     rdfs:range rc:Evidence ;
     rdfs:comment "Links an observation or assertion to supporting evidence." .
 
+rc:hasClaim a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range rc:Claim ;
+    rdfs:comment "Links an observation to one or more structured RDF claims." .
+
+rc:claimKind a rdf:Property ;
+    rdfs:domain rc:Claim ;
+    rdfs:range rc:ClaimKind ;
+    rdfs:comment "The category of claim being made." .
+
+rc:claimText a rdf:Property ;
+    rdfs:domain rc:Claim ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A concise human-readable rendering of the claim." .
+
+rc:claimTarget a rdf:Property ;
+    rdfs:domain rc:Claim ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "The resource that the claim is primarily about." .
+
+rc:proposedAssertion a rdf:Property ;
+    rdfs:domain rc:Claim ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "A resource representing a candidate durable assertion that may later be promoted into a map or ontology graph." .
+
+rc:confidence a rdf:Property ;
+    rdfs:domain rc:Claim ;
+    rdfs:range rc:ConfidenceLevel ;
+    rdfs:comment "Confidence level for a structured claim." .
+
+rc:observationStatus a rdf:Property ;
+    rdfs:range rc:ObservationStatus ;
+    rdfs:comment "Lifecycle status for an observation or claim." .
+
+rc:supports a rdf:Property ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "Links an observation, claim, or evidence record to something it supports." .
+
+rc:contradicts a rdf:Property ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "Links an observation or claim to an earlier claim or assertion it contradicts." .
+
+rc:refines a rdf:Property ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "Links an observation or claim to an earlier claim or assertion it narrows, qualifies, or improves." .
+
+rc:sourceSpan a rdf:Property ;
+    rdfs:domain rc:Evidence ;
+    rdfs:range rc:SourceSpan ;
+    rdfs:comment "Links evidence to a bounded source location." .
+
+rc:sourcePath a rdf:Property ;
+    rdfs:domain rc:SourceSpan ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Path, URI, object key, or other non-secret source locator." .
+
+rc:sourceSection a rdf:Property ;
+    rdfs:domain rc:SourceSpan ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Heading, section label, table name, query name, or other local source section." .
+
+rc:startLine a rdf:Property ;
+    rdfs:domain rc:SourceSpan ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "One-based inclusive starting line for a source span." .
+
+rc:endLine a rdf:Property ;
+    rdfs:domain rc:SourceSpan ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "One-based inclusive ending line for a source span." .
+
+rc:sourceKind a rdf:Property ;
+    rdfs:domain rc:SourceSpan ;
+    rdfs:range rc:SourceKind ;
+    rdfs:comment "The kind of source being cited." .
+
 rc:summary a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "A concise human-readable summary." .
@@ -818,6 +912,29 @@ rc:Pass a rc:VerificationResultValue ; rdfs:label "pass" .
 rc:Fail a rc:VerificationResultValue ; rdfs:label "fail" .
 rc:Partial a rc:VerificationResultValue ; rdfs:label "partial" .
 rc:Error a rc:VerificationResultValue ; rdfs:label "error" .
+
+rc:CaveatClaim a rc:ClaimKind ; rdfs:label "caveat claim" .
+rc:JoinClaim a rc:ClaimKind ; rdfs:label "join claim" .
+rc:SchemaClaim a rc:ClaimKind ; rdfs:label "schema claim" .
+rc:TransformationClaim a rc:ClaimKind ; rdfs:label "transformation claim" .
+rc:AccessClaim a rc:ClaimKind ; rdfs:label "access claim" .
+rc:ProfileClaim a rc:ClaimKind ; rdfs:label "profile claim" .
+rc:InterpretationClaim a rc:ClaimKind ; rdfs:label "interpretation claim" .
+
+rc:LowConfidence a rc:ConfidenceLevel ; rdfs:label "low confidence" .
+rc:MediumConfidence a rc:ConfidenceLevel ; rdfs:label "medium confidence" .
+rc:HighConfidence a rc:ConfidenceLevel ; rdfs:label "high confidence" .
+
+rc:Tentative a rc:ObservationStatus ; rdfs:label "tentative" .
+rc:Checked a rc:ObservationStatus ; rdfs:label "checked" .
+rc:Contradicted a rc:ObservationStatus ; rdfs:label "contradicted" .
+rc:Promoted a rc:ObservationStatus ; rdfs:label "promoted" .
+
+rc:DocumentationSource a rc:SourceKind ; rdfs:label "documentation source" .
+rc:QuerySource a rc:SourceKind ; rdfs:label "query source" .
+rc:DataSampleSource a rc:SourceKind ; rdfs:label "data sample source" .
+rc:CodeSource a rc:SourceKind ; rdfs:label "code source" .
+rc:StorageSource a rc:SourceKind ; rdfs:label "storage source" .
 
 # -----------------------------------------------------------------------------
 # Caveats
