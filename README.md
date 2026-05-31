@@ -46,6 +46,7 @@ Implemented:
 - Turtle import into one graph.
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
+- `search()` for lexical retrieval over literal RDF claims.
 - `describe_dataset()` for bounded table schema, layout, caveat, and provenance context.
 - `record_observation()` for first-class observation and evidence resources.
 - Draft Rich Canopy `rc:` base ontology and open SHACL shapes.
@@ -57,7 +58,6 @@ Not implemented yet:
 
 - Context graph slicing.
 - Graph revision/diff workflow.
-- Search/FTS.
 - Full SPARQL endpoint.
 - MCP tools for graph context slicing or graph revision.
 
@@ -105,6 +105,7 @@ db.import_trig("examples/manifest-prototype-rc/polymarket.trig")
 overview = db.graph_overview()
 tables = db.list_entities(type="rc:Table", graph="map")
 dataset = db.describe_dataset(tables.entities[0].iri)
+matches = db.search("MMSI vessel", graph="map")
 observation = db.record_observation(
     summary="AIS daily broadcasts were inspected during setup.",
     observed_asset=dataset.iri,
@@ -130,16 +131,18 @@ Useful first tool calls for an agent:
 3. `doxybase.get_doc` with `doc_id="graph_roles"`
 4. `doxybase.load_example_fixtures`
 5. `doxybase.graph_overview`
-6. `doxybase.list_entities` with `type="rc:Table"` and `graph="map"`
-7. `doxybase.describe_dataset` with a table IRI from `list_entities`
-8. `doxybase.record_observation` for useful point-in-time findings
-9. `doxybase.validate_graph` with `scope="all"`
+6. `doxybase.search` for remembered terms, caveats, observations, or evidence
+7. `doxybase.list_entities` with `type="rc:Table"` and `graph="map"`
+8. `doxybase.describe_dataset` with a table IRI from `list_entities`
+9. `doxybase.record_observation` for useful point-in-time findings
+10. `doxybase.validate_graph` with `scope="all"`
 
 Current MCP tools:
 
 - `doxybase.list_docs`
 - `doxybase.get_doc`
 - `doxybase.graph_overview`
+- `doxybase.search`
 - `doxybase.list_entities`
 - `doxybase.describe_dataset`
 - `doxybase.record_observation`
@@ -173,6 +176,6 @@ Logical includes:
 The next useful implementation steps are:
 
 1. Add non-secret executable catalog metadata, such as storage layout, bucket/prefix, endpoint profile, and access-mode facts, so query-generation tools do not depend on out-of-band docs.
-2. Add basic lexical search over labels/comments/evidence.
-3. Add graph slice/revision metadata.
-4. Expand MCP tools around context retrieval once the Python API is ready.
+2. Add graph slice/revision metadata.
+3. Expand MCP tools around context retrieval once the Python API is ready.
+4. Consider semantic or hybrid search later, after the lexical RDF search surface has settled.

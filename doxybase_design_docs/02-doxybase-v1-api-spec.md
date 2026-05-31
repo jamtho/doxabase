@@ -24,12 +24,12 @@ class DoxyBase:
     ) -> EntityList:
         ...
 
-    def search_graph(
+    def search(
         self,
-        text: str,
-        types: list[str] | None = None,
-        graphs: list[str] | None = None,
+        query: str,
+        graph: str | None = None,
         limit: int = 20,
+        offset: int = 0,
     ) -> SearchResults:
         ...
 
@@ -144,23 +144,25 @@ Returns compact entity rows:
 - RDF types if useful
 - graph/layer if useful
 
-### `search_graph()`
+### `search()`
 
 Lexical search only in V1.
 
 No embedded LLM. No semantic interpretation.
 
-Use SQLite FTS over:
+The current implementation uses SQLite FTS over literal RDF objects, including:
 
-- IRI local names
 - `rdfs:label`
 - `rdfs:comment`
-- `skos:definition`
-- observation notes
-- assertion rationales
+- `rc:summary`
+- `rc:caveatDescription`
+- `rc:sourceDescription`
+- `rc:columnName`
+- `rc:pathTemplate`
 - evidence summaries
 
-Returns candidate entities/observations/triples with scores and matched fields.
+Returns matched resources with graph role, IRI, labels when available, RDF
+types, matched predicate, matched text, and snippet.
 
 ### `preview_context_graph()`
 
@@ -253,7 +255,7 @@ Suggested tools:
 ```text
 doxybase.graph_overview
 doxybase.list_entities
-doxybase.search_graph
+doxybase.search
 doxybase.preview_context_graph
 doxybase.get_context_graph
 doxybase.record_observation

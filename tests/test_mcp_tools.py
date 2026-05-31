@@ -11,6 +11,7 @@ from doxybase.mcp_tools import (
     list_entities_tool,
     load_example_fixtures_tool,
     record_observation_tool,
+    search_tool,
     validate_graph_tool,
 )
 
@@ -26,6 +27,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxybase.list_entities" in tool_names
     assert "doxybase.describe_dataset" in tool_names
     assert "doxybase.record_observation" in tool_names
+    assert "doxybase.search" in tool_names
     assert "doxybase.load_example_fixtures" in tool_names
     assert "doxybase.validate_graph" in tool_names
 
@@ -96,6 +98,22 @@ def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> No
     assert result["observation_triples"] > 0
     assert result["evidence_triples"] > 0
     assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+
+    result = search_tool(db, query="Parquet schemas", graph="map", limit=5)
+
+    assert result["query"] == "Parquet schemas"
+    assert result["graph"] == "map"
+    assert result["limit"] == 5
+    assert result["count"] >= 1
+    assert any(
+        "Parquet schemas are inferred" in match["text"]
+        for match in result["matches"]
+    )
 
 
 def test_fixture_loading_replace_keeps_all_fixtures(tmp_path: Path) -> None:

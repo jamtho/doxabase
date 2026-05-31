@@ -22,6 +22,10 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 
 Lists entities by RDF type, graph role, optional text filter, limit, and offset. Start with `type="rc:Table"` and `graph="map"`.
 
+`doxybase.search`
+
+Lexically searches literal RDF claims and returns matched resources with graph, IRI, label, types, predicate, matched text, and snippet. Use it to rediscover caveats, observations, evidence, labels, path templates, source notes, and column names.
+
 `doxybase.describe_dataset`
 
 Returns bounded context for one dataset/table IRI: columns, physical/value types, path templates, layouts, partitions, caveats, provenance, and directly related datasets.

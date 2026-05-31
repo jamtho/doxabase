@@ -83,6 +83,7 @@ DoxyBase.import_turtle(source, graph="map", replace=False)
 DoxyBase.import_trig(source, replace=False)
 DoxyBase.graph_overview(limit=100)
 DoxyBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
+DoxyBase.search(query, graph=None, limit=20, offset=0)
 DoxyBase.describe_dataset(iri, graph="map")
 DoxyBase.record_observation(summary, ...)
 DoxyBase.validate_graph(scope="map", limit_results=100)
@@ -100,6 +101,24 @@ to local graph names such as:
 ```text
 map
 ```
+
+## Lexical Search
+
+`search()` is the first retrieval affordance for remembered project lore.
+
+The implementation keeps an FTS5 table named `literal_search` as a derivative
+index over literal RDF objects in `quads`. The RDF graph remains the source of
+truth; the search index is rebuilt from `quads` after imports, observation
+writes, and graph clears.
+
+Search returns matched resources rather than detached text. Each match carries
+the graph role, subject IRI or blank node, display label, RDF types, matched
+predicate, full matched text, and highlighted snippet. This is meant to help an
+agent rediscover candidate claims, caveats, observations, evidence, path
+templates, and source notes before deciding what to inspect or consolidate.
+
+V1 search is lexical only. It is not semantic search, embedding retrieval,
+SPARQL, or graph-neighborhood slicing.
 
 ## Validation
 
@@ -137,6 +156,7 @@ Current MCP tools:
 - `doxybase.list_docs`
 - `doxybase.get_doc`
 - `doxybase.graph_overview`
+- `doxybase.search`
 - `doxybase.list_entities`
 - `doxybase.describe_dataset`
 - `doxybase.record_observation`
@@ -158,6 +178,7 @@ The MCP docs tools expose these docs:
 - `ontology_primer`
 - `mcp_tools`
 - `observation_recording`
+- `lexical_search`
 - `api_reference`
 - `fixture_notes`
 
@@ -205,7 +226,7 @@ Expected state at the time of writing:
 - Blank node IDs are imported as-is; this is sufficient for current fixtures but not a robust merge strategy.
 - There is no revision/diff model yet.
 - There is no bounded context graph retrieval yet.
-- There is no search/FTS yet.
+- Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.
 - The MCP interface exposes inspection and validation, not graph editing or context slices.
 - The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and non-secret storage metadata are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
@@ -214,10 +235,10 @@ Expected state at the time of writing:
 
 Recommended next implementation steps:
 
-1. Add lexical search over labels, comments, evidence summaries, and observation notes.
-2. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
-3. Add slice metadata and revision scaffolding.
-4. Add broader context graph retrieval after the focused dataset description API has settled.
+1. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
+2. Add slice metadata and revision scaffolding.
+3. Add broader context graph retrieval after the focused dataset description and lexical search APIs have settled.
+4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.
 
 ## Observation Recording Model
 

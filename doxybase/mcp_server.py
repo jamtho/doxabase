@@ -16,13 +16,14 @@ from doxybase.mcp_tools import (
     list_entities_tool,
     load_example_fixtures_tool,
     record_observation_tool,
+    search_tool,
     validate_graph_tool,
 )
 
 SERVER_INSTRUCTIONS = """DoxyBase is a local RDF memory capsule for data projects.
 Start with doxybase.list_docs, then read overview, graph_roles, and agent_workflow.
-Use graph_overview, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, bounded dataset description, observation recording, import, fixture loading, and validation; context slicing is not implemented yet."""
+Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
+Current V1 tools support inspection, lexical search, bounded dataset description, observation recording, import, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
@@ -103,6 +104,23 @@ def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
             row_count=row_count,
             null_count=null_count,
             distinct_count=distinct_count,
+        )
+
+    @server.tool(name="doxybase.search")
+    def search(
+        query: str,
+        graph: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Lexically search literal RDF claims and return matched resources."""
+
+        return search_tool(
+            db,
+            query=query,
+            graph=graph,
+            limit=limit,
+            offset=offset,
         )
 
     @server.tool(name="doxybase.import_trig")

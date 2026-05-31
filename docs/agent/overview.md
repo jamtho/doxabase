@@ -16,14 +16,15 @@ Current implementation status:
 - Turtle import into one graph.
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
+- `search()` for lexical retrieval over literal RDF claims.
 - `describe_dataset()` for bounded table schema, layout, caveat, and provenance context.
 - `record_observation()` for point-in-time findings and linked evidence.
-- MCP tools for docs, overview, listing, dataset description, observation recording, import, validation, and fixture loading.
+- MCP tools for docs, overview, search, listing, dataset description, observation recording, import, validation, and fixture loading.
 
 Important V1 limits:
 
 - No context slicing yet.
 - No revision/diff workflow yet.
 - No full SPARQL endpoint.
-- No embedded LLM or semantic search.
+- No embedded LLM, semantic search, or embedding index.
 - SHACL validation is explicit and diagnostic, not a commit gate.

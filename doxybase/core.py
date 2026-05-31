@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -175,6 +176,27 @@ class ObservationRecord:
     evidence_iri: str | None
     observation_triples: int
     evidence_triples: int
+
+
+@dataclass(frozen=True)
+class SearchMatch:
+    iri: str
+    graph: str
+    label: str | None
+    types: list[str]
+    predicate: str
+    predicate_label: str | None
+    text: str
+    snippet: str
+
+
+@dataclass(frozen=True)
+class SearchResults:
+    query: str
+    graph: str | None
+    matches: list[SearchMatch]
+    limit: int
+    offset: int
 
 
 @dataclass(frozen=True)
@@ -368,6 +390,69 @@ class DoxyBase:
             for row in rows
         ]
         return EntityList(entities=entities, limit=limit, offset=offset)
+
+    def search(
+        self,
+        query: str,
+        *,
+        graph: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> SearchResults:
+        if not query.strip():
+            raise DoxyBaseError("Search query must not be empty")
+        if limit < 1:
+            raise DoxyBaseError("Search limit must be at least 1")
+        if offset < 0:
+            raise DoxyBaseError("Search offset must be non-negative")
+
+        fts_query = _fts_query(query)
+        graphs = self._expand_graphs([graph] if graph else None)
+        graph_filter, graph_params = self._graph_filter(graphs)
+        rows = self._conn.execute(
+            f"""
+            SELECT
+                graph,
+                subject,
+                predicate,
+                text,
+                snippet(literal_search, 4, '[', ']', ' ... ', 18) AS snippet
+            FROM literal_search
+            WHERE literal_search MATCH ?
+              {graph_filter}
+            ORDER BY bm25(literal_search), graph, subject, predicate
+            LIMIT ? OFFSET ?
+            """,
+            [fts_query, *graph_params, limit, offset],
+        ).fetchall()
+
+        ontology_graphs = self._expand_graphs(["ontology"])
+        matches = [
+            SearchMatch(
+                iri=row["subject"],
+                graph=row["graph"],
+                label=self._display_label_from_graphs(
+                    self._lookup_graphs([row["graph"]]),
+                    row["subject"],
+                ),
+                types=self._types(row["graph"], row["subject"]),
+                predicate=row["predicate"],
+                predicate_label=self._label_from_graphs(
+                    ontology_graphs,
+                    row["predicate"],
+                ),
+                text=row["text"],
+                snippet=row["snippet"],
+            )
+            for row in rows
+        ]
+        return SearchResults(
+            query=query,
+            graph=graph,
+            matches=matches,
+            limit=limit,
+            offset=offset,
+        )
 
     def describe_dataset(self, iri: str, graph: str | None = "map") -> DatasetDescription:
         dataset_iri = self.expand_iri(iri)
@@ -632,6 +717,7 @@ class DoxyBase:
         self._ensure_mutable(graph, allow_immutable=allow_immutable)
         self._conn.execute("DELETE FROM quads WHERE graph = ?", (graph,))
         self._conn.commit()
+        self._rebuild_search_index()
 
     def validate_graph(
         self,
@@ -736,9 +822,19 @@ class DoxyBase:
             CREATE INDEX IF NOT EXISTS quads_pos ON quads(predicate, object, subject);
             CREATE INDEX IF NOT EXISTS quads_gspo ON quads(graph, subject, predicate, object);
             CREATE INDEX IF NOT EXISTS quads_graph ON quads(graph);
+
+            CREATE VIRTUAL TABLE IF NOT EXISTS literal_search USING fts5(
+                graph UNINDEXED,
+                subject UNINDEXED,
+                subject_kind UNINDEXED,
+                predicate UNINDEXED,
+                text,
+                tokenize = 'unicode61'
+            );
             """
         )
         self._conn.commit()
+        self._rebuild_search_index()
 
     def _ensure_default_graphs(self) -> None:
         for name, description, mutable, system_seed, source_path in DEFAULT_GRAPHS:
@@ -812,7 +908,22 @@ class DoxyBase:
             rows,
         )
         self._conn.commit()
-        return self.triple_count(graph) - before
+        inserted = self.triple_count(graph) - before
+        self._rebuild_search_index()
+        return inserted
+
+    def _rebuild_search_index(self) -> None:
+        self._conn.execute("DELETE FROM literal_search")
+        self._conn.execute(
+            """
+            INSERT INTO literal_search
+                (rowid, graph, subject, subject_kind, predicate, text)
+            SELECT rowid, graph, subject, subject_kind, predicate, object
+            FROM quads
+            WHERE object_kind = 'literal'
+            """
+        )
+        self._conn.commit()
 
     def _expand_graphs(self, graphs: list[str | None] | None) -> list[str]:
         if graphs is None:
@@ -1144,6 +1255,13 @@ class DoxyBase:
     def _description_from_graphs(self, graphs: list[str], subject: str) -> str | None:
         return self._first_object(graphs, subject, str(RDFS.comment))
 
+    def _display_label_from_graphs(self, graphs: list[str], subject: str) -> str | None:
+        return (
+            self._label_from_graphs(graphs, subject)
+            or self._first_object(graphs, subject, "rc:summary")
+            or self._description_from_graphs(graphs, subject)
+        )
+
     def _types_from_graphs(self, graphs: list[str], subject: str) -> list[str]:
         return self._objects(graphs, subject, str(RDF.type))
 
@@ -1224,6 +1342,13 @@ class DoxyBase:
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _fts_query(query: str) -> str:
+    tokens = re.findall(r"[A-Za-z0-9]+", query)
+    if not tokens:
+        raise DoxyBaseError("Search query must contain at least one searchable token")
+    return " AND ".join(f"{token.lower()}*" for token in tokens)
 
 
 def _existing_path(source: str | Path) -> Path | None:

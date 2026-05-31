@@ -91,6 +91,24 @@ def record_observation_tool(
     return asdict(result)
 
 
+def search_tool(
+    db: DoxyBase,
+    query: str,
+    graph: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    result = db.search(query=query, graph=graph, limit=limit, offset=offset)
+    return {
+        "query": result.query,
+        "graph": result.graph,
+        "matches": [asdict(match) for match in result.matches],
+        "limit": result.limit,
+        "offset": result.offset,
+        "count": len(result.matches),
+    }
+
+
 def import_trig_tool(
     db: DoxyBase,
     path: str,

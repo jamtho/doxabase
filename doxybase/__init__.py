@@ -13,6 +13,8 @@ from doxybase.core import (
     PhysicalLayoutDescription,
     RelatedDatasetDescription,
     ResourceSummary,
+    SearchMatch,
+    SearchResults,
     ValidationResult,
 )
 
@@ -31,5 +33,7 @@ __all__ = [
     "PhysicalLayoutDescription",
     "RelatedDatasetDescription",
     "ResourceSummary",
+    "SearchMatch",
+    "SearchResults",
     "ValidationResult",
 ]

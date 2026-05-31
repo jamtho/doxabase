@@ -121,8 +121,8 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add lexical search over labels, comments, evidence summaries, and observation
-   notes.
-2. Add non-secret executable catalog metadata for physical layouts and storage
+1. Add non-secret executable catalog metadata for physical layouts and storage
    access patterns.
-3. Add graph slice/revision metadata and broader MCP context retrieval tools.
+2. Add graph slice/revision metadata and broader MCP context retrieval tools.
+3. Consider semantic or hybrid search later, once the literal RDF search surface
+   has enough real usage.

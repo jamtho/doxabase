@@ -243,7 +243,7 @@ The main retrieval flow should be:
 ```text
 1. graph_overview()       # agent gets broad map
 2. list_entities()        # agent discovers candidate nodes by type
-3. search_graph()         # agent uses lexical search if needed
+3. search()               # agent uses lexical search if needed
 4. preview_context_graph()# agent checks slice size/shape
 5. get_context_graph()    # agent fetches bounded RDF fragment
 ```
@@ -346,7 +346,7 @@ Required examples:
 
 - `graph_overview(limit=...)`
 - `list_entities(limit=..., offset=...)`
-- `search_graph(limit=...)`
+- `search(limit=...)`
 - `preview_context_graph(limit=...)`
 - `get_context_graph(limit_triples=...)`
 - `validate_graph(limit_results=...)`
@@ -376,7 +376,7 @@ Minimum tests:
 3. Insert map graph triples.
 4. `graph_overview()` returns class/predicate counts.
 5. `list_entities(type=...)` works with limit/offset.
-6. `search_graph()` finds labels and notes.
+6. `search()` finds labels and notes.
 7. `preview_context_graph()` returns counts without full graph.
 8. `get_context_graph(policy="exact")` returns bounded Turtle.
 9. `get_context_graph(policy="expanded")` includes labels/type/property definitions.

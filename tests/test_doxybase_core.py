@@ -118,6 +118,65 @@ def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> 
     assert layout.file_format.label == "Parquet"
 
 
+def test_search_finds_fixture_literals_with_resource_context(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    results = db.search("MMSI vessel", graph="map", limit=10)
+
+    assert results.query == "MMSI vessel"
+    assert results.graph == "map"
+    assert results.limit == 10
+    match = next(
+        result
+        for result in results.matches
+        if "MMSI does not reliably identify" in result.text
+    )
+    assert match.graph == "map"
+    assert match.predicate == RC + "caveatDescription"
+    assert "MMSI" in match.snippet
+
+
+def test_search_finds_recorded_observation_and_evidence(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    record = db.record_observation(
+        summary="Handover lore says this hidden join relies on source ordering.",
+        evidence_summary="Notebook evidence captured during dataset takeover.",
+        evidence_sources=["tests/test_doxybase_core.py"],
+    )
+
+    observations = db.search("hidden join", graph="observations")
+    evidence = db.search("notebook takeover", graph="evidence")
+
+    assert observations.matches[0].iri == record.observation_iri
+    assert observations.matches[0].label == (
+        "Handover lore says this hidden join relies on source ordering."
+    )
+    assert observations.matches[0].types == [RC + "Observation"]
+    assert evidence.matches[0].iri == record.evidence_iri
+    assert evidence.matches[0].graph == "evidence"
+
+
+def test_search_index_updates_after_graph_clear(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    assert db.search("downsampling", graph="map").matches
+
+    db.clear_graph("map")
+
+    assert db.search("downsampling", graph="map").matches == []
+
+
+def test_search_rejects_invalid_queries(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxyBaseError, match="Search query"):
+        db.search("   ")
+    with pytest.raises(DoxyBaseError, match="searchable token"):
+        db.search("...")
+
+
 def test_graph_overview_counts_imported_fixtures(tmp_path: Path) -> None:
     db = DoxyBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

@@ -10,6 +10,7 @@ def test_list_agent_docs_contains_operational_docs() -> None:
     assert "agent_workflow" in doc_ids
     assert "mcp_tools" in doc_ids
     assert "observation_recording" in doc_ids
+    assert "lexical_search" in doc_ids
 
 
 def test_get_agent_doc_can_truncate_content() -> None:

@@ -53,6 +53,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "observation-recording.md",
     ),
     AgentDoc(
+        id="lexical_search",
+        title="Lexical Search",
+        description="How search helps agents rediscover claims, caveats, observations, and evidence.",
+        path=DOCS_DIR / "lexical-search.md",
+    ),
+    AgentDoc(
         id="api_reference",
         title="API Reference",
         description="Small Python API reference for the current implementation.",
