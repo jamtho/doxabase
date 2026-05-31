@@ -48,6 +48,15 @@ commit_revision()
 - Proposal/rationale packs.
 - Human review mode.
 - Multi-user governance.
+- Query generation workflows that combine DoxyBase semantic context with an execution backend such as DuckDB.
+- Result-capture workflows that record query outputs as observations linked to query, storage, and result evidence.
+
+## Executable Catalog
+
+- Non-secret storage metadata for object stores, databases, and file collections.
+- Explicit separation of logical datasets from physical layouts and query surfaces.
+- Backend-specific query planning hints without embedding credentials.
+- Dataset/table description APIs that expose bounded schema, layout, caveat, provenance, and related-dataset context.
 
 ## Product / Operational
 

@@ -202,14 +202,32 @@ Expected state at the time of writing:
 - There is no bounded context graph retrieval yet.
 - There is no search/FTS yet.
 - The MCP interface exposes inspection and validation, not graph editing or context slices.
+- There is no bounded dataset/table description API, so agents may need to read fixture files directly to recover columns, physical layout, caveats, and provenance.
+- There is no first-class observation/evidence writer; agents currently need to author RDF/TriG and import it.
+- Example fixture loading with `replace=True` clears graph roles per fixture import, which can leave only the last fixture data in shared mutable roles.
+- The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and non-secret storage metadata are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
 
 ## Near-Term Build Order
 
 Recommended next implementation steps:
 
-1. Add bounded context retrieval: `preview_context_graph()` and `get_context_graph()`.
-2. Add observation recording as graph resources.
-3. Add lexical search over labels, comments, evidence summaries, and observation notes.
-4. Add slice metadata and revision scaffolding.
-5. Add MCP tools for context retrieval after the Python API is stable.
+1. Add bounded dataset/table description, either as a focused `describe_dataset()` API or as the first policy for `preview_context_graph()` and `get_context_graph()`.
+2. Add observation recording as graph resources with linked evidence.
+3. Tighten multi-fixture replacement semantics so `replace=True` clears each targeted role once before appending all fixtures, or returns an explicit warning.
+4. Add lexical search over labels, comments, evidence summaries, and observation notes.
+5. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
+6. Add slice metadata and revision scaffolding.
+7. Add MCP tools for context retrieval after the Python API is stable.
+
+## AIS/DuckDB Pressure Points
+
+The AIS DuckDB handoff notes in `docs/agent/ais-duckdb-doxybase-observations.md` are a useful current pressure test for the architecture.
+
+The session showed that DoxyBase can preserve semantic context, caveats, profile observations, and evidence, but it is not yet enough to drive executable analytics by itself. The successful DuckDB query depended on richer local documentation for the real AIS Parquet schemas and MinIO layout. To support DoxyBase-driven query planning, future graph content and APIs need to expose:
+
+- full logical and physical schemas for the relevant datasets;
+- dataset-specific path templates and storage layout, including distinct broadcast and index layouts;
+- non-secret storage connection metadata such as bucket, prefix, endpoint profile, and path-style access requirements;
+- caveats that should travel with generated queries and results;
+- a direct way to record query outputs as observations with evidence.

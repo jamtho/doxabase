@@ -25,6 +25,7 @@ Not implemented yet:
 - Graph revision/diff workflow.
 - Observation recording helper API.
 - Search/FTS.
+- Dataset/table description API for bounded schema, layout, caveat, and provenance context.
 - Full SPARQL endpoint.
 - MCP tools for context retrieval or graph revision.
 
@@ -129,8 +130,10 @@ Logical includes:
 
 The next useful implementation steps are:
 
-1. Add bounded context graph retrieval.
-2. Add observation recording as first-class graph resources.
-3. Add basic lexical search over labels/comments/evidence.
-4. Add graph slice/revision metadata.
-5. Expand MCP tools around context retrieval once the Python API is ready.
+1. Add bounded dataset/table context retrieval, such as a `describe_dataset` view over columns, physical types, value types, path templates, caveats, provenance, and related datasets.
+2. Add observation recording as first-class graph resources, with linked evidence.
+3. Fix or document replacement semantics for multi-fixture imports that target the same graph roles.
+4. Add non-secret executable catalog metadata, such as storage layout, bucket/prefix, endpoint profile, and access-mode facts, so query-generation tools do not depend on out-of-band docs.
+5. Add basic lexical search over labels/comments/evidence.
+6. Add graph slice/revision metadata.
+7. Expand MCP tools around context retrieval once the Python API is ready.
