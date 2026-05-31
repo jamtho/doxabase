@@ -2,7 +2,39 @@
 
 DoxyBase is a local, agent-operated RDF memory capsule for data projects.
 
-It lets agents store RDF observations about datasets, consolidate those observations into named graph roles, inspect bounded summaries, and run explicit SHACL validation. The project is intentionally small: a Python package backed by a local SQLite file, with RDFLib handling parsing and pySHACL handling validation.
+The core idea is that useful knowledge about data rarely arrives fully
+systematised. Agents and humans notice things while working: row-count facts,
+schema caveats, source quirks, query results, suspected joins, broken
+assumptions, and interpretations that may or may not hold tomorrow. DoxyBase
+gives those claims somewhere durable to live as RDF, without requiring every
+claim to be promoted immediately into stable project structure.
+
+It is built around a two-phase loop:
+
+1. **Observation**: record point-in-time or source-scoped findings, with
+   evidence, as RDF resources.
+2. **Systematisation**: later consolidate useful findings into a more durable
+   project map, ontology terms, shapes, caveats, and revision history.
+
+The graph is deliberately open-ended: projects can record arbitrary RDF claims
+about datasets. At the same time, DoxyBase ships a small Rich Canopy `rc:`
+ontology for common dataset concepts such as assets, tables, columns, physical
+layouts, caveats, observations, evidence, and provenance. That shared structure
+is meant to make knowledge portable across projects without forcing every
+project into a closed schema.
+
+Another image for the project is the handover conversation you wish came with
+every complex dataset. When you inherit data, you need more than field names:
+you want the hidden facts, local caveats, awkward history, and the mindset
+behind how the dataset was created. DoxyBase tries to make that lore cheap to
+transfer one-to-many: once a human or agent has worked something out, the claim,
+evidence, caveat, and rationale can be recorded for every future reader.
+
+The implementation is intentionally small: a Python package backed by a local
+SQLite file, with RDFLib handling parsing and pySHACL handling explicit
+validation. There is no embedded LLM in the library. Agents supply semantic
+judgement; DoxyBase supplies graph mechanics, storage, retrieval affordances,
+and validation.
 
 ## Current Status
 
