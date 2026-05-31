@@ -51,6 +51,14 @@ def list_entities_tool(
     }
 
 
+def describe_dataset_tool(
+    db: DoxyBase,
+    iri: str,
+    graph: str | None = "map",
+) -> dict[str, Any]:
+    return asdict(db.describe_dataset(iri=iri, graph=graph))
+
+
 def import_trig_tool(
     db: DoxyBase,
     path: str,

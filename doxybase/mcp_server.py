@@ -8,6 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from doxybase import DoxyBase
 from doxybase.mcp_tools import (
+    describe_dataset_tool,
     get_doc_tool,
     graph_overview_tool,
     import_trig_tool,
@@ -19,8 +20,8 @@ from doxybase.mcp_tools import (
 
 SERVER_INSTRUCTIONS = """DoxyBase is a local RDF memory capsule for data projects.
 Start with doxybase.list_docs, then read overview, graph_roles, and agent_workflow.
-Use graph_overview and list_entities before asking for broader graph context.
-Current V1 tools support inspection, import, fixture loading, and validation; context slicing is not implemented yet."""
+Use graph_overview, list_entities, and describe_dataset before asking for broader graph context.
+Current V1 tools support inspection, bounded dataset description, import, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
@@ -63,6 +64,12 @@ def build_server(capsule_path: str | Path = ".doxybase.sqlite") -> FastMCP:
             limit=limit,
             offset=offset,
         )
+
+    @server.tool(name="doxybase.describe_dataset")
+    def describe_dataset(iri: str, graph: str | None = "map") -> dict[str, Any]:
+        """Return bounded schema, layout, caveat, and provenance context for one dataset."""
+
+        return describe_dataset_tool(db, iri=iri, graph=graph)
 
     @server.tool(name="doxybase.import_trig")
     def import_trig(path: str, replace: bool = False) -> dict[str, Any]:

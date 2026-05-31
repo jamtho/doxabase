@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from doxybase import DoxyBase, ImmutableGraphError
+from doxybase import DoxyBase, DoxyBaseError, ImmutableGraphError
 
 ROOT = Path(__file__).resolve().parents[1]
 AIS_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "ais.trig"
@@ -54,6 +54,65 @@ def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:
     assert "AIS Daily Vessel Index" in labels
     assert "Gamma Market Snapshots" in labels
     assert "Trade Events" in labels
+
+
+def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    description = db.describe_dataset(
+        "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    )
+
+    assert description.label == "AIS Daily Broadcast Positions"
+    assert "https://richcanopy.org/ns/rc#Table" in description.types
+    assert description.path_templates == ["broadcasts/{year}/ais-{date}.parquet"]
+    assert {column.column_name for column in description.columns} >= {
+        "mmsi",
+        "timestamp",
+        "h3_res15",
+    }
+    mmsi = next(column for column in description.columns if column.column_name == "mmsi")
+    assert mmsi.physical_type is not None
+    assert mmsi.physical_type.label == "INTEGER"
+    assert mmsi.value_type is not None
+    assert mmsi.value_type.label == "Maritime Mobile Service Identity"
+    assert mmsi.nullable is True
+    caveat_text = " ".join(caveat.description or "" for caveat in description.caveats)
+    assert "MMSI does not reliably identify a single vessel" in caveat_text
+    assert any(
+        provenance.description
+        and "NOAA Marine Cadastre AIS data" in provenance.description
+        for provenance in description.provenance
+    )
+    assert any(
+        related.iri == "https://richcanopy.org/example/manifest/ais#DailyIndex"
+        and related.relationship == "source_of"
+        for related in description.related_datasets
+    )
+
+
+def test_describe_dataset_reports_missing_dataset(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    with pytest.raises(DoxyBaseError, match="was not found"):
+        db.describe_dataset("https://richcanopy.org/example/manifest/ais#MissingDataset")
+
+
+def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    description = db.describe_dataset(
+        "https://richcanopy.org/example/manifest/ais#DailyIndex"
+    )
+
+    assert len(description.physical_layouts) == 1
+    layout = description.physical_layouts[0]
+    assert layout.iri
+    assert layout.file_format is not None
+    assert layout.file_format.label == "Parquet"
 
 
 def test_graph_overview_counts_imported_fixtures(tmp_path: Path) -> None:

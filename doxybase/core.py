@@ -106,6 +106,68 @@ class EntityList:
 
 
 @dataclass(frozen=True)
+class ResourceSummary:
+    iri: str
+    label: str | None
+    description: str | None
+
+
+@dataclass(frozen=True)
+class ColumnDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    column_name: str | None
+    physical_type: ResourceSummary | None
+    value_type: ResourceSummary | None
+    nullable: bool | None
+
+
+@dataclass(frozen=True)
+class PhysicalLayoutDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    file_format: ResourceSummary | None
+
+
+@dataclass(frozen=True)
+class PartitionDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    partition_column: ResourceSummary | None
+    granularity: ResourceSummary | None
+    path_template: str | None
+    redundant_partition_key: ResourceSummary | None
+
+
+@dataclass(frozen=True)
+class RelatedDatasetDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    relationship: str
+    relationship_iri: str | None
+
+
+@dataclass(frozen=True)
+class DatasetDescription:
+    iri: str
+    graph: str | None
+    label: str | None
+    description: str | None
+    types: list[str]
+    columns: list[ColumnDescription]
+    path_templates: list[str]
+    physical_layouts: list[PhysicalLayoutDescription]
+    partition_schemes: list[PartitionDescription]
+    caveats: list[ResourceSummary]
+    provenance: list[ResourceSummary]
+    related_datasets: list[RelatedDatasetDescription]
+
+
+@dataclass(frozen=True)
 class ValidationResult:
     conforms: bool
     report_text: str
@@ -296,6 +358,69 @@ class DoxyBase:
             for row in rows
         ]
         return EntityList(entities=entities, limit=limit, offset=offset)
+
+    def describe_dataset(self, iri: str, graph: str | None = "map") -> DatasetDescription:
+        dataset_iri = self.expand_iri(iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(data_graphs)
+        if not self._subject_exists(dataset_iri, data_graphs):
+            graph_label = graph if graph is not None else "all graphs"
+            raise DoxyBaseError(f"Dataset '{iri}' was not found in {graph_label}")
+
+        columns = [
+            self._describe_column(column_iri, data_graphs, lookup_graphs)
+            for column_iri in self._objects(data_graphs, dataset_iri, "rc:hasColumn")
+        ]
+        columns.sort(key=lambda column: (column.column_name or "", column.iri))
+
+        physical_layouts = [
+            self._describe_physical_layout(layout_iri, data_graphs, lookup_graphs)
+            for layout_iri in self._objects(data_graphs, dataset_iri, "rc:hasPhysicalLayout")
+        ]
+        partition_schemes = [
+            self._describe_partition(partition_iri, data_graphs, lookup_graphs)
+            for partition_iri in self._objects(data_graphs, dataset_iri, "rc:partitionedBy")
+        ]
+        direct_path_templates = self._objects(data_graphs, dataset_iri, "rc:pathTemplate")
+        partition_path_templates = [
+            partition.path_template
+            for partition in partition_schemes
+            if partition.path_template is not None
+        ]
+        path_templates = list(dict.fromkeys(direct_path_templates + partition_path_templates))
+
+        return DatasetDescription(
+            iri=dataset_iri,
+            graph=graph,
+            label=self._label_from_graphs(lookup_graphs, dataset_iri),
+            description=self._description_from_graphs(lookup_graphs, dataset_iri),
+            types=self._types_from_graphs(data_graphs, dataset_iri),
+            columns=columns,
+            path_templates=path_templates,
+            physical_layouts=physical_layouts,
+            partition_schemes=partition_schemes,
+            caveats=[
+                self._resource_summary(
+                    lookup_graphs,
+                    caveat_iri,
+                    description_predicate="rc:caveatDescription",
+                )
+                for caveat_iri in self._objects(
+                    data_graphs,
+                    dataset_iri,
+                    "rc:hasKnownCaveat",
+                )
+            ],
+            provenance=[
+                self._resource_summary(
+                    lookup_graphs,
+                    provenance_iri,
+                    description_predicate="rc:sourceDescription",
+                )
+                for provenance_iri in self._objects(data_graphs, dataset_iri, "rc:hasProvenance")
+            ],
+            related_datasets=self._related_datasets(dataset_iri, data_graphs, lookup_graphs),
+        )
 
     def import_turtle(
         self,
@@ -628,6 +753,250 @@ class DoxyBase:
                 (graph, subject, str(RDF.type)),
             )
         ]
+
+    def _lookup_graphs(self, data_graphs: list[str]) -> list[str]:
+        return list(dict.fromkeys(data_graphs + self._expand_graphs(["ontology"])))
+
+    def _subject_exists(self, subject: str, graphs: list[str]) -> bool:
+        graph_filter, params = self._graph_filter(graphs)
+        row = self._conn.execute(
+            f"""
+            SELECT 1
+            FROM quads
+            WHERE subject = ?
+              {graph_filter}
+            LIMIT 1
+            """,
+            [subject, *params],
+        ).fetchone()
+        return row is not None
+
+    def _describe_column(
+        self,
+        column_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> ColumnDescription:
+        physical_type = self._first_object(data_graphs, column_iri, "rc:physicalType")
+        value_type = self._first_object(data_graphs, column_iri, "rc:valueType")
+        return ColumnDescription(
+            iri=column_iri,
+            label=self._label_from_graphs(lookup_graphs, column_iri),
+            description=self._description_from_graphs(lookup_graphs, column_iri),
+            column_name=self._first_object(data_graphs, column_iri, "rc:columnName"),
+            physical_type=(
+                self._resource_summary(lookup_graphs, physical_type)
+                if physical_type is not None
+                else None
+            ),
+            value_type=(
+                self._resource_summary(lookup_graphs, value_type)
+                if value_type is not None
+                else None
+            ),
+            nullable=self._bool_object(data_graphs, column_iri, "rc:nullable"),
+        )
+
+    def _describe_physical_layout(
+        self,
+        layout_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> PhysicalLayoutDescription:
+        file_format = self._first_object(data_graphs, layout_iri, "rc:fileFormat")
+        return PhysicalLayoutDescription(
+            iri=layout_iri,
+            label=self._label_from_graphs(lookup_graphs, layout_iri),
+            description=self._description_from_graphs(lookup_graphs, layout_iri),
+            file_format=(
+                self._resource_summary(lookup_graphs, file_format)
+                if file_format is not None
+                else None
+            ),
+        )
+
+    def _describe_partition(
+        self,
+        partition_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> PartitionDescription:
+        partition_column = self._first_object(data_graphs, partition_iri, "rc:partitionColumn")
+        granularity = self._first_object(data_graphs, partition_iri, "rc:partitionGranularity")
+        redundant_partition_key = self._first_object(
+            data_graphs,
+            partition_iri,
+            "rc:redundantPartitionKey",
+        )
+        return PartitionDescription(
+            iri=partition_iri,
+            label=self._label_from_graphs(lookup_graphs, partition_iri),
+            description=self._description_from_graphs(lookup_graphs, partition_iri),
+            partition_column=(
+                self._resource_summary(lookup_graphs, partition_column)
+                if partition_column is not None
+                else None
+            ),
+            granularity=(
+                self._resource_summary(lookup_graphs, granularity)
+                if granularity is not None
+                else None
+            ),
+            path_template=self._first_object(data_graphs, partition_iri, "rc:pathTemplate"),
+            redundant_partition_key=(
+                self._resource_summary(lookup_graphs, redundant_partition_key)
+                if redundant_partition_key is not None
+                else None
+            ),
+        )
+
+    def _related_datasets(
+        self,
+        dataset_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> list[RelatedDatasetDescription]:
+        related: list[RelatedDatasetDescription] = []
+        for companion_iri in self._objects(data_graphs, dataset_iri, "rc:companionOf"):
+            related.append(
+                self._related_dataset(
+                    companion_iri,
+                    "companion",
+                    None,
+                    lookup_graphs,
+                )
+            )
+        for companion_iri in self._subjects(data_graphs, "rc:companionOf", dataset_iri):
+            related.append(
+                self._related_dataset(
+                    companion_iri,
+                    "companion",
+                    None,
+                    lookup_graphs,
+                )
+            )
+
+        for relationship_iri in self._subjects(data_graphs, "rc:sourceDataset", dataset_iri):
+            for target_iri in self._objects(data_graphs, relationship_iri, "rc:targetDataset"):
+                related.append(
+                    self._related_dataset(
+                        target_iri,
+                        "source_of",
+                        relationship_iri,
+                        lookup_graphs,
+                    )
+                )
+        for relationship_iri in self._subjects(data_graphs, "rc:targetDataset", dataset_iri):
+            for source_iri in self._objects(data_graphs, relationship_iri, "rc:sourceDataset"):
+                related.append(
+                    self._related_dataset(
+                        source_iri,
+                        "target_of",
+                        relationship_iri,
+                        lookup_graphs,
+                    )
+                )
+        return list(
+            {
+                (
+                    item.iri,
+                    item.relationship,
+                    item.relationship_iri,
+                ): item
+                for item in related
+            }.values()
+        )
+
+    def _related_dataset(
+        self,
+        iri: str,
+        relationship: str,
+        relationship_iri: str | None,
+        lookup_graphs: list[str],
+    ) -> RelatedDatasetDescription:
+        summary = self._resource_summary(lookup_graphs, iri)
+        return RelatedDatasetDescription(
+            iri=summary.iri,
+            label=summary.label,
+            description=summary.description,
+            relationship=relationship,
+            relationship_iri=relationship_iri,
+        )
+
+    def _resource_summary(
+        self,
+        graphs: list[str],
+        iri: str,
+        *,
+        description_predicate: str = "rdfs:comment",
+    ) -> ResourceSummary:
+        return ResourceSummary(
+            iri=iri,
+            label=self._label_from_graphs(graphs, iri),
+            description=(
+                self._first_object(graphs, iri, description_predicate)
+                or self._description_from_graphs(graphs, iri)
+            ),
+        )
+
+    def _objects(self, graphs: list[str], subject: str, predicate: str) -> list[str]:
+        graph_filter, params = self._graph_filter(graphs, alias="q")
+        return [
+            row["object"]
+            for row in self._conn.execute(
+                f"""
+                SELECT q.object
+                FROM quads q
+                WHERE q.subject = ?
+                  AND q.predicate = ?
+                  {graph_filter}
+                ORDER BY q.object
+                """,
+                [subject, self.expand_iri(predicate), *params],
+            )
+        ]
+
+    def _subjects(self, graphs: list[str], predicate: str, object_value: str) -> list[str]:
+        graph_filter, params = self._graph_filter(graphs, alias="q")
+        return [
+            row["subject"]
+            for row in self._conn.execute(
+                f"""
+                SELECT q.subject
+                FROM quads q
+                WHERE q.predicate = ?
+                  AND q.object = ?
+                  {graph_filter}
+                ORDER BY q.subject
+                """,
+                [self.expand_iri(predicate), object_value, *params],
+            )
+        ]
+
+    def _first_object(self, graphs: list[str], subject: str, predicate: str) -> str | None:
+        objects = self._objects(graphs, subject, predicate)
+        return objects[0] if objects else None
+
+    def _bool_object(self, graphs: list[str], subject: str, predicate: str) -> bool | None:
+        value = self._first_object(graphs, subject, predicate)
+        if value is None:
+            return None
+        return value.lower() in {"1", "true"}
+
+    def _label_from_graphs(self, graphs: list[str], subject: str) -> str | None:
+        return self._first_object(graphs, subject, str(RDFS.label))
+
+    def _description_from_graphs(self, graphs: list[str], subject: str) -> str | None:
+        return self._first_object(graphs, subject, str(RDFS.comment))
+
+    def _types_from_graphs(self, graphs: list[str], subject: str) -> list[str]:
+        return self._objects(graphs, subject, str(RDF.type))
+
+    def _graph_filter(self, graphs: list[str], *, alias: str | None = None) -> tuple[str, list[str]]:
+        if not graphs:
+            return "", []
+        column = f"{alias}.graph" if alias else "graph"
+        return f"AND {column} IN ({','.join('?' for _ in graphs)})", graphs.copy()
 
     def _term_to_storage(self, term: Node) -> tuple[str, str]:
         if isinstance(term, URIRef):

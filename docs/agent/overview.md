@@ -16,7 +16,8 @@ Current implementation status:
 - Turtle import into one graph.
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
-- MCP tools for docs, overview, listing, import, validation, and fixture loading.
+- `describe_dataset()` for bounded table schema, layout, caveat, and provenance context.
+- MCP tools for docs, overview, listing, dataset description, import, validation, and fixture loading.
 
 Important V1 limits:
 

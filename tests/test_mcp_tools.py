@@ -5,6 +5,7 @@ import pytest
 from doxybase import DoxyBase
 from doxybase.mcp_server import build_server
 from doxybase.mcp_tools import (
+    describe_dataset_tool,
     graph_overview_tool,
     list_docs_tool,
     list_entities_tool,
@@ -22,6 +23,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxybase.get_doc" in tool_names
     assert "doxybase.graph_overview" in tool_names
     assert "doxybase.list_entities" in tool_names
+    assert "doxybase.describe_dataset" in tool_names
     assert "doxybase.load_example_fixtures" in tool_names
     assert "doxybase.validate_graph" in tool_names
 
@@ -46,6 +48,31 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert overview["key_counts"]["tables"] >= 7
     assert tables["count"] >= 7
     assert validation["conforms"] is True
+
+
+def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None:
+    db = DoxyBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+
+    result = describe_dataset_tool(
+        db,
+        iri="https://richcanopy.org/example/manifest/polymarket#MarketSnapshots",
+    )
+
+    assert result["label"] == "Gamma Market Snapshots"
+    assert "data/parquet/gamma/markets/dt={date}/hour={hour}.parquet" in result[
+        "path_templates"
+    ]
+    assert {column["column_name"] for column in result["columns"]} >= {
+        "id",
+        "bestBid",
+        "bestAsk",
+    }
+    assert any(
+        caveat["description"]
+        and "Parquet schemas are inferred" in caveat["description"]
+        for caveat in result["caveats"]
+    )
 
 
 def test_fixture_loading_replace_keeps_all_fixtures(tmp_path: Path) -> None:

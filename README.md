@@ -14,6 +14,7 @@ Implemented:
 - Turtle import into one graph.
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
+- `describe_dataset()` for bounded table schema, layout, caveat, and provenance context.
 - Draft Rich Canopy `rc:` base ontology and open SHACL shapes.
 - Representative AIS and Polymarket fixtures converted from the Manifest prototype.
 - Thin MCP server for agent use.
@@ -25,9 +26,8 @@ Not implemented yet:
 - Graph revision/diff workflow.
 - Observation recording helper API.
 - Search/FTS.
-- Dataset/table description API for bounded schema, layout, caveat, and provenance context.
 - Full SPARQL endpoint.
-- MCP tools for context retrieval or graph revision.
+- MCP tools for graph context slicing or graph revision.
 
 ## Layout
 
@@ -72,6 +72,7 @@ db.import_trig("examples/manifest-prototype-rc/polymarket.trig")
 
 overview = db.graph_overview()
 tables = db.list_entities(type="rc:Table", graph="map")
+dataset = db.describe_dataset(tables.entities[0].iri)
 validation = db.validate_graph(scope="all")
 ```
 
@@ -93,7 +94,8 @@ Useful first tool calls for an agent:
 4. `doxybase.load_example_fixtures`
 5. `doxybase.graph_overview`
 6. `doxybase.list_entities` with `type="rc:Table"` and `graph="map"`
-7. `doxybase.validate_graph` with `scope="all"`
+7. `doxybase.describe_dataset` with a table IRI from `list_entities`
+8. `doxybase.validate_graph` with `scope="all"`
 
 Current MCP tools:
 
@@ -101,6 +103,7 @@ Current MCP tools:
 - `doxybase.get_doc`
 - `doxybase.graph_overview`
 - `doxybase.list_entities`
+- `doxybase.describe_dataset`
 - `doxybase.import_trig`
 - `doxybase.load_example_fixtures`
 - `doxybase.validate_graph`
@@ -130,9 +133,8 @@ Logical includes:
 
 The next useful implementation steps are:
 
-1. Add bounded dataset/table context retrieval, such as a `describe_dataset` view over columns, physical types, value types, path templates, caveats, provenance, and related datasets.
-2. Add observation recording as first-class graph resources, with linked evidence.
-3. Add non-secret executable catalog metadata, such as storage layout, bucket/prefix, endpoint profile, and access-mode facts, so query-generation tools do not depend on out-of-band docs.
-4. Add basic lexical search over labels/comments/evidence.
-5. Add graph slice/revision metadata.
-6. Expand MCP tools around context retrieval once the Python API is ready.
+1. Add observation recording as first-class graph resources, with linked evidence.
+2. Add non-secret executable catalog metadata, such as storage layout, bucket/prefix, endpoint profile, and access-mode facts, so query-generation tools do not depend on out-of-band docs.
+3. Add basic lexical search over labels/comments/evidence.
+4. Add graph slice/revision metadata.
+5. Expand MCP tools around context retrieval once the Python API is ready.

@@ -22,6 +22,10 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 
 Lists entities by RDF type, graph role, optional text filter, limit, and offset. Start with `type="rc:Table"` and `graph="map"`.
 
+`doxybase.describe_dataset`
+
+Returns bounded context for one dataset/table IRI: columns, physical/value types, path templates, layouts, partitions, caveats, provenance, and directly related datasets.
+
 ## Import and Validation
 
 `doxybase.import_trig`

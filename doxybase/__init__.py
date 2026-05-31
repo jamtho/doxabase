@@ -1,4 +1,6 @@
 from doxybase.core import (
+    ColumnDescription,
+    DatasetDescription,
     DoxyBase,
     DoxyBaseError,
     EntityList,
@@ -6,10 +8,16 @@ from doxybase.core import (
     GraphOverview,
     ImmutableGraphError,
     NamedGraphInfo,
+    PartitionDescription,
+    PhysicalLayoutDescription,
+    RelatedDatasetDescription,
+    ResourceSummary,
     ValidationResult,
 )
 
 __all__ = [
+    "ColumnDescription",
+    "DatasetDescription",
     "DoxyBase",
     "DoxyBaseError",
     "EntityList",
@@ -17,5 +25,9 @@ __all__ = [
     "GraphOverview",
     "ImmutableGraphError",
     "NamedGraphInfo",
+    "PartitionDescription",
+    "PhysicalLayoutDescription",
+    "RelatedDatasetDescription",
+    "ResourceSummary",
     "ValidationResult",
 ]

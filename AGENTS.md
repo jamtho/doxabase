@@ -121,10 +121,9 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add bounded dataset/table description, such as `describe_dataset()`.
-2. Add first-class observation and evidence recording.
-3. Add lexical search over labels, comments, evidence summaries, and observation
+1. Add first-class observation and evidence recording.
+2. Add lexical search over labels, comments, evidence summaries, and observation
    notes.
-4. Add non-secret executable catalog metadata for physical layouts and storage
+3. Add non-secret executable catalog metadata for physical layouts and storage
    access patterns.
-5. Add graph slice/revision metadata and MCP context retrieval tools.
+4. Add graph slice/revision metadata and broader MCP context retrieval tools.

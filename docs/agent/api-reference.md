@@ -30,7 +30,12 @@ db.import_trig("path/to/file.trig")
 ```python
 overview = db.graph_overview(limit=100)
 tables = db.list_entities(type="rc:Table", graph="map", limit=100)
+dataset = db.describe_dataset(tables.entities[0].iri)
 ```
+
+`describe_dataset()` returns bounded context for one dataset/table: columns,
+physical/value types, path templates, physical layouts, partition schemes,
+caveats, provenance, and directly related datasets.
 
 ## Validate
 

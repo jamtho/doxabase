@@ -83,6 +83,7 @@ DoxyBase.import_turtle(source, graph="map", replace=False)
 DoxyBase.import_trig(source, replace=False)
 DoxyBase.graph_overview(limit=100)
 DoxyBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
+DoxyBase.describe_dataset(iri, graph="map")
 DoxyBase.validate_graph(scope="map", limit_results=100)
 DoxyBase.to_graph(graphs=None)
 ```
@@ -136,6 +137,7 @@ Current MCP tools:
 - `doxybase.get_doc`
 - `doxybase.graph_overview`
 - `doxybase.list_entities`
+- `doxybase.describe_dataset`
 - `doxybase.import_trig`
 - `doxybase.load_example_fixtures`
 - `doxybase.validate_graph`
@@ -202,7 +204,6 @@ Expected state at the time of writing:
 - There is no bounded context graph retrieval yet.
 - There is no search/FTS yet.
 - The MCP interface exposes inspection and validation, not graph editing or context slices.
-- There is no bounded dataset/table description API, so agents may need to read fixture files directly to recover columns, physical layout, caveats, and provenance.
 - There is no first-class observation/evidence writer; agents currently need to author RDF/TriG and import it.
 - The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and non-secret storage metadata are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
@@ -211,18 +212,17 @@ Expected state at the time of writing:
 
 Recommended next implementation steps:
 
-1. Add bounded dataset/table description, either as a focused `describe_dataset()` API or as the first policy for `preview_context_graph()` and `get_context_graph()`.
-2. Add observation recording as graph resources with linked evidence.
-3. Add lexical search over labels, comments, evidence summaries, and observation notes.
-4. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
-5. Add slice metadata and revision scaffolding.
-6. Add MCP tools for context retrieval after the Python API is stable.
+1. Add observation recording as graph resources with linked evidence.
+2. Add lexical search over labels, comments, evidence summaries, and observation notes.
+3. Add non-secret executable catalog metadata for physical layouts and storage access patterns.
+4. Add slice metadata and revision scaffolding.
+5. Add broader context graph retrieval after the focused dataset description API has settled.
 
 ## AIS/DuckDB Pressure Points
 
 The AIS DuckDB handoff notes in `docs/agent/ais-duckdb-doxybase-observations.md` are a useful current pressure test for the architecture.
 
-The session showed that DoxyBase can preserve semantic context, caveats, profile observations, and evidence, but it is not yet enough to drive executable analytics by itself. The successful DuckDB query depended on richer local documentation for the real AIS Parquet schemas and MinIO layout. To support DoxyBase-driven query planning, future graph content and APIs need to expose:
+The session showed that DoxyBase can preserve semantic context, caveats, profile observations, and evidence, but it is not yet enough to drive executable analytics by itself. The successful DuckDB query depended on richer local documentation for the real AIS Parquet schemas and MinIO layout. To support DoxyBase-driven query planning, future graph content and APIs need to continue improving:
 
 - full logical and physical schemas for the relevant datasets;
 - dataset-specific path templates and storage layout, including distinct broadcast and index layouts;
