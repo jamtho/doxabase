@@ -18,6 +18,7 @@ from doxabase.mcp_tools import (
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_observation_tool,
+    record_pattern_tool,
     search_tool,
     validate_graph_tool,
 )
@@ -25,7 +26,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, observation and claim recording, import, fixture loading, and validation; context slicing is not implemented yet."""
+Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, observation/claim/pattern recording, import, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -170,6 +171,53 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             proposed_assertions=proposed_assertions,
         )
 
+    @server.tool(name="doxabase.record_pattern")
+    def record_pattern(
+        summary: str,
+        pattern_text: str,
+        rationale: str,
+        pattern_targets: list[str],
+        supporting_observations: list[str] | None = None,
+        supporting_claims: list[str] | None = None,
+        synthesized_at: str | None = None,
+        synthesized_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: list[str] | None = None,
+        source_path: str | None = None,
+        source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        source_kind: str | None = None,
+        confidence: str | None = "rc:MediumConfidence",
+        pattern_status: str | None = "rc:Tentative",
+        pattern_stability: str | None = "rc:EmergingPattern",
+        map_implications: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record a synthesis pattern linking observations or evidence to map targets."""
+
+        return record_pattern_tool(
+            db,
+            summary=summary,
+            pattern_text=pattern_text,
+            rationale=rationale,
+            pattern_targets=pattern_targets,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            synthesized_at=synthesized_at,
+            synthesized_by=synthesized_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            source_path=source_path,
+            source_section=source_section,
+            start_line=start_line,
+            end_line=end_line,
+            source_kind=source_kind,
+            confidence=confidence,
+            pattern_status=pattern_status,
+            pattern_stability=pattern_stability,
+            map_implications=map_implications,
+        )
+
     @server.tool(name="doxabase.search")
     def search(
         query: str,
@@ -201,7 +249,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
 
     @server.tool(name="doxabase.validate_graph")
     def validate_graph(scope: str = "map", limit_results: int = 100) -> dict[str, Any]:
-        """Run SHACL validation for map, ontology, shapes, or all graph scope."""
+        """Run SHACL validation for map, ontology, patterns, shapes, or all graph scope."""
 
         return validate_graph_tool(db, scope=scope, limit_results=limit_results)
 

@@ -151,6 +151,52 @@ def record_claim_observation_tool(
     return asdict(result)
 
 
+def record_pattern_tool(
+    db: DoxaBase,
+    summary: str,
+    pattern_text: str,
+    rationale: str,
+    pattern_targets: list[str],
+    supporting_observations: list[str] | None = None,
+    supporting_claims: list[str] | None = None,
+    synthesized_at: str | None = None,
+    synthesized_by: str | None = None,
+    evidence_summary: str | None = None,
+    evidence_sources: list[str] | None = None,
+    source_path: str | None = None,
+    source_section: str | None = None,
+    start_line: int | None = None,
+    end_line: int | None = None,
+    source_kind: str | None = None,
+    confidence: str | None = "rc:MediumConfidence",
+    pattern_status: str | None = "rc:Tentative",
+    pattern_stability: str | None = "rc:EmergingPattern",
+    map_implications: list[str] | None = None,
+) -> dict[str, Any]:
+    result = db.record_pattern(
+        summary=summary,
+        pattern_text=pattern_text,
+        rationale=rationale,
+        pattern_targets=pattern_targets,
+        supporting_observations=supporting_observations,
+        supporting_claims=supporting_claims,
+        synthesized_at=synthesized_at,
+        synthesized_by=synthesized_by,
+        evidence_summary=evidence_summary,
+        evidence_sources=evidence_sources,
+        source_path=source_path,
+        source_section=source_section,
+        start_line=start_line,
+        end_line=end_line,
+        source_kind=source_kind,
+        confidence=confidence,
+        pattern_status=pattern_status,
+        pattern_stability=pattern_stability,
+        map_implications=map_implications,
+    )
+    return asdict(result)
+
+
 def search_tool(
     db: DoxaBase,
     query: str,

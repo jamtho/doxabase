@@ -85,6 +85,7 @@ Python syntax.
 - Put project vocabulary/model terms in `ontology`.
 - Put current best project/data facts in `map`.
 - Put point-in-time or tentative findings in `observations`.
+- Put syntheses over related observations, claims, or evidence in `patterns`.
 - Put source/query/hash/sample support in `evidence`.
 - Put project SHACL extensions in `shapes`.
 - Use `history` for revision metadata when that feature exists.
@@ -92,7 +93,7 @@ Python syntax.
 Project-specific vocabulary belongs in project namespaces, not
 `ontology/rc_core.ttl`, unless it truly belongs in the shared Rich Canopy kernel.
 Fixture graph IRIs under `https://richcanopy.org/graph/{role}` map to local graph
-roles such as `map`, `ontology`, `observations`, and `evidence`.
+roles such as `map`, `ontology`, `observations`, `patterns`, and `evidence`.
 
 The AIS and Polymarket fixtures are representative pressure tests, not full
 mechanical conversions. The AIS fixture is intentionally reduced and should not
@@ -121,7 +122,9 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add graph slice/revision metadata and broader MCP context retrieval tools.
-2. Add query-planning helpers that consume storage access metadata.
-3. Consider semantic or hybrid search later, once the literal RDF search surface
-   has enough real usage.
+1. Strengthen the observation -> pattern -> map workflow.
+2. Add first-class map/systematisation helpers for datasets, tables, columns,
+   caveats, and relationships.
+3. Add richer profile metrics and profiling helpers that can write map facts,
+   observations, and patterns together.
+4. Add graph slice/revision metadata and broader MCP context retrieval tools.

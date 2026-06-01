@@ -1,13 +1,17 @@
 # Observation Recording
 
-DoxaBase distinguishes current project knowledge from point-in-time findings.
+DoxaBase distinguishes current project knowledge, point-in-time findings, and
+synthesis patterns.
 
 Use the `map` graph for consolidated facts that should describe the current best
 understanding of a dataset. Use the `observations` graph for things an agent,
 profiler, query, or human just discovered in a particular context.
+Use the `patterns` graph when related observations or claims now look like a
+repeatable or explanatory pattern.
 
 An observation is not automatically a durable model assertion. It may later be
-promoted, summarized, contradicted, or used as evidence for a map update.
+summarized, contradicted, synthesized into a pattern, or used as evidence for a
+map update.
 
 ## Observation Resources
 
@@ -79,6 +83,11 @@ transformation, access, source-span, or proposed-map claims. See
 For the common middle case, use `doxabase.record_claim_observation`. It writes
 the standard `rc:Observation` + `rc:Claim` + `rc:Evidence` + optional
 `rc:SourceSpan` pattern without requiring hand-authored TriG.
+
+When several observations or claims belong together, use
+`doxabase.record_pattern`. Patterns are the preferred bridge from noticed facts
+to map facts: they record the agent's rationale before, during, or after map
+systematisation. See `patterns` for the dedicated pattern workflow.
 
 The writer adds graph triples only after validating basic inputs such as summary
 presence, observation type, ISO datetime syntax, and non-negative counts.

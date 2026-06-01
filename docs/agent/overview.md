@@ -12,7 +12,7 @@ Current implementation status:
 
 - SQLite-backed named graph storage.
 - Immutable shipped seed graphs: `base_ontology`, `base_shapes`.
-- Mutable project graphs: `map`, `ontology`, `observations`, `evidence`, `shapes`, `history`.
+- Mutable project graphs: `map`, `ontology`, `observations`, `patterns`, `evidence`, `shapes`, `history`.
 - Turtle import into one graph.
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
@@ -21,8 +21,9 @@ Current implementation status:
 - `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
 - `record_observation()` for point-in-time findings and linked evidence.
 - `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.
-- Agent-authored observation RDF for structured claims, source spans, confidence, and status.
-- Stricter SHACL checks for observation, evidence, claim, and source-span resources.
+- `record_pattern()` for syntheses that connect related findings to map targets.
+- Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
+- Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
 - MCP tools for docs, overview, search, listing, dataset description, observation recording, import, validation, and fixture loading.
 

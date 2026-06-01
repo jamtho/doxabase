@@ -9,11 +9,13 @@ assumptions, and interpretations that may or may not hold tomorrow. DoxaBase
 gives those claims somewhere durable to live as RDF, without requiring every
 claim to be promoted immediately into stable project structure.
 
-It is built around a two-phase loop:
+It is built around an observation-pattern-map loop:
 
 1. **Observation**: record point-in-time or source-scoped findings, with
    evidence, as RDF resources.
-2. **Systematisation**: later consolidate useful findings into a more durable
+2. **Pattern**: synthesize related findings into explicit rationale that can
+   explain why something looks durable or important.
+3. **Systematisation**: consolidate useful patterns and findings into a more durable
    project map, ontology terms, shapes, caveats, and revision history.
 
 The graph is deliberately open-ended: projects can record arbitrary RDF claims
@@ -42,17 +44,21 @@ Implemented:
 
 - SQLite-backed named graph capsule.
 - Immutable shipped seed graphs: `base_ontology` and `base_shapes`.
-- Mutable project graphs: `map`, `ontology`, `observations`, `evidence`, `shapes`, and `history`.
+- Mutable project graphs: `map`, `ontology`, `observations`, `patterns`,
+  `evidence`, `shapes`, and `history`.
 - Turtle import into one graph.
 - TriG import into graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
-- `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
+- `describe_dataset()` for bounded table schema, layout, storage access, caveat,
+  and provenance context.
 - `record_observation()` for first-class observation and evidence resources.
 - `record_claim_observation()` for common observation, claim, evidence, and source-span capture.
-- Agent-authored observation RDF vocabulary for structured claims, source spans, confidence, and status.
-- Stricter SHACL validation for observation/evidence/claim resources.
+- `record_pattern()` for syntheses that connect related findings to map targets.
+- Agent-authored observation and pattern RDF vocabulary for structured claims,
+  source spans, confidence, and status.
+- Stricter SHACL validation for observation/pattern/evidence/claim resources.
 - Non-secret storage access metadata for physical query planning.
 - Draft Rich Canopy `rc:` base ontology and open SHACL shapes.
 - Representative AIS and Polymarket fixtures converted from the Manifest prototype.
@@ -121,7 +127,10 @@ observation = db.record_observation(
 validation = db.validate_graph(scope="all")
 ```
 
-The capsule seeds immutable `base_ontology` and `base_shapes` graphs from `ontology/rc_core.ttl` and `ontology/rc_shapes.ttl`. Project imports can write to mutable graph roles such as `map`, `ontology`, `observations`, `evidence`, `shapes`, and `history`.
+The capsule seeds immutable `base_ontology` and `base_shapes` graphs from
+`ontology/rc_core.ttl` and `ontology/rc_shapes.ttl`. Project imports can write
+to mutable graph roles such as `map`, `ontology`, `observations`, `patterns`,
+`evidence`, `shapes`, and `history`.
 
 ## MCP Server
 
@@ -140,11 +149,13 @@ Useful first tool calls for an agent:
 5. `doxabase.graph_overview`
 6. `doxabase.search` for remembered terms, caveats, observations, or evidence
 7. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
-8. `doxabase.describe_resource` for typed resources such as `rc:Claim` or `rc:Evidence`
+8. `doxabase.describe_resource` for typed resources such as `rc:Pattern`,
+   `rc:Claim`, or `rc:Evidence`
 9. `doxabase.describe_dataset` with a table IRI from `list_entities`
 10. `doxabase.record_observation` for useful point-in-time findings
 11. `doxabase.record_claim_observation` for structured claim observations
-12. `doxabase.validate_graph` with `scope="all"`
+12. `doxabase.record_pattern` for syntheses over related findings
+13. `doxabase.validate_graph` with `scope="all"`
 
 Current MCP tools:
 

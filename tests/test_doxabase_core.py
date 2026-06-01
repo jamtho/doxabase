@@ -18,11 +18,12 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 807
+    assert graphs["base_ontology"].triple_count == 852
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 657
+    assert graphs["base_shapes"].triple_count == 758
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
+    assert graphs["patterns"].mutable is True
 
 
 def test_immutable_seed_graphs_reject_normal_imports(tmp_path: Path) -> None:
@@ -44,6 +45,37 @@ def test_import_trig_maps_graph_iris_to_roles(tmp_path: Path) -> None:
     }
     assert db.triple_count("map") == 219
     assert db.triple_count("ontology") == 94
+
+
+def test_import_trig_maps_patterns_graph_role(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    imported = db.import_trig(
+        """
+        @prefix ex:  <https://example.test/project#> .
+        @prefix rc:  <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        rcg:patterns {
+            ex:body_top_pattern a rc:Pattern ;
+                rc:summary "body_top behaves like cleaned top-level text." ;
+                rc:patternText "Repeated source notes support treating body_top as cleaned message text." ;
+                rc:rationale "The README and profile checks describe the same transformation." ;
+                rc:patternTarget ex:body_top ;
+                rc:evidence ex:body_top_pattern_evidence ;
+                rc:synthesizedAt "2026-06-01T00:00:00Z"^^xsd:dateTime .
+        }
+
+        rcg:evidence {
+            ex:body_top_pattern_evidence a rc:Evidence ;
+                rc:summary "README body processing section." ;
+                <http://purl.org/dc/terms/source> "tests/test_doxabase_core.py" .
+        }
+        """
+    )
+
+    assert imported["patterns"] > 0
+    assert db.validate_graph(scope="all").conforms
 
 
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:
@@ -361,6 +393,9 @@ def test_record_claim_observation_writes_common_rdf_pattern(tmp_path: Path) -> N
         text="reply separators",
     )
     assert [claim.iri for claim in claims.entities] == [result.claim_iri]
+    assert claims.entities[0].label == (
+        "body_top stores text above reply separators after footer stripping."
+    )
 
     context = db.describe_resource(result.claim_iri, graph="observations")
     outgoing_predicates = {triple.predicate for triple in context.outgoing}
@@ -381,6 +416,137 @@ def test_record_claim_observation_writes_common_rdf_pattern(tmp_path: Path) -> N
         triple.predicate == "https://richcanopy.org/ns/rc#sourceSpan"
         and triple.object == result.source_span_iri
         for triple in evidence_context.outgoing
+    )
+
+
+def test_record_pattern_links_observations_claims_evidence_and_targets(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    observation = db.record_observation(
+        summary="body_top was populated in the inspected local parquet profile.",
+        evidence_summary="Synthetic profile evidence.",
+        evidence_sources=["tests/test_doxabase_core.py"],
+    )
+    claim = db.record_claim_observation(
+        summary="body_top transformation claim.",
+        claim_text="body_top is cleaned top-level message text.",
+        claim_kind="rc:TransformationClaim",
+        claim_targets=["https://example.test/enron#eml_messages__body_top"],
+        evidence_summary="README body processing section.",
+        source_path="/home/james/github.com/jamtho/enron-emails/README.md",
+        source_section="Body processing",
+        source_kind="rc:DocumentationSource",
+        confidence="rc:HighConfidence",
+        observation_status="rc:Checked",
+    )
+
+    result = db.record_pattern(
+        summary="body_top behaves like cleaned top-level message text.",
+        pattern_text=(
+            "Documentation, a profile observation, and the transformation claim "
+            "all support treating body_top as cleaned sender-new text."
+        ),
+        rationale=(
+            "The supporting observation says the field is populated, while the "
+            "claim and source span explain the reply-splitting transformation."
+        ),
+        pattern_targets=["https://example.test/enron#eml_messages__body_top"],
+        supporting_observations=[observation.observation_iri],
+        supporting_claims=[claim.claim_iri],
+        source_path="/home/james/github.com/jamtho/enron-emails/README.md",
+        source_section="Body processing",
+        start_line=186,
+        end_line=191,
+        source_kind="rc:DocumentationSource",
+        confidence="rc:HighConfidence",
+        pattern_status="rc:Checked",
+        pattern_stability="rc:RepeatedPattern",
+        map_implications=["https://example.test/enron#caveat_body_processing_lossy"],
+    )
+
+    assert result.pattern_iri.startswith(
+        "https://richcanopy.org/doxabase/generated/pattern/"
+    )
+    assert result.evidence_iri is not None
+    assert result.source_span_iri is not None
+    assert result.pattern_triples > 0
+    assert result.evidence_triples > 0
+    assert db.graph_overview().key_counts["patterns"] == 1
+    assert db.validate_graph(scope="patterns").conforms
+    assert db.validate_graph(scope="all").conforms
+
+    patterns = db.list_entities(
+        type="rc:Pattern",
+        graph="patterns",
+        text="sender-new",
+    )
+    assert [pattern.iri for pattern in patterns.entities] == [result.pattern_iri]
+    assert patterns.entities[0].label == (
+        "body_top behaves like cleaned top-level message text."
+    )
+
+    context = db.describe_resource(result.pattern_iri, graph="patterns")
+    outgoing_predicates = {triple.predicate for triple in context.outgoing}
+
+    assert context.label == "body_top behaves like cleaned top-level message text."
+    assert "https://richcanopy.org/ns/rc#supportingObservation" in outgoing_predicates
+    assert "https://richcanopy.org/ns/rc#supportingClaim" in outgoing_predicates
+    assert "https://richcanopy.org/ns/rc#mapImplication" in outgoing_predicates
+    assert db.search("sender-new", graph="patterns").matches[0].iri == (
+        result.pattern_iri
+    )
+
+
+def test_record_pattern_requires_support_or_source(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="supporting_observations"):
+        db.record_pattern(
+            summary="Unsupported synthesis.",
+            pattern_text="This pattern has no support.",
+            rationale="A pattern should not be a free-floating hunch.",
+            pattern_targets=["https://example.test/enron#eml_messages"],
+        )
+    with pytest.raises(DoxaBaseError, match="evidence_summary requires"):
+        db.record_pattern(
+            summary="Evidence summary without a source.",
+            pattern_text="This pattern has support but no evidence source.",
+            rationale="Evidence summaries should not create source-less evidence.",
+            pattern_targets=["https://example.test/enron#eml_messages"],
+            supporting_observations=["https://example.test/enron#obs"],
+            evidence_summary="This summary has no source.",
+        )
+
+
+def test_agent_authored_pattern_rdf_requires_rationale(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix ex:  <https://example.test/project#> .
+        @prefix rc:  <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:patterns {
+            ex:unsupported_pattern a rc:Pattern ;
+                rc:summary "A pattern without rationale should fail." ;
+                rc:patternText "This pattern skips rationale." ;
+                rc:patternTarget ex:eml_messages ;
+                rc:evidence ex:evidence .
+        }
+
+        rcg:evidence {
+            ex:evidence a rc:Evidence ;
+                <http://purl.org/dc/terms/source> "tests/test_doxabase_core.py" .
+        }
+        """
+    )
+
+    validation = db.validate_graph(scope="all")
+
+    assert not validation.conforms
+    assert "Pattern resources must have exactly one string rationale" in (
+        validation.report_text
     )
 
 

@@ -59,6 +59,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "observation-rdf.md",
     ),
     AgentDoc(
+        id="patterns",
+        title="Patterns",
+        description="How to synthesize observations into patterns before systematising map facts.",
+        path=DOCS_DIR / "patterns.md",
+    ),
+    AgentDoc(
         id="lexical_search",
         title="Lexical Search",
         description="How search helps agents rediscover claims, caveats, observations, and evidence.",

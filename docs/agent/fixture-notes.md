@@ -19,6 +19,7 @@ For example:
 - `https://richcanopy.org/graph/ontology`
 - `https://richcanopy.org/graph/map`
 - `https://richcanopy.org/graph/observations`
+- `https://richcanopy.org/graph/patterns`
 - `https://richcanopy.org/graph/evidence`
 
 `DoxaBase.import_trig()` and the MCP import tools map those IRIs to local graph role names.

@@ -11,6 +11,7 @@ def test_list_agent_docs_contains_operational_docs() -> None:
     assert "mcp_tools" in doc_ids
     assert "observation_recording" in doc_ids
     assert "observation_rdf" in doc_ids
+    assert "patterns" in doc_ids
     assert "lexical_search" in doc_ids
     assert "executable_catalog" in doc_ids
     assert "field_trials" in doc_ids

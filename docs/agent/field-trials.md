@@ -74,6 +74,8 @@ A useful trial usually asks the agent to:
 - create a scratch capsule under `/tmp`;
 - use `record_observation` for simple evidence-backed notes;
 - use `record_claim_observation` for common structured claims;
+- use `record_pattern` when related findings should be synthesized before map
+  updates;
 - use agent-authored RDF only for claims the helper cannot express cleanly;
 - use `list_entities`, `describe_resource`, `search`, and `graph_overview` to
   verify retrieval;
@@ -87,12 +89,13 @@ Ask for a report with these sections:
 1. Scratch capsule work performed
 2. Observations recorded
 3. Structured claims recorded
-4. Retrieval checks
-5. Validation result
-6. What worked
-7. Remaining friction
-8. Suggested next changes
-9. Safety/access notes
+4. Patterns synthesized
+5. Retrieval checks
+6. Validation result
+7. What worked
+8. Remaining friction
+9. Suggested next changes
+10. Safety/access notes
 
 Incomplete work is still useful. If the agent gets blocked, ask it to report the
 blocker, what it had prepared, and what it would do next.
@@ -102,6 +105,7 @@ blocker, what it had prepared, and what it would do next.
 Look for these signals:
 
 - Could the agent decide when to use a helper versus hand-authored RDF?
+- Could the agent decide when related observations should become a pattern?
 - Did evidence stay source-backed and credential-free?
 - Did validation catch real mistakes without becoming busywork?
 - Could the agent retrieve typed resources without relying only on lexical

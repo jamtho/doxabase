@@ -13,7 +13,7 @@ Use `rc:` terms for shared structural concepts:
 - `rc:Dataset`, `rc:Table`, `rc:Column`, `rc:ColumnGroup`
 - `rc:ValueType`, `rc:PhysicalType`, `rc:AllowedValues`, `rc:ValueRange`
 - `rc:ForeignKey`, `rc:SharedIdentifier`, `rc:Derivation`, `rc:Aggregation`
-- `rc:KnownCaveat`, `rc:Observation`, `rc:Evidence`
+- `rc:KnownCaveat`, `rc:Observation`, `rc:Claim`, `rc:Pattern`, `rc:Evidence`
 - `rc:PhysicalLayout`, `rc:PartitionScheme`, `rc:RowOrdering`
 
 Use project namespaces for domain-specific ideas:
@@ -26,5 +26,7 @@ Useful distinction:
 
 - Declared allowed values belong to the model, using `rc:AllowedValues`.
 - Observed values from a profiler belong to observations, using `rc:Observation` or `rc:ProfileObservation`.
+- Syntheses over related observations or claims belong to patterns, using
+  `rc:Pattern`.
 
 The base SHACL shapes validate common authoring mistakes in `rc:` usage. They are open and do not reject client-defined terms.

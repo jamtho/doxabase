@@ -1,6 +1,7 @@
 # Graph Roles
 
-DoxaBase uses named graph roles to separate stable vocabulary from project facts, observations, evidence, and validation shapes.
+DoxaBase uses named graph roles to separate stable vocabulary, project facts,
+observations, patterns, evidence, and validation shapes.
 
 ## Immutable Seed Graphs
 
@@ -27,9 +28,16 @@ The current best structured map of the project/data world: datasets, tables, col
 Point-in-time or tentative findings: profiling results, observed counts, candidate joins, raw notes, failed assumptions, exploratory discoveries, and agent-run observations.
 Use `record_observation()` for routine structured observation writes.
 
+`patterns`
+
+Syntheses over observations, claims, or evidence. Patterns explain why related
+findings belong together and how they may support the current map, without
+requiring an immediate map edit.
+Use `record_pattern()` for routine pattern writes.
+
 `evidence`
 
-Support for observations or map assertions: source files, query text, URLs, hashes, evidence summaries, validation reports, and samples.
+Support for observations, patterns, or map assertions: source files, query text, URLs, hashes, evidence summaries, validation reports, and samples.
 `record_observation()` can create a linked evidence resource when evidence fields are supplied.
 
 `shapes`

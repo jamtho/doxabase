@@ -585,6 +585,104 @@ rc:ClaimShape a sh:NodeShape ;
         sh:message "proposedAssertion values should be named resources." ;
     ] .
 
+rc:PatternShape a sh:NodeShape ;
+    sh:targetClass rc:Pattern ;
+    sh:or (
+        [
+            sh:property [
+                sh:path rc:supportingObservation ;
+                sh:minCount 1 ;
+            ]
+        ]
+        [
+            sh:property [
+                sh:path rc:supportingClaim ;
+                sh:minCount 1 ;
+            ]
+        ]
+        [
+            sh:property [
+                sh:path rc:evidence ;
+                sh:minCount 1 ;
+            ]
+        ]
+    ) ;
+    sh:property [
+        sh:path rc:summary ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "Pattern resources must have exactly one string summary." ;
+    ] ;
+    sh:property [
+        sh:path rc:patternText ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "Pattern resources must have exactly one string patternText." ;
+    ] ;
+    sh:property [
+        sh:path rc:rationale ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "Pattern resources must have exactly one string rationale." ;
+    ] ;
+    sh:property [
+        sh:path rc:patternTarget ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "Pattern resources should name at least one patternTarget IRI." ;
+    ] ;
+    sh:property [
+        sh:path rc:supportingObservation ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Observation ;
+        sh:message "supportingObservation values should be named Observation resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:supportingClaim ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Claim ;
+        sh:message "supportingClaim values should be named Claim resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:evidence ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Evidence ;
+        sh:message "Pattern evidence values should be named Evidence resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:confidence ;
+        sh:maxCount 1 ;
+        sh:in ( rc:LowConfidence rc:MediumConfidence rc:HighConfidence ) ;
+        sh:message "Pattern confidence must be LowConfidence, MediumConfidence, or HighConfidence." ;
+    ] ;
+    sh:property [
+        sh:path rc:observationStatus ;
+        sh:maxCount 1 ;
+        sh:in ( rc:Tentative rc:Checked rc:Contradicted rc:Promoted ) ;
+        sh:message "Pattern observationStatus must be Tentative, Checked, Contradicted, or Promoted." ;
+    ] ;
+    sh:property [
+        sh:path rc:patternStability ;
+        sh:maxCount 1 ;
+        sh:in ( rc:EmergingPattern rc:RepeatedPattern rc:InvariantPattern ) ;
+        sh:message "patternStability must be EmergingPattern, RepeatedPattern, or InvariantPattern." ;
+    ] ;
+    sh:property [
+        sh:path rc:synthesizedAt ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+        sh:message "synthesizedAt must be an xsd:dateTime if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:mapImplication ;
+        sh:nodeKind sh:IRI ;
+        sh:message "mapImplication values should be named resources." ;
+    ] ;
+    sh:message "Pattern resources must be supported by observations, claims, or evidence." .
+
 rc:EvidenceShape a sh:NodeShape ;
     sh:targetClass rc:Evidence ;
     sh:or (

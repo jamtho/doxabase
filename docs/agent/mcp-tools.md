@@ -21,9 +21,9 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 `doxabase.list_entities`
 
 Lists entities by RDF type, graph role, optional text filter, limit, and offset. Start with `type="rc:Table"` and `graph="map"`.
-For type-aware retrieval, use types such as `rc:Claim`, `rc:Evidence`, or
-`rc:SourceSpan`; the text filter searches literal facts attached to each
-resource, not only labels.
+For type-aware retrieval, use types such as `rc:Pattern`, `rc:Claim`,
+`rc:Evidence`, or `rc:SourceSpan`; the text filter searches literal facts
+attached to each resource, not only labels.
 
 `doxabase.describe_resource`
 
@@ -50,6 +50,13 @@ one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use this for caveat,
 join, schema, transformation, access, profile, or interpretation claims that are
 more structured than a note but do not require hand-authored TriG.
 
+`doxabase.record_pattern`
+
+Records one `rc:Pattern` in the `patterns` graph and optionally linked
+`rc:Evidence` / `rc:SourceSpan` resources in the `evidence` graph. Use this when
+several observations, claims, or sources belong together and suggest a more
+durable pattern or map implication.
+
 ## Import and Validation
 
 `doxabase.import_trig`
@@ -64,4 +71,6 @@ When called with `replace=true`, DoxaBase clears the graph roles used by the bun
 
 `doxabase.validate_graph`
 
-Runs pySHACL over the selected scope using logical `shapes` (`base_shapes + shapes`). Use `scope="all"` after importing fixtures.
+Runs pySHACL over the selected scope using logical `shapes`
+(`base_shapes + shapes`). Use `scope="patterns"` for pattern work and
+`scope="all"` after importing fixtures.

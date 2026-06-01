@@ -13,6 +13,7 @@ from doxabase.mcp_tools import (
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_observation_tool,
+    record_pattern_tool,
     search_tool,
     validate_graph_tool,
 )
@@ -31,6 +32,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
+    assert "doxabase.record_pattern" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
@@ -145,6 +147,62 @@ def test_record_claim_observation_tool_and_resource_context(
     assert context["label"] == "The embeddings output joins to eml_messages by doc_id."
     assert any(
         triple["predicate"] == "https://richcanopy.org/ns/rc#claimKind"
+        for triple in context["outgoing"]
+    )
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_record_pattern_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    claim = record_claim_observation_tool(
+        db,
+        summary="MCP helper wrote a claim for pattern support.",
+        claim_text="The child table joins to the parent table by parent_doc_id.",
+        claim_kind="rc:JoinClaim",
+        claim_targets=[
+            "https://example.test/enron#eml_attachments_parent_doc_id",
+            "https://example.test/enron#eml_messages_doc_id",
+        ],
+        evidence_summary="README attachments section.",
+        source_path="/home/james/github.com/jamtho/enron-emails/README.md",
+        source_kind="rc:DocumentationSource",
+        confidence="rc:HighConfidence",
+        observation_status="rc:Checked",
+    )
+
+    result = record_pattern_tool(
+        db,
+        summary="parent_doc_id behaves as the attachment-to-message join.",
+        pattern_text="The structured claim and source docs support parent_doc_id as the join from attachments to messages.",
+        rationale="The claim names both join columns, and the source span records where the handoff describes the relationship.",
+        pattern_targets=["https://example.test/enron#eml_attachments_parent_doc_id"],
+        supporting_claims=[claim["claim_iri"]],
+        source_path="/home/james/github.com/jamtho/enron-emails/README.md",
+        source_section="Attachments",
+        source_kind="rc:DocumentationSource",
+        confidence="rc:HighConfidence",
+        pattern_status="rc:Checked",
+        pattern_stability="rc:RepeatedPattern",
+    )
+    patterns = list_entities_tool(
+        db,
+        type="rc:Pattern",
+        graph="patterns",
+        text="attachment-to-message",
+    )
+    context = describe_resource_tool(
+        db,
+        iri=result["pattern_iri"],
+        graph="patterns",
+    )
+
+    assert result["pattern_iri"] in {pattern["iri"] for pattern in patterns["entities"]}
+    assert patterns["entities"][0]["label"] == (
+        "parent_doc_id behaves as the attachment-to-message join."
+    )
+    assert context["label"] == "parent_doc_id behaves as the attachment-to-message join."
+    assert any(
+        triple["predicate"] == "https://richcanopy.org/ns/rc#supportingClaim"
         for triple in context["outgoing"]
     )
     assert validate_graph_tool(db, scope="all")["conforms"] is True

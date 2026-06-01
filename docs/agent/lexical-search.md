@@ -25,9 +25,9 @@ The index is derivative. The RDF quads remain the source of truth, and the
 search index is rebuilt from them after graph writes and clears.
 
 Search is lexical, not type-aware. To browse resources by RDF class, use
-`doxabase.list_entities` with `type="rc:Claim"`, `type="rc:Evidence"`, or another
-class, then call `doxabase.describe_resource` for the resource you want to
-inspect.
+`doxabase.list_entities` with `type="rc:Pattern"`, `type="rc:Claim"`,
+`type="rc:Evidence"`, or another class, then call
+`doxabase.describe_resource` for the resource you want to inspect.
 
 ## What A Match Means
 
@@ -51,9 +51,11 @@ that claim is current, complete, or applicable to the task.
 Search is especially important for the observation/systematisation loop.
 
 Observations and evidence let agents capture point-in-time findings without
-pretending they are permanent model facts. Search lets later agents find those
-findings again, compare them with the current map, and decide whether to promote
-useful knowledge into `map`, `ontology`, `shapes`, or future revision metadata.
+pretending they are permanent model facts. Patterns let agents synthesize
+related findings before they become map facts. Search lets later agents find
+that chain again, compare it with the current map, and decide whether to
+systematize useful knowledge into `map`, `ontology`, `shapes`, or future
+revision metadata.
 
 In other words, search is a memory retrieval affordance, not a semantic judge.
 The agent still supplies the judgement.
@@ -64,6 +66,7 @@ Use `graph` to narrow the search:
 
 - `graph="map"` for current consolidated project knowledge.
 - `graph="observations"` for point-in-time findings.
+- `graph="patterns"` for syntheses over related findings.
 - `graph="evidence"` for supporting source notes.
 - `graph="ontology"` for shared and project vocabulary.
 - `graph=None` to search every graph.

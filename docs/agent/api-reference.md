@@ -32,6 +32,7 @@ overview = db.graph_overview(limit=100)
 tables = db.list_entities(type="rc:Table", graph="map", limit=100)
 dataset = db.describe_dataset(tables.entities[0].iri)
 claims = db.list_entities(type="rc:Claim", graph="observations", text="join")
+patterns = db.list_entities(type="rc:Pattern", graph="patterns", text="body_top")
 matches = db.search("MMSI vessel", graph="map", limit=10)
 observation = db.record_observation(
     summary="Dataset was inspected during the current workflow.",
@@ -45,6 +46,15 @@ claim = db.record_claim_observation(
     claim_kind="rc:JoinClaim",
     claim_targets=["https://example.test/project#parent_doc_id"],
     evidence_summary="Recorded from the API reference example.",
+    source_path="docs/agent/api-reference.md",
+    source_kind="rc:DocumentationSource",
+)
+pattern = db.record_pattern(
+    summary="Repeated evidence supports the parent_doc_id join.",
+    pattern_text="Documentation and join checks both indicate parent_doc_id links child rows to message rows.",
+    rationale="The claim names the join columns and the source span records where the handoff explains them.",
+    pattern_targets=["https://example.test/project#parent_doc_id"],
+    supporting_claims=[claim.claim_iri],
     source_path="docs/agent/api-reference.md",
     source_kind="rc:DocumentationSource",
 )
@@ -64,9 +74,15 @@ supplied, it also writes a linked `rc:Evidence` resource to the `evidence` graph
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common
 claim-shaped observation pattern without hand-authoring TriG.
 
+`record_pattern()` writes one `rc:Pattern` to the `patterns` graph and can write
+linked evidence/source-span resources. Use it when several observations, claims,
+or sources belong together and explain a more durable pattern or map
+implication.
+
 `describe_resource()` returns outgoing and incoming triples for one resource.
-Use it after `list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence")`,
-or `list_entities(type="rc:SourceSpan")` when you need structured context rather
+Use it after `list_entities(type="rc:Pattern")`,
+`list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence")`, or
+`list_entities(type="rc:SourceSpan")` when you need structured context rather
 than a lexical search result.
 
 `search()` lexically searches literal RDF claims and returns matched resources,
@@ -84,6 +100,7 @@ Supported scopes today:
 
 - `map`
 - `ontology`
+- `patterns`
 - `shapes`
 - `all`
 

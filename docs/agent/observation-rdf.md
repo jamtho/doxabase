@@ -134,3 +134,8 @@ promote the claim.
 
 Use `record_claim_observation` for the middle ground: one structured claim with
 ordinary evidence and source-span support.
+
+When several observations or claims need to be synthesized together, use
+`record_pattern` or the `patterns` graph instead of forcing the synthesis into a
+single claim. Patterns are the preferred bridge from facts noticed in context to
+current-best map facts.

@@ -20,6 +20,7 @@ GraphName = TypingLiteral[
     "map",
     "ontology",
     "observations",
+    "patterns",
     "evidence",
     "shapes",
     "history",
@@ -71,6 +72,7 @@ DEFAULT_GRAPHS: tuple[tuple[str, str, bool, bool, Path | None], ...] = (
     ("map", "Current best project/data map", True, False, None),
     ("ontology", "Project-owned ontology extensions", True, False, None),
     ("observations", "Point-in-time observations and tentative findings", True, False, None),
+    ("patterns", "Syntheses that connect observations to map facts", True, False, None),
     ("evidence", "Evidence supporting observations and map assertions", True, False, None),
     ("shapes", "Project-owned SHACL shapes", True, False, None),
     ("history", "Versions, revisions, diffs, and rationale", True, False, None),
@@ -216,6 +218,15 @@ class ClaimObservationRecord:
     evidence_iri: str
     source_span_iri: str | None
     observation_triples: int
+    evidence_triples: int
+
+
+@dataclass(frozen=True)
+class PatternRecord:
+    pattern_iri: str
+    evidence_iri: str | None
+    source_span_iri: str | None
+    pattern_triples: int
     evidence_triples: int
 
 
@@ -379,6 +390,7 @@ class DoxaBase:
             "observations": self._count_type("rc:Observation")
             + self._count_type("rc:ProfileObservation"),
             "claims": self._count_type("rc:Claim"),
+            "patterns": self._count_type("rc:Pattern"),
             "evidence": self._count_type("rc:Evidence"),
             "source_spans": self._count_type("rc:SourceSpan"),
             "storage_accesses": self._count_type("rc:StorageAccess"),
@@ -458,7 +470,10 @@ class DoxaBase:
         entities = [
             EntityRow(
                 iri=row["subject"],
-                label=self._label(row["graph"], row["subject"]),
+                label=self._display_label_from_graphs(
+                    self._lookup_graphs([row["graph"]]),
+                    row["subject"],
+                ),
                 types=self._types(row["graph"], row["subject"]),
                 graph=row["graph"],
             )
@@ -1072,6 +1087,316 @@ class DoxaBase:
             evidence_triples=evidence_triples,
         )
 
+    def record_pattern(
+        self,
+        summary: str,
+        *,
+        pattern_text: str,
+        rationale: str,
+        pattern_targets: Iterable[str] | str,
+        supporting_observations: Iterable[str] | str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        synthesized_at: datetime | str | None = None,
+        synthesized_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        source_path: str | None = None,
+        source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        source_kind: str | None = None,
+        confidence: str | None = "rc:MediumConfidence",
+        pattern_status: str | None = "rc:Tentative",
+        pattern_stability: str | None = "rc:EmergingPattern",
+        map_implications: Iterable[str] | str | None = None,
+        pattern_iri: str | None = None,
+        evidence_iri: str | None = None,
+        source_span_iri: str | None = None,
+    ) -> PatternRecord:
+        if not summary.strip():
+            raise DoxaBaseError("Pattern summary must not be empty")
+        if not pattern_text.strip():
+            raise DoxaBaseError("pattern_text must not be empty")
+        if not rationale.strip():
+            raise DoxaBaseError("rationale must not be empty")
+
+        pattern_target_values = self._string_values(
+            "pattern_targets",
+            pattern_targets,
+            required=True,
+        )
+        supporting_observation_values = self._string_values(
+            "supporting_observations",
+            supporting_observations,
+        )
+        supporting_claim_values = self._string_values(
+            "supporting_claims",
+            supporting_claims,
+        )
+        evidence_source_values = self._string_values(
+            "evidence_sources",
+            evidence_sources,
+        )
+        map_implication_values = self._string_values(
+            "map_implications",
+            map_implications,
+        )
+        source_path_value = (
+            source_path.strip()
+            if source_path and source_path.strip()
+            else None
+        )
+        source_section_value = (
+            source_section.strip()
+            if source_section and source_section.strip()
+            else None
+        )
+        source_kind_value = (
+            source_kind.strip()
+            if source_kind and source_kind.strip()
+            else None
+        )
+        confidence_value = (
+            confidence.strip()
+            if confidence and confidence.strip()
+            else None
+        )
+        pattern_status_value = (
+            pattern_status.strip()
+            if pattern_status and pattern_status.strip()
+            else None
+        )
+        pattern_stability_value = (
+            pattern_stability.strip()
+            if pattern_stability and pattern_stability.strip()
+            else None
+        )
+        evidence_iri_value = (
+            evidence_iri.strip()
+            if evidence_iri and evidence_iri.strip()
+            else None
+        )
+
+        if (
+            not supporting_observation_values
+            and not supporting_claim_values
+            and not evidence_source_values
+            and source_path_value is None
+            and evidence_iri_value is None
+        ):
+            raise DoxaBaseError(
+                "record_pattern requires supporting_observations, "
+                "supporting_claims, evidence_sources, source_path, or evidence_iri"
+            )
+        if evidence_summary and not evidence_source_values and source_path_value is None:
+            raise DoxaBaseError(
+                "evidence_summary requires evidence_sources or source_path"
+            )
+        for name, value in {"start_line": start_line, "end_line": end_line}.items():
+            if value is not None and value < 1:
+                raise DoxaBaseError(f"{name} must be a positive one-based line number")
+
+        pattern_subject = URIRef(pattern_iri or self._mint_iri("pattern"))
+        evidence_subject = (
+            URIRef(evidence_iri_value)
+            if evidence_iri_value is not None
+            else URIRef(self._mint_iri("evidence"))
+            if evidence_source_values or source_path_value
+            else None
+        )
+        source_span_subject = (
+            URIRef(source_span_iri or self._mint_iri("source-span"))
+            if source_path_value is not None
+            else None
+        )
+
+        pattern_graph = Graph()
+        self._bind_prefixes(pattern_graph)
+        pattern_graph.add(
+            (pattern_subject, RDF.type, URIRef(self.expand_iri("rc:Pattern")))
+        )
+        pattern_graph.add(
+            (pattern_subject, URIRef(self.expand_iri("rc:summary")), Literal(summary))
+        )
+        pattern_graph.add(
+            (
+                pattern_subject,
+                URIRef(self.expand_iri("rc:patternText")),
+                Literal(pattern_text),
+            )
+        )
+        pattern_graph.add(
+            (
+                pattern_subject,
+                URIRef(self.expand_iri("rc:rationale")),
+                Literal(rationale),
+            )
+        )
+        pattern_graph.add(
+            (
+                pattern_subject,
+                URIRef(self.expand_iri("rc:synthesizedAt")),
+                self._datetime_literal(synthesized_at),
+            )
+        )
+        if synthesized_by is not None:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:synthesizedBy")),
+                    self._resource_or_literal(synthesized_by),
+                )
+            )
+        for target in pattern_target_values:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:patternTarget")),
+                    URIRef(self.expand_iri(target)),
+                )
+            )
+        for observation in supporting_observation_values:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:supportingObservation")),
+                    URIRef(self.expand_iri(observation)),
+                )
+            )
+        for claim in supporting_claim_values:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:supportingClaim")),
+                    URIRef(self.expand_iri(claim)),
+                )
+            )
+        if evidence_subject is not None:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:evidence")),
+                    evidence_subject,
+                )
+            )
+        if confidence_value is not None:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:confidence")),
+                    URIRef(self.expand_iri(confidence_value)),
+                )
+            )
+        if pattern_status_value is not None:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:observationStatus")),
+                    URIRef(self.expand_iri(pattern_status_value)),
+                )
+            )
+        if pattern_stability_value is not None:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:patternStability")),
+                    URIRef(self.expand_iri(pattern_stability_value)),
+                )
+            )
+        for implication in map_implication_values:
+            pattern_graph.add(
+                (
+                    pattern_subject,
+                    URIRef(self.expand_iri("rc:mapImplication")),
+                    URIRef(self.expand_iri(implication)),
+                )
+            )
+
+        evidence_triples = 0
+        if evidence_subject is not None and (evidence_source_values or source_path_value):
+            evidence_graph = Graph()
+            self._bind_prefixes(evidence_graph)
+            evidence_graph.add(
+                (evidence_subject, RDF.type, URIRef(self.expand_iri("rc:Evidence")))
+            )
+            if evidence_summary:
+                evidence_graph.add(
+                    (
+                        evidence_subject,
+                        URIRef(self.expand_iri("rc:summary")),
+                        Literal(evidence_summary),
+                    )
+                )
+            for source in evidence_source_values:
+                evidence_graph.add((evidence_subject, DCTERMS.source, Literal(source)))
+            if source_path_value is not None:
+                assert source_span_subject is not None
+                evidence_graph.add(
+                    (
+                        evidence_subject,
+                        URIRef(self.expand_iri("rc:sourceSpan")),
+                        source_span_subject,
+                    )
+                )
+                evidence_graph.add(
+                    (
+                        source_span_subject,
+                        RDF.type,
+                        URIRef(self.expand_iri("rc:SourceSpan")),
+                    )
+                )
+                evidence_graph.add(
+                    (
+                        source_span_subject,
+                        URIRef(self.expand_iri("rc:sourcePath")),
+                        Literal(source_path_value),
+                    )
+                )
+                if source_section_value:
+                    evidence_graph.add(
+                        (
+                            source_span_subject,
+                            URIRef(self.expand_iri("rc:sourceSection")),
+                            Literal(source_section_value),
+                        )
+                    )
+                if start_line is not None:
+                    evidence_graph.add(
+                        (
+                            source_span_subject,
+                            URIRef(self.expand_iri("rc:startLine")),
+                            Literal(start_line, datatype=XSD.integer),
+                        )
+                    )
+                if end_line is not None:
+                    evidence_graph.add(
+                        (
+                            source_span_subject,
+                            URIRef(self.expand_iri("rc:endLine")),
+                            Literal(end_line, datatype=XSD.integer),
+                        )
+                    )
+                if source_kind_value is not None:
+                    evidence_graph.add(
+                        (
+                            source_span_subject,
+                            URIRef(self.expand_iri("rc:sourceKind")),
+                            URIRef(self.expand_iri(source_kind_value)),
+                        )
+                    )
+            evidence_triples = self._insert_graph("evidence", evidence_graph)
+
+        pattern_triples = self._insert_graph("patterns", pattern_graph)
+        return PatternRecord(
+            pattern_iri=str(pattern_subject),
+            evidence_iri=str(evidence_subject) if evidence_subject is not None else None,
+            source_span_iri=(
+                str(source_span_subject) if source_span_subject is not None else None
+            ),
+            pattern_triples=pattern_triples,
+            evidence_triples=evidence_triples,
+        )
+
     def import_turtle(
         self,
         source: str | Path,
@@ -1131,7 +1456,7 @@ class DoxaBase:
 
     def validate_graph(
         self,
-        scope: TypingLiteral["map", "ontology", "shapes", "all"] = "map",
+        scope: TypingLiteral["map", "ontology", "patterns", "shapes", "all"] = "map",
         *,
         limit_results: int = 100,
     ) -> ValidationResult:
@@ -1371,10 +1696,26 @@ class DoxaBase:
             return self._expand_graphs(["ontology"]) + ["map"]
         if scope == "ontology":
             return self._expand_graphs(["ontology"])
+        if scope == "patterns":
+            return [
+                "base_ontology",
+                "ontology",
+                "observations",
+                "patterns",
+                "evidence",
+            ]
         if scope == "shapes":
             return self._expand_graphs(["shapes"])
         if scope == "all":
-            return ["base_ontology", "ontology", "map", "observations", "evidence", "history"]
+            return [
+                "base_ontology",
+                "ontology",
+                "map",
+                "observations",
+                "patterns",
+                "evidence",
+                "history",
+            ]
         raise ValueError(f"Unsupported validation scope: {scope}")
 
     def _local_graph_name(
@@ -1731,6 +2072,7 @@ class DoxaBase:
         return (
             self._label_from_graphs(graphs, subject)
             or self._first_object(graphs, subject, "rc:summary")
+            or self._first_object(graphs, subject, "rc:patternText")
             or self._first_object(graphs, subject, "rc:claimText")
             or self._description_from_graphs(graphs, subject)
         )

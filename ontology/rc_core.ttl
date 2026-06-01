@@ -695,11 +695,17 @@ rc:Evidence a rdfs:Class ;
 rc:Claim a rdfs:Class ;
     rdfs:comment "A structured claim made by an observation. Claims let agents express nuanced dataset lore as RDF rather than only prose." .
 
+rc:Pattern a rdfs:Class ;
+    rdfs:comment "A synthesis over observations, claims, or evidence that explains a recurring or connected dataset pattern. Patterns bridge point-in-time findings and the current project map." .
+
 rc:ClaimKind a rdfs:Class ;
     rdfs:comment "Controlled category for the kind of claim an observation is making." .
 
 rc:ConfidenceLevel a rdfs:Class ;
     rdfs:comment "Controlled confidence level for an observed claim." .
+
+rc:PatternStability a rdfs:Class ;
+    rdfs:comment "Controlled indication of how durable or repeatable a pattern appears to be." .
 
 rc:ObservationStatus a rdfs:Class ;
     rdfs:comment "Lifecycle status for an observation or claim." .
@@ -794,15 +800,59 @@ rc:claimTarget a rdf:Property ;
     rdfs:range rdfs:Resource ;
     rdfs:comment "The resource that the claim is primarily about." .
 
+rc:patternText a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A concise human-readable rendering of the pattern." .
+
+rc:rationale a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Reasoning that explains why observations, claims, or evidence belong together." .
+
+rc:patternTarget a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "A resource the pattern is primarily about." .
+
+rc:supportingObservation a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range rc:Observation ;
+    rdfs:comment "An observation that supports a pattern." .
+
+rc:supportingClaim a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range rc:Claim ;
+    rdfs:comment "A structured claim that supports a pattern." .
+
+rc:patternStability a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range rc:PatternStability ;
+    rdfs:comment "How repeatable, durable, or invariant the pattern currently appears." .
+
+rc:mapImplication a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "A map resource or named candidate map implication suggested by a pattern without requiring an immediate map edit." .
+
+rc:synthesizedAt a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "When a pattern synthesis was recorded." .
+
+rc:synthesizedBy a rdf:Property ;
+    rdfs:domain rc:Pattern ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "The agent, tool, process, or person that synthesized a pattern." .
+
 rc:proposedAssertion a rdf:Property ;
     rdfs:domain rc:Claim ;
     rdfs:range rdfs:Resource ;
     rdfs:comment "A resource representing a candidate durable assertion that may later be promoted into a map or ontology graph." .
 
 rc:confidence a rdf:Property ;
-    rdfs:domain rc:Claim ;
     rdfs:range rc:ConfidenceLevel ;
-    rdfs:comment "Confidence level for a structured claim." .
+    rdfs:comment "Confidence level for a structured claim or pattern synthesis." .
 
 rc:observationStatus a rdf:Property ;
     rdfs:range rc:ObservationStatus ;
@@ -924,6 +974,10 @@ rc:InterpretationClaim a rc:ClaimKind ; rdfs:label "interpretation claim" .
 rc:LowConfidence a rc:ConfidenceLevel ; rdfs:label "low confidence" .
 rc:MediumConfidence a rc:ConfidenceLevel ; rdfs:label "medium confidence" .
 rc:HighConfidence a rc:ConfidenceLevel ; rdfs:label "high confidence" .
+
+rc:EmergingPattern a rc:PatternStability ; rdfs:label "emerging pattern" .
+rc:RepeatedPattern a rc:PatternStability ; rdfs:label "repeated pattern" .
+rc:InvariantPattern a rc:PatternStability ; rdfs:label "invariant pattern" .
 
 rc:Tentative a rc:ObservationStatus ; rdfs:label "tentative" .
 rc:Checked a rc:ObservationStatus ; rdfs:label "checked" .
