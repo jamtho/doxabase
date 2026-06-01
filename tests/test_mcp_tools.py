@@ -12,6 +12,11 @@ from doxabase.mcp_tools import (
     list_entities_tool,
     load_example_fixtures_tool,
     record_claim_observation_tool,
+    record_map_caveat_tool,
+    record_map_column_tool,
+    record_map_dataset_tool,
+    record_map_relationship_tool,
+    record_map_storage_access_tool,
     record_observation_tool,
     record_pattern_tool,
     search_tool,
@@ -33,6 +38,11 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
     assert "doxabase.record_pattern" in tool_names
+    assert "doxabase.record_map_dataset" in tool_names
+    assert "doxabase.record_map_column" in tool_names
+    assert "doxabase.record_map_caveat" in tool_names
+    assert "doxabase.record_map_storage_access" in tool_names
+    assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
@@ -206,6 +216,62 @@ def test_record_pattern_tool_returns_json_like_payload(tmp_path: Path) -> None:
         for triple in context["outgoing"]
     )
     assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    table = f"{base}messages"
+    column = f"{base}messages__doc_id"
+    caveat = f"{base}messages_caveat"
+    storage = f"{base}local_access"
+
+    table_result = record_map_dataset_tool(
+        db,
+        iri=table,
+        label="Messages",
+        is_table=True,
+        path_templates=["data/messages.parquet"],
+    )
+    column_result = record_map_column_tool(
+        db,
+        iri=column,
+        table_iri=table,
+        column_name="doc_id",
+        physical_type="rc:Varchar",
+        nullable=False,
+    )
+    caveat_result = record_map_caveat_tool(
+        db,
+        iri=caveat,
+        description="Message identifiers are source-system identifiers.",
+        severity="rc:Minor",
+        targets=[table],
+    )
+    storage_result = record_map_storage_access_tool(
+        db,
+        iri=storage,
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root="/tmp/example",
+        datasets=[table],
+    )
+    relationship_result = record_map_relationship_tool(
+        db,
+        iri=f"{base}messages_doc_id_shared",
+        relationship_type="shared_identifier",
+        identifying_columns=[column, f"{base}other_messages__doc_id"],
+    )
+
+    assert table_result["resource_type"] == "https://richcanopy.org/ns/rc#Table"
+    assert column_result["resource_type"] == "https://richcanopy.org/ns/rc#Column"
+    assert caveat_result["resource_type"] == "https://richcanopy.org/ns/rc#KnownCaveat"
+    assert storage_result["resource_type"] == "https://richcanopy.org/ns/rc#StorageAccess"
+    assert relationship_result["resource_type"] == (
+        "https://richcanopy.org/ns/rc#SharedIdentifier"
+    )
+    assert describe_dataset_tool(db, iri=table)["label"] == "Messages"
+    assert validate_graph_tool(db, scope="map")["conforms"] is True
 
 
 def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:

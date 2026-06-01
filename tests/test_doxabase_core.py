@@ -148,6 +148,125 @@ def test_describe_dataset_reports_missing_dataset(tmp_path: Path) -> None:
         db.describe_dataset("https://richcanopy.org/example/manifest/ais#MissingDataset")
 
 
+def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/enron#"
+    messages = f"{base}eml_messages"
+    attachments = f"{base}eml_attachments"
+    doc_id = f"{base}eml_messages__doc_id"
+    parent_doc_id = f"{base}eml_attachments__parent_doc_id"
+    caveat = f"{base}caveat_body_processing_lossy"
+    storage = f"{base}local_parquet_access"
+
+    storage_record = db.record_map_storage_access(
+        storage,
+        label="local parquet access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root="/home/james/github.com/jamtho/enron-emails",
+        path_templates=["data/parquet/*.parquet"],
+        datasets=[messages],
+    )
+    caveat_record = db.record_map_caveat(
+        caveat,
+        label="body processing lossy",
+        description="body_top is cleaned sender-new text, not raw email text.",
+        severity="rc:Moderate",
+        targets=[messages],
+    )
+    table_record = db.record_map_dataset(
+        messages,
+        label="EML messages",
+        description="One row per parsed raw .eml message.",
+        is_table=True,
+        path_templates=["data/parquet/eml_messages.parquet"],
+        row_count_snapshot=123,
+        row_semantics="rc:EventRow",
+        entity_key=doc_id,
+        schema_stability="rc:FixedSchema",
+        caveats=[caveat],
+        storage_accesses=[storage],
+    )
+    db.record_map_dataset(
+        attachments,
+        label="EML attachments",
+        is_table=True,
+        path_templates=["data/parquet/eml_attachments.parquet"],
+    )
+    doc_column = db.record_map_column(
+        doc_id,
+        table_iri=messages,
+        column_name="doc_id",
+        label="EML messages.doc_id",
+        physical_type="rc:Varchar",
+        value_type=f"{base}DocId",
+        nullable=False,
+    )
+    db.record_map_column(
+        parent_doc_id,
+        table_iri=attachments,
+        column_name="parent_doc_id",
+        physical_type="rc:Varchar",
+        value_type=f"{base}DocId",
+        nullable=True,
+    )
+    relationship = db.record_map_relationship(
+        f"{base}eml_attachment_parent_doc_id_fk",
+        relationship_type="foreign_key",
+        label="attachment parent doc id fk",
+        source_dataset=attachments,
+        target_dataset=messages,
+        from_column=parent_doc_id,
+        to_column=doc_id,
+        declared=False,
+        referential_integrity="rc:StrictIntegrity",
+    )
+
+    assert storage_record.resource_type == RC + "StorageAccess"
+    assert caveat_record.resource_type == RC + "KnownCaveat"
+    assert table_record.resource_type == RC + "Table"
+    assert doc_column.resource_type == RC + "Column"
+    assert relationship.resource_type == RC + "ForeignKey"
+    assert db.validate_graph(scope="map").conforms
+
+    description = db.describe_dataset(messages)
+    assert description.label == "EML messages"
+    assert description.path_templates == [
+        "data/parquet/eml_messages.parquet",
+        "data/parquet/*.parquet",
+    ]
+    assert description.columns[0].column_name == "doc_id"
+    assert description.columns[0].nullable is False
+    assert description.storage_accesses[0].storage_root == (
+        "/home/james/github.com/jamtho/enron-emails"
+    )
+    assert description.caveats[0].description == (
+        "body_top is cleaned sender-new text, not raw email text."
+    )
+    assert any(
+        related.iri == attachments and related.relationship == "target_of"
+        for related in description.related_datasets
+    )
+
+
+def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#messages"
+
+    db.record_map_dataset(
+        table,
+        label="Messages",
+        is_table=True,
+        path_templates=["data/messages.parquet"],
+    )
+    db.record_map_dataset(table, label="Updated messages")
+
+    description = db.describe_dataset(table)
+    assert description.label == "Updated messages"
+    assert RC + "Table" in description.types
+    assert description.path_templates == ["data/messages.parquet"]
+
+
 def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

@@ -57,6 +57,31 @@ Records one `rc:Pattern` in the `patterns` graph and optionally linked
 several observations, claims, or sources belong together and suggest a more
 durable pattern or map implication.
 
+`doxabase.record_map_dataset`
+
+Records or updates a dataset/table resource in the `map` graph. Omit
+`is_table` for partial updates that should preserve existing dataset/table
+typing.
+
+`doxabase.record_map_column`
+
+Records or updates a column resource and can link it to a table with
+`rc:hasColumn`.
+
+`doxabase.record_map_caveat`
+
+Records or updates a `rc:KnownCaveat` and can link it to affected datasets.
+
+`doxabase.record_map_storage_access`
+
+Records or updates non-secret storage access metadata and can link it to
+datasets.
+
+`doxabase.record_map_relationship`
+
+Records or updates a relationship resource. Supported relationship types are
+`foreign_key`, `shared_identifier`, and `derivation`.
+
 ## Import and Validation
 
 `doxabase.import_trig`

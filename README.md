@@ -56,6 +56,8 @@ Implemented:
 - `record_observation()` for first-class observation and evidence resources.
 - `record_claim_observation()` for common observation, claim, evidence, and source-span capture.
 - `record_pattern()` for syntheses that connect related findings to map targets.
+- Map authoring helpers for current-best datasets, columns, caveats, storage
+  access, and relationships.
 - Agent-authored observation and pattern RDF vocabulary for structured claims,
   source spans, confidence, and status.
 - Stricter SHACL validation for observation/pattern/evidence/claim resources.
@@ -155,7 +157,8 @@ Useful first tool calls for an agent:
 10. `doxabase.record_observation` for useful point-in-time findings
 11. `doxabase.record_claim_observation` for structured claim observations
 12. `doxabase.record_pattern` for syntheses over related findings
-13. `doxabase.validate_graph` with `scope="all"`
+13. `doxabase.record_map_dataset` and related map helpers for current-best facts
+14. `doxabase.validate_graph` with `scope="all"`
 
 Current MCP tools:
 

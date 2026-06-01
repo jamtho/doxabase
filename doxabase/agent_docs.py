@@ -65,6 +65,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "patterns.md",
     ),
     AgentDoc(
+        id="map_authoring",
+        title="Map Authoring",
+        description="How to write current-best dataset, column, caveat, storage, and relationship facts.",
+        path=DOCS_DIR / "map-authoring.md",
+    ),
+    AgentDoc(
         id="lexical_search",
         title="Lexical Search",
         description="How search helps agents rediscover claims, caveats, observations, and evidence.",

@@ -58,6 +58,18 @@ pattern = db.record_pattern(
     source_path="docs/agent/api-reference.md",
     source_kind="rc:DocumentationSource",
 )
+table = db.record_map_dataset(
+    iri="https://example.test/project#child_table",
+    label="Child table",
+    is_table=True,
+    path_templates=["data/child.parquet"],
+)
+column = db.record_map_column(
+    iri="https://example.test/project#child_table__parent_doc_id",
+    table_iri=table.iri,
+    column_name="parent_doc_id",
+    physical_type="rc:Varchar",
+)
 context = db.describe_resource(claim.claim_iri, graph="observations")
 ```
 
@@ -78,6 +90,13 @@ claim-shaped observation pattern without hand-authoring TriG.
 linked evidence/source-span resources. Use it when several observations, claims,
 or sources belong together and explain a more durable pattern or map
 implication.
+
+Map authoring helpers write current-best project facts to `map`:
+`record_map_dataset()`, `record_map_column()`, `record_map_caveat()`,
+`record_map_storage_access()`, and `record_map_relationship()`. Use them when
+observations or patterns are ready to become operating context for future
+agents. On partial dataset updates, omit `is_table` to preserve existing
+dataset/table typing.
 
 `describe_resource()` returns outgoing and incoming triples for one resource.
 Use it after `list_entities(type="rc:Pattern")`,

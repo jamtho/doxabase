@@ -197,6 +197,162 @@ def record_pattern_tool(
     return asdict(result)
 
 
+def record_map_dataset_tool(
+    db: DoxaBase,
+    iri: str,
+    label: str | None = None,
+    description: str | None = None,
+    is_table: bool | None = None,
+    columns: list[str] | None = None,
+    path_templates: list[str] | None = None,
+    row_count_snapshot: int | None = None,
+    row_semantics: str | None = None,
+    entity_key: str | None = None,
+    schema_stability: str | None = None,
+    caveats: list[str] | None = None,
+    storage_accesses: list[str] | None = None,
+    physical_layouts: list[str] | None = None,
+    companion_datasets: list[str] | None = None,
+    extra_types: list[str] | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_dataset(
+        iri=iri,
+        label=label,
+        description=description,
+        is_table=is_table,
+        columns=columns,
+        path_templates=path_templates,
+        row_count_snapshot=row_count_snapshot,
+        row_semantics=row_semantics,
+        entity_key=entity_key,
+        schema_stability=schema_stability,
+        caveats=caveats,
+        storage_accesses=storage_accesses,
+        physical_layouts=physical_layouts,
+        companion_datasets=companion_datasets,
+        extra_types=extra_types,
+    )
+    return asdict(result)
+
+
+def record_map_column_tool(
+    db: DoxaBase,
+    iri: str,
+    column_name: str,
+    table_iri: str | None = None,
+    label: str | None = None,
+    description: str | None = None,
+    physical_type: str | None = None,
+    value_type: str | None = None,
+    nullable: bool | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_column(
+        iri=iri,
+        column_name=column_name,
+        table_iri=table_iri,
+        label=label,
+        description=description,
+        physical_type=physical_type,
+        value_type=value_type,
+        nullable=nullable,
+    )
+    return asdict(result)
+
+
+def record_map_caveat_tool(
+    db: DoxaBase,
+    iri: str,
+    description: str,
+    label: str | None = None,
+    impact: str | None = None,
+    severity: str | None = None,
+    targets: list[str] | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_caveat(
+        iri=iri,
+        description=description,
+        label=label,
+        impact=impact,
+        severity=severity,
+        targets=targets,
+    )
+    return asdict(result)
+
+
+def record_map_storage_access_tool(
+    db: DoxaBase,
+    iri: str,
+    label: str | None = None,
+    description: str | None = None,
+    storage_protocol: str | None = None,
+    access_mode: str | None = None,
+    storage_root: str | None = None,
+    endpoint_profile: str | None = None,
+    bucket_name: str | None = None,
+    key_prefix: str | None = None,
+    region: str | None = None,
+    path_style_access: bool | None = None,
+    credential_reference: str | None = None,
+    path_templates: list[str] | None = None,
+    datasets: list[str] | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_storage_access(
+        iri=iri,
+        label=label,
+        description=description,
+        storage_protocol=storage_protocol,
+        access_mode=access_mode,
+        storage_root=storage_root,
+        endpoint_profile=endpoint_profile,
+        bucket_name=bucket_name,
+        key_prefix=key_prefix,
+        region=region,
+        path_style_access=path_style_access,
+        credential_reference=credential_reference,
+        path_templates=path_templates,
+        datasets=datasets,
+    )
+    return asdict(result)
+
+
+def record_map_relationship_tool(
+    db: DoxaBase,
+    iri: str,
+    relationship_type: str,
+    label: str | None = None,
+    description: str | None = None,
+    source_dataset: str | None = None,
+    target_dataset: str | None = None,
+    from_column: str | None = None,
+    to_column: str | None = None,
+    identifying_columns: list[str] | None = None,
+    source_columns: list[str] | None = None,
+    derived_columns: list[str] | None = None,
+    declared: bool | None = None,
+    referential_integrity: str | None = None,
+    derivation_function: str | None = None,
+    derivation_properties: list[str] | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_relationship(
+        iri=iri,
+        relationship_type=relationship_type,  # type: ignore[arg-type]
+        label=label,
+        description=description,
+        source_dataset=source_dataset,
+        target_dataset=target_dataset,
+        from_column=from_column,
+        to_column=to_column,
+        identifying_columns=identifying_columns,
+        source_columns=source_columns,
+        derived_columns=derived_columns,
+        declared=declared,
+        referential_integrity=referential_integrity,
+        derivation_function=derivation_function,
+        derivation_properties=derivation_properties,
+    )
+    return asdict(result)
+
+
 def search_tool(
     db: DoxaBase,
     query: str,

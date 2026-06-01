@@ -76,6 +76,13 @@ candidate durable assertion. Prefer patterns when you are grouping related
 findings and explaining why they matter. Use proposed assertions only when a
 single claim really does point at a candidate map assertion.
 
+## Relation To Map Helpers
+
+Patterns are not promoted automatically yet. If a pattern supports a map change,
+record the map fact with a map authoring helper and keep the pattern linked via
+`rc:mapImplication` for now. Future promotion tools should make that
+relationship explicit and mark supporting claims or patterns as promoted.
+
 ## Validation
 
 Pattern validation is intentionally stricter than map validation. A pattern must

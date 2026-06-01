@@ -231,6 +231,14 @@ class PatternRecord:
 
 
 @dataclass(frozen=True)
+class MapResourceRecord:
+    iri: str
+    resource_type: str
+    graph: str
+    triples: int
+
+
+@dataclass(frozen=True)
 class ResourceTriple:
     graph: str
     subject: str
@@ -1397,6 +1405,631 @@ class DoxaBase:
             evidence_triples=evidence_triples,
         )
 
+    def record_map_dataset(
+        self,
+        iri: str,
+        *,
+        label: str | None = None,
+        description: str | None = None,
+        is_table: bool | None = None,
+        columns: Iterable[str] | str | None = None,
+        path_templates: Iterable[str] | str | None = None,
+        row_count_snapshot: int | None = None,
+        row_semantics: str | None = None,
+        entity_key: str | None = None,
+        schema_stability: str | None = None,
+        caveats: Iterable[str] | str | None = None,
+        storage_accesses: Iterable[str] | str | None = None,
+        physical_layouts: Iterable[str] | str | None = None,
+        companion_datasets: Iterable[str] | str | None = None,
+        extra_types: Iterable[str] | str | None = None,
+    ) -> MapResourceRecord:
+        dataset_iri = self._required_iri("iri", iri)
+        self._ensure_non_negative("row_count_snapshot", row_count_snapshot)
+        column_values = self._string_values("columns", columns)
+        path_template_values = self._string_values("path_templates", path_templates)
+        caveat_values = self._string_values("caveats", caveats)
+        storage_access_values = self._string_values("storage_accesses", storage_accesses)
+        physical_layout_values = self._string_values("physical_layouts", physical_layouts)
+        companion_values = self._string_values("companion_datasets", companion_datasets)
+        extra_type_values = self._string_values("extra_types", extra_types)
+
+        dataset_type = self.expand_iri("rc:Dataset")
+        table_type = self.expand_iri("rc:Table")
+        expanded_extra_types = [
+            self.expand_iri(type_value) for type_value in extra_type_values
+        ]
+        current_types = set(self._types("map", dataset_iri))
+        dataset_is_table = is_table is True or (
+            is_table is None
+            and (table_type in current_types or table_type in expanded_extra_types)
+        )
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(dataset_iri)
+        graph.add((subject, RDF.type, URIRef(dataset_type)))
+        if dataset_is_table:
+            graph.add((subject, RDF.type, URIRef(table_type)))
+        for type_value in expanded_extra_types:
+            graph.add((subject, RDF.type, URIRef(type_value)))
+        self._add_optional_literal(graph, subject, str(RDFS.label), label)
+        self._add_optional_literal(graph, subject, str(RDFS.comment), description)
+        for column in column_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasColumn")),
+                    URIRef(self.expand_iri(column)),
+                )
+            )
+        for path_template in path_template_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:pathTemplate")),
+                    Literal(path_template),
+                )
+            )
+        if row_count_snapshot is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:rowCountSnapshot")),
+                    Literal(row_count_snapshot, datatype=XSD.integer),
+                )
+            )
+        if row_semantics is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:rowSemantics")),
+                    URIRef(self.expand_iri(row_semantics)),
+                )
+            )
+        if entity_key is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:entityKey")),
+                    URIRef(self.expand_iri(entity_key)),
+                )
+            )
+        if schema_stability is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:schemaStability")),
+                    URIRef(self.expand_iri(schema_stability)),
+                )
+            )
+        for caveat in caveat_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasKnownCaveat")),
+                    URIRef(self.expand_iri(caveat)),
+                )
+            )
+        for access in storage_access_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasStorageAccess")),
+                    URIRef(self.expand_iri(access)),
+                )
+            )
+        for layout in physical_layout_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasPhysicalLayout")),
+                    URIRef(self.expand_iri(layout)),
+                )
+            )
+        for companion in companion_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:companionOf")),
+                    URIRef(self.expand_iri(companion)),
+                )
+            )
+
+        predicates: list[str] = []
+        if is_table is not None or not current_types:
+            predicates.append(str(RDF.type))
+        if label is not None:
+            predicates.append(str(RDFS.label))
+        if description is not None:
+            predicates.append(str(RDFS.comment))
+        if columns is not None:
+            predicates.append(self.expand_iri("rc:hasColumn"))
+        if path_templates is not None:
+            predicates.append(self.expand_iri("rc:pathTemplate"))
+        if row_count_snapshot is not None:
+            predicates.append(self.expand_iri("rc:rowCountSnapshot"))
+        if row_semantics is not None:
+            predicates.append(self.expand_iri("rc:rowSemantics"))
+        if entity_key is not None:
+            predicates.append(self.expand_iri("rc:entityKey"))
+        if schema_stability is not None:
+            predicates.append(self.expand_iri("rc:schemaStability"))
+        if caveats is not None:
+            predicates.append(self.expand_iri("rc:hasKnownCaveat"))
+        if storage_accesses is not None:
+            predicates.append(self.expand_iri("rc:hasStorageAccess"))
+        if physical_layouts is not None:
+            predicates.append(self.expand_iri("rc:hasPhysicalLayout"))
+        if companion_datasets is not None:
+            predicates.append(self.expand_iri("rc:companionOf"))
+        triples = self._replace_subject_triples("map", dataset_iri, predicates, graph)
+        resource_type = table_type if dataset_is_table else dataset_type
+        return MapResourceRecord(
+            iri=dataset_iri,
+            resource_type=resource_type,
+            graph="map",
+            triples=triples,
+        )
+
+    def record_map_column(
+        self,
+        iri: str,
+        *,
+        column_name: str,
+        table_iri: str | None = None,
+        label: str | None = None,
+        description: str | None = None,
+        physical_type: str | None = None,
+        value_type: str | None = None,
+        nullable: bool | None = None,
+    ) -> MapResourceRecord:
+        column_iri = self._required_iri("iri", iri)
+        column_name_value = column_name.strip()
+        if not column_name_value:
+            raise DoxaBaseError("column_name must not be empty")
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(column_iri)
+        graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:Column"))))
+        graph.add(
+            (
+                subject,
+                URIRef(self.expand_iri("rc:columnName")),
+                Literal(column_name_value),
+            )
+        )
+        self._add_optional_literal(graph, subject, str(RDFS.label), label)
+        self._add_optional_literal(graph, subject, str(RDFS.comment), description)
+        if physical_type is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:physicalType")),
+                    URIRef(self.expand_iri(physical_type)),
+                )
+            )
+        if value_type is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:valueType")),
+                    URIRef(self.expand_iri(value_type)),
+                )
+            )
+        if nullable is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:nullable")),
+                    Literal(nullable, datatype=XSD.boolean),
+                )
+            )
+
+        predicates = [
+            str(RDF.type),
+            self.expand_iri("rc:columnName"),
+        ]
+        if label is not None:
+            predicates.append(str(RDFS.label))
+        if description is not None:
+            predicates.append(str(RDFS.comment))
+        if physical_type is not None:
+            predicates.append(self.expand_iri("rc:physicalType"))
+        if value_type is not None:
+            predicates.append(self.expand_iri("rc:valueType"))
+        if nullable is not None:
+            predicates.append(self.expand_iri("rc:nullable"))
+        triples = self._replace_subject_triples("map", column_iri, predicates, graph)
+        if table_iri is not None:
+            table_subject = self._required_iri("table_iri", table_iri)
+            link_graph = Graph()
+            self._bind_prefixes(link_graph)
+            link_graph.add(
+                (
+                    URIRef(table_subject),
+                    URIRef(self.expand_iri("rc:hasColumn")),
+                    subject,
+                )
+            )
+            triples += self._insert_graph("map", link_graph)
+        return MapResourceRecord(
+            iri=column_iri,
+            resource_type=self.expand_iri("rc:Column"),
+            graph="map",
+            triples=triples,
+        )
+
+    def record_map_caveat(
+        self,
+        iri: str,
+        *,
+        description: str,
+        label: str | None = None,
+        impact: str | None = None,
+        severity: str | None = None,
+        targets: Iterable[str] | str | None = None,
+    ) -> MapResourceRecord:
+        caveat_iri = self._required_iri("iri", iri)
+        description_value = description.strip()
+        if not description_value:
+            raise DoxaBaseError("description must not be empty")
+        target_values = self._string_values("targets", targets)
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(caveat_iri)
+        graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:KnownCaveat"))))
+        graph.add(
+            (
+                subject,
+                URIRef(self.expand_iri("rc:caveatDescription")),
+                Literal(description_value),
+            )
+        )
+        self._add_optional_literal(graph, subject, str(RDFS.label), label)
+        self._add_optional_literal(graph, subject, "rc:impact", impact)
+        if severity is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:severity")),
+                    URIRef(self.expand_iri(severity)),
+                )
+            )
+
+        predicates = [
+            str(RDF.type),
+            self.expand_iri("rc:caveatDescription"),
+        ]
+        if label is not None:
+            predicates.append(str(RDFS.label))
+        if impact is not None:
+            predicates.append(self.expand_iri("rc:impact"))
+        if severity is not None:
+            predicates.append(self.expand_iri("rc:severity"))
+        triples = self._replace_subject_triples("map", caveat_iri, predicates, graph)
+        if target_values:
+            link_graph = Graph()
+            self._bind_prefixes(link_graph)
+            for target in target_values:
+                link_graph.add(
+                    (
+                        URIRef(self.expand_iri(target)),
+                        URIRef(self.expand_iri("rc:hasKnownCaveat")),
+                        subject,
+                    )
+                )
+            triples += self._insert_graph("map", link_graph)
+        return MapResourceRecord(
+            iri=caveat_iri,
+            resource_type=self.expand_iri("rc:KnownCaveat"),
+            graph="map",
+            triples=triples,
+        )
+
+    def record_map_storage_access(
+        self,
+        iri: str,
+        *,
+        label: str | None = None,
+        description: str | None = None,
+        storage_protocol: str | None = None,
+        access_mode: str | None = None,
+        storage_root: str | None = None,
+        endpoint_profile: str | None = None,
+        bucket_name: str | None = None,
+        key_prefix: str | None = None,
+        region: str | None = None,
+        path_style_access: bool | None = None,
+        credential_reference: str | None = None,
+        path_templates: Iterable[str] | str | None = None,
+        datasets: Iterable[str] | str | None = None,
+    ) -> MapResourceRecord:
+        access_iri = self._required_iri("iri", iri)
+        path_template_values = self._string_values("path_templates", path_templates)
+        dataset_values = self._string_values("datasets", datasets)
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(access_iri)
+        graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:StorageAccess"))))
+        self._add_optional_literal(graph, subject, str(RDFS.label), label)
+        self._add_optional_literal(graph, subject, str(RDFS.comment), description)
+        if storage_protocol is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:storageProtocol")),
+                    URIRef(self.expand_iri(storage_protocol)),
+                )
+            )
+        if access_mode is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:accessMode")),
+                    URIRef(self.expand_iri(access_mode)),
+                )
+            )
+        for predicate, value in (
+            ("rc:storageRoot", storage_root),
+            ("rc:endpointProfile", endpoint_profile),
+            ("rc:bucketName", bucket_name),
+            ("rc:keyPrefix", key_prefix),
+            ("rc:region", region),
+            ("rc:credentialReference", credential_reference),
+        ):
+            self._add_optional_literal(graph, subject, predicate, value)
+        if path_style_access is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:pathStyleAccess")),
+                    Literal(path_style_access, datatype=XSD.boolean),
+                )
+            )
+        for path_template in path_template_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:pathTemplate")),
+                    Literal(path_template),
+                )
+            )
+
+        predicates = [str(RDF.type)]
+        if label is not None:
+            predicates.append(str(RDFS.label))
+        if description is not None:
+            predicates.append(str(RDFS.comment))
+        if storage_protocol is not None:
+            predicates.append(self.expand_iri("rc:storageProtocol"))
+        if access_mode is not None:
+            predicates.append(self.expand_iri("rc:accessMode"))
+        if storage_root is not None:
+            predicates.append(self.expand_iri("rc:storageRoot"))
+        if endpoint_profile is not None:
+            predicates.append(self.expand_iri("rc:endpointProfile"))
+        if bucket_name is not None:
+            predicates.append(self.expand_iri("rc:bucketName"))
+        if key_prefix is not None:
+            predicates.append(self.expand_iri("rc:keyPrefix"))
+        if region is not None:
+            predicates.append(self.expand_iri("rc:region"))
+        if credential_reference is not None:
+            predicates.append(self.expand_iri("rc:credentialReference"))
+        if path_style_access is not None:
+            predicates.append(self.expand_iri("rc:pathStyleAccess"))
+        if path_templates is not None:
+            predicates.append(self.expand_iri("rc:pathTemplate"))
+        triples = self._replace_subject_triples("map", access_iri, predicates, graph)
+        if dataset_values:
+            link_graph = Graph()
+            self._bind_prefixes(link_graph)
+            for dataset in dataset_values:
+                link_graph.add(
+                    (
+                        URIRef(self.expand_iri(dataset)),
+                        URIRef(self.expand_iri("rc:hasStorageAccess")),
+                        subject,
+                    )
+                )
+            triples += self._insert_graph("map", link_graph)
+        return MapResourceRecord(
+            iri=access_iri,
+            resource_type=self.expand_iri("rc:StorageAccess"),
+            graph="map",
+            triples=triples,
+        )
+
+    def record_map_relationship(
+        self,
+        iri: str,
+        *,
+        relationship_type: TypingLiteral[
+            "foreign_key",
+            "shared_identifier",
+            "derivation",
+        ],
+        label: str | None = None,
+        description: str | None = None,
+        source_dataset: str | None = None,
+        target_dataset: str | None = None,
+        from_column: str | None = None,
+        to_column: str | None = None,
+        identifying_columns: Iterable[str] | str | None = None,
+        source_columns: Iterable[str] | str | None = None,
+        derived_columns: Iterable[str] | str | None = None,
+        declared: bool | None = None,
+        referential_integrity: str | None = None,
+        derivation_function: str | None = None,
+        derivation_properties: Iterable[str] | str | None = None,
+    ) -> MapResourceRecord:
+        relationship_iri = self._required_iri("iri", iri)
+        identifying_column_values = self._string_values(
+            "identifying_columns",
+            identifying_columns,
+        )
+        source_column_values = self._string_values("source_columns", source_columns)
+        derived_column_values = self._string_values("derived_columns", derived_columns)
+        derivation_property_values = self._string_values(
+            "derivation_properties",
+            derivation_properties,
+        )
+        type_map = {
+            "foreign_key": "rc:ForeignKey",
+            "shared_identifier": "rc:SharedIdentifier",
+            "derivation": "rc:Derivation",
+        }
+        resource_type = type_map.get(relationship_type)
+        if resource_type is None:
+            raise DoxaBaseError(
+                "relationship_type must be 'foreign_key', 'shared_identifier', or 'derivation'"
+            )
+        if relationship_type == "foreign_key" and (from_column is None or to_column is None):
+            raise DoxaBaseError(
+                "foreign_key relationships require from_column and to_column"
+            )
+        if relationship_type == "shared_identifier" and len(identifying_column_values) < 2:
+            raise DoxaBaseError(
+                "shared_identifier relationships require at least two identifying_columns"
+            )
+        if relationship_type == "derivation" and (
+            not source_column_values or not derived_column_values
+        ):
+            raise DoxaBaseError(
+                "derivation relationships require source_columns and derived_columns"
+            )
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(relationship_iri)
+        graph.add((subject, RDF.type, URIRef(self.expand_iri(resource_type))))
+        self._add_optional_literal(graph, subject, str(RDFS.label), label)
+        self._add_optional_literal(graph, subject, str(RDFS.comment), description)
+        if source_dataset is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:sourceDataset")),
+                    URIRef(self.expand_iri(source_dataset)),
+                )
+            )
+        if target_dataset is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:targetDataset")),
+                    URIRef(self.expand_iri(target_dataset)),
+                )
+            )
+        if relationship_type == "foreign_key":
+            assert from_column is not None
+            assert to_column is not None
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:foreignKeyFrom")),
+                    URIRef(self.expand_iri(from_column)),
+                )
+            )
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:foreignKeyTo")),
+                    URIRef(self.expand_iri(to_column)),
+                )
+            )
+            if declared is not None:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:declared")),
+                        Literal(declared, datatype=XSD.boolean),
+                    )
+                )
+            if referential_integrity is not None:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:referentialIntegrity")),
+                        URIRef(self.expand_iri(referential_integrity)),
+                    )
+                )
+        if relationship_type == "shared_identifier":
+            for column in identifying_column_values:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:identifyingColumn")),
+                        URIRef(self.expand_iri(column)),
+                    )
+                )
+        if relationship_type == "derivation":
+            for column in source_column_values:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:sourceColumn")),
+                        URIRef(self.expand_iri(column)),
+                    )
+                )
+            for column in derived_column_values:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:derivedColumn")),
+                        URIRef(self.expand_iri(column)),
+                    )
+                )
+            if derivation_function is not None:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:derivationFunction")),
+                        URIRef(self.expand_iri(derivation_function)),
+                    )
+                )
+            for derivation_property in derivation_property_values:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:hasDerivationProperty")),
+                        URIRef(self.expand_iri(derivation_property)),
+                    )
+                )
+
+        predicates = [
+            str(RDF.type),
+            str(RDFS.label),
+            str(RDFS.comment),
+            self.expand_iri("rc:sourceDataset"),
+            self.expand_iri("rc:targetDataset"),
+            self.expand_iri("rc:foreignKeyFrom"),
+            self.expand_iri("rc:foreignKeyTo"),
+            self.expand_iri("rc:declared"),
+            self.expand_iri("rc:referentialIntegrity"),
+            self.expand_iri("rc:identifyingColumn"),
+            self.expand_iri("rc:sourceColumn"),
+            self.expand_iri("rc:derivedColumn"),
+            self.expand_iri("rc:derivationFunction"),
+            self.expand_iri("rc:hasDerivationProperty"),
+        ]
+        triples = self._replace_subject_triples(
+            "map",
+            relationship_iri,
+            predicates,
+            graph,
+        )
+        return MapResourceRecord(
+            iri=relationship_iri,
+            resource_type=self.expand_iri(resource_type),
+            graph="map",
+            triples=triples,
+        )
+
     def import_turtle(
         self,
         source: str | Path,
@@ -2112,6 +2745,22 @@ class DoxaBase:
             return URIRef(expanded)
         return Literal(value)
 
+    def _required_iri(self, name: str, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise DoxaBaseError(f"{name} must not be empty")
+        return self.expand_iri(cleaned)
+
+    def _add_optional_literal(
+        self,
+        graph: Graph,
+        subject: URIRef,
+        predicate: str,
+        value: str | None,
+    ) -> None:
+        if value is not None and value.strip():
+            graph.add((subject, URIRef(self.expand_iri(predicate)), Literal(value.strip())))
+
     def _ensure_non_negative(self, name: str, value: int | None) -> None:
         if value is not None and value < 0:
             raise DoxaBaseError(f"{name} must be non-negative")
@@ -2133,6 +2782,29 @@ class DoxaBase:
         if required and not cleaned:
             raise DoxaBaseError(f"{name} must contain at least one non-empty value")
         return cleaned
+
+    def _replace_subject_triples(
+        self,
+        graph: str,
+        subject: str,
+        predicates: Iterable[str],
+        rdf_graph: Graph,
+    ) -> int:
+        self._ensure_mutable(graph)
+        predicate_values = list(dict.fromkeys(predicates))
+        if predicate_values:
+            placeholders = ",".join("?" for _ in predicate_values)
+            self._conn.execute(
+                f"""
+                DELETE FROM quads
+                WHERE graph = ?
+                  AND subject = ?
+                  AND predicate IN ({placeholders})
+                """,
+                [graph, subject, *predicate_values],
+            )
+            self._conn.commit()
+        return self._insert_graph(graph, rdf_graph)
 
     def _resource_triples(
         self,

@@ -3,7 +3,7 @@
 Use this sequence when arriving cold in a DoxaBase capsule.
 
 1. Call `doxabase.list_docs`.
-2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `observation_rdf`, `patterns`, `executable_catalog`, and `field_trials` if you do not know the project conventions.
+2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `observation_rdf`, `patterns`, `map_authoring`, `executable_catalog`, and `field_trials` if you do not know the project conventions.
 3. Call `doxabase.graph_overview` to inspect named graphs, counts, common classes, and predicates.
 4. Call `doxabase.search` when you have a remembered term, caveat, column name, source note, or question-shaped keyword.
 5. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.
@@ -13,7 +13,8 @@ Use this sequence when arriving cold in a DoxaBase capsule.
 9. Use `doxabase.record_claim_observation` for the common observation + claim + evidence + source-span pattern.
    For more complex caveat, join, transformation, access, or source-span claims, write agent-authored observation RDF using the `observation_rdf` patterns.
 10. Use `doxabase.record_pattern` when several observations or claims belong together and explain a more durable pattern.
-11. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
+11. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
+12. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
 
 When adding future facts, choose graph roles by update pattern:
 

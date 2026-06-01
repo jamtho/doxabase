@@ -122,9 +122,7 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Strengthen the observation -> pattern -> map workflow.
-2. Add first-class map/systematisation helpers for datasets, tables, columns,
-   caveats, and relationships.
-3. Add richer profile metrics and profiling helpers that can write map facts,
+1. Add pattern-to-map promotion and retrieval helpers such as `describe_pattern`.
+2. Add richer profile metrics and profiling helpers that can write map facts,
    observations, and patterns together.
-4. Add graph slice/revision metadata and broader MCP context retrieval tools.
+3. Add graph slice/revision metadata and broader MCP context retrieval tools.

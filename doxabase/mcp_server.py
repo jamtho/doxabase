@@ -17,6 +17,11 @@ from doxabase.mcp_tools import (
     list_entities_tool,
     load_example_fixtures_tool,
     record_claim_observation_tool,
+    record_map_caveat_tool,
+    record_map_column_tool,
+    record_map_dataset_tool,
+    record_map_relationship_tool,
+    record_map_storage_access_tool,
     record_observation_tool,
     record_pattern_tool,
     search_tool,
@@ -26,7 +31,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, observation/claim/pattern recording, import, fixture loading, and validation; context slicing is not implemented yet."""
+Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern recording, import, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -216,6 +221,167 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             map_implications=map_implications,
+        )
+
+    @server.tool(name="doxabase.record_map_dataset")
+    def record_map_dataset(
+        iri: str,
+        label: str | None = None,
+        description: str | None = None,
+        is_table: bool | None = None,
+        columns: list[str] | None = None,
+        path_templates: list[str] | None = None,
+        row_count_snapshot: int | None = None,
+        row_semantics: str | None = None,
+        entity_key: str | None = None,
+        schema_stability: str | None = None,
+        caveats: list[str] | None = None,
+        storage_accesses: list[str] | None = None,
+        physical_layouts: list[str] | None = None,
+        companion_datasets: list[str] | None = None,
+        extra_types: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record or update a dataset/table resource in the map graph."""
+
+        return record_map_dataset_tool(
+            db,
+            iri=iri,
+            label=label,
+            description=description,
+            is_table=is_table,
+            columns=columns,
+            path_templates=path_templates,
+            row_count_snapshot=row_count_snapshot,
+            row_semantics=row_semantics,
+            entity_key=entity_key,
+            schema_stability=schema_stability,
+            caveats=caveats,
+            storage_accesses=storage_accesses,
+            physical_layouts=physical_layouts,
+            companion_datasets=companion_datasets,
+            extra_types=extra_types,
+        )
+
+    @server.tool(name="doxabase.record_map_column")
+    def record_map_column(
+        iri: str,
+        column_name: str,
+        table_iri: str | None = None,
+        label: str | None = None,
+        description: str | None = None,
+        physical_type: str | None = None,
+        value_type: str | None = None,
+        nullable: bool | None = None,
+    ) -> dict[str, Any]:
+        """Record or update a column resource in the map graph."""
+
+        return record_map_column_tool(
+            db,
+            iri=iri,
+            column_name=column_name,
+            table_iri=table_iri,
+            label=label,
+            description=description,
+            physical_type=physical_type,
+            value_type=value_type,
+            nullable=nullable,
+        )
+
+    @server.tool(name="doxabase.record_map_caveat")
+    def record_map_caveat(
+        iri: str,
+        description: str,
+        label: str | None = None,
+        impact: str | None = None,
+        severity: str | None = None,
+        targets: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record or update a known caveat in the map graph."""
+
+        return record_map_caveat_tool(
+            db,
+            iri=iri,
+            description=description,
+            label=label,
+            impact=impact,
+            severity=severity,
+            targets=targets,
+        )
+
+    @server.tool(name="doxabase.record_map_storage_access")
+    def record_map_storage_access(
+        iri: str,
+        label: str | None = None,
+        description: str | None = None,
+        storage_protocol: str | None = None,
+        access_mode: str | None = None,
+        storage_root: str | None = None,
+        endpoint_profile: str | None = None,
+        bucket_name: str | None = None,
+        key_prefix: str | None = None,
+        region: str | None = None,
+        path_style_access: bool | None = None,
+        credential_reference: str | None = None,
+        path_templates: list[str] | None = None,
+        datasets: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record or update non-secret storage access metadata in the map graph."""
+
+        return record_map_storage_access_tool(
+            db,
+            iri=iri,
+            label=label,
+            description=description,
+            storage_protocol=storage_protocol,
+            access_mode=access_mode,
+            storage_root=storage_root,
+            endpoint_profile=endpoint_profile,
+            bucket_name=bucket_name,
+            key_prefix=key_prefix,
+            region=region,
+            path_style_access=path_style_access,
+            credential_reference=credential_reference,
+            path_templates=path_templates,
+            datasets=datasets,
+        )
+
+    @server.tool(name="doxabase.record_map_relationship")
+    def record_map_relationship(
+        iri: str,
+        relationship_type: str,
+        label: str | None = None,
+        description: str | None = None,
+        source_dataset: str | None = None,
+        target_dataset: str | None = None,
+        from_column: str | None = None,
+        to_column: str | None = None,
+        identifying_columns: list[str] | None = None,
+        source_columns: list[str] | None = None,
+        derived_columns: list[str] | None = None,
+        declared: bool | None = None,
+        referential_integrity: str | None = None,
+        derivation_function: str | None = None,
+        derivation_properties: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record or update a relationship resource in the map graph."""
+
+        return record_map_relationship_tool(
+            db,
+            iri=iri,
+            relationship_type=relationship_type,
+            label=label,
+            description=description,
+            source_dataset=source_dataset,
+            target_dataset=target_dataset,
+            from_column=from_column,
+            to_column=to_column,
+            identifying_columns=identifying_columns,
+            source_columns=source_columns,
+            derived_columns=derived_columns,
+            declared=declared,
+            referential_integrity=referential_integrity,
+            derivation_function=derivation_function,
+            derivation_properties=derivation_properties,
         )
 
     @server.tool(name="doxabase.search")

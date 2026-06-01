@@ -22,6 +22,8 @@ Project-owned vocabulary and model layer: client classes, properties, value type
 `map`
 
 The current best structured map of the project/data world: datasets, tables, columns, accepted joins, caveats, computability claims, current summaries, and links from project entities to ontology terms.
+Use map authoring helpers for routine dataset, column, caveat, storage, and
+relationship writes.
 
 `observations`
 

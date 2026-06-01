@@ -22,6 +22,8 @@ Current implementation status:
 - `record_observation()` for point-in-time findings and linked evidence.
 - `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.
 - `record_pattern()` for syntheses that connect related findings to map targets.
+- Map authoring helpers for current-best datasets, columns, caveats, storage
+  access, and relationships.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
