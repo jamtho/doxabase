@@ -64,7 +64,8 @@ Mutable:
 - `observations`: point-in-time findings and tentative RDF.
 - `evidence`: support for observations or map assertions.
 - `shapes`: project/client SHACL shapes.
-- `history`: versions, revisions, diffs, and consolidation rationale.
+- `history`: revision metadata, graph-count snapshots, consolidation rationale,
+  and future staged diffs.
 
 Logical includes:
 
@@ -88,6 +89,7 @@ DoxaBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
 DoxaBase.search(query, graph=None, limit=20, offset=0)
 DoxaBase.describe_dataset(iri, graph="map")
 DoxaBase.record_observation(summary, ...)
+DoxaBase.record_graph_revision(summary, rationale, changed_graphs, ...)
 DoxaBase.validate_graph(scope="map", limit_results=100)
 DoxaBase.to_graph(graphs=None)
 DoxaBase.to_dataset(graphs=None)
@@ -243,10 +245,11 @@ Expected state at the time of writing:
 
 - Storage currently stores term strings directly rather than using interned term IDs.
 - Blank node IDs are imported as-is; this is sufficient for current fixtures but not a robust merge strategy.
-- There is no revision/diff model yet.
+- Revision metadata exists, but there is no staged revision/diff model yet.
 - There is no bounded context graph retrieval yet.
 - Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.
-- The MCP interface exposes inspection and validation, not graph editing or context slices.
+- The MCP interface exposes inspection, helper-backed graph writing, validation,
+  and revision metadata, not context slices.
 - The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and storage layout are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
 
@@ -254,8 +257,8 @@ Expected state at the time of writing:
 
 Recommended next implementation steps:
 
-1. Add slice metadata and revision scaffolding.
-2. Add broader context graph retrieval after the focused dataset description and lexical search APIs have settled.
+1. Add broader context graph retrieval and staged revision/diff workflows.
+2. Add richer profile metrics and profiling helpers.
 3. Add query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.
 

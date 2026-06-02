@@ -749,6 +749,104 @@ rc:SourceSpanShape a sh:NodeShape ;
         sh:message "sourceKind must be an rc:SourceKind if declared." ;
     ] .
 
+rc:GraphRevisionShape a sh:NodeShape ;
+    sh:targetClass rc:GraphRevision ;
+    sh:property [
+        sh:path rc:summary ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "GraphRevision resources must have exactly one string summary." ;
+    ] ;
+    sh:property [
+        sh:path rc:revisionType ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class rc:RevisionType ;
+        sh:message "GraphRevision resources must have exactly one rc:RevisionType." ;
+    ] ;
+    sh:property [
+        sh:path rc:revisionRationale ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "GraphRevision resources must have exactly one string revisionRationale." ;
+    ] ;
+    sh:property [
+        sh:path rc:changedGraph ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "GraphRevision resources must name at least one changedGraph string." ;
+    ] ;
+    sh:property [
+        sh:path rc:createdAt ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+        sh:message "GraphRevision resources must have exactly one xsd:dateTime createdAt." ;
+    ] ;
+    sh:property [
+        sh:path rc:revisionSupportingObservation ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Observation ;
+        sh:message "revisionSupportingObservation values should be named Observation resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:revisionSupportingClaim ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Claim ;
+        sh:message "revisionSupportingClaim values should be named Claim resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:revisionSupportingPattern ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Pattern ;
+        sh:message "revisionSupportingPattern values should be named Pattern resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:evidence ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:Evidence ;
+        sh:message "GraphRevision evidence values should be named Evidence resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasGraphSnapshot ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:GraphSnapshot ;
+        sh:message "hasGraphSnapshot values should be named GraphSnapshot resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:validationConforms ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+        sh:message "validationConforms must be a boolean if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:validationResultCount ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "validationResultCount must be a non-negative integer if declared." ;
+    ] .
+
+rc:GraphSnapshotShape a sh:NodeShape ;
+    sh:targetClass rc:GraphSnapshot ;
+    sh:property [
+        sh:path rc:graphRole ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "GraphSnapshot resources must have exactly one string graphRole." ;
+    ] ;
+    sh:property [
+        sh:path rc:tripleCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "GraphSnapshot resources must have exactly one non-negative tripleCount." ;
+    ] .
+
 rc:KnownCaveatShape a sh:NodeShape ;
     sh:targetClass rc:KnownCaveat ;
     sh:property [

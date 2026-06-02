@@ -991,6 +991,100 @@ rc:CodeSource a rc:SourceKind ; rdfs:label "code source" .
 rc:StorageSource a rc:SourceKind ; rdfs:label "storage source" .
 
 # -----------------------------------------------------------------------------
+# History and revisions
+# -----------------------------------------------------------------------------
+
+rc:GraphRevision a rdfs:Class ;
+    rdfs:comment "Metadata for a graph change, consolidation step, review bundle, or other revision event recorded in the history graph." .
+
+rc:GraphSnapshot a rdfs:Class ;
+    rdfs:comment "A point-in-time count summary for one graph role within a revision record." .
+
+rc:RevisionType a rdfs:Class ;
+    rdfs:comment "A compact category for a graph revision or history event." .
+
+rc:revisionType a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:RevisionType ;
+    rdfs:comment "The category of graph revision or history event." .
+
+rc:revisionRationale a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Why the graph change, consolidation, or review bundle was created." .
+
+rc:changedGraph a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A graph role affected by or included in a revision event." .
+
+rc:createdAt a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "When a revision event was recorded." .
+
+rc:createdBy a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "Agent, person, or process that recorded a revision event." .
+
+rc:revisionSupportingObservation a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:Observation ;
+    rdfs:comment "An observation that supports a graph revision." .
+
+rc:revisionSupportingClaim a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:Claim ;
+    rdfs:comment "A structured claim that supports a graph revision." .
+
+rc:revisionSupportingPattern a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:Pattern ;
+    rdfs:comment "A pattern that supports a graph revision." .
+
+rc:hasGraphSnapshot a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:GraphSnapshot ;
+    rdfs:comment "Links a revision event to point-in-time graph role counts." .
+
+rc:graphRole a rdf:Property ;
+    rdfs:domain rc:GraphSnapshot ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The named graph role summarized by a graph snapshot." .
+
+rc:tripleCount a rdf:Property ;
+    rdfs:domain rc:GraphSnapshot ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Triple count for one graph role at the time a revision was recorded." .
+
+rc:exportPath a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Path to an exported review artifact associated with a revision event." .
+
+rc:validationScope a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Validation scope checked for a revision event." .
+
+rc:validationConforms a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Whether validation conformed for a revision event." .
+
+rc:validationResultCount a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Number of validation results reported for a revision event." .
+
+rc:ManualRevision a rc:RevisionType ; rdfs:label "manual revision" .
+rc:ImportRevision a rc:RevisionType ; rdfs:label "import revision" .
+rc:ExportRevision a rc:RevisionType ; rdfs:label "export revision" .
+rc:MapAuthoringRevision a rc:RevisionType ; rdfs:label "map authoring revision" .
+rc:FieldTrialRevision a rc:RevisionType ; rdfs:label "field trial revision" .
+
+# -----------------------------------------------------------------------------
 # Caveats
 # -----------------------------------------------------------------------------
 

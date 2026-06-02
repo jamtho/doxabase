@@ -24,16 +24,18 @@ Current implementation status:
 - `record_pattern()` for syntheses that connect related findings to map targets.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, and relationships.
+- `record_graph_revision()` for history metadata about graph changes and review
+  bundles.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
 - MCP tools for docs, overview, search, listing, dataset description,
-  observation recording, import/export, validation, and fixture loading.
+  observation/history recording, import/export, validation, and fixture loading.
 
 Important V1 limits:
 
 - No context slicing yet.
-- No revision/diff workflow yet.
+- No staged revision/diff workflow yet.
 - No full SPARQL endpoint.
 - No direct query generation or execution helpers yet.
 - No embedded LLM, semantic search, or embedding index.

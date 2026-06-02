@@ -48,7 +48,10 @@ Project-owned SHACL shapes. These extend `base_shapes` and remain open unless a 
 
 `history`
 
-Graph versions, revision rationale, diffs, superseded terms, deprecated mappings, and consolidation notes. This is mostly reserved in the current implementation.
+Revision rationale, review-bundle metadata, graph-count snapshots, superseded
+terms, deprecated mappings, and consolidation notes.
+Use `record_graph_revision()` for routine revision metadata. Full staged diffs
+and graph replacement are not implemented yet.
 
 ## Logical Includes
 

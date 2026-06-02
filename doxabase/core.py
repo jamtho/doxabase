@@ -75,7 +75,13 @@ DEFAULT_GRAPHS: tuple[tuple[str, str, bool, bool, Path | None], ...] = (
     ("patterns", "Syntheses that connect observations to map facts", True, False, None),
     ("evidence", "Evidence supporting observations and map assertions", True, False, None),
     ("shapes", "Project-owned SHACL shapes", True, False, None),
-    ("history", "Versions, revisions, diffs, and rationale", True, False, None),
+    (
+        "history",
+        "Revision metadata, graph-count snapshots, and rationale",
+        True,
+        False,
+        None,
+    ),
 )
 
 EXPORT_PRESETS: dict[str, tuple[str, ...]] = {
@@ -129,6 +135,14 @@ class GraphExportRecord:
     graph_counts: dict[str, int]
     triples: int
     bytes_written: int
+
+
+@dataclass(frozen=True)
+class GraphRevisionRecord:
+    revision_iri: str
+    revision_type: str
+    graph: str
+    triples: int
 
 
 @dataclass(frozen=True)
@@ -426,6 +440,8 @@ class DoxaBase:
             "patterns": self._count_type("rc:Pattern"),
             "evidence": self._count_type("rc:Evidence"),
             "source_spans": self._count_type("rc:SourceSpan"),
+            "graph_revisions": self._count_type("rc:GraphRevision"),
+            "graph_snapshots": self._count_type("rc:GraphSnapshot"),
             "storage_accesses": self._count_type("rc:StorageAccess"),
             "shapes": self._count_type("sh:NodeShape"),
         }
@@ -2055,6 +2071,198 @@ class DoxaBase:
             triples=triples,
         )
 
+    def record_graph_revision(
+        self,
+        summary: str,
+        rationale: str,
+        changed_graphs: Iterable[str] | str,
+        *,
+        revision_type: str = "rc:ManualRevision",
+        revision_iri: str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        supporting_observations: Iterable[str] | str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        supporting_patterns: Iterable[str] | str | None = None,
+        evidence: Iterable[str] | str | None = None,
+        export_path: str | None = None,
+        graph_counts: dict[str, int] | None = None,
+        validation_scope: str | None = None,
+        validation_conforms: bool | None = None,
+        validation_result_count: int | None = None,
+    ) -> GraphRevisionRecord:
+        summary_value = summary.strip()
+        if not summary_value:
+            raise DoxaBaseError("summary must not be empty")
+        rationale_value = rationale.strip()
+        if not rationale_value:
+            raise DoxaBaseError("rationale must not be empty")
+
+        changed_graph_values = self._graph_names_for_export(changed_graphs)
+        for graph in changed_graph_values:
+            self._ensure_mutable(graph)
+
+        revision_subject = (
+            self._required_iri("revision_iri", revision_iri)
+            if revision_iri is not None
+            else self._mint_iri("graph-revision")
+        )
+        revision_type_iri = self.expand_iri(revision_type)
+        supporting_observation_values = self._string_values(
+            "supporting_observations",
+            supporting_observations,
+        )
+        supporting_claim_values = self._string_values(
+            "supporting_claims",
+            supporting_claims,
+        )
+        supporting_pattern_values = self._string_values(
+            "supporting_patterns",
+            supporting_patterns,
+        )
+        evidence_values = self._string_values("evidence", evidence)
+        self._ensure_non_negative(
+            "validation_result_count",
+            validation_result_count,
+        )
+        for graph_name, count in (graph_counts or {}).items():
+            self._ensure_non_negative(f"graph_counts[{graph_name}]", count)
+
+        snapshot_counts = graph_counts or self._graph_counts(changed_graph_values)
+        unknown_count_graphs = [
+            graph for graph in snapshot_counts if graph not in self._known_graph_names()
+        ]
+        if unknown_count_graphs:
+            raise DoxaBaseError(
+                f"Unknown graph role(s) in graph_counts: {', '.join(sorted(unknown_count_graphs))}"
+            )
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(revision_subject)
+        graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:GraphRevision"))))
+        graph.add(
+            (
+                subject,
+                URIRef(self.expand_iri("rc:revisionType")),
+                URIRef(revision_type_iri),
+            )
+        )
+        graph.add((subject, URIRef(self.expand_iri("rc:summary")), Literal(summary_value)))
+        graph.add(
+            (
+                subject,
+                URIRef(self.expand_iri("rc:revisionRationale")),
+                Literal(rationale_value),
+            )
+        )
+        graph.add(
+            (
+                subject,
+                URIRef(self.expand_iri("rc:createdAt")),
+                self._datetime_literal(created_at, name="created_at"),
+            )
+        )
+        if created_by is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:createdBy")),
+                    self._resource_or_literal(created_by),
+                )
+            )
+        for graph_name in changed_graph_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:changedGraph")),
+                    Literal(graph_name),
+                )
+            )
+        for support in supporting_observation_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:revisionSupportingObservation")),
+                    URIRef(self.expand_iri(support)),
+                )
+            )
+        for support in supporting_claim_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:revisionSupportingClaim")),
+                    URIRef(self.expand_iri(support)),
+                )
+            )
+        for support in supporting_pattern_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:revisionSupportingPattern")),
+                    URIRef(self.expand_iri(support)),
+                )
+            )
+        for evidence_iri in evidence_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:evidence")),
+                    URIRef(self.expand_iri(evidence_iri)),
+                )
+            )
+        self._add_optional_literal(graph, subject, "rc:exportPath", export_path)
+        self._add_optional_literal(graph, subject, "rc:validationScope", validation_scope)
+        if validation_conforms is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:validationConforms")),
+                    Literal(validation_conforms, datatype=XSD.boolean),
+                )
+            )
+        if validation_result_count is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:validationResultCount")),
+                    Literal(validation_result_count, datatype=XSD.integer),
+                )
+            )
+
+        for index, (graph_name, count) in enumerate(sorted(snapshot_counts.items()), start=1):
+            snapshot = URIRef(f"{revision_subject}/snapshot/{index}")
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasGraphSnapshot")),
+                    snapshot,
+                )
+            )
+            graph.add((snapshot, RDF.type, URIRef(self.expand_iri("rc:GraphSnapshot"))))
+            graph.add(
+                (
+                    snapshot,
+                    URIRef(self.expand_iri("rc:graphRole")),
+                    Literal(graph_name),
+                )
+            )
+            graph.add(
+                (
+                    snapshot,
+                    URIRef(self.expand_iri("rc:tripleCount")),
+                    Literal(count, datatype=XSD.integer),
+                )
+            )
+
+        triples = self._insert_graph("history", graph)
+        return GraphRevisionRecord(
+            revision_iri=revision_subject,
+            revision_type=revision_type_iri,
+            graph="history",
+            triples=triples,
+        )
+
     def import_turtle(
         self,
         source: str | Path,
@@ -2477,6 +2685,9 @@ class DoxaBase:
             )
         return graph_names
 
+    def _known_graph_names(self) -> set[str]:
+        return {row["name"] for row in self._conn.execute("SELECT name FROM named_graphs")}
+
     def _graph_counts(self, graphs: Iterable[str]) -> dict[str, int]:
         return {graph: self.triple_count(graph) for graph in graphs}
 
@@ -2881,7 +3092,12 @@ class DoxaBase:
         for prefix, namespace in PREFIXES.items():
             graph.bind(prefix, namespace)
 
-    def _datetime_literal(self, value: datetime | str | None) -> Literal:
+    def _datetime_literal(
+        self,
+        value: datetime | str | None,
+        *,
+        name: str = "observed_at",
+    ) -> Literal:
         if value is None:
             dt = datetime.now(UTC)
         elif isinstance(value, datetime):
@@ -2894,7 +3110,7 @@ class DoxaBase:
                 dt = datetime.fromisoformat(text)
             except ValueError as exc:
                 raise DoxaBaseError(
-                    "observed_at must be an ISO 8601 datetime"
+                    f"{name} must be an ISO 8601 datetime"
                 ) from exc
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=UTC)

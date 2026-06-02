@@ -82,6 +82,13 @@ datasets.
 Records or updates a relationship resource. Supported relationship types are
 `foreign_key`, `shared_identifier`, and `derivation`.
 
+`doxabase.record_graph_revision`
+
+Records revision metadata in the `history` graph: changed graph roles, summary,
+rationale, optional supporting observations/claims/patterns/evidence, validation
+result, export path, and graph-count snapshots. It does not compute diffs or
+apply graph edits.
+
 ## Import and Validation
 
 `doxabase.import_trig`

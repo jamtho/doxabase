@@ -88,7 +88,8 @@ Python syntax.
 - Put syntheses over related observations, claims, or evidence in `patterns`.
 - Put source/query/hash/sample support in `evidence`.
 - Put project SHACL extensions in `shapes`.
-- Use `history` for revision metadata when that feature exists.
+- Put graph-change rationale, review-bundle metadata, and graph-count snapshots
+  in `history`.
 
 Project-specific vocabulary belongs in project namespaces, not
 `ontology/rc_core.ttl`, unless it truly belongs in the shared Rich Canopy kernel.
@@ -99,8 +100,8 @@ The AIS and Polymarket fixtures are representative pressure tests, not full
 mechanical conversions. The AIS fixture is intentionally reduced and should not
 be treated as a full executable catalog.
 
-Graph version storage and revision workflows are planned but not implemented in
-the current runtime. For the longer plan, see
+Revision metadata records exist, but staged graph diffs and graph version storage
+are not implemented in the current runtime. For the longer plan, see
 `doxabase_design_docs/03-doxabase-v1-storage-schema.md` and the revision model
 in `doxabase_design_docs/01-doxabase-v1-design-brief.md`.
 
@@ -122,7 +123,7 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add pattern-to-map promotion and retrieval helpers such as `describe_pattern`.
-2. Add richer profile metrics and profiling helpers that can write map facts,
+1. Add graph context slicing and fuller staged revision/diff workflows.
+2. Add pattern-to-map promotion and retrieval helpers such as `describe_pattern`.
+3. Add richer profile metrics and profiling helpers that can write map facts,
    observations, and patterns together.
-3. Add graph slice/revision metadata and broader MCP context retrieval tools.

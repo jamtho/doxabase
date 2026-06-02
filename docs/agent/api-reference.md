@@ -86,6 +86,21 @@ column = db.record_map_column(
     column_name="parent_doc_id",
     physical_type="rc:Varchar",
 )
+export = db.export_trig("/tmp/project-review-bundle.trig", graphs="workflow")
+validation = db.validate_graph(scope="all")
+revision = db.record_graph_revision(
+    summary="Example workflow bundle exported",
+    rationale="The claim and pattern explain why the child table map fact was recorded.",
+    changed_graphs=["map", "observations", "patterns", "evidence"],
+    revision_type="rc:ExportRevision",
+    supporting_claims=[claim.claim_iri],
+    supporting_patterns=[pattern.pattern_iri],
+    export_path=export.path,
+    graph_counts=export.graph_counts,
+    validation_scope=validation.scope,
+    validation_conforms=validation.conforms,
+    validation_result_count=validation.result_count,
+)
 context = db.describe_resource(claim.claim_iri, graph="observations")
 ```
 
@@ -113,6 +128,10 @@ Map authoring helpers write current-best project facts to `map`:
 observations or patterns are ready to become operating context for future
 agents. On partial dataset updates, omit `is_table` to preserve existing
 dataset/table typing.
+
+`record_graph_revision()` writes metadata to `history` about changed graph
+roles, rationale, supporting resources, validation results, export paths, and
+graph-count snapshots. It does not compute diffs or apply graph edits.
 
 `describe_resource()` returns outgoing and incoming triples for one resource.
 Use it after `list_entities(type="rc:Pattern")`,

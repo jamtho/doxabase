@@ -83,6 +83,8 @@ A useful trial usually asks the agent to:
 - run `validate_graph(scope="all")`;
 - use `export_trig` or `export_graph` when the trial should leave reviewable
   RDF artifacts under `/tmp`;
+- use `record_graph_revision` when the exported bundle or map change should
+  leave a durable rationale in `history`;
 - report what worked, what was awkward, and what should change next.
 
 ## Report Sections

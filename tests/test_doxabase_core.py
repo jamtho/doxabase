@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 852
+    assert graphs["base_ontology"].triple_count == 928
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 758
+    assert graphs["base_shapes"].triple_count == 840
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -156,6 +156,67 @@ def test_export_trig_all_with_seeds_requires_explicit_seed_import(tmp_path: Path
     round_trip = DoxaBase.create(tmp_path / "round-trip-with-seeds.sqlite")
     with pytest.raises(ImmutableGraphError, match="base_(ontology|shapes)"):
         round_trip.import_trig(export_path)
+
+
+def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+    observation = db.record_observation(
+        summary="AIS map export was reviewed during a revision test.",
+        observed_asset="https://richcanopy.org/example/manifest/ais#DailyIndex",
+        evidence_summary="Revision helper unit test evidence.",
+        evidence_sources=["tests/test_doxabase_core.py"],
+    )
+    graph_counts = {
+        "map": db.triple_count("map"),
+        "observations": db.triple_count("observations"),
+    }
+    assert observation.evidence_iri is not None
+
+    revision = db.record_graph_revision(
+        summary="AIS map review bundle recorded",
+        rationale="The exported bundle captures the current AIS map plus one review observation.",
+        changed_graphs=["map", "observations"],
+        revision_type="rc:ExportRevision",
+        created_at="2026-06-02T00:00:00Z",
+        created_by="urn:doxabase:test-agent",
+        supporting_observations=[observation.observation_iri],
+        evidence=[observation.evidence_iri],
+        export_path="/tmp/ais-review-bundle.trig",
+        graph_counts=graph_counts,
+        validation_scope="all",
+        validation_conforms=True,
+        validation_result_count=0,
+    )
+
+    assert revision.revision_type == RC + "ExportRevision"
+    assert revision.graph == "history"
+    assert revision.triples > 0
+    assert db.validate_graph(scope="all").conforms
+
+    revisions = db.list_entities(type="rc:GraphRevision", graph="history")
+    assert revisions.entities[0].iri == revision.revision_iri
+    overview = db.graph_overview()
+    assert overview.key_counts["graph_revisions"] == 1
+    assert overview.key_counts["graph_snapshots"] == 2
+
+    context = db.describe_resource(revision.revision_iri, graph="history")
+    outgoing = {(triple.predicate, triple.object) for triple in context.outgoing}
+    assert (RC + "changedGraph", "map") in outgoing
+    assert (RC + "changedGraph", "observations") in outgoing
+    assert (RC + "exportPath", "/tmp/ais-review-bundle.trig") in outgoing
+    assert any(triple.predicate == RC + "hasGraphSnapshot" for triple in context.outgoing)
+
+
+def test_record_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(ImmutableGraphError, match="base_ontology"):
+        db.record_graph_revision(
+            summary="Invalid seed revision",
+            rationale="Ordinary project revisions should not target shipped seeds.",
+            changed_graphs=["base_ontology"],
+        )
 
 
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:

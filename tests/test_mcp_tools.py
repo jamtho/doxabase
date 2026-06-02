@@ -19,6 +19,7 @@ from doxabase.mcp_tools import (
     record_map_dataset_tool,
     record_map_relationship_tool,
     record_map_storage_access_tool,
+    record_graph_revision_tool,
     record_observation_tool,
     record_pattern_tool,
     search_tool,
@@ -48,6 +49,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
     assert "doxabase.export_trig" in tool_names
+    assert "doxabase.record_graph_revision" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
 
@@ -107,6 +109,35 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     assert "base_ontology" not in trig_result["graphs"]
     assert trig_result["triples"] == sum(trig_result["graph_counts"].values())
     assert trig_path.exists()
+
+
+def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+    validation = validate_graph_tool(db, scope="all")
+    export_path = tmp_path / "review.trig"
+    export_result = export_trig_tool(db, path=str(export_path))
+
+    result = record_graph_revision_tool(
+        db,
+        summary="Fixture review bundle exported",
+        rationale="The MCP wrapper test records why this review bundle exists.",
+        changed_graphs=["map", "observations", "patterns", "evidence"],
+        revision_type="rc:ExportRevision",
+        export_path=export_result["path"],
+        graph_counts=export_result["graph_counts"],
+        validation_scope=validation["scope"],
+        validation_conforms=validation["conforms"],
+        validation_result_count=validation["result_count"],
+    )
+
+    assert result["revision_iri"].startswith(
+        "https://richcanopy.org/doxabase/generated/graph-revision/"
+    )
+    assert result["revision_type"] == "https://richcanopy.org/ns/rc#ExportRevision"
+    assert result["graph"] == "history"
+    assert result["triples"] > 0
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
 def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None:

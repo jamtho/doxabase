@@ -418,6 +418,46 @@ def export_trig_tool(
     return asdict(result)
 
 
+def record_graph_revision_tool(
+    db: DoxaBase,
+    summary: str,
+    rationale: str,
+    changed_graphs: list[str],
+    revision_type: str = "rc:ManualRevision",
+    revision_iri: str | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    supporting_observations: list[str] | None = None,
+    supporting_claims: list[str] | None = None,
+    supporting_patterns: list[str] | None = None,
+    evidence: list[str] | None = None,
+    export_path: str | None = None,
+    graph_counts: dict[str, int] | None = None,
+    validation_scope: str | None = None,
+    validation_conforms: bool | None = None,
+    validation_result_count: int | None = None,
+) -> dict[str, Any]:
+    result = db.record_graph_revision(
+        summary=summary,
+        rationale=rationale,
+        changed_graphs=changed_graphs,
+        revision_type=revision_type,
+        revision_iri=revision_iri,
+        created_at=created_at,
+        created_by=created_by,
+        supporting_observations=supporting_observations,
+        supporting_claims=supporting_claims,
+        supporting_patterns=supporting_patterns,
+        evidence=evidence,
+        export_path=export_path,
+        graph_counts=graph_counts,
+        validation_scope=validation_scope,
+        validation_conforms=validation_conforms,
+        validation_result_count=validation_result_count,
+    )
+    return asdict(result)
+
+
 def load_example_fixtures_tool(db: DoxaBase, replace: bool = False) -> dict[str, Any]:
     results = []
     totals: dict[str, int] = {}

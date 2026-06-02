@@ -24,6 +24,7 @@ from doxabase.mcp_tools import (
     record_map_dataset_tool,
     record_map_relationship_tool,
     record_map_storage_access_tool,
+    record_graph_revision_tool,
     record_observation_tool,
     record_pattern_tool,
     search_tool,
@@ -33,7 +34,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern recording, import/export, fixture loading, and validation; context slicing is not implemented yet."""
+Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, import/export, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -439,6 +440,47 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             path=path,
             graphs=graphs,
             overwrite=overwrite,
+        )
+
+    @server.tool(name="doxabase.record_graph_revision")
+    def record_graph_revision(
+        summary: str,
+        rationale: str,
+        changed_graphs: list[str],
+        revision_type: str = "rc:ManualRevision",
+        revision_iri: str | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        supporting_observations: list[str] | None = None,
+        supporting_claims: list[str] | None = None,
+        supporting_patterns: list[str] | None = None,
+        evidence: list[str] | None = None,
+        export_path: str | None = None,
+        graph_counts: dict[str, int] | None = None,
+        validation_scope: str | None = None,
+        validation_conforms: bool | None = None,
+        validation_result_count: int | None = None,
+    ) -> dict[str, Any]:
+        """Record graph revision metadata in the history graph."""
+
+        return record_graph_revision_tool(
+            db,
+            summary=summary,
+            rationale=rationale,
+            changed_graphs=changed_graphs,
+            revision_type=revision_type,
+            revision_iri=revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            evidence=evidence,
+            export_path=export_path,
+            graph_counts=graph_counts,
+            validation_scope=validation_scope,
+            validation_conforms=validation_conforms,
+            validation_result_count=validation_result_count,
         )
 
     @server.tool(name="doxabase.load_example_fixtures")

@@ -58,6 +58,8 @@ Implemented:
 - `record_pattern()` for syntheses that connect related findings to map targets.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, and relationships.
+- `record_graph_revision()` for history metadata about graph changes and review
+  bundles.
 - Agent-authored observation and pattern RDF vocabulary for structured claims,
   source spans, confidence, and status.
 - Stricter SHACL validation for observation/pattern/evidence/claim resources.
@@ -70,10 +72,10 @@ Implemented:
 Not implemented yet:
 
 - Context graph slicing.
-- Graph revision/diff workflow.
+- Staged graph revision/diff workflow.
 - Query generation or execution helpers.
 - Full SPARQL endpoint.
-- MCP tools for graph context slicing or graph revision.
+- MCP tools for graph context slicing.
 
 ## Layout
 
@@ -160,6 +162,8 @@ Useful first tool calls for an agent:
 13. `doxabase.record_map_dataset` and related map helpers for current-best facts
 14. `doxabase.validate_graph` with `scope="all"`
 15. `doxabase.export_trig` when you need a named-graph project review bundle
+16. `doxabase.record_graph_revision` when the bundle/change rationale should be
+    preserved in `history`
 
 Current MCP tools:
 
@@ -181,6 +185,7 @@ Current MCP tools:
 - `doxabase.import_trig`
 - `doxabase.export_graph`
 - `doxabase.export_trig`
+- `doxabase.record_graph_revision`
 - `doxabase.load_example_fixtures`
 - `doxabase.validate_graph`
 
@@ -198,7 +203,7 @@ Mutable project graphs:
 - `observations`: point-in-time and tentative findings.
 - `evidence`: source/query/hash/sample support.
 - `shapes`: project/client SHACL shapes.
-- `history`: revisions, diffs, and consolidation rationale.
+- `history`: revision metadata, graph-count snapshots, and consolidation rationale.
 
 Logical includes:
 
@@ -209,7 +214,7 @@ Logical includes:
 
 The next useful implementation steps are:
 
-1. Add graph slice/revision metadata.
-2. Expand MCP tools around context retrieval once the Python API is ready.
+1. Add graph context slicing and fuller staged revision/diff workflows.
+2. Add richer profile metrics and profiling helpers.
 3. Consider query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, after the lexical RDF search surface has settled.

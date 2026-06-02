@@ -3,7 +3,7 @@
 Use this sequence when arriving cold in a DoxaBase capsule.
 
 1. Call `doxabase.list_docs`.
-2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `observation_rdf`, `patterns`, `map_authoring`, `executable_catalog`, and `field_trials` if you do not know the project conventions.
+2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `observation_rdf`, `patterns`, `map_authoring`, `revisions`, `executable_catalog`, and `field_trials` if you do not know the project conventions.
 3. Call `doxabase.graph_overview` to inspect named graphs, counts, common classes, and predicates.
 4. Call `doxabase.search` when you have a remembered term, caveat, column name, source note, or question-shaped keyword.
 5. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.
@@ -15,6 +15,8 @@ Use this sequence when arriving cold in a DoxaBase capsule.
 10. Use `doxabase.record_pattern` when several observations or claims belong together and explain a more durable pattern.
 11. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
 12. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
+13. Use `doxabase.record_graph_revision` after a meaningful graph change or
+    review-bundle export when later agents should know what changed and why.
 
 When adding future facts, choose graph roles by update pattern:
 
@@ -24,12 +26,10 @@ When adding future facts, choose graph roles by update pattern:
 - Put syntheses over related findings in `patterns`.
 - Put source/query/hash/sample support in `evidence`.
 - Put project SHACL in `shapes`.
+- Put revision rationale and review-bundle metadata in `history`.
 
 Do not write to `base_ontology` or `base_shapes`; they are immutable package seed graphs.
 
-In the current V1 slice, the MCP interface does not yet expose graph revision or
-context-slice tools. Treat it as an inspection, validation, fixture-loading, and
-observation-capture surface.
-It does expose lexical search, type-aware resource retrieval, executable-catalog
-metadata, and structured observation recording for routine and claim-shaped
-findings.
+In the current V1 slice, the MCP interface does not yet expose context-slice or
+staged diff/commit tools. Treat revision records as metadata about graph changes,
+not as transactional graph replacement.

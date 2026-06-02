@@ -71,6 +71,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "map-authoring.md",
     ),
     AgentDoc(
+        id="revisions",
+        title="Revision History",
+        description="How to record graph revision metadata and review-bundle rationale.",
+        path=DOCS_DIR / "revisions.md",
+    ),
+    AgentDoc(
         id="lexical_search",
         title="Lexical Search",
         description="How search helps agents rediscover claims, caveats, observations, and evidence.",
