@@ -10,6 +10,8 @@ from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     describe_dataset_tool,
     describe_resource_tool,
+    export_graph_tool,
+    export_trig_tool,
     get_doc_tool,
     graph_overview_tool,
     import_trig_tool,
@@ -31,7 +33,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern recording, import, fixture loading, and validation; context slicing is not implemented yet."""
+Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern recording, import/export, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -406,6 +408,38 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Import a TriG file into DoxaBase graph roles."""
 
         return import_trig_tool(db, path=path, replace=replace)
+
+    @server.tool(name="doxabase.export_graph")
+    def export_graph(
+        path: str,
+        graphs: list[str] | None = None,
+        format: str = "turtle",
+        overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Export one or more graph roles as a flattened RDF graph file."""
+
+        return export_graph_tool(
+            db,
+            path=path,
+            graphs=graphs,
+            format=format,
+            overwrite=overwrite,
+        )
+
+    @server.tool(name="doxabase.export_trig")
+    def export_trig(
+        path: str,
+        graphs: list[str] | None = None,
+        overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Export graph roles as a named-graph TriG bundle."""
+
+        return export_trig_tool(
+            db,
+            path=path,
+            graphs=graphs,
+            overwrite=overwrite,
+        )
 
     @server.tool(name="doxabase.load_example_fixtures")
     def load_example_fixtures(replace: bool = False) -> dict[str, Any]:

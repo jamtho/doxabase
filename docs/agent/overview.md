@@ -14,7 +14,7 @@ Current implementation status:
 - Immutable shipped seed graphs: `base_ontology`, `base_shapes`.
 - Mutable project graphs: `map`, `ontology`, `observations`, `patterns`, `evidence`, `shapes`, `history`.
 - Turtle import into one graph.
-- TriG import into graph roles.
+- TriG import/export for graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
@@ -27,7 +27,8 @@ Current implementation status:
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
-- MCP tools for docs, overview, search, listing, dataset description, observation recording, import, validation, and fixture loading.
+- MCP tools for docs, overview, search, listing, dataset description,
+  observation recording, import/export, validation, and fixture loading.
 
 Important V1 limits:
 

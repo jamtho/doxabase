@@ -81,6 +81,8 @@ A useful trial usually asks the agent to:
 - use `list_entities`, `describe_resource`, `search`, and `graph_overview` to
   verify retrieval;
 - run `validate_graph(scope="all")`;
+- use `export_trig` or `export_graph` when the trial should leave reviewable
+  RDF artifacts under `/tmp`;
 - report what worked, what was awkward, and what should change next.
 
 ## Report Sections

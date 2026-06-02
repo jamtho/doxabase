@@ -2,7 +2,7 @@ import warnings
 from pathlib import Path
 
 import pytest
-from rdflib import Literal, URIRef
+from rdflib import Dataset, Graph, Literal, URIRef
 from rdflib.namespace import DCTERMS, RDF
 
 from doxabase import DoxaBase, DoxaBaseError, ImmutableGraphError
@@ -76,6 +76,86 @@ def test_import_trig_maps_patterns_graph_role(tmp_path: Path) -> None:
 
     assert imported["patterns"] > 0
     assert db.validate_graph(scope="all").conforms
+
+
+def test_export_graph_writes_flattened_turtle(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+    export_path = tmp_path / "map.ttl"
+
+    result = db.export_graph(export_path, graphs="map")
+
+    assert result.path == str(export_path)
+    assert result.format == "turtle"
+    assert result.graphs == ["map"]
+    assert result.graph_counts == {"map": db.triple_count("map")}
+    assert result.triples == db.triple_count("map")
+    assert result.bytes_written == export_path.stat().st_size
+
+    graph = Graph()
+    graph.parse(export_path, format="turtle")
+    assert len(graph) == db.triple_count("map")
+    assert (
+        URIRef("https://richcanopy.org/example/manifest/ais#DailyBroadcasts"),
+        RDF.type,
+        URIRef(RC + "Table"),
+    ) in graph
+
+    with pytest.raises(DoxaBaseError, match="already exists"):
+        db.export_graph(export_path, graphs="map")
+
+
+def test_export_trig_preserves_graph_roles_for_round_trip(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+    export_path = tmp_path / "bundle.trig"
+
+    result = db.export_trig(export_path)
+
+    assert result.format == "trig"
+    assert result.graphs == [
+        "ontology",
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+        "shapes",
+        "history",
+    ]
+    assert result.graph_counts == {
+        graph: db.triple_count(graph) for graph in result.graphs
+    }
+    assert result.triples == sum(db.triple_count(graph) for graph in result.graphs)
+
+    dataset = Dataset()
+    dataset.parse(export_path, format="trig")
+    identifiers = {str(context.identifier) for context in dataset.graphs() if len(context)}
+    assert "https://richcanopy.org/graph/base_ontology" not in identifiers
+    assert "https://richcanopy.org/graph/map" in identifiers
+    assert "https://richcanopy.org/graph/observations" in identifiers
+
+    round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
+    imported = round_trip.import_trig(export_path)
+    assert imported["map"] == db.triple_count("map")
+    assert imported["observations"] == db.triple_count("observations")
+    assert imported["evidence"] == db.triple_count("evidence")
+    assert imported["ontology"] == db.triple_count("ontology")
+
+
+def test_export_trig_all_with_seeds_requires_explicit_seed_import(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+    export_path = tmp_path / "all-with-seeds.trig"
+
+    result = db.export_trig(export_path, graphs="all_with_seeds")
+
+    assert result.graphs[:2] == ["base_ontology", "base_shapes"]
+    assert result.graph_counts["base_ontology"] == db.triple_count("base_ontology")
+    assert result.graph_counts["base_shapes"] == db.triple_count("base_shapes")
+
+    round_trip = DoxaBase.create(tmp_path / "round-trip-with-seeds.sqlite")
+    with pytest.raises(ImmutableGraphError, match="base_(ontology|shapes)"):
+        round_trip.import_trig(export_path)
 
 
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:

@@ -25,6 +25,22 @@ db.import_trig("path/to/file.trig")
 
 `import_trig()` preserves named graph roles and maps `https://richcanopy.org/graph/{role}` to `{role}`.
 
+## Export Data
+
+```python
+db.export_graph("/tmp/map.ttl", graphs="map")
+db.export_trig("/tmp/project-review-bundle.trig")
+db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
+```
+
+`export_graph()` writes one flattened RDF graph, usually Turtle.
+
+`export_trig()` writes a named-graph bundle with graph role IRIs so another
+DoxaBase capsule can import it again. The default exports mutable project
+graphs. Use `graphs="workflow"` for `map`, `observations`, `patterns`, and
+`evidence`; use `graphs="all_with_seeds"` only when you explicitly need shipped
+seed graphs in the bundle.
+
 ## Inspect
 
 ```python

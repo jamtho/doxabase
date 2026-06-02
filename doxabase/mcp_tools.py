@@ -386,6 +386,38 @@ def import_trig_tool(
     }
 
 
+def export_graph_tool(
+    db: DoxaBase,
+    path: str,
+    graphs: list[str] | None = None,
+    format: str = "turtle",
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    resolved_path = _resolve_path(path)
+    result = db.export_graph(
+        resolved_path,
+        graphs=graphs if graphs is not None else ["map"],
+        format=format,
+        overwrite=overwrite,
+    )
+    return asdict(result)
+
+
+def export_trig_tool(
+    db: DoxaBase,
+    path: str,
+    graphs: list[str] | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    resolved_path = _resolve_path(path)
+    result = db.export_trig(
+        resolved_path,
+        graphs=graphs,
+        overwrite=overwrite,
+    )
+    return asdict(result)
+
+
 def load_example_fixtures_tool(db: DoxaBase, replace: bool = False) -> dict[str, Any]:
     results = []
     totals: dict[str, int] = {}

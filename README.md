@@ -47,7 +47,7 @@ Implemented:
 - Mutable project graphs: `map`, `ontology`, `observations`, `patterns`,
   `evidence`, `shapes`, and `history`.
 - Turtle import into one graph.
-- TriG import into graph roles.
+- TriG import/export for graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
@@ -159,6 +159,7 @@ Useful first tool calls for an agent:
 12. `doxabase.record_pattern` for syntheses over related findings
 13. `doxabase.record_map_dataset` and related map helpers for current-best facts
 14. `doxabase.validate_graph` with `scope="all"`
+15. `doxabase.export_trig` when you need a named-graph project review bundle
 
 Current MCP tools:
 
@@ -171,7 +172,15 @@ Current MCP tools:
 - `doxabase.describe_dataset`
 - `doxabase.record_observation`
 - `doxabase.record_claim_observation`
+- `doxabase.record_pattern`
+- `doxabase.record_map_dataset`
+- `doxabase.record_map_column`
+- `doxabase.record_map_caveat`
+- `doxabase.record_map_storage_access`
+- `doxabase.record_map_relationship`
 - `doxabase.import_trig`
+- `doxabase.export_graph`
+- `doxabase.export_trig`
 - `doxabase.load_example_fixtures`
 - `doxabase.validate_graph`
 

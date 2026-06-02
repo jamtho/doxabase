@@ -7,6 +7,8 @@ from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     describe_dataset_tool,
     describe_resource_tool,
+    export_graph_tool,
+    export_trig_tool,
     graph_overview_tool,
     list_docs_tool,
     list_entities_tool,
@@ -44,6 +46,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_storage_access" in tool_names
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
+    assert "doxabase.export_graph" in tool_names
+    assert "doxabase.export_trig" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
 
@@ -68,6 +72,41 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert overview["key_counts"]["tables"] >= 7
     assert tables["count"] >= 7
     assert validation["conforms"] is True
+
+
+def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+    graph_path = tmp_path / "map.ttl"
+    trig_path = tmp_path / "bundle.trig"
+
+    graph_result = export_graph_tool(db, path=str(graph_path), graphs=["map"])
+    trig_result = export_trig_tool(
+        db,
+        path=str(trig_path),
+    )
+
+    assert graph_result["path"] == str(graph_path)
+    assert graph_result["format"] == "turtle"
+    assert graph_result["graphs"] == ["map"]
+    assert graph_result["graph_counts"] == {"map": db.triple_count("map")}
+    assert graph_result["triples"] == db.triple_count("map")
+    assert graph_path.exists()
+
+    assert trig_result["path"] == str(trig_path)
+    assert trig_result["format"] == "trig"
+    assert trig_result["graphs"] == [
+        "ontology",
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+        "shapes",
+        "history",
+    ]
+    assert "base_ontology" not in trig_result["graphs"]
+    assert trig_result["triples"] == sum(trig_result["graph_counts"].values())
+    assert trig_path.exists()
 
 
 def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None:

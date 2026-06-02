@@ -81,6 +81,8 @@ Implemented:
 DoxaBase.create(path, overwrite=False, seed=True)
 DoxaBase.import_turtle(source, graph="map", replace=False)
 DoxaBase.import_trig(source, replace=False)
+DoxaBase.export_graph(path, graphs="map", format="turtle", overwrite=False)
+DoxaBase.export_trig(path, graphs=None, overwrite=False)
 DoxaBase.graph_overview(limit=100)
 DoxaBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
 DoxaBase.search(query, graph=None, limit=20, offset=0)
@@ -88,6 +90,7 @@ DoxaBase.describe_dataset(iri, graph="map")
 DoxaBase.record_observation(summary, ...)
 DoxaBase.validate_graph(scope="map", limit_results=100)
 DoxaBase.to_graph(graphs=None)
+DoxaBase.to_dataset(graphs=None)
 ```
 
 `import_trig()` maps fixture graph IRIs such as:

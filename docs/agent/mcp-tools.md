@@ -88,6 +88,25 @@ Records or updates a relationship resource. Supported relationship types are
 
 Imports a TriG file into graph roles. Fixture graph IRIs such as `https://richcanopy.org/graph/map` map to local role names like `map`.
 
+`doxabase.export_graph`
+
+Exports one or more graph roles as one flattened RDF graph file. The default is
+the `map` graph in Turtle. Use it for quick single-graph review artifacts. The
+result includes per-graph triple counts.
+
+`doxabase.export_trig`
+
+Exports graph roles as a named-graph TriG bundle using graph IRIs such as
+`https://richcanopy.org/graph/map`. Use it when preserving graph roles matters,
+for example when dumping a scratch capsule after a field trial.
+
+By default this exports the mutable project graphs: `ontology`, `map`,
+`observations`, `patterns`, `evidence`, `shapes`, and `history`. Useful presets
+are `workflow` / `review_bundle` for `map`, `observations`, `patterns`, and
+`evidence`, plus `all_with_seeds` when you explicitly need immutable seed graphs
+included too. All-with-seeds bundles may require special import handling because
+normal capsules protect `base_ontology` and `base_shapes`.
+
 `doxabase.load_example_fixtures`
 
 Convenience tool that imports the AIS and Polymarket RC fixtures.

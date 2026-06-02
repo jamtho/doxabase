@@ -78,6 +78,21 @@ DEFAULT_GRAPHS: tuple[tuple[str, str, bool, bool, Path | None], ...] = (
     ("history", "Versions, revisions, diffs, and rationale", True, False, None),
 )
 
+EXPORT_PRESETS: dict[str, tuple[str, ...]] = {
+    "workflow": ("map", "observations", "patterns", "evidence"),
+    "review_bundle": ("map", "observations", "patterns", "evidence"),
+    "project": (
+        "ontology",
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+        "shapes",
+        "history",
+    ),
+    "all_with_seeds": tuple(graph[0] for graph in DEFAULT_GRAPHS),
+}
+
 
 class DoxaBaseError(Exception):
     """Base exception for DoxaBase runtime errors."""
@@ -104,6 +119,16 @@ class GraphOverview:
     predicate_counts: list[tuple[str, int]]
     key_counts: dict[str, int]
     namespaces: dict[str, str]
+
+
+@dataclass(frozen=True)
+class GraphExportRecord:
+    path: str
+    format: str
+    graphs: list[str]
+    graph_counts: dict[str, int]
+    triples: int
+    bytes_written: int
 
 
 @dataclass(frozen=True)
@@ -2081,6 +2106,48 @@ class DoxaBase:
             )
         return imported
 
+    def export_graph(
+        self,
+        path: str | Path,
+        *,
+        graphs: Iterable[str] | str | None = "map",
+        format: str = "turtle",
+        overwrite: bool = False,
+    ) -> GraphExportRecord:
+        graph_names = self._graph_names_for_export(graphs)
+        rdf_graph = self._to_graph_roles(graph_names)
+        data = rdf_graph.serialize(format=format)
+        bytes_written = self._write_export(path, data, overwrite=overwrite)
+        return GraphExportRecord(
+            path=str(path),
+            format=format,
+            graphs=graph_names,
+            graph_counts=self._graph_counts(graph_names),
+            triples=len(rdf_graph),
+            bytes_written=bytes_written,
+        )
+
+    def export_trig(
+        self,
+        path: str | Path,
+        *,
+        graphs: Iterable[str] | str | None = None,
+        overwrite: bool = False,
+        graph_iri_prefix: str = RCG_PREFIX,
+    ) -> GraphExportRecord:
+        graph_names = self._graph_names_for_export(graphs, default_preset="project")
+        dataset = self.to_dataset(graph_names, graph_iri_prefix=graph_iri_prefix)
+        data = dataset.serialize(format="trig")
+        bytes_written = self._write_export(path, data, overwrite=overwrite)
+        return GraphExportRecord(
+            path=str(path),
+            format="trig",
+            graphs=graph_names,
+            graph_counts=self._graph_counts(graph_names),
+            triples=len(dataset),
+            bytes_written=bytes_written,
+        )
+
     def clear_graph(self, graph: str, *, allow_immutable: bool = False) -> None:
         self._ensure_mutable(graph, allow_immutable=allow_immutable)
         self._conn.execute("DELETE FROM quads WHERE graph = ?", (graph,))
@@ -2113,11 +2180,14 @@ class DoxaBase:
             scope=scope,
         )
 
-    def to_graph(self, graphs: Iterable[str] | None = None) -> Graph:
+    def to_graph(self, graphs: Iterable[str] | str | None = None) -> Graph:
+        graph_names = self._expand_graphs(self._requested_graphs(graphs))
+        return self._to_graph_roles(graph_names)
+
+    def _to_graph_roles(self, graph_names: list[str]) -> Graph:
         rdf_graph = Graph()
         for prefix, namespace in PREFIXES.items():
             rdf_graph.bind(prefix, namespace)
-        graph_names = self._expand_graphs(list(graphs) if graphs is not None else None)
         params: list[Any] = []
         graph_filter = ""
         if graph_names:
@@ -2139,6 +2209,45 @@ class DoxaBase:
                 )
             )
         return rdf_graph
+
+    def to_dataset(
+        self,
+        graphs: Iterable[str] | str | None = None,
+        *,
+        graph_iri_prefix: str = RCG_PREFIX,
+    ) -> Dataset:
+        dataset = Dataset()
+        for prefix, namespace in PREFIXES.items():
+            dataset.bind(prefix, namespace)
+        dataset.bind("rcg", graph_iri_prefix)
+        graph_names = self._graph_names_for_export(
+            graphs,
+            default_preset="all_with_seeds",
+        )
+        params: list[Any] = []
+        graph_filter = ""
+        if graph_names:
+            graph_filter = f"WHERE graph IN ({','.join('?' for _ in graph_names)})"
+            params.extend(graph_names)
+        for row in self._conn.execute(
+            f"""
+            SELECT graph, subject, subject_kind, predicate, object, object_kind, datatype, lang
+            FROM quads
+            {graph_filter}
+            """,
+            params,
+        ):
+            context = dataset.graph(
+                URIRef(self._export_graph_identifier(row["graph"], graph_iri_prefix))
+            )
+            context.add(
+                (
+                    self._term_from_row(row["subject"], row["subject_kind"]),
+                    URIRef(row["predicate"]),
+                    self._object_from_row(row),
+                )
+            )
+        return dataset
 
     def triple_count(self, graph: str | None = None) -> int:
         if graph is None:
@@ -2324,6 +2433,53 @@ class DoxaBase:
                 expanded.append(graph)
         return list(dict.fromkeys(expanded))
 
+    def _requested_graphs(
+        self,
+        graphs: Iterable[str] | str | None,
+    ) -> list[str | None] | None:
+        if graphs is None:
+            return None
+        if isinstance(graphs, str):
+            return [graphs]
+        return list(graphs)
+
+    def _graph_names_for_export(
+        self,
+        graphs: Iterable[str] | str | None,
+        *,
+        default_preset: str | None = None,
+    ) -> list[str]:
+        requested_graphs = self._requested_graphs(graphs)
+        if requested_graphs is None and default_preset is not None:
+            requested_graphs = [default_preset]
+        graph_names: list[str] = []
+        for graph in requested_graphs or []:
+            if graph is None:
+                continue
+            if graph == "all":
+                graph_names.extend(self._graph_names_for_export("all_with_seeds"))
+                continue
+            preset = EXPORT_PRESETS.get(graph)
+            if preset is not None:
+                graph_names.extend(preset)
+            else:
+                graph_names.append(graph)
+        graph_names = list(dict.fromkeys(graph_names))
+        if not graph_names:
+            raise DoxaBaseError("graphs must contain at least one graph role")
+        known_graphs = {
+            row["name"] for row in self._conn.execute("SELECT name FROM named_graphs")
+        }
+        unknown_graphs = [graph for graph in graph_names if graph not in known_graphs]
+        if unknown_graphs:
+            raise DoxaBaseError(
+                f"Unknown graph role(s): {', '.join(sorted(unknown_graphs))}"
+            )
+        return graph_names
+
+    def _graph_counts(self, graphs: Iterable[str]) -> dict[str, int]:
+        return {graph: self.triple_count(graph) for graph in graphs}
+
     def _graphs_for_validation_scope(self, scope: str) -> list[str]:
         if scope == "map":
             return self._expand_graphs(["ontology"]) + ["map"]
@@ -2361,6 +2517,11 @@ class DoxaBase:
         if identifier.startswith(RCG_PREFIX):
             return identifier.removeprefix(RCG_PREFIX)
         return identifier
+
+    def _export_graph_identifier(self, graph: str, graph_iri_prefix: str) -> str:
+        if "://" in graph or graph.startswith("urn:"):
+            return graph
+        return f"{graph_iri_prefix}{graph}"
 
     def _count_objects(self, predicate: str, *, limit: int) -> list[tuple[str, int]]:
         return [
@@ -2744,6 +2905,22 @@ class DoxaBase:
         if "://" in expanded or expanded.startswith("urn:") or ":" in value:
             return URIRef(expanded)
         return Literal(value)
+
+    def _write_export(
+        self,
+        path: str | Path,
+        data: str,
+        *,
+        overwrite: bool,
+    ) -> int:
+        output_path = Path(path)
+        if output_path.exists() and not overwrite:
+            raise DoxaBaseError(
+                f"Export path already exists: {output_path}. Use overwrite=True to replace it."
+            )
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(data, encoding="utf-8")
+        return len(data.encode("utf-8"))
 
     def _required_iri(self, name: str, value: str) -> str:
         cleaned = value.strip()
