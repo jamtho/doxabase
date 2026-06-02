@@ -146,6 +146,36 @@ class GraphRevisionRecord:
 
 
 @dataclass(frozen=True)
+class GraphSnapshotDescription:
+    graph_role: str
+    triple_count: int
+
+
+@dataclass(frozen=True)
+class GraphRevisionDescription:
+    iri: str
+    graph: str | None
+    label: str | None
+    summary: str | None
+    revision_type: str | None
+    revision_type_label: str | None
+    rationale: str | None
+    changed_graphs: list[str]
+    included_graphs: list[str]
+    created_at: str | None
+    created_by: str | None
+    export_path: str | None
+    validation_scope: str | None
+    validation_conforms: bool | None
+    validation_result_count: int | None
+    graph_snapshots: list[GraphSnapshotDescription]
+    supporting_observations: list[ResourceSummary]
+    supporting_claims: list[ResourceSummary]
+    supporting_patterns: list[ResourceSummary]
+    evidence: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
 class EntityRow:
     iri: str
     label: str | None
@@ -565,6 +595,86 @@ class DoxaBase:
                 else []
             ),
             limit=limit,
+        )
+
+    def describe_graph_revision(
+        self,
+        iri: str,
+        *,
+        graph: str | None = "history",
+    ) -> GraphRevisionDescription:
+        revision_iri = self.expand_iri(iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(data_graphs)
+        if not self._subject_exists(revision_iri, data_graphs):
+            graph_label = graph if graph is not None else "all graphs"
+            raise DoxaBaseError(f"Graph revision '{iri}' was not found in {graph_label}")
+        if self.expand_iri("rc:GraphRevision") not in self._types_from_graphs(
+            data_graphs,
+            revision_iri,
+        ):
+            raise DoxaBaseError(f"Resource '{iri}' is not an rc:GraphRevision")
+
+        revision_type = self._first_object(data_graphs, revision_iri, "rc:revisionType")
+        all_lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        snapshots = self._graph_revision_snapshots(revision_iri, data_graphs)
+        included_graphs = self._objects(data_graphs, revision_iri, "rc:includedGraph")
+        if not included_graphs:
+            included_graphs = [snapshot.graph_role for snapshot in snapshots]
+
+        return GraphRevisionDescription(
+            iri=revision_iri,
+            graph=graph,
+            label=self._display_label_from_graphs(lookup_graphs, revision_iri),
+            summary=self._first_object(data_graphs, revision_iri, "rc:summary"),
+            revision_type=revision_type,
+            revision_type_label=(
+                self._label_from_graphs(self._expand_graphs(["ontology"]), revision_type)
+                if revision_type is not None
+                else None
+            ),
+            rationale=self._first_object(data_graphs, revision_iri, "rc:revisionRationale"),
+            changed_graphs=self._objects(data_graphs, revision_iri, "rc:changedGraph"),
+            included_graphs=included_graphs,
+            created_at=self._first_object(data_graphs, revision_iri, "rc:createdAt"),
+            created_by=self._first_object(data_graphs, revision_iri, "rc:createdBy"),
+            export_path=self._first_object(data_graphs, revision_iri, "rc:exportPath"),
+            validation_scope=self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:validationScope",
+            ),
+            validation_conforms=self._bool_object(
+                data_graphs,
+                revision_iri,
+                "rc:validationConforms",
+            ),
+            validation_result_count=self._int_object(
+                data_graphs,
+                revision_iri,
+                "rc:validationResultCount",
+            ),
+            graph_snapshots=snapshots,
+            supporting_observations=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(
+                    data_graphs,
+                    revision_iri,
+                    "rc:revisionSupportingObservation",
+                ),
+            ),
+            supporting_claims=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, revision_iri, "rc:revisionSupportingClaim"),
+            ),
+            supporting_patterns=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, revision_iri, "rc:revisionSupportingPattern"),
+            ),
+            evidence=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, revision_iri, "rc:evidence"),
+            ),
         )
 
     def search(
@@ -3105,6 +3215,10 @@ class DoxaBase:
             return None
         return value.lower() in {"1", "true"}
 
+    def _int_object(self, graphs: list[str], subject: str, predicate: str) -> int | None:
+        value = self._first_object(graphs, subject, predicate)
+        return int(value) if value is not None else None
+
     def _label_from_graphs(self, graphs: list[str], subject: str) -> str | None:
         return self._first_object(graphs, subject, str(RDFS.label))
 
@@ -3122,6 +3236,39 @@ class DoxaBase:
 
     def _types_from_graphs(self, graphs: list[str], subject: str) -> list[str]:
         return self._objects(graphs, subject, str(RDF.type))
+
+    def _resource_summaries(
+        self,
+        graphs: list[str],
+        iris: Iterable[str],
+    ) -> list[ResourceSummary]:
+        return [
+            ResourceSummary(
+                iri=iri,
+                label=self._display_label_from_graphs(graphs, iri),
+                description=self._description_from_graphs(graphs, iri),
+            )
+            for iri in iris
+        ]
+
+    def _graph_revision_snapshots(
+        self,
+        revision_iri: str,
+        graphs: list[str],
+    ) -> list[GraphSnapshotDescription]:
+        snapshots: list[GraphSnapshotDescription] = []
+        for snapshot_iri in self._objects(graphs, revision_iri, "rc:hasGraphSnapshot"):
+            graph_role = self._first_object(graphs, snapshot_iri, "rc:graphRole")
+            triple_count = self._int_object(graphs, snapshot_iri, "rc:tripleCount")
+            if graph_role is None or triple_count is None:
+                continue
+            snapshots.append(
+                GraphSnapshotDescription(
+                    graph_role=graph_role,
+                    triple_count=triple_count,
+                )
+            )
+        return sorted(snapshots, key=lambda snapshot: snapshot.graph_role)
 
     def _mint_iri(self, kind: str) -> str:
         return f"https://richcanopy.org/doxabase/generated/{kind}/{uuid4()}"

@@ -18,6 +18,7 @@ Use this sequence when arriving cold in a DoxaBase capsule.
 13. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph
     roles were included for review, and why.
+14. Use `doxabase.describe_graph_revision` when reviewing a history record.
 
 When adding future facts, choose graph roles by update pattern:
 

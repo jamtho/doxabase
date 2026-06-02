@@ -31,6 +31,12 @@ Returns outgoing and incoming triples for one resource, with available labels
 and RDF types. Use it after `list_entities` when lexical search found a resource
 but you need its structured claim/evidence/source-span context.
 
+`doxabase.describe_graph_revision`
+
+Returns compact revision context for one `rc:GraphRevision`: summary,
+rationale, revision type, changed graph roles, included review/export graph
+roles, validation result, export path, graph-count snapshots, and support links.
+
 `doxabase.search`
 
 Lexically searches literal RDF claims and returns matched resources with graph, IRI, label, types, predicate, matched text, and snippet. Use it to rediscover caveats, observations, evidence, labels, path templates, source notes, and column names.

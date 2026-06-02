@@ -18,6 +18,7 @@ Current implementation status:
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
+- `describe_graph_revision()` for compact review of history records.
 - `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
 - `record_observation()` for point-in-time findings and linked evidence.
 - `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.

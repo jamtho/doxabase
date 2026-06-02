@@ -51,6 +51,7 @@ Implemented:
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
+- `describe_graph_revision()` for compact history review over revision records.
 - `describe_dataset()` for bounded table schema, layout, storage access, caveat,
   and provenance context.
 - `record_observation()` for first-class observation and evidence resources.
@@ -164,6 +165,7 @@ Useful first tool calls for an agent:
 15. `doxabase.export_trig` when you need a named-graph project review bundle
 16. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
+17. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -173,6 +175,7 @@ Current MCP tools:
 - `doxabase.search`
 - `doxabase.list_entities`
 - `doxabase.describe_resource`
+- `doxabase.describe_graph_revision`
 - `doxabase.describe_dataset`
 - `doxabase.record_observation`
 - `doxabase.record_claim_observation`

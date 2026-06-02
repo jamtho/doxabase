@@ -135,6 +135,10 @@ roles, included review/export graph roles, rationale, supporting resources,
 validation results, export paths, and graph-count snapshots. It does not compute
 diffs or apply graph edits.
 
+`describe_graph_revision()` returns compact revision context: summary,
+rationale, changed/included graph roles, graph-count snapshots, validation
+result, export path, and supporting observation/claim/pattern/evidence links.
+
 `describe_resource()` returns outgoing and incoming triples for one resource.
 Use it after `list_entities(type="rc:Pattern")`,
 `list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence")`, or

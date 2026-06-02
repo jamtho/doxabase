@@ -6,6 +6,7 @@ from doxabase import DoxaBase
 from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     describe_dataset_tool,
+    describe_graph_revision_tool,
     describe_resource_tool,
     export_graph_tool,
     export_trig_tool,
@@ -38,6 +39,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
     assert "doxabase.describe_resource" in tool_names
+    assert "doxabase.describe_graph_revision" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
     assert "doxabase.record_pattern" in tool_names
@@ -116,7 +118,7 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     load_example_fixtures_tool(db)
     validation = validate_graph_tool(db, scope="all")
     export_path = tmp_path / "review.trig"
-    export_result = export_trig_tool(db, path=str(export_path))
+    export_result = export_trig_tool(db, path=str(export_path), graphs=["workflow"])
 
     result = record_graph_revision_tool(
         db,
@@ -142,6 +144,17 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     outgoing = {(triple.predicate, triple.object) for triple in context.outgoing}
     assert ("https://richcanopy.org/ns/rc#changedGraph", "map") not in outgoing
     assert ("https://richcanopy.org/ns/rc#includedGraph", "map") in outgoing
+    description = describe_graph_revision_tool(db, result["revision_iri"])
+    assert description["summary"] == "Fixture review bundle exported"
+    assert description["changed_graphs"] == ["evidence", "observations", "patterns"]
+    assert description["included_graphs"] == [
+        "evidence",
+        "map",
+        "observations",
+        "patterns",
+    ]
+    assert description["validation_conforms"] is True
+    assert description["graph_snapshots"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

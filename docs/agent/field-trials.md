@@ -87,6 +87,7 @@ A useful trial usually asks the agent to:
   leave a durable rationale in `history`; keep `changed_graphs` limited to
   graph roles that actually changed, and use `included_graphs` for unchanged
   review context included in an export;
+- use `describe_graph_revision` to inspect the resulting history record;
 - report what worked, what was awkward, and what should change next.
 
 ## Report Sections

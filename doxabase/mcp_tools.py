@@ -67,6 +67,14 @@ def describe_resource_tool(
     return asdict(result)
 
 
+def describe_graph_revision_tool(
+    db: DoxaBase,
+    iri: str,
+    graph: str | None = "history",
+) -> dict[str, Any]:
+    return asdict(db.describe_graph_revision(iri=iri, graph=graph))
+
+
 def describe_dataset_tool(
     db: DoxaBase,
     iri: str,

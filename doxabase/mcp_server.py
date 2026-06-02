@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     describe_dataset_tool,
+    describe_graph_revision_tool,
     describe_resource_tool,
     export_graph_tool,
     export_trig_tool,
@@ -34,7 +35,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, and describe_dataset before asking for broader graph context.
-Current V1 tools support inspection, type-aware resource retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, import/export, fixture loading, and validation; context slicing is not implemented yet."""
+Current V1 tools support inspection, type-aware resource/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, import/export, fixture loading, and validation; context slicing is not implemented yet."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -100,6 +101,15 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             include_incoming=include_incoming,
             limit=limit,
         )
+
+    @server.tool(name="doxabase.describe_graph_revision")
+    def describe_graph_revision(
+        iri: str,
+        graph: str | None = "history",
+    ) -> dict[str, Any]:
+        """Return compact revision metadata, snapshots, and support links."""
+
+        return describe_graph_revision_tool(db, iri=iri, graph=graph)
 
     @server.tool(name="doxabase.record_observation")
     def record_observation(

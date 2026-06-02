@@ -66,6 +66,13 @@ When `graph_counts` is supplied, DoxyBase also records those graph roles as
 included review/snapshot context. Passing `included_graphs=export.graphs` makes
 that distinction explicit for readers.
 
+`changed_graphs` describes the content change being recorded. It should not
+include `history` merely because `record_graph_revision()` writes revision
+metadata there.
+
+Use `describe_graph_revision()` when you want a compact review of a revision
+record instead of generic outgoing triples.
+
 ## Revision Types
 
 Common revision type IRIs:

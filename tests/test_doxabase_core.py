@@ -210,6 +210,26 @@ def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
     assert (RC + "exportPath", "/tmp/ais-review-bundle.trig") in outgoing
     assert any(triple.predicate == RC + "hasGraphSnapshot" for triple in context.outgoing)
 
+    description = db.describe_graph_revision(revision.revision_iri)
+    assert description.summary == "AIS map review bundle recorded"
+    assert description.revision_type == RC + "ExportRevision"
+    assert description.revision_type_label == "export revision"
+    assert description.changed_graphs == ["observations"]
+    assert description.included_graphs == ["map", "observations"]
+    assert description.export_path == "/tmp/ais-review-bundle.trig"
+    assert description.validation_conforms is True
+    assert description.validation_result_count == 0
+    assert {
+        snapshot.graph_role: snapshot.triple_count
+        for snapshot in description.graph_snapshots
+    } == graph_counts
+    assert [support.iri for support in description.supporting_observations] == [
+        observation.observation_iri
+    ]
+    assert description.supporting_observations[0].label == (
+        "AIS map export was reviewed during a revision test."
+    )
+
 
 def test_record_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
