@@ -923,6 +923,11 @@ class DoxaBase:
             "proposed_assertions",
             proposed_assertions,
         )
+        self._validate_resource_values("claim_targets", claim_target_values)
+        self._validate_resource_values(
+            "proposed_assertions",
+            proposed_assertion_values,
+        )
         if not evidence_source_values and source_path_value is None:
             raise DoxaBaseError(
                 "record_claim_observation requires evidence_sources or source_path"
@@ -1190,6 +1195,13 @@ class DoxaBase:
             "map_implications",
             map_implications,
         )
+        self._validate_resource_values("pattern_targets", pattern_target_values)
+        self._validate_resource_values(
+            "supporting_observations",
+            supporting_observation_values,
+        )
+        self._validate_resource_values("supporting_claims", supporting_claim_values)
+        self._validate_resource_values("map_implications", map_implication_values)
         source_path_value = (
             source_path.strip()
             if source_path and source_path.strip()
@@ -2078,6 +2090,7 @@ class DoxaBase:
         changed_graphs: Iterable[str] | str,
         *,
         revision_type: str = "rc:ManualRevision",
+        included_graphs: Iterable[str] | str | None = None,
         revision_iri: str | None = None,
         created_at: datetime | str | None = None,
         created_by: str | None = None,
@@ -2102,6 +2115,16 @@ class DoxaBase:
         for graph in changed_graph_values:
             self._ensure_mutable(graph)
 
+        if included_graphs is not None:
+            included_graph_values = self._graph_names_for_export(included_graphs)
+        else:
+            included_graph_values = []
+        for graph_name in graph_counts or {}:
+            if graph_name not in included_graph_values:
+                included_graph_values.append(graph_name)
+        if not included_graph_values:
+            included_graph_values = changed_graph_values
+
         revision_subject = (
             self._required_iri("revision_iri", revision_iri)
             if revision_iri is not None
@@ -2121,6 +2144,13 @@ class DoxaBase:
             supporting_patterns,
         )
         evidence_values = self._string_values("evidence", evidence)
+        self._validate_resource_values(
+            "supporting_observations",
+            supporting_observation_values,
+        )
+        self._validate_resource_values("supporting_claims", supporting_claim_values)
+        self._validate_resource_values("supporting_patterns", supporting_pattern_values)
+        self._validate_resource_values("evidence", evidence_values)
         self._ensure_non_negative(
             "validation_result_count",
             validation_result_count,
@@ -2128,7 +2158,7 @@ class DoxaBase:
         for graph_name, count in (graph_counts or {}).items():
             self._ensure_non_negative(f"graph_counts[{graph_name}]", count)
 
-        snapshot_counts = graph_counts or self._graph_counts(changed_graph_values)
+        snapshot_counts = graph_counts or self._graph_counts(included_graph_values)
         unknown_count_graphs = [
             graph for graph in snapshot_counts if graph not in self._known_graph_names()
         ]
@@ -2176,6 +2206,14 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:changedGraph")),
+                    Literal(graph_name),
+                )
+            )
+        for graph_name in included_graph_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:includedGraph")),
                     Literal(graph_name),
                 )
             )
@@ -3121,6 +3159,25 @@ class DoxaBase:
         if "://" in expanded or expanded.startswith("urn:") or ":" in value:
             return URIRef(expanded)
         return Literal(value)
+
+    def _validate_resource_values(self, name: str, values: Iterable[str]) -> None:
+        for value in values:
+            self._resource_ref(name, value)
+
+    def _resource_ref(self, name: str, value: str) -> URIRef:
+        text = value.strip()
+        if not text:
+            raise DoxaBaseError(f"{name} values must not be empty")
+        if re.search(r"\s", text):
+            raise DoxaBaseError(
+                f"{name} values must be IRIs or CURIEs, not prose: {value!r}"
+            )
+        expanded = self.expand_iri(text)
+        if "://" not in expanded and not expanded.startswith("urn:") and ":" not in text:
+            raise DoxaBaseError(
+                f"{name} values must be IRIs or CURIEs, not plain names: {value!r}"
+            )
+        return URIRef(expanded)
 
     def _write_export(
         self,

@@ -76,6 +76,9 @@ candidate durable assertion. Prefer patterns when you are grouping related
 findings and explaining why they matter. Use proposed assertions only when a
 single claim really does point at a candidate map assertion.
 
+`proposed_assertions` and `map_implications` are resource links. Pass IRIs or
+CURIEs there; put prose in `claim_text`, `pattern_text`, or `rationale`.
+
 ## Relation To Map Helpers
 
 Patterns are not promoted automatically yet. If a pattern supports a map change,

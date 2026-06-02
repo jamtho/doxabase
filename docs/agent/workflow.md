@@ -16,7 +16,8 @@ Use this sequence when arriving cold in a DoxaBase capsule.
 11. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
 12. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
 13. Use `doxabase.record_graph_revision` after a meaningful graph change or
-    review-bundle export when later agents should know what changed and why.
+    review-bundle export when later agents should know what changed, what graph
+    roles were included for review, and why.
 
 When adding future facts, choose graph roles by update pattern:
 

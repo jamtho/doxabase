@@ -85,9 +85,9 @@ Records or updates a relationship resource. Supported relationship types are
 `doxabase.record_graph_revision`
 
 Records revision metadata in the `history` graph: changed graph roles, summary,
-rationale, optional supporting observations/claims/patterns/evidence, validation
-result, export path, and graph-count snapshots. It does not compute diffs or
-apply graph edits.
+rationale, optional included review/export graph roles, optional supporting
+observations/claims/patterns/evidence, validation result, export path, and
+graph-count snapshots. It does not compute diffs or apply graph edits.
 
 ## Import and Validation
 

@@ -1,7 +1,8 @@
 # Revision History
 
-Use the `history` graph to record why graph state changed, what graph roles were
-affected, and where a reviewer can inspect the resulting bundle.
+Use the `history` graph to record why graph state changed, what graph roles
+changed, what graph roles were included for review, and where a reviewer can
+inspect the resulting bundle.
 
 The current helper is `doxabase.record_graph_revision`. It records metadata; it
 does not compute diffs or apply graph edits. Use it after helper-authored map
@@ -13,6 +14,7 @@ should remain available to later agents.
 Record a graph revision when you can say:
 
 - these graph roles changed or were consolidated;
+- these graph roles were included in the review/export context;
 - this is why the change was made;
 - these observations, claims, patterns, or evidence supported it;
 - this validation result or export path helps a future reviewer.
@@ -30,6 +32,7 @@ db.record_graph_revision(
     summary="Project review bundle exported",
     rationale="The map helper field trial produced current-best map facts and supporting observations.",
     changed_graphs=["map", "observations", "patterns", "evidence"],
+    included_graphs=export.graphs,
     revision_type="rc:ExportRevision",
     supporting_patterns=[
         "https://example.test/project#pattern_doc_id_parent_doc_id_spine",
@@ -41,6 +44,27 @@ db.record_graph_revision(
     validation_result_count=validation.result_count,
 )
 ```
+
+If an agent records new observations or patterns but leaves the map unchanged,
+keep `changed_graphs` narrow and include the map only as review context:
+
+```python
+export = db.export_trig("/tmp/project-review.trig", graphs="workflow")
+
+db.record_graph_revision(
+    summary="No-map-edit review bundle exported",
+    rationale="The map was exported for reviewer context, but only observations, patterns, and evidence changed.",
+    changed_graphs=["observations", "patterns", "evidence"],
+    included_graphs=export.graphs,
+    revision_type="rc:FieldTrialRevision",
+    export_path=export.path,
+    graph_counts=export.graph_counts,
+)
+```
+
+When `graph_counts` is supplied, DoxyBase also records those graph roles as
+included review/snapshot context. Passing `included_graphs=export.graphs` makes
+that distinction explicit for readers.
 
 ## Revision Types
 

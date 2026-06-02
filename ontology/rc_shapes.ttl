@@ -779,6 +779,11 @@ rc:GraphRevisionShape a sh:NodeShape ;
         sh:message "GraphRevision resources must name at least one changedGraph string." ;
     ] ;
     sh:property [
+        sh:path rc:includedGraph ;
+        sh:datatype xsd:string ;
+        sh:message "includedGraph values must be graph role strings." ;
+    ] ;
+    sh:property [
         sh:path rc:createdAt ;
         sh:minCount 1 ;
         sh:maxCount 1 ;

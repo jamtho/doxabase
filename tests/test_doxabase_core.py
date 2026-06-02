@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 928
+    assert graphs["base_ontology"].triple_count == 932
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 840
+    assert graphs["base_shapes"].triple_count == 844
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -176,7 +176,8 @@ def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
     revision = db.record_graph_revision(
         summary="AIS map review bundle recorded",
         rationale="The exported bundle captures the current AIS map plus one review observation.",
-        changed_graphs=["map", "observations"],
+        changed_graphs=["observations"],
+        included_graphs=["map", "observations"],
         revision_type="rc:ExportRevision",
         created_at="2026-06-02T00:00:00Z",
         created_by="urn:doxabase:test-agent",
@@ -202,8 +203,10 @@ def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
 
     context = db.describe_resource(revision.revision_iri, graph="history")
     outgoing = {(triple.predicate, triple.object) for triple in context.outgoing}
-    assert (RC + "changedGraph", "map") in outgoing
+    assert (RC + "changedGraph", "map") not in outgoing
     assert (RC + "changedGraph", "observations") in outgoing
+    assert (RC + "includedGraph", "map") in outgoing
+    assert (RC + "includedGraph", "observations") in outgoing
     assert (RC + "exportPath", "/tmp/ais-review-bundle.trig") in outgoing
     assert any(triple.predicate == RC + "hasGraphSnapshot" for triple in context.outgoing)
 
@@ -779,6 +782,22 @@ def test_record_pattern_requires_support_or_source(tmp_path: Path) -> None:
         )
 
 
+def test_record_pattern_rejects_prose_map_implications(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="map_implications values"):
+        db.record_pattern(
+            summary="Prose map implication.",
+            pattern_text="This pattern should fail before TriG export.",
+            rationale="Map implications should point at map resources.",
+            pattern_targets=["https://example.test/enron#eml_messages"],
+            supporting_observations=["https://example.test/enron#obs"],
+            map_implications=[
+                "Map remains unchanged in this run; review rationale is in history.",
+            ],
+        )
+
+
 def test_agent_authored_pattern_rdf_requires_rationale(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(
@@ -820,6 +839,24 @@ def test_record_claim_observation_requires_source(tmp_path: Path) -> None:
             claim_kind="rc:CaveatClaim",
             claim_targets=["https://example.test/enron#eml_messages"],
             evidence_summary="Summary alone is not enough for source-backed evidence.",
+        )
+
+
+def test_record_claim_observation_rejects_prose_proposed_assertions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="proposed_assertions values"):
+        db.record_claim_observation(
+            summary="Prose proposed assertion.",
+            claim_text="This claim should fail before TriG export.",
+            claim_kind="rc:CaveatClaim",
+            claim_targets=["https://example.test/enron#eml_messages"],
+            evidence_sources=["tests/test_doxabase_core.py"],
+            proposed_assertions=[
+                "Map remains unchanged in this run; review rationale is in history.",
+            ],
         )
 
 

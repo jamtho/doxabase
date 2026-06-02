@@ -84,7 +84,9 @@ A useful trial usually asks the agent to:
 - use `export_trig` or `export_graph` when the trial should leave reviewable
   RDF artifacts under `/tmp`;
 - use `record_graph_revision` when the exported bundle or map change should
-  leave a durable rationale in `history`;
+  leave a durable rationale in `history`; keep `changed_graphs` limited to
+  graph roles that actually changed, and use `included_graphs` for unchanged
+  review context included in an export;
 - report what worked, what was awkward, and what should change next.
 
 ## Report Sections

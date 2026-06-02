@@ -92,6 +92,7 @@ revision = db.record_graph_revision(
     summary="Example workflow bundle exported",
     rationale="The claim and pattern explain why the child table map fact was recorded.",
     changed_graphs=["map", "observations", "patterns", "evidence"],
+    included_graphs=export.graphs,
     revision_type="rc:ExportRevision",
     supporting_claims=[claim.claim_iri],
     supporting_patterns=[pattern.pattern_iri],
@@ -130,8 +131,9 @@ agents. On partial dataset updates, omit `is_table` to preserve existing
 dataset/table typing.
 
 `record_graph_revision()` writes metadata to `history` about changed graph
-roles, rationale, supporting resources, validation results, export paths, and
-graph-count snapshots. It does not compute diffs or apply graph edits.
+roles, included review/export graph roles, rationale, supporting resources,
+validation results, export paths, and graph-count snapshots. It does not compute
+diffs or apply graph edits.
 
 `describe_resource()` returns outgoing and incoming triples for one resource.
 Use it after `list_entities(type="rc:Pattern")`,

@@ -1016,7 +1016,12 @@ rc:revisionRationale a rdf:Property ;
 rc:changedGraph a rdf:Property ;
     rdfs:domain rc:GraphRevision ;
     rdfs:range xsd:string ;
-    rdfs:comment "A graph role affected by or included in a revision event." .
+    rdfs:comment "A graph role whose contents changed or were consolidated in a revision event." .
+
+rc:includedGraph a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A graph role included in a review, validation, export, or snapshot context for a revision event." .
 
 rc:createdAt a rdf:Property ;
     rdfs:domain rc:GraphRevision ;

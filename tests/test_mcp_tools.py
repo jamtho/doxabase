@@ -122,7 +122,8 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         db,
         summary="Fixture review bundle exported",
         rationale="The MCP wrapper test records why this review bundle exists.",
-        changed_graphs=["map", "observations", "patterns", "evidence"],
+        changed_graphs=["observations", "patterns", "evidence"],
+        included_graphs=export_result["graphs"],
         revision_type="rc:ExportRevision",
         export_path=export_result["path"],
         graph_counts=export_result["graph_counts"],
@@ -137,6 +138,10 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["revision_type"] == "https://richcanopy.org/ns/rc#ExportRevision"
     assert result["graph"] == "history"
     assert result["triples"] > 0
+    context = db.describe_resource(result["revision_iri"], graph="history")
+    outgoing = {(triple.predicate, triple.object) for triple in context.outgoing}
+    assert ("https://richcanopy.org/ns/rc#changedGraph", "map") not in outgoing
+    assert ("https://richcanopy.org/ns/rc#includedGraph", "map") in outgoing
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
