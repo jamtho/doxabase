@@ -224,6 +224,11 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
     )
     assert any(
         related["relationship"] == "shares_identifier_with"
+        and related["relationship_label"]
+        == "Condition ID identifies the same market across datasets"
+        and related["relationship_kind"]
+        == "https://richcanopy.org/ns/rc#SharedIdentifier"
+        and related["relationship_kind_label"] == "SharedIdentifier"
         and related["label"] == "Trade Events"
         for related in result["related_datasets"]
     )

@@ -255,6 +255,9 @@ class RelatedDatasetDescription:
     description: str | None
     relationship: str
     relationship_iri: str | None
+    relationship_label: str | None
+    relationship_kind: str | None
+    relationship_kind_label: str | None
 
 
 @dataclass(frozen=True)
@@ -3453,12 +3456,34 @@ class DoxaBase:
         lookup_graphs: list[str],
     ) -> RelatedDatasetDescription:
         summary = self._resource_summary(lookup_graphs, iri)
+        relationship_types = (
+            self._types_from_graphs(lookup_graphs, relationship_iri)
+            if relationship_iri is not None
+            else []
+        )
+        relationship_kind = self._first_matching_type(
+            relationship_types,
+            [
+                "rc:ForeignKey",
+                "rc:SharedIdentifier",
+                "rc:Derivation",
+                "rc:Aggregation",
+                "rc:Relationship",
+            ],
+        )
         return RelatedDatasetDescription(
             iri=summary.iri,
             label=summary.label,
             description=summary.description,
             relationship=relationship,
             relationship_iri=relationship_iri,
+            relationship_label=(
+                self._display_label_from_graphs(lookup_graphs, relationship_iri)
+                if relationship_iri is not None
+                else None
+            ),
+            relationship_kind=relationship_kind,
+            relationship_kind_label=self._label_for_resource(relationship_kind),
         )
 
     def _optional_resource_summary(
@@ -3691,7 +3716,11 @@ class DoxaBase:
                         )
                     )
 
-        return self._resource_summaries(all_lookup_graphs, sorted(pattern_iris))
+        return self._resource_summaries(
+            all_lookup_graphs,
+            sorted(pattern_iris),
+            description_predicate="rc:patternText",
+        )
 
     def _first_matching_type(
         self,
@@ -3815,9 +3844,16 @@ class DoxaBase:
         self,
         graphs: list[str],
         iris: Iterable[str],
+        *,
+        description_predicate: str = "rdfs:comment",
     ) -> list[ResourceSummary]:
         return [
-            self._resource_summary(graphs, iri, display_label=True)
+            self._resource_summary(
+                graphs,
+                iri,
+                description_predicate=description_predicate,
+                display_label=True,
+            )
             for iri in iris
         ]
 

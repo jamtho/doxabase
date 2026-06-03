@@ -47,7 +47,9 @@ Returns bounded context for one dataset/table IRI: row semantics, entity and
 snapshot keys, columns, physical/value types, path templates, layouts, storage
 access descriptions, partitions, caveats with impact/severity, provenance
 transformations, relationships, directly related datasets, and linked patterns.
-Column summaries include column names and owning dataset context when available.
+Column summaries include column names and owning dataset context when available;
+related dataset entries include relationship labels/kinds, and linked patterns
+include pattern text as their description when available.
 
 `doxabase.describe_pattern`
 

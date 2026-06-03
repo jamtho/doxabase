@@ -450,6 +450,9 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert relationship_description.referential_integrity.iri == RC + "StrictIntegrity"
     assert any(
         related.iri == attachments and related.relationship == "target_of"
+        and related.relationship_label == "attachment parent doc id fk"
+        and related.relationship_kind == RC + "ForeignKey"
+        and related.relationship_kind_label == "ForeignKey"
         for related in description.related_datasets
     )
 
@@ -514,6 +517,9 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
     ]
     assert description.linked_patterns[0].label == (
         "doc_id is the stable message identity handle."
+    )
+    assert description.linked_patterns[0].description == (
+        "Use doc_id as the stable message identity handle."
     )
     assert description.path_templates == ["data/messages.parquet"]
 
