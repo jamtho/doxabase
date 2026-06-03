@@ -1,4 +1,5 @@
 from doxabase.core import (
+    CaveatDescription,
     ColumnDescription,
     ClaimDescription,
     ClaimObservationRecord,
@@ -21,6 +22,7 @@ from doxabase.core import (
     PatternDescription,
     PatternRecord,
     PhysicalLayoutDescription,
+    RelationshipDescription,
     RelatedDatasetDescription,
     ResourceContext,
     ResourceSummary,
@@ -29,10 +31,12 @@ from doxabase.core import (
     SearchResults,
     SourceSpanDescription,
     StorageAccessDescription,
+    TransformationDescription,
     ValidationResult,
 )
 
 __all__ = [
+    "CaveatDescription",
     "ColumnDescription",
     "ClaimDescription",
     "ClaimObservationRecord",
@@ -55,6 +59,7 @@ __all__ = [
     "PatternDescription",
     "PatternRecord",
     "PhysicalLayoutDescription",
+    "RelationshipDescription",
     "RelatedDatasetDescription",
     "ResourceContext",
     "ResourceSummary",
@@ -63,5 +68,6 @@ __all__ = [
     "SearchResults",
     "SourceSpanDescription",
     "StorageAccessDescription",
+    "TransformationDescription",
     "ValidationResult",
 ]

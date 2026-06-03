@@ -20,7 +20,7 @@ Current implementation status:
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
 - `describe_pattern()` for compact handoff context around pattern syntheses.
 - `describe_graph_revision()` for compact review of history records.
-- `describe_dataset()` for bounded table schema, layout, storage access, caveat, and provenance context.
+- `describe_dataset()` for bounded table schema, row semantics, relationship, caveat, provenance, and linked-pattern context.
 - `record_observation()` for point-in-time findings and linked evidence.
 - `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.
 - `record_pattern()` for syntheses that connect related findings to map targets.

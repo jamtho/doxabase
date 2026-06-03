@@ -170,6 +170,16 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
     )
 
     assert result["label"] == "Gamma Market Snapshots"
+    assert result["row_semantics"]["iri"] == "https://richcanopy.org/ns/rc#SnapshotRow"
+    assert result["entity_key"]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#mkt_id"
+    )
+    assert result["snapshot_timestamp"]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#mkt_fetched_at"
+    )
+    assert result["schema_stability"]["iri"] == (
+        "https://richcanopy.org/ns/rc#InferredSchema"
+    )
     assert "data/parquet/gamma/markets/dt={date}/hour={hour}.parquet" in result[
         "path_templates"
     ]
@@ -186,6 +196,22 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         caveat["description"]
         and "Parquet schemas are inferred" in caveat["description"]
         for caveat in result["caveats"]
+    )
+    assert any(
+        caveat["impact"]
+        and "physical types may vary" in caveat["impact"]
+        and caveat["severity"]["iri"] == "https://richcanopy.org/ns/rc#Moderate"
+        for caveat in result["caveats"]
+    )
+    assert {transformation["transformation_type"] for transformation in result[
+        "transformations"
+    ]} == {"collection", "compaction"}
+    assert any(
+        relationship["relationship_kind"]
+        == "https://richcanopy.org/ns/rc#SharedIdentifier"
+        and relationship["label"]
+        == "Condition ID identifies the same market across datasets"
+        for relationship in result["relationships"]
     )
 
 

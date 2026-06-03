@@ -266,6 +266,10 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
 
     assert description.label == "AIS Daily Broadcast Positions"
     assert "https://richcanopy.org/ns/rc#Table" in description.types
+    assert description.row_semantics is not None
+    assert description.row_semantics.iri == RC + "EventRow"
+    assert description.schema_stability is not None
+    assert description.schema_stability.iri == RC + "FixedSchema"
     assert description.path_templates == ["broadcasts/{year}/ais-{date}.parquet"]
     assert len(description.storage_accesses) == 1
     storage_access = description.storage_accesses[0]
@@ -292,10 +296,18 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     assert mmsi.nullable is True
     caveat_text = " ".join(caveat.description or "" for caveat in description.caveats)
     assert "MMSI does not reliably identify a single vessel" in caveat_text
+    assert any(caveat.severity is not None for caveat in description.caveats)
     assert any(
         provenance.description
         and "NOAA Marine Cadastre AIS data" in provenance.description
         for provenance in description.provenance
+    )
+    assert any(
+        relationship.relationship_kind == RC + "Derivation"
+        and relationship.derived_columns
+        and relationship.derived_columns[0].iri
+        == "https://richcanopy.org/example/manifest/ais#bc_timestamp"
+        for relationship in description.relationships
     )
     assert any(
         related.iri == "https://richcanopy.org/example/manifest/ais#DailyIndex"
@@ -395,6 +407,13 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
 
     description = db.describe_dataset(messages)
     assert description.label == "EML messages"
+    assert description.row_semantics is not None
+    assert description.row_semantics.iri == RC + "EventRow"
+    assert description.entity_key is not None
+    assert description.entity_key.iri == doc_id
+    assert description.schema_stability is not None
+    assert description.schema_stability.iri == RC + "FixedSchema"
+    assert description.row_count_snapshot == 123
     assert description.path_templates == [
         "data/parquet/eml_messages.parquet",
         "data/parquet/*.parquet",
@@ -407,6 +426,17 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert description.caveats[0].description == (
         "body_top is cleaned sender-new text, not raw email text."
     )
+    assert description.caveats[0].severity is not None
+    assert description.caveats[0].severity.iri == RC + "Moderate"
+    relationship_description = description.relationships[0]
+    assert relationship_description.relationship_kind == RC + "ForeignKey"
+    assert relationship_description.foreign_key_from is not None
+    assert relationship_description.foreign_key_from.iri == parent_doc_id
+    assert relationship_description.foreign_key_to is not None
+    assert relationship_description.foreign_key_to.iri == doc_id
+    assert relationship_description.declared is False
+    assert relationship_description.referential_integrity is not None
+    assert relationship_description.referential_integrity.iri == RC + "StrictIntegrity"
     assert any(
         related.iri == attachments and related.relationship == "target_of"
         for related in description.related_datasets
@@ -428,6 +458,52 @@ def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) 
     description = db.describe_dataset(table)
     assert description.label == "Updated messages"
     assert RC + "Table" in description.types
+
+
+def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/enron#"
+    messages = f"{base}eml_messages"
+    doc_id = f"{base}eml_messages__doc_id"
+    claim = f"{base}claim_doc_id_join"
+
+    db.record_map_dataset(
+        messages,
+        label="EML messages",
+        is_table=True,
+        path_templates=["data/messages.parquet"],
+    )
+    db.record_map_column(
+        doc_id,
+        table_iri=messages,
+        column_name="doc_id",
+        physical_type="rc:Varchar",
+    )
+    claim_result = db.record_claim_observation(
+        summary="doc_id behaves as the message entity key.",
+        claim_text="doc_id behaves as the message entity key.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=[doc_id],
+        claim_iri=claim,
+        evidence_summary="Unit test evidence.",
+        evidence_sources=["tests/test_doxabase_core.py"],
+    )
+    pattern_result = db.record_pattern(
+        summary="doc_id is the stable message identity handle.",
+        pattern_text="Use doc_id as the stable message identity handle.",
+        rationale="A claim about the table column supports this reader protocol.",
+        pattern_targets=[messages],
+        supporting_claims=[claim_result.claim_iri],
+    )
+
+    description = db.describe_dataset(messages)
+
+    assert [pattern.iri for pattern in description.linked_patterns] == [
+        pattern_result.pattern_iri
+    ]
+    assert description.linked_patterns[0].label == (
+        "doc_id is the stable message identity handle."
+    )
     assert description.path_templates == ["data/messages.parquet"]
 
 

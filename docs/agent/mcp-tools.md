@@ -43,7 +43,10 @@ Lexically searches literal RDF claims and returns matched resources with graph, 
 
 `doxabase.describe_dataset`
 
-Returns bounded context for one dataset/table IRI: columns, physical/value types, path templates, layouts, storage access descriptions, partitions, caveats, provenance, and directly related datasets.
+Returns bounded context for one dataset/table IRI: row semantics, entity and
+snapshot keys, columns, physical/value types, path templates, layouts, storage
+access descriptions, partitions, caveats with impact/severity, provenance
+transformations, relationships, directly related datasets, and linked patterns.
 
 `doxabase.describe_pattern`
 

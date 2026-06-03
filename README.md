@@ -53,8 +53,8 @@ Implemented:
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
 - `describe_pattern()` for compact handoff context around pattern syntheses.
 - `describe_graph_revision()` for compact history review over revision records.
-- `describe_dataset()` for bounded table schema, layout, storage access, caveat,
-  and provenance context.
+- `describe_dataset()` for bounded table schema, row semantics, relationship,
+  caveat, provenance, and linked-pattern context.
 - `record_observation()` for first-class observation and evidence resources.
 - `record_claim_observation()` for common observation, claim, evidence, and source-span capture.
 - `record_pattern()` for syntheses that connect related findings to map targets.
@@ -155,11 +155,11 @@ Useful first tool calls for an agent:
 5. `doxabase.graph_overview`
 6. `doxabase.search` for remembered terms, caveats, observations, or evidence
 7. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
-8. `doxabase.describe_pattern` for pattern handoff context after finding an
+8. `doxabase.describe_dataset` with a table IRI from `list_entities`
+9. `doxabase.describe_pattern` for pattern handoff context after finding an
    `rc:Pattern`
-9. `doxabase.describe_resource` for typed resources such as `rc:Claim`,
+10. `doxabase.describe_resource` for typed resources such as `rc:Claim`,
    `rc:Evidence`, or `rc:SourceSpan`
-10. `doxabase.describe_dataset` with a table IRI from `list_entities`
 11. `doxabase.record_observation` for useful point-in-time findings
 12. `doxabase.record_claim_observation` for structured claim observations
 13. `doxabase.record_pattern` for syntheses over related findings

@@ -255,20 +255,67 @@ class RelatedDatasetDescription:
 
 
 @dataclass(frozen=True)
+class CaveatDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    impact: str | None
+    severity: ResourceSummary | None
+
+
+@dataclass(frozen=True)
+class TransformationDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    transformation_type: str | None
+    transformation_description: str | None
+
+
+@dataclass(frozen=True)
+class RelationshipDescription:
+    iri: str
+    label: str | None
+    description: str | None
+    types: list[str]
+    relationship_kind: str | None
+    relationship_kind_label: str | None
+    source_dataset: ResourceSummary | None
+    target_dataset: ResourceSummary | None
+    foreign_key_from: ResourceSummary | None
+    foreign_key_to: ResourceSummary | None
+    referential_integrity: ResourceSummary | None
+    declared: bool | None
+    identifying_columns: list[ResourceSummary]
+    source_columns: list[ResourceSummary]
+    derived_columns: list[ResourceSummary]
+    derivation_function: ResourceSummary | None
+    derivation_properties: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
 class DatasetDescription:
     iri: str
     graph: str | None
     label: str | None
     description: str | None
     types: list[str]
+    row_semantics: ResourceSummary | None
+    entity_key: ResourceSummary | None
+    snapshot_timestamp: ResourceSummary | None
+    schema_stability: ResourceSummary | None
+    row_count_snapshot: int | None
     columns: list[ColumnDescription]
     path_templates: list[str]
     physical_layouts: list[PhysicalLayoutDescription]
     storage_accesses: list[StorageAccessDescription]
     partition_schemes: list[PartitionDescription]
-    caveats: list[ResourceSummary]
+    caveats: list[CaveatDescription]
     provenance: list[ResourceSummary]
+    transformations: list[TransformationDescription]
     related_datasets: list[RelatedDatasetDescription]
+    relationships: list[RelationshipDescription]
+    linked_patterns: list[ResourceSummary]
 
 
 @dataclass(frozen=True)
@@ -880,6 +927,7 @@ class DoxaBase:
             for column_iri in self._objects(data_graphs, dataset_iri, "rc:hasColumn")
         ]
         columns.sort(key=lambda column: (column.column_name or "", column.iri))
+        column_iris = [column.iri for column in columns]
 
         physical_layouts = [
             self._describe_physical_layout(layout_iri, data_graphs, lookup_graphs)
@@ -909,6 +957,20 @@ class DoxaBase:
                 direct_path_templates + partition_path_templates + access_path_templates
             )
         )
+        caveat_iris = self._objects(data_graphs, dataset_iri, "rc:hasKnownCaveat")
+        provenance_iris = self._objects(data_graphs, dataset_iri, "rc:hasProvenance")
+        relationships = self._relationships_for_dataset(
+            dataset_iri,
+            column_iris,
+            data_graphs,
+            lookup_graphs,
+        )
+        linked_pattern_targets = [
+            dataset_iri,
+            *column_iris,
+            *caveat_iris,
+            *(relationship.iri for relationship in relationships),
+        ]
 
         return DatasetDescription(
             iri=dataset_iri,
@@ -916,22 +978,35 @@ class DoxaBase:
             label=self._label_from_graphs(lookup_graphs, dataset_iri),
             description=self._description_from_graphs(lookup_graphs, dataset_iri),
             types=self._types_from_graphs(data_graphs, dataset_iri),
+            row_semantics=self._optional_resource_summary(
+                lookup_graphs,
+                self._first_object(data_graphs, dataset_iri, "rc:rowSemantics"),
+            ),
+            entity_key=self._optional_resource_summary(
+                lookup_graphs,
+                self._first_object(data_graphs, dataset_iri, "rc:entityKey"),
+            ),
+            snapshot_timestamp=self._optional_resource_summary(
+                lookup_graphs,
+                self._first_object(data_graphs, dataset_iri, "rc:snapshotTimestamp"),
+            ),
+            schema_stability=self._optional_resource_summary(
+                lookup_graphs,
+                self._first_object(data_graphs, dataset_iri, "rc:schemaStability"),
+            ),
+            row_count_snapshot=self._int_object(
+                data_graphs,
+                dataset_iri,
+                "rc:rowCountSnapshot",
+            ),
             columns=columns,
             path_templates=path_templates,
             physical_layouts=physical_layouts,
             storage_accesses=storage_accesses,
             partition_schemes=partition_schemes,
             caveats=[
-                self._resource_summary(
-                    lookup_graphs,
-                    caveat_iri,
-                    description_predicate="rc:caveatDescription",
-                )
-                for caveat_iri in self._objects(
-                    data_graphs,
-                    dataset_iri,
-                    "rc:hasKnownCaveat",
-                )
+                self._describe_caveat(caveat_iri, data_graphs, lookup_graphs)
+                for caveat_iri in caveat_iris
             ],
             provenance=[
                 self._resource_summary(
@@ -939,9 +1014,18 @@ class DoxaBase:
                     provenance_iri,
                     description_predicate="rc:sourceDescription",
                 )
-                for provenance_iri in self._objects(data_graphs, dataset_iri, "rc:hasProvenance")
+                for provenance_iri in provenance_iris
             ],
+            transformations=self._transformations_for_provenance(
+                provenance_iris,
+                data_graphs,
+                lookup_graphs,
+            ),
             related_datasets=self._related_datasets(dataset_iri, data_graphs, lookup_graphs),
+            relationships=relationships,
+            linked_patterns=self._linked_patterns_for_dataset(
+                linked_pattern_targets,
+            ),
         )
 
     def record_observation(
@@ -3281,6 +3365,250 @@ class DoxaBase:
             relationship=relationship,
             relationship_iri=relationship_iri,
         )
+
+    def _optional_resource_summary(
+        self,
+        graphs: list[str],
+        iri: str | None,
+    ) -> ResourceSummary | None:
+        if iri is None:
+            return None
+        return self._resource_summary(graphs, iri)
+
+    def _describe_caveat(
+        self,
+        caveat_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> CaveatDescription:
+        severity = self._first_object(data_graphs, caveat_iri, "rc:severity")
+        return CaveatDescription(
+            iri=caveat_iri,
+            label=self._display_label_from_graphs(lookup_graphs, caveat_iri),
+            description=self._first_object(data_graphs, caveat_iri, "rc:caveatDescription")
+            or self._description_from_graphs(lookup_graphs, caveat_iri),
+            impact=self._first_object(data_graphs, caveat_iri, "rc:impact"),
+            severity=self._optional_resource_summary(lookup_graphs, severity),
+        )
+
+    def _transformations_for_provenance(
+        self,
+        provenance_iris: Iterable[str],
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> list[TransformationDescription]:
+        transformation_iris: list[str] = []
+        for provenance_iri in provenance_iris:
+            transformation_iris.extend(
+                self._objects(data_graphs, provenance_iri, "rc:hasTransformation")
+            )
+        return [
+            self._describe_transformation(transformation_iri, data_graphs, lookup_graphs)
+            for transformation_iri in dict.fromkeys(transformation_iris)
+        ]
+
+    def _describe_transformation(
+        self,
+        transformation_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> TransformationDescription:
+        return TransformationDescription(
+            iri=transformation_iri,
+            label=self._display_label_from_graphs(lookup_graphs, transformation_iri),
+            description=self._description_from_graphs(lookup_graphs, transformation_iri),
+            transformation_type=self._first_object(
+                data_graphs,
+                transformation_iri,
+                "rc:transformationType",
+            ),
+            transformation_description=self._first_object(
+                data_graphs,
+                transformation_iri,
+                "rc:transformationDescription",
+            ),
+        )
+
+    def _relationships_for_dataset(
+        self,
+        dataset_iri: str,
+        column_iris: Iterable[str],
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> list[RelationshipDescription]:
+        relationship_iris: set[str] = set()
+        relationship_iris.update(
+            self._subjects(data_graphs, "rc:sourceDataset", dataset_iri)
+        )
+        relationship_iris.update(
+            self._subjects(data_graphs, "rc:targetDataset", dataset_iri)
+        )
+        for column_iri in column_iris:
+            for predicate in (
+                "rc:foreignKeyFrom",
+                "rc:foreignKeyTo",
+                "rc:identifyingColumn",
+                "rc:sourceColumn",
+                "rc:derivedColumn",
+            ):
+                relationship_iris.update(
+                    self._subjects(data_graphs, predicate, column_iri)
+                )
+
+        return [
+            self._describe_relationship(relationship_iri, data_graphs, lookup_graphs)
+            for relationship_iri in sorted(relationship_iris)
+        ]
+
+    def _describe_relationship(
+        self,
+        relationship_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> RelationshipDescription:
+        types = self._types_from_graphs(data_graphs, relationship_iri)
+        relationship_kind = self._first_matching_type(
+            types,
+            [
+                "rc:ForeignKey",
+                "rc:SharedIdentifier",
+                "rc:Derivation",
+                "rc:Aggregation",
+                "rc:Relationship",
+            ],
+        )
+        source_dataset = self._first_object(
+            data_graphs,
+            relationship_iri,
+            "rc:sourceDataset",
+        )
+        target_dataset = self._first_object(
+            data_graphs,
+            relationship_iri,
+            "rc:targetDataset",
+        )
+        foreign_key_from = self._first_object(
+            data_graphs,
+            relationship_iri,
+            "rc:foreignKeyFrom",
+        )
+        foreign_key_to = self._first_object(
+            data_graphs,
+            relationship_iri,
+            "rc:foreignKeyTo",
+        )
+        referential_integrity = self._first_object(
+            data_graphs,
+            relationship_iri,
+            "rc:referentialIntegrity",
+        )
+        derivation_function = self._first_object(
+            data_graphs,
+            relationship_iri,
+            "rc:derivationFunction",
+        )
+        return RelationshipDescription(
+            iri=relationship_iri,
+            label=self._display_label_from_graphs(lookup_graphs, relationship_iri),
+            description=self._description_from_graphs(lookup_graphs, relationship_iri),
+            types=types,
+            relationship_kind=relationship_kind,
+            relationship_kind_label=self._label_for_resource(relationship_kind),
+            source_dataset=self._optional_resource_summary(
+                lookup_graphs,
+                source_dataset,
+            ),
+            target_dataset=self._optional_resource_summary(
+                lookup_graphs,
+                target_dataset,
+            ),
+            foreign_key_from=self._optional_resource_summary(
+                lookup_graphs,
+                foreign_key_from,
+            ),
+            foreign_key_to=self._optional_resource_summary(
+                lookup_graphs,
+                foreign_key_to,
+            ),
+            referential_integrity=self._optional_resource_summary(
+                lookup_graphs,
+                referential_integrity,
+            ),
+            declared=self._bool_object(data_graphs, relationship_iri, "rc:declared"),
+            identifying_columns=self._resource_summaries(
+                lookup_graphs,
+                self._objects(data_graphs, relationship_iri, "rc:identifyingColumn"),
+            ),
+            source_columns=self._resource_summaries(
+                lookup_graphs,
+                self._objects(data_graphs, relationship_iri, "rc:sourceColumn"),
+            ),
+            derived_columns=self._resource_summaries(
+                lookup_graphs,
+                self._objects(data_graphs, relationship_iri, "rc:derivedColumn"),
+            ),
+            derivation_function=self._optional_resource_summary(
+                lookup_graphs,
+                derivation_function,
+            ),
+            derivation_properties=self._resource_summaries(
+                lookup_graphs,
+                self._objects(
+                    data_graphs,
+                    relationship_iri,
+                    "rc:hasDerivationProperty",
+                ),
+            ),
+        )
+
+    def _linked_patterns_for_dataset(
+        self,
+        target_iris: Iterable[str],
+    ) -> list[ResourceSummary]:
+        targets = list(dict.fromkeys(target_iris))
+        pattern_graphs = self._expand_graphs(["patterns"])
+        all_graphs = self._expand_graphs(["all"])
+        all_lookup_graphs = self._lookup_graphs(all_graphs)
+        pattern_iris: set[str] = set()
+
+        for target_iri in targets:
+            pattern_iris.update(
+                self._subjects(pattern_graphs, "rc:patternTarget", target_iri)
+            )
+            pattern_iris.update(
+                self._subjects(pattern_graphs, "rc:mapImplication", target_iri)
+            )
+            for claim_iri in self._subjects(all_graphs, "rc:claimTarget", target_iri):
+                pattern_iris.update(
+                    self._subjects(pattern_graphs, "rc:supportingClaim", claim_iri)
+                )
+            for observation_predicate in ("rc:observedAsset", "rc:observedColumn"):
+                for observation_iri in self._subjects(
+                    all_graphs,
+                    observation_predicate,
+                    target_iri,
+                ):
+                    pattern_iris.update(
+                        self._subjects(
+                            pattern_graphs,
+                            "rc:supportingObservation",
+                            observation_iri,
+                        )
+                    )
+
+        return self._resource_summaries(all_lookup_graphs, sorted(pattern_iris))
+
+    def _first_matching_type(
+        self,
+        types: Iterable[str],
+        candidates: Iterable[str],
+    ) -> str | None:
+        type_set = set(types)
+        for candidate in candidates:
+            expanded = self.expand_iri(candidate)
+            if expanded in type_set:
+                return expanded
+        return None
 
     def _resource_summary(
         self,

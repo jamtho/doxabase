@@ -105,10 +105,11 @@ revision = db.record_graph_revision(
 context = db.describe_resource(claim.claim_iri, graph="observations")
 ```
 
-`describe_dataset()` returns bounded context for one dataset/table: columns,
-physical/value types, path templates, physical layouts, storage access
-descriptions, partition schemes, caveats, provenance, and directly related
-datasets.
+`describe_dataset()` returns bounded context for one dataset/table: row
+semantics, entity/snapshot keys, columns, physical/value types, path templates,
+physical layouts, storage access descriptions, partition schemes, caveats with
+impact/severity, provenance transformations, relationships, directly related
+datasets, and linked patterns.
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are
