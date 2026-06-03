@@ -45,6 +45,12 @@ Lexically searches literal RDF claims and returns matched resources with graph, 
 
 Returns bounded context for one dataset/table IRI: columns, physical/value types, path templates, layouts, storage access descriptions, partitions, caveats, provenance, and directly related datasets.
 
+`doxabase.describe_pattern`
+
+Returns compact handoff context for one `rc:Pattern`: pattern text, rationale,
+targets, supporting observations, supporting claims, evidence/source spans, and
+map implications.
+
 `doxabase.record_observation`
 
 Records a structured observation in the `observations` graph. Optional evidence fields create a linked `rc:Evidence` resource in the `evidence` graph. Use this for point-in-time findings, profile counts, query outputs, and workflow notes that should remain available to later agents.

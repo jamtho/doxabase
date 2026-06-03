@@ -7,18 +7,19 @@ Use this sequence when arriving cold in a DoxaBase capsule.
 3. Call `doxabase.graph_overview` to inspect named graphs, counts, common classes, and predicates.
 4. Call `doxabase.search` when you have a remembered term, caveat, column name, source note, or question-shaped keyword.
 5. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.
-6. Use `doxabase.list_entities` with types such as `rc:Pattern`, `rc:Claim`, `rc:Evidence`, or `rc:SourceSpan`, then `doxabase.describe_resource`, when you need type-aware retrieval instead of lexical search.
-7. Call `doxabase.describe_dataset` for a bounded view of one table's columns, layouts, storage access, caveats, provenance, and related datasets.
-8. Use `doxabase.record_observation` when you discover a simple point-in-time finding that should remain available to later agents.
-9. Use `doxabase.record_claim_observation` for the common observation + claim + evidence + source-span pattern.
+6. Use `doxabase.list_entities` with `type="rc:Pattern"` followed by `doxabase.describe_pattern` when you need a compact handoff view of a pattern.
+7. Use `doxabase.list_entities` with types such as `rc:Claim`, `rc:Evidence`, or `rc:SourceSpan`, then `doxabase.describe_resource`, when you need generic type-aware retrieval instead of lexical search.
+8. Call `doxabase.describe_dataset` for a bounded view of one table's columns, layouts, storage access, caveats, provenance, and related datasets.
+9. Use `doxabase.record_observation` when you discover a simple point-in-time finding that should remain available to later agents.
+10. Use `doxabase.record_claim_observation` for the common observation + claim + evidence + source-span pattern.
    For more complex caveat, join, transformation, access, or source-span claims, write agent-authored observation RDF using the `observation_rdf` patterns.
-10. Use `doxabase.record_pattern` when several observations or claims belong together and explain a more durable pattern.
-11. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
-12. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
-13. Use `doxabase.record_graph_revision` after a meaningful graph change or
+11. Use `doxabase.record_pattern` when several observations or claims belong together and explain a more durable pattern.
+12. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
+13. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
+14. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph
     roles were included for review, and why.
-14. Use `doxabase.describe_graph_revision` when reviewing a history record.
+15. Use `doxabase.describe_graph_revision` when reviewing a history record.
 
 When adding future facts, choose graph roles by update pattern:
 

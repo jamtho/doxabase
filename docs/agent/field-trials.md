@@ -76,6 +76,8 @@ A useful trial usually asks the agent to:
 - use `record_claim_observation` for common structured claims;
 - use `record_pattern` when related findings should be synthesized before map
   updates;
+- use `describe_pattern` when checking whether synthesized lore can be taught
+  back compactly;
 - use map authoring helpers when the trial asks for a current-best scratch map;
 - use agent-authored RDF only for claims the helper cannot express cleanly;
 - use `list_entities`, `describe_resource`, `search`, and `graph_overview` to

@@ -300,6 +300,62 @@ class PatternRecord:
 
 
 @dataclass(frozen=True)
+class SourceSpanDescription:
+    iri: str
+    source_path: str | None
+    source_section: str | None
+    start_line: int | None
+    end_line: int | None
+    source_kind: str | None
+    source_kind_label: str | None
+
+
+@dataclass(frozen=True)
+class EvidenceDescription:
+    iri: str
+    label: str | None
+    summary: str | None
+    sources: list[str]
+    source_spans: list[SourceSpanDescription]
+
+
+@dataclass(frozen=True)
+class ClaimDescription:
+    iri: str
+    label: str | None
+    claim_text: str | None
+    claim_kind: str | None
+    claim_kind_label: str | None
+    claim_targets: list[ResourceSummary]
+    confidence: str | None
+    confidence_label: str | None
+    observation_status: str | None
+    observation_status_label: str | None
+    proposed_assertions: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
+class PatternDescription:
+    iri: str
+    graph: str | None
+    label: str | None
+    summary: str | None
+    pattern_text: str | None
+    rationale: str | None
+    pattern_targets: list[ResourceSummary]
+    supporting_observations: list[ResourceSummary]
+    supporting_claims: list[ClaimDescription]
+    evidence: list[EvidenceDescription]
+    confidence: str | None
+    confidence_label: str | None
+    observation_status: str | None
+    observation_status_label: str | None
+    pattern_stability: str | None
+    pattern_stability_label: str | None
+    map_implications: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
 class MapResourceRecord:
     iri: str
     resource_type: str
@@ -674,6 +730,77 @@ class DoxaBase:
             evidence=self._resource_summaries(
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
+            ),
+        )
+
+    def describe_pattern(
+        self,
+        iri: str,
+        *,
+        graph: str | None = "patterns",
+    ) -> PatternDescription:
+        pattern_iri = self.expand_iri(iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(data_graphs)
+        all_graphs = self._expand_graphs(["all"])
+        all_lookup_graphs = self._lookup_graphs(all_graphs)
+        if not self._subject_exists(pattern_iri, data_graphs):
+            graph_label = graph if graph is not None else "all graphs"
+            raise DoxaBaseError(f"Pattern '{iri}' was not found in {graph_label}")
+        if self.expand_iri("rc:Pattern") not in self._types_from_graphs(
+            data_graphs,
+            pattern_iri,
+        ):
+            raise DoxaBaseError(f"Resource '{iri}' is not an rc:Pattern")
+
+        confidence = self._first_object(data_graphs, pattern_iri, "rc:confidence")
+        observation_status = self._first_object(
+            data_graphs,
+            pattern_iri,
+            "rc:observationStatus",
+        )
+        pattern_stability = self._first_object(
+            data_graphs,
+            pattern_iri,
+            "rc:patternStability",
+        )
+
+        return PatternDescription(
+            iri=pattern_iri,
+            graph=graph,
+            label=self._display_label_from_graphs(lookup_graphs, pattern_iri),
+            summary=self._first_object(data_graphs, pattern_iri, "rc:summary"),
+            pattern_text=self._first_object(data_graphs, pattern_iri, "rc:patternText"),
+            rationale=self._first_object(data_graphs, pattern_iri, "rc:rationale"),
+            pattern_targets=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, pattern_iri, "rc:patternTarget"),
+            ),
+            supporting_observations=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, pattern_iri, "rc:supportingObservation"),
+            ),
+            supporting_claims=[
+                self._describe_claim(claim_iri, all_graphs, all_lookup_graphs)
+                for claim_iri in self._objects(
+                    data_graphs,
+                    pattern_iri,
+                    "rc:supportingClaim",
+                )
+            ],
+            evidence=[
+                self._describe_evidence(evidence_iri, all_graphs, all_lookup_graphs)
+                for evidence_iri in self._objects(data_graphs, pattern_iri, "rc:evidence")
+            ],
+            confidence=confidence,
+            confidence_label=self._label_for_resource(confidence),
+            observation_status=observation_status,
+            observation_status_label=self._label_for_resource(observation_status),
+            pattern_stability=pattern_stability,
+            pattern_stability_label=self._label_for_resource(pattern_stability),
+            map_implications=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, pattern_iri, "rc:mapImplication"),
             ),
         )
 
@@ -3250,6 +3377,81 @@ class DoxaBase:
             )
             for iri in iris
         ]
+
+    def _describe_claim(
+        self,
+        claim_iri: str,
+        graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> ClaimDescription:
+        claim_kind = self._first_object(graphs, claim_iri, "rc:claimKind")
+        confidence = self._first_object(graphs, claim_iri, "rc:confidence")
+        observation_status = self._first_object(
+            graphs,
+            claim_iri,
+            "rc:observationStatus",
+        )
+        return ClaimDescription(
+            iri=claim_iri,
+            label=self._display_label_from_graphs(lookup_graphs, claim_iri),
+            claim_text=self._first_object(graphs, claim_iri, "rc:claimText"),
+            claim_kind=claim_kind,
+            claim_kind_label=self._label_for_resource(claim_kind),
+            claim_targets=self._resource_summaries(
+                lookup_graphs,
+                self._objects(graphs, claim_iri, "rc:claimTarget"),
+            ),
+            confidence=confidence,
+            confidence_label=self._label_for_resource(confidence),
+            observation_status=observation_status,
+            observation_status_label=self._label_for_resource(observation_status),
+            proposed_assertions=self._resource_summaries(
+                lookup_graphs,
+                self._objects(graphs, claim_iri, "rc:proposedAssertion"),
+            ),
+        )
+
+    def _describe_evidence(
+        self,
+        evidence_iri: str,
+        graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> EvidenceDescription:
+        return EvidenceDescription(
+            iri=evidence_iri,
+            label=self._display_label_from_graphs(lookup_graphs, evidence_iri),
+            summary=self._first_object(graphs, evidence_iri, "rc:summary"),
+            sources=self._objects(graphs, evidence_iri, str(DCTERMS.source)),
+            source_spans=[
+                self._describe_source_span(span_iri, graphs)
+                for span_iri in self._objects(graphs, evidence_iri, "rc:sourceSpan")
+            ],
+        )
+
+    def _describe_source_span(
+        self,
+        source_span_iri: str,
+        graphs: list[str],
+    ) -> SourceSpanDescription:
+        source_kind = self._first_object(graphs, source_span_iri, "rc:sourceKind")
+        return SourceSpanDescription(
+            iri=source_span_iri,
+            source_path=self._first_object(graphs, source_span_iri, "rc:sourcePath"),
+            source_section=self._first_object(
+                graphs,
+                source_span_iri,
+                "rc:sourceSection",
+            ),
+            start_line=self._int_object(graphs, source_span_iri, "rc:startLine"),
+            end_line=self._int_object(graphs, source_span_iri, "rc:endLine"),
+            source_kind=source_kind,
+            source_kind_label=self._label_for_resource(source_kind),
+        )
+
+    def _label_for_resource(self, iri: str | None) -> str | None:
+        if iri is None:
+            return None
+        return self._label_from_graphs(self._expand_graphs(["ontology"]), iri)
 
     def _graph_revision_snapshots(
         self,

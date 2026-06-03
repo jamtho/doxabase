@@ -79,6 +79,10 @@ single claim really does point at a candidate map assertion.
 `proposed_assertions` and `map_implications` are resource links. Pass IRIs or
 CURIEs there; put prose in `claim_text`, `pattern_text`, or `rationale`.
 
+Use `doxabase.describe_pattern` when a pattern should teach a future reader how
+to think about a dataset. It returns the pattern, targets, supporting claims,
+observations, evidence/source spans, and map implications in one compact object.
+
 ## Relation To Map Helpers
 
 Patterns are not promoted automatically yet. If a pattern supports a map change,

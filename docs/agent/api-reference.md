@@ -139,11 +139,14 @@ diffs or apply graph edits.
 rationale, changed/included graph roles, graph-count snapshots, validation
 result, export path, and supporting observation/claim/pattern/evidence links.
 
+`describe_pattern()` returns compact handoff context for a pattern: pattern text,
+rationale, targets, supporting observations and claims, evidence/source spans,
+and map implications.
+
 `describe_resource()` returns outgoing and incoming triples for one resource.
-Use it after `list_entities(type="rc:Pattern")`,
-`list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence")`, or
-`list_entities(type="rc:SourceSpan")` when you need structured context rather
-than a lexical search result.
+Use it after `list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence")`,
+or `list_entities(type="rc:SourceSpan")` when you need generic structured
+context rather than a type-specific helper.
 
 `search()` lexically searches literal RDF claims and returns matched resources,
 their graph role, RDF types, matched predicate, matched text, and snippet. Use

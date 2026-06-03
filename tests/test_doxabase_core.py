@@ -780,6 +780,38 @@ def test_record_pattern_links_observations_claims_evidence_and_targets(
         result.pattern_iri
     )
 
+    description = db.describe_pattern(result.pattern_iri)
+    assert description.summary == "body_top behaves like cleaned top-level message text."
+    assert description.pattern_text is not None
+    assert "sender-new text" in description.pattern_text
+    assert description.rationale is not None
+    assert description.confidence == RC + "HighConfidence"
+    assert description.confidence_label == "high confidence"
+    assert description.observation_status == RC + "Checked"
+    assert description.observation_status_label == "checked"
+    assert description.pattern_stability == RC + "RepeatedPattern"
+    assert description.pattern_stability_label == "repeated pattern"
+    assert [target.iri for target in description.pattern_targets] == [
+        "https://example.test/enron#eml_messages__body_top"
+    ]
+    assert [support.iri for support in description.supporting_observations] == [
+        observation.observation_iri
+    ]
+    assert description.supporting_observations[0].label == (
+        "body_top was populated in the inspected local parquet profile."
+    )
+    assert [support.iri for support in description.supporting_claims] == [
+        claim.claim_iri
+    ]
+    assert description.supporting_claims[0].claim_text == (
+        "body_top is cleaned top-level message text."
+    )
+    assert description.evidence[0].source_spans[0].source_section == "Body processing"
+    assert description.evidence[0].source_spans[0].start_line == 186
+    assert [implication.iri for implication in description.map_implications] == [
+        "https://example.test/enron#caveat_body_processing_lossy"
+    ]
+
 
 def test_record_pattern_requires_support_or_source(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")

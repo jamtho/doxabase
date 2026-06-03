@@ -51,6 +51,7 @@ Implemented:
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
+- `describe_pattern()` for compact handoff context around pattern syntheses.
 - `describe_graph_revision()` for compact history review over revision records.
 - `describe_dataset()` for bounded table schema, layout, storage access, caveat,
   and provenance context.
@@ -154,18 +155,20 @@ Useful first tool calls for an agent:
 5. `doxabase.graph_overview`
 6. `doxabase.search` for remembered terms, caveats, observations, or evidence
 7. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
-8. `doxabase.describe_resource` for typed resources such as `rc:Pattern`,
-   `rc:Claim`, or `rc:Evidence`
-9. `doxabase.describe_dataset` with a table IRI from `list_entities`
-10. `doxabase.record_observation` for useful point-in-time findings
-11. `doxabase.record_claim_observation` for structured claim observations
-12. `doxabase.record_pattern` for syntheses over related findings
-13. `doxabase.record_map_dataset` and related map helpers for current-best facts
-14. `doxabase.validate_graph` with `scope="all"`
-15. `doxabase.export_trig` when you need a named-graph project review bundle
-16. `doxabase.record_graph_revision` when the bundle/change rationale should be
+8. `doxabase.describe_pattern` for pattern handoff context after finding an
+   `rc:Pattern`
+9. `doxabase.describe_resource` for typed resources such as `rc:Claim`,
+   `rc:Evidence`, or `rc:SourceSpan`
+10. `doxabase.describe_dataset` with a table IRI from `list_entities`
+11. `doxabase.record_observation` for useful point-in-time findings
+12. `doxabase.record_claim_observation` for structured claim observations
+13. `doxabase.record_pattern` for syntheses over related findings
+14. `doxabase.record_map_dataset` and related map helpers for current-best facts
+15. `doxabase.validate_graph` with `scope="all"`
+16. `doxabase.export_trig` when you need a named-graph project review bundle
+17. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-17. `doxabase.describe_graph_revision` when reviewing a history record
+18. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -175,6 +178,7 @@ Current MCP tools:
 - `doxabase.search`
 - `doxabase.list_entities`
 - `doxabase.describe_resource`
+- `doxabase.describe_pattern`
 - `doxabase.describe_graph_revision`
 - `doxabase.describe_dataset`
 - `doxabase.record_observation`

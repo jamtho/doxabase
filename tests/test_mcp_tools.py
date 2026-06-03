@@ -7,6 +7,7 @@ from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     describe_dataset_tool,
     describe_graph_revision_tool,
+    describe_pattern_tool,
     describe_resource_tool,
     export_graph_tool,
     export_trig_tool,
@@ -40,6 +41,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_dataset" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
+    assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
     assert "doxabase.record_pattern" in tool_names
@@ -293,6 +295,7 @@ def test_record_pattern_tool_returns_json_like_payload(tmp_path: Path) -> None:
         iri=result["pattern_iri"],
         graph="patterns",
     )
+    pattern_description = describe_pattern_tool(db, result["pattern_iri"])
 
     assert result["pattern_iri"] in {pattern["iri"] for pattern in patterns["entities"]}
     assert patterns["entities"][0]["label"] == (
@@ -302,6 +305,15 @@ def test_record_pattern_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert any(
         triple["predicate"] == "https://richcanopy.org/ns/rc#supportingClaim"
         for triple in context["outgoing"]
+    )
+    assert pattern_description["summary"] == (
+        "parent_doc_id behaves as the attachment-to-message join."
+    )
+    assert pattern_description["supporting_claims"][0]["claim_text"] == (
+        "The child table joins to the parent table by parent_doc_id."
+    )
+    assert pattern_description["evidence"][0]["source_spans"][0]["source_section"] == (
+        "Attachments"
     )
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
