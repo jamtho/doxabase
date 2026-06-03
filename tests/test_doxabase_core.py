@@ -307,6 +307,9 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
         and relationship.derived_columns
         and relationship.derived_columns[0].iri
         == "https://richcanopy.org/example/manifest/ais#bc_timestamp"
+        and relationship.derived_columns[0].column_name == "timestamp"
+        and relationship.derived_columns[0].owning_dataset_label
+        == "AIS Daily Broadcast Positions"
         for relationship in description.relationships
     )
     assert any(
@@ -390,8 +393,6 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         f"{base}eml_attachment_parent_doc_id_fk",
         relationship_type="foreign_key",
         label="attachment parent doc id fk",
-        source_dataset=attachments,
-        target_dataset=messages,
         from_column=parent_doc_id,
         to_column=doc_id,
         declared=False,
@@ -411,6 +412,9 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert description.row_semantics.iri == RC + "EventRow"
     assert description.entity_key is not None
     assert description.entity_key.iri == doc_id
+    assert description.entity_key.column_name == "doc_id"
+    assert description.entity_key.owning_dataset_iri == messages
+    assert description.entity_key.owning_dataset_label == "EML messages"
     assert description.schema_stability is not None
     assert description.schema_stability.iri == RC + "FixedSchema"
     assert description.row_count_snapshot == 123
@@ -430,10 +434,17 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert description.caveats[0].severity.iri == RC + "Moderate"
     relationship_description = description.relationships[0]
     assert relationship_description.relationship_kind == RC + "ForeignKey"
+    assert relationship_description.relationship_kind_label == "ForeignKey"
     assert relationship_description.foreign_key_from is not None
     assert relationship_description.foreign_key_from.iri == parent_doc_id
+    assert relationship_description.foreign_key_from.column_name == "parent_doc_id"
+    assert relationship_description.foreign_key_from.owning_dataset_label == (
+        "EML attachments"
+    )
     assert relationship_description.foreign_key_to is not None
     assert relationship_description.foreign_key_to.iri == doc_id
+    assert relationship_description.foreign_key_to.column_name == "doc_id"
+    assert relationship_description.foreign_key_to.owning_dataset_label == "EML messages"
     assert relationship_description.declared is False
     assert relationship_description.referential_integrity is not None
     assert relationship_description.referential_integrity.iri == RC + "StrictIntegrity"

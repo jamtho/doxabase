@@ -174,9 +174,12 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
     assert result["entity_key"]["iri"] == (
         "https://richcanopy.org/example/manifest/polymarket#mkt_id"
     )
+    assert result["entity_key"]["column_name"] == "id"
+    assert result["entity_key"]["owning_dataset_label"] == "Gamma Market Snapshots"
     assert result["snapshot_timestamp"]["iri"] == (
         "https://richcanopy.org/example/manifest/polymarket#mkt_fetched_at"
     )
+    assert result["snapshot_timestamp"]["column_name"] == "_fetched_at"
     assert result["schema_stability"]["iri"] == (
         "https://richcanopy.org/ns/rc#InferredSchema"
     )
@@ -209,9 +212,20 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
     assert any(
         relationship["relationship_kind"]
         == "https://richcanopy.org/ns/rc#SharedIdentifier"
+        and relationship["relationship_kind_label"] == "SharedIdentifier"
         and relationship["label"]
         == "Condition ID identifies the same market across datasets"
+        and any(
+            column["column_name"] == "conditionId"
+            and column["owning_dataset_label"] == "Gamma Market Snapshots"
+            for column in relationship["identifying_columns"]
+        )
         for relationship in result["relationships"]
+    )
+    assert any(
+        related["relationship"] == "shares_identifier_with"
+        and related["label"] == "Trade Events"
+        for related in result["related_datasets"]
     )
 
 

@@ -109,7 +109,10 @@ context = db.describe_resource(claim.claim_iri, graph="observations")
 semantics, entity/snapshot keys, columns, physical/value types, path templates,
 physical layouts, storage access descriptions, partition schemes, caveats with
 impact/severity, provenance transformations, relationships, directly related
-datasets, and linked patterns.
+datasets, and linked patterns. Column resource summaries include `column_name`
+and owning dataset context when the map provides it; related datasets may be
+inferred from column-level relationships even when a relationship resource lacks
+explicit source/target dataset triples.
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are

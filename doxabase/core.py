@@ -195,6 +195,9 @@ class ResourceSummary:
     iri: str
     label: str | None
     description: str | None
+    column_name: str | None = None
+    owning_dataset_iri: str | None = None
+    owning_dataset_label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1021,7 +1024,12 @@ class DoxaBase:
                 data_graphs,
                 lookup_graphs,
             ),
-            related_datasets=self._related_datasets(dataset_iri, data_graphs, lookup_graphs),
+            related_datasets=self._related_datasets(
+                dataset_iri,
+                data_graphs,
+                lookup_graphs,
+                relationships=relationships,
+            ),
             relationships=relationships,
             linked_patterns=self._linked_patterns_for_dataset(
                 linked_pattern_targets,
@@ -3298,6 +3306,8 @@ class DoxaBase:
         dataset_iri: str,
         data_graphs: list[str],
         lookup_graphs: list[str],
+        *,
+        relationships: Iterable[RelationshipDescription] = (),
     ) -> list[RelatedDatasetDescription]:
         related: list[RelatedDatasetDescription] = []
         for companion_iri in self._objects(data_graphs, dataset_iri, "rc:companionOf"):
@@ -3339,6 +3349,14 @@ class DoxaBase:
                         lookup_graphs,
                     )
                 )
+        for relationship in relationships:
+            related.extend(
+                self._related_datasets_from_column_relationship(
+                    dataset_iri,
+                    relationship,
+                    lookup_graphs,
+                )
+            )
         return list(
             {
                 (
@@ -3349,6 +3367,83 @@ class DoxaBase:
                 for item in related
             }.values()
         )
+
+    def _related_datasets_from_column_relationship(
+        self,
+        dataset_iri: str,
+        relationship: RelationshipDescription,
+        lookup_graphs: list[str],
+    ) -> list[RelatedDatasetDescription]:
+        related: list[RelatedDatasetDescription] = []
+        if relationship.foreign_key_from is not None and relationship.foreign_key_to is not None:
+            from_dataset = relationship.foreign_key_from.owning_dataset_iri
+            to_dataset = relationship.foreign_key_to.owning_dataset_iri
+            if from_dataset == dataset_iri and to_dataset and to_dataset != dataset_iri:
+                related.append(
+                    self._related_dataset(
+                        to_dataset,
+                        "source_of",
+                        relationship.iri,
+                        lookup_graphs,
+                    )
+                )
+            if to_dataset == dataset_iri and from_dataset and from_dataset != dataset_iri:
+                related.append(
+                    self._related_dataset(
+                        from_dataset,
+                        "target_of",
+                        relationship.iri,
+                        lookup_graphs,
+                    )
+                )
+
+        shared_identifier_datasets = {
+            column.owning_dataset_iri
+            for column in relationship.identifying_columns
+            if column.owning_dataset_iri is not None
+        }
+        if dataset_iri in shared_identifier_datasets:
+            for related_dataset_iri in sorted(shared_identifier_datasets - {dataset_iri}):
+                related.append(
+                    self._related_dataset(
+                        related_dataset_iri,
+                        "shares_identifier_with",
+                        relationship.iri,
+                        lookup_graphs,
+                    )
+                )
+
+        source_datasets = {
+            column.owning_dataset_iri
+            for column in relationship.source_columns
+            if column.owning_dataset_iri is not None
+        }
+        derived_datasets = {
+            column.owning_dataset_iri
+            for column in relationship.derived_columns
+            if column.owning_dataset_iri is not None
+        }
+        if dataset_iri in source_datasets:
+            for related_dataset_iri in sorted(derived_datasets - {dataset_iri}):
+                related.append(
+                    self._related_dataset(
+                        related_dataset_iri,
+                        "source_of_derivation",
+                        relationship.iri,
+                        lookup_graphs,
+                    )
+                )
+        if dataset_iri in derived_datasets:
+            for related_dataset_iri in sorted(source_datasets - {dataset_iri}):
+                related.append(
+                    self._related_dataset(
+                        related_dataset_iri,
+                        "derived_from",
+                        relationship.iri,
+                        lookup_graphs,
+                    )
+                )
+        return related
 
     def _related_dataset(
         self,
@@ -3616,13 +3711,28 @@ class DoxaBase:
         iri: str,
         *,
         description_predicate: str = "rdfs:comment",
+        display_label: bool = False,
     ) -> ResourceSummary:
+        column_name = self._first_object(graphs, iri, "rc:columnName")
+        owning_dataset_iri = self._first_owner_dataset_iri(graphs, iri)
+        label = (
+            self._display_label_from_graphs(graphs, iri)
+            if display_label
+            else self._label_from_graphs(graphs, iri)
+        )
         return ResourceSummary(
             iri=iri,
-            label=self._label_from_graphs(graphs, iri),
+            label=label or column_name or self._local_name(iri),
             description=(
                 self._first_object(graphs, iri, description_predicate)
                 or self._description_from_graphs(graphs, iri)
+            ),
+            column_name=column_name,
+            owning_dataset_iri=owning_dataset_iri,
+            owning_dataset_label=(
+                self._display_label_from_graphs(graphs, owning_dataset_iri)
+                if owning_dataset_iri is not None
+                else None
             ),
         )
 
@@ -3664,6 +3774,15 @@ class DoxaBase:
         objects = self._objects(graphs, subject, predicate)
         return objects[0] if objects else None
 
+    def _first_subject(
+        self,
+        graphs: list[str],
+        predicate: str,
+        object_value: str,
+    ) -> str | None:
+        subjects = self._subjects(graphs, predicate, object_value)
+        return subjects[0] if subjects else None
+
     def _bool_object(self, graphs: list[str], subject: str, predicate: str) -> bool | None:
         value = self._first_object(graphs, subject, predicate)
         if value is None:
@@ -3698,13 +3817,12 @@ class DoxaBase:
         iris: Iterable[str],
     ) -> list[ResourceSummary]:
         return [
-            ResourceSummary(
-                iri=iri,
-                label=self._display_label_from_graphs(graphs, iri),
-                description=self._description_from_graphs(graphs, iri),
-            )
+            self._resource_summary(graphs, iri, display_label=True)
             for iri in iris
         ]
+
+    def _first_owner_dataset_iri(self, graphs: list[str], iri: str) -> str | None:
+        return self._first_subject(graphs, "rc:hasColumn", iri)
 
     def _describe_claim(
         self,
@@ -3779,7 +3897,17 @@ class DoxaBase:
     def _label_for_resource(self, iri: str | None) -> str | None:
         if iri is None:
             return None
-        return self._label_from_graphs(self._expand_graphs(["ontology"]), iri)
+        return self._label_from_graphs(
+            self._expand_graphs(["ontology"]),
+            iri,
+        ) or self._local_name(iri)
+
+    def _local_name(self, iri: str) -> str | None:
+        if "#" in iri:
+            return iri.rsplit("#", 1)[1]
+        if "/" in iri:
+            return iri.rstrip("/").rsplit("/", 1)[1]
+        return None
 
     def _graph_revision_snapshots(
         self,
