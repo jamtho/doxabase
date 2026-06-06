@@ -113,8 +113,9 @@ datasets, and linked patterns. Column resource summaries include `column_name`
 and owning dataset context when the map provides it; related datasets may be
 inferred from column-level relationships even when a relationship resource lacks
 explicit source/target dataset triples. Related dataset entries include
-relationship labels/kinds, and linked pattern summaries use the pattern text as
-their description when available.
+relationship labels/kinds; `related_dataset_groups` groups repeated links by
+target dataset and lists the relationship reasons and involved columns. Linked
+pattern summaries use the pattern text as their description when available.
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are

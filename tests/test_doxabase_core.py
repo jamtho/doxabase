@@ -455,6 +455,19 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         and related.relationship_kind_label == "ForeignKey"
         for related in description.related_datasets
     )
+    assert len(description.related_dataset_groups) == 1
+    related_group = description.related_dataset_groups[0]
+    assert related_group.iri == attachments
+    assert related_group.label == "EML attachments"
+    assert len(related_group.reasons) == 1
+    related_reason = related_group.reasons[0]
+    assert related_reason.relationship == "target_of"
+    assert related_reason.relationship_label == "attachment parent doc id fk"
+    assert related_reason.relationship_kind_label == "ForeignKey"
+    assert {column.column_name for column in related_reason.columns} == {
+        "doc_id",
+        "parent_doc_id",
+    }
 
 
 def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) -> None:

@@ -232,6 +232,26 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         and related["label"] == "Trade Events"
         for related in result["related_datasets"]
     )
+    trade_group = next(
+        group
+        for group in result["related_dataset_groups"]
+        if group["label"] == "Trade Events"
+    )
+    assert any(
+        reason["relationship"] == "shares_identifier_with"
+        and reason["relationship_label"]
+        == "Condition ID identifies the same market across datasets"
+        and reason["relationship_kind_label"] == "SharedIdentifier"
+        and {
+            (column["owning_dataset_label"], column["column_name"])
+            for column in reason["columns"]
+        }
+        >= {
+            ("Gamma Market Snapshots", "conditionId"),
+            ("Trade Events", "conditionId"),
+        }
+        for reason in trade_group["reasons"]
+    )
 
 
 def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> None:

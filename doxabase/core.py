@@ -261,6 +261,24 @@ class RelatedDatasetDescription:
 
 
 @dataclass(frozen=True)
+class RelatedDatasetReason:
+    relationship: str
+    relationship_iri: str | None
+    relationship_label: str | None
+    relationship_kind: str | None
+    relationship_kind_label: str | None
+    columns: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
+class RelatedDatasetGroup:
+    iri: str
+    label: str | None
+    description: str | None
+    reasons: list[RelatedDatasetReason]
+
+
+@dataclass(frozen=True)
 class CaveatDescription:
     iri: str
     label: str | None
@@ -320,6 +338,7 @@ class DatasetDescription:
     provenance: list[ResourceSummary]
     transformations: list[TransformationDescription]
     related_datasets: list[RelatedDatasetDescription]
+    related_dataset_groups: list[RelatedDatasetGroup]
     relationships: list[RelationshipDescription]
     linked_patterns: list[ResourceSummary]
 
@@ -977,6 +996,12 @@ class DoxaBase:
             *caveat_iris,
             *(relationship.iri for relationship in relationships),
         ]
+        related_datasets = self._related_datasets(
+            dataset_iri,
+            data_graphs,
+            lookup_graphs,
+            relationships=relationships,
+        )
 
         return DatasetDescription(
             iri=dataset_iri,
@@ -1027,11 +1052,11 @@ class DoxaBase:
                 data_graphs,
                 lookup_graphs,
             ),
-            related_datasets=self._related_datasets(
+            related_datasets=related_datasets,
+            related_dataset_groups=self._related_dataset_groups(
                 dataset_iri,
-                data_graphs,
-                lookup_graphs,
-                relationships=relationships,
+                related_datasets,
+                relationships,
             ),
             relationships=relationships,
             linked_patterns=self._linked_patterns_for_dataset(
@@ -3484,6 +3509,106 @@ class DoxaBase:
             ),
             relationship_kind=relationship_kind,
             relationship_kind_label=self._label_for_resource(relationship_kind),
+        )
+
+    def _related_dataset_groups(
+        self,
+        dataset_iri: str,
+        related_datasets: Iterable[RelatedDatasetDescription],
+        relationships: Iterable[RelationshipDescription],
+    ) -> list[RelatedDatasetGroup]:
+        relationships_by_iri = {
+            relationship.iri: relationship
+            for relationship in relationships
+        }
+        groups: dict[str, RelatedDatasetDescription] = {}
+        reasons_by_group: dict[str, list[RelatedDatasetReason]] = {}
+        seen_reasons: set[tuple[str, str, str | None]] = set()
+
+        for related in related_datasets:
+            groups.setdefault(related.iri, related)
+            reasons_by_group.setdefault(related.iri, [])
+
+            reason_key = (related.iri, related.relationship, related.relationship_iri)
+            if reason_key in seen_reasons:
+                continue
+            seen_reasons.add(reason_key)
+            relationship = (
+                relationships_by_iri.get(related.relationship_iri)
+                if related.relationship_iri is not None
+                else None
+            )
+            reasons_by_group[related.iri].append(
+                RelatedDatasetReason(
+                    relationship=related.relationship,
+                    relationship_iri=related.relationship_iri,
+                    relationship_label=related.relationship_label,
+                    relationship_kind=related.relationship_kind,
+                    relationship_kind_label=related.relationship_kind_label,
+                    columns=(
+                        self._relationship_columns_between_datasets(
+                            dataset_iri,
+                            related.iri,
+                            relationship,
+                        )
+                        if relationship is not None
+                        else []
+                    ),
+                )
+            )
+
+        return [
+            RelatedDatasetGroup(
+                iri=related.iri,
+                label=related.label,
+                description=related.description,
+                reasons=sorted(
+                    reasons_by_group[related.iri],
+                    key=lambda reason: (
+                        reason.relationship_kind_label or "",
+                        reason.relationship_label or "",
+                        reason.relationship,
+                    ),
+                ),
+            )
+            for related in sorted(
+                groups.values(),
+                key=lambda item: (item.label or "", item.iri),
+            )
+        ]
+
+    def _relationship_columns_between_datasets(
+        self,
+        dataset_iri: str,
+        related_dataset_iri: str,
+        relationship: RelationshipDescription,
+    ) -> list[ResourceSummary]:
+        candidate_columns: list[ResourceSummary] = []
+        for column in (
+            relationship.foreign_key_from,
+            relationship.foreign_key_to,
+            *relationship.identifying_columns,
+            *relationship.source_columns,
+            *relationship.derived_columns,
+        ):
+            if column is not None and column.owning_dataset_iri in {
+                dataset_iri,
+                related_dataset_iri,
+            }:
+                candidate_columns.append(column)
+
+        return list(
+            {
+                column.iri: column
+                for column in sorted(
+                    candidate_columns,
+                    key=lambda item: (
+                        item.owning_dataset_label or "",
+                        item.column_name or "",
+                        item.iri,
+                    ),
+                )
+            }.values()
         )
 
     def _optional_resource_summary(
