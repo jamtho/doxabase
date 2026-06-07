@@ -78,6 +78,9 @@ A useful trial usually asks the agent to:
   updates;
 - use `stage_graph_revision` when a hunch or candidate systematisation should
   be preserved without becoming durable map truth yet;
+- use `stage_systematisation` when one modelling hunch has several plausible
+  RDF framings, especially if the hunch may need pattern-first and
+  ontology-first alternatives;
 - use `describe_pattern` when checking whether synthesized lore can be taught
   back compactly;
 - use map authoring helpers when the trial asks for a current-best scratch map;
@@ -96,12 +99,12 @@ A useful trial usually asks the agent to:
 - use `describe_graph_revision` to inspect the resulting history record;
 - report what worked, what was awkward, and what should change next.
 
-For promotion-helper trials, include at least one awkward systematisation that
-does not fit neatly into current helper templates. The agent should be allowed
-to propose a new project vocabulary term, an ontology extension, or several
-alternative RDF framings. Treat it as a failure if the workflow pushes the agent
-to choose only familiar map facts when a deeper graph concept would be more
-natural.
+For systematisation-helper trials, include at least one awkward systematisation
+that does not fit neatly into current helper templates. The agent should be
+allowed to propose a new project vocabulary term, an ontology extension, or
+several alternative RDF framings. Treat it as a failure if the workflow pushes
+the agent to choose only familiar map facts when a deeper graph concept would be
+more natural.
 
 ## Report Sections
 

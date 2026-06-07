@@ -181,6 +181,13 @@ without mutating the target graph. Pass Turtle payloads in `additions` and/or
 patch RDF, previews before/after counts, runs SHACL validation over the preview,
 and records `rc:GraphPatch` entries for later review.
 
+`stage_systematisation()` stages one or more caller-authored RDF framings for a
+modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
+`framings`. Each framing can use `graph` + `content` shorthand or full
+`additions` / `removals` patch lists. Later framings are linked as alternatives
+to the first by default. This is a drafting and validation scaffold, not an
+ontology decision engine.
+
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, changed/included graph roles, graph-count snapshots, validation
 result, export path, and supporting observation/claim/pattern/evidence links.

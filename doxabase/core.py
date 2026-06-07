@@ -171,6 +171,30 @@ class StagedGraphRevisionRecord:
 
 
 @dataclass(frozen=True)
+class SystematisationFramingRecord:
+    label: str
+    rationale: str | None
+    target_graphs: list[str]
+    stance: str
+    revision_iri: str
+    patch_count: int
+    triple_count: int
+    validation_scope: str
+    validation_conforms: bool
+    validation_result_count: int
+
+
+@dataclass(frozen=True)
+class SystematisationDraftRecord:
+    summary: str
+    intent: str
+    anchors: list[str]
+    warnings: list[str]
+    framings: list[SystematisationFramingRecord]
+    staged_revisions: list[StagedGraphRevisionRecord]
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionExportRecord:
     path: str
     format: str
@@ -4049,6 +4073,143 @@ class DoxaBase:
             validation_result_count=validation.result_count,
         )
 
+    def stage_systematisation(
+        self,
+        summary: str,
+        intent: str,
+        framings: Iterable[Mapping[str, Any]],
+        *,
+        anchors: Iterable[str] | str | None = None,
+        rationale: str | None = None,
+        default_stance: str = "rc:ExploratoryHunch",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: Iterable[str] | str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        supporting_observations: Iterable[str] | str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        supporting_patterns: Iterable[str] | str | None = None,
+        evidence: Iterable[str] | str | None = None,
+        alternative_to: str | None = None,
+        link_alternatives: bool = True,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ] = "all",
+    ) -> SystematisationDraftRecord:
+        summary_value = summary.strip()
+        if not summary_value:
+            raise DoxaBaseError("summary must not be empty")
+        intent_value = intent.strip()
+        if not intent_value:
+            raise DoxaBaseError("intent must not be empty")
+        rationale_value = rationale.strip() if rationale is not None else None
+        anchor_values = self._string_values("anchors", anchors)
+        self._validate_resource_values("anchors", anchor_values)
+        framing_values = list(framings)
+        if not framing_values:
+            raise DoxaBaseError("stage_systematisation requires at least one framing")
+
+        warnings: list[str] = []
+        if not anchor_values:
+            warnings.append(
+                "No anchors were supplied; future reviewers may have less context."
+            )
+        if len(framing_values) > 1 and link_alternatives:
+            warnings.append(
+                "Multiple framings were staged; later revisions are linked as alternatives to the first."
+            )
+
+        staged_revisions: list[StagedGraphRevisionRecord] = []
+        framing_records: list[SystematisationFramingRecord] = []
+        first_revision_iri: str | None = None
+        for index, framing in enumerate(framing_values, start=1):
+            if not isinstance(framing, Mapping):
+                raise DoxaBaseError("framings entries must be objects")
+            label = str(
+                framing.get("label") or framing.get("name") or f"Framing {index}"
+            ).strip()
+            if not label:
+                raise DoxaBaseError("framing label must not be empty")
+            framing_rationale = str(framing.get("rationale") or "").strip() or None
+            stance = str(framing.get("stance") or default_stance).strip()
+            if not stance:
+                raise DoxaBaseError("framing stance must not be empty")
+            additions, removals = self._systematisation_patch_specs(framing)
+            framing_scope = str(
+                framing.get("validation_scope") or validation_scope
+            ).strip()
+            if not framing_scope:
+                raise DoxaBaseError("validation_scope must not be empty")
+            revision_summary = (
+                f"{summary_value}: {label}"
+                if len(framing_values) > 1
+                else summary_value
+            )
+            revision_rationale = self._systematisation_rationale(
+                intent=intent_value,
+                anchors=anchor_values,
+                overall_rationale=rationale_value,
+                framing_label=label,
+                framing_rationale=framing_rationale,
+            )
+            framing_alternative_to = str(framing.get("alternative_to") or "").strip()
+            if framing_alternative_to:
+                alternative_target = framing_alternative_to
+            elif index == 1:
+                alternative_target = alternative_to
+            elif link_alternatives:
+                alternative_target = first_revision_iri
+            else:
+                alternative_target = alternative_to
+
+            staged = self.stage_graph_revision(
+                summary=revision_summary,
+                rationale=revision_rationale,
+                additions=additions,
+                removals=removals,
+                stance=stance,
+                revision_type=revision_type,
+                included_graphs=included_graphs,
+                created_at=created_at,
+                created_by=created_by,
+                supporting_observations=supporting_observations,
+                supporting_claims=supporting_claims,
+                supporting_patterns=supporting_patterns,
+                evidence=evidence,
+                alternative_to=alternative_target,
+                validation_scope=framing_scope,  # type: ignore[arg-type]
+            )
+            if first_revision_iri is None:
+                first_revision_iri = staged.revision_iri
+            staged_revisions.append(staged)
+            framing_records.append(
+                SystematisationFramingRecord(
+                    label=label,
+                    rationale=framing_rationale,
+                    target_graphs=staged.changed_graphs,
+                    stance=staged.revision_stance,
+                    revision_iri=staged.revision_iri,
+                    patch_count=len(staged.patches),
+                    triple_count=sum(patch.triple_count for patch in staged.patches),
+                    validation_scope=staged.validation_scope,
+                    validation_conforms=staged.validation_conforms,
+                    validation_result_count=staged.validation_result_count,
+                )
+            )
+
+        return SystematisationDraftRecord(
+            summary=summary_value,
+            intent=intent_value,
+            anchors=anchor_values,
+            warnings=warnings,
+            framings=framing_records,
+            staged_revisions=staged_revisions,
+        )
+
     def export_staged_revision(
         self,
         iri: str,
@@ -4122,6 +4283,95 @@ class DoxaBase:
                     }
                 )
         return parsed
+
+    def _systematisation_patch_specs(
+        self,
+        framing: Mapping[str, Any],
+    ) -> tuple[list[dict[str, str]] | None, list[dict[str, str]] | None]:
+        additions = self._normalise_patch_spec_list(
+            "additions",
+            framing.get("additions"),
+        )
+        removals = self._normalise_patch_spec_list(
+            "removals",
+            framing.get("removals"),
+        )
+        if additions is not None or removals is not None:
+            return additions, removals
+
+        graph_value = (
+            framing.get("graph")
+            or framing.get("target_graph")
+            or framing.get("targetGraph")
+            or ""
+        )
+        content_value = framing.get("content") or framing.get("turtle") or ""
+        patch_format = str(framing.get("format") or "turtle").strip()
+        return [
+            {
+                "graph": str(graph_value),
+                "content": str(content_value),
+                "format": patch_format,
+            }
+        ], None
+
+    def _normalise_patch_spec_list(
+        self,
+        name: str,
+        value: Any,
+    ) -> list[dict[str, str]] | None:
+        if value is None:
+            return None
+        if isinstance(value, Mapping):
+            raw_items = [value]
+        elif isinstance(value, str):
+            raise DoxaBaseError(f"{name} must be a patch object or list of patches")
+        else:
+            raw_items = list(value)
+        normalised: list[dict[str, str]] = []
+        for item in raw_items:
+            if not isinstance(item, Mapping):
+                raise DoxaBaseError(f"{name} entries must be patch objects")
+            normalised.append(
+                {
+                    str(key): str(item_value)
+                    for key, item_value in item.items()
+                    if item_value is not None
+                }
+            )
+        return normalised
+
+    def _systematisation_rationale(
+        self,
+        *,
+        intent: str,
+        anchors: list[str],
+        overall_rationale: str | None,
+        framing_label: str,
+        framing_rationale: str | None,
+    ) -> str:
+        lines = [
+            f"Systematisation intent: {intent}",
+            "",
+            f"Framing: {framing_label}",
+        ]
+        if framing_rationale:
+            lines.extend(["", f"Framing rationale: {framing_rationale}"])
+        if overall_rationale:
+            lines.extend(["", f"Overall rationale: {overall_rationale}"])
+        if anchors:
+            lines.extend(["", "Anchors:"])
+            lines.extend(f"- {anchor}" for anchor in anchors)
+        lines.extend(
+            [
+                "",
+                (
+                    "DoxaBase preserved caller-authored RDF and previewed validation; "
+                    "the ontology shape was chosen by the agent."
+                ),
+            ]
+        )
+        return "\n".join(lines)
 
     def _staged_revision_markdown(
         self,

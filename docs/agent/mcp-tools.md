@@ -142,6 +142,16 @@ kind of systematisation move being made. The helper parses patch RDF, previews
 graph counts, runs SHACL validation over `validation_scope`, and returns patch
 metadata.
 
+`doxabase.stage_systematisation`
+
+Stages one or more caller-authored RDF framings for the same modelling hunch.
+Use it when an agent is choosing between pattern-first, ontology-first, map-first,
+or other RDF shapes and wants to keep alternatives reviewable. Each framing may
+use simple `graph` + `content` Turtle shorthand, or full `additions` /
+`removals` patch lists. The helper records the systematisation intent, anchors,
+rationale, validation preview, and linked staged revisions; it does not decide
+the ontology design for the agent.
+
 `doxabase.describe_staged_revision`
 
 Returns a staged revision with stance, rationale, support links, patch payloads,

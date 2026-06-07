@@ -318,6 +318,98 @@ def test_stage_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> 
         )
 
 
+def test_stage_systematisation_preserves_alternative_rdf_framings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    observation = db.record_observation(
+        "Message-like rows repeatedly require identity reasoning.",
+        evidence_summary="Synthetic test note backing the staged systematisation.",
+        evidence_sources=["test://identity-ladder"],
+    )
+    before_ontology_count = db.triple_count("ontology")
+    before_patterns_count = db.triple_count("patterns")
+
+    ontology_framing = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:IdentityLadder a rdfs:Class ;
+        rdfs:label "Identity ladder" ;
+        rdfs:comment "A project-local way to model progressively stronger identity hints." .
+    """
+    pattern_framing = f"""
+    @prefix ex: <https://example.test/project#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:IdentityLadderPattern a rc:Pattern ;
+        rdfs:label "Identity ladder pattern" ;
+        rc:summary "Identity hints become stronger as more columns agree." ;
+        rc:patternText "Repeated message-like rows appear to form a ladder of identity hints rather than one fixed key." ;
+        rc:rationale "This may generalise better than forcing every source into a single key model." ;
+        rc:patternTarget ex:Messages ;
+        rc:supportingObservation <{observation.observation_iri}> ;
+        rc:patternStability rc:EmergingPattern .
+    """
+
+    draft = db.stage_systematisation(
+        summary="Explore identity-ladder modelling",
+        intent=(
+            "Keep two RDF framings alive while deciding whether this belongs in "
+            "project vocabulary or as a pattern first."
+        ),
+        rationale=(
+            "The concept is deliberately awkward: it may need ontology surface "
+            "before it can become a map fact."
+        ),
+        anchors=[observation.observation_iri, "https://example.test/project#Messages"],
+        framings=[
+            {
+                "label": "Project vocabulary term",
+                "graph": "ontology",
+                "content": ontology_framing,
+                "stance": "rc:AlternativeSystematisation",
+            },
+            {
+                "label": "Pattern first",
+                "graph": "patterns",
+                "content": pattern_framing,
+                "rationale": (
+                    "This keeps the insight tentative while preserving the "
+                    "intuition that the map may need a new concept later."
+                ),
+            },
+        ],
+        validation_scope="all",
+    )
+
+    assert draft.summary == "Explore identity-ladder modelling"
+    assert draft.anchors == [
+        observation.observation_iri,
+        "https://example.test/project#Messages",
+    ]
+    assert len(draft.staged_revisions) == 2
+    assert len(draft.framings) == 2
+    assert draft.framings[0].target_graphs == ["ontology"]
+    assert draft.framings[1].target_graphs == ["patterns"]
+    assert all(framing.validation_conforms for framing in draft.framings)
+    assert draft.framings[0].stance == RC + "AlternativeSystematisation"
+    assert draft.framings[1].stance == RC + "ExploratoryHunch"
+    assert db.triple_count("ontology") == before_ontology_count
+    assert db.triple_count("patterns") == before_patterns_count
+
+    first = db.describe_staged_revision(draft.staged_revisions[0].revision_iri)
+    second = db.describe_staged_revision(draft.staged_revisions[1].revision_iri)
+    assert first.alternative_to is None
+    assert second.alternative_to is not None
+    assert second.alternative_to.iri == first.iri
+    assert "Systematisation intent:" in second.rationale
+    assert "Identity ladder" in first.patches[0].content
+    assert "IdentityLadderPattern" in second.patches[0].content
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

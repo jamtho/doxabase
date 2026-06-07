@@ -541,6 +541,48 @@ def stage_graph_revision_tool(
     return asdict(result)
 
 
+def stage_systematisation_tool(
+    db: DoxaBase,
+    summary: str,
+    intent: str,
+    framings: list[dict[str, Any]],
+    anchors: list[str] | None = None,
+    rationale: str | None = None,
+    default_stance: str = "rc:ExploratoryHunch",
+    revision_type: str = "rc:StagedRevision",
+    included_graphs: list[str] | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    supporting_observations: list[str] | None = None,
+    supporting_claims: list[str] | None = None,
+    supporting_patterns: list[str] | None = None,
+    evidence: list[str] | None = None,
+    alternative_to: str | None = None,
+    link_alternatives: bool = True,
+    validation_scope: str = "all",
+) -> dict[str, Any]:
+    result = db.stage_systematisation(
+        summary=summary,
+        intent=intent,
+        framings=framings,
+        anchors=anchors,
+        rationale=rationale,
+        default_stance=default_stance,
+        revision_type=revision_type,
+        included_graphs=included_graphs,
+        created_at=created_at,
+        created_by=created_by,
+        supporting_observations=supporting_observations,
+        supporting_claims=supporting_claims,
+        supporting_patterns=supporting_patterns,
+        evidence=evidence,
+        alternative_to=alternative_to,
+        link_alternatives=link_alternatives,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return asdict(result)
+
+
 def export_staged_revision_tool(
     db: DoxaBase,
     iri: str,

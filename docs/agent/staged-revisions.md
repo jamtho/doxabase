@@ -67,6 +67,59 @@ Use `doxabase.describe_staged_revision` to inspect patch payloads, stance,
 validation status, support links, and before/after count previews. Use
 `doxabase.export_staged_revision` to write a Markdown review bundle.
 
+## Systematisation Drafts
+
+Call `doxabase.stage_systematisation` when you have a modelling hunch and want
+to preserve one or more possible RDF framings for it. This helper is deliberately
+not a promotion wizard. It does not choose the ontology shape for you; it packages
+caller-authored RDF framings as staged revisions, validates them, and links later
+framings as alternatives to the first by default.
+
+Use it for the part of the work where graph judgement matters:
+
+- a pattern-first framing versus an ontology-first framing;
+- a bold hunch that needs a new project vocabulary term;
+- several plausible map shapes where one feels more robust but the reason is not
+  yet fully mechanical;
+- a conservative candidate plus a more speculative alternative.
+
+Each framing can use the shorthand `graph` + `content` for one addition, or full
+`additions` / `removals` patch lists when the graph move is more complex:
+
+```python
+result = stage_systematisation_tool(
+    db,
+    summary="Explore identity-ladder modelling",
+    intent=(
+        "Keep two RDF framings alive while deciding whether this belongs in "
+        "project vocabulary or as a pattern first."
+    ),
+    anchors=["ex:Messages", "ex:observation-123"],
+    rationale=(
+        "The concept may explain repeated identity hints better than a single "
+        "fixed key model."
+    ),
+    framings=[
+        {
+            "label": "Project vocabulary term",
+            "graph": "ontology",
+            "content": "... Turtle defining ex:IdentityLadder ...",
+            "stance": "rc:AlternativeSystematisation",
+        },
+        {
+            "label": "Pattern first",
+            "graph": "patterns",
+            "content": "... Turtle defining an rc:Pattern ...",
+        },
+    ],
+    validation_scope="all",
+)
+```
+
+The staged revision rationale records the systematisation intent, anchors,
+overall rationale, and framing-specific rationale. This keeps exports readable
+even while richer promotion metadata is still evolving.
+
 ## What Gets Recorded
 
 Staged revisions are `rc:GraphRevision` resources with `rc:StagedRevision` type,

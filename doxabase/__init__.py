@@ -46,6 +46,8 @@ from doxabase.core import (
     StagedGraphRevisionExportRecord,
     StagedGraphRevisionRecord,
     StorageAccessDescription,
+    SystematisationDraftRecord,
+    SystematisationFramingRecord,
     TransformationDescription,
     ValidationResult,
 )
@@ -98,6 +100,8 @@ __all__ = [
     "StagedGraphRevisionExportRecord",
     "StagedGraphRevisionRecord",
     "StorageAccessDescription",
+    "SystematisationDraftRecord",
+    "SystematisationFramingRecord",
     "TransformationDescription",
     "ValidationResult",
 ]

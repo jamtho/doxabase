@@ -31,11 +31,13 @@ Current implementation status:
   bundles.
 - `stage_graph_revision()`, `describe_staged_revision()`, and
   `export_staged_revision()` for reviewable graph patch proposals.
+- `stage_systematisation()` for preserving alternative caller-authored RDF
+  framings of a modelling hunch.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
 - MCP tools for docs, overview, search, listing, dataset description,
-  context slicing, observation/history recording, staged revisions,
+  context slicing, observation/history recording, systematisation staging,
   import/export, validation, and fixture loading.
 
 Important V1 limits:

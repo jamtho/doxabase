@@ -34,13 +34,14 @@ from doxabase.mcp_tools import (
     record_pattern_tool,
     search_tool,
     stage_graph_revision_tool,
+    stage_systematisation_tool,
     validate_graph_tool,
 )
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, staged graph revision review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, systematisation staging, staged graph revision review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -573,6 +574,49 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             supporting_patterns=supporting_patterns,
             evidence=evidence,
             alternative_to=alternative_to,
+            validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.stage_systematisation")
+    def stage_systematisation(
+        summary: str,
+        intent: str,
+        framings: list[dict[str, Any]],
+        anchors: list[str] | None = None,
+        rationale: str | None = None,
+        default_stance: str = "rc:ExploratoryHunch",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: list[str] | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        supporting_observations: list[str] | None = None,
+        supporting_claims: list[str] | None = None,
+        supporting_patterns: list[str] | None = None,
+        evidence: list[str] | None = None,
+        alternative_to: str | None = None,
+        link_alternatives: bool = True,
+        validation_scope: str = "all",
+    ) -> dict[str, Any]:
+        """Stage one or more caller-authored RDF framings for a systematisation."""
+
+        return stage_systematisation_tool(
+            db,
+            summary=summary,
+            intent=intent,
+            framings=framings,
+            anchors=anchors,
+            rationale=rationale,
+            default_stance=default_stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            evidence=evidence,
+            alternative_to=alternative_to,
+            link_alternatives=link_alternatives,
             validation_scope=validation_scope,
         )
 
