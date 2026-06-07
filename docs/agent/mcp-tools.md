@@ -52,6 +52,9 @@ owning dataset context when available; related dataset entries include
 relationship labels/kinds, grouped reasons can fold same-column relationship
 tags, linked patterns include pattern text as their description, and
 `linked_pattern_reasons` explains why each pattern matched when available.
+Within each linked-pattern reason, scan `match_groups` first for relevance
+tiers, route labels, resource kinds, and supporting resources; use raw `matches`
+when every route matters.
 
 `doxabase.describe_pattern`
 

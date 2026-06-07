@@ -562,6 +562,28 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
         ("pattern_target", messages),
         ("supporting_claim_target", doc_id),
     }
+    assert {
+        (group.relevance_tier, group.matched_resource.iri)
+        for group in pattern_reason.match_groups
+    } == {
+        ("direct", messages),
+        ("claim_supported", doc_id),
+    }
+    direct_group = next(
+        group
+        for group in pattern_reason.match_groups
+        if group.matched_resource.iri == messages
+    )
+    assert direct_group.matched_resource_kind == "Table"
+    assert direct_group.route_labels == ["direct pattern target"]
+    claim_group = next(
+        group
+        for group in pattern_reason.match_groups
+        if group.matched_resource.iri == doc_id
+    )
+    assert claim_group.matched_resource_kind == "Column"
+    assert claim_group.route_labels == ["via supporting claim target"]
+    assert claim_group.supporting_claims[0].iri == claim_result.claim_iri
     claim_match = next(
         match
         for match in pattern_reason.matches

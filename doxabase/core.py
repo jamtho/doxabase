@@ -303,11 +303,24 @@ class LinkedPatternMatch:
 
 
 @dataclass(frozen=True)
+class LinkedPatternMatchGroup:
+    matched_resource: ResourceSummary
+    matched_resource_types: list[str]
+    matched_resource_kind: str | None
+    relevance_tier: str
+    route_types: list[str]
+    route_labels: list[str]
+    supporting_claims: list[ResourceSummary]
+    supporting_observations: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
 class LinkedPatternReason:
     iri: str
     label: str | None
     pattern_text: str | None
     rationale: str | None
+    match_groups: list[LinkedPatternMatchGroup]
     matches: list[LinkedPatternMatch]
 
 
@@ -4088,6 +4101,10 @@ class DoxaBase:
                     "rc:patternText",
                 ),
                 rationale=self._first_object(all_graphs, pattern_iri, "rc:rationale"),
+                match_groups=self._linked_pattern_match_groups(
+                    matches,
+                    all_graphs,
+                ),
                 matches=sorted(
                     matches,
                     key=lambda match: (
@@ -4105,6 +4122,135 @@ class DoxaBase:
                 ),
             )
         ]
+
+    def _linked_pattern_match_groups(
+        self,
+        matches: Iterable[LinkedPatternMatch],
+        all_graphs: list[str],
+    ) -> list[LinkedPatternMatchGroup]:
+        grouped: dict[str, list[LinkedPatternMatch]] = {}
+        for match in matches:
+            grouped.setdefault(match.matched_resource.iri, []).append(match)
+
+        groups: list[LinkedPatternMatchGroup] = []
+        for group_matches in sorted(
+            grouped.values(),
+            key=lambda group_matches: (
+                self._linked_pattern_relevance_rank(
+                    self._linked_pattern_relevance_tier(group_matches)
+                ),
+                group_matches[0].matched_resource.label or "",
+                group_matches[0].matched_resource.iri,
+            ),
+        ):
+            matched_resource = group_matches[0].matched_resource
+            route_types = sorted(
+                {match.match_type for match in group_matches},
+                key=self._linked_pattern_match_type_priority,
+            )
+            groups.append(
+                LinkedPatternMatchGroup(
+                    matched_resource=matched_resource,
+                    matched_resource_types=self._types_from_graphs(
+                        all_graphs,
+                        matched_resource.iri,
+                    ),
+                    matched_resource_kind=self._matched_resource_kind(
+                        all_graphs,
+                        matched_resource.iri,
+                    ),
+                    relevance_tier=self._linked_pattern_relevance_tier(group_matches),
+                    route_types=route_types,
+                    route_labels=[
+                        self._linked_pattern_match_type_label(match_type)
+                        for match_type in route_types
+                    ],
+                    supporting_claims=self._unique_optional_summaries(
+                        match.supporting_claim for match in group_matches
+                    ),
+                    supporting_observations=self._unique_optional_summaries(
+                        match.supporting_observation for match in group_matches
+                    ),
+                )
+            )
+        return groups
+
+    def _linked_pattern_match_type_label(self, match_type: str) -> str:
+        return {
+            "pattern_target": "direct pattern target",
+            "map_implication": "map implication",
+            "supporting_claim_target": "via supporting claim target",
+            "supporting_observation_asset": "via supporting observation asset",
+            "supporting_observation_column": "via supporting observation column",
+        }.get(match_type, match_type.replace("_", " "))
+
+    def _linked_pattern_match_type_priority(self, match_type: str) -> int:
+        return {
+            "pattern_target": 0,
+            "map_implication": 1,
+            "supporting_claim_target": 2,
+            "supporting_observation_asset": 3,
+            "supporting_observation_column": 4,
+        }.get(match_type, 99)
+
+    def _linked_pattern_relevance_tier(
+        self,
+        matches: Iterable[LinkedPatternMatch],
+    ) -> str:
+        match_types = {match.match_type for match in matches}
+        if "pattern_target" in match_types:
+            return "direct"
+        if "map_implication" in match_types:
+            return "map_implication"
+        if "supporting_claim_target" in match_types:
+            return "claim_supported"
+        if any(
+            match_type.startswith("supporting_observation_")
+            for match_type in match_types
+        ):
+            return "observation_supported"
+        return "background"
+
+    def _linked_pattern_relevance_rank(self, relevance_tier: str) -> int:
+        return {
+            "direct": 0,
+            "map_implication": 1,
+            "claim_supported": 2,
+            "observation_supported": 3,
+            "background": 4,
+        }.get(relevance_tier, 99)
+
+    def _matched_resource_kind(self, graphs: list[str], iri: str) -> str | None:
+        matched_type = self._first_matching_type(
+            self._types_from_graphs(graphs, iri),
+            [
+                "rc:Table",
+                "rc:Dataset",
+                "rc:Column",
+                "rc:KnownCaveat",
+                "rc:ForeignKey",
+                "rc:SharedIdentifier",
+                "rc:Derivation",
+                "rc:Claim",
+                "rc:Observation",
+                "rc:ProfileObservation",
+                "rc:Evidence",
+                "rc:SourceSpan",
+            ],
+        )
+        return self._label_for_resource(matched_type)
+
+    def _unique_optional_summaries(
+        self,
+        summaries: Iterable[ResourceSummary | None],
+    ) -> list[ResourceSummary]:
+        return list(
+            {
+                summary.iri: summary
+                for summary in summaries
+                if summary is not None
+            }.values()
+        )
 
     def _first_matching_type(
         self,

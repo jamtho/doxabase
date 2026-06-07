@@ -118,7 +118,10 @@ target dataset and folds same-column reasons into relationship tags with
 current/related columns and integrity metadata when available. Linked pattern
 summaries use the pattern text as their description when available;
 `linked_pattern_reasons` explains whether a pattern matched through a direct
-target, map implication, supporting claim, or supporting observation.
+target, map implication, supporting claim, or supporting observation. Use
+`match_groups` for a compressed first pass with relevance tiers, route labels,
+resource kinds, and supporting claim/observation counts; use raw `matches` when
+you need every route.
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are

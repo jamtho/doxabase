@@ -471,6 +471,15 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     assert description["linked_pattern_reasons"][0]["matches"][0][
         "matched_resource"
     ]["column_name"] == "doc_id"
+    assert description["linked_pattern_reasons"][0]["match_groups"][0][
+        "matched_resource"
+    ]["column_name"] == "doc_id"
+    assert description["linked_pattern_reasons"][0]["match_groups"][0][
+        "relevance_tier"
+    ] == "direct"
+    assert description["linked_pattern_reasons"][0]["match_groups"][0][
+        "route_labels"
+    ] == ["direct pattern target"]
     assert validate_graph_tool(db, scope="map")["conforms"] is True
 
 
