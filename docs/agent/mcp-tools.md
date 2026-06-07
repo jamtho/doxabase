@@ -50,8 +50,8 @@ transformations, relationships, directly related datasets, grouped related
 dataset reasons, and linked patterns. Column summaries include column names and
 owning dataset context when available; related dataset entries include
 relationship labels/kinds, grouped reasons can fold same-column relationship
-tags, and linked patterns include pattern text as their description when
-available.
+tags, linked patterns include pattern text as their description, and
+`linked_pattern_reasons` explains why each pattern matched when available.
 
 `doxabase.describe_pattern`
 

@@ -295,6 +295,23 @@ class RelatedDatasetGroup:
 
 
 @dataclass(frozen=True)
+class LinkedPatternMatch:
+    match_type: str
+    matched_resource: ResourceSummary
+    supporting_claim: ResourceSummary | None
+    supporting_observation: ResourceSummary | None
+
+
+@dataclass(frozen=True)
+class LinkedPatternReason:
+    iri: str
+    label: str | None
+    pattern_text: str | None
+    rationale: str | None
+    matches: list[LinkedPatternMatch]
+
+
+@dataclass(frozen=True)
 class CaveatDescription:
     iri: str
     label: str | None
@@ -357,6 +374,7 @@ class DatasetDescription:
     related_dataset_groups: list[RelatedDatasetGroup]
     relationships: list[RelationshipDescription]
     linked_patterns: list[ResourceSummary]
+    linked_pattern_reasons: list[LinkedPatternReason]
 
 
 @dataclass(frozen=True)
@@ -1018,6 +1036,9 @@ class DoxaBase:
             lookup_graphs,
             relationships=relationships,
         )
+        linked_pattern_reasons = self._linked_pattern_reasons_for_dataset(
+            linked_pattern_targets,
+        )
 
         return DatasetDescription(
             iri=dataset_iri,
@@ -1078,6 +1099,7 @@ class DoxaBase:
             linked_patterns=self._linked_patterns_for_dataset(
                 linked_pattern_targets,
             ),
+            linked_pattern_reasons=linked_pattern_reasons,
         )
 
     def record_observation(
@@ -3951,6 +3973,138 @@ class DoxaBase:
             sorted(pattern_iris),
             description_predicate="rc:patternText",
         )
+
+    def _linked_pattern_reasons_for_dataset(
+        self,
+        target_iris: Iterable[str],
+    ) -> list[LinkedPatternReason]:
+        targets = list(dict.fromkeys(target_iris))
+        pattern_graphs = self._expand_graphs(["patterns"])
+        all_graphs = self._expand_graphs(["all"])
+        all_lookup_graphs = self._lookup_graphs(all_graphs)
+        matches_by_pattern: dict[str, list[LinkedPatternMatch]] = {}
+        seen_matches: set[tuple[str, str, str, str | None, str | None]] = set()
+
+        def add_match(
+            pattern_iri: str,
+            match_type: str,
+            matched_iri: str,
+            *,
+            supporting_claim_iri: str | None = None,
+            supporting_observation_iri: str | None = None,
+        ) -> None:
+            match_key = (
+                pattern_iri,
+                match_type,
+                matched_iri,
+                supporting_claim_iri,
+                supporting_observation_iri,
+            )
+            if match_key in seen_matches:
+                return
+            seen_matches.add(match_key)
+            matches_by_pattern.setdefault(pattern_iri, []).append(
+                LinkedPatternMatch(
+                    match_type=match_type,
+                    matched_resource=self._resource_summary(
+                        all_lookup_graphs,
+                        matched_iri,
+                        display_label=True,
+                    ),
+                    supporting_claim=(
+                        self._resource_summary(
+                            all_lookup_graphs,
+                            supporting_claim_iri,
+                            display_label=True,
+                        )
+                        if supporting_claim_iri is not None
+                        else None
+                    ),
+                    supporting_observation=(
+                        self._resource_summary(
+                            all_lookup_graphs,
+                            supporting_observation_iri,
+                            display_label=True,
+                        )
+                        if supporting_observation_iri is not None
+                        else None
+                    ),
+                )
+            )
+
+        for target_iri in targets:
+            for pattern_iri in self._subjects(
+                pattern_graphs,
+                "rc:patternTarget",
+                target_iri,
+            ):
+                add_match(pattern_iri, "pattern_target", target_iri)
+            for pattern_iri in self._subjects(
+                pattern_graphs,
+                "rc:mapImplication",
+                target_iri,
+            ):
+                add_match(pattern_iri, "map_implication", target_iri)
+            for claim_iri in self._subjects(all_graphs, "rc:claimTarget", target_iri):
+                for pattern_iri in self._subjects(
+                    pattern_graphs,
+                    "rc:supportingClaim",
+                    claim_iri,
+                ):
+                    add_match(
+                        pattern_iri,
+                        "supporting_claim_target",
+                        target_iri,
+                        supporting_claim_iri=claim_iri,
+                    )
+            for observation_predicate, match_type in (
+                ("rc:observedAsset", "supporting_observation_asset"),
+                ("rc:observedColumn", "supporting_observation_column"),
+            ):
+                for observation_iri in self._subjects(
+                    all_graphs,
+                    observation_predicate,
+                    target_iri,
+                ):
+                    for pattern_iri in self._subjects(
+                        pattern_graphs,
+                        "rc:supportingObservation",
+                        observation_iri,
+                    ):
+                        add_match(
+                            pattern_iri,
+                            match_type,
+                            target_iri,
+                            supporting_observation_iri=observation_iri,
+                        )
+
+        return [
+            LinkedPatternReason(
+                iri=pattern_iri,
+                label=self._display_label_from_graphs(all_lookup_graphs, pattern_iri),
+                pattern_text=self._first_object(
+                    all_graphs,
+                    pattern_iri,
+                    "rc:patternText",
+                ),
+                rationale=self._first_object(all_graphs, pattern_iri, "rc:rationale"),
+                matches=sorted(
+                    matches,
+                    key=lambda match: (
+                        match.match_type,
+                        match.matched_resource.label or "",
+                        match.matched_resource.iri,
+                    ),
+                ),
+            )
+            for pattern_iri, matches in sorted(
+                matches_by_pattern.items(),
+                key=lambda item: (
+                    self._display_label_from_graphs(all_lookup_graphs, item[0]) or "",
+                    item[0],
+                ),
+            )
+        ]
 
     def _first_matching_type(
         self,

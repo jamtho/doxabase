@@ -546,6 +546,30 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
     assert description.linked_patterns[0].description == (
         "Use doc_id as the stable message identity handle."
     )
+    assert len(description.linked_pattern_reasons) == 1
+    pattern_reason = description.linked_pattern_reasons[0]
+    assert pattern_reason.iri == pattern_result.pattern_iri
+    assert pattern_reason.pattern_text == (
+        "Use doc_id as the stable message identity handle."
+    )
+    assert pattern_reason.rationale == (
+        "A claim about the table column supports this reader protocol."
+    )
+    assert {
+        (match.match_type, match.matched_resource.iri)
+        for match in pattern_reason.matches
+    } == {
+        ("pattern_target", messages),
+        ("supporting_claim_target", doc_id),
+    }
+    claim_match = next(
+        match
+        for match in pattern_reason.matches
+        if match.match_type == "supporting_claim_target"
+    )
+    assert claim_match.supporting_claim is not None
+    assert claim_match.supporting_claim.iri == claim_result.claim_iri
+    assert claim_match.matched_resource.column_name == "doc_id"
     assert description.path_templates == ["data/messages.parquet"]
 
 

@@ -116,7 +116,9 @@ explicit source/target dataset triples. Related dataset entries include
 relationship labels/kinds; `related_dataset_groups` groups repeated links by
 target dataset and folds same-column reasons into relationship tags with
 current/related columns and integrity metadata when available. Linked pattern
-summaries use the pattern text as their description when available.
+summaries use the pattern text as their description when available;
+`linked_pattern_reasons` explains whether a pattern matched through a direct
+target, map implication, supporting claim, or supporting observation.
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are

@@ -443,6 +443,15 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
         relationship_type="shared_identifier",
         identifying_columns=[column, f"{base}other_messages__doc_id"],
     )
+    record_pattern_tool(
+        db,
+        summary="doc_id is the message identity handle.",
+        pattern_text="Use doc_id as the message identity handle before joining.",
+        rationale="The map marks doc_id as the table column that participates in message identity.",
+        pattern_targets=[column],
+        source_path="tests/test_mcp_tools.py",
+        source_kind="rc:DocumentationSource",
+    )
 
     assert table_result["resource_type"] == "https://richcanopy.org/ns/rc#Table"
     assert column_result["resource_type"] == "https://richcanopy.org/ns/rc#Column"
@@ -451,7 +460,17 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     assert relationship_result["resource_type"] == (
         "https://richcanopy.org/ns/rc#SharedIdentifier"
     )
-    assert describe_dataset_tool(db, iri=table)["label"] == "Messages"
+    description = describe_dataset_tool(db, iri=table)
+    assert description["label"] == "Messages"
+    assert description["linked_pattern_reasons"][0]["pattern_text"] == (
+        "Use doc_id as the message identity handle before joining."
+    )
+    assert description["linked_pattern_reasons"][0]["matches"][0]["match_type"] == (
+        "pattern_target"
+    )
+    assert description["linked_pattern_reasons"][0]["matches"][0][
+        "matched_resource"
+    ]["column_name"] == "doc_id"
     assert validate_graph_tool(db, scope="map")["conforms"] is True
 
 
