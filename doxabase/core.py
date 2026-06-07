@@ -317,9 +317,13 @@ class LinkedPatternMatchGroup:
 @dataclass(frozen=True)
 class LinkedPatternReason:
     iri: str
+    pattern_iri: str
     label: str | None
     pattern_text: str | None
     rationale: str | None
+    match_group_count: int
+    raw_match_count: int
+    relevance_tier_counts: dict[str, int]
     match_groups: list[LinkedPatternMatchGroup]
     matches: list[LinkedPatternMatch]
 
@@ -4091,37 +4095,53 @@ class DoxaBase:
                             supporting_observation_iri=observation_iri,
                         )
 
-        return [
-            LinkedPatternReason(
-                iri=pattern_iri,
-                label=self._display_label_from_graphs(all_lookup_graphs, pattern_iri),
-                pattern_text=self._first_object(
-                    all_graphs,
-                    pattern_iri,
-                    "rc:patternText",
-                ),
-                rationale=self._first_object(all_graphs, pattern_iri, "rc:rationale"),
-                match_groups=self._linked_pattern_match_groups(
-                    matches,
-                    all_graphs,
-                ),
-                matches=sorted(
-                    matches,
-                    key=lambda match: (
-                        match.match_type,
-                        match.matched_resource.label or "",
-                        match.matched_resource.iri,
+        linked_pattern_reasons: list[LinkedPatternReason] = []
+        for pattern_iri, matches in sorted(
+            matches_by_pattern.items(),
+            key=lambda item: (
+                self._display_label_from_graphs(all_lookup_graphs, item[0]) or "",
+                item[0],
+            ),
+        ):
+            match_groups = self._linked_pattern_match_groups(
+                matches,
+                all_graphs,
+            )
+            linked_pattern_reasons.append(
+                LinkedPatternReason(
+                    iri=pattern_iri,
+                    pattern_iri=pattern_iri,
+                    label=self._display_label_from_graphs(
+                        all_lookup_graphs,
+                        pattern_iri,
+                    ),
+                    pattern_text=self._first_object(
+                        all_graphs,
+                        pattern_iri,
+                        "rc:patternText",
+                    ),
+                    rationale=self._first_object(
+                        all_graphs,
+                        pattern_iri,
+                        "rc:rationale",
+                    ),
+                    match_group_count=len(match_groups),
+                    raw_match_count=len(matches),
+                    relevance_tier_counts=self._linked_pattern_relevance_tier_counts(
+                        match_groups
+                    ),
+                    match_groups=match_groups,
+                    matches=sorted(
+                        matches,
+                        key=lambda match: (
+                            match.match_type,
+                            match.matched_resource.label or "",
+                            match.matched_resource.iri,
+                        ),
                     ),
                 ),
             )
-            for pattern_iri, matches in sorted(
-                matches_by_pattern.items(),
-                key=lambda item: (
-                    self._display_label_from_graphs(all_lookup_graphs, item[0]) or "",
-                    item[0],
-                ),
-            )
-        ]
+        return linked_pattern_reasons
 
     def _linked_pattern_match_groups(
         self,
@@ -4220,6 +4240,17 @@ class DoxaBase:
             "background": 4,
         }.get(relevance_tier, 99)
 
+    def _linked_pattern_relevance_tier_counts(
+        self,
+        match_groups: Iterable[LinkedPatternMatchGroup],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for match_group in match_groups:
+            counts[match_group.relevance_tier] = (
+                counts.get(match_group.relevance_tier, 0) + 1
+            )
+        return counts
+
     def _matched_resource_kind(self, graphs: list[str], iri: str) -> str | None:
         matched_type = self._first_matching_type(
             self._types_from_graphs(graphs, iri),
@@ -4282,9 +4313,10 @@ class DoxaBase:
         return ResourceSummary(
             iri=iri,
             label=label or column_name or self._local_name(iri),
-            description=(
-                self._first_object(graphs, iri, description_predicate)
-                or self._description_from_graphs(graphs, iri)
+            description=self._resource_description_from_graphs(
+                graphs,
+                iri,
+                description_predicate=description_predicate,
             ),
             column_name=column_name,
             owning_dataset_iri=owning_dataset_iri,
@@ -4357,6 +4389,103 @@ class DoxaBase:
 
     def _description_from_graphs(self, graphs: list[str], subject: str) -> str | None:
         return self._first_object(graphs, subject, str(RDFS.comment))
+
+    def _resource_description_from_graphs(
+        self,
+        graphs: list[str],
+        subject: str,
+        *,
+        description_predicate: str = "rdfs:comment",
+    ) -> str | None:
+        predicates = dict.fromkeys(
+            [
+                description_predicate,
+                str(RDFS.comment),
+                str(DCTERMS.description),
+                "rc:caveatDescription",
+                "rc:transformationDescription",
+                "rc:sourceDescription",
+                "rc:impact",
+            ]
+        )
+        for predicate in predicates:
+            description = self._first_object(graphs, subject, predicate)
+            if description is not None:
+                return description
+        return self._synthesized_relationship_description_from_graphs(graphs, subject)
+
+    def _synthesized_relationship_description_from_graphs(
+        self,
+        graphs: list[str],
+        subject: str,
+    ) -> str | None:
+        types = self._types_from_graphs(graphs, subject)
+        relationship_kind = self._first_matching_type(
+            types,
+            [
+                "rc:ForeignKey",
+                "rc:SharedIdentifier",
+                "rc:Derivation",
+                "rc:Aggregation",
+                "rc:Relationship",
+            ],
+        )
+        if relationship_kind == self.expand_iri("rc:ForeignKey"):
+            from_column = self._first_object(graphs, subject, "rc:foreignKeyFrom")
+            to_column = self._first_object(graphs, subject, "rc:foreignKeyTo")
+            if from_column is None or to_column is None:
+                return None
+            detail = (
+                "Foreign key from "
+                f"{self._compact_resource_label(graphs, from_column)} to "
+                f"{self._compact_resource_label(graphs, to_column)}"
+            )
+            integrity = self._first_object(graphs, subject, "rc:referentialIntegrity")
+            if integrity is not None:
+                detail += (
+                    "; referential integrity: "
+                    f"{self._compact_resource_label(graphs, integrity)}"
+                )
+            declared = self._bool_object(graphs, subject, "rc:declared")
+            if declared is not None:
+                detail += f"; declared: {str(declared).lower()}"
+            return detail
+        if relationship_kind == self.expand_iri("rc:SharedIdentifier"):
+            columns = [
+                self._compact_resource_label(graphs, column)
+                for column in self._objects(graphs, subject, "rc:identifyingColumn")
+            ]
+            if not columns:
+                return None
+            return "Shared identifier across " + ", ".join(columns)
+        if relationship_kind == self.expand_iri("rc:Derivation"):
+            source_columns = [
+                self._compact_resource_label(graphs, column)
+                for column in self._objects(graphs, subject, "rc:sourceColumn")
+            ]
+            derived_columns = [
+                self._compact_resource_label(graphs, column)
+                for column in self._objects(graphs, subject, "rc:derivedColumn")
+            ]
+            if not source_columns or not derived_columns:
+                return None
+            detail = (
+                "Derivation from "
+                f"{', '.join(source_columns)} to {', '.join(derived_columns)}"
+            )
+            function_iri = self._first_object(graphs, subject, "rc:derivationFunction")
+            if function_iri is not None:
+                function_label = self._compact_resource_label(graphs, function_iri)
+                detail += f"; function: {function_label}"
+            return detail
+        return None
+
+    def _compact_resource_label(self, graphs: list[str], subject: str) -> str:
+        return (
+            self._display_label_from_graphs(graphs, subject)
+            or self._first_object(graphs, subject, "rc:columnName")
+            or self._local_name(subject)
+        )
 
     def _display_label_from_graphs(self, graphs: list[str], subject: str) -> str | None:
         return (

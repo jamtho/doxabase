@@ -21,6 +21,14 @@ Use this sequence when arriving cold in a DoxaBase capsule.
     roles were included for review, and why.
 15. Use `doxabase.describe_graph_revision` when reviewing a history record.
 
+When reading linked-pattern reasons from `describe_dataset`, scan
+`match_groups` before raw `matches`. Direct and map-implication groups are the
+strongest local relevance signals; claim- and observation-supported groups show
+surrounding lore. Treat group counts as navigation hints rather than confidence
+scores; tier counts are over grouped matches, while raw match counts are over
+unfolded routes. Call `describe_pattern` before applying a pattern as a decision
+rule.
+
 When adding future facts, choose graph roles by update pattern:
 
 - Put vocabulary/model terms in `ontology`.

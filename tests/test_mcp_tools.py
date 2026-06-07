@@ -74,7 +74,7 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     tables = list_entities_tool(db, type="rc:Table", graph="map")
     validation = validate_graph_tool(db, scope="all")
 
-    assert load_result["total_imported"] == 762
+    assert load_result["total_imported"] == 763
     assert overview["key_counts"]["tables"] >= 7
     assert tables["count"] >= 7
     assert validation["conforms"] is True
@@ -448,7 +448,7 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
         summary="doc_id is the message identity handle.",
         pattern_text="Use doc_id as the message identity handle before joining.",
         rationale="The map marks doc_id as the table column that participates in message identity.",
-        pattern_targets=[column],
+        pattern_targets=[column, relationship_result["iri"]],
         source_path="tests/test_mcp_tools.py",
         source_kind="rc:DocumentationSource",
     )
@@ -462,24 +462,33 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     )
     description = describe_dataset_tool(db, iri=table)
     assert description["label"] == "Messages"
-    assert description["linked_pattern_reasons"][0]["pattern_text"] == (
+    linked_pattern_reason = description["linked_pattern_reasons"][0]
+    assert linked_pattern_reason["pattern_iri"] == linked_pattern_reason["iri"]
+    assert linked_pattern_reason["pattern_text"] == (
         "Use doc_id as the message identity handle before joining."
     )
-    assert description["linked_pattern_reasons"][0]["matches"][0]["match_type"] == (
-        "pattern_target"
+    assert linked_pattern_reason["match_group_count"] == 2
+    assert linked_pattern_reason["raw_match_count"] == 2
+    assert linked_pattern_reason["relevance_tier_counts"] == {"direct": 2}
+    assert {
+        match["matched_resource"]["iri"]: match["match_type"]
+        for match in linked_pattern_reason["matches"]
+    } == {
+        column: "pattern_target",
+        relationship_result["iri"]: "pattern_target",
+    }
+    groups_by_resource = {
+        group["matched_resource"]["iri"]: group
+        for group in linked_pattern_reason["match_groups"]
+    }
+    assert groups_by_resource[column]["matched_resource"]["column_name"] == "doc_id"
+    assert groups_by_resource[column]["relevance_tier"] == "direct"
+    assert groups_by_resource[column]["route_labels"] == ["direct pattern target"]
+    relationship_group = groups_by_resource[relationship_result["iri"]]
+    assert relationship_group["matched_resource_kind"] == "SharedIdentifier"
+    assert relationship_group["matched_resource"]["description"] == (
+        "Shared identifier across doc_id, other_messages__doc_id"
     )
-    assert description["linked_pattern_reasons"][0]["matches"][0][
-        "matched_resource"
-    ]["column_name"] == "doc_id"
-    assert description["linked_pattern_reasons"][0]["match_groups"][0][
-        "matched_resource"
-    ]["column_name"] == "doc_id"
-    assert description["linked_pattern_reasons"][0]["match_groups"][0][
-        "relevance_tier"
-    ] == "direct"
-    assert description["linked_pattern_reasons"][0]["match_groups"][0][
-        "route_labels"
-    ] == ["direct pattern target"]
     assert validate_graph_tool(db, scope="map")["conforms"] is True
 
 

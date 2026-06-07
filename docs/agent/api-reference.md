@@ -118,10 +118,17 @@ target dataset and folds same-column reasons into relationship tags with
 current/related columns and integrity metadata when available. Linked pattern
 summaries use the pattern text as their description when available;
 `linked_pattern_reasons` explains whether a pattern matched through a direct
-target, map implication, supporting claim, or supporting observation. Use
-`match_groups` for a compressed first pass with relevance tiers, route labels,
-resource kinds, and supporting claim/observation counts; use raw `matches` when
-you need every route.
+target, map implication, supporting claim, or supporting observation. Each
+reason uses `iri` for the pattern IRI and also exposes the same value as
+`pattern_iri` for consumers that prefer the explicit name. Use `match_groups`
+for a compressed first pass with relevance tiers, route labels, resource kinds,
+and supporting claim/observation links. The compact `match_group_count`,
+`raw_match_count`, and `relevance_tier_counts` fields are triage hints, not
+confidence scores; `relevance_tier_counts` counts grouped matches, while
+`raw_match_count` counts unfolded routes. Prefer direct and map-implication
+groups when scanning; use claim/observation-supported groups for context; call
+`describe_pattern()` before acting on a pattern; use raw `matches` when you need
+every route.
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are

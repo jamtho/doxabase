@@ -52,9 +52,15 @@ owning dataset context when available; related dataset entries include
 relationship labels/kinds, grouped reasons can fold same-column relationship
 tags, linked patterns include pattern text as their description, and
 `linked_pattern_reasons` explains why each pattern matched when available.
-Within each linked-pattern reason, scan `match_groups` first for relevance
-tiers, route labels, resource kinds, and supporting resources; use raw `matches`
-when every route matters.
+Within each linked-pattern reason, `iri` and `pattern_iri` both name the linked
+pattern. Scan `match_groups` first for relevance tiers, route labels, resource
+kinds, and supporting resources; use raw `matches` when every route matters.
+Treat group and tier counts as triage hints, not as confidence scores:
+`relevance_tier_counts` counts grouped matches, while `raw_match_count` counts
+unfolded route matches. Direct and map-implication groups are usually the
+strongest local relevance signals, while claim/observation-supported groups
+explain the surrounding lore. Call `doxabase.describe_pattern` before using a
+pattern as a decision rule.
 
 `doxabase.describe_pattern`
 

@@ -241,6 +241,7 @@ rcg:map {
 
     pm:OrderbookSnapshots a rc:Dataset, rc:Table ;
         rdfs:label "CLOB Orderbook Snapshots" ;
+        rdfs:comment "Point-in-time CLOB orderbook snapshots for market outcome tokens." ;
         rc:rowSemantics rc:SnapshotRow ;
         rc:entityKey pm:ob_asset_id ;
         rc:snapshotTimestamp pm:ob_fetched_at ;

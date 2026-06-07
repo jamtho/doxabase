@@ -504,6 +504,7 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
     base = "https://example.test/enron#"
     messages = f"{base}eml_messages"
     doc_id = f"{base}eml_messages__doc_id"
+    caveat = f"{base}eml_messages_id_caveat"
     claim = f"{base}claim_doc_id_join"
 
     db.record_map_dataset(
@@ -518,6 +519,11 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
         column_name="doc_id",
         physical_type="rc:Varchar",
     )
+    db.record_map_caveat(
+        caveat,
+        description="Message identifiers are stable within this source but not globally.",
+        targets=[messages],
+    )
     claim_result = db.record_claim_observation(
         summary="doc_id behaves as the message entity key.",
         claim_text="doc_id behaves as the message entity key.",
@@ -531,7 +537,7 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
         summary="doc_id is the stable message identity handle.",
         pattern_text="Use doc_id as the stable message identity handle.",
         rationale="A claim about the table column supports this reader protocol.",
-        pattern_targets=[messages],
+        pattern_targets=[messages, caveat],
         supporting_claims=[claim_result.claim_iri],
     )
 
@@ -549,6 +555,7 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
     assert len(description.linked_pattern_reasons) == 1
     pattern_reason = description.linked_pattern_reasons[0]
     assert pattern_reason.iri == pattern_result.pattern_iri
+    assert pattern_reason.pattern_iri == pattern_result.pattern_iri
     assert pattern_reason.pattern_text == (
         "Use doc_id as the stable message identity handle."
     )
@@ -559,16 +566,33 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
         (match.match_type, match.matched_resource.iri)
         for match in pattern_reason.matches
     } == {
+        ("pattern_target", caveat),
         ("pattern_target", messages),
         ("supporting_claim_target", doc_id),
+    }
+    assert pattern_reason.match_group_count == 3
+    assert pattern_reason.raw_match_count == 3
+    assert pattern_reason.relevance_tier_counts == {
+        "direct": 2,
+        "claim_supported": 1,
     }
     assert {
         (group.relevance_tier, group.matched_resource.iri)
         for group in pattern_reason.match_groups
     } == {
+        ("direct", caveat),
         ("direct", messages),
         ("claim_supported", doc_id),
     }
+    caveat_group = next(
+        group
+        for group in pattern_reason.match_groups
+        if group.matched_resource.iri == caveat
+    )
+    assert caveat_group.matched_resource_kind == "KnownCaveat"
+    assert caveat_group.matched_resource.description == (
+        "Message identifiers are stable within this source but not globally."
+    )
     direct_group = next(
         group
         for group in pattern_reason.match_groups
