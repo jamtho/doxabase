@@ -76,6 +76,8 @@ A useful trial usually asks the agent to:
 - use `record_claim_observation` for common structured claims;
 - use `record_pattern` when related findings should be synthesized before map
   updates;
+- use `stage_graph_revision` when a hunch or candidate systematisation should
+  be preserved without becoming durable map truth yet;
 - use `describe_pattern` when checking whether synthesized lore can be taught
   back compactly;
 - use map authoring helpers when the trial asks for a current-best scratch map;
@@ -89,8 +91,17 @@ A useful trial usually asks the agent to:
   leave a durable rationale in `history`; keep `changed_graphs` limited to
   graph roles that actually changed, and use `included_graphs` for unchanged
   review context included in an export;
+- use `describe_staged_revision` and `export_staged_revision` when testing
+  staged patch proposals;
 - use `describe_graph_revision` to inspect the resulting history record;
 - report what worked, what was awkward, and what should change next.
+
+For promotion-helper trials, include at least one awkward systematisation that
+does not fit neatly into current helper templates. The agent should be allowed
+to propose a new project vocabulary term, an ontology extension, or several
+alternative RDF framings. Treat it as a failure if the workflow pushes the agent
+to choose only familiar map facts when a deeper graph concept would be more
+natural.
 
 ## Report Sections
 
@@ -116,6 +127,8 @@ Look for these signals:
 
 - Could the agent decide when to use a helper versus hand-authored RDF?
 - Could the agent decide when related observations should become a pattern?
+- Could the agent propose a concept that stretches the current ontology, rather
+  than only filling existing helper templates?
 - Did evidence stay source-backed and credential-free?
 - Did validation catch real mistakes without becoming busywork?
 - Could the agent retrieve typed resources without relying only on lexical

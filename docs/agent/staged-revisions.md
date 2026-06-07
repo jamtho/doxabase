@@ -85,6 +85,22 @@ Use `alternative_to` when recording competing staged systematisations. Keeping
 alternatives side by side is expected; staged revisions are cheap memory for
 creative exploration, not a forced march toward one approved answer.
 
+## Awkward Concept Test
+
+Future promotion helpers should be tested against ideas that do not fit neatly
+into the current ontology. A good helper should let an agent say, in effect:
+
+- this may need a new project vocabulary term;
+- this may belong in `ontology` before it belongs in `map`;
+- this is a useful intermediate concept even if no existing helper shape covers
+  it;
+- here are several plausible RDF framings, and this one feels more robust.
+
+If a promotion helper can only produce familiar map facts, it is too narrow. The
+agent's knowledge-graph reasoning should remain primary; DoxaBase should help
+draft, validate, and preserve the graph move, not decide that only existing
+templates are legitimate.
+
 ## Limits
 
 DoxaBase does not yet apply staged revisions. There is no conflict detection,

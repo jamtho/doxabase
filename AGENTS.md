@@ -129,3 +129,8 @@ The near-term order is:
 2. Add fuller staged apply/conflict/version workflows.
 3. Add richer profile metrics and profiling helpers that can write map facts,
    observations, and patterns together.
+
+When building promotion helpers, preserve agents' knowledge-graph reasoning. A
+helper should draft and validate graph moves, not force every insight into an
+existing template. Test it with at least one awkward systematisation that may
+need a project vocabulary term, ontology extension, or competing RDF framings.

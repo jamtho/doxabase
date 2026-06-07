@@ -268,6 +268,13 @@ Recommended next implementation steps:
 3. Add query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.
 
+Promotion helpers should be drafting aids, not form workflows. The acceptance
+test is whether an agent can use them to stage an awkward systematisation that
+does not already fit the current map helpers: a new project vocabulary term, an
+ontology extension, or several alternative RDF framings. If the helper only
+makes familiar map facts easy, it is suppressing the agent's knowledge-graph
+reasoning rather than supporting it.
+
 ## Observation Recording Model
 
 `record_observation()` writes structured `rc:Observation` or `rc:ProfileObservation` resources into the `observations` graph. If evidence fields are supplied, it also writes one linked `rc:Evidence` resource into the `evidence` graph.
