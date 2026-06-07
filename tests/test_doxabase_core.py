@@ -619,6 +619,95 @@ def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
     assert description.path_templates == ["data/messages.parquet"]
 
 
+def test_describe_context_slice_returns_route_explained_dataset_brief(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/enron#"
+    messages = f"{base}eml_messages"
+    doc_id = f"{base}eml_messages__doc_id"
+    claim = f"{base}claim_doc_id_join"
+
+    db.record_map_dataset(
+        messages,
+        label="EML messages",
+        description="Parsed email message records.",
+        is_table=True,
+        path_templates=["data/messages.parquet"],
+    )
+    db.record_map_column(
+        doc_id,
+        table_iri=messages,
+        column_name="doc_id",
+        physical_type="rc:Varchar",
+    )
+    claim_result = db.record_claim_observation(
+        summary="doc_id behaves as the message entity key.",
+        claim_text="doc_id behaves as the message entity key.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=[doc_id],
+        claim_iri=claim,
+        evidence_summary="Unit test evidence.",
+        source_path="tests/test_doxabase_core.py",
+        source_kind="rc:DocumentationSource",
+    )
+    pattern_result = db.record_pattern(
+        summary="doc_id is the stable message identity handle.",
+        pattern_text="Use doc_id as the stable message identity handle.",
+        rationale="A claim about the table column supports this reader protocol.",
+        pattern_targets=[messages],
+        supporting_claims=[claim_result.claim_iri],
+    )
+
+    context_slice = db.describe_context_slice(
+        [messages],
+        profile="dataset_brief",
+        include_trig=True,
+        max_triples=200,
+    )
+
+    assert context_slice.profile == "dataset_brief"
+    assert context_slice.seeds[0].iri == messages
+    assert context_slice.dataset_contexts[0].iri == messages
+    assert context_slice.pattern_contexts[0].iri == pattern_result.pattern_iri
+    assert context_slice.truncated is False
+    assert context_slice.truncation_scope == "triples_only"
+    assert context_slice.resource_count == len(context_slice.resources)
+    assert context_slice.triple_count <= 200
+    assert context_slice.returned_triple_count == context_slice.triple_count
+    assert context_slice.candidate_triple_count == context_slice.triple_count
+    assert context_slice.omitted_triple_count == 0
+    assert context_slice.graph_counts["map"] >= 1
+    assert context_slice.graph_counts["patterns"] >= 1
+    assert context_slice.graph_counts["observations"] >= 1
+    assert context_slice.graph_counts["evidence"] >= 1
+    assert context_slice.route_counts["dataset_column"] == 1
+    assert context_slice.route_counts["linked_pattern"] == 1
+    assert context_slice.route_counts["supporting_claim"] >= 1
+
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert messages in resources
+    assert doc_id in resources
+    assert pattern_result.pattern_iri in resources
+    assert claim_result.claim_iri in resources
+    assert claim_result.evidence_iri in resources
+    assert resources[messages].referenced_only is False
+    assert resources[messages].primary_route.route == "seed"
+    assert any(route.route == "seed" for route in resources[messages].routes)
+    assert any(route.route == "dataset_column" for route in resources[doc_id].routes)
+    assert any(
+        route.route == "linked_pattern"
+        for route in resources[pattern_result.pattern_iri].routes
+    )
+
+    assert context_slice.trig is not None
+    dataset = Dataset()
+    dataset.parse(data=context_slice.trig, format="trig")
+    graph_iris = {str(graph.identifier) for graph in dataset.graphs() if len(graph)}
+    assert "https://richcanopy.org/graph/map" in graph_iris
+    assert "https://richcanopy.org/graph/patterns" in graph_iris
+
+
 def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

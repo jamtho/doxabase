@@ -516,6 +516,49 @@ class ResourceContext:
 
 
 @dataclass(frozen=True)
+class ContextSliceRoute:
+    route: str
+    route_label: str
+    source_iri: str | None
+    source_label: str | None
+    depth: int
+
+
+@dataclass(frozen=True)
+class ContextSliceResource:
+    iri: str
+    label: str | None
+    description: str | None
+    types: list[str]
+    graphs: list[str]
+    referenced_only: bool
+    primary_route: ContextSliceRoute
+    routes: list[ContextSliceRoute]
+
+
+@dataclass(frozen=True)
+class ContextSlice:
+    profile: str
+    seeds: list[ResourceSummary]
+    resources: list[ContextSliceResource]
+    resource_count: int
+    route_counts: dict[str, int]
+    graph_counts: dict[str, int]
+    triples: list[ResourceTriple]
+    triple_count: int
+    returned_triple_count: int
+    candidate_triple_count: int
+    omitted_triple_count: int
+    max_triples: int
+    truncated: bool
+    truncation_scope: str
+    trig: str | None
+    dataset_contexts: list[DatasetDescription]
+    pattern_contexts: list[PatternDescription]
+    warnings: list[str]
+
+
+@dataclass(frozen=True)
 class SearchMatch:
     iri: str
     graph: str
@@ -926,6 +969,814 @@ class DoxaBase:
                 self._objects(data_graphs, pattern_iri, "rc:mapImplication"),
             ),
         )
+
+    def describe_context_slice(
+        self,
+        seed_iris: Iterable[str] | str,
+        *,
+        profile: TypingLiteral[
+            "dataset_brief",
+            "pattern_brief",
+            "deep_lore",
+        ] = "dataset_brief",
+        max_triples: int = 500,
+        include_trig: bool = False,
+        graph_iri_prefix: str = RCG_PREFIX,
+    ) -> ContextSlice:
+        if max_triples < 1:
+            raise DoxaBaseError("max_triples must be at least 1")
+        if profile not in {"dataset_brief", "pattern_brief", "deep_lore"}:
+            raise DoxaBaseError(
+                "profile must be 'dataset_brief', 'pattern_brief', or 'deep_lore'"
+            )
+
+        seeds = [
+            self.expand_iri(seed)
+            for seed in self._string_values("seed_iris", seed_iris, required=True)
+        ]
+        all_graphs = self._expand_graphs(["all"])
+        all_lookup_graphs = self._lookup_graphs(all_graphs)
+        resources: dict[str, list[ContextSliceRoute]] = {}
+        dataset_contexts: dict[str, DatasetDescription] = {}
+        pattern_contexts: dict[str, PatternDescription] = {}
+        described_datasets: set[str] = set()
+        described_patterns: set[str] = set()
+        described_claims: set[str] = set()
+        described_observations: set[str] = set()
+        described_evidence: set[str] = set()
+        warnings: list[str] = []
+
+        def add_resource(
+            iri: str | None,
+            route: str,
+            route_label: str,
+            *,
+            source_iri: str | None = None,
+            depth: int = 0,
+        ) -> None:
+            if iri is None:
+                return
+            expanded_iri = self.expand_iri(iri)
+            source_label = (
+                self._display_label_from_graphs(all_lookup_graphs, source_iri)
+                if source_iri is not None
+                else None
+            )
+            route_record = ContextSliceRoute(
+                route=route,
+                route_label=route_label,
+                source_iri=source_iri,
+                source_label=source_label,
+                depth=depth,
+            )
+            existing = resources.setdefault(expanded_iri, [])
+            route_key = (
+                route_record.route,
+                route_record.source_iri,
+                route_record.depth,
+            )
+            if not any(
+                (item.route, item.source_iri, item.depth) == route_key
+                for item in existing
+            ):
+                existing.append(route_record)
+
+        def add_summary(
+            summary: ResourceSummary | None,
+            route: str,
+            route_label: str,
+            *,
+            source_iri: str | None = None,
+            depth: int = 0,
+        ) -> None:
+            if summary is not None:
+                add_resource(
+                    summary.iri,
+                    route,
+                    route_label,
+                    source_iri=source_iri,
+                    depth=depth,
+                )
+
+        def add_claim(claim_iri: str, source_iri: str | None, depth: int) -> None:
+            if claim_iri in described_claims:
+                add_resource(
+                    claim_iri,
+                    "supporting_claim",
+                    "supporting claim",
+                    source_iri=source_iri,
+                    depth=depth,
+                )
+                return
+            described_claims.add(claim_iri)
+            add_resource(
+                claim_iri,
+                "supporting_claim",
+                "supporting claim",
+                source_iri=source_iri,
+                depth=depth,
+            )
+            claim = self._describe_claim(claim_iri, all_graphs, all_lookup_graphs)
+            for target in claim.claim_targets:
+                add_summary(
+                    target,
+                    "claim_target",
+                    "claim target",
+                    source_iri=claim_iri,
+                    depth=depth + 1,
+                )
+            for proposed in claim.proposed_assertions:
+                add_summary(
+                    proposed,
+                    "proposed_assertion",
+                    "proposed assertion",
+                    source_iri=claim_iri,
+                    depth=depth + 1,
+                )
+            for observation_iri in self._subjects(
+                all_graphs,
+                "rc:hasClaim",
+                claim_iri,
+            ):
+                add_observation(observation_iri, claim_iri, depth + 1)
+
+        def add_evidence(evidence_iri: str, source_iri: str | None, depth: int) -> None:
+            if evidence_iri in described_evidence:
+                add_resource(
+                    evidence_iri,
+                    "evidence",
+                    "evidence",
+                    source_iri=source_iri,
+                    depth=depth,
+                )
+                return
+            described_evidence.add(evidence_iri)
+            add_resource(
+                evidence_iri,
+                "evidence",
+                "evidence",
+                source_iri=source_iri,
+                depth=depth,
+            )
+            for span_iri in self._objects(all_graphs, evidence_iri, "rc:sourceSpan"):
+                add_resource(
+                    span_iri,
+                    "source_span",
+                    "source span",
+                    source_iri=evidence_iri,
+                    depth=depth + 1,
+                )
+
+        def add_observation(
+            observation_iri: str,
+            source_iri: str | None,
+            depth: int,
+        ) -> None:
+            if observation_iri in described_observations:
+                add_resource(
+                    observation_iri,
+                    "supporting_observation",
+                    "supporting observation",
+                    source_iri=source_iri,
+                    depth=depth,
+                )
+                return
+            described_observations.add(observation_iri)
+            add_resource(
+                observation_iri,
+                "supporting_observation",
+                "supporting observation",
+                source_iri=source_iri,
+                depth=depth,
+            )
+            for predicate, route, label in (
+                ("rc:observedAsset", "observed_asset", "observed asset"),
+                ("rc:observedColumn", "observed_column", "observed column"),
+            ):
+                for observed_iri in self._objects(all_graphs, observation_iri, predicate):
+                    add_resource(
+                        observed_iri,
+                        route,
+                        label,
+                        source_iri=observation_iri,
+                        depth=depth + 1,
+                    )
+            for claim_iri in self._objects(all_graphs, observation_iri, "rc:hasClaim"):
+                add_claim(claim_iri, observation_iri, depth + 1)
+            for evidence_iri in self._objects(all_graphs, observation_iri, "rc:evidence"):
+                add_evidence(evidence_iri, observation_iri, depth + 1)
+
+        def add_pattern(pattern_iri: str, source_iri: str | None, depth: int) -> None:
+            if pattern_iri in described_patterns:
+                add_resource(
+                    pattern_iri,
+                    "linked_pattern",
+                    "linked pattern",
+                    source_iri=source_iri,
+                    depth=depth,
+                )
+                return
+            described_patterns.add(pattern_iri)
+            add_resource(
+                pattern_iri,
+                "linked_pattern",
+                "linked pattern",
+                source_iri=source_iri,
+                depth=depth,
+            )
+            try:
+                pattern = self.describe_pattern(pattern_iri, graph="patterns")
+            except DoxaBaseError as exc:
+                warnings.append(str(exc))
+                return
+            pattern_contexts[pattern.iri] = pattern
+            for target in pattern.pattern_targets:
+                add_summary(
+                    target,
+                    "pattern_target",
+                    "pattern target",
+                    source_iri=pattern_iri,
+                    depth=depth + 1,
+                )
+                add_owner_dataset_for_column(target.iri, pattern_iri, depth + 2)
+            for implication in pattern.map_implications:
+                add_summary(
+                    implication,
+                    "map_implication",
+                    "map implication",
+                    source_iri=pattern_iri,
+                    depth=depth + 1,
+                )
+            for observation in pattern.supporting_observations:
+                add_observation(observation.iri, pattern_iri, depth + 1)
+            for claim in pattern.supporting_claims:
+                add_claim(claim.iri, pattern_iri, depth + 1)
+            for evidence in pattern.evidence:
+                add_evidence(evidence.iri, pattern_iri, depth + 1)
+
+        def add_owner_dataset_for_column(
+            iri: str,
+            source_iri: str | None,
+            depth: int,
+        ) -> None:
+            owner = self._first_owner_dataset_iri(all_graphs, iri)
+            if owner is not None:
+                add_resource(
+                    owner,
+                    "owning_dataset",
+                    "owning dataset",
+                    source_iri=source_iri,
+                    depth=depth,
+                )
+
+        def add_relationship(relationship: RelationshipDescription, depth: int) -> None:
+            add_resource(
+                relationship.iri,
+                "dataset_relationship",
+                "dataset relationship",
+                source_iri=relationship.iri,
+                depth=depth,
+            )
+            for summary in (
+                relationship.source_dataset,
+                relationship.target_dataset,
+                relationship.foreign_key_from,
+                relationship.foreign_key_to,
+                relationship.referential_integrity,
+                relationship.derivation_function,
+            ):
+                add_summary(
+                    summary,
+                    "relationship_resource",
+                    "relationship resource",
+                    source_iri=relationship.iri,
+                    depth=depth + 1,
+                )
+            for collection in (
+                relationship.identifying_columns,
+                relationship.source_columns,
+                relationship.derived_columns,
+                relationship.derivation_properties,
+            ):
+                for summary in collection:
+                    add_summary(
+                        summary,
+                        "relationship_resource",
+                        "relationship resource",
+                        source_iri=relationship.iri,
+                        depth=depth + 1,
+                    )
+
+        def add_dataset(dataset_iri: str, source_iri: str | None, depth: int) -> None:
+            add_resource(
+                dataset_iri,
+                "seed_dataset" if source_iri is None else "related_dataset",
+                "seed dataset" if source_iri is None else "related dataset",
+                source_iri=source_iri,
+                depth=depth,
+            )
+            if dataset_iri in described_datasets:
+                return
+            described_datasets.add(dataset_iri)
+            try:
+                dataset = self.describe_dataset(dataset_iri, graph="map")
+            except DoxaBaseError as exc:
+                warnings.append(str(exc))
+                return
+            dataset_contexts[dataset.iri] = dataset
+            for summary in (
+                dataset.row_semantics,
+                dataset.entity_key,
+                dataset.snapshot_timestamp,
+                dataset.schema_stability,
+            ):
+                add_summary(
+                    summary,
+                    "dataset_semantic_term",
+                    "dataset semantic term",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+            for column in dataset.columns:
+                add_resource(
+                    column.iri,
+                    "dataset_column",
+                    "dataset column",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    column.physical_type,
+                    "column_type",
+                    "column type",
+                    source_iri=column.iri,
+                    depth=depth + 2,
+                )
+                add_summary(
+                    column.value_type,
+                    "column_type",
+                    "column type",
+                    source_iri=column.iri,
+                    depth=depth + 2,
+                )
+            for layout in dataset.physical_layouts:
+                add_resource(
+                    layout.iri,
+                    "physical_layout",
+                    "physical layout",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    layout.file_format,
+                    "layout_term",
+                    "layout term",
+                    source_iri=layout.iri,
+                    depth=depth + 2,
+                )
+                add_summary(
+                    layout.compression_codec,
+                    "layout_term",
+                    "layout term",
+                    source_iri=layout.iri,
+                    depth=depth + 2,
+                )
+            for access in dataset.storage_accesses:
+                add_resource(
+                    access.iri,
+                    "storage_access",
+                    "storage access",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    access.storage_protocol,
+                    "storage_term",
+                    "storage term",
+                    source_iri=access.iri,
+                    depth=depth + 2,
+                )
+                add_summary(
+                    access.access_mode,
+                    "storage_term",
+                    "storage term",
+                    source_iri=access.iri,
+                    depth=depth + 2,
+                )
+            for partition in dataset.partition_schemes:
+                add_resource(
+                    partition.iri,
+                    "partition_scheme",
+                    "partition scheme",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    partition.partition_column,
+                    "partition_resource",
+                    "partition resource",
+                    source_iri=partition.iri,
+                    depth=depth + 2,
+                )
+                add_summary(
+                    partition.granularity,
+                    "partition_resource",
+                    "partition resource",
+                    source_iri=partition.iri,
+                    depth=depth + 2,
+                )
+                add_summary(
+                    partition.redundant_partition_key,
+                    "partition_resource",
+                    "partition resource",
+                    source_iri=partition.iri,
+                    depth=depth + 2,
+                )
+            for caveat in dataset.caveats:
+                add_resource(
+                    caveat.iri,
+                    "known_caveat",
+                    "known caveat",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    caveat.severity,
+                    "caveat_severity",
+                    "caveat severity",
+                    source_iri=caveat.iri,
+                    depth=depth + 2,
+                )
+            for provenance in dataset.provenance:
+                add_summary(
+                    provenance,
+                    "provenance",
+                    "provenance",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+            for transformation in dataset.transformations:
+                add_resource(
+                    transformation.iri,
+                    "transformation",
+                    "transformation",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+            for related in dataset.related_dataset_groups:
+                add_resource(
+                    related.iri,
+                    "related_dataset",
+                    "related dataset",
+                    source_iri=dataset_iri,
+                    depth=depth + 1,
+                )
+                for reason in related.reasons:
+                    if reason.relationship_iri is not None:
+                        add_resource(
+                            reason.relationship_iri,
+                            "related_dataset_reason",
+                            "related dataset reason",
+                            source_iri=related.iri,
+                            depth=depth + 2,
+                        )
+                    for column in reason.columns:
+                        add_summary(
+                            column,
+                            "related_dataset_column",
+                            "related dataset column",
+                            source_iri=related.iri,
+                            depth=depth + 2,
+                        )
+            for relationship in dataset.relationships:
+                add_relationship(relationship, depth + 1)
+            for reason in dataset.linked_pattern_reasons:
+                for group in reason.match_groups:
+                    add_summary(
+                        group.matched_resource,
+                        f"linked_pattern_{group.relevance_tier}",
+                        f"linked pattern {group.relevance_tier}",
+                        source_iri=reason.iri,
+                        depth=depth + 2,
+                    )
+            for linked_pattern in dataset.linked_patterns:
+                add_pattern(linked_pattern.iri, dataset_iri, depth + 1)
+
+        for seed in seeds:
+            if not self._subject_exists(seed, all_graphs):
+                raise DoxaBaseError(f"Seed resource '{seed}' was not found")
+            add_resource(seed, "seed", "seed resource", depth=0)
+            seed_types = self._types_from_graphs(all_graphs, seed)
+            if (
+                profile in {"dataset_brief", "deep_lore"}
+                and (
+                    self.expand_iri("rc:Dataset") in seed_types
+                    or self.expand_iri("rc:Table") in seed_types
+                )
+            ):
+                add_dataset(seed, None, 0)
+            elif (
+                profile in {"pattern_brief", "deep_lore"}
+                and self.expand_iri("rc:Pattern") in seed_types
+            ):
+                add_pattern(seed, None, 0)
+            else:
+                warnings.append(
+                    f"Seed '{seed}' was included directly; profile-specific expansion did not apply."
+                )
+
+        if profile == "deep_lore":
+            self._add_revision_context_for_slice(resources, all_graphs, add_resource)
+
+        resource_iris = self._context_slice_resource_order(resources, all_lookup_graphs)
+        triples, candidate_triple_count = self._context_slice_triples(
+            self._context_slice_graphs(),
+            resource_iris,
+            max_triples=max_triples,
+        )
+        omitted_triple_count = max(candidate_triple_count - len(triples), 0)
+        truncated = omitted_triple_count > 0
+        trig = (
+            self._context_slice_trig(triples, graph_iri_prefix=graph_iri_prefix)
+            if include_trig
+            else None
+        )
+        graph_counts: dict[str, int] = {}
+        for triple in triples:
+            graph_counts[triple.graph] = graph_counts.get(triple.graph, 0) + 1
+
+        return ContextSlice(
+            profile=profile,
+            seeds=[
+                self._resource_summary(all_lookup_graphs, seed, display_label=True)
+                for seed in seeds
+            ],
+            resources=[
+                self._context_slice_resource(iri, routes, all_lookup_graphs)
+                for iri, routes in self._context_slice_ordered_resources(
+                    resources,
+                    all_lookup_graphs,
+                )
+            ],
+            resource_count=len(resources),
+            route_counts=self._context_slice_route_counts(resources),
+            graph_counts=graph_counts,
+            triples=triples,
+            triple_count=len(triples),
+            returned_triple_count=len(triples),
+            candidate_triple_count=candidate_triple_count,
+            omitted_triple_count=omitted_triple_count,
+            max_triples=max_triples,
+            truncated=truncated,
+            truncation_scope="triples_only",
+            trig=trig,
+            dataset_contexts=list(dataset_contexts.values()),
+            pattern_contexts=list(pattern_contexts.values()),
+            warnings=warnings,
+        )
+
+    def _add_revision_context_for_slice(
+        self,
+        resources: dict[str, list[ContextSliceRoute]],
+        all_graphs: list[str],
+        add_resource: Any,
+    ) -> None:
+        history_graphs = ["history"]
+        support_predicates = (
+            ("rc:revisionSupportingPattern", "revision_supporting_pattern"),
+            ("rc:revisionSupportingClaim", "revision_supporting_claim"),
+            ("rc:revisionSupportingObservation", "revision_supporting_observation"),
+        )
+        for resource_iri in list(resources):
+            for predicate, route in support_predicates:
+                for revision_iri in self._subjects(
+                    history_graphs,
+                    predicate,
+                    resource_iri,
+                ):
+                    add_resource(
+                        revision_iri,
+                        route,
+                        "supporting revision",
+                        source_iri=resource_iri,
+                        depth=3,
+                    )
+                    for evidence_iri in self._objects(
+                        all_graphs,
+                        revision_iri,
+                        "rc:evidence",
+                    ):
+                        add_resource(
+                            evidence_iri,
+                            "revision_evidence",
+                            "revision evidence",
+                            source_iri=revision_iri,
+                            depth=4,
+                        )
+
+    def _context_slice_graphs(self) -> list[str]:
+        return [
+            "base_ontology",
+            "ontology",
+            "map",
+            "observations",
+            "patterns",
+            "evidence",
+            "history",
+        ]
+
+    def _context_slice_resource(
+        self,
+        iri: str,
+        routes: list[ContextSliceRoute],
+        lookup_graphs: list[str],
+    ) -> ContextSliceResource:
+        summary = self._resource_summary(lookup_graphs, iri, display_label=True)
+        sorted_routes = self._context_slice_sorted_routes(routes)
+        graphs = self._graphs_for_subject(self._context_slice_graphs(), iri)
+        return ContextSliceResource(
+            iri=iri,
+            label=summary.label,
+            description=summary.description,
+            types=self._types_from_graphs(lookup_graphs, iri),
+            graphs=graphs,
+            referenced_only=not graphs,
+            primary_route=sorted_routes[0],
+            routes=sorted_routes,
+        )
+
+    def _context_slice_resource_order(
+        self,
+        resources: dict[str, list[ContextSliceRoute]],
+        lookup_graphs: list[str],
+    ) -> list[str]:
+        return [
+            iri
+            for iri, _routes in self._context_slice_ordered_resources(
+                resources,
+                lookup_graphs,
+            )
+        ]
+
+    def _context_slice_ordered_resources(
+        self,
+        resources: dict[str, list[ContextSliceRoute]],
+        lookup_graphs: list[str],
+    ) -> list[tuple[str, list[ContextSliceRoute]]]:
+        return sorted(
+            resources.items(),
+            key=lambda item: (
+                min(self._context_slice_route_priority(route.route) for route in item[1]),
+                min(route.depth for route in item[1]),
+                self._display_label_from_graphs(lookup_graphs, item[0]) or "",
+                item[0],
+            ),
+        )
+
+    def _context_slice_sorted_routes(
+        self,
+        routes: Iterable[ContextSliceRoute],
+    ) -> list[ContextSliceRoute]:
+        return sorted(
+            routes,
+            key=lambda route: (
+                self._context_slice_route_priority(route.route),
+                route.depth,
+                route.source_iri or "",
+                route.route,
+            ),
+        )
+
+    def _context_slice_route_priority(self, route: str) -> int:
+        exact = {
+            "seed": 0,
+            "seed_dataset": 1,
+            "linked_pattern": 2,
+            "pattern_target": 3,
+            "map_implication": 4,
+            "dataset_column": 5,
+            "known_caveat": 6,
+            "dataset_relationship": 7,
+            "related_dataset_reason": 8,
+            "related_dataset": 9,
+            "supporting_claim": 10,
+            "supporting_observation": 11,
+            "evidence": 12,
+            "source_span": 13,
+        }
+        if route in exact:
+            return exact[route]
+        if route.startswith("linked_pattern_"):
+            return 2
+        if route.startswith("revision_"):
+            return 14
+        if route.endswith("_term"):
+            return 20
+        return 30
+
+    def _context_slice_route_counts(
+        self,
+        resources: dict[str, list[ContextSliceRoute]],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for routes in resources.values():
+            for route in routes:
+                counts[route.route] = counts.get(route.route, 0) + 1
+        return counts
+
+    def _context_slice_triples(
+        self,
+        graphs: list[str],
+        resource_iris: Iterable[str],
+        *,
+        max_triples: int,
+    ) -> tuple[list[ResourceTriple], int]:
+        triples: list[ResourceTriple] = []
+        queue = list(dict.fromkeys(resource_iris))
+        seen_subjects: set[str] = set()
+        seen_triples: set[
+            tuple[str, str, str, str, str, str | None, str | None]
+        ] = set()
+        candidate_triple_count = 0
+
+        while queue:
+            subject = queue.pop(0)
+            if subject in seen_subjects:
+                continue
+            seen_subjects.add(subject)
+            subject_count = self._subject_triple_count(graphs, subject)
+            for triple in self._resource_triples(
+                graphs,
+                subject=subject,
+                limit=max(subject_count, 1),
+            ):
+                triple_key = (
+                    triple.graph,
+                    triple.subject,
+                    triple.predicate,
+                    triple.object,
+                    triple.object_kind,
+                    triple.object_datatype,
+                    triple.object_lang,
+                )
+                if triple_key in seen_triples:
+                    continue
+                seen_triples.add(triple_key)
+                candidate_triple_count += 1
+                if triple.object_kind == "bnode" and triple.object not in seen_subjects:
+                    queue.append(triple.object)
+                if len(triples) < max_triples:
+                    triples.append(triple)
+        return triples, candidate_triple_count
+
+    def _subject_triple_count(self, graphs: list[str], subject: str) -> int:
+        graph_filter, params = self._graph_filter(graphs, alias="q")
+        row = self._conn.execute(
+            f"""
+            SELECT COUNT(*) AS count
+            FROM quads q
+            WHERE q.subject = ?
+              {graph_filter}
+            """,
+            [subject, *params],
+        ).fetchone()
+        return int(row["count"])
+
+    def _context_slice_trig(
+        self,
+        triples: Iterable[ResourceTriple],
+        *,
+        graph_iri_prefix: str,
+    ) -> str:
+        dataset = Dataset()
+        for prefix, namespace in PREFIXES.items():
+            dataset.bind(prefix, namespace)
+        dataset.bind("rcg", graph_iri_prefix)
+        for triple in triples:
+            context = dataset.graph(
+                URIRef(self._export_graph_identifier(triple.graph, graph_iri_prefix))
+            )
+            context.add(
+                (
+                    self._term_from_row(triple.subject, triple.subject_kind),
+                    URIRef(triple.predicate),
+                    self._resource_triple_object_term(triple),
+                )
+            )
+        return dataset.serialize(format="trig")
+
+    def _resource_triple_object_term(self, triple: ResourceTriple) -> Identifier:
+        if triple.object_kind == "uri":
+            return URIRef(triple.object)
+        if triple.object_kind == "bnode":
+            return BNode(triple.object)
+        if triple.object_kind == "literal":
+            return Literal(
+                triple.object,
+                lang=triple.object_lang,
+                datatype=triple.object_datatype,
+            )
+        raise TypeError(f"Unsupported object kind: {triple.object_kind}")
 
     def search(
         self,
@@ -3140,6 +3991,22 @@ class DoxaBase:
 
     def _graph_counts(self, graphs: Iterable[str]) -> dict[str, int]:
         return {graph: self.triple_count(graph) for graph in graphs}
+
+    def _graphs_for_subject(self, graphs: list[str], subject: str) -> list[str]:
+        graph_filter, params = self._graph_filter(graphs, alias="q")
+        return [
+            row["graph"]
+            for row in self._conn.execute(
+                f"""
+                SELECT DISTINCT q.graph
+                FROM quads q
+                WHERE q.subject = ?
+                  {graph_filter}
+                ORDER BY q.graph
+                """,
+                [subject, *params],
+            )
+        ]
 
     def _graphs_for_validation_scope(self, scope: str) -> list[str]:
         if scope == "map":

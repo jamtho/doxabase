@@ -91,6 +91,23 @@ def describe_dataset_tool(
     return asdict(db.describe_dataset(iri=iri, graph=graph))
 
 
+def describe_context_slice_tool(
+    db: DoxaBase,
+    seed_iris: list[str],
+    profile: str = "dataset_brief",
+    max_triples: int = 500,
+    include_trig: bool = False,
+) -> dict[str, Any]:
+    return asdict(
+        db.describe_context_slice(
+            seed_iris,
+            profile=profile,  # type: ignore[arg-type]
+            max_triples=max_triples,
+            include_trig=include_trig,
+        )
+    )
+
+
 def record_observation_tool(
     db: DoxaBase,
     summary: str,

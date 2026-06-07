@@ -83,6 +83,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "lexical-search.md",
     ),
     AgentDoc(
+        id="context_slicing",
+        title="Context Slicing",
+        description="How to request bounded route-explained graph slices around datasets and patterns.",
+        path=DOCS_DIR / "context-slicing.md",
+    ),
+    AgentDoc(
         id="executable_catalog",
         title="Executable Catalog Metadata",
         description="How to model non-secret storage access facts for query planning and handoff.",

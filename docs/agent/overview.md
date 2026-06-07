@@ -21,6 +21,7 @@ Current implementation status:
 - `describe_pattern()` for compact handoff context around pattern syntheses.
 - `describe_graph_revision()` for compact review of history records.
 - `describe_dataset()` for bounded table schema, row semantics, relationship, caveat, provenance, and linked-pattern context.
+- `describe_context_slice()` for route-explained dataset, pattern, and deep-lore graph slices.
 - `record_observation()` for point-in-time findings and linked evidence.
 - `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.
 - `record_pattern()` for syntheses that connect related findings to map targets.
@@ -32,11 +33,11 @@ Current implementation status:
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
 - MCP tools for docs, overview, search, listing, dataset description,
-  observation/history recording, import/export, validation, and fixture loading.
+  context slicing, observation/history recording, import/export, validation, and
+  fixture loading.
 
 Important V1 limits:
 
-- No context slicing yet.
 - No staged revision/diff workflow yet.
 - No full SPARQL endpoint.
 - No direct query generation or execution helpers yet.

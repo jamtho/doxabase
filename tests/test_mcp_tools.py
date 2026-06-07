@@ -5,6 +5,7 @@ import pytest
 from doxabase import DoxaBase
 from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
+    describe_context_slice_tool,
     describe_dataset_tool,
     describe_graph_revision_tool,
     describe_pattern_tool,
@@ -39,6 +40,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.graph_overview" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
+    assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
     assert "doxabase.describe_pattern" in tool_names
@@ -268,6 +270,57 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         column["column_name"]
         for column in condition_id_reason["related_dataset_columns"]
     ] == ["conditionId"]
+
+
+def test_describe_context_slice_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+    seed_iri = "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots"
+    record_pattern_tool(
+        db,
+        summary="Market snapshots carry hourly Gamma market state.",
+        pattern_text="Treat market snapshots as hourly Gamma state around condition IDs.",
+        rationale="The fixture map describes snapshot rows, condition IDs, and hourly partitions together.",
+        pattern_targets=[seed_iri],
+        source_path="tests/test_mcp_tools.py",
+        source_kind="rc:DocumentationSource",
+    )
+
+    result = describe_context_slice_tool(
+        db,
+        seed_iris=[seed_iri],
+        profile="dataset_brief",
+        max_triples=120,
+    )
+
+    assert result["profile"] == "dataset_brief"
+    assert result["seeds"][0]["label"] == "Gamma Market Snapshots"
+    assert result["dataset_contexts"][0]["iri"] == seed_iri
+    assert result["pattern_contexts"]
+    assert result["resource_count"] == len(result["resources"])
+    assert result["route_counts"]["dataset_column"] >= 1
+    assert result["route_counts"]["linked_pattern"] >= 1
+    assert result["triple_count"] <= 120
+    assert result["returned_triple_count"] == result["triple_count"]
+    assert result["candidate_triple_count"] >= result["returned_triple_count"]
+    assert result["omitted_triple_count"] == (
+        result["candidate_triple_count"] - result["returned_triple_count"]
+    )
+    assert result["truncation_scope"] == "triples_only"
+    assert result["truncated"] is True
+    assert result["omitted_triple_count"] > 0
+    assert result["triples"][0]["subject"] == seed_iri
+    assert result["trig"] is None
+    assert any(
+        resource["iri"]
+        == "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots"
+        and resource["referenced_only"] is False
+        and resource["primary_route"]["route"] == "seed"
+        and any(route["route"] == "seed" for route in resource["routes"])
+        for resource in result["resources"]
+    )
 
 
 def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> None:

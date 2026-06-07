@@ -55,6 +55,8 @@ Implemented:
 - `describe_graph_revision()` for compact history review over revision records.
 - `describe_dataset()` for bounded table schema, row semantics, relationship,
   caveat, provenance, and linked-pattern context.
+- `describe_context_slice()` for route-explained dataset, pattern, and deep-lore
+  graph slices.
 - `record_observation()` for first-class observation and evidence resources.
 - `record_claim_observation()` for common observation, claim, evidence, and source-span capture.
 - `record_pattern()` for syntheses that connect related findings to map targets.
@@ -73,11 +75,9 @@ Implemented:
 
 Not implemented yet:
 
-- Context graph slicing.
 - Staged graph revision/diff workflow.
 - Query generation or execution helpers.
 - Full SPARQL endpoint.
-- MCP tools for graph context slicing.
 
 ## Layout
 
@@ -156,19 +156,21 @@ Useful first tool calls for an agent:
 6. `doxabase.search` for remembered terms, caveats, observations, or evidence
 7. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
 8. `doxabase.describe_dataset` with a table IRI from `list_entities`
-9. `doxabase.describe_pattern` for pattern handoff context after finding an
+9. `doxabase.describe_context_slice` when a route-explained graph slice would
+   help a deeper handoff or review
+10. `doxabase.describe_pattern` for pattern handoff context after finding an
    `rc:Pattern`
-10. `doxabase.describe_resource` for typed resources such as `rc:Claim`,
+11. `doxabase.describe_resource` for typed resources such as `rc:Claim`,
    `rc:Evidence`, or `rc:SourceSpan`
-11. `doxabase.record_observation` for useful point-in-time findings
-12. `doxabase.record_claim_observation` for structured claim observations
-13. `doxabase.record_pattern` for syntheses over related findings
-14. `doxabase.record_map_dataset` and related map helpers for current-best facts
-15. `doxabase.validate_graph` with `scope="all"`
-16. `doxabase.export_trig` when you need a named-graph project review bundle
-17. `doxabase.record_graph_revision` when the bundle/change rationale should be
+12. `doxabase.record_observation` for useful point-in-time findings
+13. `doxabase.record_claim_observation` for structured claim observations
+14. `doxabase.record_pattern` for syntheses over related findings
+15. `doxabase.record_map_dataset` and related map helpers for current-best facts
+16. `doxabase.validate_graph` with `scope="all"`
+17. `doxabase.export_trig` when you need a named-graph project review bundle
+18. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-18. `doxabase.describe_graph_revision` when reviewing a history record
+19. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -181,6 +183,7 @@ Current MCP tools:
 - `doxabase.describe_pattern`
 - `doxabase.describe_graph_revision`
 - `doxabase.describe_dataset`
+- `doxabase.describe_context_slice`
 - `doxabase.record_observation`
 - `doxabase.record_claim_observation`
 - `doxabase.record_pattern`
@@ -221,7 +224,7 @@ Logical includes:
 
 The next useful implementation steps are:
 
-1. Add graph context slicing and fuller staged revision/diff workflows.
+1. Add fuller staged revision/diff workflows.
 2. Add richer profile metrics and profiling helpers.
 3. Consider query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, after the lexical RDF search surface has settled.

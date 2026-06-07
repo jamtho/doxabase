@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     describe_dataset_tool,
+    describe_context_slice_tool,
     describe_graph_revision_tool,
     describe_pattern_tool,
     describe_resource_tool,
@@ -35,8 +36,8 @@ from doxabase.mcp_tools import (
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
-Use graph_overview, search, list_entities, describe_dataset, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, import/export, fixture loading, and validation; context slicing is not implemented yet."""
+Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -85,6 +86,23 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return bounded schema, layout, storage access, caveat, and provenance context."""
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.describe_context_slice")
+    def describe_context_slice(
+        seed_iris: list[str],
+        profile: str = "dataset_brief",
+        max_triples: int = 500,
+        include_trig: bool = False,
+    ) -> dict[str, Any]:
+        """Return a route-explained graph slice around datasets, patterns, or lore."""
+
+        return describe_context_slice_tool(
+            db,
+            seed_iris=seed_iris,
+            profile=profile,
+            max_triples=max_triples,
+            include_trig=include_trig,
+        )
 
     @server.tool(name="doxabase.describe_resource")
     def describe_resource(

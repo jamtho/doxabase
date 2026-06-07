@@ -40,7 +40,8 @@ Use the DoxaBase MCP docs tools when available:
 1. `doxabase.list_docs`
 2. `doxabase.get_doc` with `doc_id="overview"`
 3. `doxabase.get_doc` with `doc_id="graph_roles"`
-4. `doxabase.graph_overview`
+4. `doxabase.get_doc` with `doc_id="context_slicing"`
+5. `doxabase.graph_overview`
 
 ## Daily Commands
 
@@ -123,7 +124,7 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add graph context slicing and fuller staged revision/diff workflows.
-2. Add pattern-to-map promotion and retrieval helpers such as `describe_pattern`.
+1. Add fuller staged revision/diff workflows.
+2. Add pattern-to-map promotion helpers.
 3. Add richer profile metrics and profiling helpers that can write map facts,
    observations, and patterns together.

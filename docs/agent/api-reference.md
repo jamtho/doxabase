@@ -47,6 +47,11 @@ seed graphs in the bundle.
 overview = db.graph_overview(limit=100)
 tables = db.list_entities(type="rc:Table", graph="map", limit=100)
 dataset = db.describe_dataset(tables.entities[0].iri)
+context_slice = db.describe_context_slice(
+    [dataset.iri],
+    profile="dataset_brief",
+    include_trig=True,
+)
 claims = db.list_entities(type="rc:Claim", graph="observations", text="join")
 patterns = db.list_entities(type="rc:Pattern", graph="patterns", text="body_top")
 matches = db.search("MMSI vessel", graph="map", limit=10)
@@ -129,6 +134,18 @@ confidence scores; `relevance_tier_counts` counts grouped matches, while
 groups when scanning; use claim/observation-supported groups for context; call
 `describe_pattern()` before acting on a pattern; use raw `matches` when you need
 every route.
+
+`describe_context_slice()` returns a bounded, route-explained graph slice around
+seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
+dataset/table map context and linked lore, `pattern_brief` starts from pattern
+support, and `deep_lore` also includes directly relevant revision metadata.
+Use `resources[].routes`, `route_counts`, `dataset_contexts`, and
+`pattern_contexts` as the reading path before raw `triples`. Set
+`include_trig=True` when an agent needs importable TriG text for review or a
+scratch capsule. `max_triples` only truncates raw triples/TriG; top-level
+resources, routes, and structured contexts continue to describe the full
+selected slice. Use `candidate_triple_count`, `returned_triple_count`, and
+`omitted_triple_count` to decide whether to rerun with a larger limit.
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are
