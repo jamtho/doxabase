@@ -22,10 +22,15 @@ between a lore handoff and an opaque RDF neighborhood.
 
 Useful fields:
 
+- `reading_order`: a short static protocol for reading a slice: seeds,
+  structured contexts, routes, resources, then raw RDF when needed.
 - `resources`: selected resources with labels, descriptions, types, graphs, and
   route reasons. `primary_route` is the highest-priority inclusion reason;
   `referenced_only=true` means the resource was selected as an object/reference
   but has no subject triples in the selected graphs.
+- `route_legend`: compact meanings for the route names present in this slice,
+  including their priority and count. Use it with `route_counts` before
+  inspecting raw triples.
 - `route_counts`: how many resources were included through each route.
 - `dataset_contexts` and `pattern_contexts`: structured summaries for the main
   domain objects in the slice.

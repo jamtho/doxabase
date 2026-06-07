@@ -69,7 +69,9 @@ Returns a bounded, route-explained subgraph around one or more seed IRIs. Use
 for pattern support context, and `profile="deep_lore"` when explicit revision
 metadata should come along too. Read `resources[].routes` and `route_counts`
 before raw triples; those fields explain why each resource entered the slice.
-Set `include_trig=true` when you need importable TriG text, and raise
+`reading_order` and `route_legend` provide the static reading protocol and
+meanings for the routes present in the response. Set `include_trig=true` when
+you need importable TriG text, and raise
 `max_triples` when `truncated` is true and the slice still looks relevant.
 Truncation only affects raw `triples` and `trig`; resources and structured
 contexts still describe the full selected slice.

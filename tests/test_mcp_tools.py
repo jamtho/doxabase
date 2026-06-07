@@ -302,6 +302,14 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     assert result["resource_count"] == len(result["resources"])
     assert result["route_counts"]["dataset_column"] >= 1
     assert result["route_counts"]["linked_pattern"] >= 1
+    assert result["reading_order"][0].startswith("Start with seeds")
+    assert any(
+        route["route"] == "seed"
+        and route["count"] == 1
+        and route["priority"] == 0
+        and route["meaning"] == "The resource the caller asked about directly."
+        for route in result["route_legend"]
+    )
     assert result["triple_count"] <= 120
     assert result["returned_triple_count"] == result["triple_count"]
     assert result["candidate_triple_count"] >= result["returned_triple_count"]

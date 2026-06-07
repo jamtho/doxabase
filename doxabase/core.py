@@ -525,6 +525,15 @@ class ContextSliceRoute:
 
 
 @dataclass(frozen=True)
+class ContextSliceRouteLegend:
+    route: str
+    route_label: str
+    meaning: str
+    priority: int
+    count: int
+
+
+@dataclass(frozen=True)
 class ContextSliceResource:
     iri: str
     label: str | None
@@ -540,8 +549,10 @@ class ContextSliceResource:
 class ContextSlice:
     profile: str
     seeds: list[ResourceSummary]
+    reading_order: list[str]
     resources: list[ContextSliceResource]
     resource_count: int
+    route_legend: list[ContextSliceRouteLegend]
     route_counts: dict[str, int]
     graph_counts: dict[str, int]
     triples: list[ResourceTriple]
@@ -1455,7 +1466,7 @@ class DoxaBase:
                     add_summary(
                         group.matched_resource,
                         f"linked_pattern_{group.relevance_tier}",
-                        f"linked pattern {group.relevance_tier}",
+                        f"linked pattern {group.relevance_tier.replace('_', ' ')}",
                         source_iri=reason.iri,
                         depth=depth + 2,
                     )
@@ -1504,6 +1515,7 @@ class DoxaBase:
         graph_counts: dict[str, int] = {}
         for triple in triples:
             graph_counts[triple.graph] = graph_counts.get(triple.graph, 0) + 1
+        route_counts = self._context_slice_route_counts(resources)
 
         return ContextSlice(
             profile=profile,
@@ -1511,6 +1523,7 @@ class DoxaBase:
                 self._resource_summary(all_lookup_graphs, seed, display_label=True)
                 for seed in seeds
             ],
+            reading_order=self._context_slice_reading_order(),
             resources=[
                 self._context_slice_resource(iri, routes, all_lookup_graphs)
                 for iri, routes in self._context_slice_ordered_resources(
@@ -1519,7 +1532,8 @@ class DoxaBase:
                 )
             ],
             resource_count=len(resources),
-            route_counts=self._context_slice_route_counts(resources),
+            route_legend=self._context_slice_route_legend(resources, route_counts),
+            route_counts=route_counts,
             graph_counts=graph_counts,
             triples=triples,
             triple_count=len(triples),
@@ -1683,6 +1697,88 @@ class DoxaBase:
             for route in routes:
                 counts[route.route] = counts.get(route.route, 0) + 1
         return counts
+
+    def _context_slice_reading_order(self) -> list[str]:
+        return [
+            "Start with seeds to confirm the requested entry points.",
+            "Read dataset_contexts and pattern_contexts for compact domain context.",
+            "Scan route_counts and route_legend to understand why resources were included.",
+            "Read resources in order, using primary_route before secondary routes.",
+            "Inspect triples or trig only when exact RDF statements or graph roles matter.",
+        ]
+
+    def _context_slice_route_legend(
+        self,
+        resources: dict[str, list[ContextSliceRoute]],
+        route_counts: dict[str, int],
+    ) -> list[ContextSliceRouteLegend]:
+        labels: dict[str, str] = {}
+        for routes in resources.values():
+            for route in routes:
+                labels.setdefault(route.route, route.route_label)
+        return [
+            ContextSliceRouteLegend(
+                route=route,
+                route_label=labels.get(route, route.replace("_", " ")),
+                meaning=self._context_slice_route_meaning(route),
+                priority=self._context_slice_route_priority(route),
+                count=count,
+            )
+            for route, count in sorted(
+                route_counts.items(),
+                key=lambda item: (self._context_slice_route_priority(item[0]), item[0]),
+            )
+        ]
+
+    def _context_slice_route_meaning(self, route: str) -> str:
+        meanings = {
+            "seed": "The resource the caller asked about directly.",
+            "seed_dataset": "A seed resource expanded as a dataset or table.",
+            "linked_pattern": (
+                "A selected or dataset-linked pattern included for surrounding lore."
+            ),
+            "pattern_target": "A resource the selected pattern is about.",
+            "map_implication": "A map resource or assertion the selected pattern may affect.",
+            "dataset_column": "A column belonging to a selected dataset.",
+            "known_caveat": "A caveat attached to a selected dataset.",
+            "dataset_relationship": "A relationship attached to a selected dataset.",
+            "related_dataset_reason": (
+                "A relationship or shared identifier explaining a related dataset."
+            ),
+            "related_dataset": "Another dataset connected to a selected dataset.",
+            "related_dataset_column": "A column involved in a related-dataset reason.",
+            "relationship_resource": "A resource referenced by a selected dataset relationship.",
+            "supporting_claim": "A claim supporting a selected pattern or observation.",
+            "claim_target": "A resource a supporting claim is about.",
+            "proposed_assertion": "A tentative assertion linked from a supporting claim.",
+            "supporting_observation": "An observation supporting a selected pattern or claim.",
+            "observed_asset": "A dataset or asset named by a selected observation.",
+            "observed_column": "A column named by a selected observation.",
+            "evidence": "Evidence linked to a selected observation, claim, pattern, or revision.",
+            "source_span": "A source span attached to selected evidence.",
+            "owning_dataset": "The dataset that owns a selected column.",
+            "dataset_semantic_term": "A semantic term attached to a selected dataset.",
+            "column_type": "A type resource attached to a selected column.",
+            "physical_layout": "Physical layout metadata for a selected dataset.",
+            "layout_term": "A term used inside selected physical layout metadata.",
+            "storage_access": "Storage access metadata for a selected dataset.",
+            "storage_term": "A term used inside selected storage metadata.",
+            "partition_scheme": "Partition metadata for a selected dataset.",
+            "partition_resource": "A resource referenced by selected partition metadata.",
+            "caveat_severity": "A severity term attached to a selected caveat.",
+            "provenance": "Provenance metadata attached to a selected dataset.",
+            "transformation": "Transformation metadata attached to a selected dataset.",
+        }
+        if route in meanings:
+            return meanings[route]
+        if route.startswith("linked_pattern_"):
+            tier = route.removeprefix("linked_pattern_").replace("_", " ")
+            return f"A resource matched through a linked-pattern relevance route: {tier}."
+        if route.startswith("revision_"):
+            return "Revision-history metadata connected to selected lore resources."
+        if route.endswith("_term"):
+            return "A vocabulary term referenced by selected structured context."
+        return "A resource included by this profile-specific context route."
 
     def _context_slice_triples(
         self,

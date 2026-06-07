@@ -140,7 +140,9 @@ seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
 dataset/table map context and linked lore, `pattern_brief` starts from pattern
 support, and `deep_lore` also includes directly relevant revision metadata.
 Use `resources[].routes`, `route_counts`, `dataset_contexts`, and
-`pattern_contexts` as the reading path before raw `triples`. Set
+`pattern_contexts` as the reading path before raw `triples`. The response also
+includes `reading_order` and a filtered `route_legend` so cold agents can follow
+the intended reading protocol without rediscovering route meanings. Set
 `include_trig=True` when an agent needs importable TriG text for review or a
 scratch capsule. `max_triples` only truncates raw triples/TriG; top-level
 resources, routes, and structured contexts continue to describe the full

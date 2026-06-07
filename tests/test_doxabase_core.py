@@ -684,6 +684,14 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
     assert context_slice.route_counts["dataset_column"] == 1
     assert context_slice.route_counts["linked_pattern"] == 1
     assert context_slice.route_counts["supporting_claim"] >= 1
+    assert context_slice.reading_order[0].startswith("Start with seeds")
+    route_legend = {row.route: row for row in context_slice.route_legend}
+    assert route_legend["seed"].count == 1
+    assert route_legend["seed"].priority == 0
+    assert route_legend["seed"].meaning == (
+        "The resource the caller asked about directly."
+    )
+    assert route_legend["dataset_column"].count == 1
 
     resources = {resource.iri: resource for resource in context_slice.resources}
     assert messages in resources
