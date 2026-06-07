@@ -14,6 +14,7 @@ def test_list_agent_docs_contains_operational_docs() -> None:
     assert "patterns" in doc_ids
     assert "map_authoring" in doc_ids
     assert "revisions" in doc_ids
+    assert "staged_revisions" in doc_ids
     assert "lexical_search" in doc_ids
     assert "context_slicing" in doc_ids
     assert "executable_catalog" in doc_ids

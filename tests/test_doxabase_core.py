@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 932
+    assert graphs["base_ontology"].triple_count == 994
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 844
+    assert graphs["base_shapes"].triple_count == 906
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -239,6 +239,82 @@ def test_record_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) ->
             summary="Invalid seed revision",
             rationale="Ordinary project revisions should not target shipped seeds.",
             changed_graphs=["base_ontology"],
+        )
+
+
+def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_map_count = db.triple_count("map")
+    addition = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:Messages a rc:Dataset, rc:Table ;
+        rdfs:label "Messages" .
+    """
+
+    staged = db.stage_graph_revision(
+        summary="Try messages table framing",
+        rationale=(
+            "Exploratory hunch: treating messages as the map anchor should make "
+            "later join reasoning easier."
+        ),
+        additions=[{"graph": "map", "content": addition}],
+        stance="rc:ExploratoryHunch",
+        validation_scope="all",
+    )
+
+    assert staged.revision_type == RC + "StagedRevision"
+    assert staged.revision_stance == RC + "ExploratoryHunch"
+    assert staged.changed_graphs == ["map"]
+    assert staged.validation_conforms is True
+    assert staged.validation_result_count == 0
+    assert staged.patches[0].operation == RC + "AdditionPatch"
+    assert staged.patches[0].target_graph == "map"
+    assert staged.patches[0].triple_count == 3
+    assert staged.patches[0].before_triple_count == before_map_count
+    assert staged.patches[0].after_triple_count == before_map_count + 3
+    assert db.triple_count("map") == before_map_count
+
+    description = db.describe_staged_revision(staged.revision_iri)
+    assert description.revision_stance_label == "exploratory hunch"
+    assert description.revision_type_label == "staged revision"
+    assert description.validation_conforms is True
+    assert description.patches[0].content is not None
+    assert "ex:Messages" in description.patches[0].content
+    overview = db.graph_overview()
+    assert overview.key_counts["graph_revisions"] == 1
+    assert overview.key_counts["graph_patches"] == 1
+    assert db.validate_graph(scope="all").conforms
+
+    export_path = tmp_path / "staged-review.md"
+    export = db.export_staged_revision(staged.revision_iri, export_path)
+    assert export.path == str(export_path)
+    assert export.format == "markdown"
+    export_text = export_path.read_text()
+    assert "exploratory hunch" in export_text
+    assert "ex:Messages" in export_text
+
+
+def test_stage_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(ImmutableGraphError, match="base_ontology"):
+        db.stage_graph_revision(
+            summary="Invalid staged seed patch",
+            rationale="Project-level staged revisions must not target shipped seeds.",
+            additions=[
+                {
+                    "graph": "base_ontology",
+                    "content": (
+                        "@prefix ex: <https://example.test/> . "
+                        "ex:s ex:p ex:o ."
+                    ),
+                }
+            ],
         )
 
 

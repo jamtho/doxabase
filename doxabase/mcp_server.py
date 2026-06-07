@@ -13,7 +13,9 @@ from doxabase.mcp_tools import (
     describe_graph_revision_tool,
     describe_pattern_tool,
     describe_resource_tool,
+    describe_staged_revision_tool,
     export_graph_tool,
+    export_staged_revision_tool,
     export_trig_tool,
     get_doc_tool,
     graph_overview_tool,
@@ -31,13 +33,14 @@ from doxabase.mcp_tools import (
     record_observation_tool,
     record_pattern_tool,
     search_tool,
+    stage_graph_revision_tool,
     validate_graph_tool,
 )
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, staged graph revision review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -129,6 +132,15 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return compact revision metadata, snapshots, and support links."""
 
         return describe_graph_revision_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.describe_staged_revision")
+    def describe_staged_revision(
+        iri: str,
+        graph: str | None = "history",
+    ) -> dict[str, Any]:
+        """Return staged revision metadata and patch payloads for review."""
+
+        return describe_staged_revision_tool(db, iri=iri, graph=graph)
 
     @server.tool(name="doxabase.describe_pattern")
     def describe_pattern(
@@ -521,6 +533,64 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             validation_scope=validation_scope,
             validation_conforms=validation_conforms,
             validation_result_count=validation_result_count,
+        )
+
+    @server.tool(name="doxabase.stage_graph_revision")
+    def stage_graph_revision(
+        summary: str,
+        rationale: str,
+        additions: list[dict[str, str]] | None = None,
+        removals: list[dict[str, str]] | None = None,
+        stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: list[str] | None = None,
+        revision_iri: str | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        supporting_observations: list[str] | None = None,
+        supporting_claims: list[str] | None = None,
+        supporting_patterns: list[str] | None = None,
+        evidence: list[str] | None = None,
+        alternative_to: str | None = None,
+        validation_scope: str = "all",
+    ) -> dict[str, Any]:
+        """Record a reviewable staged graph revision without applying it."""
+
+        return stage_graph_revision_tool(
+            db,
+            summary=summary,
+            rationale=rationale,
+            additions=additions,
+            removals=removals,
+            stance=stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            revision_iri=revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            evidence=evidence,
+            alternative_to=alternative_to,
+            validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.export_staged_revision")
+    def export_staged_revision(
+        iri: str,
+        path: str,
+        format: str = "markdown",
+        overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Export a staged revision review bundle."""
+
+        return export_staged_revision_tool(
+            db,
+            iri=iri,
+            path=path,
+            format=format,
+            overwrite=overwrite,
         )
 
     @server.tool(name="doxabase.load_example_fixtures")

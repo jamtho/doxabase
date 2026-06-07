@@ -3,7 +3,7 @@
 Use this sequence when arriving cold in a DoxaBase capsule.
 
 1. Call `doxabase.list_docs`.
-2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `context_slicing`, `observation_rdf`, `patterns`, `map_authoring`, `revisions`, `executable_catalog`, and `field_trials` if you do not know the project conventions.
+2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `context_slicing`, `observation_rdf`, `patterns`, `map_authoring`, `revisions`, `staged_revisions`, `executable_catalog`, and `field_trials` if you do not know the project conventions.
 3. Call `doxabase.graph_overview` to inspect named graphs, counts, common classes, and predicates.
 4. Call `doxabase.search` when you have a remembered term, caveat, column name, source note, or question-shaped keyword.
 5. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.
@@ -15,12 +15,16 @@ Use this sequence when arriving cold in a DoxaBase capsule.
 11. Use `doxabase.record_claim_observation` for the common observation + claim + evidence + source-span pattern.
    For more complex caveat, join, transformation, access, or source-span claims, write agent-authored observation RDF using the `observation_rdf` patterns.
 12. Use `doxabase.record_pattern` when several observations or claims belong together and explain a more durable pattern.
-13. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
-14. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
-15. Use `doxabase.record_graph_revision` after a meaningful graph change or
+13. Use `doxabase.stage_graph_revision` when you want to propose additions or
+    removals without applying them. This is appropriate for exploratory hunches,
+    alternative systematisations, and reviewable candidate map changes.
+14. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
+15. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
+16. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph
     roles were included for review, and why.
-16. Use `doxabase.describe_graph_revision` when reviewing a history record.
+17. Use `doxabase.describe_graph_revision` when reviewing a history record, and
+    `doxabase.describe_staged_revision` when reviewing a staged patch proposal.
 
 When reading linked-pattern reasons from `describe_dataset`, scan
 `match_groups` before raw `matches`. Direct and map-implication groups are the
@@ -43,5 +47,6 @@ When adding future facts, choose graph roles by update pattern:
 Do not write to `base_ontology` or `base_shapes`; they are immutable package seed graphs.
 
 In the current V1 slice, the MCP interface exposes route-explained context
-slices, but not staged diff/commit tools. Treat revision records as metadata
-about graph changes, not as transactional graph replacement.
+slices and reviewable staged revisions. It does not yet apply staged revisions
+or provide conflict handling. Treat staged revisions as cheap proposal memory,
+not as transactional graph replacement.

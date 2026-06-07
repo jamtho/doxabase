@@ -77,6 +77,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "revisions.md",
     ),
     AgentDoc(
+        id="staged_revisions",
+        title="Staged Revisions",
+        description="How to propose reviewable graph changes without applying them.",
+        path=DOCS_DIR / "staged-revisions.md",
+    ),
+    AgentDoc(
         id="lexical_search",
         title="Lexical Search",
         description="How search helps agents rediscover claims, caveats, observations, and evidence.",

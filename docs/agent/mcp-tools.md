@@ -132,6 +132,26 @@ rationale, optional included review/export graph roles, optional supporting
 observations/claims/patterns/evidence, validation result, export path, and
 graph-count snapshots. It does not compute diffs or apply graph edits.
 
+`doxabase.stage_graph_revision`
+
+Records a staged graph revision in `history` without applying it. Pass
+`additions` and/or `removals` as Turtle payloads with target graph roles. Use
+`stance` values such as `rc:ExploratoryHunch`, `rc:CandidateRevision`,
+`rc:ConservativeCleanup`, or `rc:AlternativeSystematisation` to preserve the
+kind of systematisation move being made. The helper parses patch RDF, previews
+graph counts, runs SHACL validation over `validation_scope`, and returns patch
+metadata.
+
+`doxabase.describe_staged_revision`
+
+Returns a staged revision with stance, rationale, support links, patch payloads,
+before/after count previews, and validation status.
+
+`doxabase.export_staged_revision`
+
+Writes a Markdown review bundle for a staged revision. This is for human/agent
+review; staged revisions are not applied by the current runtime.
+
 ## Import and Validation
 
 `doxabase.import_trig`

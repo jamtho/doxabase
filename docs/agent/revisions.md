@@ -4,10 +4,10 @@ Use the `history` graph to record why graph state changed, what graph roles
 changed, what graph roles were included for review, and where a reviewer can
 inspect the resulting bundle.
 
-The current helper is `doxabase.record_graph_revision`. It records metadata; it
-does not compute diffs or apply graph edits. Use it after helper-authored map
-changes, imports, exports, or field-trial review bundles when the rationale
-should remain available to later agents.
+Use `doxabase.record_graph_revision` after graph state has changed, after an
+import/export, or after a review bundle when the rationale should remain
+available to later agents. For proposed additions/removals that should not be
+applied yet, use `doxabase.stage_graph_revision`; see `staged_revisions`.
 
 ## When To Record
 
@@ -87,9 +87,24 @@ Use project-specific revision types if these are too coarse. Declare custom
 revision types as `rc:RevisionType` resources in project ontology before relying
 on `validate_graph(scope="all")`.
 
+## Staged Proposals
+
+`doxabase.stage_graph_revision` records reviewable patch payloads in `history`
+without mutating the target graph. Use it when an agent has a promising hunch,
+an alternative systematisation, or a candidate map change that should be
+preserved for review before it becomes current-best context.
+
+Staged revisions are deliberately lighter than an approval process. They record
+stance, rationale, support links, Turtle additions/removals, preview counts, and
+SHACL validation results. They do not require proof before an agent can preserve
+a bold idea.
+
+Use `describe_staged_revision()` to inspect the proposal and
+`export_staged_revision()` to write a Markdown review bundle.
+
 ## Limits
 
-DoxaBase does not yet have staged graph revision sessions, graph diffs, or
-conflict handling. The revision helper is scaffolding for that future workflow:
-it preserves rationale and review context now, while leaving full slice
-replacement for later.
+DoxaBase can record staged patch proposals, but it does not yet apply them,
+detect conflicts, or store durable graph versions. The revision helpers preserve
+rationale and review context now, while leaving approval, promotion, and full
+slice replacement for later.

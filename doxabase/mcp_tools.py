@@ -75,6 +75,14 @@ def describe_graph_revision_tool(
     return asdict(db.describe_graph_revision(iri=iri, graph=graph))
 
 
+def describe_staged_revision_tool(
+    db: DoxaBase,
+    iri: str,
+    graph: str | None = "history",
+) -> dict[str, Any]:
+    return asdict(db.describe_staged_revision(iri=iri, graph=graph))
+
+
 def describe_pattern_tool(
     db: DoxaBase,
     iri: str,
@@ -489,6 +497,63 @@ def record_graph_revision_tool(
         validation_scope=validation_scope,
         validation_conforms=validation_conforms,
         validation_result_count=validation_result_count,
+    )
+    return asdict(result)
+
+
+def stage_graph_revision_tool(
+    db: DoxaBase,
+    summary: str,
+    rationale: str,
+    additions: list[dict[str, str]] | None = None,
+    removals: list[dict[str, str]] | None = None,
+    stance: str = "rc:CandidateRevision",
+    revision_type: str = "rc:StagedRevision",
+    included_graphs: list[str] | None = None,
+    revision_iri: str | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    supporting_observations: list[str] | None = None,
+    supporting_claims: list[str] | None = None,
+    supporting_patterns: list[str] | None = None,
+    evidence: list[str] | None = None,
+    alternative_to: str | None = None,
+    validation_scope: str = "all",
+) -> dict[str, Any]:
+    result = db.stage_graph_revision(
+        summary=summary,
+        rationale=rationale,
+        additions=additions,
+        removals=removals,
+        stance=stance,
+        revision_type=revision_type,
+        included_graphs=included_graphs,
+        revision_iri=revision_iri,
+        created_at=created_at,
+        created_by=created_by,
+        supporting_observations=supporting_observations,
+        supporting_claims=supporting_claims,
+        supporting_patterns=supporting_patterns,
+        evidence=evidence,
+        alternative_to=alternative_to,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return asdict(result)
+
+
+def export_staged_revision_tool(
+    db: DoxaBase,
+    iri: str,
+    path: str,
+    format: str = "markdown",
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    resolved_path = _resolve_path(path)
+    result = db.export_staged_revision(
+        iri=iri,
+        path=resolved_path,
+        format=format,  # type: ignore[arg-type]
+        overwrite=overwrite,
     )
     return asdict(result)
 

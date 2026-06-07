@@ -29,16 +29,18 @@ Current implementation status:
   access, and relationships.
 - `record_graph_revision()` for history metadata about graph changes and review
   bundles.
+- `stage_graph_revision()`, `describe_staged_revision()`, and
+  `export_staged_revision()` for reviewable graph patch proposals.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
 - MCP tools for docs, overview, search, listing, dataset description,
-  context slicing, observation/history recording, import/export, validation, and
-  fixture loading.
+  context slicing, observation/history recording, staged revisions,
+  import/export, validation, and fixture loading.
 
 Important V1 limits:
 
-- No staged revision/diff workflow yet.
+- No staged revision apply/conflict workflow yet.
 - No full SPARQL endpoint.
 - No direct query generation or execution helpers yet.
 - No embedded LLM, semantic search, or embedding index.

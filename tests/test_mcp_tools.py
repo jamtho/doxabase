@@ -10,7 +10,9 @@ from doxabase.mcp_tools import (
     describe_graph_revision_tool,
     describe_pattern_tool,
     describe_resource_tool,
+    describe_staged_revision_tool,
     export_graph_tool,
+    export_staged_revision_tool,
     export_trig_tool,
     graph_overview_tool,
     list_docs_tool,
@@ -26,6 +28,7 @@ from doxabase.mcp_tools import (
     record_observation_tool,
     record_pattern_tool,
     search_tool,
+    stage_graph_revision_tool,
     validate_graph_tool,
 )
 
@@ -43,6 +46,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
+    assert "doxabase.describe_staged_revision" in tool_names
     assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
@@ -54,8 +58,10 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
+    assert "doxabase.export_staged_revision" in tool_names
     assert "doxabase.export_trig" in tool_names
     assert "doxabase.record_graph_revision" in tool_names
+    assert "doxabase.stage_graph_revision" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
 
@@ -160,6 +166,60 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert description["validation_conforms"] is True
     assert description["graph_snapshots"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_map_count = db.triple_count("map")
+    content = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:Messages a rc:Dataset, rc:Table ;
+        rdfs:label "Messages" .
+    """
+
+    result = stage_graph_revision_tool(
+        db,
+        summary="Try messages table framing",
+        rationale=(
+            "Exploratory hunch: this map shape may generalise better once "
+            "more message-like datasets arrive."
+        ),
+        additions=[{"graph": "map", "content": content}],
+        stance="rc:ExploratoryHunch",
+        validation_scope="all",
+    )
+
+    assert result["revision_iri"].startswith(
+        "https://richcanopy.org/doxabase/generated/staged-revision/"
+    )
+    assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
+    assert result["revision_stance"] == "https://richcanopy.org/ns/rc#ExploratoryHunch"
+    assert result["changed_graphs"] == ["map"]
+    assert result["validation_conforms"] is True
+    assert result["validation_result_count"] == 0
+    assert result["patches"][0]["operation"] == "https://richcanopy.org/ns/rc#AdditionPatch"
+    assert result["patches"][0]["before_triple_count"] == before_map_count
+    assert result["patches"][0]["after_triple_count"] == before_map_count + 3
+    assert db.triple_count("map") == before_map_count
+
+    description = describe_staged_revision_tool(db, result["revision_iri"])
+    assert description["revision_stance_label"] == "exploratory hunch"
+    assert description["patches"][0]["target_graph"] == "map"
+    assert "ex:Messages" in description["patches"][0]["content"]
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+    export_path = tmp_path / "staged-review.md"
+    export = export_staged_revision_tool(
+        db,
+        iri=result["revision_iri"],
+        path=str(export_path),
+    )
+    assert export["format"] == "markdown"
+    assert export_path.exists()
+    assert "exploratory hunch" in export_path.read_text()
 
 
 def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None:

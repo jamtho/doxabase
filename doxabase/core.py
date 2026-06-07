@@ -6,7 +6,7 @@ import warnings
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable, Literal as TypingLiteral
+from typing import Any, Iterable, Literal as TypingLiteral, Mapping
 from uuid import uuid4
 
 from pyshacl import validate
@@ -146,9 +146,55 @@ class GraphRevisionRecord:
 
 
 @dataclass(frozen=True)
+class StagedGraphPatchRecord:
+    patch_iri: str
+    operation: str
+    target_graph: str
+    format: str
+    triple_count: int
+    before_triple_count: int
+    after_triple_count: int
+
+
+@dataclass(frozen=True)
+class StagedGraphRevisionRecord:
+    revision_iri: str
+    revision_type: str
+    revision_stance: str
+    graph: str
+    triples: int
+    changed_graphs: list[str]
+    patches: list[StagedGraphPatchRecord]
+    validation_scope: str
+    validation_conforms: bool
+    validation_result_count: int
+
+
+@dataclass(frozen=True)
+class StagedGraphRevisionExportRecord:
+    path: str
+    format: str
+    revision_iri: str
+    bytes_written: int
+
+
+@dataclass(frozen=True)
 class GraphSnapshotDescription:
     graph_role: str
     triple_count: int
+
+
+@dataclass(frozen=True)
+class StagedGraphPatchDescription:
+    iri: str
+    operation: str
+    operation_label: str | None
+    target_graph: str | None
+    format: str | None
+    triple_count: int | None
+    before_triple_count: int | None
+    after_triple_count: int | None
+    content: str | None
 
 
 @dataclass(frozen=True)
@@ -169,6 +215,33 @@ class GraphRevisionDescription:
     validation_conforms: bool | None
     validation_result_count: int | None
     graph_snapshots: list[GraphSnapshotDescription]
+    supporting_observations: list[ResourceSummary]
+    supporting_claims: list[ResourceSummary]
+    supporting_patterns: list[ResourceSummary]
+    evidence: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
+class StagedGraphRevisionDescription:
+    iri: str
+    graph: str | None
+    label: str | None
+    summary: str | None
+    revision_type: str | None
+    revision_type_label: str | None
+    revision_stance: str | None
+    revision_stance_label: str | None
+    rationale: str | None
+    alternative_to: ResourceSummary | None
+    changed_graphs: list[str]
+    included_graphs: list[str]
+    created_at: str | None
+    created_by: str | None
+    validation_scope: str | None
+    validation_conforms: bool | None
+    validation_result_count: int | None
+    graph_snapshots: list[GraphSnapshotDescription]
+    patches: list[StagedGraphPatchDescription]
     supporting_observations: list[ResourceSummary]
     supporting_claims: list[ResourceSummary]
     supporting_patterns: list[ResourceSummary]
@@ -704,6 +777,7 @@ class DoxaBase:
             "evidence": self._count_type("rc:Evidence"),
             "source_spans": self._count_type("rc:SourceSpan"),
             "graph_revisions": self._count_type("rc:GraphRevision"),
+            "graph_patches": self._count_type("rc:GraphPatch"),
             "graph_snapshots": self._count_type("rc:GraphSnapshot"),
             "storage_accesses": self._count_type("rc:StorageAccess"),
             "shapes": self._count_type("sh:NodeShape"),
@@ -888,6 +962,112 @@ class DoxaBase:
                 "rc:validationResultCount",
             ),
             graph_snapshots=snapshots,
+            supporting_observations=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(
+                    data_graphs,
+                    revision_iri,
+                    "rc:revisionSupportingObservation",
+                ),
+            ),
+            supporting_claims=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, revision_iri, "rc:revisionSupportingClaim"),
+            ),
+            supporting_patterns=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, revision_iri, "rc:revisionSupportingPattern"),
+            ),
+            evidence=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, revision_iri, "rc:evidence"),
+            ),
+        )
+
+    def describe_staged_revision(
+        self,
+        iri: str,
+        *,
+        graph: str | None = "history",
+    ) -> StagedGraphRevisionDescription:
+        revision_iri = self.expand_iri(iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(data_graphs)
+        if not self._subject_exists(revision_iri, data_graphs):
+            graph_label = graph if graph is not None else "all graphs"
+            raise DoxaBaseError(
+                f"Staged graph revision '{iri}' was not found in {graph_label}"
+            )
+        if self.expand_iri("rc:GraphRevision") not in self._types_from_graphs(
+            data_graphs,
+            revision_iri,
+        ):
+            raise DoxaBaseError(f"Resource '{iri}' is not an rc:GraphRevision")
+
+        patch_iris = self._objects(data_graphs, revision_iri, "rc:hasGraphPatch")
+        if not patch_iris:
+            raise DoxaBaseError(f"Graph revision '{iri}' has no staged patch entries")
+
+        revision_type = self._first_object(data_graphs, revision_iri, "rc:revisionType")
+        revision_stance = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:revisionStance",
+        )
+        alternative_to_iri = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:alternativeTo",
+        )
+        all_lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        snapshots = self._graph_revision_snapshots(revision_iri, data_graphs)
+        included_graphs = self._objects(data_graphs, revision_iri, "rc:includedGraph")
+        if not included_graphs:
+            included_graphs = [snapshot.graph_role for snapshot in snapshots]
+
+        return StagedGraphRevisionDescription(
+            iri=revision_iri,
+            graph=graph,
+            label=self._display_label_from_graphs(lookup_graphs, revision_iri),
+            summary=self._first_object(data_graphs, revision_iri, "rc:summary"),
+            revision_type=revision_type,
+            revision_type_label=(
+                self._label_from_graphs(self._expand_graphs(["ontology"]), revision_type)
+                if revision_type is not None
+                else None
+            ),
+            revision_stance=revision_stance,
+            revision_stance_label=self._label_for_resource(revision_stance),
+            rationale=self._first_object(data_graphs, revision_iri, "rc:revisionRationale"),
+            alternative_to=(
+                self._resource_summary(all_lookup_graphs, alternative_to_iri)
+                if alternative_to_iri is not None
+                else None
+            ),
+            changed_graphs=self._objects(data_graphs, revision_iri, "rc:changedGraph"),
+            included_graphs=included_graphs,
+            created_at=self._first_object(data_graphs, revision_iri, "rc:createdAt"),
+            created_by=self._first_object(data_graphs, revision_iri, "rc:createdBy"),
+            validation_scope=self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:validationScope",
+            ),
+            validation_conforms=self._bool_object(
+                data_graphs,
+                revision_iri,
+                "rc:validationConforms",
+            ),
+            validation_result_count=self._int_object(
+                data_graphs,
+                revision_iri,
+                "rc:validationResultCount",
+            ),
+            graph_snapshots=snapshots,
+            patches=[
+                self._describe_staged_graph_patch(patch_iri, data_graphs)
+                for patch_iri in patch_iris
+            ],
             supporting_observations=self._resource_summaries(
                 all_lookup_graphs,
                 self._objects(
@@ -3660,6 +3840,345 @@ class DoxaBase:
             triples=triples,
         )
 
+    def stage_graph_revision(
+        self,
+        summary: str,
+        rationale: str,
+        *,
+        additions: Iterable[Mapping[str, str]] | None = None,
+        removals: Iterable[Mapping[str, str]] | None = None,
+        stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: Iterable[str] | str | None = None,
+        revision_iri: str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        supporting_observations: Iterable[str] | str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        supporting_patterns: Iterable[str] | str | None = None,
+        evidence: Iterable[str] | str | None = None,
+        alternative_to: str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ] = "all",
+    ) -> StagedGraphRevisionRecord:
+        parsed_patches = self._parse_staged_patch_specs(
+            additions=additions,
+            removals=removals,
+        )
+        if not parsed_patches:
+            raise DoxaBaseError("stage_graph_revision requires at least one patch")
+
+        stance_iri = self.expand_iri(stance)
+        if self.expand_iri("rc:RevisionStance") not in self._types_from_graphs(
+            self._expand_graphs(["ontology"]),
+            stance_iri,
+        ):
+            raise DoxaBaseError(
+                "stance must be an rc:RevisionStance declared in base or project ontology"
+            )
+
+        changed_graph_values = list(
+            dict.fromkeys(patch["target_graph"] for patch in parsed_patches)
+        )
+        for graph_name in changed_graph_values:
+            self._ensure_mutable(str(graph_name))
+
+        preview_graphs: dict[str, Graph] = {
+            graph_name: self.to_graph([graph_name])
+            for graph_name in changed_graph_values
+        }
+        patch_records: list[StagedGraphPatchRecord] = []
+        for patch in parsed_patches:
+            target_graph = str(patch["target_graph"])
+            patch_graph = patch["graph"]
+            if not isinstance(patch_graph, Graph):
+                raise DoxaBaseError("Internal staged patch parse error")
+            preview = preview_graphs[target_graph]
+            before_count = len(preview)
+            if patch["operation"] == self.expand_iri("rc:AdditionPatch"):
+                for triple in patch_graph:
+                    preview.add(triple)
+            else:
+                for triple in patch_graph:
+                    preview.remove(triple)
+            after_count = len(preview)
+            patch_records.append(
+                StagedGraphPatchRecord(
+                    patch_iri=str(patch["patch_iri"]),
+                    operation=str(patch["operation"]),
+                    target_graph=target_graph,
+                    format=str(patch["format"]),
+                    triple_count=len(patch_graph),
+                    before_triple_count=before_count,
+                    after_triple_count=after_count,
+                )
+            )
+
+        validation = self._validate_graph_preview(
+            validation_scope,
+            preview_graphs=preview_graphs,
+        )
+        revision_subject = (
+            self._required_iri("revision_iri", revision_iri)
+            if revision_iri is not None
+            else self._mint_iri("staged-revision")
+        )
+        graph_counts = {
+            graph_name: self.triple_count(graph_name)
+            for graph_name in changed_graph_values
+        }
+        revision_record = self.record_graph_revision(
+            summary=summary,
+            rationale=rationale,
+            changed_graphs=changed_graph_values,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            revision_iri=revision_subject,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            evidence=evidence,
+            graph_counts=graph_counts,
+            validation_scope=validation.scope,
+            validation_conforms=validation.conforms,
+            validation_result_count=validation.result_count,
+        )
+
+        metadata = Graph()
+        self._bind_prefixes(metadata)
+        subject = URIRef(revision_subject)
+        metadata.add(
+            (
+                subject,
+                URIRef(self.expand_iri("rc:revisionStance")),
+                URIRef(stance_iri),
+            )
+        )
+        if alternative_to is not None:
+            metadata.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:alternativeTo")),
+                    URIRef(self.expand_iri(alternative_to)),
+                )
+            )
+        for patch, patch_record in zip(parsed_patches, patch_records, strict=True):
+            patch_subject = URIRef(patch_record.patch_iri)
+            metadata.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasGraphPatch")),
+                    patch_subject,
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:GraphPatch")),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    URIRef(self.expand_iri("rc:patchOperation")),
+                    URIRef(patch_record.operation),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    URIRef(self.expand_iri("rc:targetGraph")),
+                    Literal(patch_record.target_graph),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    URIRef(self.expand_iri("rc:patchFormat")),
+                    Literal(patch_record.format),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    URIRef(self.expand_iri("rc:patchContent")),
+                    Literal(str(patch["content"])),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    URIRef(self.expand_iri("rc:patchTripleCount")),
+                    Literal(patch_record.triple_count, datatype=XSD.integer),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    URIRef(self.expand_iri("rc:beforeTripleCount")),
+                    Literal(patch_record.before_triple_count, datatype=XSD.integer),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    URIRef(self.expand_iri("rc:afterTripleCount")),
+                    Literal(patch_record.after_triple_count, datatype=XSD.integer),
+                )
+            )
+
+        extra_triples = self._insert_graph("history", metadata)
+        return StagedGraphRevisionRecord(
+            revision_iri=revision_subject,
+            revision_type=revision_record.revision_type,
+            revision_stance=stance_iri,
+            graph="history",
+            triples=revision_record.triples + extra_triples,
+            changed_graphs=changed_graph_values,
+            patches=patch_records,
+            validation_scope=validation.scope,
+            validation_conforms=validation.conforms,
+            validation_result_count=validation.result_count,
+        )
+
+    def export_staged_revision(
+        self,
+        iri: str,
+        path: str | Path,
+        *,
+        format: TypingLiteral["markdown"] = "markdown",
+        overwrite: bool = False,
+    ) -> StagedGraphRevisionExportRecord:
+        if format != "markdown":
+            raise DoxaBaseError("Only markdown staged revision exports are supported")
+        description = self.describe_staged_revision(iri)
+        data = self._staged_revision_markdown(description)
+        bytes_written = self._write_export(path, data, overwrite=overwrite)
+        return StagedGraphRevisionExportRecord(
+            path=str(path),
+            format=format,
+            revision_iri=description.iri,
+            bytes_written=bytes_written,
+        )
+
+    def _parse_staged_patch_specs(
+        self,
+        *,
+        additions: Iterable[Mapping[str, str]] | None,
+        removals: Iterable[Mapping[str, str]] | None,
+    ) -> list[dict[str, Any]]:
+        parsed: list[dict[str, Any]] = []
+        for operation, specs in (
+            (self.expand_iri("rc:AdditionPatch"), additions),
+            (self.expand_iri("rc:RemovalPatch"), removals),
+        ):
+            for spec in specs or []:
+                graph_value = str(
+                    spec.get("graph")
+                    or spec.get("target_graph")
+                    or spec.get("targetGraph")
+                    or ""
+                ).strip()
+                if not graph_value:
+                    raise DoxaBaseError("Each staged patch must name a graph")
+                graph_names = self._graph_names_for_export([graph_value])
+                if len(graph_names) != 1:
+                    raise DoxaBaseError(
+                        "Each staged patch must target exactly one concrete graph role"
+                    )
+                target_graph = graph_names[0]
+                self._ensure_mutable(target_graph)
+                patch_format = str(spec.get("format") or "turtle").strip()
+                content = str(spec.get("content") or spec.get("turtle") or "").strip()
+                if not content:
+                    raise DoxaBaseError("Each staged patch must include RDF content")
+                patch_graph = Graph()
+                self._bind_prefixes(patch_graph)
+                try:
+                    patch_graph.parse(data=content, format=patch_format)
+                except Exception as exc:
+                    raise DoxaBaseError(
+                        f"Could not parse staged patch for graph '{target_graph}' "
+                        f"as {patch_format}"
+                    ) from exc
+                if len(patch_graph) == 0:
+                    raise DoxaBaseError("Staged patch content must contain triples")
+                parsed.append(
+                    {
+                        "patch_iri": self._mint_iri("graph-patch"),
+                        "operation": operation,
+                        "target_graph": target_graph,
+                        "format": patch_format,
+                        "content": content,
+                        "graph": patch_graph,
+                    }
+                )
+        return parsed
+
+    def _staged_revision_markdown(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> str:
+        lines = [
+            f"# {description.summary or 'Staged graph revision'}",
+            "",
+            f"- Revision: `{description.iri}`",
+            f"- Stance: {description.revision_stance_label or description.revision_stance or 'unknown'}",
+            f"- Type: {description.revision_type_label or description.revision_type or 'unknown'}",
+            f"- Changed graphs: {', '.join(description.changed_graphs)}",
+            (
+                f"- Validation: {description.validation_scope or 'unknown'} "
+                f"conforms={description.validation_conforms} "
+                f"results={description.validation_result_count}"
+            ),
+            "",
+            "## Rationale",
+            "",
+            description.rationale or "",
+        ]
+        if description.alternative_to is not None:
+            lines.extend(
+                [
+                    "",
+                    "## Alternative To",
+                    "",
+                    (
+                        f"- {description.alternative_to.label or description.alternative_to.iri} "
+                        f"(`{description.alternative_to.iri}`)"
+                    ),
+                ]
+            )
+        lines.extend(["", "## Patches", ""])
+        for index, patch in enumerate(description.patches, start=1):
+            lines.extend(
+                [
+                    f"### Patch {index}: {patch.operation_label or patch.operation}",
+                    "",
+                    f"- IRI: `{patch.iri}`",
+                    f"- Target graph: `{patch.target_graph}`",
+                    f"- Format: `{patch.format}`",
+                    f"- Triples: {patch.triple_count}",
+                    (
+                        f"- Count preview: {patch.before_triple_count} -> "
+                        f"{patch.after_triple_count}"
+                    ),
+                    "",
+                    f"```{patch.format or 'turtle'}",
+                    patch.content or "",
+                    "```",
+                    "",
+                ]
+            )
+        return "\n".join(lines).rstrip() + "\n"
+
     def import_turtle(
         self,
         source: str | Path,
@@ -3778,6 +4297,53 @@ class DoxaBase:
         result_count = sum(1 for _ in report_graph.subjects(RDF.type, URIRef(PREFIXES["sh"] + "ValidationResult")))
         if result_count > limit_results:
             report_text = f"{report_text}\n\nResult output limited by caller to {limit_results} results."
+        return ValidationResult(
+            conforms=bool(conforms),
+            report_text=str(report_text),
+            result_count=result_count,
+            scope=scope,
+        )
+
+    def _validate_graph_preview(
+        self,
+        scope: str,
+        *,
+        preview_graphs: Mapping[str, Graph],
+        limit_results: int = 100,
+    ) -> ValidationResult:
+        try:
+            data_graphs = self._graphs_for_validation_scope(scope)
+        except ValueError as exc:
+            raise DoxaBaseError(str(exc)) from exc
+        shape_graphs = self._expand_graphs(["shapes"])
+        data = Graph()
+        for prefix, namespace in PREFIXES.items():
+            data.bind(prefix, namespace)
+        for graph_name in data_graphs:
+            source = preview_graphs.get(graph_name)
+            if source is None:
+                source = self.to_graph([graph_name])
+            for triple in source:
+                data.add(triple)
+        shapes = self.to_graph(shape_graphs)
+        conforms, report_graph, report_text = validate(
+            data_graph=data,
+            shacl_graph=shapes,
+            inference="rdfs",
+            advanced=False,
+        )
+        result_count = sum(
+            1
+            for _ in report_graph.subjects(
+                RDF.type,
+                URIRef(PREFIXES["sh"] + "ValidationResult"),
+            )
+        )
+        if result_count > limit_results:
+            report_text = (
+                f"{report_text}\n\nResult output limited by caller to "
+                f"{limit_results} results."
+            )
         return ValidationResult(
             conforms=bool(conforms),
             report_text=str(report_text),
@@ -5550,6 +6116,32 @@ class DoxaBase:
             end_line=self._int_object(graphs, source_span_iri, "rc:endLine"),
             source_kind=source_kind,
             source_kind_label=self._label_for_resource(source_kind),
+        )
+
+    def _describe_staged_graph_patch(
+        self,
+        patch_iri: str,
+        graphs: list[str],
+    ) -> StagedGraphPatchDescription:
+        operation = self._first_object(graphs, patch_iri, "rc:patchOperation")
+        return StagedGraphPatchDescription(
+            iri=patch_iri,
+            operation=operation,
+            operation_label=self._label_for_resource(operation),
+            target_graph=self._first_object(graphs, patch_iri, "rc:targetGraph"),
+            format=self._first_object(graphs, patch_iri, "rc:patchFormat"),
+            triple_count=self._int_object(graphs, patch_iri, "rc:patchTripleCount"),
+            before_triple_count=self._int_object(
+                graphs,
+                patch_iri,
+                "rc:beforeTripleCount",
+            ),
+            after_triple_count=self._int_object(
+                graphs,
+                patch_iri,
+                "rc:afterTripleCount",
+            ),
+            content=self._first_object(graphs, patch_iri, "rc:patchContent"),
         )
 
     def _label_for_resource(self, iri: str | None) -> str | None:

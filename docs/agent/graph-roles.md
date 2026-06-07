@@ -50,8 +50,9 @@ Project-owned SHACL shapes. These extend `base_shapes` and remain open unless a 
 
 Revision rationale, review-bundle metadata, graph-count snapshots, superseded
 terms, deprecated mappings, and consolidation notes.
-Use `record_graph_revision()` for routine revision metadata. Full staged diffs
-and graph replacement are not implemented yet.
+Use `record_graph_revision()` for routine revision metadata and
+`stage_graph_revision()` for reviewable patch proposals. Applying staged
+revisions and graph replacement are not implemented yet.
 
 ## Logical Includes
 

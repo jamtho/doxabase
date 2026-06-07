@@ -809,10 +809,28 @@ rc:GraphRevisionShape a sh:NodeShape ;
         sh:message "revisionSupportingPattern values should be named Pattern resources." ;
     ] ;
     sh:property [
+        sh:path rc:revisionStance ;
+        sh:maxCount 1 ;
+        sh:class rc:RevisionStance ;
+        sh:message "revisionStance must be an rc:RevisionStance if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:alternativeTo ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:GraphRevision ;
+        sh:message "alternativeTo values should be named GraphRevision resources." ;
+    ] ;
+    sh:property [
         sh:path rc:evidence ;
         sh:nodeKind sh:IRI ;
         sh:class rc:Evidence ;
         sh:message "GraphRevision evidence values should be named Evidence resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasGraphPatch ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:GraphPatch ;
+        sh:message "hasGraphPatch values should be named GraphPatch resources." ;
     ] ;
     sh:property [
         sh:path rc:hasGraphSnapshot ;
@@ -832,6 +850,61 @@ rc:GraphRevisionShape a sh:NodeShape ;
         sh:datatype xsd:integer ;
         sh:minInclusive 0 ;
         sh:message "validationResultCount must be a non-negative integer if declared." ;
+    ] .
+
+rc:GraphPatchShape a sh:NodeShape ;
+    sh:targetClass rc:GraphPatch ;
+    sh:property [
+        sh:path rc:patchOperation ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class rc:GraphPatchOperation ;
+        sh:message "GraphPatch resources must have exactly one GraphPatchOperation." ;
+    ] ;
+    sh:property [
+        sh:path rc:targetGraph ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "GraphPatch resources must have exactly one string targetGraph." ;
+    ] ;
+    sh:property [
+        sh:path rc:patchFormat ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "GraphPatch resources must have exactly one string patchFormat." ;
+    ] ;
+    sh:property [
+        sh:path rc:patchContent ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "GraphPatch resources must have exactly one string patchContent." ;
+    ] ;
+    sh:property [
+        sh:path rc:patchTripleCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "patchTripleCount must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:beforeTripleCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "beforeTripleCount must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:afterTripleCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "afterTripleCount must be a non-negative integer." ;
     ] .
 
 rc:GraphSnapshotShape a sh:NodeShape ;

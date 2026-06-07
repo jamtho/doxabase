@@ -174,9 +174,20 @@ roles, included review/export graph roles, rationale, supporting resources,
 validation results, export paths, and graph-count snapshots. It does not compute
 diffs or apply graph edits.
 
+`stage_graph_revision()` writes a reviewable staged revision to `history`
+without mutating the target graph. Pass Turtle payloads in `additions` and/or
+`removals`, set a stance such as `rc:ExploratoryHunch` or
+`rc:CandidateRevision`, and choose a `validation_scope`. The helper parses the
+patch RDF, previews before/after counts, runs SHACL validation over the preview,
+and records `rc:GraphPatch` entries for later review.
+
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, changed/included graph roles, graph-count snapshots, validation
 result, export path, and supporting observation/claim/pattern/evidence links.
+
+`describe_staged_revision()` returns staged patch payloads, stance, validation
+status, support links, and count previews. `export_staged_revision()` writes a
+Markdown review bundle.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,
