@@ -49,8 +49,9 @@ access descriptions, partitions, caveats with impact/severity, provenance
 transformations, relationships, directly related datasets, grouped related
 dataset reasons, and linked patterns. Column summaries include column names and
 owning dataset context when available; related dataset entries include
-relationship labels/kinds, and linked patterns include pattern text as their
-description when available.
+relationship labels/kinds, grouped reasons can fold same-column relationship
+tags, and linked patterns include pattern text as their description when
+available.
 
 `doxabase.describe_pattern`
 

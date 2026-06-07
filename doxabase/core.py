@@ -261,6 +261,17 @@ class RelatedDatasetDescription:
 
 
 @dataclass(frozen=True)
+class RelatedDatasetReasonTag:
+    relationship: str
+    relationship_iri: str | None
+    relationship_label: str | None
+    relationship_kind: str | None
+    relationship_kind_label: str | None
+    declared: bool | None
+    referential_integrity: ResourceSummary | None
+
+
+@dataclass(frozen=True)
 class RelatedDatasetReason:
     relationship: str
     relationship_iri: str | None
@@ -268,6 +279,11 @@ class RelatedDatasetReason:
     relationship_kind: str | None
     relationship_kind_label: str | None
     columns: list[ResourceSummary]
+    current_dataset_columns: list[ResourceSummary]
+    related_dataset_columns: list[ResourceSummary]
+    declared: bool | None
+    referential_integrity: ResourceSummary | None
+    relationship_tags: list[RelatedDatasetReasonTag]
 
 
 @dataclass(frozen=True)
@@ -3522,37 +3538,70 @@ class DoxaBase:
             for relationship in relationships
         }
         groups: dict[str, RelatedDatasetDescription] = {}
-        reasons_by_group: dict[str, list[RelatedDatasetReason]] = {}
-        seen_reasons: set[tuple[str, str, str | None]] = set()
+        reasons_by_group: dict[
+            str,
+            dict[tuple[tuple[str, ...], tuple[str, ...]], list[RelatedDatasetReasonTag]],
+        ] = {}
+        columns_by_reason: dict[
+            tuple[str, tuple[tuple[str, ...], tuple[str, ...]]],
+            tuple[list[ResourceSummary], list[ResourceSummary], list[ResourceSummary]],
+        ] = {}
+        seen_tags: set[tuple[str, str, str | None]] = set()
 
         for related in related_datasets:
             groups.setdefault(related.iri, related)
-            reasons_by_group.setdefault(related.iri, [])
+            reasons_by_group.setdefault(related.iri, {})
 
-            reason_key = (related.iri, related.relationship, related.relationship_iri)
-            if reason_key in seen_reasons:
+            tag_key = (related.iri, related.relationship, related.relationship_iri)
+            if tag_key in seen_tags:
                 continue
-            seen_reasons.add(reason_key)
+            seen_tags.add(tag_key)
             relationship = (
                 relationships_by_iri.get(related.relationship_iri)
                 if related.relationship_iri is not None
                 else None
             )
-            reasons_by_group[related.iri].append(
-                RelatedDatasetReason(
+            columns = (
+                self._relationship_columns_between_datasets(
+                    dataset_iri,
+                    related.iri,
+                    relationship,
+                )
+                if relationship is not None
+                else []
+            )
+            current_columns = [
+                column
+                for column in columns
+                if column.owning_dataset_iri == dataset_iri
+            ]
+            related_columns = [
+                column
+                for column in columns
+                if column.owning_dataset_iri == related.iri
+            ]
+            reason_key = (
+                tuple(column.iri for column in current_columns),
+                tuple(column.iri for column in related_columns),
+            )
+            reasons_by_group[related.iri].setdefault(reason_key, [])
+            columns_by_reason[(related.iri, reason_key)] = (
+                columns,
+                current_columns,
+                related_columns,
+            )
+            reasons_by_group[related.iri][reason_key].append(
+                RelatedDatasetReasonTag(
                     relationship=related.relationship,
                     relationship_iri=related.relationship_iri,
                     relationship_label=related.relationship_label,
                     relationship_kind=related.relationship_kind,
                     relationship_kind_label=related.relationship_kind_label,
-                    columns=(
-                        self._relationship_columns_between_datasets(
-                            dataset_iri,
-                            related.iri,
-                            relationship,
-                        )
+                    declared=relationship.declared if relationship is not None else None,
+                    referential_integrity=(
+                        relationship.referential_integrity
                         if relationship is not None
-                        else []
+                        else None
                     ),
                 )
             )
@@ -3563,12 +3612,16 @@ class DoxaBase:
                 label=related.label,
                 description=related.description,
                 reasons=sorted(
-                    reasons_by_group[related.iri],
-                    key=lambda reason: (
-                        reason.relationship_kind_label or "",
-                        reason.relationship_label or "",
-                        reason.relationship,
-                    ),
+                    [
+                        self._related_dataset_reason(
+                            reason_tags,
+                            *columns_by_reason[(related.iri, reason_key)],
+                        )
+                        for reason_key, reason_tags in reasons_by_group[
+                            related.iri
+                        ].items()
+                    ],
+                    key=self._related_dataset_reason_sort_key,
                 ),
             )
             for related in sorted(
@@ -3576,6 +3629,58 @@ class DoxaBase:
                 key=lambda item: (item.label or "", item.iri),
             )
         ]
+
+    def _related_dataset_reason(
+        self,
+        tags: list[RelatedDatasetReasonTag],
+        columns: list[ResourceSummary],
+        current_dataset_columns: list[ResourceSummary],
+        related_dataset_columns: list[ResourceSummary],
+    ) -> RelatedDatasetReason:
+        sorted_tags = sorted(tags, key=self._related_dataset_reason_tag_sort_key)
+        primary = sorted_tags[0]
+        return RelatedDatasetReason(
+            relationship=primary.relationship,
+            relationship_iri=primary.relationship_iri,
+            relationship_label=primary.relationship_label,
+            relationship_kind=primary.relationship_kind,
+            relationship_kind_label=primary.relationship_kind_label,
+            columns=columns,
+            current_dataset_columns=current_dataset_columns,
+            related_dataset_columns=related_dataset_columns,
+            declared=primary.declared,
+            referential_integrity=primary.referential_integrity,
+            relationship_tags=sorted_tags,
+        )
+
+    def _related_dataset_reason_sort_key(
+        self,
+        reason: RelatedDatasetReason,
+    ) -> tuple[int, str, str]:
+        return (
+            self._relationship_kind_priority(reason.relationship_kind),
+            reason.relationship_label or "",
+            reason.relationship,
+        )
+
+    def _related_dataset_reason_tag_sort_key(
+        self,
+        tag: RelatedDatasetReasonTag,
+    ) -> tuple[int, str, str]:
+        return (
+            self._relationship_kind_priority(tag.relationship_kind),
+            tag.relationship_label or "",
+            tag.relationship,
+        )
+
+    def _relationship_kind_priority(self, relationship_kind: str | None) -> int:
+        return {
+            self.expand_iri("rc:ForeignKey"): 0,
+            self.expand_iri("rc:SharedIdentifier"): 1,
+            self.expand_iri("rc:Derivation"): 2,
+            self.expand_iri("rc:Aggregation"): 3,
+            self.expand_iri("rc:Relationship"): 4,
+        }.get(relationship_kind, 99)
 
     def _relationship_columns_between_datasets(
         self,

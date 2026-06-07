@@ -237,21 +237,37 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         for group in result["related_dataset_groups"]
         if group["label"] == "Trade Events"
     )
-    assert any(
-        reason["relationship"] == "shares_identifier_with"
-        and reason["relationship_label"]
-        == "Condition ID identifies the same market across datasets"
-        and reason["relationship_kind_label"] == "SharedIdentifier"
-        and {
+    condition_id_reason = next(
+        reason
+        for reason in trade_group["reasons"]
+        if {
             (column["owning_dataset_label"], column["column_name"])
             for column in reason["columns"]
         }
-        >= {
+        == {
             ("Gamma Market Snapshots", "conditionId"),
             ("Trade Events", "conditionId"),
         }
-        for reason in trade_group["reasons"]
     )
+    assert condition_id_reason["relationship"] == "target_of"
+    assert condition_id_reason["relationship_label"] == "Trades to Markets via conditionId"
+    assert condition_id_reason["relationship_kind_label"] == "ForeignKey"
+    assert condition_id_reason["declared"] is None
+    assert condition_id_reason["referential_integrity"]["iri"] == (
+        "https://richcanopy.org/ns/rc#PartialIntegrity"
+    )
+    assert {
+        tag["relationship_kind_label"]
+        for tag in condition_id_reason["relationship_tags"]
+    } == {"ForeignKey", "SharedIdentifier"}
+    assert [
+        column["column_name"]
+        for column in condition_id_reason["current_dataset_columns"]
+    ] == ["conditionId"]
+    assert [
+        column["column_name"]
+        for column in condition_id_reason["related_dataset_columns"]
+    ] == ["conditionId"]
 
 
 def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> None:

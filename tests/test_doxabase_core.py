@@ -464,10 +464,22 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert related_reason.relationship == "target_of"
     assert related_reason.relationship_label == "attachment parent doc id fk"
     assert related_reason.relationship_kind_label == "ForeignKey"
+    assert related_reason.declared is False
+    assert related_reason.referential_integrity is not None
+    assert related_reason.referential_integrity.iri == RC + "StrictIntegrity"
     assert {column.column_name for column in related_reason.columns} == {
         "doc_id",
         "parent_doc_id",
     }
+    assert [column.column_name for column in related_reason.current_dataset_columns] == [
+        "doc_id"
+    ]
+    assert [column.column_name for column in related_reason.related_dataset_columns] == [
+        "parent_doc_id"
+    ]
+    assert [tag.relationship_kind_label for tag in related_reason.relationship_tags] == [
+        "ForeignKey"
+    ]
 
 
 def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) -> None:
