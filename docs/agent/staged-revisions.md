@@ -120,11 +120,17 @@ The staged revision rationale records the systematisation intent, anchors,
 overall rationale, and framing-specific rationale. This keeps exports readable
 even while richer promotion metadata is still evolving.
 
+Systematisation anchors are also recorded as `rc:revisionAnchor` triples on each
+staged revision. Use anchors for resources the hunch is about, such as columns,
+tables, caveats, relationships, observations, or patterns. Do not use anchors as
+a substitute for evidence: supporting observations, claims, patterns, and
+evidence links still carry the justification for the proposal.
+
 ## What Gets Recorded
 
 Staged revisions are `rc:GraphRevision` resources with `rc:StagedRevision` type,
-optional support links to observations, claims, patterns, and evidence, plus one
-or more `rc:GraphPatch` resources.
+optional support links to observations, claims, patterns, and evidence, optional
+`rc:revisionAnchor` topical links, plus one or more `rc:GraphPatch` resources.
 
 Patch entries record:
 

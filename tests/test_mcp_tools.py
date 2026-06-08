@@ -139,6 +139,9 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         changed_graphs=["observations", "patterns", "evidence"],
         included_graphs=export_result["graphs"],
         revision_type="rc:ExportRevision",
+        revision_anchors=[
+            "https://richcanopy.org/example/manifest/ais#DailyIndex",
+        ],
         export_path=export_result["path"],
         graph_counts=export_result["graph_counts"],
         validation_scope=validation["scope"],
@@ -165,6 +168,9 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         "observations",
         "patterns",
     ]
+    assert description["revision_anchors"][0]["iri"] == (
+        "https://richcanopy.org/example/manifest/ais#DailyIndex"
+    )
     assert description["validation_conforms"] is True
     assert description["graph_snapshots"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
@@ -288,6 +294,7 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
         result["staged_revisions"][1]["revision_iri"],
     )
     assert second["alternative_to"]["iri"] == first_iri
+    assert second["revision_anchors"][0]["iri"] == observation.observation_iri
     assert "Systematisation intent:" in second["rationale"]
 
 

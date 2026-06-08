@@ -1067,6 +1067,11 @@ rc:revisionSupportingPattern a rdf:Property ;
     rdfs:range rc:Pattern ;
     rdfs:comment "A pattern that supports a graph revision." .
 
+rc:revisionAnchor a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "A resource the revision is about, without implying that the resource is evidence or support for the change." .
+
 rc:hasGraphPatch a rdf:Property ;
     rdfs:domain rc:GraphRevision ;
     rdfs:range rc:GraphPatch ;

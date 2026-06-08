@@ -171,8 +171,9 @@ dataset/table typing.
 
 `record_graph_revision()` writes metadata to `history` about changed graph
 roles, included review/export graph roles, rationale, supporting resources,
-validation results, export paths, and graph-count snapshots. It does not compute
-diffs or apply graph edits.
+revision anchors, validation results, export paths, and graph-count snapshots.
+It does not compute diffs or apply graph edits. Use support links for evidence
+behind a revision; use anchors for resources the revision is about.
 
 `stage_graph_revision()` writes a reviewable staged revision to `history`
 without mutating the target graph. Pass Turtle payloads in `additions` and/or
@@ -186,15 +187,17 @@ modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
 `framings`. Each framing can use `graph` + `content` shorthand or full
 `additions` / `removals` patch lists. Later framings are linked as alternatives
 to the first by default. This is a drafting and validation scaffold, not an
-ontology decision engine.
+ontology decision engine. Anchors are recorded as `rc:revisionAnchor` metadata
+on each staged revision and are also repeated in rationale text for readability.
 
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, changed/included graph roles, graph-count snapshots, validation
-result, export path, and supporting observation/claim/pattern/evidence links.
+result, export path, revision anchors, and supporting
+observation/claim/pattern/evidence links.
 
 `describe_staged_revision()` returns staged patch payloads, stance, validation
-status, support links, and count previews. `export_staged_revision()` writes a
-Markdown review bundle.
+status, support links, revision anchors, and count previews.
+`export_staged_revision()` writes a Markdown review bundle.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,

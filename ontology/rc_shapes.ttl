@@ -809,6 +809,11 @@ rc:GraphRevisionShape a sh:NodeShape ;
         sh:message "revisionSupportingPattern values should be named Pattern resources." ;
     ] ;
     sh:property [
+        sh:path rc:revisionAnchor ;
+        sh:nodeKind sh:IRI ;
+        sh:message "revisionAnchor values should be named graph resources." ;
+    ] ;
+    sh:property [
         sh:path rc:revisionStance ;
         sh:maxCount 1 ;
         sh:class rc:RevisionStance ;

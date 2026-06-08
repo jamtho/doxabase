@@ -129,8 +129,9 @@ Records or updates a relationship resource. Supported relationship types are
 
 Records revision metadata in the `history` graph: changed graph roles, summary,
 rationale, optional included review/export graph roles, optional supporting
-observations/claims/patterns/evidence, validation result, export path, and
-graph-count snapshots. It does not compute diffs or apply graph edits.
+observations/claims/patterns/evidence, optional `revision_anchors`, validation
+result, export path, and graph-count snapshots. It does not compute diffs or
+apply graph edits.
 
 `doxabase.stage_graph_revision`
 
@@ -140,7 +141,8 @@ Records a staged graph revision in `history` without applying it. Pass
 `rc:ConservativeCleanup`, or `rc:AlternativeSystematisation` to preserve the
 kind of systematisation move being made. The helper parses patch RDF, previews
 graph counts, runs SHACL validation over `validation_scope`, and returns patch
-metadata.
+metadata. `revision_anchors` can name graph resources the staged proposal is
+about without treating them as evidence or support.
 
 `doxabase.stage_systematisation`
 
@@ -154,8 +156,8 @@ the ontology design for the agent.
 
 `doxabase.describe_staged_revision`
 
-Returns a staged revision with stance, rationale, support links, patch payloads,
-before/after count previews, and validation status.
+Returns a staged revision with stance, rationale, support links, revision
+anchors, patch payloads, before/after count previews, and validation status.
 
 `doxabase.export_staged_revision`
 

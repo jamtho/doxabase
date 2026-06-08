@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 994
+    assert graphs["base_ontology"].triple_count == 998
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 906
+    assert graphs["base_shapes"].triple_count == 910
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -182,6 +182,10 @@ def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
         created_at="2026-06-02T00:00:00Z",
         created_by="urn:doxabase:test-agent",
         supporting_observations=[observation.observation_iri],
+        revision_anchors=[
+            "https://richcanopy.org/example/manifest/ais#DailyIndex",
+            "https://richcanopy.org/example/manifest/ais#ix_mmsi",
+        ],
         evidence=[observation.evidence_iri],
         export_path="/tmp/ais-review-bundle.trig",
         graph_counts=graph_counts,
@@ -207,6 +211,10 @@ def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
     assert (RC + "changedGraph", "observations") in outgoing
     assert (RC + "includedGraph", "map") in outgoing
     assert (RC + "includedGraph", "observations") in outgoing
+    assert (
+        RC + "revisionAnchor",
+        "https://richcanopy.org/example/manifest/ais#DailyIndex",
+    ) in outgoing
     assert (RC + "exportPath", "/tmp/ais-review-bundle.trig") in outgoing
     assert any(triple.predicate == RC + "hasGraphSnapshot" for triple in context.outgoing)
 
@@ -226,6 +234,12 @@ def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
     assert [support.iri for support in description.supporting_observations] == [
         observation.observation_iri
     ]
+    assert [anchor.iri for anchor in description.revision_anchors] == [
+        "https://richcanopy.org/example/manifest/ais#DailyIndex",
+        "https://richcanopy.org/example/manifest/ais#ix_mmsi",
+    ]
+    assert description.revision_anchors[0].label == "AIS Daily Vessel Index"
+    assert description.revision_anchors[1].label == "mmsi"
     assert description.supporting_observations[0].label == (
         "AIS map export was reviewed during a revision test."
     )
@@ -401,6 +415,14 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
 
     first = db.describe_staged_revision(draft.staged_revisions[0].revision_iri)
     second = db.describe_staged_revision(draft.staged_revisions[1].revision_iri)
+    assert {anchor.iri for anchor in first.revision_anchors} == {
+        observation.observation_iri,
+        "https://example.test/project#Messages",
+    }
+    assert {anchor.iri for anchor in second.revision_anchors} == {
+        observation.observation_iri,
+        "https://example.test/project#Messages",
+    }
     assert first.alternative_to is None
     assert second.alternative_to is not None
     assert second.alternative_to.iri == first.iri

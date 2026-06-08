@@ -80,7 +80,8 @@ A useful trial usually asks the agent to:
   be preserved without becoming durable map truth yet;
 - use `stage_systematisation` when one modelling hunch has several plausible
   RDF framings, especially if the hunch may need pattern-first and
-  ontology-first alternatives;
+  ontology-first alternatives; pass anchors for the concrete resources the
+  hunch is about, not as a substitute for support/evidence;
 - use `describe_pattern` when checking whether synthesized lore can be taught
   back compactly;
 - use map authoring helpers when the trial asks for a current-best scratch map;

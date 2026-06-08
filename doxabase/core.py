@@ -242,6 +242,7 @@ class GraphRevisionDescription:
     supporting_observations: list[ResourceSummary]
     supporting_claims: list[ResourceSummary]
     supporting_patterns: list[ResourceSummary]
+    revision_anchors: list[ResourceSummary]
     evidence: list[ResourceSummary]
 
 
@@ -269,6 +270,7 @@ class StagedGraphRevisionDescription:
     supporting_observations: list[ResourceSummary]
     supporting_claims: list[ResourceSummary]
     supporting_patterns: list[ResourceSummary]
+    revision_anchors: list[ResourceSummary]
     evidence: list[ResourceSummary]
 
 
@@ -1002,6 +1004,10 @@ class DoxaBase:
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:revisionSupportingPattern"),
             ),
+            revision_anchors=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, revision_iri, "rc:revisionAnchor"),
+            ),
             evidence=self._resource_summaries(
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
@@ -1107,6 +1113,10 @@ class DoxaBase:
             supporting_patterns=self._resource_summaries(
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:revisionSupportingPattern"),
+            ),
+            revision_anchors=self._resource_summaries(
+                all_lookup_graphs,
+                self._objects(data_graphs, revision_iri, "rc:revisionAnchor"),
             ),
             evidence=self._resource_summaries(
                 all_lookup_graphs,
@@ -3660,6 +3670,7 @@ class DoxaBase:
         supporting_observations: Iterable[str] | str | None = None,
         supporting_claims: Iterable[str] | str | None = None,
         supporting_patterns: Iterable[str] | str | None = None,
+        revision_anchors: Iterable[str] | str | None = None,
         evidence: Iterable[str] | str | None = None,
         export_path: str | None = None,
         graph_counts: dict[str, int] | None = None,
@@ -3706,6 +3717,10 @@ class DoxaBase:
             "supporting_patterns",
             supporting_patterns,
         )
+        revision_anchor_values = self._string_values(
+            "revision_anchors",
+            revision_anchors,
+        )
         evidence_values = self._string_values("evidence", evidence)
         self._validate_resource_values(
             "supporting_observations",
@@ -3713,6 +3728,7 @@ class DoxaBase:
         )
         self._validate_resource_values("supporting_claims", supporting_claim_values)
         self._validate_resource_values("supporting_patterns", supporting_pattern_values)
+        self._validate_resource_values("revision_anchors", revision_anchor_values)
         self._validate_resource_values("evidence", evidence_values)
         self._ensure_non_negative(
             "validation_result_count",
@@ -3804,6 +3820,14 @@ class DoxaBase:
                     URIRef(self.expand_iri(support)),
                 )
             )
+        for anchor in revision_anchor_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:revisionAnchor")),
+                    URIRef(self.expand_iri(anchor)),
+                )
+            )
         for evidence_iri in evidence_values:
             graph.add(
                 (
@@ -3880,6 +3904,7 @@ class DoxaBase:
         supporting_observations: Iterable[str] | str | None = None,
         supporting_claims: Iterable[str] | str | None = None,
         supporting_patterns: Iterable[str] | str | None = None,
+        revision_anchors: Iterable[str] | str | None = None,
         evidence: Iterable[str] | str | None = None,
         alternative_to: str | None = None,
         validation_scope: TypingLiteral[
@@ -3968,6 +3993,7 @@ class DoxaBase:
             supporting_observations=supporting_observations,
             supporting_claims=supporting_claims,
             supporting_patterns=supporting_patterns,
+            revision_anchors=revision_anchors,
             evidence=evidence,
             graph_counts=graph_counts,
             validation_scope=validation.scope,
@@ -4179,6 +4205,7 @@ class DoxaBase:
                 supporting_observations=supporting_observations,
                 supporting_claims=supporting_claims,
                 supporting_patterns=supporting_patterns,
+                revision_anchors=anchor_values,
                 evidence=evidence,
                 alternative_to=alternative_target,
                 validation_scope=framing_scope,  # type: ignore[arg-type]
@@ -4406,6 +4433,10 @@ class DoxaBase:
                     ),
                 ]
             )
+        if description.revision_anchors:
+            lines.extend(["", "## Revision Anchors", ""])
+            for anchor in description.revision_anchors:
+                lines.append(f"- {anchor.label or anchor.iri} (`{anchor.iri}`)")
         lines.extend(["", "## Patches", ""])
         for index, patch in enumerate(description.patches, start=1):
             lines.extend(
