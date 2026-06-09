@@ -1438,6 +1438,29 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
     assert "https://richcanopy.org/graph/patterns" in graph_iris
 
 
+def test_deep_lore_context_slice_reports_absent_lore_layer(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#plain_table"
+    db.record_map_dataset(
+        dataset,
+        label="Plain table",
+        description="A table with map context but no recorded lore.",
+        is_table=True,
+        path_templates=["data/plain.parquet"],
+    )
+
+    context_slice = db.describe_context_slice([dataset], profile="deep_lore")
+
+    assert context_slice.pattern_contexts == []
+    assert context_slice.route_counts["seed_dataset"] == 1
+    assert context_slice.warnings == [
+        "deep_lore found no claims, patterns, reconsiderations, "
+        "evidence, or revision history beyond map context for these seeds."
+    ]
+
+
 def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

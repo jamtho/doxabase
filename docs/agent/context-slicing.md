@@ -34,6 +34,9 @@ Useful fields:
 - `route_counts`: how many resources were included through each route.
 - `dataset_contexts` and `pattern_contexts`: structured summaries for the main
   domain objects in the slice.
+- `warnings`: notes about how to read the slice. In `deep_lore`, a warning may
+  explicitly say that no claims, patterns, reconsiderations, evidence, or
+  revision history were found beyond ordinary map context.
 - `triples`: selected RDF triples, preserving graph roles.
 - `trig`: optional TriG text when `include_trig=true`.
 - `resource_count`, `candidate_triple_count`, `returned_triple_count`, and

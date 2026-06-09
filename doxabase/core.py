@@ -1852,6 +1852,13 @@ class DoxaBase:
         for triple in triples:
             graph_counts[triple.graph] = graph_counts.get(triple.graph, 0) + 1
         route_counts = self._context_slice_route_counts(resources)
+        if profile == "deep_lore" and not self._context_slice_has_lore_routes(
+            route_counts,
+        ):
+            warnings.append(
+                "deep_lore found no claims, patterns, reconsiderations, "
+                "evidence, or revision history beyond map context for these seeds."
+            )
 
         return ContextSlice(
             profile=profile,
@@ -2037,6 +2044,24 @@ class DoxaBase:
             for route in routes:
                 counts[route.route] = counts.get(route.route, 0) + 1
         return counts
+
+    def _context_slice_has_lore_routes(self, route_counts: Mapping[str, int]) -> bool:
+        lore_routes = {
+            "linked_pattern",
+            "supporting_claim",
+            "claim_reconsideration",
+            "incoming_claim_reconsideration",
+            "reconsidered_claim",
+            "reconsidering_claim",
+            "supporting_observation",
+            "evidence",
+            "source_span",
+        }
+        return any(
+            route in lore_routes or route.startswith(("linked_pattern_", "revision_"))
+            for route, count in route_counts.items()
+            if count > 0
+        )
 
     def _context_slice_reading_order(self) -> list[str]:
         return [
