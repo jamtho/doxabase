@@ -178,6 +178,44 @@ can include focus node, result path, source constraint component, severity,
 value, and one or more messages. Markdown staged-revision exports include the
 same diagnostics before the patch payloads.
 
+## Repair Loop Example
+
+A useful staged-validation loop is:
+
+1. Record the lore first as observations, claims, or patterns.
+2. Stage shared provisional ontology and shapes for the hunch.
+3. Let a candidate fail if it is incomplete.
+4. Inspect `describe_staged_revision(...).validation_results`.
+5. Stage a repaired candidate using the diagnostic focus node, result path, and
+   message.
+6. Keep a pattern-first or bolder alternative if the deeper hunch should not be
+   collapsed into the conservative map candidate.
+
+For example, a Polymarket trial treated `outcomes` and `clobTokenIds` as
+parallel JSON arrays that bridge Gamma market snapshots to scalar CLOB token
+identifiers. The agent first recorded claims and a pattern saying this was a
+positional array bridge, not a plain foreign key. It then staged shared
+provisional vocabulary and a shape requiring each `OutcomeTokenAlignment` to
+name the market table, condition column, outcome-label array column, CLOB
+token-id array column, downstream token columns, and alignment basis.
+
+The first map candidate intentionally omitted the token-id array column. Its
+staged revision failed with a diagnostic like:
+
+```text
+focus_node: ft:outcome_token_alignment_v1
+result_path: ft:clobTokenIdArrayColumn
+constraint: sh:MinCountConstraintComponent
+message: Outcome token alignments must name the CLOB token-id array column.
+```
+
+The repair was then a graph move rather than guesswork: add
+`ft:clobTokenIdArrayColumn pm:mkt_clob_token_ids` to that same focus node and
+stage a new candidate. A third framing kept the more conceptual hunch alive as
+a pattern-first latent outcome-slot model. This is the intended feel of the
+workflow: validation is a guide for graph repair, while alternatives preserve
+creative modelling space.
+
 ## Awkward Concept Test
 
 Future promotion helpers should be tested against ideas that do not fit neatly

@@ -634,6 +634,336 @@ def test_stage_systematisation_shared_shapes_validate_preview_framing(
     assert "Snapshot state keys must name a timestamp column." in export_text
 
 
+def test_polymarket_outcome_alignment_failure_and_repair_uses_diagnostics(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(POLYMARKET_FIXTURE)
+    before_map_count = db.triple_count("map")
+    before_ontology_count = db.triple_count("ontology")
+    before_shapes_count = db.triple_count("shapes")
+    ft = "https://richcanopy.org/example/field-trial/polymarket-diagnostics#"
+
+    claim = db.record_claim_observation(
+        summary="Outcome/token alignment is an embedded array bridge.",
+        claim_text=(
+            "Gamma market snapshots carry outcomes and clobTokenIds as JSON-array "
+            "columns, while downstream CLOB tables use scalar token identifiers."
+        ),
+        claim_kind="rc:SchemaClaim",
+        claim_targets=[
+            "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots",
+            "https://richcanopy.org/example/manifest/polymarket#mkt_outcomes",
+            "https://richcanopy.org/example/manifest/polymarket#mkt_clob_token_ids",
+            "https://richcanopy.org/example/manifest/polymarket#same_entity_clob_token",
+        ],
+        confidence="rc:HighConfidence",
+        observation_status="rc:Checked",
+        evidence_summary=(
+            "Fixture map records outcomes and clobTokenIds as JSON-array columns, "
+            "and scalar token identity as a separate SharedIdentifier."
+        ),
+        source_path="examples/manifest-prototype-rc/polymarket.trig",
+        start_line=163,
+        end_line=494,
+        source_kind="rc:DocumentationSource",
+    )
+    pattern = db.record_pattern(
+        summary="Outcome/token alignment is a positional array bridge.",
+        pattern_text=(
+            "Polymarket market identity flows through conditionId plus parallel "
+            "outcomes and clobTokenIds arrays before downstream tables expose "
+            "scalar CLOB token ids."
+        ),
+        rationale=(
+            "The existing fixture captures scalar token identity, but the "
+            "market-side bridge is hidden inside array order rather than a "
+            "plain column-to-column foreign key."
+        ),
+        pattern_targets=[
+            "https://richcanopy.org/example/manifest/polymarket#mkt_outcomes",
+            "https://richcanopy.org/example/manifest/polymarket#mkt_clob_token_ids",
+            "https://richcanopy.org/example/manifest/polymarket#same_entity_clob_token",
+        ],
+        supporting_claims=[claim.claim_iri],
+        map_implications=[
+            f"{ft}outcome_token_alignment_v1",
+            f"{ft}outcome_slot_latent_entity",
+        ],
+    )
+
+    shared_ontology = f"""
+    @prefix ft: <{ft}> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ft:OutcomeTokenAlignment a rdfs:Class ;
+        rdfs:label "Outcome token alignment" .
+
+    ft:OutcomeTokenAlignmentPattern a rdfs:Class ;
+        rdfs:subClassOf rc:Pattern ;
+        rdfs:label "Outcome token alignment pattern" .
+
+    ft:OutcomeSlot a rdfs:Class ;
+        rdfs:label "Outcome slot" .
+
+    ft:alignmentMarketTable a rdf:Property ;
+        rdfs:range rc:Table ;
+        rdfs:label "alignment market table" .
+
+    ft:conditionIdColumn a rdf:Property ;
+        rdfs:range rc:Column ;
+        rdfs:label "condition id column" .
+
+    ft:outcomeLabelArrayColumn a rdf:Property ;
+        rdfs:range rc:Column ;
+        rdfs:label "outcome label array column" .
+
+    ft:clobTokenIdArrayColumn a rdf:Property ;
+        rdfs:range rc:Column ;
+        rdfs:label "CLOB token id array column" .
+
+    ft:downstreamTokenColumn a rdf:Property ;
+        rdfs:range rc:Column ;
+        rdfs:label "downstream token column" .
+
+    ft:alignmentBasis a rdf:Property ;
+        rdfs:label "alignment basis" .
+
+    ft:requiresJsonArrayParsing a rdf:Property ;
+        rdfs:label "requires JSON array parsing" .
+
+    ft:impliedLatentEntity a rdf:Property ;
+        rdfs:label "implied latent entity" .
+
+    ft:keepsArrayOrderUnresolved a rdf:Property ;
+        rdfs:label "keeps array order unresolved" .
+    """
+    shared_shapes = f"""
+    @prefix ft: <{ft}> .
+    @prefix sh: <http://www.w3.org/ns/shacl#> .
+    @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+    ft:OutcomeTokenAlignmentShape a sh:NodeShape ;
+        sh:targetClass ft:OutcomeTokenAlignment ;
+        sh:property [
+            sh:path ft:alignmentMarketTable ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Outcome token alignments must name the market snapshot table."
+        ] ;
+        sh:property [
+            sh:path ft:conditionIdColumn ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Outcome token alignments must name the conditionId column."
+        ] ;
+        sh:property [
+            sh:path ft:outcomeLabelArrayColumn ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Outcome token alignments must name the outcome-label array column."
+        ] ;
+        sh:property [
+            sh:path ft:clobTokenIdArrayColumn ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Outcome token alignments must name the CLOB token-id array column."
+        ] ;
+        sh:property [
+            sh:path ft:downstreamTokenColumn ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Outcome token alignments need a downstream scalar CLOB token column."
+        ] ;
+        sh:property [
+            sh:path ft:alignmentBasis ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:datatype xsd:string ;
+            sh:message "Outcome token alignments must explain the alignment basis."
+        ] ;
+        sh:property [
+            sh:path ft:requiresJsonArrayParsing ;
+            sh:minCount 1 ;
+            sh:maxCount 1 ;
+            sh:datatype xsd:boolean ;
+            sh:message "Outcome token alignments must say whether JSON array parsing is required."
+        ] .
+
+    ft:OutcomeTokenAlignmentPatternShape a sh:NodeShape ;
+        sh:targetClass ft:OutcomeTokenAlignmentPattern ;
+        sh:property [
+            sh:path ft:impliedLatentEntity ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Pattern-first outcome token lore must name the latent entity it preserves."
+        ] ;
+        sh:property [
+            sh:path ft:keepsArrayOrderUnresolved ;
+            sh:maxCount 1 ;
+            sh:datatype xsd:boolean ;
+            sh:message "keepsArrayOrderUnresolved must be a boolean if supplied."
+        ] .
+    """
+    flawed_map = f"""
+    @prefix ft: <{ft}> .
+    @prefix pm: <https://richcanopy.org/example/manifest/polymarket#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ft:outcome_token_alignment_v1 a ft:OutcomeTokenAlignment ;
+        rdfs:label "Outcome token alignment across Gamma and CLOB tables" ;
+        ft:alignmentMarketTable pm:MarketSnapshots ;
+        ft:conditionIdColumn pm:mkt_condition_id ;
+        ft:outcomeLabelArrayColumn pm:mkt_outcomes ;
+        ft:downstreamTokenColumn pm:px_token_id, pm:ob_asset_id, pm:tr_asset, pm:hld_token ;
+        ft:alignmentBasis "Outcome labels and token ids are expected to line up by array position before downstream tables expose scalar token ids." ;
+        ft:requiresJsonArrayParsing true .
+    """
+    repaired_map = flawed_map.replace(
+        "ft:outcomeLabelArrayColumn pm:mkt_outcomes ;",
+        (
+            "ft:outcomeLabelArrayColumn pm:mkt_outcomes ;\n"
+            "        ft:clobTokenIdArrayColumn pm:mkt_clob_token_ids ;"
+        ),
+    )
+    pattern_first = f"""
+    @prefix ft: <{ft}> .
+    @prefix pm: <https://richcanopy.org/example/manifest/polymarket#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ft:outcome_slot_latent_entity a ft:OutcomeSlot ;
+        rdfs:label "Latent Polymarket outcome slot" .
+
+    ft:outcome_token_alignment_pattern a ft:OutcomeTokenAlignmentPattern, rc:Pattern ;
+        rdfs:label "Outcome token alignment pattern" ;
+        rc:summary "Outcome/token alignment is a positional array bridge." ;
+        rc:patternText "Gamma outcomes and clobTokenIds arrays imply a latent outcome slot before CLOB token ids appear as scalar columns." ;
+        rc:rationale "This keeps the array-order hunch tentative instead of pretending the map already has a plain foreign key." ;
+        rc:patternTarget pm:mkt_outcomes, pm:mkt_clob_token_ids, pm:same_entity_clob_token ;
+        rc:supportingClaim <{claim.claim_iri}> ;
+        rc:mapImplication ft:outcome_slot_latent_entity, ft:outcome_token_alignment_v1 ;
+        rc:patternStability rc:EmergingPattern ;
+        ft:impliedLatentEntity ft:outcome_slot_latent_entity ;
+        ft:keepsArrayOrderUnresolved true .
+    """
+    shared_additions = [
+        {"graph": "ontology", "content": shared_ontology},
+        {"graph": "shapes", "content": shared_shapes},
+    ]
+
+    failed = db.stage_systematisation(
+        summary="Model Polymarket outcome-token alignment",
+        intent=(
+            "Test whether provisional shapes catch a missing source array in "
+            "a Polymarket outcome-token alignment hunch."
+        ),
+        anchors=[
+            "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots",
+            "https://richcanopy.org/example/manifest/polymarket#mkt_outcomes",
+            "https://richcanopy.org/example/manifest/polymarket#mkt_clob_token_ids",
+            pattern.pattern_iri,
+        ],
+        supporting_claims=[claim.claim_iri],
+        supporting_patterns=[pattern.pattern_iri],
+        shared_context_summary=(
+            "Define provisional outcome-token alignment vocabulary and shapes."
+        ),
+        shared_additions=shared_additions,
+        framings=[
+            {
+                "label": "Flawed map candidate missing token array source",
+                "graph": "map",
+                "content": flawed_map,
+                "stance": "rc:CandidateRevision",
+            }
+        ],
+        validation_scope="all",
+    )
+
+    assert failed.framings[0].validation_conforms is False
+    diagnostic = failed.framings[0].validation_results[0]
+    assert diagnostic.focus_node == f"{ft}outcome_token_alignment_v1"
+    assert diagnostic.result_path == f"{ft}clobTokenIdArrayColumn"
+    assert diagnostic.source_constraint_component == (
+        "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    )
+    assert "CLOB token-id array column" in diagnostic.messages[0]
+
+    failed_description = db.describe_staged_revision(
+        failed.staged_revisions[0].revision_iri
+    )
+    failed_export_path = tmp_path / "failed-polymarket-alignment.md"
+    db.export_staged_revision(failed_description.iri, failed_export_path)
+    failed_export_text = failed_export_path.read_text()
+    assert "## Validation Results" in failed_export_text
+    assert "Result path: clobTokenIdArrayColumn" in failed_export_text
+    assert "Outcome token alignments must name the CLOB token-id array column." in (
+        failed_export_text
+    )
+
+    repaired = db.stage_systematisation(
+        summary="Repair Polymarket outcome-token alignment",
+        intent=(
+            "Use the failed validation diagnostic to add the missing token "
+            "array source, while preserving a pattern-first alternative."
+        ),
+        anchors=[
+            "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots",
+            "https://richcanopy.org/example/manifest/polymarket#mkt_outcomes",
+            "https://richcanopy.org/example/manifest/polymarket#mkt_clob_token_ids",
+            pattern.pattern_iri,
+        ],
+        supporting_claims=[claim.claim_iri],
+        supporting_patterns=[pattern.pattern_iri],
+        shared_context_summary=(
+            "Reuse the same provisional outcome-token alignment vocabulary and shapes."
+        ),
+        shared_additions=shared_additions,
+        alternative_to=failed_description.iri,
+        framings=[
+            {
+                "label": "Repaired map candidate with token array source",
+                "graph": "map",
+                "content": repaired_map,
+                "stance": "rc:CandidateRevision",
+            },
+            {
+                "label": "Pattern-first latent outcome slot",
+                "graph": "patterns",
+                "content": pattern_first,
+                "stance": "rc:AlternativeSystematisation",
+            },
+        ],
+        validation_scope="all",
+    )
+
+    assert [framing.validation_conforms for framing in repaired.framings] == [
+        True,
+        True,
+    ]
+    repaired_description = db.describe_staged_revision(
+        repaired.staged_revisions[0].revision_iri
+    )
+    pattern_description = db.describe_staged_revision(
+        repaired.staged_revisions[1].revision_iri
+    )
+    assert repaired_description.alternative_to is not None
+    assert repaired_description.alternative_to.iri == failed_description.iri
+    assert pattern_description.alternative_to is not None
+    assert pattern_description.alternative_to.iri == repaired_description.iri
+    assert db.triple_count("map") == before_map_count
+    assert db.triple_count("ontology") == before_ontology_count
+    assert db.triple_count("shapes") == before_shapes_count
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
