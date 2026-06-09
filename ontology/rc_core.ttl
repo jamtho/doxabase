@@ -1012,6 +1012,9 @@ rc:RevisionStance a rdfs:Class ;
 rc:GraphPatchOperation a rdfs:Class ;
     rdfs:comment "A compact operation type for a staged graph patch." .
 
+rc:GraphPatchRole a rdfs:Class ;
+    rdfs:comment "A compact role for a staged graph patch, such as shared proposed context or framing-specific payload." .
+
 rc:revisionType a rdf:Property ;
     rdfs:domain rc:GraphRevision ;
     rdfs:range rc:RevisionType ;
@@ -1107,6 +1110,11 @@ rc:patchFormat a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "The RDF serialization format of patchContent, usually turtle." .
 
+rc:patchRole a rdf:Property ;
+    rdfs:domain rc:GraphPatch ;
+    rdfs:range rc:GraphPatchRole ;
+    rdfs:comment "Whether a staged graph patch is framing-specific payload or shared proposed context for related framings." .
+
 rc:patchContent a rdf:Property ;
     rdfs:domain rc:GraphPatch ;
     rdfs:range xsd:string ;
@@ -1162,6 +1170,9 @@ rc:SupersededRevision a rc:RevisionStance ; rdfs:label "superseded revision" .
 
 rc:AdditionPatch a rc:GraphPatchOperation ; rdfs:label "addition patch" .
 rc:RemovalPatch a rc:GraphPatchOperation ; rdfs:label "removal patch" .
+
+rc:FramingPatch a rc:GraphPatchRole ; rdfs:label "framing patch" .
+rc:SharedContextPatch a rc:GraphPatchRole ; rdfs:label "shared context patch" .
 
 # -----------------------------------------------------------------------------
 # Caveats

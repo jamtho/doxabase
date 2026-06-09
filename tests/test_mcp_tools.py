@@ -258,23 +258,33 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
         rc:supportingObservation <{observation.observation_iri}> ;
         rc:patternStability rc:EmergingPattern .
     """
+    map_framing = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:Messages a rc:Dataset, rc:Table ;
+        rdfs:label "Messages" .
+    """
 
     result = stage_systematisation_tool(
         db,
         summary="Explore identity-ladder modelling",
         intent="Preserve two possible RDF shapes for the same modelling hunch.",
         anchors=[observation.observation_iri],
+        shared_additions=[{"graph": "ontology", "content": ontology_framing}],
+        shared_context_summary="Define provisional identity-ladder vocabulary once.",
         framings=[
-            {
-                "label": "Ontology term",
-                "graph": "ontology",
-                "content": ontology_framing,
-                "stance": "rc:AlternativeSystematisation",
-            },
             {
                 "label": "Pattern first",
                 "graph": "patterns",
                 "content": pattern_framing,
+            },
+            {
+                "label": "Map candidate",
+                "graph": "map",
+                "content": map_framing,
+                "stance": "rc:CandidateRevision",
             },
         ],
     )
@@ -283,8 +293,8 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["anchors"] == [observation.observation_iri]
     assert len(result["framings"]) == 2
     assert len(result["staged_revisions"]) == 2
-    assert result["framings"][0]["target_graphs"] == ["ontology"]
-    assert result["framings"][1]["target_graphs"] == ["patterns"]
+    assert result["framings"][0]["target_graphs"] == ["ontology", "patterns"]
+    assert result["framings"][1]["target_graphs"] == ["ontology", "map"]
     assert result["framings"][0]["validation_conforms"] is True
     assert result["framings"][1]["validation_conforms"] is True
 
@@ -295,6 +305,8 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert second["alternative_to"]["iri"] == first_iri
     assert second["revision_anchors"][0]["iri"] == observation.observation_iri
+    assert second["patches"][0]["patch_role_label"] == "shared context patch"
+    assert second["patches"][1]["patch_role_label"] == "framing patch"
     assert "Systematisation intent:" in second["rationale"]
 
 

@@ -73,7 +73,10 @@ Call `doxabase.stage_systematisation` when you have a modelling hunch and want
 to preserve one or more possible RDF framings for it. This helper is deliberately
 not a promotion wizard. It does not choose the ontology shape for you; it packages
 caller-authored RDF framings as staged revisions, validates them, and links later
-framings as alternatives to the first by default.
+framings as alternatives to the first by default. When several framings need the
+same provisional vocabulary or assumptions, pass `shared_additions` or
+`shared_removals`; those shared patches are included in each framing preview and
+exported as `rc:SharedContextPatch` entries.
 
 Use it for the part of the work where graph judgement matters:
 
@@ -84,7 +87,8 @@ Use it for the part of the work where graph judgement matters:
 - a conservative candidate plus a more speculative alternative.
 
 Each framing can use the shorthand `graph` + `content` for one addition, or full
-`additions` / `removals` patch lists when the graph move is more complex:
+`additions` / `removals` patch lists when the graph move is more complex.
+Shared context patches are previewed before each framing's own patches:
 
 ```python
 result = stage_systematisation_tool(
@@ -99,17 +103,27 @@ result = stage_systematisation_tool(
         "The concept may explain repeated identity hints better than a single "
         "fixed key model."
     ),
-    framings=[
+    shared_context_summary=(
+        "Define provisional identity-ladder vocabulary so multiple framings can "
+        "refer to the same tentative concept."
+    ),
+    shared_additions=[
         {
-            "label": "Project vocabulary term",
             "graph": "ontology",
             "content": "... Turtle defining ex:IdentityLadder ...",
-            "stance": "rc:AlternativeSystematisation",
         },
+    ],
+    framings=[
         {
-            "label": "Pattern first",
+            "label": "Deeper pattern hunch",
             "graph": "patterns",
             "content": "... Turtle defining an rc:Pattern ...",
+        },
+        {
+            "label": "Concrete map candidate",
+            "graph": "map",
+            "content": "... Turtle using the shared vocabulary ...",
+            "stance": "rc:CandidateRevision",
         },
     ],
     validation_scope="all",
@@ -117,8 +131,8 @@ result = stage_systematisation_tool(
 ```
 
 The staged revision rationale records the systematisation intent, anchors,
-overall rationale, and framing-specific rationale. This keeps exports readable
-even while richer promotion metadata is still evolving.
+overall rationale, shared-context summary, and framing-specific rationale. This
+keeps exports readable even while richer promotion metadata is still evolving.
 
 Systematisation anchors are also recorded as `rc:revisionAnchor` triples on each
 staged revision. Use anchors for resources the hunch is about, such as columns,
@@ -137,6 +151,7 @@ Patch entries record:
 - `rc:patchOperation`: addition or removal;
 - `rc:targetGraph`: the mutable graph role;
 - `rc:patchFormat` and `rc:patchContent`;
+- `rc:patchRole`: `rc:SharedContextPatch` or `rc:FramingPatch`;
 - `rc:patchTripleCount`;
 - `rc:beforeTripleCount` and `rc:afterTripleCount` for the preview sequence.
 

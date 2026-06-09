@@ -32,7 +32,7 @@ Current implementation status:
 - `stage_graph_revision()`, `describe_staged_revision()`, and
   `export_staged_revision()` for reviewable graph patch proposals.
 - `stage_systematisation()` for preserving alternative caller-authored RDF
-  framings of a modelling hunch.
+  framings of a modelling hunch, with optional shared proposed context.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.

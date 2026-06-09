@@ -21,7 +21,8 @@ Use this sequence when arriving cold in a DoxaBase capsule.
 14. Use `doxabase.stage_systematisation` when one modelling hunch has several
     plausible RDF framings. This is especially useful for pattern-first versus
     ontology-first alternatives, or for awkward concepts that do not fit current
-    helper templates.
+    helper templates. Use shared proposed context when several framings need the
+    same tentative vocabulary or assumptions.
 15. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
 16. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
 17. Use `doxabase.record_graph_revision` after a meaningful graph change or

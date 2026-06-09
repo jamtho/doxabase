@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 998
+    assert graphs["base_ontology"].triple_count == 1008
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 910
+    assert graphs["base_shapes"].triple_count == 916
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -288,6 +288,7 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     assert staged.validation_result_count == 0
     assert staged.patches[0].operation == RC + "AdditionPatch"
     assert staged.patches[0].target_graph == "map"
+    assert staged.patches[0].patch_role == RC + "FramingPatch"
     assert staged.patches[0].triple_count == 3
     assert staged.patches[0].before_triple_count == before_map_count
     assert staged.patches[0].after_triple_count == before_map_count + 3
@@ -297,6 +298,7 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     assert description.revision_stance_label == "exploratory hunch"
     assert description.revision_type_label == "staged revision"
     assert description.validation_conforms is True
+    assert description.patches[0].patch_role_label == "framing patch"
     assert description.patches[0].content is not None
     assert "ex:Messages" in description.patches[0].content
     overview = db.graph_overview()
@@ -430,6 +432,106 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "Identity ladder" in first.patches[0].content
     assert "IdentityLadderPattern" in second.patches[0].content
     assert db.validate_graph(scope="all").conforms
+
+
+def test_stage_systematisation_shared_context_validates_each_framing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_ontology_count = db.triple_count("ontology")
+    before_map_count = db.triple_count("map")
+    before_patterns_count = db.triple_count("patterns")
+    shared_context = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:OperationalIdentifierInteger a rc:PhysicalType ;
+        rdfs:label "operational identifier integer" .
+    """
+    map_framing = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:message_mmsi a rc:Column ;
+        rdfs:label "Message MMSI" ;
+        rc:columnName "mmsi" ;
+        rc:physicalType ex:OperationalIdentifierInteger .
+    """
+    pattern_framing = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix dcterms: <http://purl.org/dc/terms/> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:operational_identifier_pattern a rc:Pattern ;
+        rdfs:label "Operational identifier pattern" ;
+        rc:summary "Identifier columns may need scoped reliability semantics." ;
+        rc:patternText "The proposed operational identifier type is useful as shared context for map and pattern framings." ;
+        rc:rationale "The pattern records the stronger hunch while the map framing tries a concrete column model." ;
+        rc:patternTarget ex:message_mmsi ;
+        rc:evidence ex:shared_context_evidence ;
+        rc:patternStability rc:EmergingPattern .
+
+    ex:shared_context_evidence a rc:Evidence ;
+        rc:summary "Synthetic shared-context test evidence." ;
+        dcterms:source "tests/test_doxabase_core.py" .
+    """
+
+    draft = db.stage_systematisation(
+        summary="Explore shared operational identifier context",
+        intent=(
+            "Use one provisional ontology patch as shared context for a map "
+            "candidate and a pattern hunch."
+        ),
+        anchors=["https://example.test/project#message_mmsi"],
+        shared_context_summary=(
+            "Define a project-local physical type that the map framing needs "
+            "for SHACL validation."
+        ),
+        shared_additions=[{"graph": "ontology", "content": shared_context}],
+        framings=[
+            {
+                "label": "Concrete map candidate",
+                "graph": "map",
+                "content": map_framing,
+                "stance": "rc:CandidateRevision",
+            },
+            {
+                "label": "Pattern hunch",
+                "graph": "patterns",
+                "content": pattern_framing,
+            },
+        ],
+        validation_scope="all",
+    )
+
+    assert len(draft.staged_revisions) == 2
+    assert "Shared proposed context patches" in draft.warnings[0]
+    assert db.triple_count("ontology") == before_ontology_count
+    assert db.triple_count("map") == before_map_count
+    assert db.triple_count("patterns") == before_patterns_count
+    assert all(framing.validation_conforms for framing in draft.framings)
+
+    first = db.describe_staged_revision(draft.staged_revisions[0].revision_iri)
+    second = db.describe_staged_revision(draft.staged_revisions[1].revision_iri)
+    assert set(first.changed_graphs) == {"ontology", "map"}
+    assert set(second.changed_graphs) == {"ontology", "patterns"}
+    assert [patch.patch_role_label for patch in first.patches] == [
+        "shared context patch",
+        "framing patch",
+    ]
+    assert [patch.patch_role_label for patch in second.patches] == [
+        "shared context patch",
+        "framing patch",
+    ]
+    assert "Shared proposed context (1 patch(es))" in first.rationale
+    export_path = tmp_path / "shared-context-review.md"
+    db.export_staged_revision(first.iri, export_path)
+    export_text = export_path.read_text()
+    assert "Role: shared context patch" in export_text
+    assert "Role: framing patch" in export_text
 
 
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:

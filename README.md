@@ -67,7 +67,8 @@ Implemented:
 - `stage_graph_revision()` for reviewable additions/removals with stance,
   preview counts, and validation, without applying the patch.
 - `stage_systematisation()` for staging one or more caller-authored RDF framings
-  of the same modelling hunch as reviewable alternatives.
+  of the same modelling hunch, with optional shared proposed context, as
+  reviewable alternatives.
 - Agent-authored observation and pattern RDF vocabulary for structured claims,
   source spans, confidence, and status.
 - Stricter SHACL validation for observation/pattern/evidence/claim resources.
@@ -172,7 +173,7 @@ Useful first tool calls for an agent:
 15. `doxabase.stage_graph_revision` for reviewable additions/removals that
     should not be applied yet
 16. `doxabase.stage_systematisation` for alternative RDF framings of one
-    modelling hunch
+    modelling hunch, optionally with shared proposed context
 17. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
 18. `doxabase.record_map_dataset` and related map helpers for current-best facts
 19. `doxabase.validate_graph` with `scope="all"`

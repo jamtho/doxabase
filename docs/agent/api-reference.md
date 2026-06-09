@@ -186,9 +186,11 @@ and records `rc:GraphPatch` entries for later review.
 modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
 `framings`. Each framing can use `graph` + `content` shorthand or full
 `additions` / `removals` patch lists. Later framings are linked as alternatives
-to the first by default. This is a drafting and validation scaffold, not an
-ontology decision engine. Anchors are recorded as `rc:revisionAnchor` metadata
-on each staged revision and are also repeated in rationale text for readability.
+to the first by default. Use `shared_additions` / `shared_removals` when several
+framings should validate against the same provisional context. This is a
+drafting and validation scaffold, not an ontology decision engine. Anchors are
+recorded as `rc:revisionAnchor` metadata on each staged revision and are also
+repeated in rationale text for readability.
 
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, changed/included graph roles, graph-count snapshots, validation

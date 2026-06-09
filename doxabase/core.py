@@ -151,6 +151,7 @@ class StagedGraphPatchRecord:
     operation: str
     target_graph: str
     format: str
+    patch_role: str
     triple_count: int
     before_triple_count: int
     after_triple_count: int
@@ -215,6 +216,8 @@ class StagedGraphPatchDescription:
     operation_label: str | None
     target_graph: str | None
     format: str | None
+    patch_role: str | None
+    patch_role_label: str | None
     triple_count: int | None
     before_triple_count: int | None
     after_triple_count: int | None
@@ -1054,6 +1057,11 @@ class DoxaBase:
         included_graphs = self._objects(data_graphs, revision_iri, "rc:includedGraph")
         if not included_graphs:
             included_graphs = [snapshot.graph_role for snapshot in snapshots]
+        patches = [
+            self._describe_staged_graph_patch(patch_iri, data_graphs)
+            for patch_iri in patch_iris
+        ]
+        patches.sort(key=self._staged_patch_sort_key)
 
         return StagedGraphRevisionDescription(
             iri=revision_iri,
@@ -1094,10 +1102,7 @@ class DoxaBase:
                 "rc:validationResultCount",
             ),
             graph_snapshots=snapshots,
-            patches=[
-                self._describe_staged_graph_patch(patch_iri, data_graphs)
-                for patch_iri in patch_iris
-            ],
+            patches=patches,
             supporting_observations=self._resource_summaries(
                 all_lookup_graphs,
                 self._objects(
@@ -3956,12 +3961,14 @@ class DoxaBase:
                 for triple in patch_graph:
                     preview.remove(triple)
             after_count = len(preview)
+            patch_role = str(patch["patch_role"])
             patch_records.append(
                 StagedGraphPatchRecord(
                     patch_iri=str(patch["patch_iri"]),
                     operation=str(patch["operation"]),
                     target_graph=target_graph,
                     format=str(patch["format"]),
+                    patch_role=patch_role,
                     triple_count=len(patch_graph),
                     before_triple_count=before_count,
                     after_triple_count=after_count,
@@ -4059,6 +4066,13 @@ class DoxaBase:
             metadata.add(
                 (
                     patch_subject,
+                    URIRef(self.expand_iri("rc:patchRole")),
+                    URIRef(patch_record.patch_role),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
                     URIRef(self.expand_iri("rc:patchContent")),
                     Literal(str(patch["content"])),
                 )
@@ -4107,6 +4121,9 @@ class DoxaBase:
         *,
         anchors: Iterable[str] | str | None = None,
         rationale: str | None = None,
+        shared_additions: Iterable[Mapping[str, str]] | Mapping[str, str] | None = None,
+        shared_removals: Iterable[Mapping[str, str]] | Mapping[str, str] | None = None,
+        shared_context_summary: str | None = None,
         default_stance: str = "rc:ExploratoryHunch",
         revision_type: str = "rc:StagedRevision",
         included_graphs: Iterable[str] | str | None = None,
@@ -4138,11 +4155,29 @@ class DoxaBase:
         framing_values = list(framings)
         if not framing_values:
             raise DoxaBaseError("stage_systematisation requires at least one framing")
+        shared_addition_specs = self._patch_specs_with_role(
+            self._normalise_patch_spec_list("shared_additions", shared_additions) or [],
+            "rc:SharedContextPatch",
+        )
+        shared_removal_specs = self._patch_specs_with_role(
+            self._normalise_patch_spec_list("shared_removals", shared_removals) or [],
+            "rc:SharedContextPatch",
+        )
+        shared_patch_count = len(shared_addition_specs) + len(shared_removal_specs)
+        shared_context_summary_value = (
+            shared_context_summary.strip()
+            if shared_context_summary is not None
+            else None
+        )
 
         warnings: list[str] = []
         if not anchor_values:
             warnings.append(
                 "No anchors were supplied; future reviewers may have less context."
+            )
+        if shared_patch_count:
+            warnings.append(
+                "Shared proposed context patches are included in every staged framing preview and patch bundle."
             )
         if len(framing_values) > 1 and link_alternatives:
             warnings.append(
@@ -4165,6 +4200,14 @@ class DoxaBase:
             if not stance:
                 raise DoxaBaseError("framing stance must not be empty")
             additions, removals = self._systematisation_patch_specs(framing)
+            addition_specs = self._patch_specs_with_role(
+                additions or [],
+                "rc:FramingPatch",
+            )
+            removal_specs = self._patch_specs_with_role(
+                removals or [],
+                "rc:FramingPatch",
+            )
             framing_scope = str(
                 framing.get("validation_scope") or validation_scope
             ).strip()
@@ -4179,6 +4222,8 @@ class DoxaBase:
                 intent=intent_value,
                 anchors=anchor_values,
                 overall_rationale=rationale_value,
+                shared_context_summary=shared_context_summary_value,
+                shared_patch_count=shared_patch_count,
                 framing_label=label,
                 framing_rationale=framing_rationale,
             )
@@ -4195,8 +4240,8 @@ class DoxaBase:
             staged = self.stage_graph_revision(
                 summary=revision_summary,
                 rationale=revision_rationale,
-                additions=additions,
-                removals=removals,
+                additions=[*shared_addition_specs, *addition_specs],
+                removals=[*shared_removal_specs, *removal_specs],
                 stance=stance,
                 revision_type=revision_type,
                 included_graphs=included_graphs,
@@ -4299,12 +4344,27 @@ class DoxaBase:
                     ) from exc
                 if len(patch_graph) == 0:
                     raise DoxaBaseError("Staged patch content must contain triples")
+                patch_role = str(
+                    spec.get("patch_role")
+                    or spec.get("patchRole")
+                    or spec.get("role")
+                    or "rc:FramingPatch"
+                ).strip()
+                patch_role_iri = self.expand_iri(patch_role)
+                if self.expand_iri("rc:GraphPatchRole") not in self._types_from_graphs(
+                    self._expand_graphs(["ontology"]),
+                    patch_role_iri,
+                ):
+                    raise DoxaBaseError(
+                        "patch_role must be an rc:GraphPatchRole declared in base or project ontology"
+                    )
                 parsed.append(
                     {
                         "patch_iri": self._mint_iri("graph-patch"),
                         "operation": operation,
                         "target_graph": target_graph,
                         "format": patch_format,
+                        "patch_role": patch_role_iri,
                         "content": content,
                         "graph": patch_graph,
                     }
@@ -4368,12 +4428,27 @@ class DoxaBase:
             )
         return normalised
 
+    def _patch_specs_with_role(
+        self,
+        specs: Iterable[Mapping[str, str]],
+        patch_role: str,
+    ) -> list[dict[str, str]]:
+        return [
+            {
+                **{str(key): str(value) for key, value in spec.items()},
+                "patch_role": patch_role,
+            }
+            for spec in specs
+        ]
+
     def _systematisation_rationale(
         self,
         *,
         intent: str,
         anchors: list[str],
         overall_rationale: str | None,
+        shared_context_summary: str | None,
+        shared_patch_count: int,
         framing_label: str,
         framing_rationale: str | None,
     ) -> str:
@@ -4386,6 +4461,17 @@ class DoxaBase:
             lines.extend(["", f"Framing rationale: {framing_rationale}"])
         if overall_rationale:
             lines.extend(["", f"Overall rationale: {overall_rationale}"])
+        if shared_patch_count:
+            shared_text = (
+                shared_context_summary
+                or "Shared proposed context is included in each framing preview."
+            )
+            lines.extend(
+                [
+                    "",
+                    f"Shared proposed context ({shared_patch_count} patch(es)): {shared_text}",
+                ]
+            )
         if anchors:
             lines.extend(["", "Anchors:"])
             lines.extend(f"- {anchor}" for anchor in anchors)
@@ -4446,6 +4532,7 @@ class DoxaBase:
                     f"- IRI: `{patch.iri}`",
                     f"- Target graph: `{patch.target_graph}`",
                     f"- Format: `{patch.format}`",
+                    f"- Role: {patch.patch_role_label or patch.patch_role or 'unknown'}",
                     f"- Triples: {patch.triple_count}",
                     (
                         f"- Count preview: {patch.before_triple_count} -> "
@@ -6405,12 +6492,15 @@ class DoxaBase:
         graphs: list[str],
     ) -> StagedGraphPatchDescription:
         operation = self._first_object(graphs, patch_iri, "rc:patchOperation")
+        patch_role = self._first_object(graphs, patch_iri, "rc:patchRole")
         return StagedGraphPatchDescription(
             iri=patch_iri,
             operation=operation,
             operation_label=self._label_for_resource(operation),
             target_graph=self._first_object(graphs, patch_iri, "rc:targetGraph"),
             format=self._first_object(graphs, patch_iri, "rc:patchFormat"),
+            patch_role=patch_role,
+            patch_role_label=self._label_for_resource(patch_role),
             triple_count=self._int_object(graphs, patch_iri, "rc:patchTripleCount"),
             before_triple_count=self._int_object(
                 graphs,
@@ -6424,6 +6514,14 @@ class DoxaBase:
             ),
             content=self._first_object(graphs, patch_iri, "rc:patchContent"),
         )
+
+    def _staged_patch_sort_key(
+        self,
+        patch: StagedGraphPatchDescription,
+    ) -> tuple[int, str, str]:
+        shared_role = self.expand_iri("rc:SharedContextPatch")
+        role_rank = 0 if patch.patch_role == shared_role else 1
+        return (role_rank, patch.target_graph or "", patch.iri)
 
     def _label_for_resource(self, iri: str | None) -> str | None:
         if iri is None:

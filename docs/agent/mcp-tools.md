@@ -150,9 +150,11 @@ Stages one or more caller-authored RDF framings for the same modelling hunch.
 Use it when an agent is choosing between pattern-first, ontology-first, map-first,
 or other RDF shapes and wants to keep alternatives reviewable. Each framing may
 use simple `graph` + `content` Turtle shorthand, or full `additions` /
-`removals` patch lists. The helper records the systematisation intent, anchors,
-rationale, validation preview, and linked staged revisions; it does not decide
-the ontology design for the agent.
+`removals` patch lists. Use `shared_additions` / `shared_removals` for
+provisional vocabulary or assumptions that every framing should validate
+against. The helper records the systematisation intent, anchors, rationale,
+validation preview, and linked staged revisions; it does not decide the ontology
+design for the agent.
 
 `doxabase.describe_staged_revision`
 

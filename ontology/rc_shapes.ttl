@@ -881,6 +881,13 @@ rc:GraphPatchShape a sh:NodeShape ;
         sh:message "GraphPatch resources must have exactly one string patchFormat." ;
     ] ;
     sh:property [
+        sh:path rc:patchRole ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class rc:GraphPatchRole ;
+        sh:message "GraphPatch resources must have exactly one GraphPatchRole." ;
+    ] ;
+    sh:property [
         sh:path rc:patchContent ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
