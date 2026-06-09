@@ -2262,7 +2262,8 @@ class DoxaBase:
         if offset < 0:
             raise DoxaBaseError("Search offset must be non-negative")
 
-        fts_query = _fts_query(query)
+        search_tokens = _search_tokens(query)
+        fts_query = _fts_query_from_tokens(search_tokens)
         graphs = self._expand_graphs([graph] if graph else None)
         graph_filter, graph_params = self._graph_filter(graphs)
         rows = self._conn.execute(
@@ -2281,6 +2282,13 @@ class DoxaBase:
             """,
             [fts_query, *graph_params, limit, offset],
         ).fetchall()
+        if not rows and len(search_tokens) > 1:
+            rows = self._co_mentioned_search_rows(
+                search_tokens,
+                graphs,
+                limit=limit,
+                offset=offset,
+            )
 
         ontology_graphs = self._expand_graphs(["ontology"])
         matches = [
@@ -2309,6 +2317,67 @@ class DoxaBase:
             limit=limit,
             offset=offset,
         )
+
+    def _co_mentioned_search_rows(
+        self,
+        tokens: list[str],
+        graphs: list[str],
+        *,
+        limit: int,
+        offset: int,
+    ) -> list[sqlite3.Row]:
+        graph_filter, graph_params = self._graph_filter(graphs)
+        fts_query = _fts_or_query_from_tokens(tokens)
+        candidate_limit = max((limit + offset) * 20, 100)
+        rows = self._conn.execute(
+            f"""
+            SELECT
+                graph,
+                subject,
+                predicate,
+                text,
+                snippet(literal_search, 4, '[', ']', ' ... ', 18) AS snippet
+            FROM literal_search
+            WHERE literal_search MATCH ?
+              {graph_filter}
+            ORDER BY graph, subject, predicate
+            LIMIT ?
+            """,
+            [fts_query, *graph_params, candidate_limit],
+        ).fetchall()
+        grouped: dict[str, tuple[set[str], list[sqlite3.Row]]] = {}
+        for row in rows:
+            matched_tokens = {
+                token for token in tokens if token in row["text"].lower()
+            }
+            if not matched_tokens:
+                continue
+            context_key = self._search_context_key(graphs, row["subject"])
+            token_set, grouped_rows = grouped.setdefault(context_key, (set(), []))
+            token_set.update(matched_tokens)
+            grouped_rows.append(row)
+
+        required_tokens = set(tokens)
+        selected_rows: list[sqlite3.Row] = []
+        seen: set[tuple[str, str, str, str]] = set()
+        for context_key, (token_set, grouped_rows) in sorted(grouped.items()):
+            if not required_tokens.issubset(token_set):
+                continue
+            for row in grouped_rows:
+                row_key = (
+                    row["graph"],
+                    row["subject"],
+                    row["predicate"],
+                    row["text"],
+                )
+                if row_key in seen:
+                    continue
+                seen.add(row_key)
+                selected_rows.append(row)
+        return selected_rows[offset : offset + limit]
+
+    def _search_context_key(self, graphs: list[str], subject: str) -> str:
+        return self._first_owner_dataset_iri(graphs, subject) or subject
 
     def describe_dataset(self, iri: str, graph: str | None = "map") -> DatasetDescription:
         dataset_iri = self.expand_iri(iri)
@@ -7725,10 +7794,22 @@ def _now() -> str:
 
 
 def _fts_query(query: str) -> str:
+    return _fts_query_from_tokens(_search_tokens(query))
+
+
+def _search_tokens(query: str) -> list[str]:
     tokens = re.findall(r"[A-Za-z0-9]+", query)
     if not tokens:
         raise DoxaBaseError("Search query must contain at least one searchable token")
+    return [token.lower() for token in tokens]
+
+
+def _fts_query_from_tokens(tokens: list[str]) -> str:
     return " AND ".join(f"{token.lower()}*" for token in tokens)
+
+
+def _fts_or_query_from_tokens(tokens: list[str]) -> str:
+    return " OR ".join(f"{token.lower()}*" for token in tokens)
 
 
 def _existing_path(source: str | Path) -> Path | None:

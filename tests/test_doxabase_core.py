@@ -1497,6 +1497,26 @@ def test_search_finds_fixture_literals_with_resource_context(tmp_path: Path) -> 
     assert "MMSI" in match.snippet
 
 
+def test_search_falls_back_to_same_dataset_co_mentions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(POLYMARKET_FIXTURE)
+
+    results = db.search("outcomes clobTokenIds", graph="map", limit=10)
+    matched_iris = {match.iri for match in results.matches}
+
+    assert (
+        "https://richcanopy.org/example/manifest/polymarket#mkt_outcomes"
+        in matched_iris
+    )
+    assert (
+        "https://richcanopy.org/example/manifest/polymarket#mkt_clob_token_ids"
+        in matched_iris
+    )
+    assert {match.graph for match in results.matches} == {"map"}
+
+
 def test_search_finds_recorded_observation_and_evidence(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     record = db.record_observation(

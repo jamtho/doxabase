@@ -46,6 +46,13 @@ Treat matches as candidate context. A match can tell you that a caveat,
 observation, path template, or source note exists; it does not decide whether
 that claim is current, complete, or applicable to the task.
 
+For multi-token queries, search first tries to find literals containing all
+tokens. If that finds nothing, it falls back to local co-mentions: resources in
+the same immediate context may be returned when their literals collectively
+cover the query. The main current use is same-table column discovery, such as
+finding both `outcomes` and `clobTokenIds` when those names live on separate
+column resources owned by one dataset.
+
 ## Observation And Systematisation
 
 Search is especially important for the observation/systematisation loop.
