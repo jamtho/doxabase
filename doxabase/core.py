@@ -424,6 +424,7 @@ class RelatedDatasetReason:
     related_dataset_columns: list[ResourceSummary]
     declared: bool | None
     referential_integrity: ResourceSummary | None
+    source_caveats: list[CaveatDescription]
     relationship_tags: list[RelatedDatasetReasonTag]
 
 
@@ -517,6 +518,7 @@ class RelationshipDescription:
     derivation_properties: list[ResourceSummary]
     group_by_columns: list[ResourceSummary]
     aggregated_columns: list[AggregatedColumnDescription]
+    source_caveats: list[CaveatDescription]
 
 
 @dataclass(frozen=True)
@@ -6695,6 +6697,10 @@ class DoxaBase:
             tuple[str, tuple[tuple[str, ...], tuple[str, ...]]],
             tuple[list[ResourceSummary], list[ResourceSummary], list[ResourceSummary]],
         ] = {}
+        source_caveats_by_reason: dict[
+            tuple[str, tuple[tuple[str, ...], tuple[str, ...]]],
+            dict[str, CaveatDescription],
+        ] = {}
         seen_tags: set[tuple[str, str, str | None]] = set()
 
         for related in related_datasets:
@@ -6739,6 +6745,14 @@ class DoxaBase:
                 current_columns,
                 related_columns,
             )
+            source_caveats_by_reason.setdefault((related.iri, reason_key), {})
+            if relationship is not None:
+                source_caveats_by_reason[(related.iri, reason_key)].update(
+                    {
+                        caveat.iri: caveat
+                        for caveat in relationship.source_caveats
+                    }
+                )
             reasons_by_group[related.iri][reason_key].append(
                 RelatedDatasetReasonTag(
                     relationship=related.relationship,
@@ -6765,6 +6779,11 @@ class DoxaBase:
                         self._related_dataset_reason(
                             reason_tags,
                             *columns_by_reason[(related.iri, reason_key)],
+                            list(
+                                source_caveats_by_reason[
+                                    (related.iri, reason_key)
+                                ].values()
+                            ),
                         )
                         for reason_key, reason_tags in reasons_by_group[
                             related.iri
@@ -6785,6 +6804,7 @@ class DoxaBase:
         columns: list[ResourceSummary],
         current_dataset_columns: list[ResourceSummary],
         related_dataset_columns: list[ResourceSummary],
+        source_caveats: list[CaveatDescription],
     ) -> RelatedDatasetReason:
         sorted_tags = sorted(tags, key=self._related_dataset_reason_tag_sort_key)
         primary = sorted_tags[0]
@@ -6799,6 +6819,10 @@ class DoxaBase:
             related_dataset_columns=related_dataset_columns,
             declared=primary.declared,
             referential_integrity=primary.referential_integrity,
+            source_caveats=sorted(
+                source_caveats,
+                key=lambda caveat: (caveat.label or "", caveat.iri),
+            ),
             relationship_tags=sorted_tags,
         )
 
@@ -7035,6 +7059,50 @@ class DoxaBase:
             relationship_iri,
             "rc:derivationFunction",
         )
+        source_dataset_summary = self._optional_resource_summary(
+            lookup_graphs,
+            source_dataset,
+        )
+        target_dataset_summary = self._optional_resource_summary(
+            lookup_graphs,
+            target_dataset,
+        )
+        foreign_key_from_summary = self._optional_resource_summary(
+            lookup_graphs,
+            foreign_key_from,
+        )
+        foreign_key_to_summary = self._optional_resource_summary(
+            lookup_graphs,
+            foreign_key_to,
+        )
+        identifying_columns = self._resource_summaries(
+            lookup_graphs,
+            self._objects(data_graphs, relationship_iri, "rc:identifyingColumn"),
+        )
+        source_columns = self._resource_summaries(
+            lookup_graphs,
+            self._objects(data_graphs, relationship_iri, "rc:sourceColumn"),
+        )
+        derived_columns = self._resource_summaries(
+            lookup_graphs,
+            self._objects(data_graphs, relationship_iri, "rc:derivedColumn"),
+        )
+        group_by_columns = self._resource_summaries(
+            lookup_graphs,
+            self._objects(data_graphs, relationship_iri, "rc:groupByColumn"),
+        )
+        aggregated_columns = [
+            self._describe_aggregated_column(
+                aggregated_column_iri,
+                data_graphs,
+                lookup_graphs,
+            )
+            for aggregated_column_iri in self._objects(
+                data_graphs,
+                relationship_iri,
+                "rc:hasAggregatedColumn",
+            )
+        ]
         return RelationshipDescription(
             iri=relationship_iri,
             label=self._display_label_from_graphs(lookup_graphs, relationship_iri),
@@ -7042,39 +7110,18 @@ class DoxaBase:
             types=types,
             relationship_kind=relationship_kind,
             relationship_kind_label=self._label_for_resource(relationship_kind),
-            source_dataset=self._optional_resource_summary(
-                lookup_graphs,
-                source_dataset,
-            ),
-            target_dataset=self._optional_resource_summary(
-                lookup_graphs,
-                target_dataset,
-            ),
-            foreign_key_from=self._optional_resource_summary(
-                lookup_graphs,
-                foreign_key_from,
-            ),
-            foreign_key_to=self._optional_resource_summary(
-                lookup_graphs,
-                foreign_key_to,
-            ),
+            source_dataset=source_dataset_summary,
+            target_dataset=target_dataset_summary,
+            foreign_key_from=foreign_key_from_summary,
+            foreign_key_to=foreign_key_to_summary,
             referential_integrity=self._optional_resource_summary(
                 lookup_graphs,
                 referential_integrity,
             ),
             declared=self._bool_object(data_graphs, relationship_iri, "rc:declared"),
-            identifying_columns=self._resource_summaries(
-                lookup_graphs,
-                self._objects(data_graphs, relationship_iri, "rc:identifyingColumn"),
-            ),
-            source_columns=self._resource_summaries(
-                lookup_graphs,
-                self._objects(data_graphs, relationship_iri, "rc:sourceColumn"),
-            ),
-            derived_columns=self._resource_summaries(
-                lookup_graphs,
-                self._objects(data_graphs, relationship_iri, "rc:derivedColumn"),
-            ),
+            identifying_columns=identifying_columns,
+            source_columns=source_columns,
+            derived_columns=derived_columns,
             derivation_function=self._optional_resource_summary(
                 lookup_graphs,
                 derivation_function,
@@ -7087,22 +7134,17 @@ class DoxaBase:
                     "rc:hasDerivationProperty",
                 ),
             ),
-            group_by_columns=self._resource_summaries(
+            group_by_columns=group_by_columns,
+            aggregated_columns=aggregated_columns,
+            source_caveats=self._relationship_source_caveats(
+                data_graphs,
                 lookup_graphs,
-                self._objects(data_graphs, relationship_iri, "rc:groupByColumn"),
+                source_dataset_summary,
+                foreign_key_from_summary,
+                source_columns,
+                group_by_columns,
+                aggregated_columns,
             ),
-            aggregated_columns=[
-                self._describe_aggregated_column(
-                    aggregated_column_iri,
-                    data_graphs,
-                    lookup_graphs,
-                )
-                for aggregated_column_iri in self._objects(
-                    data_graphs,
-                    relationship_iri,
-                    "rc:hasAggregatedColumn",
-                )
-            ],
         )
 
     def _describe_aggregated_column(
@@ -7149,6 +7191,52 @@ class DoxaBase:
                 within_group_ordering,
             ),
         )
+
+    def _relationship_source_caveats(
+        self,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+        source_dataset: ResourceSummary | None,
+        foreign_key_from: ResourceSummary | None,
+        source_columns: list[ResourceSummary],
+        group_by_columns: list[ResourceSummary],
+        aggregated_columns: list[AggregatedColumnDescription],
+    ) -> list[CaveatDescription]:
+        source_resources: list[str] = []
+        if source_dataset is not None:
+            source_resources.append(source_dataset.iri)
+        if foreign_key_from is not None:
+            source_resources.append(foreign_key_from.iri)
+            if foreign_key_from.owning_dataset_iri is not None:
+                source_resources.append(foreign_key_from.owning_dataset_iri)
+        for column in (*source_columns, *group_by_columns):
+            source_resources.append(column.iri)
+            if column.owning_dataset_iri is not None:
+                source_resources.append(column.owning_dataset_iri)
+        for aggregated_column in aggregated_columns:
+            for column in aggregated_column.source_columns:
+                source_resources.append(column.iri)
+                if column.owning_dataset_iri is not None:
+                    source_resources.append(column.owning_dataset_iri)
+            if aggregated_column.within_group_ordering is not None:
+                source_resources.append(aggregated_column.within_group_ordering.iri)
+                if (
+                    aggregated_column.within_group_ordering.owning_dataset_iri
+                    is not None
+                ):
+                    source_resources.append(
+                        aggregated_column.within_group_ordering.owning_dataset_iri
+                    )
+
+        caveat_iris: list[str] = []
+        for resource_iri in dict.fromkeys(source_resources):
+            caveat_iris.extend(
+                self._objects(data_graphs, resource_iri, "rc:hasKnownCaveat")
+            )
+        return [
+            self._describe_caveat(caveat_iri, data_graphs, lookup_graphs)
+            for caveat_iri in sorted(set(caveat_iris))
+        ]
 
     def _linked_patterns_for_dataset(
         self,

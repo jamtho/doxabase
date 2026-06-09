@@ -169,8 +169,8 @@ few useful gaps:
   reconsiderations exist. When it has no extra lore beyond `dataset_brief`, the
   response should ideally say so.
 - Derived and aggregate tables still need pressure testing. Aggregation
-  relationships now expose grouping columns and per-target aggregate mappings,
-  but agents should still check whether source caveats, row-unit semantics, and
+  relationships now expose grouping columns, per-target aggregate mappings, and
+  source caveats, but agents should still check whether row-unit semantics and
   layout-verification status are easy enough to carry into staged map candidates.
 - Relationship descriptions expose aggregation source/target columns, but
   cross-dataset partition/path ownership may still need clearer retrieval.

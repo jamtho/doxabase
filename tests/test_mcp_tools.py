@@ -483,9 +483,24 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
         "https://richcanopy.org/ns/rc#Count"
     )
     assert any(
+        caveat["description"]
+        and "MMSI does not reliably identify a single vessel" in caveat["description"]
+        for caveat in aggregation["source_caveats"]
+    )
+    assert any(
         related["relationship"] == "aggregated_from"
         and related["label"] == "AIS Daily Broadcast Positions"
         for related in result["related_datasets"]
+    )
+    broadcast_group = next(
+        group
+        for group in result["related_dataset_groups"]
+        if group["label"] == "AIS Daily Broadcast Positions"
+    )
+    assert any(
+        caveat["impact"] and "Grouping by MMSI may conflate" in caveat["impact"]
+        for reason in broadcast_group["reasons"]
+        for caveat in reason["source_caveats"]
     )
 
 

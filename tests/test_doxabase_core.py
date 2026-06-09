@@ -1105,9 +1105,32 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     assert aggregate_mapping.within_group_ordering is not None
     assert aggregate_mapping.within_group_ordering.column_name == "timestamp"
     assert any(
+        caveat.description
+        and "MMSI does not reliably identify a single vessel" in caveat.description
+        for caveat in aggregation.source_caveats
+    )
+    assert any(
         related.iri == "https://richcanopy.org/example/manifest/ais#DailyIndex"
         and related.relationship == "source_of_aggregation"
         for related in description.related_datasets
+    )
+
+    index_description = db.describe_dataset(
+        "https://richcanopy.org/example/manifest/ais#DailyIndex"
+    )
+    broadcast_group = next(
+        group
+        for group in index_description.related_dataset_groups
+        if group.iri == "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    )
+    broadcast_reason = next(
+        reason
+        for reason in broadcast_group.reasons
+        if reason.relationship == "aggregated_from"
+    )
+    assert any(
+        caveat.impact and "Grouping by MMSI may conflate" in caveat.impact
+        for caveat in broadcast_reason.source_caveats
     )
 
 
