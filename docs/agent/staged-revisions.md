@@ -76,7 +76,9 @@ caller-authored RDF framings as staged revisions, validates them, and links late
 framings as alternatives to the first by default. When several framings need the
 same provisional vocabulary or assumptions, pass `shared_additions` or
 `shared_removals`; those shared patches are included in each framing preview and
-exported as `rc:SharedContextPatch` entries.
+exported as `rc:SharedContextPatch` entries. Shared patches can target
+`ontology`, `shapes`, or other mutable graph roles. Staged `shapes` patches
+participate in the preview SHACL validation for each framing.
 
 Use it for the part of the work where graph judgement matters:
 
@@ -158,6 +160,15 @@ Patch entries record:
 Use `alternative_to` when recording competing staged systematisations. Keeping
 alternatives side by side is expected; staged revisions are cheap memory for
 creative exploration, not a forced march toward one approved answer.
+
+## Validation Notes
+
+DoxaBase runs pySHACL with RDFS inference during preview validation. That is
+usually helpful because ordinary RDF vocabulary such as `rdfs:range` can teach
+the validator useful class context. It also means a shape using `sh:class` may
+pass because the class was inferred rather than explicitly written. When a trial
+needs a stricter check, add shape constraints for the concrete property,
+node-kind, count, or value that should be present.
 
 ## Awkward Concept Test
 

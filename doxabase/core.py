@@ -4693,7 +4693,15 @@ class DoxaBase:
                 source = self.to_graph([graph_name])
             for triple in source:
                 data.add(triple)
-        shapes = self.to_graph(shape_graphs)
+        shapes = Graph()
+        for prefix, namespace in PREFIXES.items():
+            shapes.bind(prefix, namespace)
+        for graph_name in shape_graphs:
+            source = preview_graphs.get(graph_name)
+            if source is None:
+                source = self.to_graph([graph_name])
+            for triple in source:
+                shapes.add(triple)
         conforms, report_graph, report_text = validate(
             data_graph=data,
             shacl_graph=shapes,

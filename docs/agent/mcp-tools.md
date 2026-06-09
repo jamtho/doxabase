@@ -152,7 +152,9 @@ or other RDF shapes and wants to keep alternatives reviewable. Each framing may
 use simple `graph` + `content` Turtle shorthand, or full `additions` /
 `removals` patch lists. Use `shared_additions` / `shared_removals` for
 provisional vocabulary or assumptions that every framing should validate
-against. The helper records the systematisation intent, anchors, rationale,
+against. Shared patches can include provisional `shapes`; staged shapes are
+active during the preview validation for each framing. The helper records the
+systematisation intent, anchors, rationale,
 validation preview, and linked staged revisions; it does not decide the ontology
 design for the agent.
 
@@ -201,4 +203,6 @@ When called with `replace=true`, DoxaBase clears the graph roles used by the bun
 
 Runs pySHACL over the selected scope using logical `shapes`
 (`base_shapes + shapes`). Use `scope="patterns"` for pattern work and
-`scope="all"` after importing fixtures.
+`scope="all"` after importing fixtures. Validation uses RDFS inference, so
+class membership can be inferred from vocabulary such as `rdfs:range`; use
+property, node-kind, count, or value constraints when explicit checks matter.

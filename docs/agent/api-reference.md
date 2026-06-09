@@ -187,7 +187,9 @@ modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
 `framings`. Each framing can use `graph` + `content` shorthand or full
 `additions` / `removals` patch lists. Later framings are linked as alternatives
 to the first by default. Use `shared_additions` / `shared_removals` when several
-framings should validate against the same provisional context. This is a
+framings should validate against the same provisional context. Shared patches
+may include provisional `shapes`; staged shapes are active during the preview
+SHACL validation for each framing. This is a
 drafting and validation scaffold, not an ontology decision engine. Anchors are
 recorded as `rc:revisionAnchor` metadata on each staged revision and are also
 repeated in rationale text for readability.
@@ -220,6 +222,10 @@ observations, and evidence before deciding what to trust or inspect next.
 ```python
 result = db.validate_graph(scope="all")
 ```
+
+DoxaBase runs pySHACL with RDFS inference. A class constraint can therefore pass
+because a class was inferred from vocabulary such as `rdfs:range`; use property,
+node-kind, count, or value constraints when a stricter explicit check matters.
 
 Supported scopes today:
 

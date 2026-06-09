@@ -534,6 +534,85 @@ def test_stage_systematisation_shared_context_validates_each_framing(
     assert "Role: framing patch" in export_text
 
 
+def test_stage_systematisation_shared_shapes_validate_preview_framing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_map_count = db.triple_count("map")
+    before_shapes_count = db.triple_count("shapes")
+    shared_ontology = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:SnapshotStateKey a rdfs:Class ;
+        rdfs:label "Snapshot state key" .
+
+    ex:stateTimestampColumn a rdf:Property ;
+        rdfs:label "state timestamp column" .
+    """
+    shared_shape = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+    ex:SnapshotStateKeyShape a sh:NodeShape ;
+        sh:targetClass ex:SnapshotStateKey ;
+        sh:property [
+            sh:path ex:stateTimestampColumn ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Snapshot state keys must name a timestamp column."
+        ] .
+    """
+    incomplete_map_framing = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:incomplete_snapshot_state_key a ex:SnapshotStateKey ;
+        rdfs:label "Incomplete snapshot state key" .
+    """
+
+    draft = db.stage_systematisation(
+        summary="Test staged shape validation",
+        intent=(
+            "Confirm shared shape patches are active while each framing is "
+            "validated."
+        ),
+        shared_context_summary=(
+            "Define provisional snapshot state-key vocabulary and the stricter "
+            "shape that candidate map framings must satisfy."
+        ),
+        shared_additions=[
+            {"graph": "ontology", "content": shared_ontology},
+            {"graph": "shapes", "content": shared_shape},
+        ],
+        framings=[
+            {
+                "label": "Incomplete map candidate",
+                "graph": "map",
+                "content": incomplete_map_framing,
+                "stance": "rc:CandidateRevision",
+            }
+        ],
+        validation_scope="all",
+    )
+
+    assert len(draft.staged_revisions) == 1
+    assert draft.framings[0].validation_conforms is False
+    assert draft.framings[0].validation_result_count > 0
+    assert db.triple_count("map") == before_map_count
+    assert db.triple_count("shapes") == before_shapes_count
+
+    description = db.describe_staged_revision(draft.staged_revisions[0].revision_iri)
+    assert description.validation_conforms is False
+    assert description.validation_result_count > 0
+    assert [patch.patch_role_label for patch in description.patches] == [
+        "shared context patch",
+        "shared context patch",
+        "framing patch",
+    ]
+
+
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

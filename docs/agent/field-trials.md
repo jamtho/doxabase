@@ -83,7 +83,8 @@ A useful trial usually asks the agent to:
   ontology-first alternatives; pass anchors for the concrete resources the
   hunch is about, not as a substitute for support/evidence; use shared proposed
   context when several framings should lean on the same provisional vocabulary
-  or assumptions;
+  or assumptions, and include shared `shapes` when the trial needs temporary
+  validation rules for the framings;
 - use `describe_pattern` when checking whether synthesized lore can be taught
   back compactly;
 - use map authoring helpers when the trial asks for a current-best scratch map;
