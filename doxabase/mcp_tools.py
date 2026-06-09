@@ -559,6 +559,8 @@ def stage_graph_revision_tool(
     revision_anchors: list[str] | None = None,
     evidence: list[str] | None = None,
     alternative_to: str | None = None,
+    review_note: str | None = None,
+    review_recommendation: str | None = None,
     validation_scope: str = "all",
 ) -> dict[str, Any]:
     result = db.stage_graph_revision(
@@ -578,6 +580,8 @@ def stage_graph_revision_tool(
         revision_anchors=revision_anchors,
         evidence=evidence,
         alternative_to=alternative_to,
+        review_note=review_note,
+        review_recommendation=review_recommendation,
         validation_scope=validation_scope,  # type: ignore[arg-type]
     )
     return asdict(result)
@@ -653,6 +657,7 @@ def export_staged_revisions_tool(
     revision_iris: list[str],
     path: str,
     title: str | None = None,
+    executive_summary: str | None = None,
     format: str = "markdown",
     overwrite: bool = False,
 ) -> dict[str, Any]:
@@ -660,6 +665,7 @@ def export_staged_revisions_tool(
         revision_iris=revision_iris,
         path=path,
         title=title,
+        executive_summary=executive_summary,
         format=format,  # type: ignore[arg-type]
         overwrite=overwrite,
     )

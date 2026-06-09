@@ -18,7 +18,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1060
+    assert graphs["base_ontology"].triple_count == 1068
     assert graphs["base_ontology"].mutable is False
     assert graphs["base_shapes"].triple_count == 1011
     assert graphs["base_shapes"].mutable is False
@@ -386,6 +386,8 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
                 "graph": "ontology",
                 "content": ontology_framing,
                 "stance": "rc:AlternativeSystematisation",
+                "review_note": "This names the concept directly, but it may be premature.",
+                "review_recommendation": "Keep as an alternative while more cases accumulate.",
             },
             {
                 "label": "Pattern first",
@@ -395,6 +397,8 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
                     "This keeps the insight tentative while preserving the "
                     "intuition that the map may need a new concept later."
                 ),
+                "review_note": "This keeps the bold hunch alive without forcing the map.",
+                "review_recommendation": "Preferred for now.",
             },
         ],
         validation_scope="all",
@@ -412,6 +416,10 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert all(framing.validation_conforms for framing in draft.framings)
     assert draft.framings[0].stance == RC + "AlternativeSystematisation"
     assert draft.framings[1].stance == RC + "ExploratoryHunch"
+    assert draft.framings[1].review_note == (
+        "This keeps the bold hunch alive without forcing the map."
+    )
+    assert draft.framings[1].review_recommendation == "Preferred for now."
     assert db.triple_count("ontology") == before_ontology_count
     assert db.triple_count("patterns") == before_patterns_count
 
@@ -429,6 +437,11 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert second.alternative_to is not None
     assert second.alternative_to.iri == first.iri
     assert "Systematisation intent:" in second.rationale
+    assert first.review_recommendation == (
+        "Keep as an alternative while more cases accumulate."
+    )
+    assert second.review_note == "This keeps the bold hunch alive without forcing the map."
+    assert second.review_recommendation == "Preferred for now."
     assert "Identity ladder" in first.patches[0].content
     assert "IdentityLadderPattern" in second.patches[0].content
     assert db.validate_graph(scope="all").conforms
@@ -438,6 +451,10 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         [revision.revision_iri for revision in draft.staged_revisions],
         export_path,
         title="Identity ladder alternatives",
+        executive_summary=(
+            "Prefer the pattern-first framing for now, while preserving the "
+            "ontology alternative as useful pressure on the model."
+        ),
     )
     exported = export_path.read_text(encoding="utf-8")
 
@@ -446,7 +463,13 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     ]
     assert export.bytes_written == len(exported.encode("utf-8"))
     assert exported.startswith("# Identity ladder alternatives\n")
+    assert "## Review Summary" in exported
+    assert "Prefer the pattern-first framing for now" in exported
     assert "## Summary" in exported
+    assert "Recommendation" in exported
+    assert "Preferred for now." in exported
+    assert "## Review Notes" in exported
+    assert "This keeps the bold hunch alive without forcing the map." in exported
     assert "| 1 | Explore identity-ladder modelling: Project vocabulary term" in exported
     assert "| 2 | Explore identity-ladder modelling: Pattern first" in exported
     assert "## Revision 1: Explore identity-ladder modelling: Project vocabulary term" in exported

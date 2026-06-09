@@ -93,6 +93,11 @@ Use it for the part of the work where graph judgement matters:
 
 Each framing can use the shorthand `graph` + `content` for one addition, or full
 `additions` / `removals` patch lists when the graph move is more complex.
+Add `review_note` and `review_recommendation` when the comparison itself needs
+human-readable judgement, for example "preferred for now", "too bold but
+informative", or "keep as a concrete alternative". These fields are not proof
+and they do not apply the revision; they are review cues preserved with the
+staged proposal.
 Shared context patches are previewed before each framing's own patches:
 
 ```python
@@ -123,12 +128,15 @@ result = stage_systematisation_tool(
             "label": "Deeper pattern hunch",
             "graph": "patterns",
             "content": "... Turtle defining an rc:Pattern ...",
+            "review_note": "Keeps the strong hunch alive without forcing the map.",
+            "review_recommendation": "Preferred for now.",
         },
         {
             "label": "Concrete map candidate",
             "graph": "map",
             "content": "... Turtle using the shared vocabulary ...",
             "stance": "rc:CandidateRevision",
+            "review_recommendation": "Useful alternative, but wait for more support.",
         },
     ],
     validation_scope="all",
@@ -142,12 +150,18 @@ db.export_staged_revisions(
     [revision.revision_iri for revision in result.staged_revisions],
     "/tmp/systematisation-review.md",
     title="Identity ladder alternatives",
+    executive_summary=(
+        "Prefer the pattern-first framing for now, while keeping the map "
+        "candidate as useful pressure on the model."
+    ),
 )
 ```
 
 The staged revision rationale records the systematisation intent, anchors,
-overall rationale, shared-context summary, and framing-specific rationale. This
-keeps exports readable even while richer promotion metadata is still evolving.
+overall rationale, shared-context summary, and framing-specific rationale. The
+grouped export also surfaces review notes, recommendations, and diagnostic
+headlines in its top sections so a reviewer can understand the semantic delta
+without reading every Turtle payload first.
 
 Systematisation anchors are also recorded as `rc:revisionAnchor` triples on each
 staged revision. Use anchors for resources the hunch is about, such as columns,

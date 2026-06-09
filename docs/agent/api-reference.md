@@ -211,25 +211,29 @@ pySHACL provides them.
 `stage_systematisation()` stages one or more caller-authored RDF framings for a
 modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
 `framings`. Each framing can use `graph` + `content` shorthand or full
-`additions` / `removals` patch lists. Later framings are linked as alternatives
-to the first by default. Use `shared_additions` / `shared_removals` when several
-framings should validate against the same provisional context. Shared patches
-may include provisional `shapes`; staged shapes are active during the preview
-SHACL validation for each framing. This is a
-drafting and validation scaffold, not an ontology decision engine. Anchors are
-recorded as `rc:revisionAnchor` metadata on each staged revision and are also
-repeated in rationale text for readability.
+`additions` / `removals` patch lists. A framing may also include
+`review_note` / `review_recommendation` prose to say what the agent thinks the
+proposal is doing and whether it is preferred, risky, obsolete, or worth keeping
+as an alternative. Later framings are linked as alternatives to the first by
+default. Use `shared_additions` / `shared_removals` when several framings should
+validate against the same provisional context. Shared patches may include
+provisional `shapes`; staged shapes are active during the preview SHACL
+validation for each framing. This is a drafting and validation scaffold, not an
+ontology decision engine. Anchors are recorded as `rc:revisionAnchor` metadata
+on each staged revision and are also repeated in rationale text for readability.
 
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, changed/included graph roles, graph-count snapshots, validation
 result, structured validation diagnostics, export path, revision anchors, and
 supporting observation/claim/pattern/evidence links.
 
-`describe_staged_revision()` returns staged patch payloads, stance, validation
-status, structured validation diagnostics, support links, revision anchors, and
-count previews. `export_staged_revision()` writes a Markdown review bundle with
-diagnostics before patch payloads. `export_staged_revisions()` writes one
-Markdown review bundle for several staged revisions in caller-chosen order.
+`describe_staged_revision()` returns staged patch payloads, stance, review
+notes/recommendations, validation status, structured validation diagnostics,
+support links, revision anchors, and count previews. `export_staged_revision()`
+writes a Markdown review bundle with diagnostics before patch payloads.
+`export_staged_revisions()` writes one Markdown review bundle for several staged
+revisions in caller-chosen order; pass `executive_summary` when the comparison
+needs an agent-authored synthesis at the top of the artifact.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,

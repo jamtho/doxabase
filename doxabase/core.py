@@ -199,6 +199,8 @@ class StagedGraphRevisionRecord:
 class SystematisationFramingRecord:
     label: str
     rationale: str | None
+    review_note: str | None
+    review_recommendation: str | None
     target_graphs: list[str]
     stance: str
     revision_iri: str
@@ -294,6 +296,8 @@ class StagedGraphRevisionDescription:
     revision_stance: str | None
     revision_stance_label: str | None
     rationale: str | None
+    review_note: str | None
+    review_recommendation: str | None
     alternative_to: ResourceSummary | None
     changed_graphs: list[str]
     included_graphs: list[str]
@@ -1159,6 +1163,12 @@ class DoxaBase:
             revision_stance=revision_stance,
             revision_stance_label=self._label_for_resource(revision_stance),
             rationale=self._first_object(data_graphs, revision_iri, "rc:revisionRationale"),
+            review_note=self._first_object(data_graphs, revision_iri, "rc:reviewNote"),
+            review_recommendation=self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:reviewRecommendation",
+            ),
             alternative_to=(
                 self._resource_summary(all_lookup_graphs, alternative_to_iri)
                 if alternative_to_iri is not None
@@ -4451,6 +4461,8 @@ class DoxaBase:
         revision_anchors: Iterable[str] | str | None = None,
         evidence: Iterable[str] | str | None = None,
         alternative_to: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -4557,6 +4569,13 @@ class DoxaBase:
                 URIRef(self.expand_iri("rc:revisionStance")),
                 URIRef(stance_iri),
             )
+        )
+        self._add_optional_literal(metadata, subject, "rc:reviewNote", review_note)
+        self._add_optional_literal(
+            metadata,
+            subject,
+            "rc:reviewRecommendation",
+            review_recommendation,
         )
         if alternative_to is not None:
             metadata.add(
@@ -4737,6 +4756,24 @@ class DoxaBase:
             if not label:
                 raise DoxaBaseError("framing label must not be empty")
             framing_rationale = str(framing.get("rationale") or "").strip() or None
+            framing_review_note = (
+                str(
+                    framing.get("review_note")
+                    or framing.get("reviewNote")
+                    or framing.get("note")
+                    or ""
+                ).strip()
+                or None
+            )
+            framing_review_recommendation = (
+                str(
+                    framing.get("review_recommendation")
+                    or framing.get("reviewRecommendation")
+                    or framing.get("recommendation")
+                    or ""
+                ).strip()
+                or None
+            )
             stance = str(framing.get("stance") or default_stance).strip()
             if not stance:
                 raise DoxaBaseError("framing stance must not be empty")
@@ -4794,6 +4831,8 @@ class DoxaBase:
                 revision_anchors=anchor_values,
                 evidence=evidence,
                 alternative_to=alternative_target,
+                review_note=framing_review_note,
+                review_recommendation=framing_review_recommendation,
                 validation_scope=framing_scope,  # type: ignore[arg-type]
             )
             if first_revision_iri is None:
@@ -4803,6 +4842,8 @@ class DoxaBase:
                 SystematisationFramingRecord(
                     label=label,
                     rationale=framing_rationale,
+                    review_note=framing_review_note,
+                    review_recommendation=framing_review_recommendation,
                     target_graphs=staged.changed_graphs,
                     stance=staged.revision_stance,
                     revision_iri=staged.revision_iri,
@@ -4850,6 +4891,7 @@ class DoxaBase:
         path: str | Path,
         *,
         title: str | None = None,
+        executive_summary: str | None = None,
         format: TypingLiteral["markdown"] = "markdown",
         overwrite: bool = False,
     ) -> StagedGraphRevisionsExportRecord:
@@ -4864,7 +4906,11 @@ class DoxaBase:
             self.describe_staged_revision(revision_iri)
             for revision_iri in revision_values
         ]
-        data = self._staged_revisions_markdown(descriptions, title=title)
+        data = self._staged_revisions_markdown(
+            descriptions,
+            title=title,
+            executive_summary=executive_summary,
+        )
         bytes_written = self._write_export(path, data, overwrite=overwrite)
         return StagedGraphRevisionsExportRecord(
             path=str(path),
@@ -5078,6 +5124,17 @@ class DoxaBase:
             "",
             description.rationale or "",
         ]
+        if description.review_note is not None:
+            lines.extend(["", "## Review Note", "", description.review_note])
+        if description.review_recommendation is not None:
+            lines.extend(
+                [
+                    "",
+                    "## Review Recommendation",
+                    "",
+                    description.review_recommendation,
+                ]
+            )
         if description.alternative_to is not None:
             lines.extend(
                 [
@@ -5172,16 +5229,26 @@ class DoxaBase:
         descriptions: list[StagedGraphRevisionDescription],
         *,
         title: str | None,
+        executive_summary: str | None,
     ) -> str:
         title_text = title.strip() if title and title.strip() else "Staged revision bundle"
         lines = [
             f"# {title_text}",
             "",
+        ]
+        executive_summary_text = (
+            executive_summary.strip() if executive_summary is not None else None
+        )
+        if executive_summary_text:
+            lines.extend(["## Review Summary", "", executive_summary_text, ""])
+        lines.extend(
+            [
             "## Summary",
             "",
-            "| # | Summary | Stance | Changed graphs | Validation | Results |",
-            "|---|---|---|---|---|---|",
-        ]
+            "| # | Summary | Stance | Changed graphs | Validation | Results | Diagnostics | Recommendation |",
+            "|---|---|---|---|---|---:|---|---|",
+            ]
+        )
         for index, description in enumerate(descriptions, start=1):
             lines.append(
                 "| "
@@ -5199,10 +5266,22 @@ class DoxaBase:
                         ),
                         str(description.validation_conforms),
                         str(description.validation_result_count),
+                        self._markdown_table_cell(
+                            self._validation_diagnostic_headline(description)
+                        ),
+                        self._markdown_table_cell(
+                            description.review_recommendation or ""
+                        ),
                     ]
                 )
                 + " |"
             )
+        if any(description.review_note for description in descriptions):
+            lines.extend(["", "## Review Notes", ""])
+            for index, description in enumerate(descriptions, start=1):
+                if description.review_note:
+                    label = description.summary or description.iri
+                    lines.append(f"{index}. {label}: {description.review_note}")
         lines.extend(["", "## Revisions", ""])
         for index, description in enumerate(descriptions, start=1):
             lines.extend(
@@ -5214,6 +5293,34 @@ class DoxaBase:
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _validation_diagnostic_headline(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> str:
+        if not description.validation_results:
+            return ""
+        messages = [
+            message
+            for result in description.validation_results
+            for message in result.messages
+            if message
+        ]
+        if messages:
+            first_message = messages[0]
+        else:
+            first_result = description.validation_results[0]
+            first_message = (
+                first_result.result_path_label
+                or first_result.result_path
+                or first_result.focus_node_label
+                or first_result.focus_node
+                or "Validation result"
+            )
+        remaining = len(description.validation_results) - 1
+        if remaining > 0:
+            return f"{first_message} (+{remaining} more)"
+        return first_message
 
     def _markdown_table_cell(self, value: str) -> str:
         return value.replace("|", "\\|").replace("\n", " ")

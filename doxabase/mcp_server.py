@@ -597,6 +597,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         revision_anchors: list[str] | None = None,
         evidence: list[str] | None = None,
         alternative_to: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
         validation_scope: str = "all",
     ) -> dict[str, Any]:
         """Record a reviewable staged graph revision without applying it."""
@@ -619,6 +621,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             revision_anchors=revision_anchors,
             evidence=evidence,
             alternative_to=alternative_to,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
             validation_scope=validation_scope,
         )
 
@@ -693,6 +697,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         revision_iris: list[str],
         path: str,
         title: str | None = None,
+        executive_summary: str | None = None,
         format: str = "markdown",
         overwrite: bool = False,
     ) -> dict[str, Any]:
@@ -703,6 +708,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             revision_iris=revision_iris,
             path=path,
             title=title,
+            executive_summary=executive_summary,
             format=format,
             overwrite=overwrite,
         )

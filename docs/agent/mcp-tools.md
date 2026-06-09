@@ -166,16 +166,16 @@ use simple `graph` + `content` Turtle shorthand, or full `additions` /
 provisional vocabulary or assumptions that every framing should validate
 against. Shared patches can include provisional `shapes`; staged shapes are
 active during the preview validation for each framing. The helper records the
-systematisation intent, anchors, rationale,
-validation preview, and linked staged revisions; it does not decide the ontology
-design for the agent.
+systematisation intent, anchors, rationale, optional review notes and
+recommendations, validation preview, and linked staged revisions; it does not
+decide the ontology design for the agent.
 
 `doxabase.describe_staged_revision`
 
 Returns a staged revision with stance, rationale, support links, revision
-anchors, patch payloads, before/after count previews, validation status, and
-structured SHACL diagnostics such as focus node, result path, constraint, and
-messages.
+anchors, review note/recommendation, patch payloads, before/after count
+previews, validation status, and structured SHACL diagnostics such as focus
+node, result path, constraint, and messages.
 
 `doxabase.export_staged_revision`
 
@@ -187,7 +187,9 @@ human/agent review; staged revisions are not applied by the current runtime.
 
 Writes one Markdown review bundle for several staged revisions in caller-chosen
 order. Use it after `stage_systematisation` when failed, repaired, and
-alternative framings should travel together for review.
+alternative framings should travel together for review. Pass
+`executive_summary` when the bundle should open with the agent's current
+provisional verdict.
 
 ## Import and Validation
 

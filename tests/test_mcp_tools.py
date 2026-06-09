@@ -283,12 +283,16 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
                 "label": "Pattern first",
                 "graph": "patterns",
                 "content": pattern_framing,
+                "review_note": "The pattern framing keeps the idea tentative.",
+                "review_recommendation": "Preferred until the map vocabulary settles.",
             },
             {
                 "label": "Map candidate",
                 "graph": "map",
                 "content": map_framing,
                 "stance": "rc:CandidateRevision",
+                "reviewNote": "This is reviewable but slightly too early.",
+                "reviewRecommendation": "Keep as a concrete alternative.",
             },
         ],
     )
@@ -301,6 +305,12 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["framings"][1]["target_graphs"] == ["ontology", "map"]
     assert result["framings"][0]["validation_conforms"] is True
     assert result["framings"][1]["validation_conforms"] is True
+    assert result["framings"][0]["review_note"] == (
+        "The pattern framing keeps the idea tentative."
+    )
+    assert result["framings"][1]["review_recommendation"] == (
+        "Keep as a concrete alternative."
+    )
 
     first_iri = result["staged_revisions"][0]["revision_iri"]
     second = describe_staged_revision_tool(
@@ -321,12 +331,17 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
         ],
         path=str(export_path),
         title="Identity ladder MCP bundle",
+        executive_summary="Pattern-first is preferred, but both framings remain useful.",
     )
     exported = export_path.read_text(encoding="utf-8")
     assert export["revision_iris"] == [
         revision["revision_iri"] for revision in result["staged_revisions"]
     ]
     assert exported.startswith("# Identity ladder MCP bundle\n")
+    assert "## Review Summary" in exported
+    assert "Pattern-first is preferred" in exported
+    assert "Preferred until the map vocabulary settles." in exported
+    assert "The pattern framing keeps the idea tentative." in exported
     assert "## Summary" in exported
     assert "Pattern first" in exported
     assert "Map candidate" in exported

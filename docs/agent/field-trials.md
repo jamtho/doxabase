@@ -102,6 +102,9 @@ A useful trial usually asks the agent to:
   staged patch proposals, use `export_staged_revisions` when alternatives should
   be reviewed as one bundle, and inspect `validation_results` when a proposal
   fails validation before inferring the cause from patch text;
+- when staging competing systematisations, add `review_note` and
+  `review_recommendation` fields so the grouped export carries the agent's
+  provisional judgement alongside validation diagnostics;
 - use `describe_graph_revision` to inspect the resulting history record;
 - report what worked, what was awkward, and what should change next.
 
@@ -171,8 +174,8 @@ few useful gaps:
 - Relationship descriptions should expose aggregation source/target columns and
   cross-dataset partition/path ownership more clearly.
 - Staged systematisation drafts with failed, repaired, and alternative framings
-  should be exported with `export_staged_revisions` when the comparison itself
-  is the artifact under review.
+  should be exported with `export_staged_revisions` and an `executive_summary`
+  when the comparison itself is the artifact under review.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
