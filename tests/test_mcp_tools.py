@@ -13,6 +13,7 @@ from doxabase.mcp_tools import (
     describe_staged_revision_tool,
     export_graph_tool,
     export_staged_revision_tool,
+    export_staged_revisions_tool,
     export_trig_tool,
     graph_overview_tool,
     list_docs_tool,
@@ -62,6 +63,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
     assert "doxabase.export_staged_revision" in tool_names
+    assert "doxabase.export_staged_revisions" in tool_names
     assert "doxabase.export_trig" in tool_names
     assert "doxabase.record_graph_revision" in tool_names
     assert "doxabase.stage_graph_revision" in tool_names
@@ -310,6 +312,24 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert second["patches"][0]["patch_role_label"] == "shared context patch"
     assert second["patches"][1]["patch_role_label"] == "framing patch"
     assert "Systematisation intent:" in second["rationale"]
+
+    export_path = tmp_path / "identity-ladder-review.md"
+    export = export_staged_revisions_tool(
+        db,
+        revision_iris=[
+            revision["revision_iri"] for revision in result["staged_revisions"]
+        ],
+        path=str(export_path),
+        title="Identity ladder MCP bundle",
+    )
+    exported = export_path.read_text(encoding="utf-8")
+    assert export["revision_iris"] == [
+        revision["revision_iri"] for revision in result["staged_revisions"]
+    ]
+    assert exported.startswith("# Identity ladder MCP bundle\n")
+    assert "## Summary" in exported
+    assert "Pattern first" in exported
+    assert "Map candidate" in exported
 
 
 def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None:

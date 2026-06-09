@@ -16,6 +16,7 @@ from doxabase.mcp_tools import (
     describe_staged_revision_tool,
     export_graph_tool,
     export_staged_revision_tool,
+    export_staged_revisions_tool,
     export_trig_tool,
     get_doc_tool,
     graph_overview_tool,
@@ -683,6 +684,25 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             db,
             iri=iri,
             path=path,
+            format=format,
+            overwrite=overwrite,
+        )
+
+    @server.tool(name="doxabase.export_staged_revisions")
+    def export_staged_revisions(
+        revision_iris: list[str],
+        path: str,
+        title: str | None = None,
+        format: str = "markdown",
+        overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Export multiple staged revisions into one comparison review bundle."""
+
+        return export_staged_revisions_tool(
+            db,
+            revision_iris=revision_iris,
+            path=path,
+            title=title,
             format=format,
             overwrite=overwrite,
         )

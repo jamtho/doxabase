@@ -183,6 +183,12 @@ Writes a Markdown review bundle for a staged revision, including validation
 diagnostics before patch payloads when validation failed. This is for
 human/agent review; staged revisions are not applied by the current runtime.
 
+`doxabase.export_staged_revisions`
+
+Writes one Markdown review bundle for several staged revisions in caller-chosen
+order. Use it after `stage_systematisation` when failed, repaired, and
+alternative framings should travel together for review.
+
 ## Import and Validation
 
 `doxabase.import_trig`

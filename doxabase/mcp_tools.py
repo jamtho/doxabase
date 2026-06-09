@@ -648,6 +648,24 @@ def export_staged_revision_tool(
     return asdict(result)
 
 
+def export_staged_revisions_tool(
+    db: DoxaBase,
+    revision_iris: list[str],
+    path: str,
+    title: str | None = None,
+    format: str = "markdown",
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    result = db.export_staged_revisions(
+        revision_iris=revision_iris,
+        path=path,
+        title=title,
+        format=format,  # type: ignore[arg-type]
+        overwrite=overwrite,
+    )
+    return asdict(result)
+
+
 def load_example_fixtures_tool(db: DoxaBase, replace: bool = False) -> dict[str, Any]:
     results = []
     totals: dict[str, int] = {}

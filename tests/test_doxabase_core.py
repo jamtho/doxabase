@@ -433,6 +433,27 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "IdentityLadderPattern" in second.patches[0].content
     assert db.validate_graph(scope="all").conforms
 
+    export_path = tmp_path / "identity-ladder-review.md"
+    export = db.export_staged_revisions(
+        [revision.revision_iri for revision in draft.staged_revisions],
+        export_path,
+        title="Identity ladder alternatives",
+    )
+    exported = export_path.read_text(encoding="utf-8")
+
+    assert export.revision_iris == [
+        revision.revision_iri for revision in draft.staged_revisions
+    ]
+    assert export.bytes_written == len(exported.encode("utf-8"))
+    assert exported.startswith("# Identity ladder alternatives\n")
+    assert "## Summary" in exported
+    assert "| 1 | Explore identity-ladder modelling: Project vocabulary term" in exported
+    assert "| 2 | Explore identity-ladder modelling: Pattern first" in exported
+    assert "## Revision 1: Explore identity-ladder modelling: Project vocabulary term" in exported
+    assert "## Revision 2: Explore identity-ladder modelling: Pattern first" in exported
+    assert "## Alternative To" in exported
+    assert "IdentityLadderPattern" in exported
+
 
 def test_stage_systematisation_shared_context_validates_each_framing(
     tmp_path: Path,

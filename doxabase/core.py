@@ -229,6 +229,14 @@ class StagedGraphRevisionExportRecord:
 
 
 @dataclass(frozen=True)
+class StagedGraphRevisionsExportRecord:
+    path: str
+    format: str
+    revision_iris: list[str]
+    bytes_written: int
+
+
+@dataclass(frozen=True)
 class GraphSnapshotDescription:
     graph_role: str
     triple_count: int
@@ -4836,6 +4844,35 @@ class DoxaBase:
             bytes_written=bytes_written,
         )
 
+    def export_staged_revisions(
+        self,
+        revision_iris: Iterable[str] | str,
+        path: str | Path,
+        *,
+        title: str | None = None,
+        format: TypingLiteral["markdown"] = "markdown",
+        overwrite: bool = False,
+    ) -> StagedGraphRevisionsExportRecord:
+        if format != "markdown":
+            raise DoxaBaseError("Only markdown staged revision exports are supported")
+        revision_values = self._string_values(
+            "revision_iris",
+            revision_iris,
+            required=True,
+        )
+        descriptions = [
+            self.describe_staged_revision(revision_iri)
+            for revision_iri in revision_values
+        ]
+        data = self._staged_revisions_markdown(descriptions, title=title)
+        bytes_written = self._write_export(path, data, overwrite=overwrite)
+        return StagedGraphRevisionsExportRecord(
+            path=str(path),
+            format=format,
+            revision_iris=[description.iri for description in descriptions],
+            bytes_written=bytes_written,
+        )
+
     def _parse_staged_patch_specs(
         self,
         *,
@@ -5129,6 +5166,57 @@ class DoxaBase:
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revisions_markdown(
+        self,
+        descriptions: list[StagedGraphRevisionDescription],
+        *,
+        title: str | None,
+    ) -> str:
+        title_text = title.strip() if title and title.strip() else "Staged revision bundle"
+        lines = [
+            f"# {title_text}",
+            "",
+            "## Summary",
+            "",
+            "| # | Summary | Stance | Changed graphs | Validation | Results |",
+            "|---|---|---|---|---|---|",
+        ]
+        for index, description in enumerate(descriptions, start=1):
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(index),
+                        self._markdown_table_cell(description.summary or description.iri),
+                        self._markdown_table_cell(
+                            description.revision_stance_label
+                            or description.revision_stance
+                            or "unknown"
+                        ),
+                        self._markdown_table_cell(
+                            ", ".join(description.changed_graphs) or "none"
+                        ),
+                        str(description.validation_conforms),
+                        str(description.validation_result_count),
+                    ]
+                )
+                + " |"
+            )
+        lines.extend(["", "## Revisions", ""])
+        for index, description in enumerate(descriptions, start=1):
+            lines.extend(
+                [
+                    f"## Revision {index}: {description.summary or description.iri}",
+                    "",
+                    self._staged_revision_markdown(description).strip(),
+                    "",
+                ]
+            )
+        return "\n".join(lines).rstrip() + "\n"
+
+    def _markdown_table_cell(self, value: str) -> str:
+        return value.replace("|", "\\|").replace("\n", " ")
 
     def _diagnostic_markdown_resource(self, iri: str, label: str | None) -> str:
         if label and label != iri:

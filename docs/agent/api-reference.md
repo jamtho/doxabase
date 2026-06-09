@@ -228,7 +228,8 @@ supporting observation/claim/pattern/evidence links.
 `describe_staged_revision()` returns staged patch payloads, stance, validation
 status, structured validation diagnostics, support links, revision anchors, and
 count previews. `export_staged_revision()` writes a Markdown review bundle with
-diagnostics before patch payloads.
+diagnostics before patch payloads. `export_staged_revisions()` writes one
+Markdown review bundle for several staged revisions in caller-chosen order.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,

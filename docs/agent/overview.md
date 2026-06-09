@@ -32,8 +32,8 @@ Current implementation status:
 - `record_graph_revision()` for history metadata about graph changes and review
   bundles.
 - `stage_graph_revision()`, `describe_staged_revision()`, and
-  `export_staged_revision()` for reviewable graph patch proposals with
-  structured validation diagnostics.
+  `export_staged_revision()` / `export_staged_revisions()` for reviewable graph
+  patch proposals with structured validation diagnostics.
 - `stage_systematisation()` for preserving alternative caller-authored RDF
   framings of a modelling hunch, with optional shared proposed context.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.

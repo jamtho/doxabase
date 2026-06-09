@@ -66,7 +66,9 @@ The target graph is not changed. Staged revisions are review objects.
 Use `doxabase.describe_staged_revision` to inspect patch payloads, stance,
 validation status, structured validation result diagnostics, support links, and
 before/after count previews. Use `doxabase.export_staged_revision` to write a
-Markdown review bundle.
+Markdown review bundle for one proposal. Use `doxabase.export_staged_revisions`
+when several alternatives, failed candidates, and repaired candidates should be
+reviewed together.
 
 ## Systematisation Drafts
 
@@ -130,6 +132,16 @@ result = stage_systematisation_tool(
         },
     ],
     validation_scope="all",
+)
+```
+
+After staging several framings, export them together for review:
+
+```python
+db.export_staged_revisions(
+    [revision.revision_iri for revision in result.staged_revisions],
+    "/tmp/systematisation-review.md",
+    title="Identity ladder alternatives",
 )
 ```
 
