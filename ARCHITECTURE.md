@@ -132,7 +132,9 @@ SPARQL, or graph-neighborhood slicing.
 
 ## Validation
 
-Validation is explicit and diagnostic.
+Validation is explicit and diagnostic. Staged revision previews preserve
+structured SHACL result diagnostics in `history` so failed proposals can be
+reviewed without rerunning the preview.
 
 `validate_graph()` reconstructs a combined RDFLib graph for the requested scope and runs pySHACL using logical shapes, meaning `base_shapes + shapes`.
 
@@ -243,7 +245,7 @@ Expected state at the time of writing:
 - `rc_core.ttl`: 697 triples.
 - `rc_shapes.ttl`: 531 triples.
 - `ais.trig`: 321 quads.
-- `polymarket.trig`: 441 quads.
+- `polymarket.trig`: 442 quads.
 - All fixtures conform to base SHACL shapes.
 
 ## Known Technical Debt

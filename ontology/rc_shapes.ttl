@@ -855,6 +855,32 @@ rc:GraphRevisionShape a sh:NodeShape ;
         sh:datatype xsd:integer ;
         sh:minInclusive 0 ;
         sh:message "validationResultCount must be a non-negative integer if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:hasValidationResult ;
+        sh:nodeKind sh:IRI ;
+        sh:class sh:ValidationResult ;
+        sh:message "hasValidationResult values should be named SHACL ValidationResult resources." ;
+    ] .
+
+rc:ValidationResultShape a sh:NodeShape ;
+    sh:targetClass sh:ValidationResult ;
+    sh:property [
+        sh:path sh:resultMessage ;
+        sh:datatype xsd:string ;
+        sh:message "Validation result messages must be strings." ;
+    ] ;
+    sh:property [
+        sh:path sh:sourceConstraintComponent ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "sourceConstraintComponent must be a named SHACL constraint component when declared." ;
+    ] ;
+    sh:property [
+        sh:path sh:resultSeverity ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "resultSeverity must be a named SHACL severity when declared." ;
     ] .
 
 rc:GraphPatchShape a sh:NodeShape ;

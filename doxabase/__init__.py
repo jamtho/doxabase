@@ -49,6 +49,7 @@ from doxabase.core import (
     SystematisationDraftRecord,
     SystematisationFramingRecord,
     TransformationDescription,
+    ValidationDiagnostic,
     ValidationResult,
 )
 
@@ -103,5 +104,6 @@ __all__ = [
     "SystematisationDraftRecord",
     "SystematisationFramingRecord",
     "TransformationDescription",
+    "ValidationDiagnostic",
     "ValidationResult",
 ]

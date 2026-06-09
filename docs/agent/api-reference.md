@@ -180,7 +180,10 @@ without mutating the target graph. Pass Turtle payloads in `additions` and/or
 `removals`, set a stance such as `rc:ExploratoryHunch` or
 `rc:CandidateRevision`, and choose a `validation_scope`. The helper parses the
 patch RDF, previews before/after counts, runs SHACL validation over the preview,
-and records `rc:GraphPatch` entries for later review.
+and records `rc:GraphPatch` entries for later review. When validation reports
+results, the staged revision stores linked `sh:ValidationResult` diagnostics
+with focus node, result path, constraint, severity, value, and messages where
+pySHACL provides them.
 
 `stage_systematisation()` stages one or more caller-authored RDF framings for a
 modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
@@ -196,12 +199,13 @@ repeated in rationale text for readability.
 
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, changed/included graph roles, graph-count snapshots, validation
-result, export path, revision anchors, and supporting
-observation/claim/pattern/evidence links.
+result, structured validation diagnostics, export path, revision anchors, and
+supporting observation/claim/pattern/evidence links.
 
 `describe_staged_revision()` returns staged patch payloads, stance, validation
-status, support links, revision anchors, and count previews.
-`export_staged_revision()` writes a Markdown review bundle.
+status, structured validation diagnostics, support links, revision anchors, and
+count previews. `export_staged_revision()` writes a Markdown review bundle with
+diagnostics before patch payloads.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,
@@ -226,6 +230,9 @@ result = db.validate_graph(scope="all")
 DoxaBase runs pySHACL with RDFS inference. A class constraint can therefore pass
 because a class was inferred from vocabulary such as `rdfs:range`; use property,
 node-kind, count, or value constraints when a stricter explicit check matters.
+The returned `results` list contains bounded structured diagnostics with focus
+node, result path, constraint, severity, value, and messages where pySHACL
+provides them.
 
 Supported scopes today:
 

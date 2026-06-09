@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1008
+    assert graphs["base_ontology"].triple_count == 1012
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 916
+    assert graphs["base_shapes"].triple_count == 937
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -600,17 +600,38 @@ def test_stage_systematisation_shared_shapes_validate_preview_framing(
     assert len(draft.staged_revisions) == 1
     assert draft.framings[0].validation_conforms is False
     assert draft.framings[0].validation_result_count > 0
+    assert draft.framings[0].validation_results
+    framing_result = draft.framings[0].validation_results[0]
+    assert framing_result.result_path == "https://example.test/project#stateTimestampColumn"
+    assert framing_result.result_path_label == "stateTimestampColumn"
+    assert framing_result.source_constraint_component == (
+        "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    )
+    assert "Snapshot state keys must name a timestamp column." in framing_result.messages
     assert db.triple_count("map") == before_map_count
     assert db.triple_count("shapes") == before_shapes_count
 
     description = db.describe_staged_revision(draft.staged_revisions[0].revision_iri)
     assert description.validation_conforms is False
     assert description.validation_result_count > 0
+    assert description.validation_results
+    result = description.validation_results[0]
+    assert result.iri == f"{description.iri}/validation-result/1"
+    assert result.focus_node == "https://example.test/project#incomplete_snapshot_state_key"
+    assert result.focus_node_label == "incomplete_snapshot_state_key"
+    assert result.result_path == "https://example.test/project#stateTimestampColumn"
+    assert "Snapshot state keys must name a timestamp column." in result.messages
     assert [patch.patch_role_label for patch in description.patches] == [
         "shared context patch",
         "shared context patch",
         "framing patch",
     ]
+    export_path = tmp_path / "failed-shape-review.md"
+    db.export_staged_revision(description.iri, export_path)
+    export_text = export_path.read_text()
+    assert "## Validation Results" in export_text
+    assert "Result path: stateTimestampColumn" in export_text
+    assert "Snapshot state keys must name a timestamp column." in export_text
 
 
 def test_list_entities_returns_tables_from_map(tmp_path: Path) -> None:

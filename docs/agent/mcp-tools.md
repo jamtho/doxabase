@@ -141,7 +141,8 @@ Records a staged graph revision in `history` without applying it. Pass
 `rc:ConservativeCleanup`, or `rc:AlternativeSystematisation` to preserve the
 kind of systematisation move being made. The helper parses patch RDF, previews
 graph counts, runs SHACL validation over `validation_scope`, and returns patch
-metadata. `revision_anchors` can name graph resources the staged proposal is
+metadata plus structured validation diagnostics when validation reports
+results. `revision_anchors` can name graph resources the staged proposal is
 about without treating them as evidence or support.
 
 `doxabase.stage_systematisation`
@@ -161,12 +162,15 @@ design for the agent.
 `doxabase.describe_staged_revision`
 
 Returns a staged revision with stance, rationale, support links, revision
-anchors, patch payloads, before/after count previews, and validation status.
+anchors, patch payloads, before/after count previews, validation status, and
+structured SHACL diagnostics such as focus node, result path, constraint, and
+messages.
 
 `doxabase.export_staged_revision`
 
-Writes a Markdown review bundle for a staged revision. This is for human/agent
-review; staged revisions are not applied by the current runtime.
+Writes a Markdown review bundle for a staged revision, including validation
+diagnostics before patch payloads when validation failed. This is for
+human/agent review; staged revisions are not applied by the current runtime.
 
 ## Import and Validation
 
@@ -206,3 +210,5 @@ Runs pySHACL over the selected scope using logical `shapes`
 `scope="all"` after importing fixtures. Validation uses RDFS inference, so
 class membership can be inferred from vocabulary such as `rdfs:range`; use
 property, node-kind, count, or value constraints when explicit checks matter.
+The response includes bounded structured `results` with focus node, result path,
+constraint, severity, value, and messages when pySHACL reports failures.

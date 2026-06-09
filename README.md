@@ -65,7 +65,8 @@ Implemented:
 - `record_graph_revision()` for history metadata about graph changes and review
   bundles.
 - `stage_graph_revision()` for reviewable additions/removals with stance,
-  preview counts, and validation, without applying the patch.
+  preview counts, validation, and structured SHACL diagnostics, without
+  applying the patch.
 - `stage_systematisation()` for staging one or more caller-authored RDF framings
   of the same modelling hunch, with optional shared proposed context, as
   reviewable alternatives.
@@ -171,7 +172,8 @@ Useful first tool calls for an agent:
 13. `doxabase.record_claim_observation` for structured claim observations
 14. `doxabase.record_pattern` for syntheses over related findings
 15. `doxabase.stage_graph_revision` for reviewable additions/removals that
-    should not be applied yet
+    should not be applied yet, including validation diagnostics for failed
+    previews
 16. `doxabase.stage_systematisation` for alternative RDF framings of one
     modelling hunch, optionally with shared proposed context
 17. `doxabase.describe_staged_revision` when reviewing a staged patch proposal

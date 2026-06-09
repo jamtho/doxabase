@@ -64,8 +64,9 @@ validation over the preview scope, and records staged metadata in `history`.
 The target graph is not changed. Staged revisions are review objects.
 
 Use `doxabase.describe_staged_revision` to inspect patch payloads, stance,
-validation status, support links, and before/after count previews. Use
-`doxabase.export_staged_revision` to write a Markdown review bundle.
+validation status, structured validation result diagnostics, support links, and
+before/after count previews. Use `doxabase.export_staged_revision` to write a
+Markdown review bundle.
 
 ## Systematisation Drafts
 
@@ -146,7 +147,8 @@ evidence links still carry the justification for the proposal.
 
 Staged revisions are `rc:GraphRevision` resources with `rc:StagedRevision` type,
 optional support links to observations, claims, patterns, and evidence, optional
-`rc:revisionAnchor` topical links, plus one or more `rc:GraphPatch` resources.
+`rc:revisionAnchor` topical links, optional linked `sh:ValidationResult`
+diagnostics, plus one or more `rc:GraphPatch` resources.
 
 Patch entries record:
 
@@ -169,6 +171,12 @@ the validator useful class context. It also means a shape using `sh:class` may
 pass because the class was inferred rather than explicitly written. When a trial
 needs a stricter check, add shape constraints for the concrete property,
 node-kind, count, or value that should be present.
+
+When validation fails, staged revisions preserve structured SHACL diagnostics in
+`validation_results`. Read these before guessing from patch text. Each result
+can include focus node, result path, source constraint component, severity,
+value, and one or more messages. Markdown staged-revision exports include the
+same diagnostics before the patch payloads.
 
 ## Awkward Concept Test
 

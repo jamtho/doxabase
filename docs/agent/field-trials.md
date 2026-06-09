@@ -99,7 +99,8 @@ A useful trial usually asks the agent to:
   graph roles that actually changed, and use `included_graphs` for unchanged
   review context included in an export;
 - use `describe_staged_revision` and `export_staged_revision` when testing
-  staged patch proposals;
+  staged patch proposals, and inspect `validation_results` when a proposal
+  fails validation before inferring the cause from patch text;
 - use `describe_graph_revision` to inspect the resulting history record;
 - report what worked, what was awkward, and what should change next.
 

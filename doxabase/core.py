@@ -158,6 +158,22 @@ class StagedGraphPatchRecord:
 
 
 @dataclass(frozen=True)
+class ValidationDiagnostic:
+    iri: str | None
+    focus_node: str | None
+    focus_node_label: str | None
+    result_path: str | None
+    result_path_label: str | None
+    value: str | None
+    source_shape: str | None
+    source_constraint_component: str | None
+    source_constraint_component_label: str | None
+    severity: str | None
+    severity_label: str | None
+    messages: list[str]
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionRecord:
     revision_iri: str
     revision_type: str
@@ -169,6 +185,7 @@ class StagedGraphRevisionRecord:
     validation_scope: str
     validation_conforms: bool
     validation_result_count: int
+    validation_results: list[ValidationDiagnostic]
 
 
 @dataclass(frozen=True)
@@ -183,6 +200,7 @@ class SystematisationFramingRecord:
     validation_scope: str
     validation_conforms: bool
     validation_result_count: int
+    validation_results: list[ValidationDiagnostic]
 
 
 @dataclass(frozen=True)
@@ -241,6 +259,7 @@ class GraphRevisionDescription:
     validation_scope: str | None
     validation_conforms: bool | None
     validation_result_count: int | None
+    validation_results: list[ValidationDiagnostic]
     graph_snapshots: list[GraphSnapshotDescription]
     supporting_observations: list[ResourceSummary]
     supporting_claims: list[ResourceSummary]
@@ -268,6 +287,7 @@ class StagedGraphRevisionDescription:
     validation_scope: str | None
     validation_conforms: bool | None
     validation_result_count: int | None
+    validation_results: list[ValidationDiagnostic]
     graph_snapshots: list[GraphSnapshotDescription]
     patches: list[StagedGraphPatchDescription]
     supporting_observations: list[ResourceSummary]
@@ -698,6 +718,7 @@ class ValidationResult:
     report_text: str
     result_count: int
     scope: str
+    results: list[ValidationDiagnostic]
 
 
 class DoxaBase:
@@ -990,6 +1011,10 @@ class DoxaBase:
                 revision_iri,
                 "rc:validationResultCount",
             ),
+            validation_results=self._graph_revision_validation_results(
+                revision_iri,
+                data_graphs,
+            ),
             graph_snapshots=snapshots,
             supporting_observations=self._resource_summaries(
                 all_lookup_graphs,
@@ -1100,6 +1125,10 @@ class DoxaBase:
                 data_graphs,
                 revision_iri,
                 "rc:validationResultCount",
+            ),
+            validation_results=self._graph_revision_validation_results(
+                revision_iri,
+                data_graphs,
             ),
             graph_snapshots=snapshots,
             patches=patches,
@@ -3682,6 +3711,7 @@ class DoxaBase:
         validation_scope: str | None = None,
         validation_conforms: bool | None = None,
         validation_result_count: int | None = None,
+        validation_results: Iterable[ValidationDiagnostic] | None = None,
     ) -> GraphRevisionRecord:
         summary_value = summary.strip()
         if not summary_value:
@@ -3739,6 +3769,7 @@ class DoxaBase:
             "validation_result_count",
             validation_result_count,
         )
+        validation_result_values = list(validation_results or [])
         for graph_name, count in (graph_counts or {}).items():
             self._ensure_non_negative(f"graph_counts[{graph_name}]", count)
 
@@ -3859,6 +3890,18 @@ class DoxaBase:
                     Literal(validation_result_count, datatype=XSD.integer),
                 )
             )
+        for index, result in enumerate(validation_result_values, start=1):
+            result_subject = URIRef(
+                result.iri or f"{revision_subject}/validation-result/{index}"
+            )
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:hasValidationResult")),
+                    result_subject,
+                )
+            )
+            self._add_validation_diagnostic_triples(graph, result_subject, result)
 
         for index, (graph_name, count) in enumerate(sorted(snapshot_counts.items()), start=1):
             snapshot = URIRef(f"{revision_subject}/snapshot/{index}")
@@ -4006,6 +4049,7 @@ class DoxaBase:
             validation_scope=validation.scope,
             validation_conforms=validation.conforms,
             validation_result_count=validation.result_count,
+            validation_results=validation.results,
         )
 
         metadata = Graph()
@@ -4111,6 +4155,7 @@ class DoxaBase:
             validation_scope=validation.scope,
             validation_conforms=validation.conforms,
             validation_result_count=validation.result_count,
+            validation_results=validation.results,
         )
 
     def stage_systematisation(
@@ -4270,6 +4315,7 @@ class DoxaBase:
                     validation_scope=staged.validation_scope,
                     validation_conforms=staged.validation_conforms,
                     validation_result_count=staged.validation_result_count,
+                    validation_results=staged.validation_results,
                 )
             )
 
@@ -4523,6 +4569,55 @@ class DoxaBase:
             lines.extend(["", "## Revision Anchors", ""])
             for anchor in description.revision_anchors:
                 lines.append(f"- {anchor.label or anchor.iri} (`{anchor.iri}`)")
+        if description.validation_results:
+            lines.extend(["", "## Validation Results", ""])
+            for index, result in enumerate(description.validation_results, start=1):
+                lines.extend(
+                    [
+                        f"### Result {index}",
+                        "",
+                        f"- IRI: `{result.iri}`",
+                    ]
+                )
+                if result.focus_node is not None:
+                    lines.append(
+                        "- Focus node: "
+                        + self._diagnostic_markdown_resource(
+                            result.focus_node,
+                            result.focus_node_label,
+                        )
+                    )
+                if result.result_path is not None:
+                    lines.append(
+                        "- Result path: "
+                        + self._diagnostic_markdown_resource(
+                            result.result_path,
+                            result.result_path_label,
+                        )
+                    )
+                if result.value is not None:
+                    lines.append(f"- Value: `{result.value}`")
+                if result.source_constraint_component is not None:
+                    lines.append(
+                        "- Constraint: "
+                        + self._diagnostic_markdown_resource(
+                            result.source_constraint_component,
+                            result.source_constraint_component_label,
+                        )
+                    )
+                if result.severity is not None:
+                    lines.append(
+                        "- Severity: "
+                        + self._diagnostic_markdown_resource(
+                            result.severity,
+                            result.severity_label,
+                        )
+                    )
+                if result.source_shape is not None:
+                    lines.append(f"- Source shape: `{result.source_shape}`")
+                for message in result.messages:
+                    lines.append(f"- Message: {message}")
+                lines.append("")
         lines.extend(["", "## Patches", ""])
         for index, patch in enumerate(description.patches, start=1):
             lines.extend(
@@ -4546,6 +4641,11 @@ class DoxaBase:
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _diagnostic_markdown_resource(self, iri: str, label: str | None) -> str:
+        if label and label != iri:
+            return f"{label} (`{iri}`)"
+        return f"`{iri}`"
 
     def import_turtle(
         self,
@@ -4662,7 +4762,11 @@ class DoxaBase:
             inference="rdfs",
             advanced=False,
         )
-        result_count = sum(1 for _ in report_graph.subjects(RDF.type, URIRef(PREFIXES["sh"] + "ValidationResult")))
+        diagnostics = self._validation_diagnostics_from_report_graph(
+            report_graph,
+            limit_results=limit_results,
+        )
+        result_count = self._validation_result_count(report_graph)
         if result_count > limit_results:
             report_text = f"{report_text}\n\nResult output limited by caller to {limit_results} results."
         return ValidationResult(
@@ -4670,6 +4774,7 @@ class DoxaBase:
             report_text=str(report_text),
             result_count=result_count,
             scope=scope,
+            results=diagnostics,
         )
 
     def _validate_graph_preview(
@@ -4708,13 +4813,11 @@ class DoxaBase:
             inference="rdfs",
             advanced=False,
         )
-        result_count = sum(
-            1
-            for _ in report_graph.subjects(
-                RDF.type,
-                URIRef(PREFIXES["sh"] + "ValidationResult"),
-            )
+        diagnostics = self._validation_diagnostics_from_report_graph(
+            report_graph,
+            limit_results=limit_results,
         )
+        result_count = self._validation_result_count(report_graph)
         if result_count > limit_results:
             report_text = (
                 f"{report_text}\n\nResult output limited by caller to "
@@ -4725,7 +4828,181 @@ class DoxaBase:
             report_text=str(report_text),
             result_count=result_count,
             scope=scope,
+            results=diagnostics,
         )
+
+    def _validation_result_count(self, report_graph: Graph) -> int:
+        return sum(
+            1
+            for _ in report_graph.subjects(
+                RDF.type,
+                URIRef(PREFIXES["sh"] + "ValidationResult"),
+            )
+        )
+
+    def _validation_diagnostics_from_report_graph(
+        self,
+        report_graph: Graph,
+        *,
+        limit_results: int,
+    ) -> list[ValidationDiagnostic]:
+        result_type = URIRef(PREFIXES["sh"] + "ValidationResult")
+        result_iris = sorted(
+            report_graph.subjects(RDF.type, result_type),
+            key=lambda node: str(node),
+        )
+        diagnostics = [
+            self._validation_diagnostic_from_report_graph(report_graph, result_node)
+            for result_node in result_iris[:limit_results]
+        ]
+        return sorted(diagnostics, key=self._validation_diagnostic_sort_key)
+
+    def _validation_diagnostic_from_report_graph(
+        self,
+        report_graph: Graph,
+        result_node: Node,
+    ) -> ValidationDiagnostic:
+        sh = PREFIXES["sh"]
+        focus_node = self._first_report_value(
+            report_graph,
+            result_node,
+            URIRef(sh + "focusNode"),
+        )
+        result_path = self._first_report_value(
+            report_graph,
+            result_node,
+            URIRef(sh + "resultPath"),
+        )
+        value = self._first_report_value(
+            report_graph,
+            result_node,
+            URIRef(sh + "value"),
+        )
+        source_shape = self._first_report_value(
+            report_graph,
+            result_node,
+            URIRef(sh + "sourceShape"),
+        )
+        source_constraint_component = self._first_report_value(
+            report_graph,
+            result_node,
+            URIRef(sh + "sourceConstraintComponent"),
+        )
+        severity = self._first_report_value(
+            report_graph,
+            result_node,
+            URIRef(sh + "resultSeverity"),
+        )
+        messages = sorted(
+            str(message)
+            for message in report_graph.objects(
+                result_node,
+                URIRef(sh + "resultMessage"),
+            )
+        )
+        return ValidationDiagnostic(
+            iri=None if isinstance(result_node, BNode) else str(result_node),
+            focus_node=focus_node,
+            focus_node_label=self._diagnostic_resource_label(focus_node),
+            result_path=result_path,
+            result_path_label=self._diagnostic_resource_label(result_path),
+            value=value,
+            source_shape=source_shape,
+            source_constraint_component=source_constraint_component,
+            source_constraint_component_label=self._diagnostic_resource_label(
+                source_constraint_component
+            ),
+            severity=severity,
+            severity_label=self._diagnostic_resource_label(severity),
+            messages=messages,
+        )
+
+    def _first_report_value(
+        self,
+        report_graph: Graph,
+        subject: Node,
+        predicate: URIRef,
+    ) -> str | None:
+        values = sorted(report_graph.objects(subject, predicate), key=lambda node: str(node))
+        return str(values[0]) if values else None
+
+    def _diagnostic_resource_label(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return self._label_for_resource(value)
+
+    def _validation_diagnostic_sort_key(
+        self,
+        diagnostic: ValidationDiagnostic,
+    ) -> tuple[str, str, str]:
+        return (
+            diagnostic.focus_node or "",
+            diagnostic.result_path or "",
+            " ".join(diagnostic.messages),
+        )
+
+    def _add_validation_diagnostic_triples(
+        self,
+        graph: Graph,
+        subject: URIRef,
+        diagnostic: ValidationDiagnostic,
+    ) -> None:
+        sh = PREFIXES["sh"]
+        graph.add((subject, RDF.type, URIRef(sh + "ValidationResult")))
+        self._add_optional_validation_node(
+            graph,
+            subject,
+            URIRef(sh + "focusNode"),
+            diagnostic.focus_node,
+        )
+        self._add_optional_validation_node(
+            graph,
+            subject,
+            URIRef(sh + "resultPath"),
+            diagnostic.result_path,
+        )
+        self._add_optional_validation_node(
+            graph,
+            subject,
+            URIRef(sh + "value"),
+            diagnostic.value,
+        )
+        self._add_optional_validation_node(
+            graph,
+            subject,
+            URIRef(sh + "sourceShape"),
+            diagnostic.source_shape,
+        )
+        self._add_optional_validation_node(
+            graph,
+            subject,
+            URIRef(sh + "sourceConstraintComponent"),
+            diagnostic.source_constraint_component,
+        )
+        self._add_optional_validation_node(
+            graph,
+            subject,
+            URIRef(sh + "resultSeverity"),
+            diagnostic.severity,
+        )
+        for message in diagnostic.messages:
+            graph.add((subject, URIRef(sh + "resultMessage"), Literal(message)))
+
+    def _add_optional_validation_node(
+        self,
+        graph: Graph,
+        subject: URIRef,
+        predicate: URIRef,
+        value: str | None,
+    ) -> None:
+        if value is None:
+            return
+        graph.add((subject, predicate, self._validation_node(value)))
+
+    def _validation_node(self, value: str) -> Identifier:
+        if "://" in value or value.startswith("urn:"):
+            return URIRef(value)
+        return Literal(value)
 
     def to_graph(self, graphs: Iterable[str] | str | None = None) -> Graph:
         graph_names = self._expand_graphs(self._requested_graphs(graphs))
@@ -6564,6 +6841,44 @@ class DoxaBase:
                 )
             )
         return sorted(snapshots, key=lambda snapshot: snapshot.graph_role)
+
+    def _graph_revision_validation_results(
+        self,
+        revision_iri: str,
+        graphs: list[str],
+    ) -> list[ValidationDiagnostic]:
+        sh = PREFIXES["sh"]
+        diagnostics: list[ValidationDiagnostic] = []
+        for result_iri in self._objects(graphs, revision_iri, "rc:hasValidationResult"):
+            focus_node = self._first_object(graphs, result_iri, sh + "focusNode")
+            result_path = self._first_object(graphs, result_iri, sh + "resultPath")
+            value = self._first_object(graphs, result_iri, sh + "value")
+            source_shape = self._first_object(graphs, result_iri, sh + "sourceShape")
+            source_constraint_component = self._first_object(
+                graphs,
+                result_iri,
+                sh + "sourceConstraintComponent",
+            )
+            severity = self._first_object(graphs, result_iri, sh + "resultSeverity")
+            diagnostics.append(
+                ValidationDiagnostic(
+                    iri=result_iri,
+                    focus_node=focus_node,
+                    focus_node_label=self._diagnostic_resource_label(focus_node),
+                    result_path=result_path,
+                    result_path_label=self._diagnostic_resource_label(result_path),
+                    value=value,
+                    source_shape=source_shape,
+                    source_constraint_component=source_constraint_component,
+                    source_constraint_component_label=self._diagnostic_resource_label(
+                        source_constraint_component
+                    ),
+                    severity=severity,
+                    severity_label=self._diagnostic_resource_label(severity),
+                    messages=self._objects(graphs, result_iri, sh + "resultMessage"),
+                )
+            )
+        return sorted(diagnostics, key=self._validation_diagnostic_sort_key)
 
     def _mint_iri(self, kind: str) -> str:
         return f"https://richcanopy.org/doxabase/generated/{kind}/{uuid4()}"
