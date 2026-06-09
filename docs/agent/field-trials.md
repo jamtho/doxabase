@@ -168,11 +168,12 @@ few useful gaps:
 - `deep_lore` is most valuable once claims, patterns, history, or
   reconsiderations exist. When it has no extra lore beyond `dataset_brief`, the
   response should ideally say so.
-- Derived and aggregate tables need better modelling ergonomics. In particular,
-  agents want to carry source caveats, grouping columns, row-unit semantics, and
-  layout-verification status into staged map candidates.
-- Relationship descriptions should expose aggregation source/target columns and
-  cross-dataset partition/path ownership more clearly.
+- Derived and aggregate tables still need pressure testing. Aggregation
+  relationships now expose grouping columns and per-target aggregate mappings,
+  but agents should still check whether source caveats, row-unit semantics, and
+  layout-verification status are easy enough to carry into staged map candidates.
+- Relationship descriptions expose aggregation source/target columns, but
+  cross-dataset partition/path ownership may still need clearer retrieval.
 - Staged systematisation drafts with failed, repaired, and alternative framings
   should be exported with `export_staged_revisions` and an `executive_summary`
   when the comparison itself is the artifact under review.

@@ -488,6 +488,15 @@ class TransformationDescription:
 
 
 @dataclass(frozen=True)
+class AggregatedColumnDescription:
+    iri: str
+    target_column: ResourceSummary | None
+    source_columns: list[ResourceSummary]
+    aggregation_function: ResourceSummary | None
+    within_group_ordering: ResourceSummary | None
+
+
+@dataclass(frozen=True)
 class RelationshipDescription:
     iri: str
     label: str | None
@@ -506,6 +515,8 @@ class RelationshipDescription:
     derived_columns: list[ResourceSummary]
     derivation_function: ResourceSummary | None
     derivation_properties: list[ResourceSummary]
+    group_by_columns: list[ResourceSummary]
+    aggregated_columns: list[AggregatedColumnDescription]
 
 
 @dataclass(frozen=True)
@@ -4018,6 +4029,7 @@ class DoxaBase:
             "foreign_key",
             "shared_identifier",
             "derivation",
+            "aggregation",
         ],
         label: str | None = None,
         description: str | None = None,
@@ -4028,6 +4040,10 @@ class DoxaBase:
         identifying_columns: Iterable[str] | str | None = None,
         source_columns: Iterable[str] | str | None = None,
         derived_columns: Iterable[str] | str | None = None,
+        group_by_columns: Iterable[str] | str | None = None,
+        aggregated_columns: (
+            Iterable[Mapping[str, Any]] | Mapping[str, Any] | None
+        ) = None,
         declared: bool | None = None,
         referential_integrity: str | None = None,
         derivation_function: str | None = None,
@@ -4040,6 +4056,13 @@ class DoxaBase:
         )
         source_column_values = self._string_values("source_columns", source_columns)
         derived_column_values = self._string_values("derived_columns", derived_columns)
+        group_by_column_values = self._string_values(
+            "group_by_columns",
+            group_by_columns,
+        )
+        aggregated_column_values = self._normalise_aggregated_column_specs(
+            aggregated_columns,
+        )
         derivation_property_values = self._string_values(
             "derivation_properties",
             derivation_properties,
@@ -4048,11 +4071,13 @@ class DoxaBase:
             "foreign_key": "rc:ForeignKey",
             "shared_identifier": "rc:SharedIdentifier",
             "derivation": "rc:Derivation",
+            "aggregation": "rc:Aggregation",
         }
         resource_type = type_map.get(relationship_type)
         if resource_type is None:
             raise DoxaBaseError(
-                "relationship_type must be 'foreign_key', 'shared_identifier', or 'derivation'"
+                "relationship_type must be 'foreign_key', 'shared_identifier', "
+                "'derivation', or 'aggregation'"
             )
         if relationship_type == "foreign_key" and (from_column is None or to_column is None):
             raise DoxaBaseError(
@@ -4067,6 +4092,10 @@ class DoxaBase:
         ):
             raise DoxaBaseError(
                 "derivation relationships require source_columns and derived_columns"
+            )
+        if relationship_type == "aggregation" and not aggregated_column_values:
+            raise DoxaBaseError(
+                "aggregation relationships require at least one aggregated_columns entry"
             )
 
         graph = Graph()
@@ -4167,6 +4196,75 @@ class DoxaBase:
                     )
                 )
 
+        if relationship_type == "aggregation":
+            for column in group_by_column_values:
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:groupByColumn")),
+                        URIRef(self.expand_iri(column)),
+                    )
+                )
+            for index, aggregated_column in enumerate(aggregated_column_values, start=1):
+                mapping_subject = (
+                    URIRef(self.expand_iri(aggregated_column["iri"]))
+                    if aggregated_column["iri"] is not None
+                    else URIRef(f"{relationship_iri}/aggregated-column/{index}")
+                )
+                graph.add(
+                    (
+                        subject,
+                        URIRef(self.expand_iri("rc:hasAggregatedColumn")),
+                        mapping_subject,
+                    )
+                )
+                graph.add(
+                    (
+                        mapping_subject,
+                        RDF.type,
+                        URIRef(self.expand_iri("rc:AggregatedColumn")),
+                    )
+                )
+                graph.add(
+                    (
+                        mapping_subject,
+                        URIRef(self.expand_iri("rc:targetColumn")),
+                        URIRef(self.expand_iri(aggregated_column["target_column"])),
+                    )
+                )
+                for column in aggregated_column["source_columns"]:
+                    graph.add(
+                        (
+                            mapping_subject,
+                            URIRef(self.expand_iri("rc:aggregationSourceColumn")),
+                            URIRef(self.expand_iri(column)),
+                        )
+                    )
+                if aggregated_column["aggregation_function"] is not None:
+                    graph.add(
+                        (
+                            mapping_subject,
+                            URIRef(self.expand_iri("rc:aggregationFunction")),
+                            URIRef(
+                                self.expand_iri(
+                                    aggregated_column["aggregation_function"]
+                                )
+                            ),
+                        )
+                    )
+                if aggregated_column["within_group_ordering"] is not None:
+                    graph.add(
+                        (
+                            mapping_subject,
+                            URIRef(self.expand_iri("rc:withinGroupOrdering")),
+                            URIRef(
+                                self.expand_iri(
+                                    aggregated_column["within_group_ordering"]
+                                )
+                            ),
+                        )
+                    )
+
         predicates = [
             str(RDF.type),
             str(RDFS.label),
@@ -4182,7 +4280,10 @@ class DoxaBase:
             self.expand_iri("rc:derivedColumn"),
             self.expand_iri("rc:derivationFunction"),
             self.expand_iri("rc:hasDerivationProperty"),
+            self.expand_iri("rc:groupByColumn"),
+            self.expand_iri("rc:hasAggregatedColumn"),
         ]
+        self._delete_existing_aggregated_column_triples(relationship_iri)
         triples = self._replace_subject_triples(
             "map",
             relationship_iri,
@@ -4195,6 +4296,95 @@ class DoxaBase:
             graph="map",
             triples=triples,
         )
+
+    def _normalise_aggregated_column_specs(
+        self,
+        value: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        if value is None:
+            return []
+        if isinstance(value, Mapping):
+            raw_items = [value]
+        elif isinstance(value, str):
+            raise DoxaBaseError(
+                "aggregated_columns must be an object or list of objects"
+            )
+        else:
+            raw_items = list(value)
+
+        normalised: list[dict[str, Any]] = []
+        for index, item in enumerate(raw_items, start=1):
+            if not isinstance(item, Mapping):
+                raise DoxaBaseError("aggregated_columns entries must be objects")
+            target_column = str(
+                item.get("target_column")
+                or item.get("targetColumn")
+                or ""
+            ).strip()
+            if not target_column:
+                raise DoxaBaseError(
+                    f"aggregated_columns[{index}] requires target_column"
+                )
+            source_columns = self._string_values(
+                f"aggregated_columns[{index}].source_columns",
+                item.get("source_columns")
+                or item.get("sourceColumns")
+                or item.get("aggregation_source_columns")
+                or item.get("aggregationSourceColumns")
+                or item.get("source_column")
+                or item.get("aggregationSourceColumn"),
+            )
+            if not source_columns:
+                raise DoxaBaseError(
+                    f"aggregated_columns[{index}] requires source_columns"
+                )
+            normalised.append(
+                {
+                    "iri": str(item.get("iri") or item.get("id") or "").strip()
+                    or None,
+                    "target_column": target_column,
+                    "source_columns": source_columns,
+                    "aggregation_function": str(
+                        item.get("aggregation_function")
+                        or item.get("aggregationFunction")
+                        or item.get("function")
+                        or ""
+                    ).strip()
+                    or None,
+                    "within_group_ordering": str(
+                        item.get("within_group_ordering")
+                        or item.get("withinGroupOrdering")
+                        or item.get("ordering")
+                        or ""
+                    ).strip()
+                    or None,
+                }
+            )
+        return normalised
+
+    def _delete_existing_aggregated_column_triples(self, relationship_iri: str) -> None:
+        mapping_iris = self._objects(["map"], relationship_iri, "rc:hasAggregatedColumn")
+        if not mapping_iris:
+            return
+        predicates = [
+            str(RDF.type),
+            self.expand_iri("rc:targetColumn"),
+            self.expand_iri("rc:aggregationSourceColumn"),
+            self.expand_iri("rc:aggregationFunction"),
+            self.expand_iri("rc:withinGroupOrdering"),
+        ]
+        placeholders = ",".join("?" for _ in predicates)
+        for mapping_iri in mapping_iris:
+            self._conn.execute(
+                f"""
+                DELETE FROM quads
+                WHERE graph = ?
+                  AND subject = ?
+                  AND predicate IN ({placeholders})
+                """,
+                ["map", mapping_iri, *predicates],
+            )
+        self._conn.commit()
 
     def record_graph_revision(
         self,
@@ -6391,6 +6581,61 @@ class DoxaBase:
                         lookup_graphs,
                     )
                 )
+
+        aggregation_source_datasets: set[str] = set()
+        if relationship.source_dataset is not None:
+            aggregation_source_datasets.add(relationship.source_dataset.iri)
+        for column in relationship.group_by_columns:
+            if column.owning_dataset_iri is not None:
+                aggregation_source_datasets.add(column.owning_dataset_iri)
+        for aggregated_column in relationship.aggregated_columns:
+            for column in aggregated_column.source_columns:
+                if column.owning_dataset_iri is not None:
+                    aggregation_source_datasets.add(column.owning_dataset_iri)
+            if (
+                aggregated_column.within_group_ordering is not None
+                and aggregated_column.within_group_ordering.owning_dataset_iri is not None
+            ):
+                aggregation_source_datasets.add(
+                    aggregated_column.within_group_ordering.owning_dataset_iri
+                )
+
+        aggregation_target_datasets: set[str] = set()
+        if relationship.target_dataset is not None:
+            aggregation_target_datasets.add(relationship.target_dataset.iri)
+        for aggregated_column in relationship.aggregated_columns:
+            if (
+                aggregated_column.target_column is not None
+                and aggregated_column.target_column.owning_dataset_iri is not None
+            ):
+                aggregation_target_datasets.add(
+                    aggregated_column.target_column.owning_dataset_iri
+                )
+
+        if dataset_iri in aggregation_source_datasets:
+            for related_dataset_iri in sorted(
+                aggregation_target_datasets - {dataset_iri}
+            ):
+                related.append(
+                    self._related_dataset(
+                        related_dataset_iri,
+                        "source_of_aggregation",
+                        relationship.iri,
+                        lookup_graphs,
+                    )
+                )
+        if dataset_iri in aggregation_target_datasets:
+            for related_dataset_iri in sorted(
+                aggregation_source_datasets - {dataset_iri}
+            ):
+                related.append(
+                    self._related_dataset(
+                        related_dataset_iri,
+                        "aggregated_from",
+                        relationship.iri,
+                        lookup_graphs,
+                    )
+                )
         return related
 
     def _related_dataset(
@@ -6599,6 +6844,17 @@ class DoxaBase:
             *relationship.identifying_columns,
             *relationship.source_columns,
             *relationship.derived_columns,
+            *relationship.group_by_columns,
+            *[
+                column
+                for aggregated_column in relationship.aggregated_columns
+                for column in (
+                    aggregated_column.target_column,
+                    *aggregated_column.source_columns,
+                    aggregated_column.within_group_ordering,
+                )
+                if column is not None
+            ],
         ):
             if column is not None and column.owning_dataset_iri in {
                 dataset_iri,
@@ -6704,10 +6960,28 @@ class DoxaBase:
                 "rc:identifyingColumn",
                 "rc:sourceColumn",
                 "rc:derivedColumn",
+                "rc:groupByColumn",
             ):
                 relationship_iris.update(
                     self._subjects(data_graphs, predicate, column_iri)
                 )
+            for predicate in (
+                "rc:targetColumn",
+                "rc:aggregationSourceColumn",
+                "rc:withinGroupOrdering",
+            ):
+                for aggregated_column_iri in self._subjects(
+                    data_graphs,
+                    predicate,
+                    column_iri,
+                ):
+                    relationship_iris.update(
+                        self._subjects(
+                            data_graphs,
+                            "rc:hasAggregatedColumn",
+                            aggregated_column_iri,
+                        )
+                    )
 
         return [
             self._describe_relationship(relationship_iri, data_graphs, lookup_graphs)
@@ -6812,6 +7086,67 @@ class DoxaBase:
                     relationship_iri,
                     "rc:hasDerivationProperty",
                 ),
+            ),
+            group_by_columns=self._resource_summaries(
+                lookup_graphs,
+                self._objects(data_graphs, relationship_iri, "rc:groupByColumn"),
+            ),
+            aggregated_columns=[
+                self._describe_aggregated_column(
+                    aggregated_column_iri,
+                    data_graphs,
+                    lookup_graphs,
+                )
+                for aggregated_column_iri in self._objects(
+                    data_graphs,
+                    relationship_iri,
+                    "rc:hasAggregatedColumn",
+                )
+            ],
+        )
+
+    def _describe_aggregated_column(
+        self,
+        aggregated_column_iri: str,
+        data_graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> AggregatedColumnDescription:
+        target_column = self._first_object(
+            data_graphs,
+            aggregated_column_iri,
+            "rc:targetColumn",
+        )
+        aggregation_function = self._first_object(
+            data_graphs,
+            aggregated_column_iri,
+            "rc:aggregationFunction",
+        )
+        within_group_ordering = self._first_object(
+            data_graphs,
+            aggregated_column_iri,
+            "rc:withinGroupOrdering",
+        )
+        return AggregatedColumnDescription(
+            iri=aggregated_column_iri,
+            target_column=self._optional_resource_summary(
+                lookup_graphs,
+                target_column,
+            ),
+            source_columns=self._resource_summaries(
+                lookup_graphs,
+                self._objects(
+                    data_graphs,
+                    aggregated_column_iri,
+                    "rc:aggregationSourceColumn",
+                ),
+            ),
+            aggregation_function=self._optional_resource_summary(
+                lookup_graphs,
+                aggregation_function,
+            ),
+            within_group_ordering=self._optional_resource_summary(
+                lookup_graphs,
+                within_group_ordering,
             ),
         )
 

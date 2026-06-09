@@ -1078,9 +1078,35 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
         == "AIS Daily Broadcast Positions"
         for relationship in description.relationships
     )
+    aggregation = next(
+        relationship
+        for relationship in description.relationships
+        if relationship.relationship_kind == RC + "Aggregation"
+    )
+    assert aggregation.target_dataset is not None
+    assert aggregation.target_dataset.iri == (
+        "https://richcanopy.org/example/manifest/ais#DailyIndex"
+    )
+    assert [column.column_name for column in aggregation.group_by_columns] == ["mmsi"]
+    aggregate_mapping = next(
+        mapping
+        for mapping in aggregation.aggregated_columns
+        if mapping.target_column is not None
+        and mapping.target_column.column_name == "distance_m"
+    )
+    assert {column.column_name for column in aggregate_mapping.source_columns} == {
+        "latitude",
+        "longitude",
+    }
+    assert aggregate_mapping.aggregation_function is not None
+    assert aggregate_mapping.aggregation_function.label == (
+        "Haversine distance from first to last position"
+    )
+    assert aggregate_mapping.within_group_ordering is not None
+    assert aggregate_mapping.within_group_ordering.column_name == "timestamp"
     assert any(
         related.iri == "https://richcanopy.org/example/manifest/ais#DailyIndex"
-        and related.relationship == "source_of"
+        and related.relationship == "source_of_aggregation"
         for related in description.related_datasets
     )
 
@@ -1098,8 +1124,11 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     base = "https://example.test/enron#"
     messages = f"{base}eml_messages"
     attachments = f"{base}eml_attachments"
+    attachment_counts = f"{base}eml_message_attachment_counts"
     doc_id = f"{base}eml_messages__doc_id"
     parent_doc_id = f"{base}eml_attachments__parent_doc_id"
+    count_doc_id = f"{base}eml_message_attachment_counts__doc_id"
+    attachment_count = f"{base}eml_message_attachment_counts__attachment_count"
     caveat = f"{base}caveat_body_processing_lossy"
     storage = f"{base}local_parquet_access"
 
@@ -1138,6 +1167,13 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         is_table=True,
         path_templates=["data/parquet/eml_attachments.parquet"],
     )
+    db.record_map_dataset(
+        attachment_counts,
+        label="EML attachment counts",
+        is_table=True,
+        entity_key=count_doc_id,
+        path_templates=["data/parquet/eml_attachment_counts.parquet"],
+    )
     doc_column = db.record_map_column(
         doc_id,
         table_iri=messages,
@@ -1155,6 +1191,21 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         value_type=f"{base}DocId",
         nullable=True,
     )
+    db.record_map_column(
+        count_doc_id,
+        table_iri=attachment_counts,
+        column_name="doc_id",
+        physical_type="rc:Varchar",
+        value_type=f"{base}DocId",
+        nullable=False,
+    )
+    db.record_map_column(
+        attachment_count,
+        table_iri=attachment_counts,
+        column_name="attachment_count",
+        physical_type="rc:Integer",
+        nullable=False,
+    )
     relationship = db.record_map_relationship(
         f"{base}eml_attachment_parent_doc_id_fk",
         relationship_type="foreign_key",
@@ -1164,12 +1215,28 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         declared=False,
         referential_integrity="rc:StrictIntegrity",
     )
+    aggregation = db.record_map_relationship(
+        f"{base}attachment_counts_by_message",
+        relationship_type="aggregation",
+        label="attachment counts by message",
+        source_dataset=attachments,
+        target_dataset=attachment_counts,
+        group_by_columns=[parent_doc_id],
+        aggregated_columns=[
+            {
+                "target_column": attachment_count,
+                "source_columns": [parent_doc_id],
+                "aggregation_function": "rc:Count",
+            }
+        ],
+    )
 
     assert storage_record.resource_type == RC + "StorageAccess"
     assert caveat_record.resource_type == RC + "KnownCaveat"
     assert table_record.resource_type == RC + "Table"
     assert doc_column.resource_type == RC + "Column"
     assert relationship.resource_type == RC + "ForeignKey"
+    assert aggregation.resource_type == RC + "Aggregation"
     assert db.validate_graph(scope="map").conforms
 
     description = db.describe_dataset(messages)
@@ -1246,6 +1313,40 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert [tag.relationship_kind_label for tag in related_reason.relationship_tags] == [
         "ForeignKey"
     ]
+
+    count_description = db.describe_dataset(attachment_counts)
+    count_relationship = next(
+        relationship
+        for relationship in count_description.relationships
+        if relationship.relationship_kind == RC + "Aggregation"
+    )
+    assert count_relationship.source_dataset is not None
+    assert count_relationship.source_dataset.iri == attachments
+    assert [column.column_name for column in count_relationship.group_by_columns] == [
+        "parent_doc_id"
+    ]
+    assert len(count_relationship.aggregated_columns) == 1
+    count_mapping = count_relationship.aggregated_columns[0]
+    assert count_mapping.target_column is not None
+    assert count_mapping.target_column.column_name == "attachment_count"
+    assert [column.column_name for column in count_mapping.source_columns] == [
+        "parent_doc_id"
+    ]
+    assert count_mapping.aggregation_function is not None
+    assert count_mapping.aggregation_function.iri == RC + "Count"
+    assert any(
+        related.iri == attachments
+        and related.relationship == "aggregated_from"
+        and related.relationship_kind == RC + "Aggregation"
+        for related in count_description.related_datasets
+    )
+    count_group = count_description.related_dataset_groups[0]
+    count_reason = count_group.reasons[0]
+    assert count_reason.relationship == "aggregated_from"
+    assert {column.column_name for column in count_reason.columns} == {
+        "attachment_count",
+        "parent_doc_id",
+    }
 
 
 def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) -> None:

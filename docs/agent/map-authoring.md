@@ -97,11 +97,37 @@ db.record_map_column(
 - `relationship_type="foreign_key"`
 - `relationship_type="shared_identifier"`
 - `relationship_type="derivation"`
+- `relationship_type="aggregation"`
 
 Use `foreign_key` for parent/child column relationships, whether declared
 upstream or inferred by checks. Use `shared_identifier` when several columns
 carry IDs from the same logical population. Use `derivation` for transformed
-columns such as cleaned text, normalized subjects, or generated features.
+columns such as cleaned text, normalized subjects, or generated features. Use
+`aggregation` for grouped summaries, rollups, and index tables that compute
+target columns from source columns.
+
+Aggregation relationships can carry `source_dataset`, `target_dataset`,
+`group_by_columns`, and `aggregated_columns`. Each `aggregated_columns` entry
+uses `target_column`, `source_columns`, optional `aggregation_function`, and
+optional `within_group_ordering`:
+
+```python
+record_map_relationship_tool(
+    db,
+    iri="ex:attachment_counts_by_message",
+    relationship_type="aggregation",
+    source_dataset="ex:Attachments",
+    target_dataset="ex:AttachmentCounts",
+    group_by_columns=["ex:attachment_parent_doc_id"],
+    aggregated_columns=[
+        {
+            "target_column": "ex:attachment_count",
+            "source_columns": ["ex:attachment_parent_doc_id"],
+            "aggregation_function": "rc:Count",
+        },
+    ],
+)
+```
 
 ## Limits
 

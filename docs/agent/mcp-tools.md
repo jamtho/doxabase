@@ -134,7 +134,10 @@ datasets.
 `doxabase.record_map_relationship`
 
 Records or updates a relationship resource. Supported relationship types are
-`foreign_key`, `shared_identifier`, and `derivation`.
+`foreign_key`, `shared_identifier`, `derivation`, and `aggregation`. Aggregation
+relationships accept `group_by_columns` and `aggregated_columns`; each aggregate
+mapping should include `target_column`, `source_columns`, optional
+`aggregation_function`, and optional `within_group_ordering`.
 
 `doxabase.record_graph_revision`
 

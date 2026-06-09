@@ -190,7 +190,11 @@ Map authoring helpers write current-best project facts to `map`:
 `record_map_storage_access()`, and `record_map_relationship()`. Use them when
 observations or patterns are ready to become operating context for future
 agents. On partial dataset updates, omit `is_table` to preserve existing
-dataset/table typing.
+dataset/table typing. `record_map_relationship()` supports foreign keys, shared
+identifiers, derivations, and aggregations; for aggregations, pass
+`group_by_columns` plus `aggregated_columns` mappings with `target_column`,
+`source_columns`, optional `aggregation_function`, and optional
+`within_group_ordering`.
 
 `record_graph_revision()` writes metadata to `history` about changed graph
 roles, included review/export graph roles, rationale, supporting resources,

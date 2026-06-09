@@ -457,6 +457,38 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
     ] == ["conditionId"]
 
 
+def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+
+    result = describe_dataset_tool(
+        db,
+        iri="https://richcanopy.org/example/manifest/ais#DailyIndex",
+    )
+
+    aggregation = next(
+        relationship
+        for relationship in result["relationships"]
+        if relationship["relationship_kind"] == "https://richcanopy.org/ns/rc#Aggregation"
+    )
+    assert aggregation["source_dataset"]["label"] == "AIS Daily Broadcast Positions"
+    assert aggregation["group_by_columns"][0]["column_name"] == "mmsi"
+    message_count_mapping = next(
+        mapping
+        for mapping in aggregation["aggregated_columns"]
+        if mapping["target_column"]["column_name"] == "message_count"
+    )
+    assert message_count_mapping["source_columns"][0]["column_name"] == "mmsi"
+    assert message_count_mapping["aggregation_function"]["iri"] == (
+        "https://richcanopy.org/ns/rc#Count"
+    )
+    assert any(
+        related["relationship"] == "aggregated_from"
+        and related["label"] == "AIS Daily Broadcast Positions"
+        for related in result["related_datasets"]
+    )
+
+
 def test_describe_context_slice_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:
