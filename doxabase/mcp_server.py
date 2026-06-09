@@ -24,6 +24,7 @@ from doxabase.mcp_tools import (
     list_entities_tool,
     load_example_fixtures_tool,
     record_claim_observation_tool,
+    record_claim_reconsideration_tool,
     record_map_caveat_tool,
     record_map_column_tool,
     record_map_dataset_tool,
@@ -41,7 +42,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/history recording, systematisation staging, staged graph revision review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/claim-reconsideration/history recording, systematisation staging, staged graph revision review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -275,6 +276,45 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             map_implications=map_implications,
+        )
+
+    @server.tool(name="doxabase.record_claim_reconsideration")
+    def record_claim_reconsideration(
+        newer_claim: str,
+        older_claim: str,
+        relation: str,
+        rationale: str,
+        summary: str | None = None,
+        reconsidered_at: str | None = None,
+        reconsidered_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: list[str] | None = None,
+        source_path: str | None = None,
+        source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        source_kind: str | None = None,
+        older_claim_status: str | None = None,
+    ) -> dict[str, Any]:
+        """Record that one claim weakens, contradicts, supersedes, or refines another."""
+
+        return record_claim_reconsideration_tool(
+            db,
+            newer_claim=newer_claim,
+            older_claim=older_claim,
+            relation=relation,
+            rationale=rationale,
+            summary=summary,
+            reconsidered_at=reconsidered_at,
+            reconsidered_by=reconsidered_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            source_path=source_path,
+            source_section=source_section,
+            start_line=start_line,
+            end_line=end_line,
+            source_kind=source_kind,
+            older_claim_status=older_claim_status,
         )
 
     @server.tool(name="doxabase.record_map_dataset")

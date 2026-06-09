@@ -70,6 +70,23 @@ claim = db.record_claim_observation(
     source_path="docs/agent/api-reference.md",
     source_kind="rc:DocumentationSource",
 )
+weaker_claim = db.record_claim_observation(
+    summary="Example caveat claim.",
+    claim_text="The join is useful operationally but is not enforced upstream.",
+    claim_kind="rc:CaveatClaim",
+    claim_targets=["https://example.test/project#parent_doc_id"],
+    evidence_sources=["DoxaBase describe_dataset output"],
+    source_kind="rc:DoxaBaseAPISource",
+)
+reconsideration = db.record_claim_reconsideration(
+    newer_claim=weaker_claim.claim_iri,
+    older_claim=claim.claim_iri,
+    relation="weakens",
+    rationale="The caveat narrows the earlier join claim without making it useless.",
+    evidence_sources=["DoxaBase describe_dataset output"],
+    source_path="/tmp/doxabase-describe-dataset-output.json",
+    source_kind="rc:DoxaBaseAPISource",
+)
 pattern = db.record_pattern(
     summary="Repeated evidence supports the parent_doc_id join.",
     pattern_text="Documentation and join checks both indicate parent_doc_id links child rows to message rows.",
@@ -156,6 +173,12 @@ supplied, it also writes a linked `rc:Evidence` resource to the `evidence` graph
 `record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common
 claim-shaped observation pattern without hand-authoring TriG.
+
+`record_claim_reconsideration()` writes an `rc:ClaimReconsideration` in
+`observations`, optionally writes evidence, and links a newer claim to an older
+claim with `weakens`, `contradicts`, `supersedes`, or `refines`. Use it when an
+agent learns that a previous hunch was too broad, wrong, replaced by a better
+framing, or still useful but narrower than first thought.
 
 `record_pattern()` writes one `rc:Pattern` to the `patterns` graph and can write
 linked evidence/source-span resources. Use it when several observations, claims,

@@ -711,6 +711,12 @@ rc:PatternStability a rdfs:Class ;
 rc:ObservationStatus a rdfs:Class ;
     rdfs:comment "Lifecycle status for an observation or claim." .
 
+rc:ClaimReconsideration a rdfs:Class ;
+    rdfs:comment "A record that one claim has weakened, contradicted, superseded, or refined an earlier claim." .
+
+rc:ClaimReconsiderationRelation a rdfs:Class ;
+    rdfs:comment "Controlled relation type for claim reconsideration records." .
+
 rc:SourceSpan a rdfs:Class ;
     rdfs:comment "A bounded location in a source document, query, code file, data sample, or external resource." .
 
@@ -871,6 +877,44 @@ rc:refines a rdf:Property ;
     rdfs:range rdfs:Resource ;
     rdfs:comment "Links an observation or claim to an earlier claim or assertion it narrows, qualifies, or improves." .
 
+rc:weakens a rdf:Property ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "Links a claim to an earlier claim or assertion it makes less certain, broad, or durable without fully contradicting it." .
+
+rc:supersedes a rdf:Property ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "Links a claim to an earlier claim or assertion it replaces as the better current interpretation." .
+
+rc:reconsideringClaim a rdf:Property ;
+    rdfs:domain rc:ClaimReconsideration ;
+    rdfs:range rc:Claim ;
+    rdfs:comment "The newer claim that reconsiders an earlier claim." .
+
+rc:reconsideredClaim a rdf:Property ;
+    rdfs:domain rc:ClaimReconsideration ;
+    rdfs:range rc:Claim ;
+    rdfs:comment "The earlier claim being weakened, contradicted, superseded, or refined." .
+
+rc:reconsiderationRelation a rdf:Property ;
+    rdfs:domain rc:ClaimReconsideration ;
+    rdfs:range rc:ClaimReconsiderationRelation ;
+    rdfs:comment "The kind of reconsideration relation between the newer and older claim." .
+
+rc:reconsiderationRationale a rdf:Property ;
+    rdfs:domain rc:ClaimReconsideration ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Why the newer claim should change how the older claim is read." .
+
+rc:reconsideredAt a rdf:Property ;
+    rdfs:domain rc:ClaimReconsideration ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "When the reconsideration was recorded." .
+
+rc:reconsideredBy a rdf:Property ;
+    rdfs:domain rc:ClaimReconsideration ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "The agent, tool, process, or person that recorded the reconsideration." .
+
 rc:sourceSpan a rdf:Property ;
     rdfs:domain rc:Evidence ;
     rdfs:range rc:SourceSpan ;
@@ -982,14 +1026,22 @@ rc:InvariantPattern a rc:PatternStability ; rdfs:label "invariant pattern" .
 
 rc:Tentative a rc:ObservationStatus ; rdfs:label "tentative" .
 rc:Checked a rc:ObservationStatus ; rdfs:label "checked" .
+rc:Weakened a rc:ObservationStatus ; rdfs:label "weakened" .
 rc:Contradicted a rc:ObservationStatus ; rdfs:label "contradicted" .
+rc:Superseded a rc:ObservationStatus ; rdfs:label "superseded" .
 rc:Promoted a rc:ObservationStatus ; rdfs:label "promoted" .
+
+rc:Weakening a rc:ClaimReconsiderationRelation ; rdfs:label "weakening" .
+rc:Contradiction a rc:ClaimReconsiderationRelation ; rdfs:label "contradiction" .
+rc:Supersession a rc:ClaimReconsiderationRelation ; rdfs:label "supersession" .
+rc:Refinement a rc:ClaimReconsiderationRelation ; rdfs:label "refinement" .
 
 rc:DocumentationSource a rc:SourceKind ; rdfs:label "documentation source" .
 rc:QuerySource a rc:SourceKind ; rdfs:label "query source" .
 rc:DataSampleSource a rc:SourceKind ; rdfs:label "data sample source" .
 rc:CodeSource a rc:SourceKind ; rdfs:label "code source" .
 rc:StorageSource a rc:SourceKind ; rdfs:label "storage source" .
+rc:DoxaBaseAPISource a rc:SourceKind ; rdfs:label "DoxaBase API source" .
 
 # -----------------------------------------------------------------------------
 # History and revisions

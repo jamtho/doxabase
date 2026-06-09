@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1012
+    assert graphs["base_ontology"].triple_count == 1060
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 937
+    assert graphs["base_shapes"].triple_count == 1011
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -1707,6 +1707,96 @@ def test_record_claim_observation_writes_common_rdf_pattern(tmp_path: Path) -> N
         and triple.object == result.source_span_iri
         for triple in evidence_context.outgoing
     )
+
+
+def test_record_claim_reconsideration_links_claim_lifecycle(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    older = db.record_claim_observation(
+        summary="Initial MMSI identity hunch.",
+        claim_text="MMSI can be treated as the stable vessel identity key.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=["https://example.test/ais#mmsi"],
+        evidence_sources=["trial setup"],
+    )
+    newer = db.record_claim_observation(
+        summary="MMSI caveat check.",
+        claim_text="MMSI is an operational grouping key, not proof of vessel identity.",
+        claim_kind="rc:CaveatClaim",
+        claim_targets=["https://example.test/ais#mmsi"],
+        evidence_sources=["retrieved caveat"],
+        observation_status="rc:Checked",
+    )
+
+    reconsideration = db.record_claim_reconsideration(
+        newer_claim=newer.claim_iri,
+        older_claim=older.claim_iri,
+        relation="weakens",
+        summary="MMSI identity hunch weakened.",
+        rationale=(
+            "The retrieved caveat shows MMSI remains useful for operational "
+            "grouping but is too weak for durable vessel identity."
+        ),
+        evidence_sources=["DoxaBase search(\"MMSI vessel\")"],
+        source_path="/tmp/doxabase-search-mmsi-vessel.json",
+        source_kind="rc:DoxaBaseAPISource",
+    )
+
+    assert reconsideration.relation == RC + "Weakening"
+    assert reconsideration.direct_predicate == RC + "weakens"
+    assert reconsideration.older_claim_status == RC + "Weakened"
+    assert reconsideration.source_span_iri is not None
+    assert reconsideration.status_triples == 1
+    assert db.validate_graph(scope="all").conforms
+
+    older_context = db.describe_resource(older.claim_iri, graph="observations")
+    assert older_context.claim is not None
+    assert older_context.claim.lifecycle_summary is not None
+    assert "Current status: weakened." in older_context.claim.lifecycle_summary
+    assert "1 weakening." in older_context.claim.lifecycle_summary
+    older_statuses = [
+        triple.object
+        for triple in older_context.outgoing
+        if triple.predicate == RC + "observationStatus"
+    ]
+    assert older_statuses == [RC + "Weakened"]
+
+    newer_context = db.describe_resource(newer.claim_iri, graph="observations")
+    assert any(
+        triple.predicate == RC + "weakens" and triple.object == older.claim_iri
+        for triple in newer_context.outgoing
+    )
+
+    pattern = db.record_pattern(
+        summary="MMSI hunch should be read as operational, not identity-level.",
+        pattern_text=(
+            "The later caveat claim weakens the earlier vessel-identity hunch "
+            "without making MMSI useless for grouping."
+        ),
+        rationale="The reconsideration preserves both the tempting hunch and the correction.",
+        pattern_targets=["https://example.test/ais#mmsi"],
+        supporting_claims=[older.claim_iri],
+        evidence_sources=["claim reconsideration test"],
+    )
+    description = db.describe_pattern(pattern.pattern_iri)
+
+    incoming = description.supporting_claims[0].incoming_reconsiderations
+    assert description.supporting_claims[0].lifecycle_summary is not None
+    assert "Later claims reconsider this claim: 1 weakening." in (
+        description.supporting_claims[0].lifecycle_summary
+    )
+    assert [item.iri for item in incoming] == [reconsideration.reconsideration_iri]
+    assert incoming[0].newer_claim is not None
+    assert incoming[0].newer_claim.iri == newer.claim_iri
+    assert incoming[0].relation_label == "weakening"
+
+    context_slice = db.describe_context_slice(
+        [older.claim_iri],
+        profile="deep_lore",
+    )
+    assert context_slice.route_counts["incoming_claim_reconsideration"] == 1
+    assert context_slice.route_counts["reconsidering_claim"] == 1
 
 
 def test_record_pattern_links_observations_claims_evidence_and_targets(

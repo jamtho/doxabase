@@ -24,6 +24,8 @@ Current implementation status:
 - `describe_context_slice()` for route-explained dataset, pattern, and deep-lore graph slices.
 - `record_observation()` for point-in-time findings and linked evidence.
 - `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.
+- `record_claim_reconsideration()` for marking when later claims weaken,
+  contradict, supersede, or refine earlier claims.
 - `record_pattern()` for syntheses that connect related findings to map targets.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, and relationships.

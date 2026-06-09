@@ -145,3 +145,33 @@ Look for these signals:
 
 Good trials create a loop: run the agent, absorb the product signal, improve the
 tool, and run another bounded trial.
+
+## Product Signals From Recent Trials
+
+The June 2026 cold-start, wrong-hunch, and AIS generalisation trials surfaced a
+few useful gaps:
+
+- Claim lifecycle needed first-class support. Agents could record an initial
+  hunch and a later correction, but they needed an explicit
+  `record_claim_reconsideration` move to mark the earlier claim as weakened,
+  contradicted, superseded, or refined without deleting the exploratory trail.
+- DoxaBase retrieval output sometimes serves as evidence. Use
+  `rc:DoxaBaseAPISource` for source spans or evidence artifacts that come from
+  `search`, `describe_dataset`, `describe_context_slice`, or similar API calls.
+- `describe_dataset` should expose embedded structures, such as JSON arrays or
+  coupled encoded fields, more directly. Agents otherwise fall back to lexical
+  search or manual fixture inspection.
+- `deep_lore` is most valuable once claims, patterns, history, or
+  reconsiderations exist. When it has no extra lore beyond `dataset_brief`, the
+  response should ideally say so.
+- Derived and aggregate tables need better modelling ergonomics. In particular,
+  agents want to carry source caveats, grouping columns, row-unit semantics, and
+  layout-verification status into staged map candidates.
+- Relationship descriptions should expose aggregation source/target columns and
+  cross-dataset partition/path ownership more clearly.
+- Staged systematisation drafts with failed, repaired, and alternative framings
+  should be exportable as one review bundle, not only one staged revision at a
+  time.
+
+Use later trials to check whether these gaps still matter after each change.
+If a gap stops being useful, revise this section.

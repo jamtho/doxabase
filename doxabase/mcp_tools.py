@@ -238,6 +238,44 @@ def record_pattern_tool(
     return asdict(result)
 
 
+def record_claim_reconsideration_tool(
+    db: DoxaBase,
+    newer_claim: str,
+    older_claim: str,
+    relation: str,
+    rationale: str,
+    summary: str | None = None,
+    reconsidered_at: str | None = None,
+    reconsidered_by: str | None = None,
+    evidence_summary: str | None = None,
+    evidence_sources: list[str] | None = None,
+    source_path: str | None = None,
+    source_section: str | None = None,
+    start_line: int | None = None,
+    end_line: int | None = None,
+    source_kind: str | None = None,
+    older_claim_status: str | None = None,
+) -> dict[str, Any]:
+    result = db.record_claim_reconsideration(
+        newer_claim=newer_claim,
+        older_claim=older_claim,
+        relation=relation,
+        rationale=rationale,
+        summary=summary,
+        reconsidered_at=reconsidered_at,
+        reconsidered_by=reconsidered_by,
+        evidence_summary=evidence_summary,
+        evidence_sources=evidence_sources,
+        source_path=source_path,
+        source_section=source_section,
+        start_line=start_line,
+        end_line=end_line,
+        source_kind=source_kind,
+        older_claim_status=older_claim_status,
+    )
+    return asdict(result)
+
+
 def record_map_dataset_tool(
     db: DoxaBase,
     iri: str,

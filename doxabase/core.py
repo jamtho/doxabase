@@ -54,6 +54,13 @@ PREFIXES = {
     "xsd": "http://www.w3.org/2001/XMLSchema#",
 }
 
+CLAIM_RECONSIDERATION_RELATIONS = {
+    "weakens": ("rc:Weakening", "rc:weakens", "rc:Weakened"),
+    "contradicts": ("rc:Contradiction", "rc:contradicts", "rc:Contradicted"),
+    "supersedes": ("rc:Supersession", "rc:supersedes", "rc:Superseded"),
+    "refines": ("rc:Refinement", "rc:refines", None),
+}
+
 DEFAULT_GRAPHS: tuple[tuple[str, str, bool, bool, Path | None], ...] = (
     (
         "base_ontology",
@@ -545,6 +552,22 @@ class PatternRecord:
 
 
 @dataclass(frozen=True)
+class ClaimReconsiderationRecord:
+    reconsideration_iri: str
+    newer_claim_iri: str
+    older_claim_iri: str
+    relation: str
+    relation_label: str | None
+    direct_predicate: str
+    older_claim_status: str | None
+    evidence_iri: str | None
+    source_span_iri: str | None
+    reconsideration_triples: int
+    evidence_triples: int
+    status_triples: int
+
+
+@dataclass(frozen=True)
 class SourceSpanDescription:
     iri: str
     source_path: str | None
@@ -565,6 +588,21 @@ class EvidenceDescription:
 
 
 @dataclass(frozen=True)
+class ClaimReconsiderationDescription:
+    iri: str
+    label: str | None
+    summary: str | None
+    rationale: str | None
+    relation: str | None
+    relation_label: str | None
+    newer_claim: ResourceSummary | None
+    older_claim: ResourceSummary | None
+    evidence: list[EvidenceDescription]
+    reconsidered_at: str | None
+    reconsidered_by: str | None
+
+
+@dataclass(frozen=True)
 class ClaimDescription:
     iri: str
     label: str | None
@@ -577,6 +615,9 @@ class ClaimDescription:
     observation_status: str | None
     observation_status_label: str | None
     proposed_assertions: list[ResourceSummary]
+    lifecycle_summary: str | None
+    outgoing_reconsiderations: list[ClaimReconsiderationDescription]
+    incoming_reconsiderations: list[ClaimReconsiderationDescription]
 
 
 @dataclass(frozen=True)
@@ -632,6 +673,7 @@ class ResourceContext:
     label: str | None
     description: str | None
     types: list[str]
+    claim: ClaimDescription | None
     outgoing: list[ResourceTriple]
     incoming: list[ResourceTriple]
     limit: int
@@ -930,12 +972,19 @@ class DoxaBase:
         resource_iri = self.expand_iri(iri)
         graphs = self._expand_graphs([graph] if graph else None)
         lookup_graphs = self._lookup_graphs(graphs)
+        types = self._types_from_graphs(graphs, resource_iri)
+        claim = (
+            self._describe_claim(resource_iri, graphs, lookup_graphs)
+            if self.expand_iri("rc:Claim") in types
+            else None
+        )
         return ResourceContext(
             iri=resource_iri,
             graph=graph,
             label=self._display_label_from_graphs(lookup_graphs, resource_iri),
             description=self._description_from_graphs(lookup_graphs, resource_iri),
-            types=self._types_from_graphs(graphs, resource_iri),
+            types=types,
+            claim=claim,
             outgoing=self._resource_triples(
                 graphs,
                 subject=resource_iri,
@@ -1352,6 +1401,40 @@ class DoxaBase:
                     source_iri=claim_iri,
                     depth=depth + 1,
                 )
+            for reconsideration in claim.outgoing_reconsiderations:
+                add_resource(
+                    reconsideration.iri,
+                    "claim_reconsideration",
+                    "claim reconsideration",
+                    source_iri=claim_iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    reconsideration.older_claim,
+                    "reconsidered_claim",
+                    "reconsidered claim",
+                    source_iri=reconsideration.iri,
+                    depth=depth + 2,
+                )
+                for evidence in reconsideration.evidence:
+                    add_evidence(evidence.iri, reconsideration.iri, depth + 2)
+            for reconsideration in claim.incoming_reconsiderations:
+                add_resource(
+                    reconsideration.iri,
+                    "incoming_claim_reconsideration",
+                    "incoming claim reconsideration",
+                    source_iri=claim_iri,
+                    depth=depth + 1,
+                )
+                add_summary(
+                    reconsideration.newer_claim,
+                    "reconsidering_claim",
+                    "reconsidering claim",
+                    source_iri=reconsideration.iri,
+                    depth=depth + 2,
+                )
+                for evidence in reconsideration.evidence:
+                    add_evidence(evidence.iri, reconsideration.iri, depth + 2)
             for observation_iri in self._subjects(
                 all_graphs,
                 "rc:hasClaim",
@@ -1739,6 +1822,11 @@ class DoxaBase:
                 and self.expand_iri("rc:Pattern") in seed_types
             ):
                 add_pattern(seed, None, 0)
+            elif (
+                profile in {"pattern_brief", "deep_lore"}
+                and self.expand_iri("rc:Claim") in seed_types
+            ):
+                add_claim(seed, None, 0)
             else:
                 warnings.append(
                     f"Seed '{seed}' was included directly; profile-specific expansion did not apply."
@@ -1922,9 +2010,13 @@ class DoxaBase:
             "related_dataset_reason": 8,
             "related_dataset": 9,
             "supporting_claim": 10,
-            "supporting_observation": 11,
-            "evidence": 12,
-            "source_span": 13,
+            "claim_reconsideration": 11,
+            "incoming_claim_reconsideration": 11,
+            "reconsidered_claim": 12,
+            "reconsidering_claim": 12,
+            "supporting_observation": 13,
+            "evidence": 14,
+            "source_span": 15,
         }
         if route in exact:
             return exact[route]
@@ -1999,6 +2091,14 @@ class DoxaBase:
             "supporting_claim": "A claim supporting a selected pattern or observation.",
             "claim_target": "A resource a supporting claim is about.",
             "proposed_assertion": "A tentative assertion linked from a supporting claim.",
+            "claim_reconsideration": (
+                "A reconsideration recorded by the selected claim about an earlier claim."
+            ),
+            "incoming_claim_reconsideration": (
+                "A later reconsideration that weakens, contradicts, supersedes, or refines the selected claim."
+            ),
+            "reconsidered_claim": "An earlier claim named by a reconsideration.",
+            "reconsidering_claim": "A later claim that reconsiders the selected claim.",
             "supporting_observation": "An observation supporting a selected pattern or claim.",
             "observed_asset": "A dataset or asset named by a selected observation.",
             "observed_column": "A column named by a selected observation.",
@@ -3063,6 +3163,300 @@ class DoxaBase:
             ),
             pattern_triples=pattern_triples,
             evidence_triples=evidence_triples,
+        )
+
+    def record_claim_reconsideration(
+        self,
+        *,
+        newer_claim: str,
+        older_claim: str,
+        relation: TypingLiteral[
+            "weakens",
+            "contradicts",
+            "supersedes",
+            "refines",
+        ]
+        | str,
+        rationale: str,
+        summary: str | None = None,
+        reconsidered_at: datetime | str | None = None,
+        reconsidered_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        source_path: str | None = None,
+        source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        source_kind: str | None = None,
+        older_claim_status: str | None = None,
+        reconsideration_iri: str | None = None,
+        evidence_iri: str | None = None,
+        source_span_iri: str | None = None,
+    ) -> ClaimReconsiderationRecord:
+        if not rationale.strip():
+            raise DoxaBaseError("reconsideration rationale must not be empty")
+        newer_claim_iri = str(self._resource_ref("newer_claim", newer_claim))
+        older_claim_iri = str(self._resource_ref("older_claim", older_claim))
+        if newer_claim_iri == older_claim_iri:
+            raise DoxaBaseError("newer_claim and older_claim must be different")
+        relation_iri, direct_predicate, default_status = (
+            self._claim_reconsideration_relation(relation)
+        )
+        status_value = (
+            older_claim_status.strip()
+            if older_claim_status and older_claim_status.strip()
+            else default_status
+        )
+        self._ensure_claim_resource("newer_claim", newer_claim_iri)
+        self._ensure_claim_resource("older_claim", older_claim_iri)
+        if status_value is not None:
+            self._resource_ref("older_claim_status", status_value)
+
+        evidence_source_values = self._string_values(
+            "evidence_sources",
+            evidence_sources,
+        )
+        source_path_value = (
+            source_path.strip()
+            if source_path and source_path.strip()
+            else None
+        )
+        source_section_value = (
+            source_section.strip()
+            if source_section and source_section.strip()
+            else None
+        )
+        source_kind_value = (
+            source_kind.strip()
+            if source_kind and source_kind.strip()
+            else None
+        )
+        evidence_iri_value = (
+            evidence_iri.strip()
+            if evidence_iri and evidence_iri.strip()
+            else None
+        )
+        if evidence_summary and not (
+            evidence_source_values or source_path_value or evidence_iri_value
+        ):
+            raise DoxaBaseError(
+                "evidence_summary requires evidence_sources, source_path, or evidence_iri"
+            )
+        for name, value in {"start_line": start_line, "end_line": end_line}.items():
+            if value is not None and value < 1:
+                raise DoxaBaseError(f"{name} must be a positive one-based line number")
+
+        reconsideration_subject = URIRef(
+            reconsideration_iri or self._mint_iri("claim-reconsideration")
+        )
+        evidence_subject = (
+            URIRef(evidence_iri_value)
+            if evidence_iri_value is not None
+            else URIRef(self._mint_iri("evidence"))
+            if evidence_source_values or source_path_value
+            else None
+        )
+        source_span_subject = (
+            URIRef(source_span_iri or self._mint_iri("source-span"))
+            if source_path_value is not None
+            else None
+        )
+        summary_text = (
+            summary.strip()
+            if summary and summary.strip()
+            else f"{self._label_for_resource(relation_iri) or relation} claim reconsideration"
+        )
+
+        reconsideration_graph = Graph()
+        self._bind_prefixes(reconsideration_graph)
+        reconsideration_graph.add(
+            (
+                reconsideration_subject,
+                RDF.type,
+                URIRef(self.expand_iri("rc:ClaimReconsideration")),
+            )
+        )
+        reconsideration_graph.add(
+            (
+                reconsideration_subject,
+                URIRef(self.expand_iri("rc:summary")),
+                Literal(summary_text),
+            )
+        )
+        reconsideration_graph.add(
+            (
+                reconsideration_subject,
+                URIRef(self.expand_iri("rc:reconsideringClaim")),
+                URIRef(newer_claim_iri),
+            )
+        )
+        reconsideration_graph.add(
+            (
+                reconsideration_subject,
+                URIRef(self.expand_iri("rc:reconsideredClaim")),
+                URIRef(older_claim_iri),
+            )
+        )
+        reconsideration_graph.add(
+            (
+                reconsideration_subject,
+                URIRef(self.expand_iri("rc:reconsiderationRelation")),
+                URIRef(relation_iri),
+            )
+        )
+        reconsideration_graph.add(
+            (
+                reconsideration_subject,
+                URIRef(self.expand_iri("rc:reconsiderationRationale")),
+                Literal(rationale),
+            )
+        )
+        reconsideration_graph.add(
+            (
+                reconsideration_subject,
+                URIRef(self.expand_iri("rc:reconsideredAt")),
+                self._datetime_literal(reconsidered_at, name="reconsidered_at"),
+            )
+        )
+        reconsideration_graph.add(
+            (
+                URIRef(newer_claim_iri),
+                URIRef(self.expand_iri(direct_predicate)),
+                URIRef(older_claim_iri),
+            )
+        )
+        if reconsidered_by is not None:
+            reconsideration_graph.add(
+                (
+                    reconsideration_subject,
+                    URIRef(self.expand_iri("rc:reconsideredBy")),
+                    self._resource_or_literal(reconsidered_by),
+                )
+            )
+        if evidence_subject is not None:
+            reconsideration_graph.add(
+                (
+                    reconsideration_subject,
+                    URIRef(self.expand_iri("rc:evidence")),
+                    evidence_subject,
+                )
+            )
+
+        evidence_triples = 0
+        if evidence_subject is not None and (
+            evidence_source_values or source_path_value
+        ):
+            evidence_graph = Graph()
+            self._bind_prefixes(evidence_graph)
+            evidence_graph.add(
+                (evidence_subject, RDF.type, URIRef(self.expand_iri("rc:Evidence")))
+            )
+            if evidence_summary:
+                evidence_graph.add(
+                    (
+                        evidence_subject,
+                        URIRef(self.expand_iri("rc:summary")),
+                        Literal(evidence_summary),
+                    )
+                )
+            for source in evidence_source_values:
+                evidence_graph.add((evidence_subject, DCTERMS.source, Literal(source)))
+            if source_path_value is not None:
+                assert source_span_subject is not None
+                evidence_graph.add(
+                    (
+                        evidence_subject,
+                        URIRef(self.expand_iri("rc:sourceSpan")),
+                        source_span_subject,
+                    )
+                )
+                evidence_graph.add(
+                    (
+                        source_span_subject,
+                        RDF.type,
+                        URIRef(self.expand_iri("rc:SourceSpan")),
+                    )
+                )
+                evidence_graph.add(
+                    (
+                        source_span_subject,
+                        URIRef(self.expand_iri("rc:sourcePath")),
+                        Literal(source_path_value),
+                    )
+                )
+                if source_section_value:
+                    evidence_graph.add(
+                        (
+                            source_span_subject,
+                            URIRef(self.expand_iri("rc:sourceSection")),
+                            Literal(source_section_value),
+                        )
+                    )
+                if start_line is not None:
+                    evidence_graph.add(
+                        (
+                            source_span_subject,
+                            URIRef(self.expand_iri("rc:startLine")),
+                            Literal(start_line, datatype=XSD.integer),
+                        )
+                    )
+                if end_line is not None:
+                    evidence_graph.add(
+                        (
+                            source_span_subject,
+                            URIRef(self.expand_iri("rc:endLine")),
+                            Literal(end_line, datatype=XSD.integer),
+                        )
+                    )
+                if source_kind_value is not None:
+                    evidence_graph.add(
+                        (
+                            source_span_subject,
+                            URIRef(self.expand_iri("rc:sourceKind")),
+                            URIRef(self.expand_iri(source_kind_value)),
+                        )
+                    )
+            evidence_triples = self._insert_graph("evidence", evidence_graph)
+
+        reconsideration_triples = self._insert_graph(
+            "observations",
+            reconsideration_graph,
+        )
+        status_triples = 0
+        if status_value is not None:
+            status_graph = Graph()
+            self._bind_prefixes(status_graph)
+            status_graph.add(
+                (
+                    URIRef(older_claim_iri),
+                    URIRef(self.expand_iri("rc:observationStatus")),
+                    URIRef(self.expand_iri(status_value)),
+                )
+            )
+            status_triples = self._replace_subject_triples(
+                "observations",
+                older_claim_iri,
+                [self.expand_iri("rc:observationStatus")],
+                status_graph,
+            )
+
+        return ClaimReconsiderationRecord(
+            reconsideration_iri=str(reconsideration_subject),
+            newer_claim_iri=newer_claim_iri,
+            older_claim_iri=older_claim_iri,
+            relation=relation_iri,
+            relation_label=self._label_for_resource(relation_iri),
+            direct_predicate=self.expand_iri(direct_predicate),
+            older_claim_status=(
+                self.expand_iri(status_value) if status_value is not None else None
+            ),
+            evidence_iri=str(evidence_subject) if evidence_subject is not None else None,
+            source_span_iri=(
+                str(source_span_subject) if source_span_subject is not None else None
+            ),
+            reconsideration_triples=reconsideration_triples,
+            evidence_triples=evidence_triples,
+            status_triples=status_triples,
         )
 
     def record_map_dataset(
@@ -6714,6 +7108,18 @@ class DoxaBase:
             claim_iri,
             "rc:observationStatus",
         )
+        outgoing_reconsiderations = self._claim_reconsiderations_for_claim(
+            claim_iri,
+            graphs,
+            lookup_graphs,
+            direction="outgoing",
+        )
+        incoming_reconsiderations = self._claim_reconsiderations_for_claim(
+            claim_iri,
+            graphs,
+            lookup_graphs,
+            direction="incoming",
+        )
         return ClaimDescription(
             iri=claim_iri,
             label=self._display_label_from_graphs(lookup_graphs, claim_iri),
@@ -6731,6 +7137,143 @@ class DoxaBase:
             proposed_assertions=self._resource_summaries(
                 lookup_graphs,
                 self._objects(graphs, claim_iri, "rc:proposedAssertion"),
+            ),
+            lifecycle_summary=self._claim_lifecycle_summary(
+                observation_status,
+                outgoing_reconsiderations,
+                incoming_reconsiderations,
+            ),
+            outgoing_reconsiderations=outgoing_reconsiderations,
+            incoming_reconsiderations=incoming_reconsiderations,
+        )
+
+    def _claim_lifecycle_summary(
+        self,
+        observation_status: str | None,
+        outgoing_reconsiderations: list[ClaimReconsiderationDescription],
+        incoming_reconsiderations: list[ClaimReconsiderationDescription],
+    ) -> str | None:
+        parts: list[str] = []
+        status_label = self._label_for_resource(observation_status)
+        if status_label is not None:
+            parts.append(f"Current status: {status_label}.")
+        if incoming_reconsiderations:
+            parts.append(
+                "Later claims reconsider this claim: "
+                f"{self._reconsideration_count_summary(incoming_reconsiderations)}."
+            )
+        if outgoing_reconsiderations:
+            parts.append(
+                "This claim reconsiders earlier claims: "
+                f"{self._reconsideration_count_summary(outgoing_reconsiderations)}."
+            )
+        return " ".join(parts) if parts else None
+
+    def _reconsideration_count_summary(
+        self,
+        reconsiderations: Iterable[ClaimReconsiderationDescription],
+    ) -> str:
+        counts: dict[str, int] = {}
+        for reconsideration in reconsiderations:
+            label = reconsideration.relation_label or "reconsideration"
+            counts[label] = counts.get(label, 0) + 1
+        return ", ".join(
+            f"{count} {label}{'' if count == 1 else 's'}"
+            for label, count in sorted(counts.items())
+        )
+
+    def _claim_reconsiderations_for_claim(
+        self,
+        claim_iri: str,
+        graphs: list[str],
+        lookup_graphs: list[str],
+        *,
+        direction: TypingLiteral["outgoing", "incoming"],
+    ) -> list[ClaimReconsiderationDescription]:
+        predicate = (
+            "rc:reconsideringClaim"
+            if direction == "outgoing"
+            else "rc:reconsideredClaim"
+        )
+        reconsideration_iris = self._subjects(graphs, predicate, claim_iri)
+        return [
+            self._describe_claim_reconsideration(
+                reconsideration_iri,
+                graphs,
+                lookup_graphs,
+            )
+            for reconsideration_iri in reconsideration_iris
+        ]
+
+    def _describe_claim_reconsideration(
+        self,
+        reconsideration_iri: str,
+        graphs: list[str],
+        lookup_graphs: list[str],
+    ) -> ClaimReconsiderationDescription:
+        relation = self._first_object(
+            graphs,
+            reconsideration_iri,
+            "rc:reconsiderationRelation",
+        )
+        newer_claim = self._first_object(
+            graphs,
+            reconsideration_iri,
+            "rc:reconsideringClaim",
+        )
+        older_claim = self._first_object(
+            graphs,
+            reconsideration_iri,
+            "rc:reconsideredClaim",
+        )
+        return ClaimReconsiderationDescription(
+            iri=reconsideration_iri,
+            label=self._display_label_from_graphs(lookup_graphs, reconsideration_iri),
+            summary=self._first_object(graphs, reconsideration_iri, "rc:summary"),
+            rationale=self._first_object(
+                graphs,
+                reconsideration_iri,
+                "rc:reconsiderationRationale",
+            ),
+            relation=relation,
+            relation_label=self._label_for_resource(relation),
+            newer_claim=(
+                self._resource_summary(
+                    lookup_graphs,
+                    newer_claim,
+                    description_predicate="rc:claimText",
+                    display_label=True,
+                )
+                if newer_claim is not None
+                else None
+            ),
+            older_claim=(
+                self._resource_summary(
+                    lookup_graphs,
+                    older_claim,
+                    description_predicate="rc:claimText",
+                    display_label=True,
+                )
+                if older_claim is not None
+                else None
+            ),
+            evidence=[
+                self._describe_evidence(evidence_iri, graphs, lookup_graphs)
+                for evidence_iri in self._objects(
+                    graphs,
+                    reconsideration_iri,
+                    "rc:evidence",
+                )
+            ],
+            reconsidered_at=self._first_object(
+                graphs,
+                reconsideration_iri,
+                "rc:reconsideredAt",
+            ),
+            reconsidered_by=self._first_object(
+                graphs,
+                reconsideration_iri,
+                "rc:reconsideredBy",
             ),
         )
 
@@ -6957,6 +7500,28 @@ class DoxaBase:
         if not cleaned:
             raise DoxaBaseError(f"{name} must not be empty")
         return self.expand_iri(cleaned)
+
+    def _claim_reconsideration_relation(
+        self,
+        relation: str,
+    ) -> tuple[str, str, str | None]:
+        text = relation.strip()
+        if not text:
+            raise DoxaBaseError("relation must not be empty")
+        expanded = self.expand_iri(text)
+        for name, (relation_iri, predicate, status) in (
+            CLAIM_RECONSIDERATION_RELATIONS.items()
+        ):
+            expanded_relation = self.expand_iri(relation_iri)
+            if text == name or expanded == expanded_relation:
+                return expanded_relation, predicate, status
+        allowed = ", ".join(CLAIM_RECONSIDERATION_RELATIONS)
+        raise DoxaBaseError(f"relation must be one of: {allowed}")
+
+    def _ensure_claim_resource(self, name: str, iri: str) -> None:
+        graphs = self._expand_graphs(["all"])
+        if self.expand_iri("rc:Claim") not in self._types_from_graphs(graphs, iri):
+            raise DoxaBaseError(f"{name} must identify an existing rc:Claim")
 
     def _add_optional_literal(
         self,

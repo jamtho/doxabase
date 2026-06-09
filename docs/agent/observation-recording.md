@@ -89,6 +89,26 @@ When several observations or claims belong together, use
 to map facts: they record the agent's rationale before, during, or after map
 systematisation. See `patterns` for the dedicated pattern workflow.
 
+When a later claim changes how an earlier claim should be read, use
+`doxabase.record_claim_reconsideration`. This is the right move for "I used to
+think X, but evidence now makes Y safer" moments. The relation can be
+`weakens`, `contradicts`, `supersedes`, or `refines`; choose the lightest
+relation that captures the change. For example, use `weakens` when a hunch is
+still partly useful but too broad, and `contradicts` when later evidence makes
+the earlier claim false.
+
+Reconsiderations preserve exploratory work without pretending every hunch
+survived unchanged. They can cite DoxaBase retrieval output as evidence with
+`source_kind="rc:DoxaBaseAPISource"` when the supporting artifact is a search,
+context slice, dataset description, or other API result. Provide `source_path`
+when you want that source kind preserved on an `rc:SourceSpan`; for example,
+point it at a scratch JSON export of the retrieval output.
+
+After recording a reconsideration, inspect the older claim through
+`describe_resource` or as a supporting claim in `describe_pattern`. Claim
+descriptions include a `lifecycle_summary` plus incoming/outgoing
+reconsideration details.
+
 The writer adds graph triples only after validating basic inputs such as summary
 presence, observation type, ISO datetime syntax, and non-negative counts.
 

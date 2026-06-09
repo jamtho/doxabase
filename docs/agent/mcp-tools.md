@@ -100,6 +100,17 @@ Records one `rc:Pattern` in the `patterns` graph and optionally linked
 several observations, claims, or sources belong together and suggest a more
 durable pattern or map implication.
 
+`doxabase.record_claim_reconsideration`
+
+Records that a newer claim weakens, contradicts, supersedes, or refines an
+older claim. Use this when exploration changes an agent's mind but the earlier
+hunch remains useful context. The helper writes an `rc:ClaimReconsideration`,
+adds a direct relation such as `rc:weakens`, optionally writes evidence/source
+span context, and marks the older claim as `rc:Weakened`, `rc:Contradicted`, or
+`rc:Superseded` when that follows from the relation. `describe_pattern` and
+`describe_context_slice` surface incoming and outgoing reconsiderations around
+claims, and claim descriptions include a compact `lifecycle_summary`.
+
 `doxabase.record_map_dataset`
 
 Records or updates a dataset/table resource in the `map` graph. Omit

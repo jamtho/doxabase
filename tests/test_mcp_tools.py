@@ -19,6 +19,7 @@ from doxabase.mcp_tools import (
     list_entities_tool,
     load_example_fixtures_tool,
     record_claim_observation_tool,
+    record_claim_reconsideration_tool,
     record_map_caveat_tool,
     record_map_column_tool,
     record_map_dataset_tool,
@@ -51,6 +52,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
+    assert "doxabase.record_claim_reconsideration" in tool_names
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.record_map_dataset" in tool_names
     assert "doxabase.record_map_column" in tool_names
@@ -538,6 +540,54 @@ def test_record_claim_observation_tool_and_resource_context(
     assert any(
         triple["predicate"] == "https://richcanopy.org/ns/rc#claimKind"
         for triple in context["outgoing"]
+    )
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_record_claim_reconsideration_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    older = record_claim_observation_tool(
+        db,
+        summary="Initial MMSI identity hunch.",
+        claim_text="MMSI can be treated as the stable vessel identity key.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=["https://example.test/ais#mmsi"],
+        evidence_sources=["trial setup"],
+    )
+    newer = record_claim_observation_tool(
+        db,
+        summary="MMSI caveat check.",
+        claim_text="MMSI is an operational grouping key, not proof of vessel identity.",
+        claim_kind="rc:CaveatClaim",
+        claim_targets=["https://example.test/ais#mmsi"],
+        evidence_sources=["retrieved caveat"],
+        observation_status="rc:Checked",
+    )
+
+    result = record_claim_reconsideration_tool(
+        db,
+        newer_claim=newer["claim_iri"],
+        older_claim=older["claim_iri"],
+        relation="weakens",
+        rationale="The retrieved caveat makes the first hunch too strong.",
+        evidence_sources=["DoxaBase search(\"MMSI vessel\")"],
+        source_path="/tmp/doxabase-search-mmsi-vessel.json",
+        source_kind="rc:DoxaBaseAPISource",
+    )
+
+    assert result["relation"] == "https://richcanopy.org/ns/rc#Weakening"
+    assert result["older_claim_status"] == "https://richcanopy.org/ns/rc#Weakened"
+    assert result["evidence_iri"] is not None
+    assert result["source_span_iri"] is not None
+    context = describe_resource_tool(
+        db,
+        iri=older["claim_iri"],
+        graph="observations",
+    )
+    assert context["claim"]["lifecycle_summary"] == (
+        "Current status: weakened. Later claims reconsider this claim: 1 weakening."
     )
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
