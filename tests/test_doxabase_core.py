@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1068
+    assert graphs["base_ontology"].triple_count == 1094
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1011
+    assert graphs["base_shapes"].triple_count == 1099
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -39,11 +39,11 @@ def test_import_trig_maps_graph_iris_to_roles(tmp_path: Path) -> None:
 
     assert imported == {
         "evidence": 3,
-        "map": 219,
+        "map": 223,
         "observations": 5,
         "ontology": 94,
     }
-    assert db.triple_count("map") == 219
+    assert db.triple_count("map") == 223
     assert db.triple_count("ontology") == 94
 
 
@@ -1036,7 +1036,17 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     assert description.row_semantics.iri == RC + "EventRow"
     assert description.schema_stability is not None
     assert description.schema_stability.iri == RC + "FixedSchema"
+    assert description.layout_verification_status is None
+    assert description.layout_verification_note is None
     assert description.path_templates == ["broadcasts/{year}/ais-{date}.parquet"]
+    assert description.partition_schemes[0].layout_verification_status is not None
+    assert description.partition_schemes[0].layout_verification_status.iri == (
+        RC + "GeneratedFromManifestLayout"
+    )
+    assert description.partition_schemes[0].layout_verification_note is not None
+    assert "verify against storage listing" in (
+        description.partition_schemes[0].layout_verification_note
+    )
     assert len(description.storage_accesses) == 1
     storage_access = description.storage_accesses[0]
     assert storage_access.storage_protocol is not None
@@ -1119,6 +1129,12 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     index_description = db.describe_dataset(
         "https://richcanopy.org/example/manifest/ais#DailyIndex"
     )
+    assert index_description.layout_verification_status is not None
+    assert index_description.layout_verification_status.iri == RC + "UnverifiedLayout"
+    assert index_description.layout_verification_note is not None
+    assert "index/{year}/ais-{date}.parquet" in (
+        index_description.layout_verification_note
+    )
     assert index_description.caveats == []
     assert any(
         caveat.description
@@ -1169,6 +1185,8 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         access_mode="rc:ReadOnlyAccess",
         storage_root="/home/james/github.com/jamtho/enron-emails",
         path_templates=["data/parquet/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note="Matched by listing the local parquet directory.",
         datasets=[messages],
     )
     caveat_record = db.record_map_caveat(
@@ -1188,6 +1206,8 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         row_semantics="rc:EventRow",
         entity_key=doc_id,
         schema_stability="rc:FixedSchema",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        layout_verification_note="A representative DuckDB read succeeded during setup.",
         caveats=[caveat],
         storage_accesses=[storage],
     )
@@ -1281,6 +1301,11 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert description.schema_stability is not None
     assert description.schema_stability.iri == RC + "FixedSchema"
     assert description.row_count_snapshot == 123
+    assert description.layout_verification_status is not None
+    assert description.layout_verification_status.iri == RC + "VerifiedByQueryLayout"
+    assert description.layout_verification_note == (
+        "A representative DuckDB read succeeded during setup."
+    )
     assert description.path_templates == [
         "data/parquet/eml_messages.parquet",
         "data/parquet/*.parquet",
@@ -1289,6 +1314,13 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert description.columns[0].nullable is False
     assert description.storage_accesses[0].storage_root == (
         "/home/james/github.com/jamtho/enron-emails"
+    )
+    assert description.storage_accesses[0].layout_verification_status is not None
+    assert description.storage_accesses[0].layout_verification_status.iri == (
+        RC + "VerifiedByListingLayout"
+    )
+    assert description.storage_accesses[0].layout_verification_note == (
+        "Matched by listing the local parquet directory."
     )
     assert description.caveats[0].description == (
         "body_top is cleaned sender-new text, not raw email text."

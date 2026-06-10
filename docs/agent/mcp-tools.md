@@ -44,9 +44,10 @@ Lexically searches literal RDF claims and returns matched resources with graph, 
 `doxabase.describe_dataset`
 
 Returns bounded context for one dataset/table IRI: row semantics, entity and
-snapshot keys, columns, physical/value types, path templates, layouts, storage
-access descriptions, partitions, direct caveats with impact/severity, upstream
-caveats inherited through relationships, provenance transformations,
+snapshot keys, columns, physical/value types, path templates, dataset/layout
+verification status and notes, layouts, storage access descriptions, partitions,
+direct caveats with impact/severity, upstream caveats inherited through
+relationships, provenance transformations,
 relationships, directly related datasets, grouped related dataset reasons, and
 linked patterns. Column summaries include column names and
 owning dataset context when available; related dataset entries include
@@ -58,6 +59,10 @@ caveats attached to source datasets or source-side columns that should remain
 visible when interpreting an aggregation, derivation, or foreign key. The
 top-level `upstream_caveats` field is a deduped rollup of those inherited
 caveats; it is separate from direct `caveats`.
+Check `layout_verification_status` and `layout_verification_note` before using
+`path_templates` for executable query planning. Child `physical_layouts`,
+`storage_accesses`, and `partition_schemes` may carry their own verification
+status/notes when the uncertainty belongs to one part of the physical metadata.
 Within each linked-pattern reason, `iri` and `pattern_iri` both name the linked
 pattern. Scan `match_groups` first for relevance tiers, route labels, resource
 kinds, and supporting resources; use raw `matches` when every route matters.

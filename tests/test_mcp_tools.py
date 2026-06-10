@@ -88,7 +88,7 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     tables = list_entities_tool(db, type="rc:Table", graph="map")
     validation = validate_graph_tool(db, scope="all")
 
-    assert load_result["total_imported"] == 763
+    assert load_result["total_imported"] == 767
     assert overview["key_counts"]["tables"] >= 7
     assert tables["count"] >= 7
     assert validation["conforms"] is True
@@ -473,6 +473,15 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
     )
     assert aggregation["source_dataset"]["label"] == "AIS Daily Broadcast Positions"
     assert aggregation["group_by_columns"][0]["column_name"] == "mmsi"
+    assert result["layout_verification_status"]["iri"] == (
+        "https://richcanopy.org/ns/rc#UnverifiedLayout"
+    )
+    assert "index/{year}/ais-{date}.parquet" in result[
+        "layout_verification_note"
+    ]
+    assert result["partition_schemes"][0]["layout_verification_status"]["iri"] == (
+        "https://richcanopy.org/ns/rc#GeneratedFromManifestLayout"
+    )
     assert result["caveats"] == []
     assert any(
         caveat["description"]
@@ -760,6 +769,8 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
         label="Messages",
         is_table=True,
         path_templates=["data/messages.parquet"],
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note="A plausible test path before query verification.",
     )
     column_result = record_map_column_tool(
         db,
@@ -782,6 +793,8 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
         storage_protocol="rc:LocalFilesystemStorage",
         access_mode="rc:ReadOnlyAccess",
         storage_root="/tmp/example",
+        layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note="Confirmed by a local directory listing.",
         datasets=[table],
     )
     relationship_result = record_map_relationship_tool(
@@ -809,6 +822,18 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     )
     description = describe_dataset_tool(db, iri=table)
     assert description["label"] == "Messages"
+    assert description["layout_verification_status"]["iri"] == (
+        "https://richcanopy.org/ns/rc#CandidateLayout"
+    )
+    assert description["layout_verification_note"] == (
+        "A plausible test path before query verification."
+    )
+    assert description["storage_accesses"][0]["layout_verification_status"]["iri"] == (
+        "https://richcanopy.org/ns/rc#VerifiedByListingLayout"
+    )
+    assert description["storage_accesses"][0]["layout_verification_note"] == (
+        "Confirmed by a local directory listing."
+    )
     linked_pattern_reason = description["linked_pattern_reasons"][0]
     assert linked_pattern_reason["pattern_iri"] == linked_pattern_reason["iri"]
     assert linked_pattern_reason["pattern_text"] == (

@@ -42,6 +42,25 @@ rc:DataAssetShape a sh:NodeShape ;
         sh:path rc:hasStorageAccess ;
         sh:nodeKind sh:IRI ;
         sh:message "hasStorageAccess values should be named storage access resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:layoutVerificationStatus ;
+        sh:maxCount 1 ;
+        sh:in (
+            rc:UnverifiedLayout
+            rc:GeneratedFromManifestLayout
+            rc:CandidateLayout
+            rc:VerifiedByListingLayout
+            rc:VerifiedByQueryLayout
+            rc:ContradictedLayout
+        ) ;
+        sh:message "layoutVerificationStatus must be a known layout verification status." ;
+    ] ;
+    sh:property [
+        sh:path rc:layoutVerificationNote ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "layoutVerificationNote must be a single string if declared." ;
     ] .
 
 rc:TableShape a sh:NodeShape ;
@@ -336,6 +355,25 @@ rc:PhysicalLayoutShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:node rc:RowOrderingShape ;
         sh:message "hasRowOrdering must match rc:RowOrderingShape." ;
+    ] ;
+    sh:property [
+        sh:path rc:layoutVerificationStatus ;
+        sh:maxCount 1 ;
+        sh:in (
+            rc:UnverifiedLayout
+            rc:GeneratedFromManifestLayout
+            rc:CandidateLayout
+            rc:VerifiedByListingLayout
+            rc:VerifiedByQueryLayout
+            rc:ContradictedLayout
+        ) ;
+        sh:message "layoutVerificationStatus must be a known layout verification status." ;
+    ] ;
+    sh:property [
+        sh:path rc:layoutVerificationNote ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "layoutVerificationNote must be a single string if declared." ;
     ] .
 
 rc:RowOrderingShape a sh:NodeShape ;
@@ -381,6 +419,25 @@ rc:PartitionSchemeShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:in ( rc:Daily rc:Hourly rc:Monthly rc:ByValue ) ;
         sh:message "partitionGranularity must be Daily, Hourly, Monthly, or ByValue." ;
+    ] ;
+    sh:property [
+        sh:path rc:layoutVerificationStatus ;
+        sh:maxCount 1 ;
+        sh:in (
+            rc:UnverifiedLayout
+            rc:GeneratedFromManifestLayout
+            rc:CandidateLayout
+            rc:VerifiedByListingLayout
+            rc:VerifiedByQueryLayout
+            rc:ContradictedLayout
+        ) ;
+        sh:message "layoutVerificationStatus must be a known layout verification status." ;
+    ] ;
+    sh:property [
+        sh:path rc:layoutVerificationNote ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "layoutVerificationNote must be a single string if declared." ;
     ] .
 
 rc:PartitionLevelShape a sh:NodeShape ;
@@ -465,6 +522,25 @@ rc:StorageAccessShape a sh:NodeShape ;
         sh:path rc:pathTemplate ;
         sh:datatype xsd:string ;
         sh:message "Storage access pathTemplate values must be strings." ;
+    ] ;
+    sh:property [
+        sh:path rc:layoutVerificationStatus ;
+        sh:maxCount 1 ;
+        sh:in (
+            rc:UnverifiedLayout
+            rc:GeneratedFromManifestLayout
+            rc:CandidateLayout
+            rc:VerifiedByListingLayout
+            rc:VerifiedByQueryLayout
+            rc:ContradictedLayout
+        ) ;
+        sh:message "layoutVerificationStatus must be a known layout verification status." ;
+    ] ;
+    sh:property [
+        sh:path rc:layoutVerificationNote ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "layoutVerificationNote must be a single string if declared." ;
     ] .
 
 rc:ObservationShape a sh:NodeShape ;

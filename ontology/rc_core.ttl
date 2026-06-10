@@ -501,6 +501,9 @@ rc:StorageProtocol a rdfs:Class ;
 rc:AccessMode a rdfs:Class ;
     rdfs:comment "Whether a storage access pattern is read-only, read-write, or otherwise constrained." .
 
+rc:LayoutVerificationStatus a rdfs:Class ;
+    rdfs:comment "How strongly a physical layout, partition path, storage access pattern, or dataset-level path claim has been checked." .
+
 rc:hasPhysicalLayout a rdf:Property ;
     rdfs:domain rc:DataAsset ;
     rdfs:range rc:PhysicalLayout ;
@@ -636,6 +639,14 @@ rc:accessMode a rdf:Property ;
     rdfs:range rc:AccessMode ;
     rdfs:comment "The intended access mode for this storage description." .
 
+rc:layoutVerificationStatus a rdf:Property ;
+    rdfs:range rc:LayoutVerificationStatus ;
+    rdfs:comment "Verification state for physical layout, partition, storage access, or dataset-level path metadata." .
+
+rc:layoutVerificationNote a rdf:Property ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Short human-readable note explaining layout/path verification state, caveats, or next checks." .
+
 rc:Parquet a rc:FileFormat ; rdfs:label "Parquet" .
 rc:CSV a rc:FileFormat ; rdfs:label "CSV" .
 rc:TSV a rc:FileFormat ; rdfs:label "TSV" .
@@ -661,6 +672,30 @@ rc:DatabaseStorage a rc:StorageProtocol ; rdfs:label "database connection" .
 
 rc:ReadOnlyAccess a rc:AccessMode ; rdfs:label "read-only" .
 rc:ReadWriteAccess a rc:AccessMode ; rdfs:label "read-write" .
+
+rc:UnverifiedLayout a rc:LayoutVerificationStatus ;
+    rdfs:label "unverified layout" ;
+    rdfs:comment "The layout/path metadata is useful for orientation but has not yet been checked against the source system." .
+
+rc:GeneratedFromManifestLayout a rc:LayoutVerificationStatus ;
+    rdfs:label "generated from manifest" ;
+    rdfs:comment "The layout/path metadata was generated from source manifest or documentation, but has not been independently checked against storage or query results." .
+
+rc:CandidateLayout a rc:LayoutVerificationStatus ;
+    rdfs:label "candidate layout" ;
+    rdfs:comment "The layout/path metadata is a plausible candidate or competing hypothesis, not yet the accepted map fact." .
+
+rc:VerifiedByListingLayout a rc:LayoutVerificationStatus ;
+    rdfs:label "verified by listing" ;
+    rdfs:comment "The layout/path metadata has been checked against a storage directory or object listing." .
+
+rc:VerifiedByQueryLayout a rc:LayoutVerificationStatus ;
+    rdfs:label "verified by query" ;
+    rdfs:comment "The layout/path metadata has been checked by successfully querying or reading representative data." .
+
+rc:ContradictedLayout a rc:LayoutVerificationStatus ;
+    rdfs:label "contradicted layout" ;
+    rdfs:comment "The layout/path metadata conflicts with source evidence and should not be used without review." .
 
 rc:Ascending a rc:SortDirection ; rdfs:label "ascending" .
 rc:Descending a rc:SortDirection ; rdfs:label "descending" .

@@ -15,6 +15,7 @@ Use `rc:` terms for shared structural concepts:
 - `rc:ForeignKey`, `rc:SharedIdentifier`, `rc:Derivation`, `rc:Aggregation`
 - `rc:KnownCaveat`, `rc:Observation`, `rc:Claim`, `rc:Pattern`, `rc:Evidence`
 - `rc:PhysicalLayout`, `rc:PartitionScheme`, `rc:RowOrdering`
+- `rc:LayoutVerificationStatus` for path/layout confidence and verification
 
 Use project namespaces for domain-specific ideas:
 

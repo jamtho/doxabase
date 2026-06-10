@@ -359,6 +359,8 @@ class PhysicalLayoutDescription:
     description: str | None
     file_format: ResourceSummary | None
     compression_codec: ResourceSummary | None
+    layout_verification_status: ResourceSummary | None
+    layout_verification_note: str | None
 
 
 @dataclass(frozen=True)
@@ -376,6 +378,8 @@ class StorageAccessDescription:
     path_style_access: bool | None
     credential_reference: str | None
     path_templates: list[str]
+    layout_verification_status: ResourceSummary | None
+    layout_verification_note: str | None
 
 
 @dataclass(frozen=True)
@@ -387,6 +391,8 @@ class PartitionDescription:
     granularity: ResourceSummary | None
     path_template: str | None
     redundant_partition_key: ResourceSummary | None
+    layout_verification_status: ResourceSummary | None
+    layout_verification_note: str | None
 
 
 @dataclass(frozen=True)
@@ -533,6 +539,8 @@ class DatasetDescription:
     snapshot_timestamp: ResourceSummary | None
     schema_stability: ResourceSummary | None
     row_count_snapshot: int | None
+    layout_verification_status: ResourceSummary | None
+    layout_verification_note: str | None
     columns: list[ColumnDescription]
     path_templates: list[str]
     physical_layouts: list[PhysicalLayoutDescription]
@@ -2509,6 +2517,19 @@ class DoxaBase:
                 dataset_iri,
                 "rc:rowCountSnapshot",
             ),
+            layout_verification_status=self._optional_resource_summary(
+                lookup_graphs,
+                self._first_object(
+                    data_graphs,
+                    dataset_iri,
+                    "rc:layoutVerificationStatus",
+                ),
+            ),
+            layout_verification_note=self._first_object(
+                data_graphs,
+                dataset_iri,
+                "rc:layoutVerificationNote",
+            ),
             columns=columns,
             path_templates=path_templates,
             physical_layouts=physical_layouts,
@@ -3619,6 +3640,8 @@ class DoxaBase:
         row_semantics: str | None = None,
         entity_key: str | None = None,
         schema_stability: str | None = None,
+        layout_verification_status: str | None = None,
+        layout_verification_note: str | None = None,
         caveats: Iterable[str] | str | None = None,
         storage_accesses: Iterable[str] | str | None = None,
         physical_layouts: Iterable[str] | str | None = None,
@@ -3704,6 +3727,20 @@ class DoxaBase:
                     URIRef(self.expand_iri(schema_stability)),
                 )
             )
+        if layout_verification_status is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:layoutVerificationStatus")),
+                    URIRef(self.expand_iri(layout_verification_status)),
+                )
+            )
+        self._add_optional_literal(
+            graph,
+            subject,
+            "rc:layoutVerificationNote",
+            layout_verification_note,
+        )
         for caveat in caveat_values:
             graph.add(
                 (
@@ -3756,6 +3793,10 @@ class DoxaBase:
             predicates.append(self.expand_iri("rc:entityKey"))
         if schema_stability is not None:
             predicates.append(self.expand_iri("rc:schemaStability"))
+        if layout_verification_status is not None:
+            predicates.append(self.expand_iri("rc:layoutVerificationStatus"))
+        if layout_verification_note is not None:
+            predicates.append(self.expand_iri("rc:layoutVerificationNote"))
         if caveats is not None:
             predicates.append(self.expand_iri("rc:hasKnownCaveat"))
         if storage_accesses is not None:
@@ -3946,6 +3987,8 @@ class DoxaBase:
         path_style_access: bool | None = None,
         credential_reference: str | None = None,
         path_templates: Iterable[str] | str | None = None,
+        layout_verification_status: str | None = None,
+        layout_verification_note: str | None = None,
         datasets: Iterable[str] | str | None = None,
     ) -> MapResourceRecord:
         access_iri = self._required_iri("iri", iri)
@@ -3999,6 +4042,20 @@ class DoxaBase:
                     Literal(path_template),
                 )
             )
+        if layout_verification_status is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:layoutVerificationStatus")),
+                    URIRef(self.expand_iri(layout_verification_status)),
+                )
+            )
+        self._add_optional_literal(
+            graph,
+            subject,
+            "rc:layoutVerificationNote",
+            layout_verification_note,
+        )
 
         predicates = [str(RDF.type)]
         if label is not None:
@@ -4025,6 +4082,10 @@ class DoxaBase:
             predicates.append(self.expand_iri("rc:pathStyleAccess"))
         if path_templates is not None:
             predicates.append(self.expand_iri("rc:pathTemplate"))
+        if layout_verification_status is not None:
+            predicates.append(self.expand_iri("rc:layoutVerificationStatus"))
+        if layout_verification_note is not None:
+            predicates.append(self.expand_iri("rc:layoutVerificationNote"))
         triples = self._replace_subject_triples("map", access_iri, predicates, graph)
         if dataset_values:
             link_graph = Graph()
@@ -6386,6 +6447,19 @@ class DoxaBase:
                 if compression_codec is not None
                 else None
             ),
+            layout_verification_status=self._optional_resource_summary(
+                lookup_graphs,
+                self._first_object(
+                    data_graphs,
+                    layout_iri,
+                    "rc:layoutVerificationStatus",
+                ),
+            ),
+            layout_verification_note=self._first_object(
+                data_graphs,
+                layout_iri,
+                "rc:layoutVerificationNote",
+            ),
         )
 
     def _describe_storage_access(
@@ -6426,6 +6500,19 @@ class DoxaBase:
                 "rc:credentialReference",
             ),
             path_templates=self._objects(data_graphs, access_iri, "rc:pathTemplate"),
+            layout_verification_status=self._optional_resource_summary(
+                lookup_graphs,
+                self._first_object(
+                    data_graphs,
+                    access_iri,
+                    "rc:layoutVerificationStatus",
+                ),
+            ),
+            layout_verification_note=self._first_object(
+                data_graphs,
+                access_iri,
+                "rc:layoutVerificationNote",
+            ),
         )
 
     def _describe_partition(
@@ -6460,6 +6547,19 @@ class DoxaBase:
                 self._resource_summary(lookup_graphs, redundant_partition_key)
                 if redundant_partition_key is not None
                 else None
+            ),
+            layout_verification_status=self._optional_resource_summary(
+                lookup_graphs,
+                self._first_object(
+                    data_graphs,
+                    partition_iri,
+                    "rc:layoutVerificationStatus",
+                ),
+            ),
+            layout_verification_note=self._first_object(
+                data_graphs,
+                partition_iri,
+                "rc:layoutVerificationNote",
             ),
         )
 

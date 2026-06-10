@@ -14,6 +14,7 @@ The V1 executable-catalog slice records non-secret facts about physical storage:
 - path-style S3 requirement
 - non-secret credential reference
 - intended access mode
+- layout/path verification status and notes
 
 ## What Belongs In The Graph
 
@@ -32,6 +33,10 @@ are safe to share with project collaborators:
 - `rc:credentialReference` names credential material without storing it.
 - `rc:accessMode` records whether the intended use is read-only or read-write.
 - `rc:compressionCodec` records file compression on a physical layout.
+- `rc:layoutVerificationStatus` records whether path/layout metadata is
+  unverified, generated, candidate, verified by listing/query, or contradicted.
+- `rc:layoutVerificationNote` carries a short note about what has or has not
+  been checked.
 
 These terms are intentionally boring. They give agents enough structure to
 generate a DuckDB/S3/local-file plan, compare datasets, and ask good follow-up
@@ -57,9 +62,12 @@ agent runtime decides how profile X resolves.
 1. Call `doxabase.describe_dataset` for the target dataset.
 2. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
    `storage_accesses` together.
-3. Combine storage root or bucket/prefix facts with the dataset path template.
-4. Check caveats before generating a query.
-5. If a query is run, record the result or failure with
+3. Check `layout_verification_status` and `layout_verification_note` on the
+   dataset and on relevant layout, partition, and storage resources.
+4. Combine storage root or bucket/prefix facts with the dataset path template
+   only when the verification status and notes make that reasonable.
+5. Check caveats before generating a query.
+6. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
 ## Current Limits
@@ -69,5 +77,5 @@ helpers that turn these facts directly into DuckDB SQL, S3 settings, or runtime
 connection objects.
 
 For now, the value is handoff and planning: the next agent can see where the data
-is, how it is physically shaped, what local profile to use, and which caveats
-should travel with generated work.
+is, how it is physically shaped, what local profile to use, which layout claims
+need verification, and which caveats should travel with generated work.

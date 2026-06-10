@@ -28,4 +28,10 @@ These fixtures are representative tests, not full mechanical conversions. They a
 
 The AIS fixture is intentionally reduced. It includes representative non-secret storage access metadata, but it does not currently represent the full real AIS broadcast or daily-index Parquet schemas. In particular, the real data includes vessel identity columns that are not present in the fixture.
 
-The AIS `DailyIndex` fixture currently shares the broadcast partition path pattern. The real daily index layout may use a distinct `index/{year}/...` prefix, so agents should verify physical layout metadata before generating executable queries.
+The AIS `DailyIndex` fixture currently shares the broadcast partition path
+pattern. The graph records this as `rc:UnverifiedLayout` on `ais:DailyIndex`,
+and the shared partition template is marked
+`rc:GeneratedFromManifestLayout`. The real daily index layout may use a
+distinct `index/{year}/...` prefix, so agents should read
+`layout_verification_status` / `layout_verification_note` and verify physical
+layout metadata before generating executable queries.

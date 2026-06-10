@@ -288,6 +288,8 @@ def record_map_dataset_tool(
     row_semantics: str | None = None,
     entity_key: str | None = None,
     schema_stability: str | None = None,
+    layout_verification_status: str | None = None,
+    layout_verification_note: str | None = None,
     caveats: list[str] | None = None,
     storage_accesses: list[str] | None = None,
     physical_layouts: list[str] | None = None,
@@ -305,6 +307,8 @@ def record_map_dataset_tool(
         row_semantics=row_semantics,
         entity_key=entity_key,
         schema_stability=schema_stability,
+        layout_verification_status=layout_verification_status,
+        layout_verification_note=layout_verification_note,
         caveats=caveats,
         storage_accesses=storage_accesses,
         physical_layouts=physical_layouts,
@@ -373,6 +377,8 @@ def record_map_storage_access_tool(
     path_style_access: bool | None = None,
     credential_reference: str | None = None,
     path_templates: list[str] | None = None,
+    layout_verification_status: str | None = None,
+    layout_verification_note: str | None = None,
     datasets: list[str] | None = None,
 ) -> dict[str, Any]:
     result = db.record_map_storage_access(
@@ -389,6 +395,8 @@ def record_map_storage_access_tool(
         path_style_access=path_style_access,
         credential_reference=credential_reference,
         path_templates=path_templates,
+        layout_verification_status=layout_verification_status,
+        layout_verification_note=layout_verification_note,
         datasets=datasets,
     )
     return asdict(result)

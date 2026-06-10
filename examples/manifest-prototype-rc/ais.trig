@@ -259,7 +259,9 @@ rcg:map {
         rc:partitionColumn ais:bc_date ;
         rc:partitionGranularity rc:Daily ;
         rc:pathTemplate "broadcasts/{year}/ais-{date}.parquet" ;
-        rc:redundantPartitionKey ais:bc_date .
+        rc:redundantPartitionKey ais:bc_date ;
+        rc:layoutVerificationStatus rc:GeneratedFromManifestLayout ;
+        rc:layoutVerificationNote "Representative fixture path template generated from manifest metadata; verify against storage listing or query results before using it as an executable path." .
 
     ais:ais_object_store_access a rc:StorageAccess ;
         rdfs:label "AIS local object-store access profile" ;
@@ -287,6 +289,8 @@ rcg:map {
             ais:ix_distance_m ;
         rc:partitionedBy ais:daily_date_partition ;
         rc:hasStorageAccess ais:ais_object_store_access ;
+        rc:layoutVerificationStatus rc:UnverifiedLayout ;
+        rc:layoutVerificationNote "DailyIndex currently inherits the broadcast partition template in this representative fixture. A project handoff suggested the real layout may use index/{year}/ais-{date}.parquet, so verify storage listing or query results before executable planning." ;
         rc:hasPhysicalLayout [
             a rc:PhysicalLayout ;
             rc:fileFormat rc:Parquet ;

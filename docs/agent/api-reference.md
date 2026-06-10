@@ -129,8 +129,9 @@ context = db.describe_resource(claim.claim_iri, graph="observations")
 
 `describe_dataset()` returns bounded context for one dataset/table: row
 semantics, entity/snapshot keys, columns, physical/value types, path templates,
-physical layouts, storage access descriptions, partition schemes, direct caveats
-with impact/severity, upstream caveats inherited through relationships,
+dataset/layout verification status and notes, physical layouts, storage access
+descriptions, partition schemes, direct caveats with impact/severity, upstream
+caveats inherited through relationships,
 provenance transformations, relationships, directly related datasets, and linked
 patterns. Column resource summaries include `column_name`
 and owning dataset context when the map provides it; related datasets may be
@@ -145,6 +146,10 @@ caveats attached to source datasets or source-side columns that should remain
 visible when interpreting an aggregation, derivation, or foreign key.
 `upstream_caveats` is the dataset-level deduped rollup of those relationship
 caveats and is intentionally separate from direct `caveats`.
+Check `layout_verification_status` and `layout_verification_note` before using
+`path_templates` for executable query planning. Child physical layout, storage,
+and partition descriptions may carry their own verification fields when the
+uncertainty belongs to one part of the path/layout model.
 `linked_pattern_reasons` explains whether a pattern matched through a direct
 target, map implication, supporting claim, or supporting observation. Each
 reason uses `iri` for the pattern IRI and also exposes the same value as
