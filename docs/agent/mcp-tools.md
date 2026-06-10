@@ -45,16 +45,19 @@ Lexically searches literal RDF claims and returns matched resources with graph, 
 
 Returns bounded context for one dataset/table IRI: row semantics, entity and
 snapshot keys, columns, physical/value types, path templates, layouts, storage
-access descriptions, partitions, direct caveats with impact/severity, provenance
-transformations, relationships, directly related datasets, grouped related
-dataset reasons, and linked patterns. Column summaries include column names and
+access descriptions, partitions, direct caveats with impact/severity, upstream
+caveats inherited through relationships, provenance transformations,
+relationships, directly related datasets, grouped related dataset reasons, and
+linked patterns. Column summaries include column names and
 owning dataset context when available; related dataset entries include
 relationship labels/kinds, grouped reasons can fold same-column relationship
 tags, linked patterns include pattern text as their description, and
 `linked_pattern_reasons` explains why each pattern matched when available.
 Relationship entries and grouped reasons may include `source_caveats`, meaning
 caveats attached to source datasets or source-side columns that should remain
-visible when interpreting an aggregation, derivation, or foreign key.
+visible when interpreting an aggregation, derivation, or foreign key. The
+top-level `upstream_caveats` field is a deduped rollup of those inherited
+caveats; it is separate from direct `caveats`.
 Within each linked-pattern reason, `iri` and `pattern_iri` both name the linked
 pattern. Scan `match_groups` first for relevance tiers, route labels, resource
 kinds, and supporting resources; use raw `matches` when every route matters.

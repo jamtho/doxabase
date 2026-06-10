@@ -473,6 +473,12 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
     )
     assert aggregation["source_dataset"]["label"] == "AIS Daily Broadcast Positions"
     assert aggregation["group_by_columns"][0]["column_name"] == "mmsi"
+    assert result["caveats"] == []
+    assert any(
+        caveat["description"]
+        and "MMSI does not reliably identify a single vessel" in caveat["description"]
+        for caveat in result["upstream_caveats"]
+    )
     message_count_mapping = next(
         mapping
         for mapping in aggregation["aggregated_columns"]

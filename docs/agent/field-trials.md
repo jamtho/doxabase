@@ -170,8 +170,9 @@ few useful gaps:
   response should ideally say so.
 - Derived and aggregate tables still need pressure testing. Aggregation
   relationships now expose grouping columns, per-target aggregate mappings, and
-  source caveats, but agents should still check whether row-unit semantics and
-  layout-verification status are easy enough to carry into staged map candidates.
+  source/upstream caveats, but agents should still check whether row-unit
+  semantics and layout-verification status are easy enough to carry into staged
+  map candidates.
 - Relationship descriptions expose aggregation source/target columns, but
   cross-dataset partition/path ownership may still need clearer retrieval.
 - Staged systematisation drafts with failed, repaired, and alternative framings

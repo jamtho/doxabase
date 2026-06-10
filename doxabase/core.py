@@ -539,6 +539,7 @@ class DatasetDescription:
     storage_accesses: list[StorageAccessDescription]
     partition_schemes: list[PartitionDescription]
     caveats: list[CaveatDescription]
+    upstream_caveats: list[CaveatDescription]
     provenance: list[ResourceSummary]
     transformations: list[TransformationDescription]
     related_datasets: list[RelatedDatasetDescription]
@@ -2476,6 +2477,10 @@ class DoxaBase:
         linked_pattern_reasons = self._linked_pattern_reasons_for_dataset(
             linked_pattern_targets,
         )
+        caveats = [
+            self._describe_caveat(caveat_iri, data_graphs, lookup_graphs)
+            for caveat_iri in caveat_iris
+        ]
 
         return DatasetDescription(
             iri=dataset_iri,
@@ -2509,10 +2514,11 @@ class DoxaBase:
             physical_layouts=physical_layouts,
             storage_accesses=storage_accesses,
             partition_schemes=partition_schemes,
-            caveats=[
-                self._describe_caveat(caveat_iri, data_graphs, lookup_graphs)
-                for caveat_iri in caveat_iris
-            ],
+            caveats=caveats,
+            upstream_caveats=self._upstream_caveats_for_dataset(
+                caveat_iris,
+                relationships,
+            ),
             provenance=[
                 self._resource_summary(
                     lookup_graphs,
@@ -2537,6 +2543,22 @@ class DoxaBase:
                 linked_pattern_targets,
             ),
             linked_pattern_reasons=linked_pattern_reasons,
+        )
+
+    def _upstream_caveats_for_dataset(
+        self,
+        direct_caveat_iris: Iterable[str],
+        relationships: Iterable[RelationshipDescription],
+    ) -> list[CaveatDescription]:
+        direct_caveat_set = set(direct_caveat_iris)
+        upstream_by_iri: dict[str, CaveatDescription] = {}
+        for relationship in relationships:
+            for caveat in relationship.source_caveats:
+                if caveat.iri not in direct_caveat_set:
+                    upstream_by_iri.setdefault(caveat.iri, caveat)
+        return sorted(
+            upstream_by_iri.values(),
+            key=lambda caveat: (caveat.label or "", caveat.iri),
         )
 
     def record_observation(

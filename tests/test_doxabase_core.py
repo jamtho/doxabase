@@ -1063,6 +1063,7 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     caveat_text = " ".join(caveat.description or "" for caveat in description.caveats)
     assert "MMSI does not reliably identify a single vessel" in caveat_text
     assert any(caveat.severity is not None for caveat in description.caveats)
+    assert description.upstream_caveats == []
     assert any(
         provenance.description
         and "NOAA Marine Cadastre AIS data" in provenance.description
@@ -1117,6 +1118,12 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
 
     index_description = db.describe_dataset(
         "https://richcanopy.org/example/manifest/ais#DailyIndex"
+    )
+    assert index_description.caveats == []
+    assert any(
+        caveat.description
+        and "MMSI does not reliably identify a single vessel" in caveat.description
+        for caveat in index_description.upstream_caveats
     )
     broadcast_group = next(
         group
