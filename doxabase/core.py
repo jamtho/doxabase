@@ -1679,6 +1679,13 @@ class DoxaBase:
                     source_iri=dataset_iri,
                     depth=depth + 1,
                 )
+            add_summary(
+                dataset.layout_verification_status,
+                "layout_verification_status",
+                "layout verification status",
+                source_iri=dataset_iri,
+                depth=depth + 1,
+            )
             for column in dataset.columns:
                 add_resource(
                     column.iri,
@@ -1723,6 +1730,13 @@ class DoxaBase:
                     source_iri=layout.iri,
                     depth=depth + 2,
                 )
+                add_summary(
+                    layout.layout_verification_status,
+                    "layout_verification_status",
+                    "layout verification status",
+                    source_iri=layout.iri,
+                    depth=depth + 2,
+                )
             for access in dataset.storage_accesses:
                 add_resource(
                     access.iri,
@@ -1742,6 +1756,13 @@ class DoxaBase:
                     access.access_mode,
                     "storage_term",
                     "storage term",
+                    source_iri=access.iri,
+                    depth=depth + 2,
+                )
+                add_summary(
+                    access.layout_verification_status,
+                    "layout_verification_status",
+                    "layout verification status",
                     source_iri=access.iri,
                     depth=depth + 2,
                 )
@@ -1771,6 +1792,13 @@ class DoxaBase:
                     partition.redundant_partition_key,
                     "partition_resource",
                     "partition resource",
+                    source_iri=partition.iri,
+                    depth=depth + 2,
+                )
+                add_summary(
+                    partition.layout_verification_status,
+                    "layout_verification_status",
+                    "layout verification status",
                     source_iri=partition.iri,
                     depth=depth + 2,
                 )
@@ -2178,6 +2206,9 @@ class DoxaBase:
             "storage_term": "A term used inside selected storage metadata.",
             "partition_scheme": "Partition metadata for a selected dataset.",
             "partition_resource": "A resource referenced by selected partition metadata.",
+            "layout_verification_status": (
+                "A verification-status term attached to dataset, layout, storage, or partition path metadata."
+            ),
             "caveat_severity": "A severity term attached to a selected caveat.",
             "provenance": "Provenance metadata attached to a selected dataset.",
             "transformation": "Transformation metadata attached to a selected dataset.",

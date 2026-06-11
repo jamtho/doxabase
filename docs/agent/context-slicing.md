@@ -8,8 +8,9 @@ conversation brief with the surrounding RDF.
 The slicer is intentionally profile-based rather than a generic graph crawl:
 
 - `dataset_brief` starts from map datasets/tables. It includes dataset context,
-  columns, layout/storage/partition resources, caveats, provenance,
-  relationships, related dataset reasons, linked patterns, and pattern support.
+  columns, layout/storage/partition resources, layout verification status terms,
+  caveats, provenance, relationships, related dataset reasons, linked patterns,
+  and pattern support.
 - `pattern_brief` starts from patterns. It includes pattern targets, map
   implications, supporting claims, observations, evidence, and source spans.
 - `deep_lore` follows the same explicit routes and also pulls in relevant

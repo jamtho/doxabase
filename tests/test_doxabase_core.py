@@ -1611,6 +1611,8 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
         description="Parsed email message records.",
         is_table=True,
         path_templates=["data/messages.parquet"],
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note="Path pattern is plausible but not verified.",
     )
     db.record_map_column(
         doc_id,
@@ -1659,6 +1661,7 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
     assert context_slice.graph_counts["observations"] >= 1
     assert context_slice.graph_counts["evidence"] >= 1
     assert context_slice.route_counts["dataset_column"] == 1
+    assert context_slice.route_counts["layout_verification_status"] == 1
     assert context_slice.route_counts["linked_pattern"] == 1
     assert context_slice.route_counts["supporting_claim"] >= 1
     assert context_slice.reading_order[0].startswith("Start with seeds")
@@ -1669,10 +1672,14 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
         "The resource the caller asked about directly."
     )
     assert route_legend["dataset_column"].count == 1
+    assert route_legend["layout_verification_status"].meaning == (
+        "A verification-status term attached to dataset, layout, storage, or partition path metadata."
+    )
 
     resources = {resource.iri: resource for resource in context_slice.resources}
     assert messages in resources
     assert doc_id in resources
+    assert RC + "CandidateLayout" in resources
     assert pattern_result.pattern_iri in resources
     assert claim_result.claim_iri in resources
     assert claim_result.evidence_iri in resources
@@ -1680,6 +1687,10 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
     assert resources[messages].primary_route.route == "seed"
     assert any(route.route == "seed" for route in resources[messages].routes)
     assert any(route.route == "dataset_column" for route in resources[doc_id].routes)
+    assert any(
+        route.route == "layout_verification_status"
+        for route in resources[RC + "CandidateLayout"].routes
+    )
     assert any(
         route.route == "linked_pattern"
         for route in resources[pattern_result.pattern_iri].routes
