@@ -1177,6 +1177,8 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     attachment_count = f"{base}eml_message_attachment_counts__attachment_count"
     caveat = f"{base}caveat_body_processing_lossy"
     storage = f"{base}local_parquet_access"
+    layout = f"{base}parquet_layout"
+    partition = f"{base}daily_partition"
 
     storage_record = db.record_map_storage_access(
         storage,
@@ -1187,6 +1189,26 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         path_templates=["data/parquet/*.parquet"],
         layout_verification_status="rc:VerifiedByListingLayout",
         layout_verification_note="Matched by listing the local parquet directory.",
+        datasets=[messages],
+    )
+    layout_record = db.record_map_physical_layout(
+        layout,
+        label="zstd parquet layout",
+        file_format="rc:Parquet",
+        compression_codec="rc:ZstdCompression",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        layout_verification_note="DuckDB read confirmed the physical format.",
+        datasets=[messages],
+    )
+    partition_record = db.record_map_partition_scheme(
+        partition,
+        label="daily message partition",
+        partition_columns=[doc_id],
+        granularity="rc:Daily",
+        path_template="data/parquet/dt={date}/eml_messages.parquet",
+        redundant_partition_key=doc_id,
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note="Path pattern is plausible but still needs listing.",
         datasets=[messages],
     )
     caveat_record = db.record_map_caveat(
@@ -1282,6 +1304,8 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     )
 
     assert storage_record.resource_type == RC + "StorageAccess"
+    assert layout_record.resource_type == RC + "PhysicalLayout"
+    assert partition_record.resource_type == RC + "PartitionScheme"
     assert caveat_record.resource_type == RC + "KnownCaveat"
     assert table_record.resource_type == RC + "Table"
     assert doc_column.resource_type == RC + "Column"
@@ -1308,10 +1332,34 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     )
     assert description.path_templates == [
         "data/parquet/eml_messages.parquet",
+        "data/parquet/dt={date}/eml_messages.parquet",
         "data/parquet/*.parquet",
     ]
     assert description.columns[0].column_name == "doc_id"
     assert description.columns[0].nullable is False
+    assert description.physical_layouts[0].file_format is not None
+    assert description.physical_layouts[0].file_format.iri == RC + "Parquet"
+    assert description.physical_layouts[0].compression_codec is not None
+    assert description.physical_layouts[0].compression_codec.iri == (
+        RC + "ZstdCompression"
+    )
+    assert description.physical_layouts[0].layout_verification_status is not None
+    assert description.physical_layouts[0].layout_verification_status.iri == (
+        RC + "VerifiedByQueryLayout"
+    )
+    assert description.partition_schemes[0].partition_column is not None
+    assert description.partition_schemes[0].partition_column.iri == doc_id
+    assert description.partition_schemes[0].granularity is not None
+    assert description.partition_schemes[0].granularity.iri == RC + "Daily"
+    assert description.partition_schemes[0].path_template == (
+        "data/parquet/dt={date}/eml_messages.parquet"
+    )
+    assert description.partition_schemes[0].redundant_partition_key is not None
+    assert description.partition_schemes[0].redundant_partition_key.iri == doc_id
+    assert description.partition_schemes[0].layout_verification_status is not None
+    assert description.partition_schemes[0].layout_verification_status.iri == (
+        RC + "CandidateLayout"
+    )
     assert description.storage_accesses[0].storage_root == (
         "/home/james/github.com/jamtho/enron-emails"
     )

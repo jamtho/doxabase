@@ -142,6 +142,20 @@ Records or updates a `rc:KnownCaveat` and can link it to affected datasets.
 Records or updates non-secret storage access metadata and can link it to
 datasets.
 
+`doxabase.record_map_physical_layout`
+
+Records or updates file-format/compression layout metadata and can link it to
+datasets. Use `layout_verification_status` and `layout_verification_note` when
+the physical format or layout has only been generated, proposed, listed, or
+query-verified.
+
+`doxabase.record_map_partition_scheme`
+
+Records or updates partition metadata, including partition columns,
+granularity, path template, redundant partition key, and layout verification
+status/notes. Use it when uncertainty belongs to a partition/path template
+rather than to the whole dataset.
+
 `doxabase.record_map_relationship`
 
 Records or updates a relationship resource. Supported relationship types are

@@ -4106,6 +4106,195 @@ class DoxaBase:
             triples=triples,
         )
 
+    def record_map_physical_layout(
+        self,
+        iri: str,
+        *,
+        label: str | None = None,
+        description: str | None = None,
+        file_format: str | None = None,
+        compression_codec: str | None = None,
+        layout_verification_status: str | None = None,
+        layout_verification_note: str | None = None,
+        datasets: Iterable[str] | str | None = None,
+    ) -> MapResourceRecord:
+        layout_iri = self._required_iri("iri", iri)
+        dataset_values = self._string_values("datasets", datasets)
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(layout_iri)
+        graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:PhysicalLayout"))))
+        self._add_optional_literal(graph, subject, str(RDFS.label), label)
+        self._add_optional_literal(graph, subject, str(RDFS.comment), description)
+        if file_format is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:fileFormat")),
+                    URIRef(self.expand_iri(file_format)),
+                )
+            )
+        if compression_codec is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:compressionCodec")),
+                    URIRef(self.expand_iri(compression_codec)),
+                )
+            )
+        if layout_verification_status is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:layoutVerificationStatus")),
+                    URIRef(self.expand_iri(layout_verification_status)),
+                )
+            )
+        self._add_optional_literal(
+            graph,
+            subject,
+            "rc:layoutVerificationNote",
+            layout_verification_note,
+        )
+
+        predicates = [str(RDF.type)]
+        if label is not None:
+            predicates.append(str(RDFS.label))
+        if description is not None:
+            predicates.append(str(RDFS.comment))
+        if file_format is not None:
+            predicates.append(self.expand_iri("rc:fileFormat"))
+        if compression_codec is not None:
+            predicates.append(self.expand_iri("rc:compressionCodec"))
+        if layout_verification_status is not None:
+            predicates.append(self.expand_iri("rc:layoutVerificationStatus"))
+        if layout_verification_note is not None:
+            predicates.append(self.expand_iri("rc:layoutVerificationNote"))
+        triples = self._replace_subject_triples("map", layout_iri, predicates, graph)
+        if dataset_values:
+            link_graph = Graph()
+            self._bind_prefixes(link_graph)
+            for dataset in dataset_values:
+                link_graph.add(
+                    (
+                        URIRef(self.expand_iri(dataset)),
+                        URIRef(self.expand_iri("rc:hasPhysicalLayout")),
+                        subject,
+                    )
+                )
+            triples += self._insert_graph("map", link_graph)
+        return MapResourceRecord(
+            iri=layout_iri,
+            resource_type=self.expand_iri("rc:PhysicalLayout"),
+            graph="map",
+            triples=triples,
+        )
+
+    def record_map_partition_scheme(
+        self,
+        iri: str,
+        *,
+        label: str | None = None,
+        description: str | None = None,
+        partition_columns: Iterable[str] | str | None = None,
+        granularity: str | None = None,
+        path_template: str | None = None,
+        redundant_partition_key: str | None = None,
+        layout_verification_status: str | None = None,
+        layout_verification_note: str | None = None,
+        datasets: Iterable[str] | str | None = None,
+    ) -> MapResourceRecord:
+        partition_iri = self._required_iri("iri", iri)
+        partition_column_values = self._string_values(
+            "partition_columns",
+            partition_columns,
+        )
+        dataset_values = self._string_values("datasets", datasets)
+
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(partition_iri)
+        graph.add((subject, RDF.type, URIRef(self.expand_iri("rc:PartitionScheme"))))
+        self._add_optional_literal(graph, subject, str(RDFS.label), label)
+        self._add_optional_literal(graph, subject, str(RDFS.comment), description)
+        for partition_column in partition_column_values:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:partitionColumn")),
+                    URIRef(self.expand_iri(partition_column)),
+                )
+            )
+        if granularity is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:partitionGranularity")),
+                    URIRef(self.expand_iri(granularity)),
+                )
+            )
+        self._add_optional_literal(graph, subject, "rc:pathTemplate", path_template)
+        if redundant_partition_key is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:redundantPartitionKey")),
+                    URIRef(self.expand_iri(redundant_partition_key)),
+                )
+            )
+        if layout_verification_status is not None:
+            graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:layoutVerificationStatus")),
+                    URIRef(self.expand_iri(layout_verification_status)),
+                )
+            )
+        self._add_optional_literal(
+            graph,
+            subject,
+            "rc:layoutVerificationNote",
+            layout_verification_note,
+        )
+
+        predicates = [str(RDF.type)]
+        if label is not None:
+            predicates.append(str(RDFS.label))
+        if description is not None:
+            predicates.append(str(RDFS.comment))
+        if partition_columns is not None:
+            predicates.append(self.expand_iri("rc:partitionColumn"))
+        if granularity is not None:
+            predicates.append(self.expand_iri("rc:partitionGranularity"))
+        if path_template is not None:
+            predicates.append(self.expand_iri("rc:pathTemplate"))
+        if redundant_partition_key is not None:
+            predicates.append(self.expand_iri("rc:redundantPartitionKey"))
+        if layout_verification_status is not None:
+            predicates.append(self.expand_iri("rc:layoutVerificationStatus"))
+        if layout_verification_note is not None:
+            predicates.append(self.expand_iri("rc:layoutVerificationNote"))
+        triples = self._replace_subject_triples("map", partition_iri, predicates, graph)
+        if dataset_values:
+            link_graph = Graph()
+            self._bind_prefixes(link_graph)
+            for dataset in dataset_values:
+                link_graph.add(
+                    (
+                        URIRef(self.expand_iri(dataset)),
+                        URIRef(self.expand_iri("rc:partitionedBy")),
+                        subject,
+                    )
+                )
+            triples += self._insert_graph("map", link_graph)
+        return MapResourceRecord(
+            iri=partition_iri,
+            resource_type=self.expand_iri("rc:PartitionScheme"),
+            graph="map",
+            triples=triples,
+        )
+
     def record_map_relationship(
         self,
         iri: str,

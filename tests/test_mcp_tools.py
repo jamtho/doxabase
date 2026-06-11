@@ -24,6 +24,8 @@ from doxabase.mcp_tools import (
     record_map_caveat_tool,
     record_map_column_tool,
     record_map_dataset_tool,
+    record_map_partition_scheme_tool,
+    record_map_physical_layout_tool,
     record_map_relationship_tool,
     record_map_storage_access_tool,
     record_graph_revision_tool,
@@ -59,6 +61,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_column" in tool_names
     assert "doxabase.record_map_caveat" in tool_names
     assert "doxabase.record_map_storage_access" in tool_names
+    assert "doxabase.record_map_physical_layout" in tool_names
+    assert "doxabase.record_map_partition_scheme" in tool_names
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
@@ -762,6 +766,8 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     column = f"{base}messages__doc_id"
     caveat = f"{base}messages_caveat"
     storage = f"{base}local_access"
+    layout = f"{base}parquet_layout"
+    partition = f"{base}daily_partition"
 
     table_result = record_map_dataset_tool(
         db,
@@ -797,6 +803,26 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
         layout_verification_note="Confirmed by a local directory listing.",
         datasets=[table],
     )
+    layout_result = record_map_physical_layout_tool(
+        db,
+        iri=layout,
+        file_format="rc:Parquet",
+        compression_codec="rc:ZstdCompression",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        layout_verification_note="A representative read used this file format.",
+        datasets=[table],
+    )
+    partition_result = record_map_partition_scheme_tool(
+        db,
+        iri=partition,
+        partition_columns=[column],
+        granularity="rc:Daily",
+        path_template="data/messages/dt={date}.parquet",
+        redundant_partition_key=column,
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note="Partition path still needs a real object listing.",
+        datasets=[table],
+    )
     relationship_result = record_map_relationship_tool(
         db,
         iri=f"{base}messages_doc_id_shared",
@@ -817,6 +843,12 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     assert column_result["resource_type"] == "https://richcanopy.org/ns/rc#Column"
     assert caveat_result["resource_type"] == "https://richcanopy.org/ns/rc#KnownCaveat"
     assert storage_result["resource_type"] == "https://richcanopy.org/ns/rc#StorageAccess"
+    assert layout_result["resource_type"] == (
+        "https://richcanopy.org/ns/rc#PhysicalLayout"
+    )
+    assert partition_result["resource_type"] == (
+        "https://richcanopy.org/ns/rc#PartitionScheme"
+    )
     assert relationship_result["resource_type"] == (
         "https://richcanopy.org/ns/rc#SharedIdentifier"
     )
@@ -833,6 +865,18 @@ def test_map_authoring_tools_return_json_like_payloads(tmp_path: Path) -> None:
     )
     assert description["storage_accesses"][0]["layout_verification_note"] == (
         "Confirmed by a local directory listing."
+    )
+    assert description["physical_layouts"][0]["file_format"]["iri"] == (
+        "https://richcanopy.org/ns/rc#Parquet"
+    )
+    assert description["physical_layouts"][0]["layout_verification_status"]["iri"] == (
+        "https://richcanopy.org/ns/rc#VerifiedByQueryLayout"
+    )
+    assert description["partition_schemes"][0]["path_template"] == (
+        "data/messages/dt={date}.parquet"
+    )
+    assert description["partition_schemes"][0]["layout_verification_status"]["iri"] == (
+        "https://richcanopy.org/ns/rc#CandidateLayout"
     )
     linked_pattern_reason = description["linked_pattern_reasons"][0]
     assert linked_pattern_reason["pattern_iri"] == linked_pattern_reason["iri"]

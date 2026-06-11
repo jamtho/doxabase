@@ -42,6 +42,13 @@ These terms are intentionally boring. They give agents enough structure to
 generate a DuckDB/S3/local-file plan, compare datasets, and ask good follow-up
 questions without pretending DoxaBase can execute every environment by itself.
 
+Agents can author these facts without hand-writing RDF:
+
+- `doxabase.record_map_storage_access` for storage protocol/root/profile facts.
+- `doxabase.record_map_physical_layout` for file format and compression facts.
+- `doxabase.record_map_partition_scheme` for partition columns, granularity,
+  path templates, and path-specific verification notes.
+
 ## What Must Stay Outside The Graph
 
 Do not put secrets in DoxaBase:

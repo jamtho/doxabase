@@ -402,6 +402,58 @@ def record_map_storage_access_tool(
     return asdict(result)
 
 
+def record_map_physical_layout_tool(
+    db: DoxaBase,
+    iri: str,
+    label: str | None = None,
+    description: str | None = None,
+    file_format: str | None = None,
+    compression_codec: str | None = None,
+    layout_verification_status: str | None = None,
+    layout_verification_note: str | None = None,
+    datasets: list[str] | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_physical_layout(
+        iri=iri,
+        label=label,
+        description=description,
+        file_format=file_format,
+        compression_codec=compression_codec,
+        layout_verification_status=layout_verification_status,
+        layout_verification_note=layout_verification_note,
+        datasets=datasets,
+    )
+    return asdict(result)
+
+
+def record_map_partition_scheme_tool(
+    db: DoxaBase,
+    iri: str,
+    label: str | None = None,
+    description: str | None = None,
+    partition_columns: list[str] | None = None,
+    granularity: str | None = None,
+    path_template: str | None = None,
+    redundant_partition_key: str | None = None,
+    layout_verification_status: str | None = None,
+    layout_verification_note: str | None = None,
+    datasets: list[str] | None = None,
+) -> dict[str, Any]:
+    result = db.record_map_partition_scheme(
+        iri=iri,
+        label=label,
+        description=description,
+        partition_columns=partition_columns,
+        granularity=granularity,
+        path_template=path_template,
+        redundant_partition_key=redundant_partition_key,
+        layout_verification_status=layout_verification_status,
+        layout_verification_note=layout_verification_note,
+        datasets=datasets,
+    )
+    return asdict(result)
+
+
 def record_map_relationship_tool(
     db: DoxaBase,
     iri: str,
