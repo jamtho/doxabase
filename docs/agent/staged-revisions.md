@@ -169,6 +169,24 @@ tables, caveats, relationships, observations, or patterns. Do not use anchors as
 a substitute for evidence: supporting observations, claims, patterns, and
 evidence links still carry the justification for the proposal.
 
+## Pattern-Supported Promotion
+
+Call `doxabase.stage_pattern_promotion` when one or more existing patterns are
+the reason a graph change now seems worth staging. This is a pattern-aware
+wrapper over `stage_systematisation`, not an automatic map editor. Pass the
+pattern IRIs and caller-authored framings. The helper:
+
+- records the selected patterns as `supporting_patterns`;
+- rolls up their supporting observations, claims, and evidence into revision
+  metadata;
+- uses the pattern IRIs, pattern targets, and `rc:mapImplication` resources as
+  revision anchors;
+- delegates patch parsing, preview counts, validation, alternatives, and review
+  notes to the ordinary staged systematisation flow.
+
+Use it when a pattern supports a caveat, relationship, project vocabulary term,
+shape, or other durable structure but the exact graph move still deserves review.
+
 ## What Gets Recorded
 
 Staged revisions are `rc:GraphRevision` resources with `rc:StagedRevision` type,
@@ -244,8 +262,8 @@ creative modelling space.
 
 ## Awkward Concept Test
 
-Future promotion helpers should be tested against ideas that do not fit neatly
-into the current ontology. A good helper should let an agent say, in effect:
+Promotion helpers should be tested against ideas that do not fit neatly into the
+current ontology. A good helper should let an agent say, in effect:
 
 - this may need a new project vocabulary term;
 - this may belong in `ontology` before it belongs in `map`;

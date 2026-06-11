@@ -33,6 +33,7 @@ from doxabase.mcp_tools import (
     record_pattern_tool,
     search_tool,
     stage_graph_revision_tool,
+    stage_pattern_promotion_tool,
     stage_systematisation_tool,
     validate_graph_tool,
 )
@@ -72,6 +73,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_graph_revision" in tool_names
     assert "doxabase.stage_graph_revision" in tool_names
     assert "doxabase.stage_systematisation" in tool_names
+    assert "doxabase.stage_pattern_promotion" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
 
@@ -349,6 +351,70 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert "## Summary" in exported
     assert "Pattern first" in exported
     assert "Map candidate" in exported
+
+
+def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    target = "https://example.test/project#messages__body_top"
+    implication = "https://example.test/project#body_top_lossy_caveat"
+    observation = db.record_observation(
+        "body_top behaves like cleaned top-level message text.",
+        observed_column=target,
+        evidence_sources=["test://body-top-profile"],
+    )
+    pattern = db.record_pattern(
+        summary="body_top is cleaned message text.",
+        pattern_text="Source notes and checks support body_top as cleaned sender-new text.",
+        rationale="The claim is durable enough to stage as a map caveat.",
+        pattern_targets=[target],
+        supporting_observations=[observation.observation_iri],
+        evidence_sources=["test://body-top-pattern"],
+        map_implications=[implication],
+    )
+
+    result = stage_pattern_promotion_tool(
+        db,
+        patterns=[pattern.pattern_iri],
+        summary="Promote body_top caveat",
+        framings=[
+            {
+                "label": "Map caveat",
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:body_top_lossy_caveat a rc:KnownCaveat ;
+                        rdfs:label "body_top lossy caveat" ;
+                        rc:caveatDescription "body_top is cleaned text, not a byte-exact source body." .
+
+                    <{target}> rc:hasKnownCaveat ex:body_top_lossy_caveat .
+                """,
+            }
+        ],
+    )
+
+    assert result["summary"] == "Promote body_top caveat"
+    assert result["intent"] == (
+        "Stage one or more graph changes supported by selected patterns."
+    )
+    assert result["anchors"] == [pattern.pattern_iri, target, implication]
+    assert result["framings"][0]["stance"] == (
+        "https://richcanopy.org/ns/rc#CandidateRevision"
+    )
+    staged = describe_staged_revision_tool(
+        db,
+        result["staged_revisions"][0]["revision_iri"],
+    )
+    assert staged["supporting_patterns"][0]["iri"] == pattern.pattern_iri
+    assert staged["supporting_observations"][0]["iri"] == observation.observation_iri
+    assert {anchor["iri"] for anchor in staged["revision_anchors"]} == {
+        pattern.pattern_iri,
+        target,
+        implication,
+    }
+    assert "Selected pattern support" in staged["rationale"]
 
 
 def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None:

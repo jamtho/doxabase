@@ -26,12 +26,15 @@ Use this sequence when arriving cold in a DoxaBase capsule.
     ontology-first alternatives, or for awkward concepts that do not fit current
     helper templates. Use shared proposed context when several framings need the
     same tentative vocabulary or assumptions.
-16. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
-17. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
-18. Use `doxabase.record_graph_revision` after a meaningful graph change or
+16. Use `doxabase.stage_pattern_promotion` when existing patterns support a
+    caller-authored map, ontology, shape, or other graph change that should
+    remain reviewable before being applied.
+17. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, `doxabase.record_map_physical_layout`, `doxabase.record_map_partition_scheme`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
+18. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
+19. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph
     roles were included for review, and why.
-19. Use `doxabase.describe_graph_revision` when reviewing a history record, and
+20. Use `doxabase.describe_graph_revision` when reviewing a history record, and
     `doxabase.describe_staged_revision` when reviewing a staged patch proposal.
 
 When reading linked-pattern reasons from `describe_dataset`, scan

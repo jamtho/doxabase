@@ -198,6 +198,16 @@ systematisation intent, anchors, rationale, optional review notes and
 recommendations, validation preview, and linked staged revisions; it does not
 decide the ontology design for the agent.
 
+`doxabase.stage_pattern_promotion`
+
+Stages one or more caller-authored RDF framings supported by existing
+`rc:Pattern` resources. Use it when a pattern looks ready to become map,
+ontology, shape, or other durable project structure, but the graph move should
+remain reviewable. The helper does not infer the map shape. It uses the selected
+patterns as `supporting_patterns`, rolls up their supporting observations,
+claims, and evidence, and uses pattern targets plus `map_implication` resources
+as revision anchors before delegating to the staged systematisation workflow.
+
 `doxabase.describe_staged_revision`
 
 Returns a staged revision with stance, rationale, support links, revision

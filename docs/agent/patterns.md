@@ -85,10 +85,18 @@ observations, evidence/source spans, and map implications in one compact object.
 
 ## Relation To Map Helpers
 
-Patterns are not promoted automatically yet. If a pattern supports a map change,
-record the map fact with a map authoring helper and keep the pattern linked via
-`rc:mapImplication` for now. Future promotion tools should make that
-relationship explicit and mark supporting claims or patterns as promoted.
+Patterns are not promoted automatically. If a pattern supports a direct
+current-best map fact, record the map fact with a map authoring helper and keep
+the pattern linked via `rc:mapImplication`.
+
+When the promotion is more nuanced, use `doxabase.stage_pattern_promotion`.
+It takes existing pattern IRIs plus caller-authored RDF framings and records
+reviewable staged revisions in `history`. The selected patterns become
+`supporting_patterns`; their supporting observations, claims, and evidence are
+rolled into the staged revision metadata; and their targets/map implications are
+used as revision anchors. The helper does not decide the graph shape for you.
+Use it for pattern-supported map, ontology, or shape changes that should be
+validated and reviewed before becoming durable project structure.
 
 ## Validation
 

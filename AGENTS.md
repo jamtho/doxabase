@@ -125,12 +125,12 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add pattern-to-map promotion helpers on top of staged revisions.
-2. Add fuller staged apply/conflict/version workflows.
-3. Add richer profile metrics and profiling helpers that can write map facts,
+1. Add fuller staged apply/conflict/version workflows.
+2. Add richer profile metrics and profiling helpers that can write map facts,
    observations, and patterns together.
+3. Add query-planning helpers that consume storage access metadata.
 
-When building promotion helpers, preserve agents' knowledge-graph reasoning. A
+When extending promotion helpers, preserve agents' knowledge-graph reasoning. A
 helper should draft and validate graph moves, not force every insight into an
 existing template. Test it with at least one awkward systematisation that may
 need a project vocabulary term, ontology extension, or competing RDF framings.

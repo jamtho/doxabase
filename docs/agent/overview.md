@@ -36,12 +36,14 @@ Current implementation status:
   patch proposals with structured validation diagnostics.
 - `stage_systematisation()` for preserving alternative caller-authored RDF
   framings of a modelling hunch, with optional shared proposed context.
+- `stage_pattern_promotion()` for staging caller-authored graph changes backed
+  by existing patterns and their support links.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
 - MCP tools for docs, overview, search, listing, dataset description,
-  context slicing, observation/history recording, systematisation staging,
-  import/export, validation, and fixture loading.
+  context slicing, observation/history recording, systematisation and
+  pattern-promotion staging, import/export, validation, and fixture loading.
 
 Important V1 limits:
 

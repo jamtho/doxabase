@@ -5360,6 +5360,158 @@ class DoxaBase:
             staged_revisions=staged_revisions,
         )
 
+    def stage_pattern_promotion(
+        self,
+        patterns: Iterable[str] | str,
+        framings: Iterable[Mapping[str, Any]],
+        *,
+        summary: str | None = None,
+        intent: str | None = None,
+        rationale: str | None = None,
+        anchors: Iterable[str] | str | None = None,
+        shared_additions: Iterable[Mapping[str, str]] | Mapping[str, str] | None = None,
+        shared_removals: Iterable[Mapping[str, str]] | Mapping[str, str] | None = None,
+        shared_context_summary: str | None = None,
+        default_stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: Iterable[str] | str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        supporting_observations: Iterable[str] | str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        evidence: Iterable[str] | str | None = None,
+        alternative_to: str | None = None,
+        link_alternatives: bool = True,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ] = "all",
+    ) -> SystematisationDraftRecord:
+        pattern_values = self._string_values("patterns", patterns, required=True)
+        self._validate_resource_values("patterns", pattern_values)
+        pattern_descriptions = [
+            self.describe_pattern(pattern_iri) for pattern_iri in pattern_values
+        ]
+        pattern_iris = [description.iri for description in pattern_descriptions]
+        explicit_anchor_values = self._string_values("anchors", anchors)
+        auto_anchor_values = [
+            *pattern_iris,
+            *(
+                target.iri
+                for description in pattern_descriptions
+                for target in description.pattern_targets
+            ),
+            *(
+                implication.iri
+                for description in pattern_descriptions
+                for implication in description.map_implications
+            ),
+        ]
+        promotion_anchors = list(
+            dict.fromkeys([*auto_anchor_values, *explicit_anchor_values])
+        )
+        auto_observation_values = [
+            observation.iri
+            for description in pattern_descriptions
+            for observation in description.supporting_observations
+        ]
+        auto_claim_values = [
+            claim.iri
+            for description in pattern_descriptions
+            for claim in description.supporting_claims
+        ]
+        auto_evidence_values = [
+            evidence_item.iri
+            for description in pattern_descriptions
+            for evidence_item in description.evidence
+        ]
+        promotion_observations = list(
+            dict.fromkeys(
+                [
+                    *auto_observation_values,
+                    *self._string_values(
+                        "supporting_observations",
+                        supporting_observations,
+                    ),
+                ]
+            )
+        )
+        promotion_claims = list(
+            dict.fromkeys(
+                [
+                    *auto_claim_values,
+                    *self._string_values("supporting_claims", supporting_claims),
+                ]
+            )
+        )
+        promotion_evidence = list(
+            dict.fromkeys(
+                [*auto_evidence_values, *self._string_values("evidence", evidence)]
+            )
+        )
+        summary_value = (
+            summary.strip()
+            if summary is not None and summary.strip()
+            else "Stage pattern-supported graph promotion"
+        )
+        intent_value = (
+            intent.strip()
+            if intent is not None and intent.strip()
+            else "Stage one or more graph changes supported by selected patterns."
+        )
+        promotion_rationale = self._pattern_promotion_rationale(
+            pattern_descriptions,
+            rationale,
+        )
+        return self.stage_systematisation(
+            summary=summary_value,
+            intent=intent_value,
+            framings=framings,
+            anchors=promotion_anchors,
+            rationale=promotion_rationale,
+            shared_additions=shared_additions,
+            shared_removals=shared_removals,
+            shared_context_summary=shared_context_summary,
+            default_stance=default_stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=promotion_observations,
+            supporting_claims=promotion_claims,
+            supporting_patterns=pattern_iris,
+            evidence=promotion_evidence,
+            alternative_to=alternative_to,
+            link_alternatives=link_alternatives,
+            validation_scope=validation_scope,
+        )
+
+    def _pattern_promotion_rationale(
+        self,
+        pattern_descriptions: Iterable[PatternDescription],
+        rationale: str | None,
+    ) -> str:
+        lines = ["Selected pattern support:"]
+        for description in pattern_descriptions:
+            pattern_summary = (
+                description.summary
+                or description.pattern_text
+                or description.label
+                or description.iri
+            )
+            lines.append(f"- {description.iri}: {pattern_summary}")
+            if description.pattern_text:
+                lines.append(f"  Pattern: {description.pattern_text}")
+            if description.rationale:
+                lines.append(f"  Rationale: {description.rationale}")
+        rationale_value = rationale.strip() if rationale is not None else ""
+        if rationale_value:
+            lines.extend(["", "Promotion rationale:", rationale_value])
+        return "\n".join(lines)
+
     def export_staged_revision(
         self,
         iri: str,

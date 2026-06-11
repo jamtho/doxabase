@@ -131,10 +131,12 @@ record_map_relationship_tool(
 
 ## Limits
 
-These helpers do not yet promote patterns automatically. If a pattern supports a
-map change, record the map fact with the helper and keep the pattern linked via
-`rc:mapImplication` for now. Future promotion tools should make that relationship
-explicit and mark supporting claims or patterns as promoted.
+These helpers do not promote patterns automatically. If a pattern supports a
+straightforward current-best map fact, record the map fact with the helper and
+keep the pattern linked via `rc:mapImplication`. If the promotion should remain
+reviewable or needs caller-authored RDF beyond the map helper surface, use
+`doxabase.stage_pattern_promotion` so the selected pattern and its support links
+travel with the staged graph change.
 
 Map helpers also do not mint project IRIs. Prefer stable project namespaces over
 generated IDs for durable map resources.

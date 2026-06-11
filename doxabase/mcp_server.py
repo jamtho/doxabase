@@ -38,6 +38,7 @@ from doxabase.mcp_tools import (
     record_pattern_tool,
     search_tool,
     stage_graph_revision_tool,
+    stage_pattern_promotion_tool,
     stage_systematisation_tool,
     validate_graph_tool,
 )
@@ -45,7 +46,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/claim-reconsideration/history recording, systematisation staging, staged graph revision review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -737,6 +738,55 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             supporting_observations=supporting_observations,
             supporting_claims=supporting_claims,
             supporting_patterns=supporting_patterns,
+            evidence=evidence,
+            alternative_to=alternative_to,
+            link_alternatives=link_alternatives,
+            validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.stage_pattern_promotion")
+    def stage_pattern_promotion(
+        patterns: list[str],
+        framings: list[dict[str, Any]],
+        summary: str | None = None,
+        intent: str | None = None,
+        rationale: str | None = None,
+        anchors: list[str] | None = None,
+        shared_additions: list[dict[str, str]] | None = None,
+        shared_removals: list[dict[str, str]] | None = None,
+        shared_context_summary: str | None = None,
+        default_stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: list[str] | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        supporting_observations: list[str] | None = None,
+        supporting_claims: list[str] | None = None,
+        evidence: list[str] | None = None,
+        alternative_to: str | None = None,
+        link_alternatives: bool = True,
+        validation_scope: str = "all",
+    ) -> dict[str, Any]:
+        """Stage graph changes supported by existing patterns."""
+
+        return stage_pattern_promotion_tool(
+            db,
+            patterns=patterns,
+            framings=framings,
+            summary=summary,
+            intent=intent,
+            rationale=rationale,
+            anchors=anchors,
+            shared_additions=shared_additions,
+            shared_removals=shared_removals,
+            shared_context_summary=shared_context_summary,
+            default_stance=default_stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
             evidence=evidence,
             alternative_to=alternative_to,
             link_alternatives=link_alternatives,

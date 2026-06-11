@@ -240,6 +240,14 @@ validation for each framing. This is a drafting and validation scaffold, not an
 ontology decision engine. Anchors are recorded as `rc:revisionAnchor` metadata
 on each staged revision and are also repeated in rationale text for readability.
 
+`stage_pattern_promotion()` stages one or more caller-authored RDF framings
+supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;
+the helper records the selected patterns as support, rolls up their supporting
+observations/claims/evidence, uses pattern targets and map implications as
+revision anchors, and delegates validation/review packaging to
+`stage_systematisation()`. It does not apply the changes or infer the graph
+shape.
+
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, changed/included graph roles, graph-count snapshots, validation
 result, structured validation diagnostics, export path, revision anchors, and

@@ -93,6 +93,7 @@ DoxaBase.record_observation(summary, ...)
 DoxaBase.record_graph_revision(summary, rationale, changed_graphs, included_graphs=None, ...)
 DoxaBase.stage_graph_revision(summary, rationale, additions=None, removals=None, ...)
 DoxaBase.stage_systematisation(summary, intent, framings, anchors=None, shared_additions=None, ...)
+DoxaBase.stage_pattern_promotion(patterns, framings, summary=None, ...)
 DoxaBase.describe_staged_revision(iri)
 DoxaBase.export_staged_revision(iri, path)
 DoxaBase.validate_graph(scope="map", limit_results=100)
@@ -192,6 +193,7 @@ Current MCP tools:
 - `doxabase.record_graph_revision`
 - `doxabase.stage_graph_revision`
 - `doxabase.stage_systematisation`
+- `doxabase.stage_pattern_promotion`
 - `doxabase.export_staged_revision`
 - `doxabase.export_staged_revisions`
 - `doxabase.load_example_fixtures`
@@ -294,7 +296,7 @@ Expected state at the time of writing:
 
 Recommended next implementation steps:
 
-1. Add pattern-to-map promotion helpers on top of staged revisions.
+1. Add fuller staged apply/conflict/version workflows.
 2. Add richer profile metrics and profiling helpers.
 3. Add query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.

@@ -478,6 +478,129 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "IdentityLadderPattern" in exported
 
 
+def test_stage_pattern_promotion_rolls_pattern_support_into_staged_revision(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/ais#"
+    mmsi_column = f"{base}broadcasts__mmsi"
+    caveat = f"{base}mmsi_operational_identity_caveat"
+    observation = db.record_observation(
+        "MMSI appears repeatedly as a useful but imperfect grouping key.",
+        observed_column=mmsi_column,
+        evidence_summary="Synthetic profile note for pattern promotion.",
+        evidence_sources=["test://mmsi-profile"],
+    )
+    claim = db.record_claim_observation(
+        summary="MMSI identity caveat.",
+        claim_text="MMSI is useful for grouping broadcasts but is not stable vessel identity.",
+        claim_kind="rc:CaveatClaim",
+        claim_targets=[mmsi_column],
+        evidence_sources=["test://mmsi-caveat"],
+    )
+    pattern = db.record_pattern(
+        summary="MMSI is operational identity, not vessel identity.",
+        pattern_text=(
+            "Repeated checks support treating MMSI as an operational grouping key "
+            "with identity caveats."
+        ),
+        rationale=(
+            "The observation and claim agree that MMSI is useful but should not "
+            "be promoted as a stable vessel identifier."
+        ),
+        pattern_targets=[mmsi_column],
+        supporting_observations=[observation.observation_iri],
+        supporting_claims=[claim.claim_iri],
+        evidence_iri=claim.evidence_iri,
+        map_implications=[caveat],
+        confidence="rc:HighConfidence",
+        pattern_stability="rc:RepeatedPattern",
+    )
+    before_map_count = db.triple_count("map")
+    before_ontology_count = db.triple_count("ontology")
+
+    draft = db.stage_pattern_promotion(
+        patterns=[pattern.pattern_iri],
+        summary="Promote MMSI caveat from pattern",
+        intent="Preserve the MMSI hunch as current map caveat plus a project term.",
+        rationale=(
+            "This is a cautious promotion: the strong pattern becomes a caveat, "
+            "not a hard identity-key assertion."
+        ),
+        shared_additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ais: <https://example.test/ais#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ais:OperationalIdentityCaveat a rdfs:Class ;
+                        rdfs:subClassOf rc:KnownCaveat ;
+                        rdfs:label "Operational identity caveat" .
+                """,
+            }
+        ],
+        framings=[
+            {
+                "label": "Map caveat",
+                "graph": "map",
+                "content": f"""
+                    @prefix ais: <https://example.test/ais#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ais:mmsi_operational_identity_caveat
+                        a rc:KnownCaveat, ais:OperationalIdentityCaveat ;
+                        rdfs:label "MMSI operational identity caveat" ;
+                        rdfs:comment "MMSI can group broadcasts but should not be treated as stable vessel identity." ;
+                        rc:caveatDescription "MMSI can group broadcasts but should not be treated as stable vessel identity." ;
+                        rc:impact "Identity-level analysis should avoid assuming one MMSI equals one vessel." ;
+                        rc:severity rc:Moderate .
+
+                    <{mmsi_column}> rc:hasKnownCaveat ais:mmsi_operational_identity_caveat .
+                """,
+                "review_note": "Pattern support is strong, but the map change remains staged.",
+            }
+        ],
+        validation_scope="all",
+    )
+
+    assert draft.summary == "Promote MMSI caveat from pattern"
+    assert draft.intent == (
+        "Preserve the MMSI hunch as current map caveat plus a project term."
+    )
+    assert draft.anchors == [pattern.pattern_iri, mmsi_column, caveat]
+    assert draft.framings[0].target_graphs == ["ontology", "map"]
+    assert draft.framings[0].validation_conforms is True
+    assert db.triple_count("map") == before_map_count
+    assert db.triple_count("ontology") == before_ontology_count
+
+    staged = db.describe_staged_revision(draft.staged_revisions[0].revision_iri)
+    assert staged.revision_stance == RC + "CandidateRevision"
+    assert staged.rationale is not None
+    assert "Selected pattern support" in staged.rationale
+    assert "Promotion rationale" in staged.rationale
+    assert {pattern_summary.iri for pattern_summary in staged.supporting_patterns} == {
+        pattern.pattern_iri
+    }
+    assert {
+        observation_summary.iri
+        for observation_summary in staged.supporting_observations
+    } == {observation.observation_iri}
+    assert {claim_summary.iri for claim_summary in staged.supporting_claims} == {
+        claim.claim_iri
+    }
+    assert {evidence_summary.iri for evidence_summary in staged.evidence} == {
+        claim.evidence_iri
+    }
+    assert {anchor.iri for anchor in staged.revision_anchors} == {
+        pattern.pattern_iri,
+        mmsi_column,
+        caveat,
+    }
+
+
 def test_stage_systematisation_shared_context_validates_each_framing(
     tmp_path: Path,
 ) -> None:

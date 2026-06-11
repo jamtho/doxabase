@@ -699,6 +699,54 @@ def stage_systematisation_tool(
     return asdict(result)
 
 
+def stage_pattern_promotion_tool(
+    db: DoxaBase,
+    patterns: list[str],
+    framings: list[dict[str, Any]],
+    summary: str | None = None,
+    intent: str | None = None,
+    rationale: str | None = None,
+    anchors: list[str] | None = None,
+    shared_additions: list[dict[str, str]] | None = None,
+    shared_removals: list[dict[str, str]] | None = None,
+    shared_context_summary: str | None = None,
+    default_stance: str = "rc:CandidateRevision",
+    revision_type: str = "rc:StagedRevision",
+    included_graphs: list[str] | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    supporting_observations: list[str] | None = None,
+    supporting_claims: list[str] | None = None,
+    evidence: list[str] | None = None,
+    alternative_to: str | None = None,
+    link_alternatives: bool = True,
+    validation_scope: str = "all",
+) -> dict[str, Any]:
+    result = db.stage_pattern_promotion(
+        patterns=patterns,
+        framings=framings,
+        summary=summary,
+        intent=intent,
+        rationale=rationale,
+        anchors=anchors,
+        shared_additions=shared_additions,
+        shared_removals=shared_removals,
+        shared_context_summary=shared_context_summary,
+        default_stance=default_stance,
+        revision_type=revision_type,
+        included_graphs=included_graphs,
+        created_at=created_at,
+        created_by=created_by,
+        supporting_observations=supporting_observations,
+        supporting_claims=supporting_claims,
+        evidence=evidence,
+        alternative_to=alternative_to,
+        link_alternatives=link_alternatives,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return asdict(result)
+
+
 def export_staged_revision_tool(
     db: DoxaBase,
     iri: str,

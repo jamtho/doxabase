@@ -85,6 +85,8 @@ A useful trial usually asks the agent to:
   context when several framings should lean on the same provisional vocabulary
   or assumptions, and include shared `shapes` when the trial needs temporary
   validation rules for the framings;
+- use `stage_pattern_promotion` when existing patterns support a caller-authored
+  map, ontology, shape, or other graph change that should remain reviewable;
 - use `describe_pattern` when checking whether synthesized lore can be taught
   back compactly;
 - use map authoring helpers when the trial asks for a current-best scratch map;
