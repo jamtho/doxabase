@@ -261,6 +261,13 @@ writes a Markdown review bundle with diagnostics before patch payloads.
 revisions in caller-chosen order; pass `executive_summary` when the comparison
 needs an agent-authored synthesis at the top of the artifact.
 
+`apply_staged_revision()` applies one staged revision after count-based conflict
+checks and preview validation. It rejects already-applied staged revisions,
+rejects target graph count drift from the patch `beforeTripleCount` values, and
+records an `rc:AppliedStagedRevision` history event linked to the staged
+revision. This is a conservative first apply path, not a full conflict/rebase or
+graph-version workflow.
+
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,
 and map implications.

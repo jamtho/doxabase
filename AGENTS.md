@@ -101,9 +101,10 @@ The AIS and Polymarket fixtures are representative pressure tests, not full
 mechanical conversions. The AIS fixture is intentionally reduced and should not
 be treated as a full executable catalog.
 
-Revision metadata and staged graph patch proposals exist, but applying staged
-revisions, conflict detection, and graph version storage are not implemented in
-the current runtime. For the longer plan, see
+Revision metadata and staged graph patch proposals exist. The current runtime
+can apply one staged revision with conservative count-based conflict checks, but
+rich conflict handling, rebasing, and graph version storage are not implemented
+yet. For the longer plan, see
 `doxabase_design_docs/03-doxabase-v1-storage-schema.md` and the revision model
 in `doxabase_design_docs/01-doxabase-v1-design-brief.md`.
 
@@ -125,7 +126,7 @@ validation, or agent workflows.
 
 The near-term order is:
 
-1. Add fuller staged apply/conflict/version workflows.
+1. Add fuller staged conflict/rebase/version workflows.
 2. Add richer profile metrics and profiling helpers that can write map facts,
    observations, and patterns together.
 3. Add query-planning helpers that consume storage access metadata.

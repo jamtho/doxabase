@@ -5,6 +5,7 @@ import pytest
 from doxabase import DoxaBase
 from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
+    apply_staged_revision_tool,
     describe_context_slice_tool,
     describe_dataset_tool,
     describe_graph_revision_tool,
@@ -74,6 +75,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.stage_graph_revision" in tool_names
     assert "doxabase.stage_systematisation" in tool_names
     assert "doxabase.stage_pattern_promotion" in tool_names
+    assert "doxabase.apply_staged_revision" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
 
@@ -238,6 +240,42 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert export["format"] == "markdown"
     assert export_path.exists()
     assert "exploratory hunch" in export_path.read_text()
+
+
+def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Messages a rc:Dataset, rc:Table ;
+                        rdfs:label "Messages" .
+                """,
+            }
+        ],
+    )
+
+    result = apply_staged_revision_tool(db, iri=staged["revision_iri"])
+
+    assert result["staged_revision_iri"] == staged["revision_iri"]
+    assert result["changed_graphs"] == ["map"]
+    assert result["patches_applied"] == 1
+    assert result["triples_added"] == 3
+    assert result["validation_conforms"] is True
+    description = describe_graph_revision_tool(db, result["applied_revision_iri"])
+    assert description["revision_type_label"] == "applied staged revision"
+    assert describe_dataset_tool(
+        db,
+        "https://example.test/project#Messages",
+    )["label"] == "Messages"
 
 
 def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) -> None:

@@ -61,7 +61,8 @@ Each patch must target one mutable graph role. The helper parses the RDF, reject
 empty or malformed payloads, previews additions/removals in memory, runs SHACL
 validation over the preview scope, and records staged metadata in `history`.
 
-The target graph is not changed. Staged revisions are review objects.
+The target graph is not changed when a revision is staged. Staged revisions are
+review objects until `doxabase.apply_staged_revision` applies one.
 
 Use `doxabase.describe_staged_revision` to inspect patch payloads, stance,
 validation status, structured validation result diagnostics, support links, and
@@ -96,8 +97,8 @@ Each framing can use the shorthand `graph` + `content` for one addition, or full
 Add `review_note` and `review_recommendation` when the comparison itself needs
 human-readable judgement, for example "preferred for now", "too bold but
 informative", or "keep as a concrete alternative". These fields are not proof
-and they do not apply the revision; they are review cues preserved with the
-staged proposal.
+and they do not apply the revision by themselves; they are review cues preserved
+with the staged proposal.
 Shared context patches are previewed before each framing's own patches:
 
 ```python
@@ -186,6 +187,25 @@ pattern IRIs and caller-authored framings. The helper:
 
 Use it when a pattern supports a caveat, relationship, project vocabulary term,
 shape, or other durable structure but the exact graph move still deserves review.
+
+## Applying Staged Revisions
+
+Use `doxabase.apply_staged_revision` after reviewing a staged revision and
+deciding it should become durable graph state. The helper is intentionally
+conservative:
+
+- it rejects a staged revision that already has an applied-revision event;
+- it checks each patch's target graph count against the recorded
+  `beforeTripleCount`;
+- it previews all patches in memory and reruns validation before mutating graph
+  state;
+- it applies additions/removals only after those checks pass;
+- it records an `rc:AppliedStagedRevision` history event linked back with
+  `rc:appliesStagedRevision`.
+
+This is not a full merge system. A harmless unrelated graph change can still
+show up as a conflict because the first guard is count-based. In that case,
+restage the patch against current graph state rather than forcing it through.
 
 ## What Gets Recorded
 
@@ -278,7 +298,7 @@ templates are legitimate.
 
 ## Limits
 
-DoxaBase does not yet apply staged revisions. There is no conflict detection,
-approval state machine, or durable graph version storage. For now, staged
-revisions are reviewable proposals with validation previews and exportable patch
-payloads. Apply/promote workflows can build on this surface later.
+DoxaBase can apply one staged revision with conservative count-based conflict
+checks. It does not yet support rich conflict diagnostics, rebasing, approval
+state machines, or durable graph version storage. Restage proposals when the
+target graph has drifted.

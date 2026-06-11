@@ -38,6 +38,8 @@ Current implementation status:
   framings of a modelling hunch, with optional shared proposed context.
 - `stage_pattern_promotion()` for staging caller-authored graph changes backed
   by existing patterns and their support links.
+- `apply_staged_revision()` for applying one staged revision after count-based
+  conflict checks and preview validation.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
@@ -47,7 +49,7 @@ Current implementation status:
 
 Important V1 limits:
 
-- No staged revision apply/conflict workflow yet.
+- No rich staged revision rebase/conflict workflow or graph version storage yet.
 - No full SPARQL endpoint.
 - No direct query generation or execution helpers yet.
 - No embedded LLM, semantic search, or embedding index.

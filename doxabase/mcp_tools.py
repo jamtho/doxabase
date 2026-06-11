@@ -747,6 +747,26 @@ def stage_pattern_promotion_tool(
     return asdict(result)
 
 
+def apply_staged_revision_tool(
+    db: DoxaBase,
+    iri: str,
+    applied_revision_iri: str | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    allow_validation_failure: bool = False,
+    validation_scope: str | None = None,
+) -> dict[str, Any]:
+    result = db.apply_staged_revision(
+        iri=iri,
+        applied_revision_iri=applied_revision_iri,
+        created_at=created_at,
+        created_by=created_by,
+        allow_validation_failure=allow_validation_failure,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return asdict(result)
+
+
 def export_staged_revision_tool(
     db: DoxaBase,
     iri: str,

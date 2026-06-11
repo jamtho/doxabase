@@ -6,8 +6,9 @@ inspect the resulting bundle.
 
 Use `doxabase.record_graph_revision` after graph state has changed, after an
 import/export, or after a review bundle when the rationale should remain
-available to later agents. For proposed additions/removals that should not be
-applied yet, use `doxabase.stage_graph_revision`; see `staged_revisions`.
+available to later agents. For proposed additions/removals that should be
+reviewed before application, use `doxabase.stage_graph_revision`; see
+`staged_revisions`.
 
 ## When To Record
 
@@ -104,7 +105,7 @@ Use `describe_staged_revision()` to inspect the proposal and
 
 ## Limits
 
-DoxaBase can record staged patch proposals, but it does not yet apply them,
-detect conflicts, or store durable graph versions. The revision helpers preserve
-rationale and review context now, while leaving approval, promotion, and full
-slice replacement for later.
+DoxaBase can apply staged patch proposals with conservative count-based conflict
+checks, but it does not yet provide rich conflict diagnostics, rebasing, approval
+workflows, or durable graph versions. The revision helpers preserve rationale
+and review context now, while leaving fuller slice replacement for later.

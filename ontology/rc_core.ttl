@@ -1133,6 +1133,11 @@ rc:alternativeTo a rdf:Property ;
     rdfs:range rc:GraphRevision ;
     rdfs:comment "Links a staged revision to an alternative staged or historical revision it competes with, refines, or supersedes." .
 
+rc:appliesStagedRevision a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:GraphRevision ;
+    rdfs:comment "Links an applied revision event to the staged graph revision it applied." .
+
 rc:changedGraph a rdf:Property ;
     rdfs:domain rc:GraphRevision ;
     rdfs:range xsd:string ;
@@ -1264,6 +1269,7 @@ rc:ExportRevision a rc:RevisionType ; rdfs:label "export revision" .
 rc:MapAuthoringRevision a rc:RevisionType ; rdfs:label "map authoring revision" .
 rc:FieldTrialRevision a rc:RevisionType ; rdfs:label "field trial revision" .
 rc:StagedRevision a rc:RevisionType ; rdfs:label "staged revision" .
+rc:AppliedStagedRevision a rc:RevisionType ; rdfs:label "applied staged revision" .
 
 rc:ExploratoryHunch a rc:RevisionStance ; rdfs:label "exploratory hunch" .
 rc:CandidateRevision a rc:RevisionStance ; rdfs:label "candidate revision" .

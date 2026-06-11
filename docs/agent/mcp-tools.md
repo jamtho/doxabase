@@ -215,11 +215,20 @@ anchors, review note/recommendation, patch payloads, before/after count
 previews, validation status, and structured SHACL diagnostics such as focus
 node, result path, constraint, and messages.
 
+`doxabase.apply_staged_revision`
+
+Applies one staged revision to its target graph roles after conservative
+count-based conflict checks and preview SHACL validation. The helper rejects
+already-applied staged revisions and rejects graph-count drift from the staged
+`beforeTripleCount` values. On success it records an `rc:AppliedStagedRevision`
+history event linked to the staged revision. It is a first apply path, not a
+full merge/rebase workflow.
+
 `doxabase.export_staged_revision`
 
 Writes a Markdown review bundle for a staged revision, including validation
 diagnostics before patch payloads when validation failed. This is for
-human/agent review; staged revisions are not applied by the current runtime.
+human/agent review.
 
 `doxabase.export_staged_revisions`
 

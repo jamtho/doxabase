@@ -34,7 +34,9 @@ Use this sequence when arriving cold in a DoxaBase capsule.
 19. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph
     roles were included for review, and why.
-20. Use `doxabase.describe_graph_revision` when reviewing a history record, and
+20. Use `doxabase.apply_staged_revision` when a staged proposal should become
+    durable graph state after conflict and validation checks.
+21. Use `doxabase.describe_graph_revision` when reviewing a history record, and
     `doxabase.describe_staged_revision` when reviewing a staged patch proposal.
 
 When reading linked-pattern reasons from `describe_dataset`, scan
@@ -58,6 +60,6 @@ When adding future facts, choose graph roles by update pattern:
 Do not write to `base_ontology` or `base_shapes`; they are immutable package seed graphs.
 
 In the current V1 slice, the MCP interface exposes route-explained context
-slices and reviewable staged revisions. It does not yet apply staged revisions
-or provide conflict handling. Treat staged revisions as cheap proposal memory,
-not as transactional graph replacement.
+slices and reviewable staged revisions. It can apply one staged revision with
+conservative count-based conflict checks, but it does not yet provide rich
+conflict handling, rebasing, or durable graph version storage.

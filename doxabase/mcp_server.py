@@ -8,6 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from doxabase import DoxaBase
 from doxabase.mcp_tools import (
+    apply_staged_revision_tool,
     describe_dataset_tool,
     describe_context_slice_tool,
     describe_graph_revision_tool,
@@ -46,7 +47,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision apply/review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -808,6 +809,27 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             path=path,
             format=format,
             overwrite=overwrite,
+        )
+
+    @server.tool(name="doxabase.apply_staged_revision")
+    def apply_staged_revision(
+        iri: str,
+        applied_revision_iri: str | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        allow_validation_failure: bool = False,
+        validation_scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Apply a staged graph revision after conflict and validation checks."""
+
+        return apply_staged_revision_tool(
+            db,
+            iri=iri,
+            applied_revision_iri=applied_revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            allow_validation_failure=allow_validation_failure,
+            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.export_staged_revisions")

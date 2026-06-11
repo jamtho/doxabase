@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1094
+    assert graphs["base_ontology"].triple_count == 1100
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1099
+    assert graphs["base_shapes"].triple_count == 1105
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -313,6 +313,119 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     export_text = export_path.read_text()
     assert "exploratory hunch" in export_text
     assert "ex:Messages" in export_text
+
+
+def test_apply_staged_revision_mutates_graph_and_records_history(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    addition = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:Messages a rc:Dataset, rc:Table ;
+        rdfs:label "Messages" .
+    """
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[{"graph": "map", "content": addition}],
+        revision_anchors=["https://example.test/project#Messages"],
+        validation_scope="all",
+    )
+
+    result = db.apply_staged_revision(staged.revision_iri)
+
+    assert result.staged_revision_iri == staged.revision_iri
+    assert result.changed_graphs == ["map"]
+    assert result.patches_applied == 1
+    assert result.triples_added == 3
+    assert result.triples_removed == 0
+    assert result.validation_conforms is True
+    assert db.triple_count("map") == 3
+    messages = db.describe_dataset("https://example.test/project#Messages")
+    assert messages.label == "Messages"
+
+    applied = db.describe_graph_revision(result.applied_revision_iri)
+    assert applied.revision_type == RC + "AppliedStagedRevision"
+    assert applied.revision_type_label == "applied staged revision"
+    assert applied.changed_graphs == ["map"]
+    assert applied.validation_conforms is True
+    assert applied.graph_snapshots[0].graph_role == "map"
+    assert applied.graph_snapshots[0].triple_count == 3
+    context = db.describe_resource(result.applied_revision_iri, graph="history")
+    assert any(
+        triple.predicate == RC + "appliesStagedRevision"
+        and triple.object == staged.revision_iri
+        for triple in context.outgoing
+    )
+    assert db.validate_graph(scope="all").conforms
+
+    with pytest.raises(DoxaBaseError, match="already been applied"):
+        db.apply_staged_revision(staged.revision_iri)
+
+
+def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    messages = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ex:Messages a rc:Dataset, rc:Table ;
+        rdfs:label "Messages" .
+    """
+    staged_addition = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Create a removable map resource for the apply test.",
+        additions=[{"graph": "map", "content": messages}],
+    )
+    db.apply_staged_revision(staged_addition.revision_iri)
+    assert db.triple_count("map") == 3
+
+    staged_removal = db.stage_graph_revision(
+        summary="Remove messages table",
+        rationale="The messages resource was staged only as temporary context.",
+        removals=[{"graph": "map", "content": messages}],
+    )
+    result = db.apply_staged_revision(staged_removal.revision_iri)
+
+    assert result.changed_graphs == ["map"]
+    assert result.triples_added == 0
+    assert result.triples_removed == 3
+    assert db.triple_count("map") == 0
+    with pytest.raises(DoxaBaseError, match="Messages"):
+        db.describe_dataset("https://example.test/project#Messages")
+
+
+def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+
+    with pytest.raises(DoxaBaseError, match="Staged revision conflict"):
+        db.apply_staged_revision(staged.revision_iri)
+
+    with pytest.raises(DoxaBaseError, match="Messages"):
+        db.describe_dataset("https://example.test/project#Messages")
 
 
 def test_stage_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> None:

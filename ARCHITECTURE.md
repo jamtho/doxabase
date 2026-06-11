@@ -94,6 +94,7 @@ DoxaBase.record_graph_revision(summary, rationale, changed_graphs, included_grap
 DoxaBase.stage_graph_revision(summary, rationale, additions=None, removals=None, ...)
 DoxaBase.stage_systematisation(summary, intent, framings, anchors=None, shared_additions=None, ...)
 DoxaBase.stage_pattern_promotion(patterns, framings, summary=None, ...)
+DoxaBase.apply_staged_revision(iri, ...)
 DoxaBase.describe_staged_revision(iri)
 DoxaBase.export_staged_revision(iri, path)
 DoxaBase.validate_graph(scope="map", limit_results=100)
@@ -194,6 +195,7 @@ Current MCP tools:
 - `doxabase.stage_graph_revision`
 - `doxabase.stage_systematisation`
 - `doxabase.stage_pattern_promotion`
+- `doxabase.apply_staged_revision`
 - `doxabase.export_staged_revision`
 - `doxabase.export_staged_revisions`
 - `doxabase.load_example_fixtures`
@@ -272,8 +274,8 @@ uv run python tools/validate_rdf.py
 
 Expected state at the time of writing:
 
-- `rc_core.ttl`: 1094 triples.
-- `rc_shapes.ttl`: 1099 triples.
+- `rc_core.ttl`: 1100 triples.
+- `rc_shapes.ttl`: 1105 triples.
 - `ais.trig`: 325 quads.
 - `polymarket.trig`: 442 quads.
 - All fixtures conform to base SHACL shapes.
@@ -282,13 +284,14 @@ Expected state at the time of writing:
 
 - Storage currently stores term strings directly rather than using interned term IDs.
 - Blank node IDs are imported as-is; this is sufficient for current fixtures but not a robust merge strategy.
-- Staged revision proposals exist, but applying them, conflict detection, and
-  durable graph version storage are not implemented yet.
+- Staged revisions can be applied with conservative count-based conflict
+  checks, but rebase, rich conflict resolution, and durable graph version
+  storage are not implemented yet.
 - Context slices are route-explained first passes, not a complete staged review
   or proof-of-closure mechanism.
 - Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.
-- The MCP interface exposes inspection, context slicing, staged revision review,
-  helper-backed graph writing, validation, and revision metadata.
+- The MCP interface exposes inspection, context slicing, staged revision
+  apply/review, helper-backed graph writing, validation, and revision metadata.
 - The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and storage layout are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
 
@@ -296,7 +299,7 @@ Expected state at the time of writing:
 
 Recommended next implementation steps:
 
-1. Add fuller staged apply/conflict/version workflows.
+1. Add fuller staged conflict/rebase/version workflows.
 2. Add richer profile metrics and profiling helpers.
 3. Add query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.

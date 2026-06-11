@@ -72,6 +72,9 @@ Implemented:
   reviewable alternatives.
 - `stage_pattern_promotion()` for staging caller-authored graph changes
   supported by existing patterns while preserving support links and anchors.
+- `apply_staged_revision()` for applying one staged revision after count-based
+  conflict checks and preview validation, while recording an applied revision
+  event in history.
 - Agent-authored observation and pattern RDF vocabulary for structured claims,
   source spans, confidence, and status.
 - Stricter SHACL validation for observation/pattern/evidence/claim resources.
@@ -83,7 +86,7 @@ Implemented:
 
 Not implemented yet:
 
-- Applying staged graph revisions, conflict detection, and graph version storage.
+- Full staged revision conflict resolution, rebase, and graph version storage.
 - Query generation or execution helpers.
 - Full SPARQL endpoint.
 
@@ -181,12 +184,14 @@ Useful first tool calls for an agent:
 17. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
     should remain reviewable before becoming durable structure
 18. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
-19. `doxabase.record_map_dataset` and related map helpers for current-best facts
-20. `doxabase.validate_graph` with `scope="all"`
-21. `doxabase.export_trig` when you need a named-graph project review bundle
-22. `doxabase.record_graph_revision` when the bundle/change rationale should be
+19. `doxabase.apply_staged_revision` when a staged proposal should become
+    durable graph state after conflict and validation checks
+20. `doxabase.record_map_dataset` and related map helpers for current-best facts
+21. `doxabase.validate_graph` with `scope="all"`
+22. `doxabase.export_trig` when you need a named-graph project review bundle
+23. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-23. `doxabase.describe_graph_revision` when reviewing a history record
+24. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -221,6 +226,7 @@ Current MCP tools:
 - `doxabase.stage_graph_revision`
 - `doxabase.stage_systematisation`
 - `doxabase.stage_pattern_promotion`
+- `doxabase.apply_staged_revision`
 - `doxabase.load_example_fixtures`
 - `doxabase.validate_graph`
 
@@ -249,7 +255,7 @@ Logical includes:
 
 The next useful implementation steps are:
 
-1. Add fuller staged apply/conflict/version workflows.
+1. Add fuller staged conflict/rebase/version workflows.
 2. Add richer profile metrics and profiling helpers.
 3. Consider query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, after the lexical RDF search surface has settled.
