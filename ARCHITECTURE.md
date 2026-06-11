@@ -170,9 +170,30 @@ Current MCP tools:
 - `doxabase.graph_overview`
 - `doxabase.search`
 - `doxabase.list_entities`
+- `doxabase.describe_resource`
+- `doxabase.describe_pattern`
+- `doxabase.describe_graph_revision`
+- `doxabase.describe_staged_revision`
 - `doxabase.describe_dataset`
+- `doxabase.describe_context_slice`
 - `doxabase.record_observation`
+- `doxabase.record_claim_observation`
+- `doxabase.record_pattern`
+- `doxabase.record_map_dataset`
+- `doxabase.record_map_column`
+- `doxabase.record_map_caveat`
+- `doxabase.record_map_storage_access`
+- `doxabase.record_map_physical_layout`
+- `doxabase.record_map_partition_scheme`
+- `doxabase.record_map_relationship`
 - `doxabase.import_trig`
+- `doxabase.export_graph`
+- `doxabase.export_trig`
+- `doxabase.record_graph_revision`
+- `doxabase.stage_graph_revision`
+- `doxabase.stage_systematisation`
+- `doxabase.export_staged_revision`
+- `doxabase.export_staged_revisions`
 - `doxabase.load_example_fixtures`
 - `doxabase.validate_graph`
 
@@ -190,8 +211,15 @@ The MCP docs tools expose these docs:
 - `ontology_primer`
 - `mcp_tools`
 - `observation_recording`
+- `observation_rdf`
+- `patterns`
+- `map_authoring`
+- `revisions`
+- `staged_revisions`
 - `lexical_search`
+- `context_slicing`
 - `executable_catalog`
+- `field_trials`
 - `api_reference`
 - `fixture_notes`
 
@@ -242,9 +270,9 @@ uv run python tools/validate_rdf.py
 
 Expected state at the time of writing:
 
-- `rc_core.ttl`: 697 triples.
-- `rc_shapes.ttl`: 531 triples.
-- `ais.trig`: 321 quads.
+- `rc_core.ttl`: 1094 triples.
+- `rc_shapes.ttl`: 1099 triples.
+- `ais.trig`: 325 quads.
 - `polymarket.trig`: 442 quads.
 - All fixtures conform to base SHACL shapes.
 
