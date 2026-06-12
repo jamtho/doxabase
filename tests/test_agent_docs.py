@@ -5,6 +5,8 @@ def test_list_agent_docs_contains_operational_docs() -> None:
     docs = list_agent_docs()
     doc_ids = {doc["id"] for doc in docs}
 
+    assert docs[0]["id"] == "start_here"
+    assert "start_here" in doc_ids
     assert "overview" in doc_ids
     assert "graph_roles" in doc_ids
     assert "agent_workflow" in doc_ids

@@ -90,6 +90,8 @@ def test_doc_tools_return_json_like_payloads() -> None:
     result = list_docs_tool()
     doc_ids = {doc["id"] for doc in result["docs"]}
 
+    assert result["docs"][0]["id"] == "start_here"
+    assert "start_here" in doc_ids
     assert "overview" in doc_ids
     assert "graph_roles" in doc_ids
 

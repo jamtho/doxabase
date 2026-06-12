@@ -17,6 +17,12 @@ class AgentDoc:
 
 DOCS: tuple[AgentDoc, ...] = (
     AgentDoc(
+        id="start_here",
+        title="Start Here",
+        description="Cold-start and post-compaction route for agents.",
+        path=DOCS_DIR / "start-here.md",
+    ),
+    AgentDoc(
         id="overview",
         title="DoxaBase Agent Overview",
         description="High-level purpose, current implementation status, and V1 limits.",

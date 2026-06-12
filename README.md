@@ -38,6 +38,21 @@ validation. There is no embedded LLM in the library. Agents supply semantic
 judgement; DoxaBase supplies graph mechanics, storage, retrieval affordances,
 and validation.
 
+## How To Read This Project
+
+For a human overview, start with this README, then read `ARCHITECTURE.md` and
+the design notes in `doxabase_design_docs/`.
+
+For a fresh agent, or an agent resuming after compaction, start with
+`docs/agent/start-here.md`. It gives the fastest route through the current
+capsule: which docs to read, which graph-inspection calls to make first, where
+different kinds of claims belong, and which runtime gotchas matter for
+sub-agent field trials.
+
+For exact operational details, use the short docs in `docs/agent/`, especially
+`graph-roles.md`, `workflow.md`, `observation-recording.md`, `patterns.md`,
+`map-authoring.md`, `staged-revisions.md`, and `field-trials.md`.
+
 ## Current Status
 
 Implemented:
@@ -164,8 +179,8 @@ uv run python -m doxabase.mcp_server --capsule .doxabase.sqlite
 Useful first tool calls for an agent:
 
 1. `doxabase.list_docs`
-2. `doxabase.get_doc` with `doc_id="overview"`
-3. `doxabase.get_doc` with `doc_id="graph_roles"`
+2. `doxabase.get_doc` with `doc_id="start_here"`
+3. `doxabase.get_doc` with `doc_id="graph_roles"` when graph placement rules matter
 4. `doxabase.load_example_fixtures`
 5. `doxabase.graph_overview`
 6. `doxabase.search` for remembered terms, caveats, observations, or evidence
@@ -256,6 +271,7 @@ Mutable project graphs:
 - `map`: current best structured project/data map.
 - `observations`: point-in-time and tentative findings.
 - `evidence`: source/query/hash/sample support.
+- `patterns`: syntheses over related observations, claims, or evidence.
 - `shapes`: project/client SHACL shapes.
 - `history`: revision metadata, graph-count snapshots, and consolidation rationale.
 

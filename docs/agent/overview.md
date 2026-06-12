@@ -2,6 +2,9 @@
 
 DoxaBase is a local RDF memory capsule for data projects.
 
+If you are arriving cold or resuming after compaction, read `start_here` before
+using this status overview.
+
 The agent-facing contract is:
 
 > The agent supplies semantic judgement; DoxaBase supplies graph mechanics.

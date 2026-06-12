@@ -30,17 +30,18 @@ agents think together with less friction.
 
 Read these first when arriving cold:
 
-1. `README.md` for status, commands, and project direction.
-2. `ARCHITECTURE.md` for boundaries and near-term build order.
-3. `docs/agent/overview.md`, `docs/agent/graph-roles.md`, and `docs/agent/workflow.md`
-   for operational graph conventions.
+1. `docs/agent/start-here.md` for the cold-start and post-compaction route.
+2. `README.md` for project purpose, status, commands, and direction.
+3. `ARCHITECTURE.md` for boundaries and near-term build order.
+4. `docs/agent/graph-roles.md` and `docs/agent/workflow.md` when you need
+   fuller operational graph conventions.
 
 Use the DoxaBase MCP docs tools when available:
 
 1. `doxabase.list_docs`
-2. `doxabase.get_doc` with `doc_id="overview"`
-3. `doxabase.get_doc` with `doc_id="graph_roles"`
-4. `doxabase.get_doc` with `doc_id="context_slicing"`
+2. `doxabase.get_doc` with `doc_id="start_here"`
+3. `doxabase.get_doc` with `doc_id="graph_roles"` when placement rules matter
+4. `doxabase.get_doc` with `doc_id="context_slicing"` when retrieval scope matters
 5. `doxabase.graph_overview`
 
 ## Daily Commands

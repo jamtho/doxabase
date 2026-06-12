@@ -1,9 +1,15 @@
 # Agent Workflow
 
-Use this sequence when arriving cold in a DoxaBase capsule.
+Use this sequence when you already know you are operating inside a DoxaBase
+capsule and need the fuller workflow. If you are arriving cold or resuming after
+compaction, read `start_here` first.
 
 1. Call `doxabase.list_docs`.
-2. Read `overview`, `graph_roles`, `ontology_primer`, `lexical_search`, `context_slicing`, `observation_rdf`, `patterns`, `map_authoring`, `revisions`, `staged_revisions`, `executable_catalog`, and `field_trials` if you do not know the project conventions.
+2. Read `start_here`, then read only the specific docs needed for the task:
+   `graph_roles` for graph placement, `observation_recording` /
+   `observation_rdf` / `patterns` for preserving lore, `map_authoring` /
+   `staged_revisions` / `revisions` for graph changes, `context_slicing` /
+   `lexical_search` for retrieval, and `field_trials` for sub-agent trials.
 3. Call `doxabase.graph_overview` to inspect named graphs, counts, common classes, and predicates.
 4. Call `doxabase.search` when you have a remembered term, caveat, column name, source note, or question-shaped keyword.
 5. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.

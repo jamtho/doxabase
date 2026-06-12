@@ -48,7 +48,7 @@ from doxabase.mcp_tools import (
 )
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
-Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
+Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
 Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision apply checks/apply/review, import/export, fixture loading, and validation."""
 

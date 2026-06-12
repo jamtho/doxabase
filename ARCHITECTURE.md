@@ -215,6 +215,7 @@ Agent docs live in `docs/agent/` and are registered in `doxabase/agent_docs.py`.
 
 The MCP docs tools expose these docs:
 
+- `start_here`
 - `overview`
 - `graph_roles`
 - `agent_workflow`

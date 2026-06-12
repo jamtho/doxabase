@@ -10,7 +10,8 @@ Returns available agent docs with IDs, titles, and descriptions.
 
 `doxabase.get_doc`
 
-Returns one markdown doc by ID. Use `max_chars` to bound output.
+Returns one markdown doc by ID. Use `max_chars` to bound output. Start with
+`doc_id="start_here"` when arriving cold or resuming after compaction.
 
 ## Capsule Inspection
 
