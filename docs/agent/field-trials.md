@@ -42,6 +42,14 @@ user's uv cache. If import paths are unclear, set:
 PYTHONPATH=/home/james/github.com/jamtho/doxybase
 ```
 
+When running a trial through Codex sub-agents, keep the harness explicit:
+
+- require a final thread report and a backup report file under `/tmp`;
+- give a tight timeout and a small, concrete task before broad exploration;
+- close completed or failed sub-agents so they do not occupy agent slots;
+- if a sub-agent appears silent, interrupt once and ask for immediate status
+  before closing it.
+
 ## Safety
 
 Use a scratch capsule, for example:
