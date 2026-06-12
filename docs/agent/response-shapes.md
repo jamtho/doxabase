@@ -1,0 +1,267 @@
+# Response Shape Examples
+
+Use this doc when scripting against the Python API or MCP helper payloads. The
+workflow docs explain what to do; this page names the fields agents commonly
+need so they do not have to infer near-miss attribute names.
+
+Python API calls return dataclass-like objects. MCP helper functions in
+`doxabase.mcp_tools` return JSON-like dictionaries. Prefer MCP helpers when you
+need serializable payloads; prefer the Python API when you are running a local
+scratch capsule script.
+
+## Docs And Overview
+
+`list_docs_tool()` returns:
+
+```python
+{
+    "docs": [
+        {"id": "start_here", "title": "Start Here", "description": "..."},
+        ...
+    ]
+}
+```
+
+`graph_overview_tool(db)` returns:
+
+```python
+{
+    "named_graphs": [
+        {
+            "name": "map",
+            "description": "Current best project/data map",
+            "mutable": True,
+            "system_seed": False,
+            "source_path": None,
+            "triple_count": 574,
+        },
+        ...
+    ],
+    "class_counts": [{"class": "rc:Column", "count": 42}, ...],
+    "predicate_counts": [{"predicate": "rdf:type", "count": 569}, ...],
+    "key_counts": {"datasets": 7, "tables": 7, "patterns": 0, ...},
+    "namespaces": {"rc": "https://richcanopy.org/ns/rc#", ...},
+}
+```
+
+There is no top-level `graph_counts` field. Derive graph counts from
+`named_graphs[].triple_count`.
+
+## Search
+
+`db.search(...)` returns a `SearchResult` with:
+
+```python
+result.query
+result.graph
+result.matches
+result.limit
+result.offset
+```
+
+Each `SearchMatch` has:
+
+```python
+match.iri
+match.graph
+match.label
+match.types
+match.predicate
+match.predicate_label
+match.text
+match.snippet
+```
+
+Use `match.iri` for the matched resource. There is no `match.subject` field.
+
+## Dataset Description
+
+`db.describe_dataset(table_iri)` returns a `DatasetDescription` with common
+fields:
+
+```python
+dataset.iri
+dataset.graph
+dataset.label
+dataset.description
+dataset.types
+dataset.row_semantics
+dataset.entity_key
+dataset.snapshot_timestamp
+dataset.schema_stability
+dataset.row_count_snapshot
+dataset.layout_verification_status
+dataset.layout_verification_note
+dataset.columns
+dataset.path_templates
+dataset.physical_layouts
+dataset.storage_accesses
+dataset.partition_schemes
+dataset.caveats
+dataset.upstream_caveats
+dataset.relationships
+dataset.linked_patterns
+dataset.linked_pattern_reasons
+```
+
+Each column in `dataset.columns` is a `ColumnDescription`:
+
+```python
+column.iri
+column.label
+column.description
+column.column_name
+column.physical_type
+column.value_type
+column.nullable
+```
+
+`physical_type` and `value_type` are resource summaries with `iri`, `label`, and
+`description`. There is no `column.semantic_role` field; use `column.value_type`
+for the semantic value concept when present.
+
+Each caveat in `dataset.caveats` has:
+
+```python
+caveat.iri
+caveat.label
+caveat.description
+caveat.impact
+caveat.severity
+```
+
+## Patterns
+
+`db.record_pattern(...)` returns a `PatternRecord`:
+
+```python
+pattern.pattern_iri
+pattern.evidence_iri
+pattern.source_span_iri
+pattern.pattern_triples
+pattern.evidence_triples
+```
+
+`db.describe_pattern(pattern_iri)` returns a `PatternDescription`:
+
+```python
+description.iri
+description.graph
+description.label
+description.summary
+description.pattern_text
+description.rationale
+description.pattern_targets
+description.supporting_observations
+description.supporting_claims
+description.evidence
+description.confidence
+description.confidence_label
+description.observation_status
+description.observation_status_label
+description.pattern_stability
+description.pattern_stability_label
+description.map_implications
+```
+
+Use `pattern_targets`, not `targets`.
+
+## Staged Revisions
+
+`db.stage_systematisation(...)` returns a `SystematisationDraftRecord`:
+
+```python
+draft.summary
+draft.intent
+draft.anchors
+draft.warnings
+draft.framings
+draft.staged_revisions
+```
+
+Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:
+
+```python
+revision.revision_iri
+revision.revision_type
+revision.revision_stance
+revision.graph
+revision.triples
+revision.changed_graphs
+revision.patches
+revision.validation_scope
+revision.validation_conforms
+revision.validation_result_count
+revision.validation_results
+```
+
+`db.describe_staged_revision(revision_iri)` returns the fuller
+`StagedGraphRevisionDescription`:
+
+```python
+description.iri
+description.summary
+description.revision_type
+description.revision_stance
+description.rationale
+description.review_note
+description.review_recommendation
+description.alternative_to
+description.changed_graphs
+description.included_graphs
+description.validation_scope
+description.validation_conforms
+description.validation_result_count
+description.validation_results
+description.graph_snapshots
+description.patches
+description.supporting_observations
+description.supporting_claims
+description.supporting_patterns
+description.revision_anchors
+description.evidence
+```
+
+Use `revision_stance`, not `stance`.
+
+Each patch in `description.patches` is a `GraphPatchDescription`:
+
+```python
+patch.iri
+patch.operation
+patch.operation_label
+patch.target_graph
+patch.format
+patch.patch_role
+patch.patch_role_label
+patch.triple_count
+patch.before_triple_count
+patch.after_triple_count
+patch.content
+```
+
+Use `operation` and `triple_count`, not `patch_operation` or
+`patch_triple_count`.
+
+`db.check_staged_revision_apply(revision_iri)` returns a
+`StagedRevisionApplyCheck`:
+
+```python
+check.staged_revision_iri
+check.can_apply
+check.already_applied_by
+check.changed_graphs
+check.patch_checks
+check.conflicts
+check.validation_scope
+check.validation_conforms
+check.validation_result_count
+check.validation_results
+check.patches_checked
+check.triples_to_add
+check.triples_to_remove
+```
+
+When `validation_conforms` is false, read `validation_results` before inferring
+the problem from patch text. Validation results usually include focus node,
+result path, constraint, severity, value, and messages.

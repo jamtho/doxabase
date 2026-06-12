@@ -94,6 +94,7 @@ def test_doc_tools_return_json_like_payloads() -> None:
     assert "start_here" in doc_ids
     assert "overview" in doc_ids
     assert "graph_roles" in doc_ids
+    assert "response_shapes" in doc_ids
 
 
 def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:

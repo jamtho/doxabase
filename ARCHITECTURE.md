@@ -62,6 +62,7 @@ Mutable:
 - `ontology`: project/client vocabulary and model terms.
 - `map`: current best structured project/data map.
 - `observations`: point-in-time findings and tentative RDF.
+- `patterns`: syntheses that connect observations to map facts.
 - `evidence`: support for observations or map assertions.
 - `shapes`: project/client SHACL shapes.
 - `history`: revision metadata, graph-count snapshots, consolidation rationale,
@@ -221,6 +222,7 @@ The MCP docs tools expose these docs:
 - `agent_workflow`
 - `ontology_primer`
 - `mcp_tools`
+- `response_shapes`
 - `observation_recording`
 - `observation_rdf`
 - `patterns`

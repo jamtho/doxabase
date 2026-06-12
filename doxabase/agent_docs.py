@@ -53,6 +53,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "mcp-tools.md",
     ),
     AgentDoc(
+        id="response_shapes",
+        title="Response Shape Examples",
+        description="Common Python and MCP response fields agents need when scripting.",
+        path=DOCS_DIR / "response-shapes.md",
+    ),
+    AgentDoc(
         id="observation_recording",
         title="Observation Recording",
         description="How to record point-in-time findings and linked evidence.",

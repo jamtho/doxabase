@@ -118,6 +118,7 @@ Not implemented yet:
 - `ontology/rc_core.ttl` - draft immutable `rc:` base ontology seed graph.
 - `ontology/rc_shapes.ttl` - draft immutable open SHACL shape seed graph.
 - `examples/manifest-prototype-rc/` - representative AIS and Polymarket fixtures converted from Manifest vocabulary to `rc:`.
+- `examples/adversarial-field-trial.py` - tiny scratch-capsule trial for checking the docs and staging workflow.
 - `tests/` - parser, validation, capsule, and MCP helper tests.
 - `tools/validate_rdf.py` - parser, term-definition, and SHACL validation checks.
 - `ARCHITECTURE.md` - project architecture and implementation notes for future agents.

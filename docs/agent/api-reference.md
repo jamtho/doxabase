@@ -6,6 +6,9 @@ Current Python API entry point:
 from doxabase import DoxaBase
 ```
 
+For compact returned-field examples, read `response_shapes`. It names the
+common dataclass and MCP helper fields that agents usually need when scripting.
+
 ## Create or Open a Capsule
 
 ```python

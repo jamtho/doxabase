@@ -9,7 +9,8 @@ compaction, read `start_here` first.
    `graph_roles` for graph placement, `observation_recording` /
    `observation_rdf` / `patterns` for preserving lore, `map_authoring` /
    `staged_revisions` / `revisions` for graph changes, `context_slicing` /
-   `lexical_search` for retrieval, and `field_trials` for sub-agent trials.
+   `lexical_search` for retrieval, `response_shapes` before scripting against
+   returned objects, and `field_trials` for sub-agent trials.
 3. Call `doxabase.graph_overview` to inspect named graphs, counts, common classes, and predicates.
 4. Call `doxabase.search` when you have a remembered term, caveat, column name, source note, or question-shaped keyword.
 5. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.

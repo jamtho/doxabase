@@ -50,6 +50,16 @@ When running a trial through Codex sub-agents, keep the harness explicit:
 - if a sub-agent appears silent, interrupt once and ask for immediate status
   before closing it.
 
+For a tiny local smoke trial, run the copyable example from the repository root:
+
+```bash
+./.venv/bin/python examples/adversarial-field-trial.py
+```
+
+It creates a scratch capsule and report under `/tmp`, records an uncertain
+identity hunch as a claim and pattern, stages competing systematisations, and
+expects one deliberately premature map candidate to fail validation.
+
 ## Safety
 
 Use a scratch capsule, for example:
@@ -101,6 +111,7 @@ A useful trial usually asks the agent to:
 - use agent-authored RDF only for claims the helper cannot express cleanly;
 - use `list_entities`, `describe_resource`, `search`, and `graph_overview` to
   verify retrieval;
+- read `response_shapes` before assuming exact Python or MCP response fields;
 - run `validate_graph(scope="all")`;
 - use `export_trig` or `export_graph` when the trial should leave reviewable
   RDF artifacts under `/tmp`;

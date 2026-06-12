@@ -11,6 +11,7 @@ def test_list_agent_docs_contains_operational_docs() -> None:
     assert "graph_roles" in doc_ids
     assert "agent_workflow" in doc_ids
     assert "mcp_tools" in doc_ids
+    assert "response_shapes" in doc_ids
     assert "observation_recording" in doc_ids
     assert "observation_rdf" in doc_ids
     assert "patterns" in doc_ids

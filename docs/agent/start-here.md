@@ -44,6 +44,9 @@ When arriving cold, use this route before reading every reference doc.
 9. Use the smallest write helper that fits the work, then validate before
    finishing.
 
+If you are scripting directly against the Python API, read `response_shapes`
+before assuming returned field names.
+
 ## If You Are Resuming After Compaction
 
 Recover the thread of work before making new graph changes.
@@ -123,4 +126,5 @@ trials, a backup report under `/tmp`.
 - `context_slicing` and `lexical_search`: retrieval and handoff routes.
 - `field_trials`: how to test DoxaBase with sub-agents and turn friction into
   product signal.
-- `api_reference` and `mcp_tools`: exact Python and MCP surfaces.
+- `response_shapes`, `api_reference`, and `mcp_tools`: exact Python and MCP
+  surfaces, including common returned field names.
