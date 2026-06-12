@@ -2720,6 +2720,59 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     assert validation.conforms, validation.report_text
 
 
+def test_record_column_profile_writes_observation_map_column_and_pattern(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Messages"
+    column = "https://example.test/project#MessagesDocId"
+    db.record_map_dataset(table, label="Messages", is_table=True)
+
+    result = db.record_column_profile(
+        column,
+        column_name="doc_id",
+        table_iri=table,
+        summary="Messages doc_id was profiled for null and distinct counts.",
+        evidence_summary="Synthetic column profile output.",
+        evidence_sources=["test://messages-doc-id-profile"],
+        row_count=123,
+        null_count=0,
+        distinct_count=123,
+        map_label="Messages.doc_id",
+        physical_type="rc:Varchar",
+        nullable=False,
+        pattern_summary="doc_id behaves like a complete identifier.",
+        pattern_text="The profiled doc_id column had no nulls and all values distinct.",
+        pattern_rationale=(
+            "A complete distinct profile is a useful hunch for later identity "
+            "and join modelling."
+        ),
+    )
+
+    assert result.column_iri == column
+    assert result.table_iri == table
+    assert result.observation.observation_type == "profile"
+    assert result.map_column is not None
+    assert result.map_column.iri == column
+    assert result.pattern is not None
+
+    description = db.describe_dataset(table)
+    assert [item.iri for item in description.columns] == [column]
+    assert description.columns[0].nullable is False
+    assert description.columns[0].physical_type is not None
+    assert description.columns[0].physical_type.iri == RC + "Varchar"
+
+    pattern = db.describe_pattern(result.pattern.pattern_iri)
+    assert [target.iri for target in pattern.pattern_targets] == [column]
+    assert [target.iri for target in pattern.map_implications] == [column]
+    assert [item.iri for item in pattern.supporting_observations] == [
+        result.observation.observation_iri
+    ]
+
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
 def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

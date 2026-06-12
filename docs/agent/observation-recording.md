@@ -41,6 +41,10 @@ update the current-best map row-count snapshot or preserve a linked pattern
 synthesis. Use plain `record_observation` when the profile result is only a
 single point-in-time noticing.
 
+Use `doxabase.record_column_profile` when a column-level profile should also
+update current-best map column metadata, such as nullability or physical type,
+or preserve a linked pattern synthesis.
+
 ## Evidence Resources
 
 Evidence belongs in the `evidence` graph. `record_observation` can create one

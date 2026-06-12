@@ -62,6 +62,8 @@ Implemented:
 - `record_pattern()` for syntheses that connect related findings to map targets.
 - `record_dataset_profile()` for bundling a profile observation with an
   optional map row-count snapshot and agent-authored profile pattern.
+- `record_column_profile()` for bundling a column profile observation with
+  optional map column metadata and an agent-authored profile pattern.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, physical layouts, partition schemes, and relationships.
 - `record_graph_revision()` for history metadata about graph changes and review
@@ -179,25 +181,27 @@ Useful first tool calls for an agent:
 13. `doxabase.record_claim_observation` for structured claim observations
 14. `doxabase.record_dataset_profile` for profile outputs that should write an
     observation and optionally update map/pattern context together
-15. `doxabase.record_pattern` for syntheses over related findings
-16. `doxabase.stage_graph_revision` for reviewable additions/removals that
+15. `doxabase.record_column_profile` for column profile outputs that should
+    write an observation and optionally update map/pattern context together
+16. `doxabase.record_pattern` for syntheses over related findings
+17. `doxabase.stage_graph_revision` for reviewable additions/removals that
     should not be applied yet, including validation diagnostics for failed
     previews
-17. `doxabase.stage_systematisation` for alternative RDF framings of one
+18. `doxabase.stage_systematisation` for alternative RDF framings of one
     modelling hunch, optionally with shared proposed context
-18. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
+19. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
     should remain reviewable before becoming durable structure
-19. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
-20. `doxabase.check_staged_revision_apply` before turning a staged proposal
+20. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
+21. `doxabase.check_staged_revision_apply` before turning a staged proposal
     into durable graph state
-21. `doxabase.apply_staged_revision` when a staged proposal should become
+22. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-22. `doxabase.record_map_dataset` and related map helpers for current-best facts
-23. `doxabase.validate_graph` with `scope="all"`
-24. `doxabase.export_trig` when you need a named-graph project review bundle
-25. `doxabase.record_graph_revision` when the bundle/change rationale should be
+23. `doxabase.record_map_dataset` and related map helpers for current-best facts
+24. `doxabase.validate_graph` with `scope="all"`
+25. `doxabase.export_trig` when you need a named-graph project review bundle
+26. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-26. `doxabase.describe_graph_revision` when reviewing a history record
+27. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -217,6 +221,7 @@ Current MCP tools:
 - `doxabase.record_claim_reconsideration`
 - `doxabase.record_pattern`
 - `doxabase.record_dataset_profile`
+- `doxabase.record_column_profile`
 - `doxabase.record_map_dataset`
 - `doxabase.record_map_column`
 - `doxabase.record_map_caveat`

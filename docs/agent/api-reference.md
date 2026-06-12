@@ -187,6 +187,10 @@ pattern linked back to the observation. Use it when a profiling result should
 arrive as observation, optional current-best map context, and optional synthesis
 without making three separate helper calls.
 
+`record_column_profile()` does the same for one column: it records a profile
+observation with `observed_column`, can update map column metadata such as
+physical type and nullability, and can write a linked profile pattern.
+
 `record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common
 claim-shaped observation pattern without hand-authoring TriG.

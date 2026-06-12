@@ -104,6 +104,14 @@ an optional current-best map row-count snapshot, and an optional
 agent-authored profile pattern linked back to the observation. Use it when a
 profile run should preserve both the raw noticing and the emerging synthesis.
 
+`doxabase.record_column_profile`
+
+Records one column profile bundle: a profile observation with
+`observed_column`, optional evidence, optional current-best map column metadata,
+and an optional linked profile pattern. Use it when profiling output says
+something useful about nullability, distinctness, physical type, or identity
+behavior for a column.
+
 `doxabase.record_claim_observation`
 
 Records the common richer pattern: one `rc:Observation`, one linked `rc:Claim`,

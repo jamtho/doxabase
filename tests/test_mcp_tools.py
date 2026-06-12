@@ -23,6 +23,7 @@ from doxabase.mcp_tools import (
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
+    record_column_profile_tool,
     record_dataset_profile_tool,
     record_map_caveat_tool,
     record_map_column_tool,
@@ -61,6 +62,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
     assert "doxabase.record_claim_reconsideration" in tool_names
+    assert "doxabase.record_column_profile" in tool_names
     assert "doxabase.record_dataset_profile" in tool_names
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.record_map_dataset" in tool_names
@@ -744,6 +746,44 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
         "https://richcanopy.org/doxabase/generated/pattern/"
     )
     assert describe_dataset_tool(db, dataset)["row_count_snapshot"] == 55
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Messages"
+    column = "https://example.test/project#MessagesDocId"
+    record_map_dataset_tool(db, table, label="Messages", is_table=True)
+
+    result = record_column_profile_tool(
+        db,
+        column_iri=column,
+        column_name="doc_id",
+        table_iri=table,
+        summary="MCP helper recorded a column profile bundle.",
+        evidence_summary="Synthetic column profile evidence.",
+        evidence_sources=["tests/test_mcp_tools.py"],
+        row_count=55,
+        null_count=0,
+        distinct_count=55,
+        map_label="Messages.doc_id",
+        physical_type="rc:Varchar",
+        nullable=False,
+        pattern_summary="doc_id profile looks complete.",
+        pattern_text="The profile found no null doc_id values and all values distinct.",
+        pattern_rationale="The profile is a useful identity hunch for later review.",
+    )
+
+    assert result["column_iri"] == column
+    assert result["table_iri"] == table
+    assert result["observation"]["observation_type"] == "profile"
+    assert result["map_column"]["iri"] == column
+    assert result["pattern"]["pattern_iri"].startswith(
+        "https://richcanopy.org/doxabase/generated/pattern/"
+    )
+    dataset = describe_dataset_tool(db, table)
+    assert dataset["columns"][0]["iri"] == column
+    assert dataset["columns"][0]["nullable"] is False
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
