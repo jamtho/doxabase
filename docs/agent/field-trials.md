@@ -48,7 +48,10 @@ When running a trial through Codex sub-agents, keep the harness explicit:
 - give a tight timeout and a small, concrete task before broad exploration;
 - close completed or failed sub-agents so they do not occupy agent slots;
 - if a sub-agent appears silent, interrupt once and ask for immediate status
-  before closing it.
+  before closing it;
+- treat a missing final or backup report as a trial failure even if a scratch
+  capsule exists; inspect the capsule for partial work, but record that the
+  agent did not complete the handoff loop.
 
 For a tiny local smoke trial, run the copyable example from the repository root:
 

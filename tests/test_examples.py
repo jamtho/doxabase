@@ -23,4 +23,5 @@ def test_adversarial_field_trial_example_runs() -> None:
     assert report_path == Path("/tmp/doxabase-adversarial-field-trial-report.md")
     assert "Pattern-first hunch" in report
     assert "Premature map caveat candidate" in report
+    assert "staged patches are not applied to the current graphs" in report
     assert "severity must be Minor, Moderate, or Severe" in report

@@ -239,6 +239,11 @@ def _write_report(
         f"Claim: `{claim_iri}`",
         f"Pattern: `{pattern_iri}`",
         f"Whole-capsule validation conforms: `{validation_conforms}`",
+        (
+            "A staged candidate can fail preview validation without changing "
+            "whole-capsule validation, because staged patches are not applied "
+            "to the current graphs."
+        ),
         "",
         "## Staged Alternatives",
     ]

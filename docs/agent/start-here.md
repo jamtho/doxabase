@@ -44,6 +44,9 @@ When arriving cold, use this route before reading every reference doc.
 9. Use the smallest write helper that fits the work, then validate before
    finishing.
 
+If the MCP docs tools are not exposed in the current session, follow the same
+route by reading the matching files in `docs/agent/` directly.
+
 If you are scripting directly against the Python API, read `response_shapes`
 before assuming returned field names.
 

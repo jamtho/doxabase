@@ -47,6 +47,26 @@ scratch capsule script.
 There is no top-level `graph_counts` field. Derive graph counts from
 `named_graphs[].triple_count`.
 
+`load_example_fixtures_tool(db, replace=True)` returns:
+
+```python
+{
+    "replace": True,
+    "fixtures": [
+        {
+            "path": "examples/manifest-prototype-rc/ais.trig",
+            "imported": {"ontology": 70, "map": 243, ...},
+        },
+        ...
+    ],
+    "totals": {"ontology": 177, "observations": 10, "map": 574, ...},
+    "total_imported": 767,
+}
+```
+
+Use `total_imported` when you want the total fixture triple count. Per-graph
+counts live under `totals`.
+
 ## Search
 
 `db.search(...)` returns a `SearchResult` with:
@@ -73,6 +93,65 @@ match.snippet
 ```
 
 Use `match.iri` for the matched resource. There is no `match.subject` field.
+
+## Context Slices
+
+`db.describe_context_slice(seed_iris, ...)` returns a `ContextSlice`:
+
+```python
+context.profile
+context.seeds
+context.reading_order
+context.resources
+context.resource_count
+context.route_legend
+context.route_counts
+context.graph_counts
+context.triples
+context.triple_count
+context.returned_triple_count
+context.candidate_triple_count
+context.omitted_triple_count
+context.max_triples
+context.truncated
+context.truncation_scope
+context.trig
+context.dataset_contexts
+context.pattern_contexts
+context.warnings
+```
+
+`route_counts` is keyed by route id. `route_legend` explains those ids with
+labels, meanings, priorities, and counts. `reading_order` is static guidance for
+how to read the returned slice; it is not recomputed as a custom plan for each
+query.
+
+Each item in `context.resources` is a `ContextSliceResource`:
+
+```python
+resource.iri
+resource.label
+resource.description
+resource.types
+resource.graphs
+resource.referenced_only
+resource.primary_route
+resource.routes
+```
+
+`referenced_only=True` means the resource is mentioned by returned context but
+was not itself expanded into full resource detail in the slice. Do not treat that
+as evidence the resource is missing from the capsule.
+
+Each route has:
+
+```python
+route.route
+route.route_label
+route.source_iri
+route.source_label
+route.depth
+```
 
 ## Dataset Description
 
@@ -200,15 +279,21 @@ revision.validation_results
 
 ```python
 description.iri
+description.graph
+description.label
 description.summary
 description.revision_type
+description.revision_type_label
 description.revision_stance
+description.revision_stance_label
 description.rationale
 description.review_note
 description.review_recommendation
 description.alternative_to
 description.changed_graphs
 description.included_graphs
+description.created_at
+description.created_by
 description.validation_scope
 description.validation_conforms
 description.validation_result_count
