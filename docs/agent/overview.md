@@ -23,6 +23,8 @@ Current implementation status:
 - `describe_dataset()` for bounded table schema, row semantics, relationship, caveat, provenance, and linked-pattern context.
 - `describe_context_slice()` for route-explained dataset, pattern, and deep-lore graph slices.
 - `record_observation()` for point-in-time findings and linked evidence.
+- `record_dataset_profile()` for profile observations that may also update map
+  row-count snapshots and linked profile patterns.
 - `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.
 - `record_claim_reconsideration()` for marking when later claims weaken,
   contradict, supersede, or refine earlier claims.

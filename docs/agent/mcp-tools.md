@@ -97,6 +97,13 @@ map implications.
 
 Records a structured observation in the `observations` graph. Optional evidence fields create a linked `rc:Evidence` resource in the `evidence` graph. Use this for point-in-time findings, profile counts, query outputs, and workflow notes that should remain available to later agents.
 
+`doxabase.record_dataset_profile`
+
+Records one dataset profile bundle: a profile observation, optional evidence,
+an optional current-best map row-count snapshot, and an optional
+agent-authored profile pattern linked back to the observation. Use it when a
+profile run should preserve both the raw noticing and the emerging synthesis.
+
 `doxabase.record_claim_observation`
 
 Records the common richer pattern: one `rc:Observation`, one linked `rc:Claim`,

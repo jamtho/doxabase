@@ -23,6 +23,7 @@ from doxabase.mcp_tools import (
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
+    record_dataset_profile_tool,
     record_map_caveat_tool,
     record_map_column_tool,
     record_map_dataset_tool,
@@ -60,6 +61,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
     assert "doxabase.record_claim_reconsideration" in tool_names
+    assert "doxabase.record_dataset_profile" in tool_names
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.record_map_dataset" in tool_names
     assert "doxabase.record_map_column" in tool_names
@@ -711,6 +713,37 @@ def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> No
     assert result["evidence_iri"] is not None
     assert result["observation_triples"] > 0
     assert result["evidence_triples"] > 0
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+
+    result = record_dataset_profile_tool(
+        db,
+        dataset_iri=dataset,
+        summary="MCP helper recorded a profile bundle.",
+        evidence_summary="Synthetic profile evidence.",
+        evidence_sources=["tests/test_mcp_tools.py"],
+        row_count=55,
+        distinct_count=54,
+        map_label="Messages",
+        is_table=True,
+        pattern_summary="Messages profile looks stable.",
+        pattern_text="The profile row count and distinct count nearly match.",
+        pattern_rationale=(
+            "A linked profile pattern keeps the profile synthesis reviewable."
+        ),
+    )
+
+    assert result["dataset_iri"] == dataset
+    assert result["observation"]["observation_type"] == "profile"
+    assert result["map_dataset"]["iri"] == dataset
+    assert result["pattern"]["pattern_iri"].startswith(
+        "https://richcanopy.org/doxabase/generated/pattern/"
+    )
+    assert describe_dataset_tool(db, dataset)["row_count_snapshot"] == 55
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

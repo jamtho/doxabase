@@ -2671,6 +2671,55 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
     assert validation.conforms, validation.report_text
 
 
+def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+
+    result = db.record_dataset_profile(
+        dataset,
+        summary="Messages were profiled for row and identity coverage.",
+        observed_by="urn:doxabase:test-agent",
+        evidence_summary="Synthetic profile output from a local DuckDB query.",
+        evidence_sources=["test://messages-profile"],
+        row_count=123,
+        distinct_count=120,
+        map_label="Messages",
+        is_table=True,
+        pattern_summary="Messages profile is internally consistent.",
+        pattern_text=(
+            "The sampled Messages profile has a stable row count and near-row "
+            "distinctness on the inspected identity field."
+        ),
+        pattern_rationale=(
+            "Keeping the profile observation, map snapshot, and pattern linked "
+            "makes later review cheaper."
+        ),
+    )
+
+    assert result.dataset_iri == dataset
+    assert result.observation.observation_type == "profile"
+    assert result.observation.evidence_iri is not None
+    assert result.map_dataset is not None
+    assert result.map_dataset.iri == dataset
+    assert result.pattern is not None
+
+    description = db.describe_dataset(dataset)
+    assert description.label == "Messages"
+    assert description.row_count_snapshot == 123
+
+    pattern = db.describe_pattern(result.pattern.pattern_iri)
+    assert [target.iri for target in pattern.pattern_targets] == [dataset]
+    assert [target.iri for target in pattern.map_implications] == [dataset]
+    assert [item.iri for item in pattern.supporting_observations] == [
+        result.observation.observation_iri
+    ]
+
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
 def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

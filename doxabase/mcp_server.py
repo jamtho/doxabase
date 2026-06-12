@@ -28,6 +28,7 @@ from doxabase.mcp_tools import (
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
+    record_dataset_profile_tool,
     record_map_caveat_tool,
     record_map_column_tool,
     record_map_dataset_tool,
@@ -48,7 +49,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision apply checks/apply/review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision apply checks/apply/review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -295,6 +296,57 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             map_implications=map_implications,
+        )
+
+    @server.tool(name="doxabase.record_dataset_profile")
+    def record_dataset_profile(
+        dataset_iri: str,
+        summary: str,
+        observed_at: str | None = None,
+        observed_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: list[str] | None = None,
+        sample_size: int | None = None,
+        row_count: int | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+        update_map_snapshot: bool = True,
+        map_label: str | None = None,
+        map_description: str | None = None,
+        is_table: bool | None = None,
+        pattern_summary: str | None = None,
+        pattern_text: str | None = None,
+        pattern_rationale: str | None = None,
+        pattern_confidence: str | None = "rc:MediumConfidence",
+        pattern_status: str | None = "rc:Tentative",
+        pattern_stability: str | None = "rc:EmergingPattern",
+        pattern_map_implications: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record a dataset profile observation, optional map snapshot, and pattern."""
+
+        return record_dataset_profile_tool(
+            db,
+            dataset_iri=dataset_iri,
+            summary=summary,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            sample_size=sample_size,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            update_map_snapshot=update_map_snapshot,
+            map_label=map_label,
+            map_description=map_description,
+            is_table=is_table,
+            pattern_summary=pattern_summary,
+            pattern_text=pattern_text,
+            pattern_rationale=pattern_rationale,
+            pattern_confidence=pattern_confidence,
+            pattern_status=pattern_status,
+            pattern_stability=pattern_stability,
+            pattern_map_implications=pattern_map_implications,
         )
 
     @server.tool(name="doxabase.record_claim_reconsideration")

@@ -644,6 +644,14 @@ class PatternRecord:
 
 
 @dataclass(frozen=True)
+class DatasetProfileRecord:
+    dataset_iri: str
+    observation: ObservationRecord
+    map_dataset: MapResourceRecord | None
+    pattern: PatternRecord | None
+
+
+@dataclass(frozen=True)
 class ClaimReconsiderationRecord:
     reconsideration_iri: str
     newer_claim_iri: str
@@ -3420,6 +3428,110 @@ class DoxaBase:
             ),
             pattern_triples=pattern_triples,
             evidence_triples=evidence_triples,
+        )
+
+    def record_dataset_profile(
+        self,
+        dataset_iri: str,
+        *,
+        summary: str,
+        observed_at: datetime | str | None = None,
+        observed_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        sample_size: int | None = None,
+        row_count: int | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+        update_map_snapshot: bool = True,
+        map_label: str | None = None,
+        map_description: str | None = None,
+        is_table: bool | None = None,
+        pattern_summary: str | None = None,
+        pattern_text: str | None = None,
+        pattern_rationale: str | None = None,
+        pattern_confidence: str | None = "rc:MediumConfidence",
+        pattern_status: str | None = "rc:Tentative",
+        pattern_stability: str | None = "rc:EmergingPattern",
+        pattern_map_implications: Iterable[str] | str | None = None,
+        observation_iri: str | None = None,
+        evidence_iri: str | None = None,
+        pattern_iri: str | None = None,
+        ) -> DatasetProfileRecord:
+        dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        pattern_fields = [pattern_summary, pattern_text, pattern_rationale]
+        has_pattern_field = any(
+            field is not None and field.strip() for field in pattern_fields
+        )
+        has_complete_pattern = all(
+            field is not None and field.strip() for field in pattern_fields
+        )
+        if has_pattern_field and not has_complete_pattern:
+            raise DoxaBaseError(
+                "pattern_summary, pattern_text, and pattern_rationale must be "
+                "provided together"
+            )
+
+        observation = self.record_observation(
+            summary=summary,
+            observation_type="profile",
+            observed_asset=dataset_value,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            sample_size=sample_size,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            observation_iri=observation_iri,
+            evidence_iri=evidence_iri,
+        )
+
+        map_dataset: MapResourceRecord | None = None
+        should_update_map = update_map_snapshot and (
+            row_count is not None
+            or map_label is not None
+            or map_description is not None
+            or is_table is not None
+        )
+        if should_update_map:
+            map_dataset = self.record_map_dataset(
+                dataset_value,
+                label=map_label,
+                description=map_description,
+                is_table=is_table,
+                row_count_snapshot=row_count,
+            )
+
+        pattern: PatternRecord | None = None
+        if (
+            pattern_summary is not None
+            and pattern_text is not None
+            and pattern_rationale is not None
+        ):
+            implication_values = self._string_values(
+                "pattern_map_implications",
+                pattern_map_implications,
+            )
+            pattern = self.record_pattern(
+                summary=pattern_summary,
+                pattern_text=pattern_text,
+                rationale=pattern_rationale,
+                pattern_targets=[dataset_value],
+                supporting_observations=[observation.observation_iri],
+                confidence=pattern_confidence,
+                pattern_status=pattern_status,
+                pattern_stability=pattern_stability,
+                map_implications=implication_values or [dataset_value],
+                pattern_iri=pattern_iri,
+            )
+
+        return DatasetProfileRecord(
+            dataset_iri=dataset_value,
+            observation=observation,
+            map_dataset=map_dataset,
+            pattern=pattern,
         )
 
     def record_claim_reconsideration(

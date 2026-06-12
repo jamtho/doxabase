@@ -181,6 +181,12 @@ selected slice. Use `candidate_triple_count`, `returned_triple_count`, and
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are
 supplied, it also writes a linked `rc:Evidence` resource to the `evidence` graph.
 
+`record_dataset_profile()` records a profile observation for one dataset and can
+also update the map row-count snapshot and write an agent-authored profile
+pattern linked back to the observation. Use it when a profiling result should
+arrive as observation, optional current-best map context, and optional synthesis
+without making three separate helper calls.
+
 `record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common
 claim-shaped observation pattern without hand-authoring TriG.

@@ -36,6 +36,11 @@ Use `observation_type="profile"` for profiling-style findings:
 Profile observations may include `sample_size`, `row_count`, `null_count`, and
 `distinct_count`. Counts must be non-negative.
 
+Use `doxabase.record_dataset_profile` when a dataset-level profile should also
+update the current-best map row-count snapshot or preserve a linked pattern
+synthesis. Use plain `record_observation` when the profile result is only a
+single point-in-time noticing.
+
 ## Evidence Resources
 
 Evidence belongs in the `evidence` graph. `record_observation` can create one
