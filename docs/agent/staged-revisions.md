@@ -203,6 +203,11 @@ conservative:
 - it records an `rc:AppliedStagedRevision` history event linked back with
   `rc:appliesStagedRevision`.
 
+Use `doxabase.check_staged_revision_apply` first when you want a read-only
+answer. It reports whether the staged revision has already been applied, whether
+any patch target graph has drifted from its recorded `beforeTripleCount`, the
+preview count for each patch, and preview validation diagnostics.
+
 This is not a full merge system. A harmless unrelated graph change can still
 show up as a conflict because the first guard is count-based. In that case,
 restage the patch against current graph state rather than forcing it through.

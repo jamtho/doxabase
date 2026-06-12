@@ -6,6 +6,7 @@ from doxabase import DoxaBase
 from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
+    check_staged_revision_apply_tool,
     describe_context_slice_tool,
     describe_dataset_tool,
     describe_graph_revision_tool,
@@ -54,6 +55,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
+    assert "doxabase.check_staged_revision_apply" in tool_names
     assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
@@ -262,6 +264,11 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
             }
         ],
     )
+
+    check = check_staged_revision_apply_tool(db, iri=staged["revision_iri"])
+    assert check["can_apply"] is True
+    assert check["conflicts"] == []
+    assert check["patch_checks"][0]["preview_triple_count"] == 3
 
     result = apply_staged_revision_tool(db, iri=staged["revision_iri"])
 

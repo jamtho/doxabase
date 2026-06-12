@@ -94,6 +94,7 @@ DoxaBase.record_graph_revision(summary, rationale, changed_graphs, included_grap
 DoxaBase.stage_graph_revision(summary, rationale, additions=None, removals=None, ...)
 DoxaBase.stage_systematisation(summary, intent, framings, anchors=None, shared_additions=None, ...)
 DoxaBase.stage_pattern_promotion(patterns, framings, summary=None, ...)
+DoxaBase.check_staged_revision_apply(iri, ...)
 DoxaBase.apply_staged_revision(iri, ...)
 DoxaBase.describe_staged_revision(iri)
 DoxaBase.export_staged_revision(iri, path)
@@ -195,6 +196,7 @@ Current MCP tools:
 - `doxabase.stage_graph_revision`
 - `doxabase.stage_systematisation`
 - `doxabase.stage_pattern_promotion`
+- `doxabase.check_staged_revision_apply`
 - `doxabase.apply_staged_revision`
 - `doxabase.export_staged_revision`
 - `doxabase.export_staged_revisions`

@@ -83,6 +83,19 @@ def describe_staged_revision_tool(
     return asdict(db.describe_staged_revision(iri=iri, graph=graph))
 
 
+def check_staged_revision_apply_tool(
+    db: DoxaBase,
+    iri: str,
+    validation_scope: str | None = None,
+) -> dict[str, Any]:
+    return asdict(
+        db.check_staged_revision_apply(
+            iri=iri,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
+        )
+    )
+
+
 def describe_pattern_tool(
     db: DoxaBase,
     iri: str,

@@ -38,6 +38,7 @@ Current implementation status:
   framings of a modelling hunch, with optional shared proposed context.
 - `stage_pattern_promotion()` for staging caller-authored graph changes backed
   by existing patterns and their support links.
+- `check_staged_revision_apply()` for read-only application diagnostics.
 - `apply_staged_revision()` for applying one staged revision after count-based
   conflict checks and preview validation.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.

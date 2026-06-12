@@ -335,6 +335,16 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         validation_scope="all",
     )
 
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.can_apply is True
+    assert check.conflicts == []
+    assert check.validation_conforms is True
+    assert check.patches_checked == 1
+    assert check.triples_to_add == 3
+    assert check.triples_to_remove == 0
+    assert check.patch_checks[0].current_triple_count == 0
+    assert check.patch_checks[0].preview_triple_count == 3
+
     result = db.apply_staged_revision(staged.revision_iri)
 
     assert result.staged_revision_iri == staged.revision_iri
@@ -364,6 +374,9 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
 
     with pytest.raises(DoxaBaseError, match="already been applied"):
         db.apply_staged_revision(staged.revision_iri)
+    applied_check = db.check_staged_revision_apply(staged.revision_iri)
+    assert applied_check.can_apply is False
+    assert applied_check.already_applied_by == result.applied_revision_iri
 
 
 def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
@@ -421,7 +434,14 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
         label="Other dataset",
     )
 
-    with pytest.raises(DoxaBaseError, match="Staged revision conflict"):
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.can_apply is False
+    assert check.validation_conforms is None
+    assert len(check.conflicts) == 1
+    assert "expected 0 triples before patch" in check.conflicts[0]
+    assert check.patch_checks[0].can_apply is False
+
+    with pytest.raises(DoxaBaseError, match="Staged revision cannot be applied"):
         db.apply_staged_revision(staged.revision_iri)
 
     with pytest.raises(DoxaBaseError, match="Messages"):

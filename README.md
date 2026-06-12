@@ -184,14 +184,16 @@ Useful first tool calls for an agent:
 17. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
     should remain reviewable before becoming durable structure
 18. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
-19. `doxabase.apply_staged_revision` when a staged proposal should become
+19. `doxabase.check_staged_revision_apply` before turning a staged proposal
+    into durable graph state
+20. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-20. `doxabase.record_map_dataset` and related map helpers for current-best facts
-21. `doxabase.validate_graph` with `scope="all"`
-22. `doxabase.export_trig` when you need a named-graph project review bundle
-23. `doxabase.record_graph_revision` when the bundle/change rationale should be
+21. `doxabase.record_map_dataset` and related map helpers for current-best facts
+22. `doxabase.validate_graph` with `scope="all"`
+23. `doxabase.export_trig` when you need a named-graph project review bundle
+24. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-24. `doxabase.describe_graph_revision` when reviewing a history record
+25. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -226,6 +228,7 @@ Current MCP tools:
 - `doxabase.stage_graph_revision`
 - `doxabase.stage_systematisation`
 - `doxabase.stage_pattern_promotion`
+- `doxabase.check_staged_revision_apply`
 - `doxabase.apply_staged_revision`
 - `doxabase.load_example_fixtures`
 - `doxabase.validate_graph`

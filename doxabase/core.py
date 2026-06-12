@@ -196,6 +196,40 @@ class StagedGraphRevisionRecord:
 
 
 @dataclass(frozen=True)
+class StagedPatchApplyCheck:
+    patch_iri: str
+    target_graph: str | None
+    operation: str | None
+    operation_label: str | None
+    patch_role: str | None
+    patch_role_label: str | None
+    triple_count: int | None
+    before_triple_count: int | None
+    current_triple_count: int | None
+    after_triple_count: int | None
+    preview_triple_count: int | None
+    can_apply: bool
+    conflict: str | None
+
+
+@dataclass(frozen=True)
+class StagedRevisionApplyCheck:
+    staged_revision_iri: str
+    can_apply: bool
+    already_applied_by: str | None
+    changed_graphs: list[str]
+    patch_checks: list[StagedPatchApplyCheck]
+    conflicts: list[str]
+    validation_scope: str
+    validation_conforms: bool | None
+    validation_result_count: int | None
+    validation_results: list[ValidationDiagnostic]
+    patches_checked: int
+    triples_to_add: int
+    triples_to_remove: int
+
+
+@dataclass(frozen=True)
 class SystematisationFramingRecord:
     label: str
     rationale: str | None
@@ -252,6 +286,14 @@ class StagedGraphRevisionsExportRecord:
     format: str
     revision_iris: list[str]
     bytes_written: int
+
+
+@dataclass(frozen=True)
+class _StagedRevisionApplicationPreview:
+    staged: StagedGraphRevisionDescription
+    check: StagedRevisionApplyCheck
+    parsed_patches: list[tuple[StagedGraphPatchDescription, Graph]]
+    preview_graphs: dict[str, Graph]
 
 
 @dataclass(frozen=True)
@@ -5528,6 +5570,24 @@ class DoxaBase:
             lines.extend(["", "Promotion rationale:", rationale_value])
         return "\n".join(lines)
 
+    def check_staged_revision_apply(
+        self,
+        iri: str,
+        *,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+    ) -> StagedRevisionApplyCheck:
+        return self._preview_staged_revision_application(
+            iri,
+            validation_scope=validation_scope,
+        ).check
+
     def apply_staged_revision(
         self,
         iri: str,
@@ -5545,84 +5605,31 @@ class DoxaBase:
         ]
         | None = None,
     ) -> AppliedStagedRevisionRecord:
-        staged = self.describe_staged_revision(iri)
-        existing_applied = self._subjects(
-            self._expand_graphs(["history"]),
-            "rc:appliesStagedRevision",
-            staged.iri,
+        preview = self._preview_staged_revision_application(
+            iri,
+            validation_scope=validation_scope,
         )
-        if existing_applied:
+        staged = preview.staged
+        check = preview.check
+        if check.already_applied_by is not None:
             raise DoxaBaseError(
                 f"Staged revision '{iri}' has already been applied by "
-                f"'{existing_applied[0]}'"
+                f"'{check.already_applied_by}'"
             )
-
-        preview_graphs: dict[str, Graph] = {}
-        parsed_patches: list[tuple[StagedGraphPatchDescription, Graph]] = []
-        addition_operation = self.expand_iri("rc:AdditionPatch")
-        removal_operation = self.expand_iri("rc:RemovalPatch")
-        for patch in staged.patches:
-            target_graph = self._required_staged_patch_field(
-                patch,
-                "target_graph",
-                patch.target_graph,
+        if check.conflicts:
+            raise DoxaBaseError(
+                "Staged revision cannot be applied: " + "; ".join(check.conflicts)
             )
-            operation = self._required_staged_patch_field(
-                patch,
-                "operation",
-                patch.operation,
-            )
-            self._ensure_mutable(target_graph)
-            preview = preview_graphs.setdefault(
-                target_graph,
-                self.to_graph([target_graph]),
-            )
-            before_count = len(preview)
-            if (
-                patch.before_triple_count is not None
-                and before_count != patch.before_triple_count
-            ):
-                raise DoxaBaseError(
-                    "Staged revision conflict for graph "
-                    f"'{target_graph}': expected {patch.before_triple_count} "
-                    f"triples before patch '{patch.iri}', found {before_count}."
-                )
-            patch_graph = self._parse_staged_patch_description(patch)
-            if operation == addition_operation:
-                for triple in patch_graph:
-                    preview.add(triple)
-            elif operation == removal_operation:
-                for triple in patch_graph:
-                    preview.remove(triple)
-            else:
-                raise DoxaBaseError(f"Unsupported staged patch operation '{operation}'")
-            after_count = len(preview)
-            if (
-                patch.after_triple_count is not None
-                and after_count != patch.after_triple_count
-            ):
-                raise DoxaBaseError(
-                    "Staged revision conflict for graph "
-                    f"'{target_graph}': expected {patch.after_triple_count} "
-                    f"triples after patch '{patch.iri}', preview produced "
-                    f"{after_count}."
-                )
-            parsed_patches.append((patch, patch_graph))
-
-        validation_scope_value = validation_scope or staged.validation_scope or "all"
-        validation = self._validate_graph_preview(
-            validation_scope_value,  # type: ignore[arg-type]
-            preview_graphs=preview_graphs,
-        )
-        if not validation.conforms and not allow_validation_failure:
+        if check.validation_conforms is False and not allow_validation_failure:
             raise DoxaBaseError(
                 "Applying staged revision would fail validation; inspect "
                 "validation_results or pass allow_validation_failure=True."
             )
 
+        addition_operation = self.expand_iri("rc:AdditionPatch")
         triples_added = 0
         triples_removed = 0
-        for patch, patch_graph in parsed_patches:
+        for patch, patch_graph in preview.parsed_patches:
             target_graph = self._required_staged_patch_field(
                 patch,
                 "target_graph",
@@ -5638,11 +5645,7 @@ class DoxaBase:
             else:
                 triples_removed += self._remove_graph_triples(target_graph, patch_graph)
 
-        changed_graphs = list(
-            dict.fromkeys(
-                patch.target_graph for patch in staged.patches if patch.target_graph
-            )
-        )
+        changed_graphs = check.changed_graphs
         graph_counts = {graph: self.triple_count(graph) for graph in changed_graphs}
         applied_subject = (
             self._required_iri("applied_revision_iri", applied_revision_iri)
@@ -5670,10 +5673,10 @@ class DoxaBase:
             revision_anchors=[item.iri for item in staged.revision_anchors],
             evidence=[item.iri for item in staged.evidence],
             graph_counts=graph_counts,
-            validation_scope=validation.scope,
-            validation_conforms=validation.conforms,
-            validation_result_count=validation.result_count,
-            validation_results=validation.results,
+            validation_scope=check.validation_scope,
+            validation_conforms=bool(check.validation_conforms),
+            validation_result_count=check.validation_result_count or 0,
+            validation_results=check.validation_results,
         )
         metadata = Graph()
         self._bind_prefixes(metadata)
@@ -5691,13 +5694,196 @@ class DoxaBase:
             graph="history",
             triples=revision_record.triples + extra_triples,
             changed_graphs=changed_graphs,
-            patches_applied=len(parsed_patches),
+            patches_applied=len(preview.parsed_patches),
             triples_added=triples_added,
             triples_removed=triples_removed,
-            validation_scope=validation.scope,
-            validation_conforms=validation.conforms,
-            validation_result_count=validation.result_count,
-            validation_results=validation.results,
+            validation_scope=check.validation_scope,
+            validation_conforms=bool(check.validation_conforms),
+            validation_result_count=check.validation_result_count or 0,
+            validation_results=check.validation_results,
+        )
+
+    def _preview_staged_revision_application(
+        self,
+        iri: str,
+        *,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+    ) -> _StagedRevisionApplicationPreview:
+        staged = self.describe_staged_revision(iri)
+        changed_graphs = list(
+            dict.fromkeys(
+                patch.target_graph for patch in staged.patches if patch.target_graph
+            )
+        )
+        validation_scope_value = validation_scope or staged.validation_scope or "all"
+        try:
+            self._graphs_for_validation_scope(validation_scope_value)
+        except ValueError as exc:
+            raise DoxaBaseError(str(exc)) from exc
+        existing_applied = self._subjects(
+            self._expand_graphs(["history"]),
+            "rc:appliesStagedRevision",
+            staged.iri,
+        )
+        if existing_applied:
+            check = StagedRevisionApplyCheck(
+                staged_revision_iri=staged.iri,
+                can_apply=False,
+                already_applied_by=existing_applied[0],
+                changed_graphs=changed_graphs,
+                patch_checks=[],
+                conflicts=[
+                    "Staged revision has already been applied by "
+                    f"'{existing_applied[0]}'"
+                ],
+                validation_scope=validation_scope_value,
+                validation_conforms=None,
+                validation_result_count=None,
+                validation_results=[],
+                patches_checked=0,
+                triples_to_add=0,
+                triples_to_remove=0,
+            )
+            return _StagedRevisionApplicationPreview(
+                staged=staged,
+                check=check,
+                parsed_patches=[],
+                preview_graphs={},
+            )
+
+        preview_graphs: dict[str, Graph] = {}
+        parsed_patches: list[tuple[StagedGraphPatchDescription, Graph]] = []
+        patch_checks: list[StagedPatchApplyCheck] = []
+        conflicts: list[str] = []
+        triples_to_add = 0
+        triples_to_remove = 0
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+
+        for patch in staged.patches:
+            target_graph: str | None = None
+            operation: str | None = None
+            current_count: int | None = None
+            preview_count: int | None = None
+            conflict: str | None = None
+            patch_graph: Graph | None = None
+            try:
+                target_graph = self._required_staged_patch_field(
+                    patch,
+                    "target_graph",
+                    patch.target_graph,
+                )
+                operation = self._required_staged_patch_field(
+                    patch,
+                    "operation",
+                    patch.operation,
+                )
+                self._ensure_mutable(target_graph)
+                current_preview = preview_graphs.setdefault(
+                    target_graph,
+                    self.to_graph([target_graph]),
+                )
+                current_count = len(current_preview)
+                if (
+                    patch.before_triple_count is not None
+                    and current_count != patch.before_triple_count
+                ):
+                    conflict = (
+                        f"graph '{target_graph}' expected "
+                        f"{patch.before_triple_count} triples before patch, "
+                        f"found {current_count}"
+                    )
+                patch_graph = self._parse_staged_patch_description(patch)
+                candidate_preview = self._clone_graph(current_preview)
+                if operation == addition_operation:
+                    for triple in patch_graph:
+                        candidate_preview.add(triple)
+                elif operation == removal_operation:
+                    for triple in patch_graph:
+                        candidate_preview.remove(triple)
+                else:
+                    conflict = f"unsupported staged patch operation '{operation}'"
+                preview_count = len(candidate_preview)
+                if (
+                    conflict is None
+                    and patch.after_triple_count is not None
+                    and preview_count != patch.after_triple_count
+                ):
+                    conflict = (
+                        f"graph '{target_graph}' expected "
+                        f"{patch.after_triple_count} triples after patch, "
+                        f"preview produced {preview_count}"
+                    )
+                if conflict is None:
+                    preview_graphs[target_graph] = candidate_preview
+                    parsed_patches.append((patch, patch_graph))
+                    if operation == addition_operation:
+                        triples_to_add += len(patch_graph)
+                    elif operation == removal_operation:
+                        triples_to_remove += len(patch_graph)
+            except DoxaBaseError as exc:
+                conflict = str(exc)
+
+            can_apply_patch = conflict is None
+            if conflict is not None:
+                conflicts.append(f"{patch.iri}: {conflict}")
+            patch_checks.append(
+                StagedPatchApplyCheck(
+                    patch_iri=patch.iri,
+                    target_graph=target_graph or patch.target_graph,
+                    operation=operation or patch.operation,
+                    operation_label=patch.operation_label,
+                    patch_role=patch.patch_role,
+                    patch_role_label=patch.patch_role_label,
+                    triple_count=patch.triple_count,
+                    before_triple_count=patch.before_triple_count,
+                    current_triple_count=current_count,
+                    after_triple_count=patch.after_triple_count,
+                    preview_triple_count=preview_count,
+                    can_apply=can_apply_patch,
+                    conflict=conflict,
+                )
+            )
+
+        validation_conforms: bool | None = None
+        validation_result_count: int | None = None
+        validation_results: list[ValidationDiagnostic] = []
+        if not conflicts:
+            validation = self._validate_graph_preview(
+                validation_scope_value,  # type: ignore[arg-type]
+                preview_graphs=preview_graphs,
+            )
+            validation_conforms = validation.conforms
+            validation_result_count = validation.result_count
+            validation_results = validation.results
+
+        check = StagedRevisionApplyCheck(
+            staged_revision_iri=staged.iri,
+            can_apply=(not conflicts and validation_conforms is True),
+            already_applied_by=None,
+            changed_graphs=changed_graphs,
+            patch_checks=patch_checks,
+            conflicts=conflicts,
+            validation_scope=validation_scope_value,
+            validation_conforms=validation_conforms,
+            validation_result_count=validation_result_count,
+            validation_results=validation_results,
+            patches_checked=len(patch_checks),
+            triples_to_add=triples_to_add,
+            triples_to_remove=triples_to_remove,
+        )
+        return _StagedRevisionApplicationPreview(
+            staged=staged,
+            check=check,
+            parsed_patches=parsed_patches,
+            preview_graphs=preview_graphs,
         )
 
     def export_staged_revision(
@@ -6803,6 +6989,13 @@ class DoxaBase:
         removed = before - self.triple_count(graph)
         self._rebuild_search_index(raise_on_failure=False)
         return removed
+
+    def _clone_graph(self, source: Graph) -> Graph:
+        graph = Graph()
+        self._bind_prefixes(graph)
+        for triple in source:
+            graph.add(triple)
+        return graph
 
     def _create_search_index(self) -> None:
         self._conn.execute(SEARCH_INDEX_SQL)

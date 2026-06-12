@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
+    check_staged_revision_apply_tool,
     describe_dataset_tool,
     describe_context_slice_tool,
     describe_graph_revision_tool,
@@ -47,7 +48,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read overview, graph_roles, and agent_workflow.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision apply/review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision apply checks/apply/review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -148,6 +149,19 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return staged revision metadata and patch payloads for review."""
 
         return describe_staged_revision_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.check_staged_revision_apply")
+    def check_staged_revision_apply(
+        iri: str,
+        validation_scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Preview whether a staged graph revision can apply cleanly."""
+
+        return check_staged_revision_apply_tool(
+            db,
+            iri=iri,
+            validation_scope=validation_scope,
+        )
 
     @server.tool(name="doxabase.describe_pattern")
     def describe_pattern(

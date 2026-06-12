@@ -261,6 +261,11 @@ writes a Markdown review bundle with diagnostics before patch payloads.
 revisions in caller-chosen order; pass `executive_summary` when the comparison
 needs an agent-authored synthesis at the top of the artifact.
 
+`check_staged_revision_apply()` previews whether one staged revision can be
+applied without mutating graph state. It reports already-applied state,
+per-patch count drift, preview triple counts, validation status, and a
+top-level `can_apply` flag.
+
 `apply_staged_revision()` applies one staged revision after count-based conflict
 checks and preview validation. It rejects already-applied staged revisions,
 rejects target graph count drift from the patch `beforeTripleCount` values, and

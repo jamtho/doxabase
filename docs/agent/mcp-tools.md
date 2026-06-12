@@ -215,6 +215,14 @@ anchors, review note/recommendation, patch payloads, before/after count
 previews, validation status, and structured SHACL diagnostics such as focus
 node, result path, constraint, and messages.
 
+`doxabase.check_staged_revision_apply`
+
+Previews whether one staged revision can apply without mutating graph state.
+Returns `can_apply`, already-applied state, per-patch current/preview counts,
+count-drift conflicts, and preview validation diagnostics. Use it before
+`doxabase.apply_staged_revision` when an agent or human wants an explicit
+read-only check.
+
 `doxabase.apply_staged_revision`
 
 Applies one staged revision to its target graph roles after conservative
