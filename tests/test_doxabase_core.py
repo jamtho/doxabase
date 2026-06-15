@@ -616,7 +616,30 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert {item.iri for item in column_support.nearby_caveats} == {
         "https://example.test/project#mixed_price_payload_caveat"
     }
+    assert [triple.object for triple in column_support.same_subject_predicate_triples] == [
+        RC + "Varchar"
+    ]
     assert "describe_context_slice" in column_support.suggested_next_calls[0]
+
+    absent_support = db.describe_assertion_support(
+        "https://example.test/project#px_price",
+        "rc:physicalType",
+        "rc:Double",
+    )
+
+    assert absent_support.assertion_present is False
+    assert absent_support.matching_triples == []
+    assert [triple.object for triple in absent_support.same_subject_predicate_triples] == [
+        RC + "Varchar"
+    ]
+    assert {item.iri for item in absent_support.nearby_caveats} == {
+        "https://example.test/project#mixed_price_payload_caveat"
+    }
+    assert "owning dataset" in absent_support.support_scope_note
+    assert any(
+        "object=None" in call
+        for call in absent_support.suggested_next_calls
+    )
 
 
 def test_apply_staged_revision_mutates_graph_and_records_history(

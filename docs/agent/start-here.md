@@ -38,7 +38,8 @@ When arriving cold, use this route before reading every reference doc.
    `type="rc:Dataset"` or `type="rc:Table"` in `graph="map"`.
 6. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.
 7. Call `doxabase.describe_assertion_support` when you need to ask why a
-   specific map assertion or caveat link is present.
+   specific map assertion or caveat link is present. If your requested object is
+   absent, check `same_subject_predicate_triples` before proposing a cleanup.
 8. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread.
 9. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and

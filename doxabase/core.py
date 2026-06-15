@@ -838,6 +838,7 @@ class AssertionSupportDescription:
     requested_object: AssertionValue | None
     assertion_present: bool
     matching_triples: list[ResourceTriple]
+    same_subject_predicate_triples: list[ResourceTriple]
     target_resources: list[ResourceSummary]
     nearby_caveats: list[CaveatDescription]
     related_observations: list[ResourceSummary]
@@ -846,6 +847,7 @@ class AssertionSupportDescription:
     related_evidence: list[ResourceSummary]
     related_revisions: list[ResourceSummary]
     context_note: str
+    support_scope_note: str
     suggested_next_calls: list[str]
 
 
@@ -1197,6 +1199,17 @@ class DoxaBase:
             object_filter=object_filter,
             limit=limit,
         )
+        same_subject_predicate_triples = (
+            self._assertion_triples(
+                graphs,
+                subject=subject_iri,
+                predicate=predicate_iri,
+                object_filter=None,
+                limit=limit,
+            )
+            if object_filter is not None
+            else matching_triples
+        )
         requested_object = (
             self._assertion_value_from_filter(lookup_graphs, object_filter)
             if object_filter is not None
@@ -1204,7 +1217,7 @@ class DoxaBase:
         )
         target_iris = self._assertion_target_iris(
             subject_iri,
-            matching_triples,
+            same_subject_predicate_triples,
             requested_object,
         )
         related = self._staged_revision_related_lore(target_iris)
@@ -1213,7 +1226,17 @@ class DoxaBase:
         context_note = (
             "Assertion support is a retrieval aid, not proof. It gathers nearby "
             "observations, claims, patterns, evidence, revisions, and caveats linked "
-            "to the assertion's subject and object resources."
+            "to the assertion's subject, requested object, and current object "
+            "resources for the same subject/predicate."
+        )
+        support_scope_note = (
+            "Exact assertion and same-subject predicate triples are read from the "
+            f"{graph or 'selected'} graph selection. Lore is gathered for the subject, "
+            "the requested object when supplied, and any current object resources "
+            "for the same subject/predicate. Column targets also pull caveats from "
+            "their owning dataset, but owner-dataset observations, claims, patterns, "
+            "evidence, and revisions only appear when directly linked through the "
+            "gathered target resources."
         )
         if not any(related.values()) and not nearby_caveats:
             context_note += " No linked lore or nearby caveats were found."
@@ -1226,6 +1249,7 @@ class DoxaBase:
             requested_object=requested_object,
             assertion_present=bool(matching_triples),
             matching_triples=matching_triples,
+            same_subject_predicate_triples=same_subject_predicate_triples,
             target_resources=target_resources,
             nearby_caveats=nearby_caveats,
             related_observations=related["observations"],
@@ -1234,10 +1258,12 @@ class DoxaBase:
             related_evidence=related["evidence"],
             related_revisions=related["revisions"],
             context_note=context_note,
+            support_scope_note=support_scope_note,
             suggested_next_calls=self._assertion_support_next_calls(
                 subject_iri,
                 predicate_iri,
                 requested_object,
+                graph=graph,
             ),
         )
 
@@ -6751,6 +6777,8 @@ class DoxaBase:
         subject_iri: str,
         predicate_iri: str,
         requested_object: AssertionValue | None,
+        *,
+        graph: str | None,
     ) -> list[str]:
         seeds = [subject_iri]
         if requested_object is not None and requested_object.value_kind in {
@@ -6763,6 +6791,11 @@ class DoxaBase:
             f"describe_context_slice([{seed_text}], profile='deep_lore')",
             f"describe_resource('{subject_iri}', graph=None)",
         ]
+        if requested_object is not None:
+            calls.append(
+                "describe_assertion_support("
+                f"'{subject_iri}', '{predicate_iri}', object=None, graph={graph!r})"
+            )
         if requested_object is not None and requested_object.value_kind in {
             "iri",
             "blank_node",

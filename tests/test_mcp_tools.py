@@ -862,8 +862,12 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result["matching_triples"][0]["object"] == (
         "https://example.test/project#message_id"
     )
+    assert result["same_subject_predicate_triples"][0]["object"] == (
+        "https://example.test/project#message_id"
+    )
     assert result["requested_object"]["resource"]["column_name"] == "message_id"
     assert "retrieval aid" in result["context_note"]
+    assert "same-subject predicate triples" in result["support_scope_note"]
 
 
 def test_record_claim_reconsideration_tool_returns_json_like_payload(

@@ -36,11 +36,14 @@ but you need its structured claim/evidence/source-span context.
 
 Explains one subject/predicate/object map assertion, or all assertions matching
 one subject/predicate when `object` is omitted. Returns whether the assertion is
-present, matching triples, subject/object resource summaries, nearby caveats,
-related observations, claims, patterns, evidence, revisions, and suggested next
-calls. Use it for questions like "why is this caveat link here?" or "what lore
-supports this column type?" It is retrieval context, not proof that the assertion
-is correct.
+present, exact matching triples, current same-subject/predicate triples,
+subject/object resource summaries, nearby caveats, related observations, claims,
+patterns, evidence, revisions, a support-scope note, and suggested next calls.
+Use it for questions like "why is this caveat link here?" or "what lore supports
+this column type?" It is retrieval context, not proof that the assertion is
+correct. When an exact requested object is absent, inspect
+`same_subject_predicate_triples` before deciding whether the current map already
+contains a more careful value.
 
 `doxabase.describe_graph_revision`
 

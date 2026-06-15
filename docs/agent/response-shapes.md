@@ -107,6 +107,7 @@ support.predicate_label
 support.requested_object
 support.assertion_present
 support.matching_triples
+support.same_subject_predicate_triples
 support.target_resources
 support.nearby_caveats
 support.related_observations
@@ -115,6 +116,7 @@ support.related_patterns
 support.related_evidence
 support.related_revisions
 support.context_note
+support.support_scope_note
 support.suggested_next_calls
 ```
 
@@ -123,6 +125,13 @@ hangs off this caveat/type/relationship assertion?" It is retrieval context, not
 proof. `assertion_present=False` means the exact requested triple was not found
 in the selected graph; the helper may still return context for the subject or
 requested object.
+
+When `object` is supplied, `same_subject_predicate_triples` lists the current
+triples for the same subject and predicate in the selected graph. This is
+especially important when `assertion_present=False`: the exact requested value
+may be absent because the map already records a different, more careful value.
+`support_scope_note` explains which resources were searched for lore and which
+nearby resources only contributed caveat context.
 
 Each `requested_object` is an `AssertionValue`:
 

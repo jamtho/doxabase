@@ -306,10 +306,13 @@ context rather than a type-specific helper.
 `describe_assertion_support()` returns support context for one map assertion.
 Pass `subject`, `predicate`, optional `object`, and optional `object_kind`
 (`"auto"`, `"iri"`, or `"literal"`). It reports whether the assertion is
-present, the matching triples, the touched resources, nearby caveats, related
-observations/claims/patterns/evidence/revisions, and suggested next calls. Use
-it when the question is "why is this map assertion here?" rather than "show me
-everything around this dataset."
+present, exact matching triples, current same-subject/predicate triples, the
+touched resources, nearby caveats, related
+observations/claims/patterns/evidence/revisions, the retrieval boundary, and
+suggested next calls. Use it when the question is "why is this map assertion
+here?" rather than "show me everything around this dataset." If an exact
+requested object is absent, the same-subject/predicate triples show what the
+current map does say for that slot.
 
 `search()` lexically searches literal RDF claims and returns matched resources,
 their graph role, RDF types, matched predicate, matched text, and snippet. Use
