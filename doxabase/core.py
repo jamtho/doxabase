@@ -1280,7 +1280,15 @@ class DoxaBase:
             same_subject_predicate_triples,
             requested_object,
         )
-        if not any(related.values()) and not nearby_caveats and not nearby_context_triples:
+        has_related_lore = any(related.values())
+        if not has_related_lore and (nearby_caveats or nearby_context_triples):
+            context_note += (
+                " No related observations, claims, patterns, evidence, or revisions "
+                "were found in this scoped lookup; inspect nearby caveats/context "
+                "and follow the suggested calls before treating that as a broad "
+                "absence of project lore."
+            )
+        elif not has_related_lore:
             context_note += (
                 " No linked lore, nearby caveats, or nearby layout/path context facts "
                 "were found in this scoped lookup; follow the suggested calls before "

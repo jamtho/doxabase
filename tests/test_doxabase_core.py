@@ -726,6 +726,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert "Partition path was generated from manifest metadata." in context_values
     assert "index/{year}/ais-{date}.parquet" in context_values
     assert "No linked lore" not in partition_support.context_note
+    assert "No related observations, claims, patterns, evidence, or revisions" in (
+        partition_support.context_note
+    )
 
 
 def test_apply_staged_revision_mutates_graph_and_records_history(
