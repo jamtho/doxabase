@@ -32,6 +32,16 @@ Returns outgoing and incoming triples for one resource, with available labels
 and RDF types. Use it after `list_entities` when lexical search found a resource
 but you need its structured claim/evidence/source-span context.
 
+`doxabase.describe_assertion_support`
+
+Explains one subject/predicate/object map assertion, or all assertions matching
+one subject/predicate when `object` is omitted. Returns whether the assertion is
+present, matching triples, subject/object resource summaries, nearby caveats,
+related observations, claims, patterns, evidence, revisions, and suggested next
+calls. Use it for questions like "why is this caveat link here?" or "what lore
+supports this column type?" It is retrieval context, not proof that the assertion
+is correct.
+
 `doxabase.describe_graph_revision`
 
 Returns compact revision context for one `rc:GraphRevision`: summary,

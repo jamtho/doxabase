@@ -10,6 +10,7 @@ from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
     check_staged_revision_apply_tool,
+    describe_assertion_support_tool,
     describe_dataset_tool,
     describe_context_slice_tool,
     describe_graph_revision_tool,
@@ -131,6 +132,27 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             iri=iri,
             graph=graph,
             include_incoming=include_incoming,
+            limit=limit,
+        )
+
+    @server.tool(name="doxabase.describe_assertion_support")
+    def describe_assertion_support(
+        subject: str,
+        predicate: str,
+        object: str | None = None,
+        graph: str | None = "map",
+        object_kind: str = "auto",
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Return support context for one subject/predicate/object assertion."""
+
+        return describe_assertion_support_tool(
+            db,
+            subject=subject,
+            predicate=predicate,
+            object=object,
+            graph=graph,
+            object_kind=object_kind,
             limit=limit,
         )
 

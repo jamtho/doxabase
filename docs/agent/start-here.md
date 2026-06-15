@@ -37,11 +37,13 @@ When arriving cold, use this route before reading every reference doc.
 5. Call `doxabase.list_entities` for likely entry points, usually
    `type="rc:Dataset"` or `type="rc:Table"` in `graph="map"`.
 6. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.
-7. Call `doxabase.describe_context_slice` when you need a route-explained slice
+7. Call `doxabase.describe_assertion_support` when you need to ask why a
+   specific map assertion or caveat link is present.
+8. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread.
-8. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
+9. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
    `doxabase.describe_pattern` when the map points to synthesized lore.
-9. Use the smallest write helper that fits the work, then validate before
+10. Use the smallest write helper that fits the work, then validate before
    finishing.
 
 If the MCP docs tools are not exposed in the current session, follow the same

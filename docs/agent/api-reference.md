@@ -303,6 +303,14 @@ Use it after `list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence"
 or `list_entities(type="rc:SourceSpan")` when you need generic structured
 context rather than a type-specific helper.
 
+`describe_assertion_support()` returns support context for one map assertion.
+Pass `subject`, `predicate`, optional `object`, and optional `object_kind`
+(`"auto"`, `"iri"`, or `"literal"`). It reports whether the assertion is
+present, the matching triples, the touched resources, nearby caveats, related
+observations/claims/patterns/evidence/revisions, and suggested next calls. Use
+it when the question is "why is this map assertion here?" rather than "show me
+everything around this dataset."
+
 `search()` lexically searches literal RDF claims and returns matched resources,
 their graph role, RDF types, matched predicate, matched text, and snippet. Use
 it to rediscover labels, caveats, source descriptions, path templates,

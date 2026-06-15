@@ -1,5 +1,7 @@
 from doxabase.core import (
     AppliedStagedRevisionRecord,
+    AssertionSupportDescription,
+    AssertionValue,
     CaveatDescription,
     ColumnProfileRecord,
     ColumnDescription,
@@ -63,6 +65,8 @@ from doxabase.core import (
 
 __all__ = [
     "AppliedStagedRevisionRecord",
+    "AssertionSupportDescription",
+    "AssertionValue",
     "CaveatDescription",
     "ColumnProfileRecord",
     "ColumnDescription",

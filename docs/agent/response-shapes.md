@@ -94,6 +94,52 @@ match.snippet
 
 Use `match.iri` for the matched resource. There is no `match.subject` field.
 
+## Assertion Support
+
+`db.describe_assertion_support(subject, predicate, object=None, ...)` returns an
+`AssertionSupportDescription`:
+
+```python
+support.graph
+support.subject
+support.predicate
+support.predicate_label
+support.requested_object
+support.assertion_present
+support.matching_triples
+support.target_resources
+support.nearby_caveats
+support.related_observations
+support.related_claims
+support.related_patterns
+support.related_evidence
+support.related_revisions
+support.context_note
+support.suggested_next_calls
+```
+
+Use this when the question is "why is this map assertion here?" or "what lore
+hangs off this caveat/type/relationship assertion?" It is retrieval context, not
+proof. `assertion_present=False` means the exact requested triple was not found
+in the selected graph; the helper may still return context for the subject or
+requested object.
+
+Each `requested_object` is an `AssertionValue`:
+
+```python
+value.value
+value.value_label
+value.value_kind
+value.datatype
+value.lang
+value.resource
+value.caveat
+```
+
+By default `object_kind="auto"` treats known CURIE/IRI-looking values as
+resources and plain strings as literals. Use `object_kind="literal"` when you
+need to match a literal that contains a colon.
+
 ## Context Slices
 
 `db.describe_context_slice(seed_iris, ...)` returns a `ContextSlice`:

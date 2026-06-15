@@ -505,6 +505,120 @@ def test_staged_revision_impacts_surface_lore_for_caveat_and_type_changes(
     assert "Raw price payloads need a coercion boundary" in export_text
 
 
+def test_describe_assertion_support_explains_map_assertion_lore(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix dcterms: <http://purl.org/dc/terms/> .
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        rcg:map {
+            ex:PriceSnapshots a rc:Dataset, rc:Table ;
+                rdfs:label "Price snapshots" ;
+                rc:hasColumn ex:px_price ;
+                rc:hasKnownCaveat ex:mixed_price_payload_caveat .
+
+            ex:px_price a rc:Column ;
+                rc:columnName "price" ;
+                rc:physicalType rc:Varchar ;
+                rdfs:comment "Raw payload column." .
+
+            ex:mixed_price_payload_caveat a rc:KnownCaveat ;
+                rdfs:label "Mixed price payload caveat" ;
+                rc:caveatDescription "price may contain numeric strings or API error objects." ;
+                rc:impact "Probability analysis must parse and filter raw payloads first." ;
+                rc:severity rc:Moderate .
+        }
+
+        rcg:observations {
+            ex:obs_price_payloads a rc:Observation ;
+                rc:summary "Sample price payloads include API error objects." ;
+                rc:observedAt "2026-06-14T00:00:00Z"^^xsd:dateTime ;
+                rc:observedAsset ex:PriceSnapshots ;
+                rc:observedColumn ex:px_price ;
+                rc:observationStatus rc:Checked ;
+                rc:evidence ex:evidence_price_payloads ;
+                rc:hasClaim ex:claim_price_payloads_are_mixed .
+
+            ex:claim_price_payloads_are_mixed a rc:Claim ;
+                rc:claimKind rc:CaveatClaim ;
+                rc:claimText "The price column is a raw payload lane before probability coercion." ;
+                rc:claimTarget ex:px_price, ex:mixed_price_payload_caveat ;
+                rc:confidence rc:HighConfidence ;
+                rc:observationStatus rc:Checked ;
+                rc:evidence ex:evidence_price_payloads .
+        }
+
+        rcg:patterns {
+            ex:pattern_price_payload_boundary a rc:Pattern ;
+                rc:summary "Raw price payloads need a coercion boundary." ;
+                rc:patternText "The price column should not be treated as clean probability until parsing filters API errors." ;
+                rc:patternTarget ex:px_price ;
+                rc:supportingObservation ex:obs_price_payloads ;
+                rc:supportingClaim ex:claim_price_payloads_are_mixed ;
+                rc:evidence ex:evidence_price_payloads ;
+                rc:mapImplication ex:mixed_price_payload_caveat .
+        }
+
+        rcg:evidence {
+            ex:evidence_price_payloads a rc:Evidence ;
+                rc:summary "Profile sample of price payload variants." ;
+                dcterms:source "test://price-payload-profile" .
+        }
+        """
+    )
+
+    caveat_support = db.describe_assertion_support(
+        "https://example.test/project#PriceSnapshots",
+        "rc:hasKnownCaveat",
+        "https://example.test/project#mixed_price_payload_caveat",
+    )
+
+    assert caveat_support.assertion_present is True
+    assert caveat_support.matching_triples[0].object_label == "Mixed price payload caveat"
+    assert caveat_support.requested_object is not None
+    assert caveat_support.requested_object.caveat is not None
+    assert caveat_support.requested_object.caveat.impact == (
+        "Probability analysis must parse and filter raw payloads first."
+    )
+    assert {item.iri for item in caveat_support.related_observations} == {
+        "https://example.test/project#obs_price_payloads"
+    }
+    assert {item.iri for item in caveat_support.related_claims} == {
+        "https://example.test/project#claim_price_payloads_are_mixed"
+    }
+    assert {item.iri for item in caveat_support.related_patterns} == {
+        "https://example.test/project#pattern_price_payload_boundary"
+    }
+    assert {item.iri for item in caveat_support.related_evidence} == {
+        "https://example.test/project#evidence_price_payloads"
+    }
+    assert [item.iri for item in caveat_support.nearby_caveats] == [
+        "https://example.test/project#mixed_price_payload_caveat"
+    ]
+
+    column_support = db.describe_assertion_support(
+        "https://example.test/project#px_price",
+        "rc:physicalType",
+        "rc:Varchar",
+    )
+
+    assert column_support.assertion_present is True
+    assert column_support.subject.label == "price"
+    assert column_support.requested_object is not None
+    assert column_support.requested_object.value == RC + "Varchar"
+    assert {item.iri for item in column_support.nearby_caveats} == {
+        "https://example.test/project#mixed_price_payload_caveat"
+    }
+    assert "describe_context_slice" in column_support.suggested_next_calls[0]
+
+
 def test_apply_staged_revision_mutates_graph_and_records_history(
     tmp_path: Path,
 ) -> None:

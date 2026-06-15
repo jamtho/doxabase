@@ -7,6 +7,7 @@ from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
     check_staged_revision_apply_tool,
+    describe_assertion_support_tool,
     describe_context_slice_tool,
     describe_dataset_tool,
     describe_graph_revision_tool,
@@ -830,6 +831,39 @@ def test_record_claim_observation_tool_and_resource_context(
         for triple in context["outgoing"]
     )
     assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_describe_assertion_support_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Messages a rc:Dataset ;
+            rc:hasColumn ex:message_id .
+
+        ex:message_id a rc:Column ;
+            rc:columnName "message_id" .
+        """,
+        graph="map",
+    )
+
+    result = describe_assertion_support_tool(
+        db,
+        subject="https://example.test/project#Messages",
+        predicate="rc:hasColumn",
+        object="https://example.test/project#message_id",
+    )
+
+    assert result["assertion_present"] is True
+    assert result["matching_triples"][0]["object"] == (
+        "https://example.test/project#message_id"
+    )
+    assert result["requested_object"]["resource"]["column_name"] == "message_id"
+    assert "retrieval aid" in result["context_note"]
 
 
 def test_record_claim_reconsideration_tool_returns_json_like_payload(

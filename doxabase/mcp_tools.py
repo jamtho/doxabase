@@ -67,6 +67,26 @@ def describe_resource_tool(
     return asdict(result)
 
 
+def describe_assertion_support_tool(
+    db: DoxaBase,
+    subject: str,
+    predicate: str,
+    object: str | None = None,
+    graph: str | None = "map",
+    object_kind: str = "auto",
+    limit: int = 20,
+) -> dict[str, Any]:
+    result = db.describe_assertion_support(
+        subject=subject,
+        predicate=predicate,
+        object=object,
+        graph=graph,
+        object_kind=object_kind,  # type: ignore[arg-type]
+        limit=limit,
+    )
+    return asdict(result)
+
+
 def describe_graph_revision_tool(
     db: DoxaBase,
     iri: str,

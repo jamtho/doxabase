@@ -819,6 +819,37 @@ class ResourceContext:
 
 
 @dataclass(frozen=True)
+class AssertionValue:
+    value: str
+    value_label: str | None
+    value_kind: str
+    datatype: str | None = None
+    lang: str | None = None
+    resource: ResourceSummary | None = None
+    caveat: CaveatDescription | None = None
+
+
+@dataclass(frozen=True)
+class AssertionSupportDescription:
+    graph: str | None
+    subject: ResourceSummary
+    predicate: str
+    predicate_label: str | None
+    requested_object: AssertionValue | None
+    assertion_present: bool
+    matching_triples: list[ResourceTriple]
+    target_resources: list[ResourceSummary]
+    nearby_caveats: list[CaveatDescription]
+    related_observations: list[ResourceSummary]
+    related_claims: list[ResourceSummary]
+    related_patterns: list[ResourceSummary]
+    related_evidence: list[ResourceSummary]
+    related_revisions: list[ResourceSummary]
+    context_note: str
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class ContextSliceRoute:
     route: str
     route_label: str
@@ -1140,6 +1171,74 @@ class DoxaBase:
                 else []
             ),
             limit=limit,
+        )
+
+    def describe_assertion_support(
+        self,
+        subject: str,
+        predicate: str,
+        object: str | None = None,
+        *,
+        graph: str | None = "map",
+        object_kind: TypingLiteral["auto", "iri", "uri", "literal"] = "auto",
+        limit: int = 20,
+    ) -> AssertionSupportDescription:
+        if limit < 1:
+            raise DoxaBaseError("Assertion support limit must be at least 1")
+        subject_iri = self.expand_iri(subject)
+        predicate_iri = self.expand_iri(predicate)
+        graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        object_filter = self._assertion_object_filter(object, object_kind)
+        matching_triples = self._assertion_triples(
+            graphs,
+            subject=subject_iri,
+            predicate=predicate_iri,
+            object_filter=object_filter,
+            limit=limit,
+        )
+        requested_object = (
+            self._assertion_value_from_filter(lookup_graphs, object_filter)
+            if object_filter is not None
+            else None
+        )
+        target_iris = self._assertion_target_iris(
+            subject_iri,
+            matching_triples,
+            requested_object,
+        )
+        related = self._staged_revision_related_lore(target_iris)
+        nearby_caveats = self._assertion_nearby_caveats(target_iris, lookup_graphs)
+        target_resources = self._resource_summaries(lookup_graphs, target_iris)
+        context_note = (
+            "Assertion support is a retrieval aid, not proof. It gathers nearby "
+            "observations, claims, patterns, evidence, revisions, and caveats linked "
+            "to the assertion's subject and object resources."
+        )
+        if not any(related.values()) and not nearby_caveats:
+            context_note += " No linked lore or nearby caveats were found."
+
+        return AssertionSupportDescription(
+            graph=graph,
+            subject=self._resource_summary(lookup_graphs, subject_iri),
+            predicate=predicate_iri,
+            predicate_label=self._label_for_resource(predicate_iri),
+            requested_object=requested_object,
+            assertion_present=bool(matching_triples),
+            matching_triples=matching_triples,
+            target_resources=target_resources,
+            nearby_caveats=nearby_caveats,
+            related_observations=related["observations"],
+            related_claims=related["claims"],
+            related_patterns=related["patterns"],
+            related_evidence=related["evidence"],
+            related_revisions=related["revisions"],
+            context_note=context_note,
+            suggested_next_calls=self._assertion_support_next_calls(
+                subject_iri,
+                predicate_iri,
+                requested_object,
+            ),
         )
 
     def describe_graph_revision(
@@ -6547,11 +6646,138 @@ class DoxaBase:
         labels = [value.value_label or value.value for value in values]
         return ", ".join(labels)
 
+    def _assertion_object_filter(
+        self,
+        object_value: str | None,
+        object_kind: str,
+    ) -> tuple[str, str, str | None, str | None] | None:
+        if object_value is None:
+            return None
+        kind = object_kind.strip().lower()
+        if kind == "uri":
+            kind = "iri"
+        if kind == "auto":
+            node = self._resource_or_literal(object_value)
+        elif kind == "iri":
+            node = URIRef(self.expand_iri(object_value))
+        elif kind == "literal":
+            node = Literal(object_value)
+        else:
+            raise DoxaBaseError(
+                "object_kind must be one of 'auto', 'iri', 'uri', or 'literal'"
+            )
+        return self._object_to_storage(node)
+
+    def _assertion_value_from_filter(
+        self,
+        lookup_graphs: list[str],
+        object_filter: tuple[str, str, str | None, str | None],
+    ) -> AssertionValue:
+        value, value_kind, datatype, lang = object_filter
+        if value_kind in {"uri", "bnode"}:
+            resource = self._resource_summary(lookup_graphs, value)
+            return AssertionValue(
+                value=value,
+                value_label=resource.label,
+                value_kind="iri" if value_kind == "uri" else "blank_node",
+                datatype=datatype,
+                lang=lang,
+                resource=resource,
+                caveat=self._impact_caveat_description(lookup_graphs, value),
+            )
+        return AssertionValue(
+            value=value,
+            value_label=None,
+            value_kind="literal",
+            datatype=datatype,
+            lang=lang,
+        )
+
+    def _assertion_target_iris(
+        self,
+        subject_iri: str,
+        matching_triples: Iterable[ResourceTriple],
+        requested_object: AssertionValue | None,
+    ) -> list[str]:
+        target_iris = [subject_iri]
+        if requested_object is not None and requested_object.value_kind in {
+            "iri",
+            "blank_node",
+        }:
+            target_iris.append(requested_object.value)
+        for triple in matching_triples:
+            if triple.object_kind in {"uri", "bnode"}:
+                target_iris.append(triple.object)
+        return list(dict.fromkeys(target_iris))
+
+    def _assertion_nearby_caveats(
+        self,
+        target_iris: Iterable[str],
+        lookup_graphs: list[str],
+    ) -> list[CaveatDescription]:
+        all_graphs = self._expand_graphs(["all"])
+        caveat_iris: dict[str, None] = {}
+        caveat_type = self.expand_iri("rc:KnownCaveat")
+        for target_iri in target_iris:
+            target_types = set(self._types_from_graphs(all_graphs, target_iri))
+            if caveat_type in target_types or self._first_object(
+                all_graphs,
+                target_iri,
+                "rc:caveatDescription",
+            ):
+                caveat_iris[target_iri] = None
+            for caveat_iri in self._objects(
+                all_graphs,
+                target_iri,
+                "rc:hasKnownCaveat",
+            ):
+                caveat_iris[caveat_iri] = None
+            owner_iri = self._first_owner_dataset_iri(all_graphs, target_iri)
+            if owner_iri is not None:
+                for caveat_iri in self._objects(
+                    all_graphs,
+                    owner_iri,
+                    "rc:hasKnownCaveat",
+                ):
+                    caveat_iris[caveat_iri] = None
+        caveats = [
+            self._describe_caveat(caveat_iri, all_graphs, lookup_graphs)
+            for caveat_iri in caveat_iris
+        ]
+        return sorted(caveats, key=lambda caveat: (caveat.label or "", caveat.iri))
+
+    def _assertion_support_next_calls(
+        self,
+        subject_iri: str,
+        predicate_iri: str,
+        requested_object: AssertionValue | None,
+    ) -> list[str]:
+        seeds = [subject_iri]
+        if requested_object is not None and requested_object.value_kind in {
+            "iri",
+            "blank_node",
+        }:
+            seeds.append(requested_object.value)
+        seed_text = ", ".join(repr(seed) for seed in seeds)
+        calls = [
+            f"describe_context_slice([{seed_text}], profile='deep_lore')",
+            f"describe_resource('{subject_iri}', graph=None)",
+        ]
+        if requested_object is not None and requested_object.value_kind in {
+            "iri",
+            "blank_node",
+        }:
+            calls.append(f"describe_resource('{requested_object.value}', graph=None)")
+        calls.append(
+            f"search('{self._local_name(predicate_iri) or predicate_iri}', graph=None)"
+        )
+        return calls
+
     def _staged_revision_related_lore(
         self,
         target_iris: Iterable[str],
         *,
-        exclude_revision_iri: str,
+        exclude_revision_iri: str | None = None,
     ) -> dict[str, list[ResourceSummary]]:
         targets = [
             iri
@@ -6649,7 +6875,8 @@ class DoxaBase:
                 self._subjects(history_graphs, "rc:evidence", evidence_iri)
             )
 
-        revision_iris.discard(exclude_revision_iri)
+        if exclude_revision_iri is not None:
+            revision_iris.discard(exclude_revision_iri)
 
         return {
             "observations": self._resource_summaries(
@@ -10105,6 +10332,51 @@ class DoxaBase:
             params.append(object_kind)
         if not filters:
             raise DoxaBaseError("Resource triple lookup requires subject or object")
+        where = " AND ".join(filters)
+        rows = self._conn.execute(
+            f"""
+            SELECT
+                q.graph,
+                q.subject,
+                q.subject_kind,
+                q.predicate,
+                q.object,
+                q.object_kind,
+                q.datatype,
+                q.lang
+            FROM quads q
+            WHERE {where}
+              {graph_filter}
+            ORDER BY q.graph, q.subject, q.predicate, q.object
+            LIMIT ?
+            """,
+            [*params, *graph_params, limit],
+        ).fetchall()
+        return [self._resource_triple_from_row(row) for row in rows]
+
+    def _assertion_triples(
+        self,
+        graphs: list[str],
+        *,
+        subject: str,
+        predicate: str,
+        object_filter: tuple[str, str, str | None, str | None] | None,
+        limit: int,
+    ) -> list[ResourceTriple]:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        filters = ["q.subject = ?", "q.predicate = ?"]
+        params: list[Any] = [subject, predicate]
+        if object_filter is not None:
+            object_value, object_kind, datatype, lang = object_filter
+            filters.extend(
+                [
+                    "q.object = ?",
+                    "q.object_kind = ?",
+                    "q.datatype IS ?",
+                    "q.lang IS ?",
+                ]
+            )
+            params.extend([object_value, object_kind, datatype, lang])
         where = " AND ".join(filters)
         rows = self._conn.execute(
             f"""
