@@ -38,8 +38,8 @@ scratch capsule script.
         ...
     ],
     "class_counts": [{"class": "rc:Column", "count": 42}, ...],
-    "predicate_counts": [{"predicate": "rdf:type", "count": 569}, ...],
-    "key_counts": {"datasets": 7, "tables": 7, "patterns": 0, ...},
+    "predicate_counts": [{"predicate": "rdf:type", "count": 574}, ...],
+    "key_counts": {"datasets": 7, "tables": 7, "patterns": 1, ...},
     "namespaces": {"rc": "https://richcanopy.org/ns/rc#", ...},
 }
 ```
@@ -55,12 +55,12 @@ There is no top-level `graph_counts` field. Derive graph counts from
     "fixtures": [
         {
             "path": "examples/manifest-prototype-rc/ais.trig",
-            "imported": {"ontology": 70, "map": 243, ...},
+            "imported": {"ontology": 94, "map": 223, ...},
         },
         ...
     ],
-    "totals": {"ontology": 177, "observations": 10, "map": 574, ...},
-    "total_imported": 767,
+    "totals": {"ontology": 177, "observations": 26, "map": 574, "patterns": 14, ...},
+    "total_imported": 800,
 }
 ```
 

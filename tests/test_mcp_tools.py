@@ -106,10 +106,36 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     tables = list_entities_tool(db, type="rc:Table", graph="map")
     validation = validate_graph_tool(db, scope="all")
 
-    assert load_result["total_imported"] == 767
+    assert load_result["total_imported"] == 800
+    assert load_result["totals"]["patterns"] == 14
     assert overview["key_counts"]["tables"] >= 7
+    assert overview["key_counts"]["patterns"] >= 1
     assert tables["count"] >= 7
     assert validation["conforms"] is True
+
+    support = describe_assertion_support_tool(
+        db,
+        subject="https://richcanopy.org/example/manifest/polymarket#px_price",
+        predicate="rc:physicalType",
+        object="rc:Varchar",
+    )
+
+    assert support["related_observations"][0]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#"
+        "obs_price_payload_caveat_from_manifest"
+    )
+    assert support["related_claims"][0]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#"
+        "claim_price_payload_requires_filtering"
+    )
+    assert support["related_patterns"][0]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#"
+        "pattern_price_payload_boundary"
+    )
+    assert support["related_evidence"][0]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#"
+        "evidence_price_payload_caveat_manifest"
+    )
 
 
 def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:

@@ -283,10 +283,10 @@ uv run python tools/validate_rdf.py
 
 Expected state at the time of writing:
 
-- `rc_core.ttl`: 1100 triples.
-- `rc_shapes.ttl`: 1105 triples.
+- `rc_core.ttl`: 1104 triples.
+- `rc_shapes.ttl`: 1112 triples.
 - `ais.trig`: 325 quads.
-- `polymarket.trig`: 442 quads.
+- `polymarket.trig`: 475 quads.
 - All fixtures conform to base SHACL shapes.
 
 ## Known Technical Debt

@@ -500,10 +500,46 @@ rcg:observations {
         rc:observedAsset pm:MarketSnapshots ;
         rc:summary "Converted representative Polymarket Manifest description content into RC graph roles; no fresh data profile was run." ;
         rc:evidence pm:evidence_polymarket_manifest_source .
+
+    pm:obs_price_payload_caveat_from_manifest a rc:Observation ;
+        rc:observedAt "2026-05-30T00:00:00Z"^^xsd:dateTime ;
+        rc:observedAsset pm:PriceSnapshots ;
+        rc:observedColumn pm:px_price ;
+        rc:summary "Manifest-derived fixture records the CLOB price column as raw payload text because some batches may contain API error objects rather than numeric prices." ;
+        rc:observationStatus rc:Checked ;
+        rc:evidence pm:evidence_price_payload_caveat_manifest ;
+        rc:hasClaim pm:claim_price_payload_requires_filtering .
+
+    pm:claim_price_payload_requires_filtering a rc:Claim ;
+        rc:claimKind rc:CaveatClaim ;
+        rc:claimText "The CLOB price column should remain a raw string payload in the map until invalid API error rows are filtered or coerced explicitly." ;
+        rc:claimTarget pm:px_price, pm:caveat_mixed_type_price ;
+        rc:confidence rc:HighConfidence ;
+        rc:observationStatus rc:Checked ;
+        rc:evidence pm:evidence_price_payload_caveat_manifest .
+}
+
+rcg:patterns {
+    pm:pattern_price_payload_boundary a rc:Pattern ;
+        rc:summary "CLOB price snapshots need a raw-payload boundary before probability analysis." ;
+        rc:patternText "The price snapshot column is modelled as raw payload text, not a clean probability, because error-object strings may appear in the same logical price lane." ;
+        rc:rationale "The fixture caveat and column type should travel together so cleanup-oriented agents do not replace the raw Varchar map assertion with a misleading Double assertion." ;
+        rc:patternTarget pm:PriceSnapshots, pm:px_price ;
+        rc:supportingObservation pm:obs_price_payload_caveat_from_manifest ;
+        rc:supportingClaim pm:claim_price_payload_requires_filtering ;
+        rc:evidence pm:evidence_price_payload_caveat_manifest ;
+        rc:mapImplication pm:px_price, pm:caveat_mixed_type_price ;
+        rc:confidence rc:HighConfidence ;
+        rc:observationStatus rc:Checked ;
+        rc:patternStability rc:EmergingPattern .
 }
 
 rcg:evidence {
     pm:evidence_polymarket_manifest_source a rc:Evidence ;
         rc:summary "Source fixture converted from ../manifest-prototype/descriptions/polymarket_description.ttl." ;
+        dcterms:source "../manifest-prototype/descriptions/polymarket_description.ttl" .
+
+    pm:evidence_price_payload_caveat_manifest a rc:Evidence ;
+        rc:summary "Representative manifest notes preserved in the fixture describe mixed numeric and API-error payloads in the CLOB price lane." ;
         dcterms:source "../manifest-prototype/descriptions/polymarket_description.ttl" .
 }
