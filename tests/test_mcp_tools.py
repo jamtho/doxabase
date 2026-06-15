@@ -149,6 +149,34 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert "claim target" in summary_by_kind["claim"]["route_labels"]
     assert summary_by_kind["pattern"]["route_count"] >= 2
 
+    token_support = describe_assertion_support_tool(
+        db,
+        subject="https://richcanopy.org/example/manifest/polymarket#px_token_id",
+        predicate="rc:physicalType",
+        object="rc:Double",
+    )
+
+    assert token_support["assertion_present"] is False
+    assert "Current same-subject/predicate value(s): VARCHAR" in (
+        token_support["absence_note"]
+    )
+    assert token_support["related_route_summaries"] == []
+    mixed_price_links = [
+        link
+        for link in token_support["nearby_caveat_links"]
+        if link["caveat"]["iri"]
+        == "https://richcanopy.org/example/manifest/polymarket#caveat_mixed_type_price"
+    ]
+    assert len(mixed_price_links) == 1
+    assert mixed_price_links[0]["scope"] == "owner_dataset"
+    assert mixed_price_links[0]["route_type"] == "owner_dataset_has_known_caveat"
+    assert mixed_price_links[0]["via_resource"]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#PriceSnapshots"
+    )
+    assert mixed_price_links[0]["matched_resource"]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#px_token_id"
+    )
+
 
 def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -906,6 +934,7 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result["owner_dataset"] is None
     assert result["absence_note"] is None
     assert result["nearby_context_triples"] == []
+    assert result["nearby_caveat_links"] == []
     assert result["related_routes"] == []
     assert result["related_route_summaries"] == []
     assert result["suggested_next_actions"][0]["tool_name"] == (

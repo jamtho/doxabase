@@ -111,6 +111,7 @@ support.matching_triples
 support.same_subject_predicate_triples
 support.target_resources
 support.nearby_caveats
+support.nearby_caveat_links
 support.nearby_context_triples
 support.related_observations
 support.related_claims
@@ -146,6 +147,22 @@ the current same-slot values, if any. `nearby_context_triples` contains selected
 direct layout/path facts such as `rc:layoutVerificationStatus`,
 `rc:layoutVerificationNote`, and `rc:pathTemplate`; these can matter when an
 assertion is present but not yet safe to use for executable planning.
+
+`nearby_caveats` is the unique list of caveats near the assertion.
+`nearby_caveat_links` explains why each caveat was included:
+
+```python
+link.caveat
+link.scope
+link.route_type
+link.route_label
+link.via_resource
+link.matched_resource
+```
+
+Check `scope` before treating a caveat as column-specific. An
+`owner_dataset` caveat came from the table that owns the column; it may still
+matter, but it is not automatically a direct caveat on that column.
 
 `suggested_next_actions` is the machine-readable form of the follow-up route:
 

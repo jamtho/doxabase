@@ -655,6 +655,30 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert [item.iri for item in caveat_support.nearby_caveats] == [
         "https://example.test/project#mixed_price_payload_caveat"
     ]
+    caveat_link_routes = {
+        (
+            link.caveat.iri,
+            link.scope,
+            link.route_type,
+            link.via_resource.iri,
+            link.matched_resource.iri,
+        )
+        for link in caveat_support.nearby_caveat_links
+    }
+    assert (
+        "https://example.test/project#mixed_price_payload_caveat",
+        "target_resource",
+        "caveat_target_resource",
+        "https://example.test/project#mixed_price_payload_caveat",
+        "https://example.test/project#mixed_price_payload_caveat",
+    ) in caveat_link_routes
+    assert (
+        "https://example.test/project#mixed_price_payload_caveat",
+        "direct_target",
+        "target_has_known_caveat",
+        "https://example.test/project#PriceSnapshots",
+        "https://example.test/project#PriceSnapshots",
+    ) in caveat_link_routes
 
     column_support = db.describe_assertion_support(
         "https://example.test/project#px_price",
@@ -672,6 +696,15 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert {item.iri for item in column_support.nearby_caveats} == {
         "https://example.test/project#mixed_price_payload_caveat"
     }
+    column_caveat_link = column_support.nearby_caveat_links[0]
+    assert column_caveat_link.scope == "owner_dataset"
+    assert column_caveat_link.route_type == "owner_dataset_has_known_caveat"
+    assert column_caveat_link.via_resource.iri == (
+        "https://example.test/project#PriceSnapshots"
+    )
+    assert column_caveat_link.matched_resource.iri == (
+        "https://example.test/project#px_price"
+    )
     assert [triple.object for triple in column_support.same_subject_predicate_triples] == [
         RC + "Varchar"
     ]

@@ -310,7 +310,9 @@ present, exact matching triples, current same-subject/predicate triples, the
 touched resources, column owner summary when known, nearby caveats, related
 observations/claims/patterns/evidence/revisions, selected direct layout/path
 context triples, the retrieval boundary, absence notes, and suggested next
-calls. `suggested_next_actions` is the structured form to drive tools;
+calls. `nearby_caveat_links` explains the scope of each caveat, for example
+whether it is directly attached to the assertion target or came via the owning
+dataset. `suggested_next_actions` is the structured form to drive tools;
 `suggested_next_calls` is the display/back-compat string form. It also returns
 `related_route_summaries` and `related_routes`, which explain why each related
 lore item entered the payload. Scan summaries first when there are many rows;
@@ -319,7 +321,8 @@ this map assertion here?" rather than "show me everything around this dataset."
 If an exact requested object is absent, the same-subject/predicate triples and
 `absence_note` show what the current map does say for that slot. For column
 subjects, follow the owner-dataset suggested actions when table-level lore may
-matter. For layout, partition, or storage assertions, inspect
+matter, but check caveat-link `scope` before treating table caveats as
+column-specific. For layout, partition, or storage assertions, inspect
 `nearby_context_triples` for verification notes before treating the assertion as
 executable planning context.
 

@@ -574,6 +574,16 @@ class CaveatDescription:
 
 
 @dataclass(frozen=True)
+class AssertionSupportCaveatLink:
+    caveat: CaveatDescription
+    scope: str
+    route_type: str
+    route_label: str
+    via_resource: ResourceSummary
+    matched_resource: ResourceSummary
+
+
+@dataclass(frozen=True)
 class TransformationDescription:
     iri: str
     label: str | None
@@ -873,6 +883,7 @@ class AssertionSupportDescription:
     same_subject_predicate_triples: list[ResourceTriple]
     target_resources: list[ResourceSummary]
     nearby_caveats: list[CaveatDescription]
+    nearby_caveat_links: list[AssertionSupportCaveatLink]
     nearby_context_triples: list[ResourceTriple]
     related_observations: list[ResourceSummary]
     related_claims: list[ResourceSummary]
@@ -1262,7 +1273,11 @@ class DoxaBase:
         related_route_summaries = self._assertion_related_route_summaries(
             related_routes
         )
-        nearby_caveats = self._assertion_nearby_caveats(target_iris, lookup_graphs)
+        nearby_caveat_links = self._assertion_nearby_caveat_links(
+            target_iris,
+            lookup_graphs,
+        )
+        nearby_caveats = self._caveats_from_links(nearby_caveat_links)
         target_resources = self._resource_summaries(lookup_graphs, target_iris)
         subject_summary = self._resource_summary(lookup_graphs, subject_iri)
         owner_dataset = (
@@ -1343,6 +1358,7 @@ class DoxaBase:
             same_subject_predicate_triples=same_subject_predicate_triples,
             target_resources=target_resources,
             nearby_caveats=nearby_caveats,
+            nearby_caveat_links=nearby_caveat_links,
             nearby_context_triples=nearby_context_triples,
             related_observations=related["observations"],
             related_claims=related["claims"],
@@ -6829,14 +6845,52 @@ class DoxaBase:
                 target_iris.append(triple.object)
         return list(dict.fromkeys(target_iris))
 
-    def _assertion_nearby_caveats(
+    def _assertion_nearby_caveat_links(
         self,
         target_iris: Iterable[str],
         lookup_graphs: list[str],
-    ) -> list[CaveatDescription]:
+    ) -> list[AssertionSupportCaveatLink]:
         all_graphs = self._expand_graphs(["all"])
-        caveat_iris: dict[str, None] = {}
+        links: list[AssertionSupportCaveatLink] = []
+        seen_links: set[tuple[str, str, str, str]] = set()
         caveat_type = self.expand_iri("rc:KnownCaveat")
+
+        def add_link(
+            caveat_iri: str,
+            *,
+            scope: str,
+            route_type: str,
+            route_label: str,
+            via_iri: str,
+            matched_iri: str,
+        ) -> None:
+            key = (caveat_iri, route_type, via_iri, matched_iri)
+            if key in seen_links:
+                return
+            seen_links.add(key)
+            links.append(
+                AssertionSupportCaveatLink(
+                    caveat=self._describe_caveat(
+                        caveat_iri,
+                        all_graphs,
+                        lookup_graphs,
+                    ),
+                    scope=scope,
+                    route_type=route_type,
+                    route_label=route_label,
+                    via_resource=self._resource_summary(
+                        lookup_graphs,
+                        via_iri,
+                        display_label=True,
+                    ),
+                    matched_resource=self._resource_summary(
+                        lookup_graphs,
+                        matched_iri,
+                        display_label=True,
+                    ),
+                )
+            )
+
         for target_iri in target_iris:
             target_types = set(self._types_from_graphs(all_graphs, target_iri))
             if caveat_type in target_types or self._first_object(
@@ -6844,13 +6898,27 @@ class DoxaBase:
                 target_iri,
                 "rc:caveatDescription",
             ):
-                caveat_iris[target_iri] = None
+                add_link(
+                    target_iri,
+                    scope="target_resource",
+                    route_type="caveat_target_resource",
+                    route_label="assertion target is a known caveat",
+                    via_iri=target_iri,
+                    matched_iri=target_iri,
+                )
             for caveat_iri in self._objects(
                 all_graphs,
                 target_iri,
                 "rc:hasKnownCaveat",
             ):
-                caveat_iris[caveat_iri] = None
+                add_link(
+                    caveat_iri,
+                    scope="direct_target",
+                    route_type="target_has_known_caveat",
+                    route_label="target resource has known caveat",
+                    via_iri=target_iri,
+                    matched_iri=target_iri,
+                )
             owner_iri = self._first_owner_dataset_iri(all_graphs, target_iri)
             if owner_iri is not None:
                 for caveat_iri in self._objects(
@@ -6858,12 +6926,42 @@ class DoxaBase:
                     owner_iri,
                     "rc:hasKnownCaveat",
                 ):
-                    caveat_iris[caveat_iri] = None
-        caveats = [
-            self._describe_caveat(caveat_iri, all_graphs, lookup_graphs)
-            for caveat_iri in caveat_iris
-        ]
-        return sorted(caveats, key=lambda caveat: (caveat.label or "", caveat.iri))
+                    add_link(
+                        caveat_iri,
+                        scope="owner_dataset",
+                        route_type="owner_dataset_has_known_caveat",
+                        route_label="owning dataset has known caveat",
+                        via_iri=owner_iri,
+                        matched_iri=target_iri,
+                    )
+
+        scope_order = {
+            "target_resource": 0,
+            "direct_target": 1,
+            "owner_dataset": 2,
+        }
+        return sorted(
+            links,
+            key=lambda link: (
+                scope_order.get(link.scope, 99),
+                link.caveat.label or "",
+                link.caveat.iri,
+                link.via_resource.label or link.via_resource.iri,
+                link.matched_resource.label or link.matched_resource.iri,
+            ),
+        )
+
+    def _caveats_from_links(
+        self,
+        links: Iterable[AssertionSupportCaveatLink],
+    ) -> list[CaveatDescription]:
+        caveats: dict[str, CaveatDescription] = {}
+        for link in links:
+            caveats.setdefault(link.caveat.iri, link.caveat)
+        return sorted(
+            caveats.values(),
+            key=lambda caveat: (caveat.label or "", caveat.iri),
+        )
 
     def _assertion_nearby_context_triples(
         self,

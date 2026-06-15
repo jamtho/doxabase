@@ -46,7 +46,8 @@ When arriving cold, use this route before reading every reference doc.
    treating the assertion as executable planning context. Prefer
    `suggested_next_actions` over parsing display call strings, and scan
    `related_route_summaries` before raw `related_routes` when there is a lot of
-   lore attached.
+   lore attached. Check `nearby_caveat_links.scope` before treating an
+   owner-dataset caveat as a direct caveat on one column.
 8. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread.
 9. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and

@@ -40,10 +40,11 @@ present, exact matching triples, current same-subject/predicate triples,
 subject/object resource summaries, an owner-dataset summary for column subjects,
 nearby caveats, selected direct layout/path context triples, related
 observations, claims, patterns, evidence, revisions, a support-scope note, an
-absence note, grouped route summaries and raw route explanations for related
-lore, and structured suggested next actions plus display call strings. Use it
-for questions like "why is this caveat link here?" or "what lore supports this
-column type?" It is retrieval context, not proof that the assertion is correct.
+absence note, scoped caveat-link metadata, grouped route summaries and raw route
+explanations for related lore, and structured suggested next actions plus
+display call strings. Use it for questions like "why is this caveat link here?"
+or "what lore supports this column type?" It is retrieval context, not proof
+that the assertion is correct.
 When an exact requested object is absent, inspect
 `same_subject_predicate_triples` and `absence_note` before deciding whether the
 current map already contains a more careful value. For column subjects, follow
@@ -55,7 +56,8 @@ need to know whether an observation, claim, pattern, evidence item, or revision
 matched the subject, requested object, current same-slot object, or another
 nearby lore item. Prefer `suggested_next_actions` over parsing
 `suggested_next_calls`; each action has `tool_name`, `arguments`, `reason`, and
-`call`.
+`call`. Check `nearby_caveat_links.scope` before treating a table-level caveat
+as specific to one column.
 
 `doxabase.describe_graph_revision`
 
