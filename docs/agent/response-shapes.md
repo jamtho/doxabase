@@ -136,12 +136,13 @@ may be absent because the map already records a different, more careful value.
 `support_scope_note` explains which resources were searched for lore and which
 nearby resources only contributed caveat context. For column subjects,
 `owner_dataset` gives the owning dataset summary when the map has one; use the
-owner-seeded suggested calls for broader dataset lore. `absence_note` is present
-when an exact requested object is absent and summarizes the current same-slot
-values, if any. `nearby_context_triples` contains selected direct layout/path
-facts such as `rc:layoutVerificationStatus`, `rc:layoutVerificationNote`, and
-`rc:pathTemplate`; these can matter when an assertion is present but not yet safe
-to use for executable planning.
+owner-seeded suggested calls for broader dataset lore. The first suggested
+context slice is owner-seeded when the assertion subject is a column.
+`absence_note` is present when an exact requested object is absent and summarizes
+the current same-slot values, if any. `nearby_context_triples` contains selected
+direct layout/path facts such as `rc:layoutVerificationStatus`,
+`rc:layoutVerificationNote`, and `rc:pathTemplate`; these can matter when an
+assertion is present but not yet safe to use for executable planning.
 
 Each `requested_object` is an `AssertionValue`:
 

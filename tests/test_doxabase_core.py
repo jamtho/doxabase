@@ -634,6 +634,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
         RC + "Varchar"
     ]
     assert "describe_context_slice" in column_support.suggested_next_calls[0]
+    assert "https://example.test/project#PriceSnapshots" in (
+        column_support.suggested_next_calls[0]
+    )
     assert any(
         "describe_dataset('https://example.test/project#PriceSnapshots')" == call
         for call in column_support.suggested_next_calls
@@ -660,6 +663,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
         "https://example.test/project#mixed_price_payload_caveat"
     }
     assert "owning dataset" in absent_support.support_scope_note
+    assert "https://example.test/project#PriceSnapshots" in (
+        absent_support.suggested_next_calls[0]
+    )
     assert any(
         "object=None" in call
         for call in absent_support.suggested_next_calls

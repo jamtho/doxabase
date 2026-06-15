@@ -6892,7 +6892,10 @@ class DoxaBase:
         graph: str | None,
         owner_dataset_iri: str | None,
     ) -> list[str]:
-        seeds = [subject_iri]
+        seeds = []
+        if owner_dataset_iri is not None:
+            seeds.append(owner_dataset_iri)
+        seeds.append(subject_iri)
         if requested_object is not None and requested_object.value_kind in {
             "iri",
             "blank_node",
@@ -6901,13 +6904,10 @@ class DoxaBase:
         seed_text = ", ".join(repr(seed) for seed in seeds)
         calls = [
             f"describe_context_slice([{seed_text}], profile='deep_lore')",
-            f"describe_resource('{subject_iri}', graph=None)",
         ]
         if owner_dataset_iri is not None:
             calls.append(f"describe_dataset('{owner_dataset_iri}')")
-            calls.append(
-                f"describe_context_slice(['{owner_dataset_iri}'], profile='deep_lore')"
-            )
+        calls.append(f"describe_resource('{subject_iri}', graph=None)")
         if requested_object is not None:
             calls.append(
                 "describe_assertion_support("
