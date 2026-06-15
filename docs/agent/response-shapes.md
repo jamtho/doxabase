@@ -102,6 +102,7 @@ Use `match.iri` for the matched resource. There is no `match.subject` field.
 ```python
 support.graph
 support.subject
+support.owner_dataset
 support.predicate
 support.predicate_label
 support.requested_object
@@ -110,6 +111,7 @@ support.matching_triples
 support.same_subject_predicate_triples
 support.target_resources
 support.nearby_caveats
+support.nearby_context_triples
 support.related_observations
 support.related_claims
 support.related_patterns
@@ -117,6 +119,7 @@ support.related_evidence
 support.related_revisions
 support.context_note
 support.support_scope_note
+support.absence_note
 support.suggested_next_calls
 ```
 
@@ -131,7 +134,14 @@ triples for the same subject and predicate in the selected graph. This is
 especially important when `assertion_present=False`: the exact requested value
 may be absent because the map already records a different, more careful value.
 `support_scope_note` explains which resources were searched for lore and which
-nearby resources only contributed caveat context.
+nearby resources only contributed caveat context. For column subjects,
+`owner_dataset` gives the owning dataset summary when the map has one; use the
+owner-seeded suggested calls for broader dataset lore. `absence_note` is present
+when an exact requested object is absent and summarizes the current same-slot
+values, if any. `nearby_context_triples` contains selected direct layout/path
+facts such as `rc:layoutVerificationStatus`, `rc:layoutVerificationNote`, and
+`rc:pathTemplate`; these can matter when an assertion is present but not yet safe
+to use for executable planning.
 
 Each `requested_object` is an `AssertionValue`:
 

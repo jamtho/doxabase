@@ -534,6 +534,17 @@ def test_describe_assertion_support_explains_map_assertion_lore(
                 rc:caveatDescription "price may contain numeric strings or API error objects." ;
                 rc:impact "Probability analysis must parse and filter raw payloads first." ;
                 rc:severity rc:Moderate .
+
+            ex:DailyIndex a rc:Dataset, rc:Table ;
+                rdfs:label "Daily index" ;
+                rc:partitionedBy ex:daily_date_partition ;
+                rc:layoutVerificationStatus rc:UnverifiedLayout ;
+                rc:layoutVerificationNote "Index layout has not been checked against storage." .
+
+            ex:daily_date_partition a rc:PartitionScheme ;
+                rc:pathTemplate "index/{year}/ais-{date}.parquet" ;
+                rc:layoutVerificationStatus rc:GeneratedFromManifestLayout ;
+                rc:layoutVerificationNote "Partition path was generated from manifest metadata." .
         }
 
         rcg:observations {
@@ -611,6 +622,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
 
     assert column_support.assertion_present is True
     assert column_support.subject.label == "price"
+    assert column_support.owner_dataset is not None
+    assert column_support.owner_dataset.iri == "https://example.test/project#PriceSnapshots"
+    assert column_support.absence_note is None
     assert column_support.requested_object is not None
     assert column_support.requested_object.value == RC + "Varchar"
     assert {item.iri for item in column_support.nearby_caveats} == {
@@ -620,6 +634,10 @@ def test_describe_assertion_support_explains_map_assertion_lore(
         RC + "Varchar"
     ]
     assert "describe_context_slice" in column_support.suggested_next_calls[0]
+    assert any(
+        "describe_dataset('https://example.test/project#PriceSnapshots')" == call
+        for call in column_support.suggested_next_calls
+    )
 
     absent_support = db.describe_assertion_support(
         "https://example.test/project#px_price",
@@ -632,6 +650,12 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert [triple.object for triple in absent_support.same_subject_predicate_triples] == [
         RC + "Varchar"
     ]
+    assert absent_support.owner_dataset is not None
+    assert absent_support.owner_dataset.label == "Price snapshots"
+    assert absent_support.absence_note is not None
+    assert "Current same-subject/predicate value(s): VARCHAR" in (
+        absent_support.absence_note
+    )
     assert {item.iri for item in absent_support.nearby_caveats} == {
         "https://example.test/project#mixed_price_payload_caveat"
     }
@@ -640,6 +664,24 @@ def test_describe_assertion_support_explains_map_assertion_lore(
         "object=None" in call
         for call in absent_support.suggested_next_calls
     )
+
+    partition_support = db.describe_assertion_support(
+        "https://example.test/project#DailyIndex",
+        "rc:partitionedBy",
+        "https://example.test/project#daily_date_partition",
+    )
+
+    context_values = {
+        triple.object_label or triple.object
+        for triple in partition_support.nearby_context_triples
+    }
+    assert partition_support.assertion_present is True
+    assert "unverified layout" in context_values
+    assert "generated from manifest" in context_values
+    assert "Index layout has not been checked against storage." in context_values
+    assert "Partition path was generated from manifest metadata." in context_values
+    assert "index/{year}/ais-{date}.parquet" in context_values
+    assert "No linked lore" not in partition_support.context_note
 
 
 def test_apply_staged_revision_mutates_graph_and_records_history(

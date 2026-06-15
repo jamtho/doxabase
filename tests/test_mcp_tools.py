@@ -891,6 +891,9 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result["same_subject_predicate_triples"][0]["object"] == (
         "https://example.test/project#message_id"
     )
+    assert result["owner_dataset"] is None
+    assert result["absence_note"] is None
+    assert result["nearby_context_triples"] == []
     assert result["requested_object"]["resource"]["column_name"] == "message_id"
     assert "retrieval aid" in result["context_note"]
     assert "same-subject predicate triples" in result["support_scope_note"]

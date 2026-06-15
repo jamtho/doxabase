@@ -39,7 +39,11 @@ When arriving cold, use this route before reading every reference doc.
 6. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.
 7. Call `doxabase.describe_assertion_support` when you need to ask why a
    specific map assertion or caveat link is present. If your requested object is
-   absent, check `same_subject_predicate_triples` before proposing a cleanup.
+   absent, check `same_subject_predicate_triples` and `absence_note` before
+   proposing a cleanup. For column assertions, follow owner-dataset suggested
+   calls when table-level lore may matter. For layout, partition, or storage
+   assertions, check `nearby_context_triples` for verification notes before
+   treating the assertion as executable planning context.
 8. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread.
 9. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and

@@ -833,6 +833,7 @@ class AssertionValue:
 class AssertionSupportDescription:
     graph: str | None
     subject: ResourceSummary
+    owner_dataset: ResourceSummary | None
     predicate: str
     predicate_label: str | None
     requested_object: AssertionValue | None
@@ -841,6 +842,7 @@ class AssertionSupportDescription:
     same_subject_predicate_triples: list[ResourceTriple]
     target_resources: list[ResourceSummary]
     nearby_caveats: list[CaveatDescription]
+    nearby_context_triples: list[ResourceTriple]
     related_observations: list[ResourceSummary]
     related_claims: list[ResourceSummary]
     related_patterns: list[ResourceSummary]
@@ -848,6 +850,7 @@ class AssertionSupportDescription:
     related_revisions: list[ResourceSummary]
     context_note: str
     support_scope_note: str
+    absence_note: str | None
     suggested_next_calls: list[str]
 
 
@@ -1223,11 +1226,26 @@ class DoxaBase:
         related = self._staged_revision_related_lore(target_iris)
         nearby_caveats = self._assertion_nearby_caveats(target_iris, lookup_graphs)
         target_resources = self._resource_summaries(lookup_graphs, target_iris)
+        subject_summary = self._resource_summary(lookup_graphs, subject_iri)
+        owner_dataset = (
+            self._resource_summary(lookup_graphs, subject_summary.owning_dataset_iri)
+            if subject_summary.owning_dataset_iri is not None
+            else None
+        )
+        nearby_context_iris = target_iris.copy()
+        if owner_dataset is not None:
+            nearby_context_iris.append(owner_dataset.iri)
+        nearby_context_triples = self._assertion_nearby_context_triples(
+            nearby_context_iris,
+            lookup_graphs,
+            limit=limit,
+        )
         context_note = (
             "Assertion support is a retrieval aid, not proof. It gathers nearby "
             "observations, claims, patterns, evidence, revisions, and caveats linked "
             "to the assertion's subject, requested object, and current object "
-            "resources for the same subject/predicate."
+            "resources for the same subject/predicate. It also surfaces selected "
+            "direct layout/path context facts on those resources."
         )
         support_scope_note = (
             "Exact assertion and same-subject predicate triples are read from the "
@@ -1236,14 +1254,32 @@ class DoxaBase:
             "for the same subject/predicate. Column targets also pull caveats from "
             "their owning dataset, but owner-dataset observations, claims, patterns, "
             "evidence, and revisions only appear when directly linked through the "
-            "gathered target resources."
+            "gathered target resources. Nearby context triples are limited to direct "
+            "layout/path predicates that often affect whether a map assertion is safe "
+            "to use for executable planning."
         )
-        if not any(related.values()) and not nearby_caveats:
-            context_note += " No linked lore or nearby caveats were found."
+        if owner_dataset is not None:
+            support_scope_note += (
+                " The subject is a column with an owning dataset; inspect "
+                "owner_dataset and the owner-seeded suggested calls for broader "
+                "dataset lore."
+            )
+        absence_note = self._assertion_absence_note(
+            matching_triples,
+            same_subject_predicate_triples,
+            requested_object,
+        )
+        if not any(related.values()) and not nearby_caveats and not nearby_context_triples:
+            context_note += (
+                " No linked lore, nearby caveats, or nearby layout/path context facts "
+                "were found in this scoped lookup; follow the suggested calls before "
+                "treating that as a broad absence of project lore."
+            )
 
         return AssertionSupportDescription(
             graph=graph,
-            subject=self._resource_summary(lookup_graphs, subject_iri),
+            subject=subject_summary,
+            owner_dataset=owner_dataset,
             predicate=predicate_iri,
             predicate_label=self._label_for_resource(predicate_iri),
             requested_object=requested_object,
@@ -1252,6 +1288,7 @@ class DoxaBase:
             same_subject_predicate_triples=same_subject_predicate_triples,
             target_resources=target_resources,
             nearby_caveats=nearby_caveats,
+            nearby_context_triples=nearby_context_triples,
             related_observations=related["observations"],
             related_claims=related["claims"],
             related_patterns=related["patterns"],
@@ -1259,11 +1296,15 @@ class DoxaBase:
             related_revisions=related["revisions"],
             context_note=context_note,
             support_scope_note=support_scope_note,
+            absence_note=absence_note,
             suggested_next_calls=self._assertion_support_next_calls(
                 subject_iri,
                 predicate_iri,
                 requested_object,
                 graph=graph,
+                owner_dataset_iri=(
+                    owner_dataset.iri if owner_dataset is not None else None
+                ),
             ),
         )
 
@@ -6772,6 +6813,76 @@ class DoxaBase:
         ]
         return sorted(caveats, key=lambda caveat: (caveat.label or "", caveat.iri))
 
+    def _assertion_nearby_context_triples(
+        self,
+        target_iris: Iterable[str],
+        lookup_graphs: list[str],
+        *,
+        limit: int,
+    ) -> list[ResourceTriple]:
+        targets = [
+            iri
+            for iri in dict.fromkeys(target_iris)
+            if iri and not iri.startswith("_:")
+        ]
+        if not targets:
+            return []
+        predicates = [
+            self.expand_iri("rc:layoutVerificationStatus"),
+            self.expand_iri("rc:layoutVerificationNote"),
+            self.expand_iri("rc:pathTemplate"),
+        ]
+        graph_filter, graph_params = self._graph_filter(lookup_graphs, alias="q")
+        target_placeholders = ",".join("?" for _ in targets)
+        predicate_placeholders = ",".join("?" for _ in predicates)
+        rows = self._conn.execute(
+            f"""
+            SELECT
+                q.graph,
+                q.subject,
+                q.subject_kind,
+                q.predicate,
+                q.object,
+                q.object_kind,
+                q.datatype,
+                q.lang
+            FROM quads q
+            WHERE q.subject IN ({target_placeholders})
+              AND q.predicate IN ({predicate_placeholders})
+              {graph_filter}
+            ORDER BY q.graph, q.subject, q.predicate, q.object
+            LIMIT ?
+            """,
+            [*targets, *predicates, *graph_params, limit],
+        ).fetchall()
+        return [self._resource_triple_from_row(row) for row in rows]
+
+    def _assertion_absence_note(
+        self,
+        matching_triples: list[ResourceTriple],
+        same_subject_predicate_triples: list[ResourceTriple],
+        requested_object: AssertionValue | None,
+    ) -> str | None:
+        if requested_object is None or matching_triples:
+            return None
+        requested_label = requested_object.value_label or requested_object.value
+        if same_subject_predicate_triples:
+            current_values = ", ".join(
+                triple.object_label or triple.object
+                for triple in same_subject_predicate_triples
+            )
+            return (
+                f"Exact requested assertion for {requested_label} is absent. "
+                "Current same-subject/predicate value(s): "
+                f"{current_values}. Do not infer a replacement without inspecting "
+                "these values and nearby lore."
+            )
+        return (
+            f"Exact requested assertion for {requested_label} is absent, and no "
+            "current same-subject/predicate triples were found in the selected "
+            "graph."
+        )
+
     def _assertion_support_next_calls(
         self,
         subject_iri: str,
@@ -6779,6 +6890,7 @@ class DoxaBase:
         requested_object: AssertionValue | None,
         *,
         graph: str | None,
+        owner_dataset_iri: str | None,
     ) -> list[str]:
         seeds = [subject_iri]
         if requested_object is not None and requested_object.value_kind in {
@@ -6791,6 +6903,11 @@ class DoxaBase:
             f"describe_context_slice([{seed_text}], profile='deep_lore')",
             f"describe_resource('{subject_iri}', graph=None)",
         ]
+        if owner_dataset_iri is not None:
+            calls.append(f"describe_dataset('{owner_dataset_iri}')")
+            calls.append(
+                f"describe_context_slice(['{owner_dataset_iri}'], profile='deep_lore')"
+            )
         if requested_object is not None:
             calls.append(
                 "describe_assertion_support("
