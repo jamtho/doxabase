@@ -6487,7 +6487,7 @@ class DoxaBase:
     ) -> ResourceSummary | None:
         if isinstance(node, Literal):
             return None
-        return self._resource_summary(lookup_graphs, str(node), display_label=True)
+        return self._resource_summary(lookup_graphs, str(node))
 
     def _impact_value_summary(
         self,

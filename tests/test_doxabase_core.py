@@ -471,6 +471,9 @@ def test_staged_revision_impacts_surface_lore_for_caveat_and_type_changes(
         for impact in description.impacts
         if impact.impact_type == "changed_physical_type"
     )
+    assert type_impact.subject is not None
+    assert type_impact.subject.label == "price"
+    assert "Raw payload column" not in type_impact.message
     assert [value.value for value in type_impact.removed_values] == [RC + "Varchar"]
     assert [value.value for value in type_impact.added_values] == [RC + "Double"]
     assert type_impact.related_observations[0].iri == (
