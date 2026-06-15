@@ -43,7 +43,9 @@ When arriving cold, use this route before reading every reference doc.
    proposing a cleanup. For column assertions, follow owner-dataset suggested
    calls when table-level lore may matter. For layout, partition, or storage
    assertions, check `nearby_context_triples` for verification notes before
-   treating the assertion as executable planning context.
+   treating the assertion as executable planning context. Scan
+   `related_route_summaries` before raw `related_routes` when there is a lot of
+   lore attached.
 8. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread.
 9. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and

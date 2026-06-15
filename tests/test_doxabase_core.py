@@ -634,6 +634,24 @@ def test_describe_assertion_support_explains_map_assertion_lore(
         "pattern",
         "map_implication",
     ) in caveat_routes
+    caveat_route_summaries = {
+        summary.resource.iri: summary
+        for summary in caveat_support.related_route_summaries
+    }
+    pattern_summary = caveat_route_summaries[
+        "https://example.test/project#pattern_price_payload_boundary"
+    ]
+    assert pattern_summary.rank >= 1
+    assert pattern_summary.resource_kind == "pattern"
+    assert pattern_summary.route_count == 3
+    assert pattern_summary.strongest_route_type == "map_implication"
+    assert pattern_summary.route_types == [
+        "map_implication",
+        "supporting_observation",
+        "supporting_claim",
+    ]
+    assert "pattern map implication" in pattern_summary.route_labels
+    assert "Mixed price payload caveat" in pattern_summary.route_note
     assert [item.iri for item in caveat_support.nearby_caveats] == [
         "https://example.test/project#mixed_price_payload_caveat"
     ]

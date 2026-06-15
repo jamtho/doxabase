@@ -141,6 +141,13 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert "claim_target" in route_types
     assert "pattern_target" in route_types
     assert "supporting_claim" in route_types
+    summary_by_kind = {
+        summary["resource_kind"]: summary
+        for summary in support["related_route_summaries"]
+    }
+    assert summary_by_kind["claim"]["strongest_route_type"] == "claim_target"
+    assert "claim target" in summary_by_kind["claim"]["route_labels"]
+    assert summary_by_kind["pattern"]["route_count"] >= 2
 
 
 def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
@@ -900,6 +907,7 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result["absence_note"] is None
     assert result["nearby_context_triples"] == []
     assert result["related_routes"] == []
+    assert result["related_route_summaries"] == []
     assert result["requested_object"]["resource"]["column_name"] == "message_id"
     assert "retrieval aid" in result["context_note"]
     assert "same-subject predicate triples" in result["support_scope_note"]

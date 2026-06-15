@@ -839,6 +839,20 @@ class AssertionSupportRoute:
 
 
 @dataclass(frozen=True)
+class AssertionSupportRouteSummary:
+    rank: int
+    resource: ResourceSummary
+    resource_kind: str
+    route_count: int
+    route_types: list[str]
+    route_labels: list[str]
+    matched_resources: list[ResourceSummary]
+    strongest_route_type: str
+    strongest_route_label: str
+    route_note: str
+
+
+@dataclass(frozen=True)
 class AssertionSupportDescription:
     graph: str | None
     subject: ResourceSummary
@@ -858,6 +872,7 @@ class AssertionSupportDescription:
     related_evidence: list[ResourceSummary]
     related_revisions: list[ResourceSummary]
     related_routes: list[AssertionSupportRoute]
+    related_route_summaries: list[AssertionSupportRouteSummary]
     context_note: str
     support_scope_note: str
     absence_note: str | None
@@ -1235,6 +1250,9 @@ class DoxaBase:
         )
         related = self._staged_revision_related_lore(target_iris)
         related_routes = self._assertion_related_lore_routes(target_iris)
+        related_route_summaries = self._assertion_related_route_summaries(
+            related_routes
+        )
         nearby_caveats = self._assertion_nearby_caveats(target_iris, lookup_graphs)
         target_resources = self._resource_summaries(lookup_graphs, target_iris)
         subject_summary = self._resource_summary(lookup_graphs, subject_iri)
@@ -1314,6 +1332,7 @@ class DoxaBase:
             related_evidence=related["evidence"],
             related_revisions=related["revisions"],
             related_routes=related_routes,
+            related_route_summaries=related_route_summaries,
             context_note=context_note,
             support_scope_note=support_scope_note,
             absence_note=absence_note,
@@ -7253,6 +7272,135 @@ class DoxaBase:
                 )
 
         return routes
+
+    def _assertion_related_route_summaries(
+        self,
+        routes: Iterable[AssertionSupportRoute],
+    ) -> list[AssertionSupportRouteSummary]:
+        route_groups: dict[tuple[str, str], list[AssertionSupportRoute]] = {}
+        for route in routes:
+            route_groups.setdefault(
+                (route.resource_kind, route.resource.iri),
+                [],
+            ).append(route)
+
+        route_weights = {
+            "target_resource": 100,
+            "claim_target": 90,
+            "pattern_target": 88,
+            "map_implication": 86,
+            "observed_column": 84,
+            "observed_asset": 80,
+            "revision_anchor": 76,
+            "target_evidence": 72,
+            "observation_claim": 68,
+            "supporting_observation": 64,
+            "supporting_claim": 62,
+            "observation_evidence": 58,
+            "claim_evidence": 56,
+            "pattern_evidence": 54,
+            "revision_supporting_observation": 48,
+            "revision_supporting_claim": 46,
+            "revision_supporting_pattern": 44,
+            "revision_evidence": 42,
+        }
+        kind_weights = {
+            "claim": 6,
+            "pattern": 5,
+            "observation": 4,
+            "evidence": 3,
+            "revision": 2,
+        }
+
+        def route_weight(route: AssertionSupportRoute) -> int:
+            return route_weights.get(route.route_type, 10)
+
+        def route_kind_weight(route: AssertionSupportRoute) -> int:
+            return kind_weights.get(route.resource_kind, 1)
+
+        def unique_labels(group_routes: list[AssertionSupportRoute]) -> list[str]:
+            return list(dict.fromkeys(route.route_label for route in group_routes))
+
+        def unique_types(group_routes: list[AssertionSupportRoute]) -> list[str]:
+            return list(dict.fromkeys(route.route_type for route in group_routes))
+
+        def unique_matches(
+            group_routes: list[AssertionSupportRoute],
+        ) -> list[ResourceSummary]:
+            matches: dict[str, ResourceSummary] = {}
+            for route in group_routes:
+                if route.matched_resource is not None:
+                    matches.setdefault(
+                        route.matched_resource.iri,
+                        route.matched_resource,
+                    )
+            return list(matches.values())
+
+        def route_note(
+            *,
+            resource: ResourceSummary,
+            resource_kind: str,
+            labels: list[str],
+            matches: list[ResourceSummary],
+            strongest_route: AssertionSupportRoute,
+        ) -> str:
+            resource_label = resource.label or resource.iri
+            label_text = ", ".join(labels)
+            match_labels = [match.label or match.iri for match in matches]
+            if match_labels:
+                match_text = "; matched " + ", ".join(match_labels)
+            else:
+                match_text = ""
+            return (
+                f"{resource_label} is included as {resource_kind}. "
+                f"Strongest route: {strongest_route.route_label}. "
+                f"Routes: {label_text}{match_text}."
+            )
+
+        ranked_groups = sorted(
+            route_groups.values(),
+            key=lambda group: (
+                -max(route_weight(route) for route in group),
+                -max(route_kind_weight(route) for route in group),
+                -len(group),
+                (group[0].resource.label or group[0].resource.iri).lower(),
+                group[0].resource.iri,
+            ),
+        )
+
+        summaries: list[AssertionSupportRouteSummary] = []
+        for rank, group in enumerate(ranked_groups, start=1):
+            strongest_route = max(
+                group,
+                key=lambda route: (
+                    route_weight(route),
+                    route_kind_weight(route),
+                    route.route_label,
+                ),
+            )
+            labels = unique_labels(group)
+            matches = unique_matches(group)
+            summaries.append(
+                AssertionSupportRouteSummary(
+                    rank=rank,
+                    resource=group[0].resource,
+                    resource_kind=group[0].resource_kind,
+                    route_count=len(group),
+                    route_types=unique_types(group),
+                    route_labels=labels,
+                    matched_resources=matches,
+                    strongest_route_type=strongest_route.route_type,
+                    strongest_route_label=strongest_route.route_label,
+                    route_note=route_note(
+                        resource=group[0].resource,
+                        resource_kind=group[0].resource_kind,
+                        labels=labels,
+                        matches=matches,
+                        strongest_route=strongest_route,
+                    ),
+                )
+            )
+        return summaries
 
     def _staged_revision_related_lore(
         self,

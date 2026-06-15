@@ -40,17 +40,18 @@ present, exact matching triples, current same-subject/predicate triples,
 subject/object resource summaries, an owner-dataset summary for column subjects,
 nearby caveats, selected direct layout/path context triples, related
 observations, claims, patterns, evidence, revisions, a support-scope note, an
-absence note, route explanations for related lore, and suggested next calls.
-Use it for questions like "why is this caveat link here?" or "what lore
-supports this column type?" It is retrieval context, not proof that the
-assertion is correct.
+absence note, grouped route summaries and raw route explanations for related
+lore, and suggested next calls. Use it for questions like "why is this caveat
+link here?" or "what lore supports this column type?" It is retrieval context,
+not proof that the assertion is correct.
 When an exact requested object is absent, inspect
 `same_subject_predicate_triples` and `absence_note` before deciding whether the
 current map already contains a more careful value. For column subjects, follow
 the owner-dataset suggested calls when you need table-level lore. For layout,
 partition, or storage assertions, inspect `nearby_context_triples` before using
-the assertion as executable planning context. Use `related_routes` when you need
-to know whether an observation, claim, pattern, evidence item, or revision
+the assertion as executable planning context. Use `related_route_summaries` to
+find the most directly related lore resources, and `related_routes` when you
+need to know whether an observation, claim, pattern, evidence item, or revision
 matched the subject, requested object, current same-slot object, or another
 nearby lore item.
 

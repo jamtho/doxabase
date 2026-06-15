@@ -118,6 +118,7 @@ support.related_patterns
 support.related_evidence
 support.related_revisions
 support.related_routes
+support.related_route_summaries
 support.context_note
 support.support_scope_note
 support.absence_note
@@ -145,6 +146,23 @@ direct layout/path facts such as `rc:layoutVerificationStatus`,
 `rc:layoutVerificationNote`, and `rc:pathTemplate`; these can matter when an
 assertion is present but not yet safe to use for executable planning.
 
+`related_route_summaries` groups and ranks `related_routes` by related resource.
+Scan these first when the payload has many routes; use raw routes when you need
+the exact link that pulled a resource in. Each summary has:
+
+```python
+summary.rank
+summary.resource
+summary.resource_kind
+summary.route_count
+summary.route_types
+summary.route_labels
+summary.matched_resources
+summary.strongest_route_type
+summary.strongest_route_label
+summary.route_note
+```
+
 `related_routes` explains why related lore entered the payload. Each route has:
 
 ```python
@@ -155,7 +173,8 @@ route.route_label
 route.matched_resource
 ```
 
-Use it to distinguish direct matches from indirect lore such as "claim target",
+Use route summaries to find the most directly relevant resources, then use raw
+routes to distinguish direct matches from indirect lore such as "claim target",
 "pattern target", "pattern map implication", "observation observed column", or
 "evidence linked from claim".
 
