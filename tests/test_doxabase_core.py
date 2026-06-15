@@ -610,6 +610,30 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert {item.iri for item in caveat_support.related_evidence} == {
         "https://example.test/project#evidence_price_payloads"
     }
+    caveat_routes = {
+        (route.resource.iri, route.resource_kind, route.route_type)
+        for route in caveat_support.related_routes
+    }
+    assert (
+        "https://example.test/project#obs_price_payloads",
+        "observation",
+        "observed_asset",
+    ) in caveat_routes
+    assert (
+        "https://example.test/project#claim_price_payloads_are_mixed",
+        "claim",
+        "claim_target",
+    ) in caveat_routes
+    assert (
+        "https://example.test/project#pattern_price_payload_boundary",
+        "pattern",
+        "supporting_observation",
+    ) in caveat_routes
+    assert (
+        "https://example.test/project#pattern_price_payload_boundary",
+        "pattern",
+        "map_implication",
+    ) in caveat_routes
     assert [item.iri for item in caveat_support.nearby_caveats] == [
         "https://example.test/project#mixed_price_payload_caveat"
     ]
@@ -662,6 +686,20 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert {item.iri for item in absent_support.nearby_caveats} == {
         "https://example.test/project#mixed_price_payload_caveat"
     }
+    absent_routes = {
+        (route.resource.iri, route.resource_kind, route.route_type)
+        for route in absent_support.related_routes
+    }
+    assert (
+        "https://example.test/project#claim_price_payloads_are_mixed",
+        "claim",
+        "claim_target",
+    ) in absent_routes
+    assert (
+        "https://example.test/project#pattern_price_payload_boundary",
+        "pattern",
+        "pattern_target",
+    ) in absent_routes
     assert "owning dataset" in absent_support.support_scope_note
     assert "https://example.test/project#PriceSnapshots" in (
         absent_support.suggested_next_calls[0]

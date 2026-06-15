@@ -117,6 +117,7 @@ support.related_claims
 support.related_patterns
 support.related_evidence
 support.related_revisions
+support.related_routes
 support.context_note
 support.support_scope_note
 support.absence_note
@@ -143,6 +144,20 @@ the current same-slot values, if any. `nearby_context_triples` contains selected
 direct layout/path facts such as `rc:layoutVerificationStatus`,
 `rc:layoutVerificationNote`, and `rc:pathTemplate`; these can matter when an
 assertion is present but not yet safe to use for executable planning.
+
+`related_routes` explains why related lore entered the payload. Each route has:
+
+```python
+route.resource
+route.resource_kind
+route.route_type
+route.route_label
+route.matched_resource
+```
+
+Use it to distinguish direct matches from indirect lore such as "claim target",
+"pattern target", "pattern map implication", "observation observed column", or
+"evidence linked from claim".
 
 Each `requested_object` is an `AssertionValue`:
 

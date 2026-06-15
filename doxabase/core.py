@@ -830,6 +830,15 @@ class AssertionValue:
 
 
 @dataclass(frozen=True)
+class AssertionSupportRoute:
+    resource: ResourceSummary
+    resource_kind: str
+    route_type: str
+    route_label: str
+    matched_resource: ResourceSummary | None
+
+
+@dataclass(frozen=True)
 class AssertionSupportDescription:
     graph: str | None
     subject: ResourceSummary
@@ -848,6 +857,7 @@ class AssertionSupportDescription:
     related_patterns: list[ResourceSummary]
     related_evidence: list[ResourceSummary]
     related_revisions: list[ResourceSummary]
+    related_routes: list[AssertionSupportRoute]
     context_note: str
     support_scope_note: str
     absence_note: str | None
@@ -1224,6 +1234,7 @@ class DoxaBase:
             requested_object,
         )
         related = self._staged_revision_related_lore(target_iris)
+        related_routes = self._assertion_related_lore_routes(target_iris)
         nearby_caveats = self._assertion_nearby_caveats(target_iris, lookup_graphs)
         target_resources = self._resource_summaries(lookup_graphs, target_iris)
         subject_summary = self._resource_summary(lookup_graphs, subject_iri)
@@ -1294,6 +1305,7 @@ class DoxaBase:
             related_patterns=related["patterns"],
             related_evidence=related["evidence"],
             related_revisions=related["revisions"],
+            related_routes=related_routes,
             context_note=context_note,
             support_scope_note=support_scope_note,
             absence_note=absence_note,
@@ -6922,6 +6934,317 @@ class DoxaBase:
             f"search('{self._local_name(predicate_iri) or predicate_iri}', graph=None)"
         )
         return calls
+
+    def _assertion_related_lore_routes(
+        self,
+        target_iris: Iterable[str],
+    ) -> list[AssertionSupportRoute]:
+        targets = [
+            iri
+            for iri in dict.fromkeys(target_iris)
+            if iri and not iri.startswith("_:")
+        ]
+        all_graphs = self._expand_graphs(["all"])
+        pattern_graphs = self._expand_graphs(["patterns"])
+        history_graphs = self._expand_graphs(["history"])
+        lookup_graphs = self._lookup_graphs(all_graphs)
+
+        description_predicates = {
+            "observation": "rc:summary",
+            "claim": "rc:claimText",
+            "pattern": "rc:patternText",
+            "evidence": "rc:summary",
+            "revision": "rc:summary",
+        }
+        routes: list[AssertionSupportRoute] = []
+        seen_routes: set[tuple[str, str, str, str | None]] = set()
+        summary_cache: dict[tuple[str, str], ResourceSummary] = {}
+
+        def summary(iri: str, kind: str) -> ResourceSummary:
+            key = (iri, kind)
+            if key not in summary_cache:
+                summary_cache[key] = self._resource_summary(
+                    lookup_graphs,
+                    iri,
+                    description_predicate=description_predicates.get(
+                        kind,
+                        "rdfs:comment",
+                    ),
+                    display_label=True,
+                )
+            return summary_cache[key]
+
+        def add_route(
+            resource_iri: str,
+            resource_kind: str,
+            route_type: str,
+            route_label: str,
+            matched_iri: str | None,
+        ) -> None:
+            key = (resource_kind, resource_iri, route_type, matched_iri)
+            if key in seen_routes:
+                return
+            seen_routes.add(key)
+            routes.append(
+                AssertionSupportRoute(
+                    resource=summary(resource_iri, resource_kind),
+                    resource_kind=resource_kind,
+                    route_type=route_type,
+                    route_label=route_label,
+                    matched_resource=(
+                        summary(matched_iri, "matched_resource")
+                        if matched_iri is not None
+                        else None
+                    ),
+                )
+            )
+
+        observation_type = self.expand_iri("rc:Observation")
+        claim_type = self.expand_iri("rc:Claim")
+        pattern_type = self.expand_iri("rc:Pattern")
+        evidence_type = self.expand_iri("rc:Evidence")
+
+        for target_iri in targets:
+            target_types = set(self._types_from_graphs(all_graphs, target_iri))
+            if observation_type in target_types:
+                add_route(
+                    target_iri,
+                    "observation",
+                    "target_resource",
+                    "target resource",
+                    target_iri,
+                )
+            if claim_type in target_types:
+                add_route(
+                    target_iri,
+                    "claim",
+                    "target_resource",
+                    "target resource",
+                    target_iri,
+                )
+            if pattern_type in target_types:
+                add_route(
+                    target_iri,
+                    "pattern",
+                    "target_resource",
+                    "target resource",
+                    target_iri,
+                )
+            if evidence_type in target_types:
+                add_route(
+                    target_iri,
+                    "evidence",
+                    "target_resource",
+                    "target resource",
+                    target_iri,
+                )
+
+            for observation_iri in self._subjects(
+                all_graphs,
+                "rc:observedAsset",
+                target_iri,
+            ):
+                add_route(
+                    observation_iri,
+                    "observation",
+                    "observed_asset",
+                    "observation observed asset",
+                    target_iri,
+                )
+            for observation_iri in self._subjects(
+                all_graphs,
+                "rc:observedColumn",
+                target_iri,
+            ):
+                add_route(
+                    observation_iri,
+                    "observation",
+                    "observed_column",
+                    "observation observed column",
+                    target_iri,
+                )
+            for claim_iri in self._subjects(all_graphs, "rc:claimTarget", target_iri):
+                add_route(
+                    claim_iri,
+                    "claim",
+                    "claim_target",
+                    "claim target",
+                    target_iri,
+                )
+            for pattern_iri in self._subjects(
+                pattern_graphs,
+                "rc:patternTarget",
+                target_iri,
+            ):
+                add_route(
+                    pattern_iri,
+                    "pattern",
+                    "pattern_target",
+                    "pattern target",
+                    target_iri,
+                )
+            for pattern_iri in self._subjects(
+                pattern_graphs,
+                "rc:mapImplication",
+                target_iri,
+            ):
+                add_route(
+                    pattern_iri,
+                    "pattern",
+                    "map_implication",
+                    "pattern map implication",
+                    target_iri,
+                )
+            for revision_iri in self._subjects(
+                history_graphs,
+                "rc:revisionAnchor",
+                target_iri,
+            ):
+                add_route(
+                    revision_iri,
+                    "revision",
+                    "revision_anchor",
+                    "revision anchor",
+                    target_iri,
+                )
+            for evidence_iri in self._objects(all_graphs, target_iri, "rc:evidence"):
+                add_route(
+                    evidence_iri,
+                    "evidence",
+                    "target_evidence",
+                    "target evidence",
+                    target_iri,
+                )
+
+        observation_iris = [
+            route.resource.iri
+            for route in routes
+            if route.resource_kind == "observation"
+        ]
+        for observation_iri in dict.fromkeys(observation_iris):
+            for claim_iri in self._objects(all_graphs, observation_iri, "rc:hasClaim"):
+                add_route(
+                    claim_iri,
+                    "claim",
+                    "observation_claim",
+                    "claim linked from observation",
+                    observation_iri,
+                )
+            for evidence_iri in self._objects(all_graphs, observation_iri, "rc:evidence"):
+                add_route(
+                    evidence_iri,
+                    "evidence",
+                    "observation_evidence",
+                    "evidence linked from observation",
+                    observation_iri,
+                )
+            for pattern_iri in self._subjects(
+                pattern_graphs,
+                "rc:supportingObservation",
+                observation_iri,
+            ):
+                add_route(
+                    pattern_iri,
+                    "pattern",
+                    "supporting_observation",
+                    "pattern supporting observation",
+                    observation_iri,
+                )
+            for revision_iri in self._subjects(
+                history_graphs,
+                "rc:revisionSupportingObservation",
+                observation_iri,
+            ):
+                add_route(
+                    revision_iri,
+                    "revision",
+                    "revision_supporting_observation",
+                    "revision supporting observation",
+                    observation_iri,
+                )
+
+        claim_iris = [
+            route.resource.iri
+            for route in routes
+            if route.resource_kind == "claim"
+        ]
+        for claim_iri in dict.fromkeys(claim_iris):
+            for evidence_iri in self._objects(all_graphs, claim_iri, "rc:evidence"):
+                add_route(
+                    evidence_iri,
+                    "evidence",
+                    "claim_evidence",
+                    "evidence linked from claim",
+                    claim_iri,
+                )
+            for pattern_iri in self._subjects(
+                pattern_graphs,
+                "rc:supportingClaim",
+                claim_iri,
+            ):
+                add_route(
+                    pattern_iri,
+                    "pattern",
+                    "supporting_claim",
+                    "pattern supporting claim",
+                    claim_iri,
+                )
+            for revision_iri in self._subjects(
+                history_graphs,
+                "rc:revisionSupportingClaim",
+                claim_iri,
+            ):
+                add_route(
+                    revision_iri,
+                    "revision",
+                    "revision_supporting_claim",
+                    "revision supporting claim",
+                    claim_iri,
+                )
+
+        pattern_iris = [
+            route.resource.iri
+            for route in routes
+            if route.resource_kind == "pattern"
+        ]
+        for pattern_iri in dict.fromkeys(pattern_iris):
+            for evidence_iri in self._objects(all_graphs, pattern_iri, "rc:evidence"):
+                add_route(
+                    evidence_iri,
+                    "evidence",
+                    "pattern_evidence",
+                    "evidence linked from pattern",
+                    pattern_iri,
+                )
+            for revision_iri in self._subjects(
+                history_graphs,
+                "rc:revisionSupportingPattern",
+                pattern_iri,
+            ):
+                add_route(
+                    revision_iri,
+                    "revision",
+                    "revision_supporting_pattern",
+                    "revision supporting pattern",
+                    pattern_iri,
+                )
+
+        evidence_iris = [
+            route.resource.iri
+            for route in routes
+            if route.resource_kind == "evidence"
+        ]
+        for evidence_iri in dict.fromkeys(evidence_iris):
+            for revision_iri in self._subjects(history_graphs, "rc:evidence", evidence_iri):
+                add_route(
+                    revision_iri,
+                    "revision",
+                    "revision_evidence",
+                    "revision evidence",
+                    evidence_iri,
+                )
+
+        return routes
 
     def _staged_revision_related_lore(
         self,
