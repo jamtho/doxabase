@@ -41,9 +41,10 @@ When arriving cold, use this route before reading every reference doc.
    specific map assertion or caveat link is present. If your requested object is
    absent, check `same_subject_predicate_triples` and `absence_note` before
    proposing a cleanup. For column assertions, follow owner-dataset suggested
-   calls when table-level lore may matter. For layout, partition, or storage
+   actions when table-level lore may matter. For layout, partition, or storage
    assertions, check `nearby_context_triples` for verification notes before
-   treating the assertion as executable planning context. Scan
+   treating the assertion as executable planning context. Prefer
+   `suggested_next_actions` over parsing display call strings, and scan
    `related_route_summaries` before raw `related_routes` when there is a lot of
    lore attached.
 8. Call `doxabase.describe_context_slice` when you need a route-explained slice

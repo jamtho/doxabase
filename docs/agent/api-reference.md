@@ -310,16 +310,18 @@ present, exact matching triples, current same-subject/predicate triples, the
 touched resources, column owner summary when known, nearby caveats, related
 observations/claims/patterns/evidence/revisions, selected direct layout/path
 context triples, the retrieval boundary, absence notes, and suggested next
-calls. It also returns `related_route_summaries` and `related_routes`, which
-explain why each related lore item entered the payload. Scan summaries first
-when there are many rows; use raw routes when you need exact links. Use it when
-the question is "why is this map assertion here?" rather than "show me
-everything around this dataset." If an exact requested object is absent, the
-same-subject/predicate triples and `absence_note` show what the current map does
-say for that slot. For column subjects, follow the owner-dataset suggested calls
-when table-level lore may matter. For layout, partition, or storage assertions,
-inspect `nearby_context_triples` for verification notes before treating the
-assertion as executable planning context.
+calls. `suggested_next_actions` is the structured form to drive tools;
+`suggested_next_calls` is the display/back-compat string form. It also returns
+`related_route_summaries` and `related_routes`, which explain why each related
+lore item entered the payload. Scan summaries first when there are many rows;
+use raw routes when you need exact links. Use it when the question is "why is
+this map assertion here?" rather than "show me everything around this dataset."
+If an exact requested object is absent, the same-subject/predicate triples and
+`absence_note` show what the current map does say for that slot. For column
+subjects, follow the owner-dataset suggested actions when table-level lore may
+matter. For layout, partition, or storage assertions, inspect
+`nearby_context_triples` for verification notes before treating the assertion as
+executable planning context.
 
 `search()` lexically searches literal RDF claims and returns matched resources,
 their graph role, RDF types, matched predicate, matched text, and snippet. Use

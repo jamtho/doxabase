@@ -908,6 +908,13 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result["nearby_context_triples"] == []
     assert result["related_routes"] == []
     assert result["related_route_summaries"] == []
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "describe_context_slice"
+    )
+    assert result["suggested_next_actions"][0]["arguments"]["seed_iris"] == [
+        "https://example.test/project#Messages",
+        "https://example.test/project#message_id",
+    ]
     assert result["requested_object"]["resource"]["column_name"] == "message_id"
     assert "retrieval aid" in result["context_note"]
     assert "same-subject predicate triples" in result["support_scope_note"]

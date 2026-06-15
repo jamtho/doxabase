@@ -853,6 +853,14 @@ class AssertionSupportRouteSummary:
 
 
 @dataclass(frozen=True)
+class SuggestedNextAction:
+    tool_name: str
+    arguments: dict[str, Any]
+    reason: str
+    call: str
+
+
+@dataclass(frozen=True)
 class AssertionSupportDescription:
     graph: str | None
     subject: ResourceSummary
@@ -876,6 +884,7 @@ class AssertionSupportDescription:
     context_note: str
     support_scope_note: str
     absence_note: str | None
+    suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
 
 
@@ -1290,7 +1299,7 @@ class DoxaBase:
         if owner_dataset is not None:
             support_scope_note += (
                 " The subject is a column with an owning dataset; inspect "
-                "owner_dataset and the owner-seeded suggested calls for broader "
+                "owner_dataset and the owner-seeded suggested actions for broader "
                 "dataset lore."
             )
         absence_note = self._assertion_absence_note(
@@ -1303,15 +1312,24 @@ class DoxaBase:
             context_note += (
                 " No related observations, claims, patterns, evidence, or revisions "
                 "were found in this scoped lookup; inspect nearby caveats/context "
-                "and follow the suggested calls before treating that as a broad "
+                "and follow the suggested actions before treating that as a broad "
                 "absence of project lore."
             )
         elif not has_related_lore:
             context_note += (
                 " No linked lore, nearby caveats, or nearby layout/path context facts "
-                "were found in this scoped lookup; follow the suggested calls before "
+                "were found in this scoped lookup; follow the suggested actions before "
                 "treating that as a broad absence of project lore."
             )
+        suggested_next_actions = self._assertion_support_next_actions(
+            subject_iri,
+            predicate_iri,
+            requested_object,
+            graph=graph,
+            owner_dataset_iri=(
+                owner_dataset.iri if owner_dataset is not None else None
+            ),
+        )
 
         return AssertionSupportDescription(
             graph=graph,
@@ -1336,15 +1354,10 @@ class DoxaBase:
             context_note=context_note,
             support_scope_note=support_scope_note,
             absence_note=absence_note,
-            suggested_next_calls=self._assertion_support_next_calls(
-                subject_iri,
-                predicate_iri,
-                requested_object,
-                graph=graph,
-                owner_dataset_iri=(
-                    owner_dataset.iri if owner_dataset is not None else None
-                ),
-            ),
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
         )
 
     def describe_graph_revision(
@@ -6922,7 +6935,18 @@ class DoxaBase:
             "graph."
         )
 
-    def _assertion_support_next_calls(
+    def _suggested_call_string(
+        self,
+        tool_name: str,
+        arguments: Mapping[str, Any],
+    ) -> str:
+        arg_text = ", ".join(
+            f"{key}={value!r}"
+            for key, value in arguments.items()
+        )
+        return f"{tool_name}({arg_text})"
+
+    def _assertion_support_next_actions(
         self,
         subject_iri: str,
         predicate_iri: str,
@@ -6930,7 +6954,7 @@ class DoxaBase:
         *,
         graph: str | None,
         owner_dataset_iri: str | None,
-    ) -> list[str]:
+    ) -> list[SuggestedNextAction]:
         seeds = []
         if owner_dataset_iri is not None:
             seeds.append(owner_dataset_iri)
@@ -6940,27 +6964,91 @@ class DoxaBase:
             "blank_node",
         }:
             seeds.append(requested_object.value)
-        seed_text = ", ".join(repr(seed) for seed in seeds)
-        calls = [
-            f"describe_context_slice([{seed_text}], profile='deep_lore')",
-        ]
+        actions: list[SuggestedNextAction] = []
+
+        def add_action(
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+        ) -> None:
+            actions.append(
+                SuggestedNextAction(
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    reason=reason,
+                    call=self._suggested_call_string(tool_name, arguments),
+                )
+            )
+
+        add_action(
+            "describe_context_slice",
+            {
+                "seed_iris": seeds,
+                "profile": "deep_lore",
+            },
+            (
+                "Load a route-explained lore slice around the assertion target "
+                "resources before making map changes."
+            ),
+        )
         if owner_dataset_iri is not None:
-            calls.append(f"describe_dataset('{owner_dataset_iri}')")
-        calls.append(f"describe_resource('{subject_iri}', graph=None)")
+            add_action(
+                "describe_dataset",
+                {
+                    "iri": owner_dataset_iri,
+                    "graph": None,
+                },
+                (
+                    "Inspect the owning dataset because column assertions often "
+                    "depend on table-level caveats and layout facts."
+                ),
+            )
+        add_action(
+            "describe_resource",
+            {
+                "iri": subject_iri,
+                "graph": None,
+            },
+            "Inspect all known triples directly attached to the assertion subject.",
+        )
         if requested_object is not None:
-            calls.append(
-                "describe_assertion_support("
-                f"'{subject_iri}', '{predicate_iri}', object=None, graph={graph!r})"
+            add_action(
+                "describe_assertion_support",
+                {
+                    "subject": subject_iri,
+                    "predicate": predicate_iri,
+                    "object": None,
+                    "graph": graph,
+                },
+                (
+                    "Compare all current values for this subject/predicate, not "
+                    "only the requested object."
+                ),
             )
         if requested_object is not None and requested_object.value_kind in {
             "iri",
             "blank_node",
         }:
-            calls.append(f"describe_resource('{requested_object.value}', graph=None)")
-        calls.append(
-            f"search('{self._local_name(predicate_iri) or predicate_iri}', graph=None)"
+            add_action(
+                "describe_resource",
+                {
+                    "iri": requested_object.value,
+                    "graph": None,
+                },
+                "Inspect all known triples directly attached to the requested object.",
+            )
+        add_action(
+            "search",
+            {
+                "query": self._local_name(predicate_iri) or predicate_iri,
+                "graph": None,
+            },
+            (
+                "Search for textual mentions of the predicate when route-based "
+                "context is too sparse."
+            ),
         )
-        return calls
+        return actions
 
     def _assertion_related_lore_routes(
         self,

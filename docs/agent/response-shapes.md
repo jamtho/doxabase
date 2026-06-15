@@ -122,6 +122,7 @@ support.related_route_summaries
 support.context_note
 support.support_scope_note
 support.absence_note
+support.suggested_next_actions
 support.suggested_next_calls
 ```
 
@@ -138,13 +139,25 @@ may be absent because the map already records a different, more careful value.
 `support_scope_note` explains which resources were searched for lore and which
 nearby resources only contributed caveat context. For column subjects,
 `owner_dataset` gives the owning dataset summary when the map has one; use the
-owner-seeded suggested calls for broader dataset lore. The first suggested
-context slice is owner-seeded when the assertion subject is a column.
+owner-seeded suggested actions for broader dataset lore. The first suggested
+context slice action is owner-seeded when the assertion subject is a column.
 `absence_note` is present when an exact requested object is absent and summarizes
 the current same-slot values, if any. `nearby_context_triples` contains selected
 direct layout/path facts such as `rc:layoutVerificationStatus`,
 `rc:layoutVerificationNote`, and `rc:pathTemplate`; these can matter when an
 assertion is present but not yet safe to use for executable planning.
+
+`suggested_next_actions` is the machine-readable form of the follow-up route:
+
+```python
+action.tool_name
+action.arguments
+action.reason
+action.call
+```
+
+Use `tool_name` and `arguments` when driving MCP/API calls. `suggested_next_calls`
+contains equivalent display strings for humans and older callers.
 
 `related_route_summaries` groups and ranks `related_routes` by related resource.
 Scan these first when the payload has many routes; use raw routes when you need

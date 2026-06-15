@@ -679,9 +679,16 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert "https://example.test/project#PriceSnapshots" in (
         column_support.suggested_next_calls[0]
     )
+    assert column_support.suggested_next_actions[0].tool_name == (
+        "describe_context_slice"
+    )
+    assert column_support.suggested_next_actions[0].arguments["seed_iris"][0] == (
+        "https://example.test/project#PriceSnapshots"
+    )
     assert any(
-        "describe_dataset('https://example.test/project#PriceSnapshots')" == call
-        for call in column_support.suggested_next_calls
+        action.tool_name == "describe_dataset"
+        and action.arguments["iri"] == "https://example.test/project#PriceSnapshots"
+        for action in column_support.suggested_next_actions
     )
 
     absent_support = db.describe_assertion_support(
@@ -723,8 +730,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
         absent_support.suggested_next_calls[0]
     )
     assert any(
-        "object=None" in call
-        for call in absent_support.suggested_next_calls
+        action.tool_name == "describe_assertion_support"
+        and action.arguments["object"] is None
+        for action in absent_support.suggested_next_actions
     )
 
     partition_support = db.describe_assertion_support(
