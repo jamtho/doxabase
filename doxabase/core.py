@@ -7534,13 +7534,13 @@ class DoxaBase:
             label_text = ", ".join(labels)
             match_labels = [match.label or match.iri for match in matches]
             if match_labels:
-                match_text = "; matched " + ", ".join(match_labels)
+                match_text = "; matches " + ", ".join(match_labels)
             else:
                 match_text = ""
             return (
-                f"{resource_label} is included as {resource_kind}. "
-                f"Strongest route: {strongest_route.route_label}. "
-                f"Routes: {label_text}{match_text}."
+                f"{resource_label} ({resource_kind}): "
+                f"{strongest_route.route_label}; "
+                f"{len(labels)} route(s): {label_text}{match_text}."
             )
 
         ranked_groups = sorted(
