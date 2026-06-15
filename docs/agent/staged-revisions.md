@@ -66,10 +66,16 @@ review objects until `doxabase.apply_staged_revision` applies one.
 
 Use `doxabase.describe_staged_revision` to inspect patch payloads, stance,
 validation status, structured validation result diagnostics, support links, and
-before/after count previews. Use `doxabase.export_staged_revision` to write a
-Markdown review bundle for one proposal. Use `doxabase.export_staged_revisions`
-when several alternatives, failed candidates, and repaired candidates should be
-reviewed together.
+before/after count previews. It also returns `impacts`: deterministic review
+context for consequences such as caveat removals, physical/value type changes,
+row-semantics changes, grouping changes, and layout/path changes. Treat impacts
+as a spotlight, not a judge. They exist to show linked observations, claims,
+patterns, evidence, and revisions that may explain why a map assertion or caveat
+was there. They do not make the proposal invalid by themselves.
+
+Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
+proposal. Use `doxabase.export_staged_revisions` when several alternatives,
+failed candidates, and repaired candidates should be reviewed together.
 
 ## Systematisation Drafts
 
@@ -195,8 +201,8 @@ deciding it should become durable graph state. The helper is intentionally
 conservative:
 
 - it rejects a staged revision that already has an applied-revision event;
-- it checks each patch's target graph count against the recorded
-  `beforeTripleCount`;
+- it checks patches in recorded `patchSequence` order and compares each target
+  graph count against the recorded `beforeTripleCount`;
 - it previews all patches in memory and reruns validation before mutating graph
   state;
 - it applies additions/removals only after those checks pass;
@@ -225,6 +231,7 @@ Patch entries record:
 - `rc:targetGraph`: the mutable graph role;
 - `rc:patchFormat` and `rc:patchContent`;
 - `rc:patchRole`: `rc:SharedContextPatch` or `rc:FramingPatch`;
+- `rc:patchSequence`: one-based preview/check/apply order;
 - `rc:patchTripleCount`;
 - `rc:beforeTripleCount` and `rc:afterTripleCount` for the preview sequence.
 

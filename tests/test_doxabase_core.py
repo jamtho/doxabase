@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1100
+    assert graphs["base_ontology"].triple_count == 1104
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1105
+    assert graphs["base_shapes"].triple_count == 1112
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -289,6 +289,7 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     assert staged.patches[0].operation == RC + "AdditionPatch"
     assert staged.patches[0].target_graph == "map"
     assert staged.patches[0].patch_role == RC + "FramingPatch"
+    assert staged.patches[0].sequence_index == 1
     assert staged.patches[0].triple_count == 3
     assert staged.patches[0].before_triple_count == before_map_count
     assert staged.patches[0].after_triple_count == before_map_count + 3
@@ -299,6 +300,7 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     assert description.revision_type_label == "staged revision"
     assert description.validation_conforms is True
     assert description.patches[0].patch_role_label == "framing patch"
+    assert description.patches[0].sequence_index == 1
     assert description.patches[0].content is not None
     assert "ex:Messages" in description.patches[0].content
     overview = db.graph_overview()
@@ -313,6 +315,191 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     export_text = export_path.read_text()
     assert "exploratory hunch" in export_text
     assert "ex:Messages" in export_text
+
+
+def test_staged_revision_impacts_surface_lore_for_caveat_and_type_changes(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix dcterms: <http://purl.org/dc/terms/> .
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        rcg:map {
+            ex:PriceSnapshots a rc:Dataset, rc:Table ;
+                rdfs:label "Price snapshots" ;
+                rc:hasColumn ex:px_price ;
+                rc:hasKnownCaveat ex:mixed_price_payload_caveat .
+
+            ex:px_price a rc:Column ;
+                rc:columnName "price" ;
+                rc:physicalType rc:Varchar ;
+                rc:nullable true ;
+                rdfs:comment "Raw payload column: usually numeric strings, sometimes API error objects." .
+
+            ex:mixed_price_payload_caveat a rc:KnownCaveat ;
+                rdfs:label "Mixed price payload caveat" ;
+                rc:caveatDescription "price may contain numeric strings or API error objects." ;
+                rc:impact "Probability analysis must parse and filter raw payloads first." ;
+                rc:severity rc:Moderate .
+        }
+
+        rcg:observations {
+            ex:obs_price_payloads a rc:Observation ;
+                rc:summary "Sample price payloads include API error objects." ;
+                rc:observedAt "2026-06-14T00:00:00Z"^^xsd:dateTime ;
+                rc:observedAsset ex:PriceSnapshots ;
+                rc:observedColumn ex:px_price ;
+                rc:observationStatus rc:Checked ;
+                rc:evidence ex:evidence_price_payloads ;
+                rc:hasClaim ex:claim_price_payloads_are_mixed .
+
+            ex:claim_price_payloads_are_mixed a rc:Claim ;
+                rc:claimKind rc:CaveatClaim ;
+                rc:claimText "The price column is a raw payload lane before probability coercion." ;
+                rc:claimTarget ex:px_price, ex:mixed_price_payload_caveat ;
+                rc:confidence rc:HighConfidence ;
+                rc:observationStatus rc:Checked ;
+                rc:evidence ex:evidence_price_payloads .
+        }
+
+        rcg:patterns {
+            ex:pattern_price_payload_boundary a rc:Pattern ;
+                rc:summary "Raw price payloads need a coercion boundary." ;
+                rc:patternText "The price column should not be treated as clean probability until parsing filters API errors." ;
+                rc:rationale "The observation and claim explain why the caveat exists." ;
+                rc:patternTarget ex:px_price ;
+                rc:supportingObservation ex:obs_price_payloads ;
+                rc:supportingClaim ex:claim_price_payloads_are_mixed ;
+                rc:evidence ex:evidence_price_payloads ;
+                rc:confidence rc:HighConfidence ;
+                rc:patternStability rc:RepeatedPattern ;
+                rc:mapImplication ex:mixed_price_payload_caveat .
+        }
+
+        rcg:evidence {
+            ex:evidence_price_payloads a rc:Evidence ;
+                rc:summary "Profile sample of price payload variants." ;
+                dcterms:source "test://price-payload-profile" .
+        }
+        """
+    )
+
+    staged = db.stage_graph_revision(
+        summary="Try clean price probability shortcut",
+        rationale=(
+            "This is intentionally tempting: make price easy for analysis while "
+            "checking whether the review bundle shows what would be lost."
+        ),
+        removals=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:PriceSnapshots rc:hasKnownCaveat ex:mixed_price_payload_caveat .
+                    ex:px_price rc:physicalType rc:Varchar ;
+                        rc:nullable true ;
+                        rdfs:comment "Raw payload column: usually numeric strings, sometimes API error objects." .
+                """,
+            }
+        ],
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:px_price rc:physicalType rc:Double ;
+                        rc:valueType ex:Probability ;
+                        rc:nullable false .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    description = db.describe_staged_revision(staged.revision_iri)
+    impact_types = {impact.impact_type for impact in description.impacts}
+    assert "removed_caveat" in impact_types
+    assert "changed_physical_type" in impact_types
+    assert "changed_value_type" in impact_types
+    assert "changed_nullable" in impact_types
+    assert "changed_documentation" in impact_types
+
+    caveat_impact = next(
+        impact
+        for impact in description.impacts
+        if impact.impact_type == "removed_caveat"
+    )
+    assert caveat_impact.subject is not None
+    assert caveat_impact.subject.iri == "https://example.test/project#PriceSnapshots"
+    removed_caveat = caveat_impact.removed_values[0]
+    assert removed_caveat.value_label == "Mixed price payload caveat"
+    assert removed_caveat.caveat is not None
+    assert removed_caveat.caveat.description == (
+        "price may contain numeric strings or API error objects."
+    )
+    assert removed_caveat.caveat.impact == (
+        "Probability analysis must parse and filter raw payloads first."
+    )
+    assert removed_caveat.caveat.severity is not None
+    assert removed_caveat.caveat.severity.iri == RC + "Moderate"
+    assert {item.iri for item in caveat_impact.related_observations} == {
+        "https://example.test/project#obs_price_payloads"
+    }
+    assert {item.iri for item in caveat_impact.related_claims} == {
+        "https://example.test/project#claim_price_payloads_are_mixed"
+    }
+    assert {item.iri for item in caveat_impact.related_patterns} == {
+        "https://example.test/project#pattern_price_payload_boundary"
+    }
+    assert {item.iri for item in caveat_impact.related_evidence} == {
+        "https://example.test/project#evidence_price_payloads"
+    }
+
+    type_impact = next(
+        impact
+        for impact in description.impacts
+        if impact.impact_type == "changed_physical_type"
+    )
+    assert [value.value for value in type_impact.removed_values] == [RC + "Varchar"]
+    assert [value.value for value in type_impact.added_values] == [RC + "Double"]
+    assert type_impact.related_observations[0].iri == (
+        "https://example.test/project#obs_price_payloads"
+    )
+
+    nullable_impact = next(
+        impact
+        for impact in description.impacts
+        if impact.impact_type == "changed_nullable"
+    )
+    assert [value.value for value in nullable_impact.removed_values] == ["true"]
+    assert [value.value for value in nullable_impact.added_values] == ["false"]
+
+    documentation_impact = next(
+        impact
+        for impact in description.impacts
+        if impact.impact_type == "changed_documentation"
+    )
+    assert documentation_impact.added_values == []
+    assert "API error objects" in documentation_impact.removed_values[0].value
+
+    export_path = tmp_path / "price-shortcut-review.md"
+    db.export_staged_revision(staged.revision_iri, export_path)
+    export_text = export_path.read_text()
+    assert "## Impact Review" in export_text
+    assert "Removes known caveat Mixed price payload caveat" in export_text
+    assert "Probability analysis must parse and filter raw payloads first." in export_text
+    assert "Raw price payloads need a coercion boundary" in export_text
 
 
 def test_apply_staged_revision_mutates_graph_and_records_history(
@@ -410,6 +597,86 @@ def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
     assert db.triple_count("map") == 0
     with pytest.raises(DoxaBaseError, match="Messages"):
         db.describe_dataset("https://example.test/project#Messages")
+
+
+def test_mixed_staged_revision_uses_recorded_patch_sequence_for_apply_check(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:Messages a rc:Dataset, rc:Table ;
+            rdfs:label "Messages" .
+        """,
+        graph="map",
+    )
+
+    minted_patch_iris = iter(
+        [
+            "https://example.test/generated/graph-patch/z-addition",
+            "https://example.test/generated/graph-patch/a-removal",
+            "https://example.test/generated/staged-revision/sequence-test",
+        ]
+    )
+
+    def mint_iri(kind: str) -> str:
+        if kind in {"graph-patch", "staged-revision"}:
+            return next(minted_patch_iris)
+        return f"https://example.test/generated/{kind}/fallback"
+
+    monkeypatch.setattr(db, "_mint_iri", mint_iri)
+
+    staged = db.stage_graph_revision(
+        summary="Swap message label for comment",
+        rationale=(
+            "Regression test: the removal patch has a lexically earlier IRI than "
+            "the addition patch, but apply checks must use recorded preview order."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Messages rdfs:comment "Staged explanatory comment." .
+                """,
+            }
+        ],
+        removals=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Messages rdfs:label "Messages" .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    description = db.describe_staged_revision(staged.revision_iri)
+    assert [patch.sequence_index for patch in description.patches] == [1, 2]
+    assert [patch.operation for patch in description.patches] == [
+        RC + "AdditionPatch",
+        RC + "RemovalPatch",
+    ]
+    assert description.patches[0].before_triple_count == 3
+    assert description.patches[0].after_triple_count == 4
+    assert description.patches[1].before_triple_count == 4
+    assert description.patches[1].after_triple_count == 3
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.can_apply is True
+    assert check.conflicts == []
+    assert [patch.current_triple_count for patch in check.patch_checks] == [3, 4]
 
 
 def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:

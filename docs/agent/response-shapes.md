@@ -300,6 +300,7 @@ description.validation_result_count
 description.validation_results
 description.graph_snapshots
 description.patches
+description.impacts
 description.supporting_observations
 description.supporting_claims
 description.supporting_patterns
@@ -319,6 +320,7 @@ patch.target_graph
 patch.format
 patch.patch_role
 patch.patch_role_label
+patch.sequence_index
 patch.triple_count
 patch.before_triple_count
 patch.after_triple_count
@@ -327,6 +329,46 @@ patch.content
 
 Use `operation` and `triple_count`, not `patch_operation` or
 `patch_triple_count`.
+
+Each impact in `description.impacts` is a deterministic review-context record,
+not a validation result:
+
+```python
+impact.impact_type
+impact.severity
+impact.changed_graph
+impact.subject
+impact.predicate
+impact.predicate_label
+impact.message
+impact.removed_values
+impact.added_values
+impact.related_observations
+impact.related_claims
+impact.related_patterns
+impact.related_evidence
+impact.related_revisions
+impact.related_context_note
+```
+
+Each value in `impact.removed_values` or `impact.added_values` has:
+
+```python
+value.value
+value.value_label
+value.value_kind
+value.caveat
+```
+
+`value.caveat` is present when the changed value is a known caveat; it carries
+the caveat description, impact, and severity summary inline.
+
+Use impacts to notice consequences such as caveat removals, physical/value type
+changes, nullability changes, row/grain signal changes, grouping changes,
+layout/path changes, and documentation changes attached to the same subject as
+another semantic impact.
+Do not treat `impacts` as proof that a staged revision is wrong; they are a
+review spotlight.
 
 `db.check_staged_revision_apply(revision_iri)` returns a
 `StagedRevisionApplyCheck`:

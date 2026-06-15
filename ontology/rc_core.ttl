@@ -1218,6 +1218,11 @@ rc:patchRole a rdf:Property ;
     rdfs:range rc:GraphPatchRole ;
     rdfs:comment "Whether a staged graph patch is framing-specific payload or shared proposed context for related framings." .
 
+rc:patchSequence a rdf:Property ;
+    rdfs:domain rc:GraphPatch ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "One-based order in which a staged patch was previewed and should be checked/applied." .
+
 rc:patchContent a rdf:Property ;
     rdfs:domain rc:GraphPatch ;
     rdfs:range xsd:string ;

@@ -228,8 +228,14 @@ as revision anchors before delegating to the staged systematisation workflow.
 
 Returns a staged revision with stance, rationale, support links, revision
 anchors, review note/recommendation, patch payloads, before/after count
-previews, validation status, and structured SHACL diagnostics such as focus
-node, result path, constraint, and messages.
+previews, validation status, structured SHACL diagnostics such as focus node,
+result path, constraint, and messages, and `impacts` review context. Impact
+entries are deterministic consequence notes, not validation failures. They call
+out changes such as removed caveats, changed physical/value types,
+nullability, row/grain signals, grouping, layout/path assertions, and
+documentation attached to the same subject as another semantic change, with
+related observations, claims, patterns, evidence, and revisions when DoxaBase can
+find them.
 
 `doxabase.check_staged_revision_apply`
 
@@ -244,9 +250,10 @@ read-only check.
 Applies one staged revision to its target graph roles after conservative
 count-based conflict checks and preview SHACL validation. The helper rejects
 already-applied staged revisions and rejects graph-count drift from the staged
-`beforeTripleCount` values. On success it records an `rc:AppliedStagedRevision`
-history event linked to the staged revision. It is a first apply path, not a
-full merge/rebase workflow.
+`beforeTripleCount` values. Patch checks follow the recorded
+`rc:patchSequence` order from the original preview. On success it records an
+`rc:AppliedStagedRevision` history event linked to the staged revision. It is a
+first apply path, not a full merge/rebase workflow.
 
 `doxabase.export_staged_revision`
 

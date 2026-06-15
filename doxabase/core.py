@@ -159,6 +159,7 @@ class StagedGraphPatchRecord:
     target_graph: str
     format: str
     patch_role: str
+    sequence_index: int
     triple_count: int
     before_triple_count: int
     after_triple_count: int
@@ -311,10 +312,38 @@ class StagedGraphPatchDescription:
     format: str | None
     patch_role: str | None
     patch_role_label: str | None
+    sequence_index: int | None
     triple_count: int | None
     before_triple_count: int | None
     after_triple_count: int | None
     content: str | None
+
+
+@dataclass(frozen=True)
+class StagedRevisionImpactValue:
+    value: str
+    value_label: str | None
+    value_kind: str
+    caveat: CaveatDescription | None = None
+
+
+@dataclass(frozen=True)
+class StagedRevisionImpact:
+    impact_type: str
+    severity: str
+    changed_graph: str | None
+    subject: ResourceSummary | None
+    predicate: str | None
+    predicate_label: str | None
+    message: str
+    removed_values: list[StagedRevisionImpactValue]
+    added_values: list[StagedRevisionImpactValue]
+    related_observations: list[ResourceSummary]
+    related_claims: list[ResourceSummary]
+    related_patterns: list[ResourceSummary]
+    related_evidence: list[ResourceSummary]
+    related_revisions: list[ResourceSummary]
+    related_context_note: str | None
 
 
 @dataclass(frozen=True)
@@ -367,6 +396,7 @@ class StagedGraphRevisionDescription:
     validation_results: list[ValidationDiagnostic]
     graph_snapshots: list[GraphSnapshotDescription]
     patches: list[StagedGraphPatchDescription]
+    impacts: list[StagedRevisionImpact]
     supporting_observations: list[ResourceSummary]
     supporting_claims: list[ResourceSummary]
     supporting_patterns: list[ResourceSummary]
@@ -1245,6 +1275,11 @@ class DoxaBase:
             for patch_iri in patch_iris
         ]
         patches.sort(key=self._staged_patch_sort_key)
+        impacts = self._staged_revision_impacts(
+            revision_iri=revision_iri,
+            patches=patches,
+            lookup_graphs=all_lookup_graphs,
+        )
 
         return StagedGraphRevisionDescription(
             iri=revision_iri,
@@ -1296,6 +1331,7 @@ class DoxaBase:
             ),
             graph_snapshots=snapshots,
             patches=patches,
+            impacts=impacts,
             supporting_observations=self._resource_summaries(
                 all_lookup_graphs,
                 self._objects(
@@ -5296,7 +5332,7 @@ class DoxaBase:
             for graph_name in changed_graph_values
         }
         patch_records: list[StagedGraphPatchRecord] = []
-        for patch in parsed_patches:
+        for sequence_index, patch in enumerate(parsed_patches, start=1):
             target_graph = str(patch["target_graph"])
             patch_graph = patch["graph"]
             if not isinstance(patch_graph, Graph):
@@ -5318,6 +5354,7 @@ class DoxaBase:
                     target_graph=target_graph,
                     format=str(patch["format"]),
                     patch_role=patch_role,
+                    sequence_index=sequence_index,
                     triple_count=len(patch_graph),
                     before_triple_count=before_count,
                     after_triple_count=after_count,
@@ -5425,6 +5462,13 @@ class DoxaBase:
                     patch_subject,
                     URIRef(self.expand_iri("rc:patchRole")),
                     URIRef(patch_record.patch_role),
+                )
+            )
+            metadata.add(
+                (
+                    patch_subject,
+                    URIRef(self.expand_iri("rc:patchSequence")),
+                    Literal(patch_record.sequence_index, datatype=XSD.integer),
                 )
             )
             metadata.add(
@@ -6185,6 +6229,456 @@ class DoxaBase:
             bytes_written=bytes_written,
         )
 
+    def _staged_revision_impacts(
+        self,
+        *,
+        revision_iri: str,
+        patches: list[StagedGraphPatchDescription],
+        lookup_graphs: list[str],
+    ) -> list[StagedRevisionImpact]:
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        tracked_predicates: dict[str, tuple[str, str]] = {
+            self.expand_iri("rc:physicalType"): (
+                "changed_physical_type",
+                "physical type",
+            ),
+            self.expand_iri("rc:valueType"): ("changed_value_type", "value type"),
+            self.expand_iri("rc:nullable"): ("changed_nullable", "nullable flag"),
+            self.expand_iri("rc:rowSemantics"): (
+                "changed_row_semantics",
+                "row semantics",
+            ),
+            self.expand_iri("rc:entityKey"): ("changed_row_key", "entity key"),
+            self.expand_iri("rc:snapshotTimestamp"): (
+                "changed_row_key",
+                "snapshot timestamp",
+            ),
+            self.expand_iri("rc:groupByColumn"): (
+                "changed_grouping",
+                "group-by column",
+            ),
+            self.expand_iri("rc:pathTemplate"): (
+                "changed_layout_or_path",
+                "path template",
+            ),
+            self.expand_iri("rc:layoutVerificationStatus"): (
+                "changed_layout_or_path",
+                "layout verification status",
+            ),
+            self.expand_iri("rc:layoutVerificationNote"): (
+                "changed_layout_or_path",
+                "layout verification note",
+            ),
+            self.expand_iri("rc:hasStorageAccess"): (
+                "changed_layout_or_path",
+                "storage access",
+            ),
+            self.expand_iri("rc:hasPhysicalLayout"): (
+                "changed_layout_or_path",
+                "physical layout",
+            ),
+        }
+        documentation_predicates: dict[str, tuple[str, str]] = {
+            str(RDFS.comment): ("changed_documentation", "documentation comment"),
+            str(DCTERMS.description): ("changed_documentation", "description"),
+        }
+        caveat_predicate = self.expand_iri("rc:hasKnownCaveat")
+        changes: dict[
+            tuple[str, Node, Node],
+            dict[str, list[Node]],
+        ] = {}
+
+        for patch in patches:
+            target_graph = patch.target_graph
+            operation = patch.operation
+            if target_graph is None or operation is None:
+                continue
+            try:
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                continue
+            change_key = "added" if operation == addition_operation else "removed"
+            if operation not in {addition_operation, removal_operation}:
+                continue
+            for subject, predicate, value in patch_graph:
+                bucket = changes.setdefault(
+                    (target_graph, subject, predicate),
+                    {"removed": [], "added": []},
+                )
+                if value not in bucket[change_key]:
+                    bucket[change_key].append(value)
+
+        impacts: list[StagedRevisionImpact] = []
+        semantic_change_subjects = {
+            (changed_graph, subject)
+            for (changed_graph, subject, predicate), values in changes.items()
+            if (
+                values["removed"]
+                or values["added"]
+            )
+            and (
+                str(predicate) == caveat_predicate
+                or str(predicate) in tracked_predicates
+            )
+        }
+        for (changed_graph, subject, predicate), values in sorted(
+            changes.items(),
+            key=lambda item: (
+                item[0][0],
+                str(item[0][1]),
+                str(item[0][2]),
+            ),
+        ):
+            removed_values = values["removed"]
+            added_values = values["added"]
+            if not removed_values and not added_values:
+                continue
+            if str(predicate) == caveat_predicate:
+                for caveat_value in removed_values:
+                    impacts.append(
+                        self._staged_revision_impact(
+                            impact_type="removed_caveat",
+                            severity="attention",
+                            changed_graph=changed_graph,
+                            subject=subject,
+                            predicate=predicate,
+                            removed_values=[caveat_value],
+                            added_values=[],
+                            lookup_graphs=lookup_graphs,
+                            revision_iri=revision_iri,
+                            message_template=(
+                                "Removes known caveat {removed} from {subject}. "
+                                "Review related observations, claims, patterns, and "
+                                "evidence before treating this as cleanup."
+                            ),
+                        )
+                    )
+                for caveat_value in added_values:
+                    impacts.append(
+                        self._staged_revision_impact(
+                            impact_type="added_caveat",
+                            severity="context",
+                            changed_graph=changed_graph,
+                            subject=subject,
+                            predicate=predicate,
+                            removed_values=[],
+                            added_values=[caveat_value],
+                            lookup_graphs=lookup_graphs,
+                            revision_iri=revision_iri,
+                            message_template=(
+                                "Adds known caveat {added} to {subject}. Related lore "
+                                "may explain why this fence is being installed."
+                            ),
+                        )
+                    )
+                continue
+
+            predicate_info = tracked_predicates.get(str(predicate))
+            if predicate_info is None:
+                predicate_info = documentation_predicates.get(str(predicate))
+                if (
+                    predicate_info is None
+                    or (changed_graph, subject) not in semantic_change_subjects
+                ):
+                    continue
+            impact_type, predicate_label = predicate_info
+            if removed_values and added_values:
+                message_template = (
+                    f"Changes {predicate_label} on {{subject}} from "
+                    "{removed} to {added}. Review attached lore before assuming "
+                    "the new framing is merely tidier."
+                )
+                severity = "attention"
+            elif removed_values:
+                message_template = (
+                    f"Removes {predicate_label} {{removed}} from {{subject}}. "
+                    "Check whether related lore depended on that assertion."
+                )
+                severity = "attention"
+            else:
+                message_template = (
+                    f"Adds {predicate_label} {{added}} to {{subject}}. "
+                    "Check whether related lore changes how this should be read."
+                )
+                severity = "context"
+            impacts.append(
+                self._staged_revision_impact(
+                    impact_type=impact_type,
+                    severity=severity,
+                    changed_graph=changed_graph,
+                    subject=subject,
+                    predicate=predicate,
+                    removed_values=removed_values,
+                    added_values=added_values,
+                    lookup_graphs=lookup_graphs,
+                    revision_iri=revision_iri,
+                    message_template=message_template,
+                )
+            )
+
+        return impacts
+
+    def _staged_revision_impact(
+        self,
+        *,
+        impact_type: str,
+        severity: str,
+        changed_graph: str,
+        subject: Node,
+        predicate: Node,
+        removed_values: list[Node],
+        added_values: list[Node],
+        lookup_graphs: list[str],
+        revision_iri: str,
+        message_template: str,
+    ) -> StagedRevisionImpact:
+        subject_summary = self._impact_resource_summary(lookup_graphs, subject)
+        value_targets = [
+            str(value)
+            for value in [*removed_values, *added_values]
+            if isinstance(value, URIRef)
+        ]
+        related = self._staged_revision_related_lore(
+            [str(subject), *value_targets],
+            exclude_revision_iri=revision_iri,
+        )
+        related_context_note = None
+        if not any(related.values()):
+            related_context_note = (
+                "No linked observations, claims, patterns, evidence, or prior "
+                "revisions were found for this impact's subject or changed values."
+            )
+        removed = [
+            self._impact_value_summary(lookup_graphs, value)
+            for value in removed_values
+        ]
+        added = [
+            self._impact_value_summary(lookup_graphs, value)
+            for value in added_values
+        ]
+        message = message_template.format(
+            subject=self._impact_subject_label(subject_summary, subject),
+            removed=self._impact_values_label(removed),
+            added=self._impact_values_label(added),
+        )
+        return StagedRevisionImpact(
+            impact_type=impact_type,
+            severity=severity,
+            changed_graph=changed_graph,
+            subject=subject_summary,
+            predicate=str(predicate),
+            predicate_label=self._label_for_resource(str(predicate)),
+            message=message,
+            removed_values=removed,
+            added_values=added,
+            related_observations=related["observations"],
+            related_claims=related["claims"],
+            related_patterns=related["patterns"],
+            related_evidence=related["evidence"],
+            related_revisions=related["revisions"],
+            related_context_note=related_context_note,
+        )
+
+    def _impact_resource_summary(
+        self,
+        lookup_graphs: list[str],
+        node: Node,
+    ) -> ResourceSummary | None:
+        if isinstance(node, Literal):
+            return None
+        return self._resource_summary(lookup_graphs, str(node), display_label=True)
+
+    def _impact_value_summary(
+        self,
+        lookup_graphs: list[str],
+        node: Node,
+    ) -> StagedRevisionImpactValue:
+        if isinstance(node, URIRef):
+            return StagedRevisionImpactValue(
+                value=str(node),
+                value_label=self._display_label_from_graphs(lookup_graphs, str(node))
+                or self._local_name(str(node)),
+                value_kind="iri",
+                caveat=self._impact_caveat_description(lookup_graphs, str(node)),
+            )
+        if isinstance(node, Literal):
+            return StagedRevisionImpactValue(
+                value=str(node),
+                value_label=None,
+                value_kind="literal",
+            )
+        return StagedRevisionImpactValue(
+            value=str(node),
+            value_label=None,
+            value_kind="blank_node",
+        )
+
+    def _impact_caveat_description(
+        self,
+        lookup_graphs: list[str],
+        iri: str,
+    ) -> CaveatDescription | None:
+        caveat_type = self.expand_iri("rc:KnownCaveat")
+        types = self._types_from_graphs(lookup_graphs, iri)
+        has_caveat_shape = caveat_type in types or any(
+            self._first_object(lookup_graphs, iri, predicate) is not None
+            for predicate in ("rc:caveatDescription", "rc:impact", "rc:severity")
+        )
+        if not has_caveat_shape:
+            return None
+        return self._describe_caveat(iri, lookup_graphs, lookup_graphs)
+
+    def _impact_subject_label(
+        self,
+        summary: ResourceSummary | None,
+        fallback: Node,
+    ) -> str:
+        if summary is None:
+            return str(fallback)
+        return summary.label or summary.column_name or summary.iri
+
+    def _impact_values_label(
+        self,
+        values: list[StagedRevisionImpactValue],
+    ) -> str:
+        if not values:
+            return "(none)"
+        labels = [value.value_label or value.value for value in values]
+        return ", ".join(labels)
+
+    def _staged_revision_related_lore(
+        self,
+        target_iris: Iterable[str],
+        *,
+        exclude_revision_iri: str,
+    ) -> dict[str, list[ResourceSummary]]:
+        targets = [
+            iri
+            for iri in dict.fromkeys(target_iris)
+            if iri and not iri.startswith("_:")
+        ]
+        all_graphs = self._expand_graphs(["all"])
+        pattern_graphs = self._expand_graphs(["patterns"])
+        history_graphs = self._expand_graphs(["history"])
+        lookup_graphs = self._lookup_graphs(all_graphs)
+
+        observation_iris: set[str] = set()
+        claim_iris: set[str] = set()
+        pattern_iris: set[str] = set()
+        evidence_iris: set[str] = set()
+        revision_iris: set[str] = set()
+
+        observation_type = self.expand_iri("rc:Observation")
+        claim_type = self.expand_iri("rc:Claim")
+        pattern_type = self.expand_iri("rc:Pattern")
+        evidence_type = self.expand_iri("rc:Evidence")
+
+        for target_iri in targets:
+            target_types = set(self._types_from_graphs(all_graphs, target_iri))
+            if observation_type in target_types:
+                observation_iris.add(target_iri)
+            if claim_type in target_types:
+                claim_iris.add(target_iri)
+            if pattern_type in target_types:
+                pattern_iris.add(target_iri)
+            if evidence_type in target_types:
+                evidence_iris.add(target_iri)
+
+            for predicate in ("rc:observedAsset", "rc:observedColumn"):
+                observation_iris.update(
+                    self._subjects(all_graphs, predicate, target_iri)
+                )
+            claim_iris.update(self._subjects(all_graphs, "rc:claimTarget", target_iri))
+            pattern_iris.update(
+                self._subjects(pattern_graphs, "rc:patternTarget", target_iri)
+            )
+            pattern_iris.update(
+                self._subjects(pattern_graphs, "rc:mapImplication", target_iri)
+            )
+            revision_iris.update(
+                self._subjects(history_graphs, "rc:revisionAnchor", target_iri)
+            )
+            evidence_iris.update(self._objects(all_graphs, target_iri, "rc:evidence"))
+
+        for observation_iri in list(observation_iris):
+            claim_iris.update(self._objects(all_graphs, observation_iri, "rc:hasClaim"))
+            evidence_iris.update(
+                self._objects(all_graphs, observation_iri, "rc:evidence")
+            )
+            pattern_iris.update(
+                self._subjects(
+                    pattern_graphs,
+                    "rc:supportingObservation",
+                    observation_iri,
+                )
+            )
+            revision_iris.update(
+                self._subjects(
+                    history_graphs,
+                    "rc:revisionSupportingObservation",
+                    observation_iri,
+                )
+            )
+
+        for claim_iri in list(claim_iris):
+            evidence_iris.update(self._objects(all_graphs, claim_iri, "rc:evidence"))
+            pattern_iris.update(
+                self._subjects(pattern_graphs, "rc:supportingClaim", claim_iri)
+            )
+            revision_iris.update(
+                self._subjects(
+                    history_graphs,
+                    "rc:revisionSupportingClaim",
+                    claim_iri,
+                )
+            )
+
+        for pattern_iri in list(pattern_iris):
+            evidence_iris.update(self._objects(all_graphs, pattern_iri, "rc:evidence"))
+            revision_iris.update(
+                self._subjects(
+                    history_graphs,
+                    "rc:revisionSupportingPattern",
+                    pattern_iri,
+                )
+            )
+
+        for evidence_iri in list(evidence_iris):
+            revision_iris.update(
+                self._subjects(history_graphs, "rc:evidence", evidence_iri)
+            )
+
+        revision_iris.discard(exclude_revision_iri)
+
+        return {
+            "observations": self._resource_summaries(
+                lookup_graphs,
+                sorted(observation_iris),
+                description_predicate="rc:summary",
+            ),
+            "claims": self._resource_summaries(
+                lookup_graphs,
+                sorted(claim_iris),
+                description_predicate="rc:claimText",
+            ),
+            "patterns": self._resource_summaries(
+                lookup_graphs,
+                sorted(pattern_iris),
+                description_predicate="rc:patternText",
+            ),
+            "evidence": self._resource_summaries(
+                lookup_graphs,
+                sorted(evidence_iris),
+                description_predicate="rc:summary",
+            ),
+            "revisions": self._resource_summaries(
+                lookup_graphs,
+                sorted(revision_iris),
+                description_predicate="rc:summary",
+            ),
+        }
+
     def _parse_staged_patch_specs(
         self,
         *,
@@ -6443,6 +6937,10 @@ class DoxaBase:
                     description.review_recommendation,
                 ]
             )
+        if description.impacts:
+            lines.extend(["", "## Impact Review", ""])
+            for impact in description.impacts:
+                lines.extend(self._staged_revision_impact_markdown(impact))
         if description.alternative_to is not None:
             lines.extend(
                 [
@@ -6518,6 +7016,7 @@ class DoxaBase:
                     f"- Target graph: `{patch.target_graph}`",
                     f"- Format: `{patch.format}`",
                     f"- Role: {patch.patch_role_label or patch.patch_role or 'unknown'}",
+                    f"- Sequence: {patch.sequence_index or 'unknown'}",
                     f"- Triples: {patch.triple_count}",
                     (
                         f"- Count preview: {patch.before_triple_count} -> "
@@ -6590,6 +7089,16 @@ class DoxaBase:
                 if description.review_note:
                     label = description.summary or description.iri
                     lines.append(f"{index}. {label}: {description.review_note}")
+        if any(description.impacts for description in descriptions):
+            lines.extend(["", "## Impact Review", ""])
+            for index, description in enumerate(descriptions, start=1):
+                if not description.impacts:
+                    continue
+                label = description.summary or description.iri
+                lines.append(f"### {index}. {label}")
+                lines.append("")
+                for impact in description.impacts:
+                    lines.append(f"- {impact.message}")
         lines.extend(["", "## Revisions", ""])
         for index, description in enumerate(descriptions, start=1):
             lines.extend(
@@ -6601,6 +7110,86 @@ class DoxaBase:
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revision_impact_markdown(
+        self,
+        impact: StagedRevisionImpact,
+    ) -> list[str]:
+        lines = [
+            f"### {impact.impact_type.replace('_', ' ').title()}",
+            "",
+            f"- Severity: {impact.severity}",
+            f"- Message: {impact.message}",
+        ]
+        if impact.changed_graph is not None:
+            lines.append(f"- Changed graph: `{impact.changed_graph}`")
+        if impact.subject is not None:
+            lines.append(
+                "- Subject: "
+                f"{impact.subject.label or impact.subject.iri} (`{impact.subject.iri}`)"
+            )
+        if impact.predicate is not None:
+            lines.append(
+                "- Predicate: "
+                f"{impact.predicate_label or impact.predicate} (`{impact.predicate}`)"
+            )
+        if impact.removed_values:
+            lines.append(
+                "- Removed values: "
+                + ", ".join(
+                    self._impact_markdown_value(value)
+                    for value in impact.removed_values
+                )
+            )
+        if impact.added_values:
+            lines.append(
+                "- Added values: "
+                + ", ".join(
+                    self._impact_markdown_value(value)
+                    for value in impact.added_values
+                )
+            )
+        for value in [*impact.removed_values, *impact.added_values]:
+            if value.caveat is None:
+                continue
+            caveat_label = value.caveat.label or value.caveat.iri
+            lines.append(f"- Caveat details for {caveat_label}:")
+            if value.caveat.description is not None:
+                lines.append(f"  - Description: {value.caveat.description}")
+            if value.caveat.impact is not None:
+                lines.append(f"  - Impact: {value.caveat.impact}")
+            if value.caveat.severity is not None:
+                lines.append(
+                    "  - Severity: "
+                    f"{value.caveat.severity.label or value.caveat.severity.iri}"
+                    f" (`{value.caveat.severity.iri}`)"
+                )
+        related_sections = [
+            ("Related observations", impact.related_observations),
+            ("Related claims", impact.related_claims),
+            ("Related patterns", impact.related_patterns),
+            ("Related evidence", impact.related_evidence),
+            ("Related revisions", impact.related_revisions),
+        ]
+        for label, resources in related_sections:
+            if resources:
+                lines.append(f"- {label}:")
+                for resource in resources:
+                    lines.append(
+                        f"  - {resource.label or resource.iri} (`{resource.iri}`)"
+                    )
+        if impact.related_context_note is not None:
+            lines.append(f"- Related context: {impact.related_context_note}")
+        lines.append("")
+        return lines
+
+    def _impact_markdown_value(
+        self,
+        value: StagedRevisionImpactValue,
+    ) -> str:
+        if value.value_kind == "iri":
+            return f"{value.value_label or value.value} (`{value.value}`)"
+        return f"`{value.value}`"
 
     def _validation_diagnostic_headline(
         self,
@@ -9241,6 +9830,7 @@ class DoxaBase:
             format=self._first_object(graphs, patch_iri, "rc:patchFormat"),
             patch_role=patch_role,
             patch_role_label=self._label_for_resource(patch_role),
+            sequence_index=self._int_object(graphs, patch_iri, "rc:patchSequence"),
             triple_count=self._int_object(graphs, patch_iri, "rc:patchTripleCount"),
             before_triple_count=self._int_object(
                 graphs,
@@ -9258,10 +9848,12 @@ class DoxaBase:
     def _staged_patch_sort_key(
         self,
         patch: StagedGraphPatchDescription,
-    ) -> tuple[int, str, str]:
+    ) -> tuple[int, int, str, str]:
+        if patch.sequence_index is not None:
+            return (0, patch.sequence_index, patch.target_graph or "", patch.iri)
         shared_role = self.expand_iri("rc:SharedContextPatch")
         role_rank = 0 if patch.patch_role == shared_role else 1
-        return (role_rank, patch.target_graph or "", patch.iri)
+        return (1, role_rank, patch.target_graph or "", patch.iri)
 
     def _label_for_resource(self, iri: str | None) -> str | None:
         if iri is None:

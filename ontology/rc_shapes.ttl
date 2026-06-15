@@ -1067,6 +1067,14 @@ rc:GraphPatchShape a sh:NodeShape ;
         sh:message "GraphPatch resources must have exactly one GraphPatchRole." ;
     ] ;
     sh:property [
+        sh:path rc:patchSequence ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "patchSequence must be a one-based integer." ;
+    ] ;
+    sh:property [
         sh:path rc:patchContent ;
         sh:minCount 1 ;
         sh:maxCount 1 ;

@@ -234,10 +234,11 @@ without mutating the target graph. Pass Turtle payloads in `additions` and/or
 `removals`, set a stance such as `rc:ExploratoryHunch` or
 `rc:CandidateRevision`, and choose a `validation_scope`. The helper parses the
 patch RDF, previews before/after counts, runs SHACL validation over the preview,
-and records `rc:GraphPatch` entries for later review. When validation reports
-results, the staged revision stores linked `sh:ValidationResult` diagnostics
-with focus node, result path, constraint, severity, value, and messages where
-pySHACL provides them.
+and records ordered `rc:GraphPatch` entries for later review. Each patch has an
+`rc:patchSequence` value; describe, export, check, and apply use that recorded
+preview order. When validation reports results, the staged revision stores
+linked `sh:ValidationResult` diagnostics with focus node, result path,
+constraint, severity, value, and messages where pySHACL provides them.
 
 `stage_systematisation()` stages one or more caller-authored RDF framings for a
 modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
@@ -268,8 +269,15 @@ supporting observation/claim/pattern/evidence links.
 
 `describe_staged_revision()` returns staged patch payloads, stance, review
 notes/recommendations, validation status, structured validation diagnostics,
-support links, revision anchors, and count previews. `export_staged_revision()`
-writes a Markdown review bundle with diagnostics before patch payloads.
+support links, revision anchors, count previews, and deterministic impact review
+context for important consequences of the patch. Impact entries are not an apply
+gate; they make nearby lore visible when a proposal removes a caveat, changes a
+type, changes nullability, changes row/grain signals, changes layout/path
+assertions, or removes documentation from a subject that also has semantic
+changes. Caveat impact values include the caveat description, impact, and
+severity inline when those facts are known.
+`export_staged_revision()` writes a Markdown review bundle with diagnostics and
+impact review before patch payloads.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; pass `executive_summary` when the comparison
 needs an agent-authored synthesis at the top of the artifact.
