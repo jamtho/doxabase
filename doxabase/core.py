@@ -865,6 +865,7 @@ class AssertionSupportRouteSummary:
 @dataclass(frozen=True)
 class SuggestedNextAction:
     tool_name: str
+    mcp_tool_name: str
     arguments: dict[str, Any]
     reason: str
     call: str
@@ -7072,6 +7073,7 @@ class DoxaBase:
             actions.append(
                 SuggestedNextAction(
                     tool_name=tool_name,
+                    mcp_tool_name=f"doxabase.{tool_name}",
                     arguments=arguments,
                     reason=reason,
                     call=self._suggested_call_string(tool_name, arguments),

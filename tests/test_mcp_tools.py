@@ -940,6 +940,9 @@ def test_describe_assertion_support_tool_returns_json_like_payload(
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "describe_context_slice"
     )
+    assert result["suggested_next_actions"][0]["mcp_tool_name"] == (
+        "doxabase.describe_context_slice"
+    )
     assert result["suggested_next_actions"][0]["arguments"]["seed_iris"] == [
         "https://example.test/project#Messages",
         "https://example.test/project#message_id",

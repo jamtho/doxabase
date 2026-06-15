@@ -168,13 +168,15 @@ matter, but it is not automatically a direct caveat on that column.
 
 ```python
 action.tool_name
+action.mcp_tool_name
 action.arguments
 action.reason
 action.call
 ```
 
-Use `tool_name` and `arguments` when driving MCP/API calls. `suggested_next_calls`
-contains equivalent display strings for humans and older callers.
+Use `mcp_tool_name` and `arguments` when driving MCP calls. `tool_name` is the
+local helper-style name, and `suggested_next_calls` contains equivalent display
+strings for humans and older callers.
 
 `related_route_summaries` groups and ranks `related_routes` by related resource.
 Scan these first when the payload has many routes; use raw routes when you need

@@ -715,6 +715,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert column_support.suggested_next_actions[0].tool_name == (
         "describe_context_slice"
     )
+    assert column_support.suggested_next_actions[0].mcp_tool_name == (
+        "doxabase.describe_context_slice"
+    )
     assert column_support.suggested_next_actions[0].arguments["seed_iris"][0] == (
         "https://example.test/project#PriceSnapshots"
     )

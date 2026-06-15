@@ -55,9 +55,10 @@ find the most directly related lore resources, and `related_routes` when you
 need to know whether an observation, claim, pattern, evidence item, or revision
 matched the subject, requested object, current same-slot object, or another
 nearby lore item. Prefer `suggested_next_actions` over parsing
-`suggested_next_calls`; each action has `tool_name`, `arguments`, `reason`, and
-`call`. Check `nearby_caveat_links.scope` before treating a table-level caveat
-as specific to one column.
+`suggested_next_calls`; each action has `tool_name`, `mcp_tool_name`,
+`arguments`, `reason`, and `call`. Use `mcp_tool_name` for MCP dispatch. Check
+`nearby_caveat_links.scope` before treating a table-level caveat as specific to
+one column.
 
 `doxabase.describe_graph_revision`
 
