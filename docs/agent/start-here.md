@@ -128,6 +128,12 @@ For Codex sub-agent field trials, prefer the repo virtualenv directly:
 ./.venv/bin/python
 ```
 
+When running a scratch script from `/tmp`, set:
+
+```bash
+PYTHONPATH=/home/james/github.com/jamtho/doxybase
+```
+
 Sandboxed sub-agents may not have access to the user's uv cache. Do not rely on
 `uv run` inside a sub-agent trial unless the trial is explicitly testing the
 developer environment. Require a final thread report and, for non-trivial

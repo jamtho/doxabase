@@ -310,10 +310,11 @@ applied without mutating graph state. It reports already-applied state,
 per-patch count drift, preview triple counts, validation status, and a
 top-level `can_apply` flag. Read `status` and `summary` first; use
 `decision`, `blocking_reasons`, `validation_skipped_reason`,
-`recommended_resolution`, and `suggested_next_actions` to decide whether to
-review then apply, inspect an applied event, review validation diagnostics, or
-restage after conflicts. Suggested actions are ordered review-first; mutation
-calls come after inspection/export suggestions.
+`recommended_resolution`, `count_drifts`, and `suggested_next_actions` to decide
+whether to review then apply, inspect an applied event, review validation
+diagnostics, or restage after conflicts. `count_drifts` gives expected/current
+counts and deltas but not exact changed triples. Suggested actions are ordered
+review-first; mutation calls come after inspection/export suggestions.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted
 staged revision's existing patch payloads, recomputing before/after counts and

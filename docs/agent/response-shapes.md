@@ -591,6 +591,7 @@ check.recommended_resolution
 check.already_applied_by
 check.changed_graphs
 check.patch_checks
+check.count_drifts
 check.conflicts
 check.validation_scope
 check.validation_conforms
@@ -614,6 +615,10 @@ applying. `blocking_reasons` uses compact values such as `target_count_drift`,
 `validation_failed`, or `already_applied`. When `validation_conforms is None`,
 read `validation_skipped_reason` before guessing why validation did not run;
 common values are `conflicts_present` and `already_applied`.
+`count_drifts` gives patch-level count drift context: target graph, expected
+before count, current count, delta, and whether exact changed triples are
+available. In the current runtime, exact changed triples are not available
+because graph version storage is still future work.
 `suggested_next_actions` uses the same structured action shape as assertion
 support: tool name, MCP tool name, arguments, reason, and display call string.
 For staged apply checks, actions are ordered review-first; mutating actions such

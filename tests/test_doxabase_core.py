@@ -1229,6 +1229,13 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.validation_conforms is None
     assert check.validation_skipped_reason == "conflicts_present"
     assert len(check.conflicts) == 1
+    assert len(check.count_drifts) == 1
+    assert check.count_drifts[0].target_graph == "map"
+    assert check.count_drifts[0].expected_before_triple_count == 0
+    assert check.count_drifts[0].current_triple_count == db.triple_count("map")
+    assert check.count_drifts[0].delta == db.triple_count("map")
+    assert check.count_drifts[0].exact_changed_triples_available is False
+    assert "future graph version storage" in check.count_drifts[0].note
     assert "expected 0 triples before patch" in check.conflicts[0]
     assert check.patch_checks[0].can_apply is False
     assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"

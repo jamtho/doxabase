@@ -214,6 +214,17 @@ class StagedPatchApplyCheck:
 
 
 @dataclass(frozen=True)
+class StagedGraphCountDrift:
+    patch_iri: str
+    target_graph: str
+    expected_before_triple_count: int
+    current_triple_count: int
+    delta: int
+    exact_changed_triples_available: bool
+    note: str
+
+
+@dataclass(frozen=True)
 class StagedRevisionApplyCheck:
     staged_revision_iri: str
     can_apply: bool
@@ -226,6 +237,7 @@ class StagedRevisionApplyCheck:
     already_applied_by: str | None
     changed_graphs: list[str]
     patch_checks: list[StagedPatchApplyCheck]
+    count_drifts: list[StagedGraphCountDrift]
     conflicts: list[str]
     validation_scope: str
     validation_conforms: bool | None
@@ -6751,6 +6763,7 @@ class DoxaBase:
                 already_applied_by=existing_applied[0],
                 changed_graphs=changed_graphs,
                 patch_checks=[],
+                count_drifts=[],
                 conflicts=[
                     "Staged revision has already been applied by "
                     f"'{existing_applied[0]}'"
@@ -6780,6 +6793,7 @@ class DoxaBase:
         preview_graphs: dict[str, Graph] = {}
         parsed_patches: list[tuple[StagedGraphPatchDescription, Graph]] = []
         patch_checks: list[StagedPatchApplyCheck] = []
+        count_drifts: list[StagedGraphCountDrift] = []
         conflicts: list[str] = []
         triples_to_add = 0
         triples_to_remove = 0
@@ -6814,6 +6828,21 @@ class DoxaBase:
                     patch.before_triple_count is not None
                     and current_count != patch.before_triple_count
                 ):
+                    count_drifts.append(
+                        StagedGraphCountDrift(
+                            patch_iri=patch.iri,
+                            target_graph=target_graph,
+                            expected_before_triple_count=patch.before_triple_count,
+                            current_triple_count=current_count,
+                            delta=current_count - patch.before_triple_count,
+                            exact_changed_triples_available=False,
+                            note=(
+                                "DoxaBase can report staged/current graph counts "
+                                "for this conflict, but exact changed triples "
+                                "need future graph version storage."
+                            ),
+                        )
+                    )
                     conflict = (
                         f"graph '{target_graph}' expected "
                         f"{patch.before_triple_count} triples before patch, "
@@ -6923,6 +6952,7 @@ class DoxaBase:
             already_applied_by=None,
             changed_graphs=changed_graphs,
             patch_checks=patch_checks,
+            count_drifts=count_drifts,
             conflicts=conflicts,
             validation_scope=validation_scope_value,
             validation_conforms=validation_conforms,

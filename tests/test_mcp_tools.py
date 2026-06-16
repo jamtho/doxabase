@@ -349,6 +349,9 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     stale_check = check_staged_revision_apply_tool(db, iri=staged["revision_iri"])
     assert stale_check["status"] == "conflict"
     assert stale_check["validation_skipped_reason"] == "conflicts_present"
+    assert stale_check["count_drifts"][0]["target_graph"] == "map"
+    assert stale_check["count_drifts"][0]["delta"] == db.triple_count("map")
+    assert stale_check["count_drifts"][0]["exact_changed_triples_available"] is False
     assert stale_check["suggested_next_actions"][0]["tool_name"] == (
         "describe_staged_revision"
     )
