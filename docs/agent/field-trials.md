@@ -202,6 +202,11 @@ few useful gaps:
 - Staged systematisation drafts with failed, repaired, and alternative framings
   should be exported with `export_staged_revisions` and an `executive_summary`
   when the comparison itself is the artifact under review.
+- `stage_map_assertion_change` judgement panels helped agents avoid a tempting
+  Polymarket `VARCHAR -> DOUBLE` cleanup, but a later AIS timestamp trial showed
+  that physical-type reviews need explicit `rc:valueType` /
+  `rc:requiredPhysicalType` context and weak labels for routes that only match
+  generic shared values such as `rc:Varchar`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

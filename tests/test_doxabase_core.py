@@ -806,6 +806,13 @@ def test_stage_map_assertion_change_packages_support_context(
         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
         @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
+        rcg:ontology {
+            ex:RawPricePayload a rc:ValueType ;
+                rdfs:label "Raw price payload" ;
+                rdfs:comment "Raw API payload before parsing invalid rows." ;
+                rc:requiredPhysicalType rc:Varchar .
+        }
+
         rcg:map {
             ex:PriceSnapshots a rc:Dataset, rc:Table ;
                 rdfs:label "Price snapshots" ;
@@ -814,7 +821,8 @@ def test_stage_map_assertion_change_packages_support_context(
 
             ex:px_price a rc:Column ;
                 rc:columnName "price" ;
-                rc:physicalType rc:Varchar .
+                rc:physicalType rc:Varchar ;
+                rc:valueType ex:RawPricePayload .
 
             ex:mixed_price_payload_caveat a rc:KnownCaveat ;
                 rdfs:label "Mixed price payload caveat" ;
@@ -887,6 +895,8 @@ def test_stage_map_assertion_change_packages_support_context(
     )
     assert "Nearby caveats by scope" in staged_change.review_note
     assert "Related route summaries" in staged_change.review_note
+    assert "Value-type context" in staged_change.review_note
+    assert "Why current value may be intentional" in staged_change.review_note
     assert "This is deliberately staged for review" in staged_change.review_note
     panel = staged_change.judgement_panel
     assert panel.assertion_present_before is False
@@ -897,6 +907,19 @@ def test_stage_map_assertion_change_packages_support_context(
     assert panel.proposed_value.label == "DOUBLE"
     assert panel.absence_note is not None
     assert "Current same-subject/predicate value(s): VARCHAR" in panel.absence_note
+    assert len(panel.value_type_context) == 1
+    value_type_context = panel.value_type_context[0]
+    assert value_type_context.value_type.iri == (
+        "https://example.test/project#RawPricePayload"
+    )
+    assert value_type_context.required_physical_type is not None
+    assert value_type_context.required_physical_type.label == "VARCHAR"
+    assert value_type_context.current_physical_type_matches is True
+    assert value_type_context.proposed_physical_type_matches is False
+    assert any(
+        "Raw price payload requires physical type VARCHAR" in note
+        for note in panel.why_current_value_may_be_intentional
+    )
     assert {caveat.scope for caveat in panel.caveats} == {"owner_dataset"}
     assert panel.caveats[0].caveat_label == "Mixed price payload caveat"
     assert any(
@@ -935,10 +958,12 @@ def test_stage_map_assertion_change_packages_support_context(
     }
     assert {
         "https://example.test/project#px_price",
-        RC + "Varchar",
-        RC + "Double",
         "https://example.test/project#mixed_price_payload_caveat",
     }.issubset({item.iri for item in description.revision_anchors})
+    assert RC + "Varchar" not in {
+        item.iri for item in description.revision_anchors
+    }
+    assert RC + "Double" not in {item.iri for item in description.revision_anchors}
     assert any(
         impact.impact_type == "changed_physical_type"
         for impact in description.impacts

@@ -62,8 +62,9 @@ For a single `map` subject/predicate assertion, prefer
 generates the Turtle patch payloads, links related lore and anchors, and returns
 the normal staged revision record alongside the support snapshot and a compact
 `judgement_panel`. Read the panel first when deciding whether a single assertion
-change is plausible: it brings current/proposed values, caveat scopes, strongest
-routes, impact entries, and safety notes into one place. Use generic
+change is plausible: it brings current/proposed values, value-type context,
+reasons the current value may be intentional, caveat scopes, strongest routes,
+impact entries, and safety notes into one place. Use generic
 `stage_graph_revision` when the patch is multi-resource, multi-graph, or cannot
 be expressed as one assertion add/remove/replace.
 

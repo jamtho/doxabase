@@ -86,6 +86,8 @@ Implemented:
 - `stage_graph_revision()` for reviewable additions/removals with stance,
   preview counts, validation, and structured SHACL diagnostics, without
   applying the patch.
+- `stage_map_assertion_change()` for reviewable single-assertion map changes
+  with pre-change support context and a compact judgement panel.
 - `stage_systematisation()` for staging one or more caller-authored RDF framings
   of the same modelling hunch, with optional shared proposed context, as
   reviewable alternatives.

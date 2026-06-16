@@ -259,6 +259,8 @@ panel.assertion_present_before
 panel.current_values
 panel.proposed_value
 panel.absence_note
+panel.value_type_context
+panel.why_current_value_may_be_intentional
 panel.caveats
 panel.strongest_routes
 panel.impacts
@@ -266,9 +268,19 @@ panel.safety_notes
 ```
 
 The panel does not decide whether the change is right. It packages the current
-and proposed values, caveat scopes, strongest related-lore routes, deterministic
+and proposed values, physical/value-type context, reasons the current value may
+be intentional, caveat scopes, strongest related-lore routes, deterministic
 impact spotlight entries, and safety notes that a reviewer should consider
-before apply. The `assertion_support` field remains the full pre-change
+before apply.
+
+For physical type changes, `panel.value_type_context` lists current
+`rc:valueType` resources and any `rc:requiredPhysicalType` they declare, with
+booleans for whether that required type matches the current or proposed physical
+type. `panel.strongest_routes[*].generic_value_only` is true when a route only
+matched a generic shared value such as `rc:Varchar`; treat those as weak context
+unless other routes tie the lore to the assertion subject or owner dataset.
+
+The `assertion_support` field remains the full pre-change
 `AssertionSupportDescription`. `additions` and `removals` are the generated
 Turtle patch specs passed to staged revision machinery. `staged_revision` is the
 normal `StagedGraphRevisionRecord` and can be inspected with

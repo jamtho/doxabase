@@ -366,10 +366,47 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
         result["staged_revision"]["revision_iri"],
     )
     assert description["supporting_patterns"]
+    assert "https://richcanopy.org/ns/rc#Varchar" not in {
+        anchor["iri"] for anchor in description["revision_anchors"]
+    }
+    assert "https://richcanopy.org/ns/rc#Double" not in {
+        anchor["iri"] for anchor in description["revision_anchors"]
+    }
     assert any(
         impact["impact_type"] == "changed_physical_type"
         for impact in description["impacts"]
     )
+
+    ais_result = stage_map_assertion_change_tool(
+        db,
+        subject="https://richcanopy.org/example/manifest/ais#bc_base_date_time",
+        predicate="rc:physicalType",
+        object="rc:TimestampTZ",
+        rationale=(
+            "Exercise a second tempting type cleanup after the Polymarket stage."
+        ),
+        change_kind="replace",
+    )
+    ais_panel = ais_result["judgement_panel"]
+    assert ais_panel["value_type_context"]
+    assert ais_panel["value_type_context"][0]["value_type"]["label"] == (
+        "Raw AIS Timestamp String"
+    )
+    assert ais_panel["value_type_context"][0]["required_physical_type"]["label"] == (
+        "VARCHAR"
+    )
+    assert ais_panel["value_type_context"][0]["current_physical_type_matches"] is True
+    assert (
+        ais_panel["value_type_context"][0]["proposed_physical_type_matches"] is False
+    )
+    assert any(
+        "Raw AIS Timestamp String requires physical type VARCHAR" in note
+        for note in ais_panel["why_current_value_may_be_intentional"]
+    )
+    assert result["staged_revision"]["revision_iri"] not in {
+        route["resource_iri"] for route in ais_panel["strongest_routes"]
+    }
+    assert db.triple_count("map") == before_map_count
 
 
 def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) -> None:

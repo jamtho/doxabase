@@ -932,6 +932,9 @@ class MapAssertionJudgementRoute:
     strongest_route_label: str
     route_count: int
     route_note: str
+    matched_resources: list[ResourceSummary]
+    generic_value_only: bool
+    relevance_note: str | None
 
 
 @dataclass(frozen=True)
@@ -944,6 +947,15 @@ class MapAssertionJudgementImpact:
 
 
 @dataclass(frozen=True)
+class MapAssertionJudgementValueTypeContext:
+    value_type: ResourceSummary
+    required_physical_type: MapAssertionJudgementValue | None
+    current_physical_type_matches: bool | None
+    proposed_physical_type_matches: bool | None
+    note: str
+
+
+@dataclass(frozen=True)
 class MapAssertionJudgementPanel:
     headline: str
     recommendation: str | None
@@ -951,6 +963,8 @@ class MapAssertionJudgementPanel:
     current_values: list[MapAssertionJudgementValue]
     proposed_value: MapAssertionJudgementValue | None
     absence_note: str | None
+    value_type_context: list[MapAssertionJudgementValueTypeContext]
+    why_current_value_may_be_intentional: list[str]
     caveats: list[MapAssertionJudgementCaveat]
     strongest_routes: list[MapAssertionJudgementRoute]
     impacts: list[MapAssertionJudgementImpact]
@@ -7212,13 +7226,33 @@ class DoxaBase:
         change_kind: str,
         user_review_note: str | None,
     ) -> str:
+        judgement_current_values = [
+            self._map_assertion_judgement_value_from_triple(triple)
+            for triple in support.same_subject_predicate_triples
+        ]
+        judgement_proposed_value = (
+            self._map_assertion_judgement_value_from_assertion_value(
+                support.requested_object
+            )
+            if support.requested_object is not None
+            else None
+        )
+        value_type_context = self._map_assertion_value_type_context(
+            support,
+            current_values=judgement_current_values,
+            proposed_value=judgement_proposed_value,
+        )
+        current_value_rationale = self._map_assertion_current_value_rationale(
+            support,
+            value_type_context=value_type_context,
+        )
         current_values = [
             triple.object_label or self._local_name(triple.object) or triple.object
             for triple in support.same_subject_predicate_triples
         ]
         route_notes = [
-            f"{summary.rank}. {summary.route_note}"
-            for summary in support.related_route_summaries[:5]
+            self._map_assertion_review_route_note(support, summary)
+            for summary in self._ranked_panel_route_summaries(support)[:5]
         ]
         caveat_notes = [
             (
@@ -7243,6 +7277,16 @@ class DoxaBase:
         ]
         if support.absence_note:
             lines.append(f"Absence note: {support.absence_note}")
+        if value_type_context:
+            lines.append(
+                "Value-type context: "
+                + " | ".join(context.note for context in value_type_context[:5])
+            )
+        if current_value_rationale:
+            lines.append(
+                "Why current value may be intentional: "
+                + " | ".join(current_value_rationale)
+            )
         if caveat_notes:
             lines.append("Nearby caveats by scope: " + " | ".join(caveat_notes))
         if route_notes:
@@ -7252,6 +7296,16 @@ class DoxaBase:
         if user_review_note:
             lines.append(f"User/agent review note: {user_review_note.strip()}")
         return "\n".join(lines)
+
+    def _map_assertion_review_route_note(
+        self,
+        support: AssertionSupportDescription,
+        summary: AssertionSupportRouteSummary,
+    ) -> str:
+        note = f"{summary.rank}. {summary.route_note}"
+        if self._map_assertion_route_is_generic_value_only(support, summary):
+            note += " [weak: generic shared-value match only]"
+        return note
 
     def _map_assertion_change_judgement_panel(
         self,
@@ -7272,13 +7326,18 @@ class DoxaBase:
             if support.requested_object is not None
             else None
         )
+        value_type_context = self._map_assertion_value_type_context(
+            support,
+            current_values=current_values,
+            proposed_value=proposed_value,
+        )
         caveats = [
             self._map_assertion_judgement_caveat(link)
             for link in support.nearby_caveat_links[:5]
         ]
         strongest_routes = [
-            self._map_assertion_judgement_route(summary)
-            for summary in support.related_route_summaries[:5]
+            self._map_assertion_judgement_route(support, summary)
+            for summary in self._ranked_panel_route_summaries(support)[:5]
         ]
         impacts = [
             self._map_assertion_judgement_impact(impact)
@@ -7296,11 +7355,19 @@ class DoxaBase:
             current_values=current_values,
             proposed_value=proposed_value,
             absence_note=support.absence_note,
+            value_type_context=value_type_context,
+            why_current_value_may_be_intentional=(
+                self._map_assertion_current_value_rationale(
+                    support,
+                    value_type_context=value_type_context,
+                )
+            ),
             caveats=caveats,
             strongest_routes=strongest_routes,
             impacts=impacts,
             safety_notes=self._map_assertion_judgement_safety_notes(
                 support,
+                value_type_context=value_type_context,
                 change_kind=change_kind,
                 impacts=staged_description.impacts,
             ),
@@ -7366,6 +7433,123 @@ class DoxaBase:
             return self._local_name(value)
         return None
 
+    def _map_assertion_value_type_context(
+        self,
+        support: AssertionSupportDescription,
+        *,
+        current_values: list[MapAssertionJudgementValue],
+        proposed_value: MapAssertionJudgementValue | None,
+    ) -> list[MapAssertionJudgementValueTypeContext]:
+        if support.predicate != self.expand_iri("rc:physicalType"):
+            return []
+        lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        current_physical_type_values = {
+            value.value
+            for value in current_values
+            if value.value_kind in {"iri", "uri"}
+        }
+        proposed_physical_type = (
+            proposed_value.value
+            if proposed_value is not None
+            and proposed_value.value_kind in {"iri", "uri"}
+            else None
+        )
+        contexts: list[MapAssertionJudgementValueTypeContext] = []
+        for value_type_iri in self._objects(
+            lookup_graphs,
+            support.subject.iri,
+            "rc:valueType",
+        ):
+            required_iri = self._first_object(
+                lookup_graphs,
+                value_type_iri,
+                "rc:requiredPhysicalType",
+            )
+            required_value = (
+                self._map_assertion_judgement_resource_value(
+                    lookup_graphs,
+                    required_iri,
+                )
+                if required_iri is not None
+                else None
+            )
+            current_matches = (
+                required_iri in current_physical_type_values
+                if required_iri is not None
+                else None
+            )
+            proposed_matches = (
+                proposed_physical_type == required_iri
+                if required_iri is not None and proposed_physical_type is not None
+                else None
+            )
+            contexts.append(
+                MapAssertionJudgementValueTypeContext(
+                    value_type=self._resource_summary(
+                        lookup_graphs,
+                        value_type_iri,
+                        display_label=True,
+                    ),
+                    required_physical_type=required_value,
+                    current_physical_type_matches=current_matches,
+                    proposed_physical_type_matches=proposed_matches,
+                    note=self._map_assertion_value_type_note(
+                        value_type_iri=value_type_iri,
+                        required_physical_type=required_value,
+                        current_matches=current_matches,
+                        proposed_matches=proposed_matches,
+                        lookup_graphs=lookup_graphs,
+                    ),
+                )
+            )
+        return contexts
+
+    def _map_assertion_judgement_resource_value(
+        self,
+        lookup_graphs: list[str],
+        iri: str,
+    ) -> MapAssertionJudgementValue:
+        return MapAssertionJudgementValue(
+            value=iri,
+            label=self._display_label_from_graphs(lookup_graphs, iri)
+            or self._local_name(iri),
+            value_kind="iri",
+        )
+
+    def _map_assertion_value_type_note(
+        self,
+        *,
+        value_type_iri: str,
+        required_physical_type: MapAssertionJudgementValue | None,
+        current_matches: bool | None,
+        proposed_matches: bool | None,
+        lookup_graphs: list[str],
+    ) -> str:
+        value_type_label = (
+            self._display_label_from_graphs(lookup_graphs, value_type_iri)
+            or self._local_name(value_type_iri)
+            or value_type_iri
+        )
+        if required_physical_type is None:
+            return f"Value type {value_type_label} has no required physical type recorded."
+        required_label = required_physical_type.label or required_physical_type.value
+        if current_matches is True:
+            return (
+                f"Value type {value_type_label} requires physical type "
+                f"{required_label}, matching the current map value."
+            )
+        if proposed_matches is True:
+            return (
+                f"Value type {value_type_label} requires physical type "
+                f"{required_label}, matching the proposed value rather than the "
+                "current map value."
+            )
+        return (
+            f"Value type {value_type_label} requires physical type "
+            f"{required_label}, which does not directly explain the current or "
+            "proposed physical type."
+        )
+
     def _map_assertion_judgement_caveat(
         self,
         link: AssertionSupportCaveatLink,
@@ -7388,8 +7572,13 @@ class DoxaBase:
 
     def _map_assertion_judgement_route(
         self,
+        support: AssertionSupportDescription,
         summary: AssertionSupportRouteSummary,
     ) -> MapAssertionJudgementRoute:
+        generic_value_only = self._map_assertion_route_is_generic_value_only(
+            support,
+            summary,
+        )
         return MapAssertionJudgementRoute(
             rank=summary.rank,
             resource_iri=summary.resource.iri,
@@ -7398,7 +7587,62 @@ class DoxaBase:
             strongest_route_label=summary.strongest_route_label,
             route_count=summary.route_count,
             route_note=summary.route_note,
+            matched_resources=summary.matched_resources,
+            generic_value_only=generic_value_only,
+            relevance_note=(
+                "This route only matched a generic shared value such as a physical "
+                "type; treat it as weak context unless other routes tie it to the "
+                "subject or owning dataset."
+                if generic_value_only
+                else None
+            ),
         )
+
+    def _ranked_panel_route_summaries(
+        self,
+        support: AssertionSupportDescription,
+    ) -> list[AssertionSupportRouteSummary]:
+        return sorted(
+            support.related_route_summaries,
+            key=lambda summary: (
+                self._map_assertion_route_is_generic_value_only(support, summary),
+                summary.rank,
+            ),
+        )
+
+    def _map_assertion_route_is_generic_value_only(
+        self,
+        support: AssertionSupportDescription,
+        summary: AssertionSupportRouteSummary,
+    ) -> bool:
+        if not summary.matched_resources:
+            return False
+        if any(match.iri == support.subject.iri for match in summary.matched_resources):
+            return False
+        if not all(
+            self._is_generic_shared_value_resource(match.iri)
+            for match in summary.matched_resources
+        ):
+            return False
+        return summary.resource_kind == "revision" or set(summary.route_types) <= {
+            "revision_anchor",
+        }
+
+    def _is_generic_shared_value_resource(self, iri: str) -> bool:
+        if not iri.startswith(PREFIXES["rc"]):
+            return False
+        generic_types = {
+            self.expand_iri("rc:PhysicalType"),
+            self.expand_iri("rc:ValueType"),
+            self.expand_iri("rc:ConfidenceLevel"),
+            self.expand_iri("rc:ObservationStatus"),
+            self.expand_iri("rc:PatternStability"),
+            self.expand_iri("rc:RevisionStance"),
+        }
+        resource_types = set(
+            self._types_from_graphs(self._expand_graphs(["all"]), iri)
+        )
+        return bool(resource_types & generic_types)
 
     def _map_assertion_judgement_impact(
         self,
@@ -7417,6 +7661,42 @@ class DoxaBase:
                 for value in impact.added_values
             ],
         )
+
+    def _map_assertion_current_value_rationale(
+        self,
+        support: AssertionSupportDescription,
+        *,
+        value_type_context: list[MapAssertionJudgementValueTypeContext],
+    ) -> list[str]:
+        notes: list[str] = []
+        for context in value_type_context:
+            if context.current_physical_type_matches is True:
+                notes.append(context.note)
+        for summary in self._ranked_panel_route_summaries(support):
+            if self._map_assertion_route_is_generic_value_only(support, summary):
+                continue
+            if summary.resource_kind not in {"claim", "pattern", "observation"}:
+                continue
+            text = (
+                summary.resource.label
+                or summary.resource.description
+                or summary.route_note
+            )
+            if text:
+                notes.append(f"Related {summary.resource_kind}: {text}")
+            if len(notes) >= 3:
+                break
+        if not notes:
+            for caveat_link in support.nearby_caveat_links[:2]:
+                text = (
+                    caveat_link.caveat.label
+                    or caveat_link.caveat.description
+                    or caveat_link.caveat.iri
+                )
+                notes.append(
+                    f"Nearby caveat ({caveat_link.scope}): {text}"
+                )
+        return list(dict.fromkeys(notes))[:3]
 
     def _map_assertion_judgement_headline(
         self,
@@ -7456,6 +7736,7 @@ class DoxaBase:
         self,
         support: AssertionSupportDescription,
         *,
+        value_type_context: list[MapAssertionJudgementValueTypeContext],
         change_kind: str,
         impacts: list[StagedRevisionImpact],
     ) -> list[str]:
@@ -7483,10 +7764,32 @@ class DoxaBase:
                 "Nearby caveats are present; check their scopes before treating "
                 "the assertion as clean planning context."
             )
+        if any(context.current_physical_type_matches for context in value_type_context):
+            notes.append(
+                "Current value-type context supports the current physical type; "
+                "check that before normalising the assertion."
+            )
+        if any(
+            context.proposed_physical_type_matches
+            and not context.current_physical_type_matches
+            for context in value_type_context
+        ):
+            notes.append(
+                "Value-type context appears to support the proposed physical type; "
+                "verify whether the current map is stale or preserving raw storage."
+            )
         if support.related_route_summaries:
             notes.append(
                 "Related observations, claims, patterns, or evidence are linked; "
                 "read the strongest routes before treating the change as cleanup."
+            )
+        if any(
+            self._map_assertion_route_is_generic_value_only(support, summary)
+            for summary in support.related_route_summaries
+        ):
+            notes.append(
+                "Some related routes only match generic shared values such as "
+                "physical types; treat those as weak context."
             )
         if any(impact.severity == "attention" for impact in impacts):
             notes.append(
@@ -7507,11 +7810,17 @@ class DoxaBase:
     ) -> list[str]:
         anchors = [support.subject.iri]
         for triple in support.same_subject_predicate_triples:
-            if triple.object_kind == "uri":
+            if (
+                triple.object_kind == "uri"
+                and not self._is_generic_shared_value_resource(triple.object)
+            ):
                 anchors.append(triple.object)
         if (
             support.requested_object is not None
             and support.requested_object.value_kind == "iri"
+            and not self._is_generic_shared_value_resource(
+                support.requested_object.value
+            )
         ):
             anchors.append(support.requested_object.value)
         for caveat in support.nearby_caveats:
