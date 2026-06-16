@@ -576,6 +576,8 @@ review spotlight.
 ```python
 check.staged_revision_iri
 check.can_apply
+check.status
+check.summary
 check.already_applied_by
 check.changed_graphs
 check.patch_checks
@@ -587,7 +589,14 @@ check.validation_results
 check.patches_checked
 check.triples_to_add
 check.triples_to_remove
+check.suggested_next_actions
+check.suggested_next_calls
 ```
+
+Read `status` and `summary` first. Current statuses are `ready`,
+`already_applied`, `conflict`, `validation_failed`, and `not_ready`.
+`suggested_next_actions` uses the same structured action shape as assertion
+support: tool name, MCP tool name, arguments, reason, and display call string.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

@@ -454,8 +454,16 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
 
     check = check_staged_revision_apply_tool(db, iri=staged["revision_iri"])
     assert check["can_apply"] is True
+    assert check["status"] == "ready"
+    assert check["summary"] == (
+        "Ready to apply 1 patch(es) across map: +3 triple(s), -0 triple(s)."
+    )
     assert check["conflicts"] == []
     assert check["patch_checks"][0]["preview_triple_count"] == 3
+    assert check["suggested_next_actions"][0]["tool_name"] == (
+        "apply_staged_revision"
+    )
+    assert check["suggested_next_calls"][0].startswith("apply_staged_revision(")
 
     result = apply_staged_revision_tool(db, iri=staged["revision_iri"])
 

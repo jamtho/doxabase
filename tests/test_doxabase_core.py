@@ -1008,6 +1008,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
 
     check = db.check_staged_revision_apply(staged.revision_iri)
     assert check.can_apply is True
+    assert check.status == "ready"
+    assert check.summary == (
+        "Ready to apply 1 patch(es) across map: +3 triple(s), -0 triple(s)."
+    )
     assert check.conflicts == []
     assert check.validation_conforms is True
     assert check.patches_checked == 1
@@ -1015,6 +1019,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert check.triples_to_remove == 0
     assert check.patch_checks[0].current_triple_count == 0
     assert check.patch_checks[0].preview_triple_count == 3
+    assert check.suggested_next_actions[0].tool_name == "apply_staged_revision"
+    assert check.suggested_next_actions[0].mcp_tool_name == (
+        "doxabase.apply_staged_revision"
+    )
+    assert check.suggested_next_actions[0].arguments == {"iri": staged.revision_iri}
+    assert check.suggested_next_calls[0].startswith("apply_staged_revision(")
 
     result = db.apply_staged_revision(staged.revision_iri)
 
@@ -1047,7 +1057,14 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         db.apply_staged_revision(staged.revision_iri)
     applied_check = db.check_staged_revision_apply(staged.revision_iri)
     assert applied_check.can_apply is False
+    assert applied_check.status == "already_applied"
+    assert applied_check.summary == (
+        f"Already applied by {result.applied_revision_iri}."
+    )
     assert applied_check.already_applied_by == result.applied_revision_iri
+    assert applied_check.suggested_next_actions[0].tool_name == (
+        "describe_graph_revision"
+    )
 
 
 def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
@@ -1187,10 +1204,13 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
 
     check = db.check_staged_revision_apply(staged.revision_iri)
     assert check.can_apply is False
+    assert check.status == "conflict"
+    assert check.summary.startswith("Blocked by 1 conflict(s); first conflict:")
     assert check.validation_conforms is None
     assert len(check.conflicts) == 1
     assert "expected 0 triples before patch" in check.conflicts[0]
     assert check.patch_checks[0].can_apply is False
+    assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
 
     with pytest.raises(DoxaBaseError, match="Staged revision cannot be applied"):
         db.apply_staged_revision(staged.revision_iri)

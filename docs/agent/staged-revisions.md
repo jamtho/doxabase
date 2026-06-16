@@ -230,7 +230,10 @@ conservative:
 Use `doxabase.check_staged_revision_apply` first when you want a read-only
 answer. It reports whether the staged revision has already been applied, whether
 any patch target graph has drifted from its recorded `beforeTripleCount`, the
-preview count for each patch, and preview validation diagnostics.
+preview count for each patch, preview validation diagnostics, `status`,
+`summary`, and structured `suggested_next_actions`. Read `status` and `summary`
+first. Current statuses are `ready`, `already_applied`, `conflict`,
+`validation_failed`, and `not_ready`.
 
 This is not a full merge system. A harmless unrelated graph change can still
 show up as a conflict because the first guard is count-based. In that case,

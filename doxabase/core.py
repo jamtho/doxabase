@@ -217,6 +217,8 @@ class StagedPatchApplyCheck:
 class StagedRevisionApplyCheck:
     staged_revision_iri: str
     can_apply: bool
+    status: str
+    summary: str
     already_applied_by: str | None
     changed_graphs: list[str]
     patch_checks: list[StagedPatchApplyCheck]
@@ -228,6 +230,8 @@ class StagedRevisionApplyCheck:
     patches_checked: int
     triples_to_add: int
     triples_to_remove: int
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -6548,9 +6552,30 @@ class DoxaBase:
             staged.iri,
         )
         if existing_applied:
+            status = "already_applied"
+            summary = self._staged_apply_check_summary(
+                status=status,
+                conflicts=[
+                    "Staged revision has already been applied by "
+                    f"'{existing_applied[0]}'"
+                ],
+                validation_result_count=None,
+                changed_graphs=changed_graphs,
+                patches_checked=0,
+                triples_to_add=0,
+                triples_to_remove=0,
+                already_applied_by=existing_applied[0],
+            )
+            suggested_next_actions = self._staged_apply_check_next_actions(
+                staged.iri,
+                status=status,
+                already_applied_by=existing_applied[0],
+            )
             check = StagedRevisionApplyCheck(
                 staged_revision_iri=staged.iri,
                 can_apply=False,
+                status=status,
+                summary=summary,
                 already_applied_by=existing_applied[0],
                 changed_graphs=changed_graphs,
                 patch_checks=[],
@@ -6565,6 +6590,10 @@ class DoxaBase:
                 patches_checked=0,
                 triples_to_add=0,
                 triples_to_remove=0,
+                suggested_next_actions=suggested_next_actions,
+                suggested_next_calls=[
+                    action.call for action in suggested_next_actions
+                ],
             )
             return _StagedRevisionApplicationPreview(
                 staged=staged,
@@ -6679,9 +6708,32 @@ class DoxaBase:
             validation_result_count = validation.result_count
             validation_results = validation.results
 
+        can_apply = not conflicts and validation_conforms is True
+        status = self._staged_apply_check_status(
+            can_apply=can_apply,
+            conflicts=conflicts,
+            validation_conforms=validation_conforms,
+        )
+        summary = self._staged_apply_check_summary(
+            status=status,
+            conflicts=conflicts,
+            validation_result_count=validation_result_count,
+            changed_graphs=changed_graphs,
+            patches_checked=len(patch_checks),
+            triples_to_add=triples_to_add,
+            triples_to_remove=triples_to_remove,
+            already_applied_by=None,
+        )
+        suggested_next_actions = self._staged_apply_check_next_actions(
+            staged.iri,
+            status=status,
+            already_applied_by=None,
+        )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
-            can_apply=(not conflicts and validation_conforms is True),
+            can_apply=can_apply,
+            status=status,
+            summary=summary,
             already_applied_by=None,
             changed_graphs=changed_graphs,
             patch_checks=patch_checks,
@@ -6693,6 +6745,10 @@ class DoxaBase:
             patches_checked=len(patch_checks),
             triples_to_add=triples_to_add,
             triples_to_remove=triples_to_remove,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
         )
         return _StagedRevisionApplicationPreview(
             staged=staged,
@@ -6700,6 +6756,127 @@ class DoxaBase:
             parsed_patches=parsed_patches,
             preview_graphs=preview_graphs,
         )
+
+    def _staged_apply_check_status(
+        self,
+        *,
+        can_apply: bool,
+        conflicts: list[str],
+        validation_conforms: bool | None,
+    ) -> str:
+        if can_apply:
+            return "ready"
+        if conflicts:
+            return "conflict"
+        if validation_conforms is False:
+            return "validation_failed"
+        return "not_ready"
+
+    def _staged_apply_check_summary(
+        self,
+        *,
+        status: str,
+        conflicts: list[str],
+        validation_result_count: int | None,
+        changed_graphs: list[str],
+        patches_checked: int,
+        triples_to_add: int,
+        triples_to_remove: int,
+        already_applied_by: str | None,
+    ) -> str:
+        graph_text = ", ".join(changed_graphs) if changed_graphs else "(none)"
+        if status == "ready":
+            return (
+                f"Ready to apply {patches_checked} patch(es) across {graph_text}: "
+                f"+{triples_to_add} triple(s), -{triples_to_remove} triple(s)."
+            )
+        if status == "already_applied":
+            return f"Already applied by {already_applied_by}."
+        if status == "conflict":
+            first_conflict = conflicts[0] if conflicts else "(unknown conflict)"
+            return (
+                f"Blocked by {len(conflicts)} conflict(s); first conflict: "
+                f"{first_conflict}"
+            )
+        if status == "validation_failed":
+            result_count = validation_result_count or 0
+            return (
+                "Patch counts replay cleanly, but preview validation failed with "
+                f"{result_count} result(s)."
+            )
+        return "Not ready to apply; inspect patch checks and validation fields."
+
+    def _staged_apply_check_next_actions(
+        self,
+        staged_revision_iri: str,
+        *,
+        status: str,
+        already_applied_by: str | None,
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+
+        def add_action(
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+        ) -> None:
+            actions.append(
+                SuggestedNextAction(
+                    tool_name=tool_name,
+                    mcp_tool_name=f"doxabase.{tool_name}",
+                    arguments=arguments,
+                    reason=reason,
+                    call=self._suggested_call_string(tool_name, arguments),
+                )
+            )
+
+        if status == "ready":
+            add_action(
+                "apply_staged_revision",
+                {"iri": staged_revision_iri},
+                (
+                    "Apply this staged revision after human/agent review of "
+                    "patches, validation, impacts, and any judgement panel."
+                ),
+            )
+            add_action(
+                "export_staged_revision",
+                {"iri": staged_revision_iri, "path": "/tmp/staged-revision-review.md"},
+                "Write a Markdown review bundle before applying if review is needed.",
+            )
+        elif status == "already_applied" and already_applied_by is not None:
+            add_action(
+                "describe_graph_revision",
+                {"iri": already_applied_by},
+                "Inspect the applied revision event instead of applying again.",
+            )
+        elif status == "conflict":
+            add_action(
+                "describe_staged_revision",
+                {"iri": staged_revision_iri},
+                (
+                    "Review the original patch payloads, count previews, impacts, "
+                    "and support before restaging against current graph state."
+                ),
+            )
+            add_action(
+                "export_staged_revision",
+                {"iri": staged_revision_iri, "path": "/tmp/staged-revision-conflict.md"},
+                "Write a review bundle that captures the stale staged proposal.",
+            )
+        elif status == "validation_failed":
+            add_action(
+                "describe_staged_revision",
+                {"iri": staged_revision_iri},
+                "Inspect structured validation_results before changing the patch.",
+            )
+        else:
+            add_action(
+                "describe_staged_revision",
+                {"iri": staged_revision_iri},
+                "Inspect staged revision details to understand why apply is not ready.",
+            )
+        return actions
 
     def export_staged_revision(
         self,
