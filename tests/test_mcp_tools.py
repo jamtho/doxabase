@@ -404,9 +404,13 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["include_apply_checks"] is True
     assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
     assert result["revisions"][0]["iri"] == staged["revision_iri"]
+    assert result["revisions"][0]["record_kind"] == "staged_patch"
+    assert result["revisions"][0]["has_patch_payload"] is True
+    assert result["revisions"][0]["patch_count"] == 1
     assert result["revisions"][0]["application_status"] == "ready"
     assert result["revisions"][0]["application_decision"] == "review_then_apply"
     assert result["revisions"][0]["application_can_apply"] is True
+    assert result["revisions"][0]["suggested_next_actions"]
 
 
 def test_stage_map_assertion_change_tool_returns_json_like_payload(
@@ -1034,6 +1038,10 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
         "https://richcanopy.org/doxabase/generated/pattern/"
     )
     assert describe_dataset_tool(db, dataset)["row_count_snapshot"] == 55
+    profile = describe_dataset_tool(db, dataset)["profile_observations"][0]
+    assert profile["row_count"] == 55
+    assert profile["distinct_count"] == 54
+    assert profile["evidence"][0]["iri"] == result["observation"]["evidence_iri"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
@@ -1072,6 +1080,11 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
     dataset = describe_dataset_tool(db, table)
     assert dataset["columns"][0]["iri"] == column
     assert dataset["columns"][0]["nullable"] is False
+    profile = dataset["columns"][0]["profile_observations"][0]
+    assert profile["row_count"] == 55
+    assert profile["null_count"] == 0
+    assert profile["distinct_count"] == 55
+    assert profile["observed_column"]["iri"] == column
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

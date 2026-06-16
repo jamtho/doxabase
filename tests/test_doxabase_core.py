@@ -1355,10 +1355,14 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     )
     assert staged_listing.count == 1
     assert staged_listing.revisions[0].iri == staged.revision_iri
+    assert staged_listing.revisions[0].record_kind == "staged_patch"
     assert staged_listing.revisions[0].revision_type == RC + "StagedRevision"
     assert staged_listing.revisions[0].revision_type_label == "staged revision"
+    assert staged_listing.revisions[0].has_patch_payload is True
+    assert staged_listing.revisions[0].patch_count == 1
     assert staged_listing.revisions[0].application_status == "ready"
     assert staged_listing.revisions[0].application_can_apply is True
+    assert staged_listing.revisions[0].suggested_next_actions
 
     applied = db.apply_staged_revision(
         staged.revision_iri,
@@ -1373,8 +1377,46 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert by_iri[applied.applied_revision_iri].applies_staged_revision == (
         staged.revision_iri
     )
-    assert by_iri[applied.applied_revision_iri].application_status is None
+    assert by_iri[applied.applied_revision_iri].record_kind == "applied_event"
+    assert by_iri[applied.applied_revision_iri].has_patch_payload is False
+    assert by_iri[applied.applied_revision_iri].patch_count == 0
+    assert by_iri[applied.applied_revision_iri].application_status == "applied_event"
     assert listing.revisions[0].iri == applied.applied_revision_iri
+
+    stale = db.stage_graph_revision(
+        summary="Stage other table",
+        rationale="Exercise list status for count drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OtherMessages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:02:00Z",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftMaker",
+        label="Drift maker",
+    )
+    restaged = db.restage_staged_revision(
+        stale.revision_iri,
+        created_at="2026-06-01T10:03:00Z",
+    )
+
+    drift_listing = db.list_graph_revisions(include_apply_checks=True)
+    drift_by_iri = {item.iri: item for item in drift_listing.revisions}
+    stale_item = drift_by_iri[stale.revision_iri]
+    assert stale_item.application_status == "conflict"
+    assert stale_item.application_blocking_reasons == ["target_count_drift"]
+    assert stale_item.application_count_drifts[0].target_graph == "map"
+    assert stale_item.suggested_next_actions[-1].tool_name == "restage_staged_revision"
+    assert stale_item.restaged_by == restaged.revision_iri
+    assert drift_by_iri[restaged.revision_iri].restaged_from == stale.revision_iri
 
 
 def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
@@ -3679,6 +3721,13 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     description = db.describe_dataset(dataset)
     assert description.label == "Messages"
     assert description.row_count_snapshot == 123
+    assert len(description.profile_observations) == 1
+    profile = description.profile_observations[0]
+    assert profile.iri == result.observation.observation_iri
+    assert profile.row_count == 123
+    assert profile.distinct_count == 120
+    assert profile.null_count is None
+    assert profile.evidence[0].iri == result.observation.evidence_iri
 
     pattern = db.describe_pattern(result.pattern.pattern_iri)
     assert [target.iri for target in pattern.pattern_targets] == [dataset]
@@ -3732,6 +3781,16 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
     assert description.columns[0].nullable is False
     assert description.columns[0].physical_type is not None
     assert description.columns[0].physical_type.iri == RC + "Varchar"
+    assert len(description.columns[0].profile_observations) == 1
+    profile = description.columns[0].profile_observations[0]
+    assert profile.iri == result.observation.observation_iri
+    assert profile.row_count == 123
+    assert profile.null_count == 0
+    assert profile.distinct_count == 123
+    assert profile.observed_asset is not None
+    assert profile.observed_asset.iri == table
+    assert profile.observed_column is not None
+    assert profile.observed_column.iri == column
 
     pattern = db.describe_pattern(result.pattern.pattern_iri)
     assert [target.iri for target in pattern.pattern_targets] == [column]

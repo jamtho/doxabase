@@ -188,11 +188,14 @@ supplied, it also writes a linked `rc:Evidence` resource to the `evidence` graph
 also update the map row-count snapshot and write an agent-authored profile
 pattern linked back to the observation. Use it when a profiling result should
 arrive as observation, optional current-best map context, and optional synthesis
-without making three separate helper calls.
+without making three separate helper calls. `describe_dataset()` surfaces recent
+dataset profile observations and their sample, row, null, and distinct counts.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as
-physical type and nullability, and can write a linked profile pattern.
+physical type and nullability, and can write a linked profile pattern. Column
+profile observations are exposed on the matching `describe_dataset().columns[]`
+entry.
 
 `record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common
@@ -285,9 +288,11 @@ supporting observation/claim/pattern/evidence links.
 
 `list_graph_revisions()` returns compact history rows for `rc:GraphRevision`
 resources, newest first. Each row includes summary, revision type/stance,
-created time, changed graphs, validation headline, relation links such as
-`applied_by`, `applies_staged_revision`, `alternative_to`, and `restaged_from`,
-plus optional staged apply-check status when `include_apply_checks=True`.
+record kind, created time, changed graphs, validation headline, patch payload
+presence/count, relation links such as `applied_by`, `applies_staged_revision`,
+`alternative_to`, `restaged_from`, and `restaged_by`, plus optional staged
+apply-check status, blockers, drift summaries, and suggested actions when
+`include_apply_checks=True`.
 
 `describe_staged_revision()` returns staged patch payloads, stance, review
 notes/recommendations, validation status, structured validation diagnostics,

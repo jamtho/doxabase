@@ -363,6 +363,7 @@ dataset.schema_stability
 dataset.row_count_snapshot
 dataset.layout_verification_status
 dataset.layout_verification_note
+dataset.profile_observations
 dataset.columns
 dataset.path_templates
 dataset.physical_layouts
@@ -374,6 +375,28 @@ dataset.relationships
 dataset.linked_patterns
 dataset.linked_pattern_reasons
 ```
+
+`dataset.profile_observations` contains recent `ProfileObservationSummary`
+items for observations whose `observed_asset` is the dataset:
+
+```python
+profile.iri
+profile.summary
+profile.observed_at
+profile.observed_by
+profile.observed_asset
+profile.observed_column
+profile.sample_size
+profile.row_count
+profile.null_count
+profile.distinct_count
+profile.evidence
+```
+
+Each `dataset.columns[]` item can also include `profile_observations` for recent
+profile observations whose `observed_column` is that column. Use these before
+searching raw observation triples when you need profile counts, distinctness, or
+null counts attached to a dataset handoff.
 
 Each column in `dataset.columns` is a `ColumnDescription`:
 
@@ -481,6 +504,7 @@ Each item in `revisions.revisions` has:
 
 ```python
 item.iri
+item.record_kind
 item.summary
 item.revision_type
 item.revision_type_label
@@ -491,17 +515,28 @@ item.changed_graphs
 item.validation_scope
 item.validation_conforms
 item.validation_result_count
+item.has_patch_payload
+item.patch_count
 item.applied_by
 item.applies_staged_revision
 item.alternative_to
 item.restaged_from
+item.restaged_by
 item.application_status
 item.application_decision
 item.application_can_apply
+item.application_blocking_reasons
+item.application_count_drifts
+item.suggested_next_actions
+item.suggested_next_calls
 ```
 
 `application_*` fields are only populated when `include_apply_checks=True` and
-the revision has staged patch payloads. Use `list_graph_revisions` to discover
+the revision has staged patch payloads, except applied revision events report
+`application_status="applied_event"` for scanning. `record_kind` is a compact row
+class such as `staged_patch`, `applied_event`, `export_record`, `import_record`,
+or `history_record`. Use `has_patch_payload` and `patch_count` to decide whether
+`describe_staged_revision` is available. Use `list_graph_revisions` to discover
 reviewable or applied history before calling `describe_graph_revision` or
 `describe_staged_revision` on a specific IRI.
 

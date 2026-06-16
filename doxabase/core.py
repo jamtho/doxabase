@@ -396,6 +396,7 @@ class GraphRevisionDescription:
 @dataclass(frozen=True)
 class GraphRevisionListItem:
     iri: str
+    record_kind: str
     summary: str | None
     revision_type: str | None
     revision_type_label: str | None
@@ -406,13 +407,20 @@ class GraphRevisionListItem:
     validation_scope: str | None
     validation_conforms: bool | None
     validation_result_count: int | None
+    has_patch_payload: bool
+    patch_count: int
     applied_by: str | None
     applies_staged_revision: str | None
     alternative_to: str | None
     restaged_from: str | None
+    restaged_by: str | None
     application_status: str | None
     application_decision: str | None
     application_can_apply: bool | None
+    application_blocking_reasons: list[str]
+    application_count_drifts: list[StagedGraphCountDrift]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -485,6 +493,21 @@ class ResourceSummary:
 
 
 @dataclass(frozen=True)
+class ProfileObservationSummary:
+    iri: str
+    summary: str | None
+    observed_at: str | None
+    observed_by: str | None
+    observed_asset: ResourceSummary | None
+    observed_column: ResourceSummary | None
+    sample_size: int | None
+    row_count: int | None
+    null_count: int | None
+    distinct_count: int | None
+    evidence: list[ResourceSummary]
+
+
+@dataclass(frozen=True)
 class ColumnDescription:
     iri: str
     label: str | None
@@ -493,6 +516,7 @@ class ColumnDescription:
     physical_type: ResourceSummary | None
     value_type: ResourceSummary | None
     nullable: bool | None
+    profile_observations: list[ProfileObservationSummary]
 
 
 @dataclass(frozen=True)
@@ -694,6 +718,7 @@ class DatasetDescription:
     row_count_snapshot: int | None
     layout_verification_status: ResourceSummary | None
     layout_verification_note: str | None
+    profile_observations: list[ProfileObservationSummary]
     columns: list[ColumnDescription]
     path_templates: list[str]
     physical_layouts: list[PhysicalLayoutDescription]
@@ -1847,11 +1872,15 @@ class DoxaBase:
             application_status: str | None = None
             application_decision: str | None = None
             application_can_apply: bool | None = None
-            if include_apply_checks and self._objects(
+            application_blocking_reasons: list[str] = []
+            application_count_drifts: list[StagedGraphCountDrift] = []
+            suggested_next_actions: list[SuggestedNextAction] = []
+            patch_iris = self._objects(
                 data_graphs,
                 revision_iri,
                 "rc:hasGraphPatch",
-            ):
+            )
+            if include_apply_checks and patch_iris:
                 try:
                     check = self.check_staged_revision_apply(revision_iri)
                 except DoxaBaseError:
@@ -1862,10 +1891,26 @@ class DoxaBase:
                     application_status = check.status
                     application_decision = check.decision
                     application_can_apply = check.can_apply
+                    application_blocking_reasons = check.blocking_reasons
+                    application_count_drifts = check.count_drifts
+                    suggested_next_actions = check.suggested_next_actions
+
+            applies_staged_revision = self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:appliesStagedRevision",
+            )
+            if application_status is None and applies_staged_revision is not None:
+                application_status = "applied_event"
 
             items.append(
                 GraphRevisionListItem(
                     iri=revision_iri,
+                    record_kind=self._graph_revision_record_kind(
+                        item_revision_type,
+                        has_patch_payload=bool(patch_iris),
+                        applies_staged_revision=applies_staged_revision,
+                    ),
                     summary=self._first_object(data_graphs, revision_iri, "rc:summary"),
                     revision_type=item_revision_type,
                     revision_type_label=(
@@ -1900,16 +1945,14 @@ class DoxaBase:
                         revision_iri,
                         "rc:validationResultCount",
                     ),
+                    has_patch_payload=bool(patch_iris),
+                    patch_count=len(patch_iris),
                     applied_by=self._first_subject(
                         data_graphs,
                         "rc:appliesStagedRevision",
                         revision_iri,
                     ),
-                    applies_staged_revision=self._first_object(
-                        data_graphs,
-                        revision_iri,
-                        "rc:appliesStagedRevision",
-                    ),
+                    applies_staged_revision=applies_staged_revision,
                     alternative_to=self._first_object(
                         data_graphs,
                         revision_iri,
@@ -1920,9 +1963,20 @@ class DoxaBase:
                         revision_iri,
                         "rc:restagesRevision",
                     ),
+                    restaged_by=self._first_subject(
+                        data_graphs,
+                        "rc:restagesRevision",
+                        revision_iri,
+                    ),
                     application_status=application_status,
                     application_decision=application_decision,
                     application_can_apply=application_can_apply,
+                    application_blocking_reasons=application_blocking_reasons,
+                    application_count_drifts=application_count_drifts,
+                    suggested_next_actions=suggested_next_actions,
+                    suggested_next_calls=[
+                        action.call for action in suggested_next_actions
+                    ],
                 )
             )
 
@@ -1943,6 +1997,23 @@ class DoxaBase:
             revision_type=revision_type_filter,
             include_apply_checks=include_apply_checks,
         )
+
+    def _graph_revision_record_kind(
+        self,
+        revision_type: str | None,
+        *,
+        has_patch_payload: bool,
+        applies_staged_revision: str | None,
+    ) -> str:
+        if applies_staged_revision is not None:
+            return "applied_event"
+        if has_patch_payload:
+            return "staged_patch"
+        if revision_type == self.expand_iri("rc:ExportRevision"):
+            return "export_record"
+        if revision_type == self.expand_iri("rc:ImportRevision"):
+            return "import_record"
+        return "history_record"
 
     def describe_staged_revision(
         self,
@@ -3400,6 +3471,10 @@ class DoxaBase:
                 dataset_iri,
                 "rc:layoutVerificationNote",
             ),
+            profile_observations=self._profile_observations_for_target(
+                target_iri=dataset_iri,
+                target_predicate="rc:observedAsset",
+            ),
             columns=columns,
             path_templates=path_templates,
             physical_layouts=physical_layouts,
@@ -3450,6 +3525,107 @@ class DoxaBase:
         return sorted(
             upstream_by_iri.values(),
             key=lambda caveat: (caveat.label or "", caveat.iri),
+        )
+
+    def _profile_observations_for_target(
+        self,
+        *,
+        target_iri: str,
+        target_predicate: str,
+        limit: int = 5,
+    ) -> list[ProfileObservationSummary]:
+        observation_graphs = ["observations"]
+        lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        profile_type = self.expand_iri("rc:ProfileObservation")
+        observation_iris = [
+            observation_iri
+            for observation_iri in self._subjects(
+                observation_graphs,
+                target_predicate,
+                target_iri,
+            )
+            if profile_type
+            in self._types_from_graphs(observation_graphs, observation_iri)
+        ]
+        summaries = [
+            self._profile_observation_summary(observation_iri, lookup_graphs)
+            for observation_iri in observation_iris
+        ]
+        summaries.sort(
+            key=lambda item: (
+                item.observed_at or "",
+                item.summary or "",
+                item.iri,
+            ),
+            reverse=True,
+        )
+        return summaries[:limit]
+
+    def _profile_observation_summary(
+        self,
+        observation_iri: str,
+        lookup_graphs: list[str],
+    ) -> ProfileObservationSummary:
+        observation_graphs = ["observations"]
+        evidence_graphs = ["evidence"]
+        observed_asset = self._first_object(
+            observation_graphs,
+            observation_iri,
+            "rc:observedAsset",
+        )
+        observed_column = self._first_object(
+            observation_graphs,
+            observation_iri,
+            "rc:observedColumn",
+        )
+        return ProfileObservationSummary(
+            iri=observation_iri,
+            summary=self._first_object(observation_graphs, observation_iri, "rc:summary"),
+            observed_at=self._first_object(
+                observation_graphs,
+                observation_iri,
+                "rc:observedAt",
+            ),
+            observed_by=self._first_object(
+                observation_graphs,
+                observation_iri,
+                "rc:observedBy",
+            ),
+            observed_asset=(
+                self._resource_summary(lookup_graphs, observed_asset)
+                if observed_asset is not None
+                else None
+            ),
+            observed_column=(
+                self._resource_summary(lookup_graphs, observed_column)
+                if observed_column is not None
+                else None
+            ),
+            sample_size=self._int_object(
+                observation_graphs,
+                observation_iri,
+                "rc:sampleSize",
+            ),
+            row_count=self._int_object(
+                observation_graphs,
+                observation_iri,
+                "rc:rowCount",
+            ),
+            null_count=self._int_object(
+                observation_graphs,
+                observation_iri,
+                "rc:nullCount",
+            ),
+            distinct_count=self._int_object(
+                observation_graphs,
+                observation_iri,
+                "rc:distinctCount",
+            ),
+            evidence=self._resource_summaries(
+                evidence_graphs,
+                self._objects(observation_graphs, observation_iri, "rc:evidence"),
+                description_predicate="rc:summary",
+            ),
         )
 
     def record_observation(
@@ -11091,6 +11267,10 @@ class DoxaBase:
                 else None
             ),
             nullable=self._bool_object(data_graphs, column_iri, "rc:nullable"),
+            profile_observations=self._profile_observations_for_target(
+                target_iri=column_iri,
+                target_predicate="rc:observedColumn",
+            ),
         )
 
     def _describe_physical_layout(

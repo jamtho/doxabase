@@ -72,7 +72,10 @@ Lists `rc:GraphRevision` resources from `history`, newest first. Use
 `revision_type` such as `rc:StagedRevision` to narrow the list. Set
 `include_apply_checks=True` when you need staged proposal status without already
 knowing which proposals are ready, stale, or already applied. Apply checks are
-only populated for revisions with graph patch payloads.
+only populated for revisions with graph patch payloads. Rows include
+`record_kind`, `has_patch_payload`, `patch_count`, revision relation links,
+selected apply-check blockers/drift summaries, and review-first suggested next
+actions.
 
 `doxabase.search`
 
@@ -140,6 +143,8 @@ Records one dataset profile bundle: a profile observation, optional evidence,
 an optional current-best map row-count snapshot, and an optional
 agent-authored profile pattern linked back to the observation. Use it when a
 profile run should preserve both the raw noticing and the emerging synthesis.
+`describe_dataset` surfaces recent dataset profile observations and their
+sample, row, null, and distinct counts.
 
 `doxabase.record_column_profile`
 
@@ -147,7 +152,8 @@ Records one column profile bundle: a profile observation with
 `observed_column`, optional evidence, optional current-best map column metadata,
 and an optional linked profile pattern. Use it when profiling output says
 something useful about nullability, distinctness, physical type, or identity
-behavior for a column.
+behavior for a column. Column profile observations appear on the matching
+`describe_dataset().columns[]` entry.
 
 `doxabase.record_claim_observation`
 
