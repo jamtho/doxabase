@@ -406,6 +406,19 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     assert result["staged_revision"]["revision_iri"] not in {
         route["resource_iri"] for route in ais_panel["strongest_routes"]
     }
+    ais_export_path = tmp_path / "ais-judgement-review.md"
+    export_staged_revision_tool(
+        db,
+        iri=ais_result["staged_revision"]["revision_iri"],
+        path=str(ais_export_path),
+    )
+    ais_export = ais_export_path.read_text()
+    assert "## Judgement Panel" in ais_export
+    assert "### Value Type Context" in ais_export
+    assert "Raw AIS Timestamp String" in ais_export
+    assert "TIMESTAMP WITH TIME ZONE" in ais_export
+    assert "| Value type | Required physical type | Current matches |" in ais_export
+    assert "No strong related-lore routes surfaced" in ais_export
     assert db.triple_count("map") == before_map_count
 
 

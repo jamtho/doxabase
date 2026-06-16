@@ -293,7 +293,10 @@ assertions, or removes documentation from a subject that also has semantic
 changes. Caveat impact values include the caveat description, impact, and
 severity inline when those facts are known.
 `export_staged_revision()` writes a Markdown review bundle with diagnostics and
-impact review before patch payloads.
+impact review before patch payloads. For simple single-assertion `map` changes
+that still replay cleanly, it reconstructs a `Judgement Panel` section so the
+export carries values, value-type context, rationale, caveats, routes, and
+safety notes from the JSON review surface.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; pass `executive_summary` when the comparison
 needs an agent-authored synthesis at the top of the artifact.

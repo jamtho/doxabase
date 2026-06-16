@@ -85,8 +85,12 @@ patterns, evidence, and revisions that may explain why a map assertion or caveat
 was there. They do not make the proposal invalid by themselves.
 
 Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
-proposal. Use `doxabase.export_staged_revisions` when several alternatives,
-failed candidates, and repaired candidates should be reviewed together.
+proposal. For simple single-assertion `map` changes that still replay cleanly,
+the export includes a `Judgement Panel` section so human and agent reviewers can
+see the same compact values, value-type context, caveats, routes, and safety
+notes that the JSON helper returned. Use `doxabase.export_staged_revisions` when
+several alternatives, failed candidates, and repaired candidates should be
+reviewed together.
 
 ## Systematisation Drafts
 

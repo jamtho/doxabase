@@ -968,6 +968,15 @@ def test_stage_map_assertion_change_packages_support_context(
         impact.impact_type == "changed_physical_type"
         for impact in description.impacts
     )
+    export_path = tmp_path / "price-change-review.md"
+    db.export_staged_revision(staged_change.staged_revision.revision_iri, export_path)
+    exported = export_path.read_text()
+    assert "## Judgement Panel" in exported
+    assert "### Value Type Context" in exported
+    assert "Raw price payload" in exported
+    assert "Current matches" in exported
+    assert "Proposed matches" in exported
+    assert "Why Current Value May Be Intentional" in exported
 
 
 def test_apply_staged_revision_mutates_graph_and_records_history(

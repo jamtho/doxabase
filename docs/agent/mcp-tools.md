@@ -309,8 +309,10 @@ first apply path, not a full merge/rebase workflow.
 `doxabase.export_staged_revision`
 
 Writes a Markdown review bundle for a staged revision, including validation
-diagnostics before patch payloads when validation failed. This is for
-human/agent review.
+diagnostics before patch payloads when validation failed. For simple
+single-assertion `map` changes that still replay cleanly, the export includes a
+`Judgement Panel` section with values, value-type context, rationale, caveats,
+routes, and safety notes. This is for human/agent review.
 
 `doxabase.export_staged_revisions`
 

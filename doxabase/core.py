@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import sqlite3
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable, Literal as TypingLiteral, Mapping
@@ -8963,6 +8963,7 @@ class DoxaBase:
         self,
         description: StagedGraphRevisionDescription,
     ) -> str:
+        judgement_panel = self._staged_revision_judgement_panel(description)
         lines = [
             f"# {description.summary or 'Staged graph revision'}",
             "",
@@ -8991,6 +8992,9 @@ class DoxaBase:
                     description.review_recommendation,
                 ]
             )
+        if judgement_panel is not None:
+            lines.extend(["", "## Judgement Panel", ""])
+            lines.extend(self._map_assertion_judgement_panel_markdown(judgement_panel))
         if description.impacts:
             lines.extend(["", "## Impact Review", ""])
             for impact in description.impacts:
@@ -9084,6 +9088,275 @@ class DoxaBase:
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revision_judgement_panel(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> MapAssertionJudgementPanel | None:
+        if not self._staged_revision_patch_counts_match(description):
+            return None
+        candidate = self._single_map_assertion_candidate(description)
+        if candidate is None:
+            return None
+        subject, predicate, object_value, object_kind, change_kind = candidate
+        support = self.describe_assertion_support(
+            subject,
+            predicate,
+            object_value,
+            graph="map",
+            object_kind=object_kind,  # type: ignore[arg-type]
+        )
+        support = self._assertion_support_without_revision(support, description.iri)
+        return self._map_assertion_change_judgement_panel(
+            support,
+            change_kind=change_kind,
+            recommendation=description.review_recommendation,
+            staged_description=description,
+        )
+
+    def _staged_revision_patch_counts_match(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> bool:
+        existing_applied = self._subjects(
+            self._expand_graphs(["history"]),
+            "rc:appliesStagedRevision",
+            description.iri,
+        )
+        if existing_applied:
+            return False
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        preview_graphs: dict[str, Graph] = {}
+        for patch in description.patches:
+            target_graph = patch.target_graph
+            operation = patch.operation
+            if target_graph is None or operation is None:
+                return False
+            if operation not in {addition_operation, removal_operation}:
+                return False
+            try:
+                self._ensure_mutable(target_graph)
+                current_preview = preview_graphs.setdefault(
+                    target_graph,
+                    self.to_graph([target_graph]),
+                )
+                if (
+                    patch.before_triple_count is not None
+                    and len(current_preview) != patch.before_triple_count
+                ):
+                    return False
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                return False
+            candidate_preview = self._clone_graph(current_preview)
+            if operation == addition_operation:
+                for triple in patch_graph:
+                    candidate_preview.add(triple)
+            else:
+                for triple in patch_graph:
+                    candidate_preview.remove(triple)
+            if (
+                patch.after_triple_count is not None
+                and len(candidate_preview) != patch.after_triple_count
+            ):
+                return False
+            preview_graphs[target_graph] = candidate_preview
+        return True
+
+    def _assertion_support_without_revision(
+        self,
+        support: AssertionSupportDescription,
+        revision_iri: str,
+    ) -> AssertionSupportDescription:
+        filtered_routes = [
+            route
+            for route in support.related_routes
+            if not (
+                route.resource_kind == "revision"
+                and route.resource.iri == revision_iri
+            )
+        ]
+        filtered_route_summaries = self._assertion_related_route_summaries(
+            filtered_routes
+        )
+        return replace(
+            support,
+            related_revisions=[
+                revision
+                for revision in support.related_revisions
+                if revision.iri != revision_iri
+            ],
+            related_routes=filtered_routes,
+            related_route_summaries=filtered_route_summaries,
+        )
+
+    def _single_map_assertion_candidate(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> tuple[str, str, str | None, str, str] | None:
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        additions: list[tuple[Identifier, URIRef, Node]] = []
+        removals: list[tuple[Identifier, URIRef, Node]] = []
+        for patch in description.patches:
+            if patch.target_graph != "map" or patch.operation not in {
+                addition_operation,
+                removal_operation,
+            }:
+                return None
+            try:
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                return None
+            triples = list(patch_graph)
+            if patch.operation == addition_operation:
+                additions.extend(triples)
+            else:
+                removals.extend(triples)
+        all_triples = [*additions, *removals]
+        if not all_triples:
+            return None
+        subjects = {triple[0] for triple in all_triples}
+        predicates = {triple[1] for triple in all_triples}
+        if len(subjects) != 1 or len(predicates) != 1:
+            return None
+        subject = next(iter(subjects))
+        predicate = next(iter(predicates))
+        if isinstance(subject, BNode) or not isinstance(predicate, URIRef):
+            return None
+        object_node = additions[0][2] if additions else removals[0][2]
+        object_value, object_kind = self._object_filter_from_node(object_node)
+        if additions and removals:
+            change_kind = "replace"
+        elif additions:
+            change_kind = "add"
+        else:
+            change_kind = "remove"
+        return str(subject), str(predicate), object_value, object_kind, change_kind
+
+    def _object_filter_from_node(
+        self,
+        node: Node,
+    ) -> tuple[str, str]:
+        if isinstance(node, URIRef):
+            return str(node), "iri"
+        if isinstance(node, Literal):
+            return str(node), "literal"
+        return str(node), "literal"
+
+    def _map_assertion_judgement_panel_markdown(
+        self,
+        panel: MapAssertionJudgementPanel,
+    ) -> list[str]:
+        lines = [
+            f"- Headline: {panel.headline}",
+            f"- Exact assertion present before staging: {panel.assertion_present_before}",
+        ]
+        if panel.recommendation is not None:
+            lines.append(f"- Recommendation: {panel.recommendation}")
+        if panel.absence_note is not None:
+            lines.append(f"- Absence note: {panel.absence_note}")
+        lines.extend(["", "### Values", ""])
+        lines.extend(
+            [
+                "| Role | Value | Kind |",
+                "|---|---|---|",
+            ]
+        )
+        if panel.current_values:
+            for value in panel.current_values:
+                lines.append(
+                    "| Current | "
+                    + self._markdown_table_cell(self._judgement_value_label(value))
+                    + " | "
+                    + self._markdown_table_cell(value.value_kind)
+                    + " |"
+                )
+        else:
+            lines.append("| Current | (none) |  |")
+        if panel.proposed_value is not None:
+            lines.append(
+                "| Proposed | "
+                + self._markdown_table_cell(
+                    self._judgement_value_label(panel.proposed_value)
+                )
+                + " | "
+                + self._markdown_table_cell(panel.proposed_value.value_kind)
+                + " |"
+            )
+        if panel.value_type_context:
+            lines.extend(["", "### Value Type Context", ""])
+            lines.extend(
+                [
+                    (
+                        "| Value type | Required physical type | Current matches | "
+                        "Proposed matches | Note |"
+                    ),
+                    "|---|---|---:|---:|---|",
+                ]
+            )
+            for context in panel.value_type_context:
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        [
+                            self._markdown_table_cell(
+                                context.value_type.label or context.value_type.iri
+                            ),
+                            self._markdown_table_cell(
+                                self._judgement_value_label(
+                                    context.required_physical_type
+                                )
+                                if context.required_physical_type is not None
+                                else "(none)"
+                            ),
+                            str(context.current_physical_type_matches),
+                            str(context.proposed_physical_type_matches),
+                            self._markdown_table_cell(context.note),
+                        ]
+                    )
+                    + " |"
+                )
+        if panel.why_current_value_may_be_intentional:
+            lines.extend(["", "### Why Current Value May Be Intentional", ""])
+            lines.extend(
+                f"- {note}" for note in panel.why_current_value_may_be_intentional
+            )
+        lines.extend(["", "### Caveats", ""])
+        if panel.caveats:
+            for caveat in panel.caveats:
+                label = caveat.caveat_label or caveat.caveat_iri
+                lines.append(f"- {label} [{caveat.scope}]: {caveat.route_label}")
+                if caveat.description is not None:
+                    lines.append(f"  - Description: {caveat.description}")
+                if caveat.impact is not None:
+                    lines.append(f"  - Impact: {caveat.impact}")
+        else:
+            lines.append("- No caveats surfaced in the judgement panel.")
+        lines.extend(["", "### Strongest Routes", ""])
+        if panel.strongest_routes:
+            for route in panel.strongest_routes:
+                label = route.resource_label or route.resource_iri
+                weak = " [weak generic-value match]" if route.generic_value_only else ""
+                lines.append(f"- {route.rank}. {label} ({route.resource_kind}){weak}")
+                lines.append(f"  - Route: {route.strongest_route_label}")
+                lines.append(f"  - Note: {route.route_note}")
+                if route.relevance_note is not None:
+                    lines.append(f"  - Relevance: {route.relevance_note}")
+        else:
+            lines.append("- No strong related-lore routes surfaced in the judgement panel.")
+        lines.extend(["", "### Safety Notes", ""])
+        lines.extend(f"- {note}" for note in panel.safety_notes)
+        return lines
+
+    def _judgement_value_label(
+        self,
+        value: MapAssertionJudgementValue | None,
+    ) -> str:
+        if value is None:
+            return "(none)"
+        return value.label or value.value
 
     def _staged_revisions_markdown(
         self,
