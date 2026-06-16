@@ -60,7 +60,10 @@ result = stage_graph_revision_tool(
 For a single `map` subject/predicate assertion, prefer
 `doxabase.stage_map_assertion_change`. It calls `describe_assertion_support`,
 generates the Turtle patch payloads, links related lore and anchors, and returns
-the normal staged revision record alongside the support snapshot. Use generic
+the normal staged revision record alongside the support snapshot and a compact
+`judgement_panel`. Read the panel first when deciding whether a single assertion
+change is plausible: it brings current/proposed values, caveat scopes, strongest
+routes, impact entries, and safety notes into one place. Use generic
 `stage_graph_revision` when the patch is multi-resource, multi-graph, or cannot
 be expressed as one assertion add/remove/replace.
 

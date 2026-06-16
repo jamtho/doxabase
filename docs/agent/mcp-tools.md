@@ -236,7 +236,11 @@ assertion such as a physical type, caveat link, nullability, path, layout, or
 relationship claim. The helper calls `describe_assertion_support`, generates
 small Turtle addition/removal patches, records related observations, claims,
 patterns, evidence, caveat scopes, and assertion anchors on the staged revision,
-and returns both the assertion-support snapshot and the staged revision record.
+and returns the assertion-support snapshot, staged revision record, and a compact
+`judgement_panel`. Check the panel first for current/proposed values, caveat
+scopes, strongest route summaries, impact spotlight entries, and safety notes;
+then drill into `assertion_support` and `describe_staged_revision` when the
+change needs more thought.
 For `replace`, the generated patch set adds the requested assertion and removes
 current same-subject/predicate values except the requested object. The recorded
 patch sequence shows the exact preview/apply order. It does not apply the change;

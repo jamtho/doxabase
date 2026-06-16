@@ -244,15 +244,35 @@ change.additions
 change.removals
 change.assertion_support
 change.staged_revision
+change.judgement_panel
 change.review_note
 change.review_recommendation
 ```
 
 Use this response when reviewing a single map assertion add/remove/replace. The
-`assertion_support` field is the pre-change `AssertionSupportDescription`.
-`additions` and `removals` are the generated Turtle patch specs passed to staged
-revision machinery. `staged_revision` is the normal `StagedGraphRevisionRecord`
-and can be inspected with `describe_staged_revision`.
+`judgement_panel` is the compact reviewer view to check first:
+
+```python
+panel.headline
+panel.recommendation
+panel.assertion_present_before
+panel.current_values
+panel.proposed_value
+panel.absence_note
+panel.caveats
+panel.strongest_routes
+panel.impacts
+panel.safety_notes
+```
+
+The panel does not decide whether the change is right. It packages the current
+and proposed values, caveat scopes, strongest related-lore routes, deterministic
+impact spotlight entries, and safety notes that a reviewer should consider
+before apply. The `assertion_support` field remains the full pre-change
+`AssertionSupportDescription`. `additions` and `removals` are the generated
+Turtle patch specs passed to staged revision machinery. `staged_revision` is the
+normal `StagedGraphRevisionRecord` and can be inspected with
+`describe_staged_revision`.
 
 ## Context Slices
 

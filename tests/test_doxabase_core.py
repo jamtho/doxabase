@@ -888,6 +888,30 @@ def test_stage_map_assertion_change_packages_support_context(
     assert "Nearby caveats by scope" in staged_change.review_note
     assert "Related route summaries" in staged_change.review_note
     assert "This is deliberately staged for review" in staged_change.review_note
+    panel = staged_change.judgement_panel
+    assert panel.assertion_present_before is False
+    assert "VARCHAR" in panel.headline
+    assert "DOUBLE" in panel.headline
+    assert [value.label for value in panel.current_values] == ["VARCHAR"]
+    assert panel.proposed_value is not None
+    assert panel.proposed_value.label == "DOUBLE"
+    assert panel.absence_note is not None
+    assert "Current same-subject/predicate value(s): VARCHAR" in panel.absence_note
+    assert {caveat.scope for caveat in panel.caveats} == {"owner_dataset"}
+    assert panel.caveats[0].caveat_label == "Mixed price payload caveat"
+    assert any(
+        route.resource_iri
+        == "https://example.test/project#pattern_price_payload_boundary"
+        for route in panel.strongest_routes
+    )
+    assert any(
+        impact.impact_type == "changed_physical_type" for impact in panel.impacts
+    )
+    assert any(
+        "exact requested assertion was absent" in note
+        for note in panel.safety_notes
+    )
+    assert any("owning dataset" in note for note in panel.safety_notes)
     assert db.triple_count("map") == before_map_count
 
     description = db.describe_staged_revision(

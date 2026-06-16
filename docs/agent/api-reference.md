@@ -245,8 +245,11 @@ constraint, severity, value, and messages where pySHACL provides them.
 and `change_kind` (`"add"`, `"remove"`, or `"replace"`). It calls
 `describe_assertion_support()` before staging, generates the Turtle patches,
 links related observations/claims/patterns/evidence and revision anchors, and
-stores an assertion-support summary in the staged revision review note. Use it
-for common assertion changes before reaching for generic `stage_graph_revision`.
+stores an assertion-support summary in the staged revision review note. The
+returned `judgement_panel` is the compact reviewer view: headline,
+current/proposed values, caveat scopes, strongest related-lore routes, impact
+spotlight entries, and safety notes. Use it for common assertion changes before
+reaching for generic `stage_graph_revision`.
 For `replace`, the generated patch set adds the requested assertion and removes
 current same-subject/predicate values except the requested object. The recorded
 patch sequence shows the exact preview/apply order.

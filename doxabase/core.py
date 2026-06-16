@@ -901,6 +901,63 @@ class AssertionSupportDescription:
 
 
 @dataclass(frozen=True)
+class MapAssertionJudgementValue:
+    value: str
+    label: str | None
+    value_kind: str
+    datatype: str | None = None
+    lang: str | None = None
+    caveat: CaveatDescription | None = None
+
+
+@dataclass(frozen=True)
+class MapAssertionJudgementCaveat:
+    caveat_iri: str
+    caveat_label: str | None
+    scope: str
+    route_label: str
+    via_resource: ResourceSummary
+    matched_resource: ResourceSummary
+    description: str | None
+    impact: str | None
+    severity_label: str | None
+
+
+@dataclass(frozen=True)
+class MapAssertionJudgementRoute:
+    rank: int
+    resource_iri: str
+    resource_label: str | None
+    resource_kind: str
+    strongest_route_label: str
+    route_count: int
+    route_note: str
+
+
+@dataclass(frozen=True)
+class MapAssertionJudgementImpact:
+    impact_type: str
+    severity: str
+    message: str
+    removed_values: list[MapAssertionJudgementValue]
+    added_values: list[MapAssertionJudgementValue]
+
+
+@dataclass(frozen=True)
+class MapAssertionJudgementPanel:
+    headline: str
+    recommendation: str | None
+    assertion_present_before: bool
+    current_values: list[MapAssertionJudgementValue]
+    proposed_value: MapAssertionJudgementValue | None
+    absence_note: str | None
+    caveats: list[MapAssertionJudgementCaveat]
+    strongest_routes: list[MapAssertionJudgementRoute]
+    impacts: list[MapAssertionJudgementImpact]
+    safety_notes: list[str]
+
+
+@dataclass(frozen=True)
 class StagedMapAssertionChangeRecord:
     change_kind: str
     graph: str
@@ -914,6 +971,7 @@ class StagedMapAssertionChangeRecord:
     removals: list[dict[str, str]]
     assertion_support: AssertionSupportDescription
     staged_revision: StagedGraphRevisionRecord
+    judgement_panel: MapAssertionJudgementPanel
     review_note: str
     review_recommendation: str | None
 
@@ -1562,6 +1620,13 @@ class DoxaBase:
             review_recommendation=recommendation,
             validation_scope=validation_scope,
         )
+        staged_description = self.describe_staged_revision(staged.revision_iri)
+        judgement_panel = self._map_assertion_change_judgement_panel(
+            support,
+            change_kind=kind,
+            recommendation=recommendation,
+            staged_description=staged_description,
+        )
         return StagedMapAssertionChangeRecord(
             change_kind=kind,
             graph=graph,
@@ -1579,6 +1644,7 @@ class DoxaBase:
             removals=removals,
             assertion_support=support,
             staged_revision=staged,
+            judgement_panel=judgement_panel,
             review_note=merged_review_note,
             review_recommendation=recommendation,
         )
@@ -7186,6 +7252,254 @@ class DoxaBase:
         if user_review_note:
             lines.append(f"User/agent review note: {user_review_note.strip()}")
         return "\n".join(lines)
+
+    def _map_assertion_change_judgement_panel(
+        self,
+        support: AssertionSupportDescription,
+        *,
+        change_kind: str,
+        recommendation: str | None,
+        staged_description: StagedGraphRevisionDescription,
+    ) -> MapAssertionJudgementPanel:
+        current_values = [
+            self._map_assertion_judgement_value_from_triple(triple)
+            for triple in support.same_subject_predicate_triples
+        ]
+        proposed_value = (
+            self._map_assertion_judgement_value_from_assertion_value(
+                support.requested_object
+            )
+            if support.requested_object is not None
+            else None
+        )
+        caveats = [
+            self._map_assertion_judgement_caveat(link)
+            for link in support.nearby_caveat_links[:5]
+        ]
+        strongest_routes = [
+            self._map_assertion_judgement_route(summary)
+            for summary in support.related_route_summaries[:5]
+        ]
+        impacts = [
+            self._map_assertion_judgement_impact(impact)
+            for impact in staged_description.impacts[:5]
+        ]
+        return MapAssertionJudgementPanel(
+            headline=self._map_assertion_judgement_headline(
+                support,
+                change_kind=change_kind,
+                current_values=current_values,
+                proposed_value=proposed_value,
+            ),
+            recommendation=recommendation,
+            assertion_present_before=support.assertion_present,
+            current_values=current_values,
+            proposed_value=proposed_value,
+            absence_note=support.absence_note,
+            caveats=caveats,
+            strongest_routes=strongest_routes,
+            impacts=impacts,
+            safety_notes=self._map_assertion_judgement_safety_notes(
+                support,
+                change_kind=change_kind,
+                impacts=staged_description.impacts,
+            ),
+        )
+
+    def _map_assertion_judgement_value_from_triple(
+        self,
+        triple: ResourceTriple,
+    ) -> MapAssertionJudgementValue:
+        return MapAssertionJudgementValue(
+            value=triple.object,
+            label=self._map_assertion_judgement_value_label(
+                triple.object,
+                triple.object_kind,
+                triple.object_label,
+            ),
+            value_kind="iri" if triple.object_kind == "uri" else triple.object_kind,
+            datatype=triple.object_datatype,
+            lang=triple.object_lang,
+        )
+
+    def _map_assertion_judgement_value_from_assertion_value(
+        self,
+        value: AssertionValue,
+    ) -> MapAssertionJudgementValue:
+        return MapAssertionJudgementValue(
+            value=value.value,
+            label=self._map_assertion_judgement_value_label(
+                value.value,
+                value.value_kind,
+                value.value_label,
+            ),
+            value_kind=value.value_kind,
+            datatype=value.datatype,
+            lang=value.lang,
+            caveat=value.caveat,
+        )
+
+    def _map_assertion_judgement_value_from_impact_value(
+        self,
+        value: StagedRevisionImpactValue,
+    ) -> MapAssertionJudgementValue:
+        return MapAssertionJudgementValue(
+            value=value.value,
+            label=self._map_assertion_judgement_value_label(
+                value.value,
+                value.value_kind,
+                value.value_label,
+            ),
+            value_kind=value.value_kind,
+            caveat=value.caveat,
+        )
+
+    def _map_assertion_judgement_value_label(
+        self,
+        value: str,
+        value_kind: str,
+        label: str | None,
+    ) -> str | None:
+        if label is not None:
+            return label
+        if value_kind in {"iri", "uri"}:
+            return self._local_name(value)
+        return None
+
+    def _map_assertion_judgement_caveat(
+        self,
+        link: AssertionSupportCaveatLink,
+    ) -> MapAssertionJudgementCaveat:
+        return MapAssertionJudgementCaveat(
+            caveat_iri=link.caveat.iri,
+            caveat_label=link.caveat.label,
+            scope=link.scope,
+            route_label=link.route_label,
+            via_resource=link.via_resource,
+            matched_resource=link.matched_resource,
+            description=link.caveat.description,
+            impact=link.caveat.impact,
+            severity_label=(
+                link.caveat.severity.label
+                if link.caveat.severity is not None
+                else None
+            ),
+        )
+
+    def _map_assertion_judgement_route(
+        self,
+        summary: AssertionSupportRouteSummary,
+    ) -> MapAssertionJudgementRoute:
+        return MapAssertionJudgementRoute(
+            rank=summary.rank,
+            resource_iri=summary.resource.iri,
+            resource_label=summary.resource.label or summary.resource.column_name,
+            resource_kind=summary.resource_kind,
+            strongest_route_label=summary.strongest_route_label,
+            route_count=summary.route_count,
+            route_note=summary.route_note,
+        )
+
+    def _map_assertion_judgement_impact(
+        self,
+        impact: StagedRevisionImpact,
+    ) -> MapAssertionJudgementImpact:
+        return MapAssertionJudgementImpact(
+            impact_type=impact.impact_type,
+            severity=impact.severity,
+            message=impact.message,
+            removed_values=[
+                self._map_assertion_judgement_value_from_impact_value(value)
+                for value in impact.removed_values
+            ],
+            added_values=[
+                self._map_assertion_judgement_value_from_impact_value(value)
+                for value in impact.added_values
+            ],
+        )
+
+    def _map_assertion_judgement_headline(
+        self,
+        support: AssertionSupportDescription,
+        *,
+        change_kind: str,
+        current_values: list[MapAssertionJudgementValue],
+        proposed_value: MapAssertionJudgementValue | None,
+    ) -> str:
+        subject_label = (
+            support.subject.label
+            or support.subject.column_name
+            or support.subject.iri
+        )
+        predicate_label = support.predicate_label or self._local_name(
+            support.predicate
+        ) or support.predicate
+        current_label = ", ".join(
+            value.label or value.value for value in current_values
+        ) or "(none)"
+        if change_kind == "remove":
+            return (
+                f"Remove {predicate_label} on {subject_label}: "
+                f"current {current_label}"
+            )
+        if proposed_value is None:
+            return f"{change_kind.title()} {predicate_label} on {subject_label}"
+        proposed_label = proposed_value.label or proposed_value.value
+        if change_kind == "replace":
+            return (
+                f"Replace {predicate_label} on {subject_label}: "
+                f"{current_label} -> {proposed_label}"
+            )
+        return f"Add {predicate_label} on {subject_label}: {proposed_label}"
+
+    def _map_assertion_judgement_safety_notes(
+        self,
+        support: AssertionSupportDescription,
+        *,
+        change_kind: str,
+        impacts: list[StagedRevisionImpact],
+    ) -> list[str]:
+        notes: list[str] = []
+        if not support.assertion_present and support.requested_object is not None:
+            notes.append(
+                "The exact requested assertion was absent before staging; compare "
+                "the proposed value with current same-subject/predicate values."
+            )
+        if (
+            support.same_subject_predicate_triples
+            and change_kind in {"add", "replace"}
+        ):
+            notes.append(
+                "The map already has value(s) for this subject/predicate, so this "
+                "proposal may create or replace competing semantics."
+            )
+        if any(link.scope == "owner_dataset" for link in support.nearby_caveat_links):
+            notes.append(
+                "At least one caveat comes from the owning dataset; treat it as "
+                "dataset-level context unless other support narrows it."
+            )
+        elif support.nearby_caveat_links:
+            notes.append(
+                "Nearby caveats are present; check their scopes before treating "
+                "the assertion as clean planning context."
+            )
+        if support.related_route_summaries:
+            notes.append(
+                "Related observations, claims, patterns, or evidence are linked; "
+                "read the strongest routes before treating the change as cleanup."
+            )
+        if any(impact.severity == "attention" for impact in impacts):
+            notes.append(
+                "The staged revision has attention-level impacts; review impact "
+                "messages and linked lore before applying."
+            )
+        if not notes:
+            notes.append(
+                "No caveats, related routes, or attention-level impacts were found "
+                "in this compact panel; inspect full assertion support before "
+                "treating that as broad absence of risk."
+            )
+        return notes
 
     def _assertion_revision_anchors(
         self,

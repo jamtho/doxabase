@@ -347,6 +347,14 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     )
     assert result["assertion_support"]["related_route_summaries"]
     assert result["review_recommendation"].startswith("Review assertion support")
+    panel = result["judgement_panel"]
+    assert panel["proposed_value"]["label"] == "DOUBLE"
+    assert [value["label"] for value in panel["current_values"]] == ["VARCHAR"]
+    assert panel["caveats"]
+    assert any(
+        impact["impact_type"] == "changed_physical_type"
+        for impact in panel["impacts"]
+    )
     assert len(result["additions"]) == 1
     assert len(result["removals"]) == 1
     assert result["staged_revision"]["changed_graphs"] == ["map"]
