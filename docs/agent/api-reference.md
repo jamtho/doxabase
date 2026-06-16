@@ -247,8 +247,9 @@ and `change_kind` (`"add"`, `"remove"`, or `"replace"`). It calls
 links related observations/claims/patterns/evidence and revision anchors, and
 stores an assertion-support summary in the staged revision review note. Use it
 for common assertion changes before reaching for generic `stage_graph_revision`.
-For `replace`, current same-subject/predicate values are staged for removal
-except the requested object, and the requested assertion is staged for addition.
+For `replace`, the generated patch set adds the requested assertion and removes
+current same-subject/predicate values except the requested object. The recorded
+patch sequence shows the exact preview/apply order.
 
 `stage_systematisation()` stages one or more caller-authored RDF framings for a
 modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
