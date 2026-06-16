@@ -402,6 +402,7 @@ class StagedGraphRevisionDescription:
     supporting_patterns: list[ResourceSummary]
     revision_anchors: list[ResourceSummary]
     evidence: list[ResourceSummary]
+    judgement_panel: MapAssertionJudgementPanel | None = None
 
 
 @dataclass(frozen=True)
@@ -1802,7 +1803,7 @@ class DoxaBase:
             lookup_graphs=all_lookup_graphs,
         )
 
-        return StagedGraphRevisionDescription(
+        description = StagedGraphRevisionDescription(
             iri=revision_iri,
             graph=graph,
             label=self._display_label_from_graphs(lookup_graphs, revision_iri),
@@ -1878,6 +1879,10 @@ class DoxaBase:
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
             ),
         )
+        judgement_panel = self._staged_revision_judgement_panel(description)
+        if judgement_panel is not None:
+            description = replace(description, judgement_panel=judgement_panel)
+        return description
 
     def describe_pattern(
         self,
@@ -8963,7 +8968,6 @@ class DoxaBase:
         self,
         description: StagedGraphRevisionDescription,
     ) -> str:
-        judgement_panel = self._staged_revision_judgement_panel(description)
         lines = [
             f"# {description.summary or 'Staged graph revision'}",
             "",
@@ -8992,9 +8996,13 @@ class DoxaBase:
                     description.review_recommendation,
                 ]
             )
-        if judgement_panel is not None:
+        if description.judgement_panel is not None:
             lines.extend(["", "## Judgement Panel", ""])
-            lines.extend(self._map_assertion_judgement_panel_markdown(judgement_panel))
+            lines.extend(
+                self._map_assertion_judgement_panel_markdown(
+                    description.judgement_panel
+                )
+            )
         if description.impacts:
             lines.extend(["", "## Impact Review", ""])
             for impact in description.impacts:

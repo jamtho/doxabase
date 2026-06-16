@@ -365,6 +365,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
         db,
         result["staged_revision"]["revision_iri"],
     )
+    assert description["judgement_panel"]["proposed_value"]["label"] == "DOUBLE"
     assert description["supporting_patterns"]
     assert "https://richcanopy.org/ns/rc#Varchar" not in {
         anchor["iri"] for anchor in description["revision_anchors"]
@@ -406,6 +407,14 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     assert result["staged_revision"]["revision_iri"] not in {
         route["resource_iri"] for route in ais_panel["strongest_routes"]
     }
+    ais_description = describe_staged_revision_tool(
+        db,
+        ais_result["staged_revision"]["revision_iri"],
+    )
+    assert ais_description["judgement_panel"]["value_type_context"][0][
+        "value_type"
+    ]["label"] == "Raw AIS Timestamp String"
+    assert ais_description["judgement_panel"]["strongest_routes"] == []
     ais_export_path = tmp_path / "ais-judgement-review.md"
     export_staged_revision_tool(
         db,

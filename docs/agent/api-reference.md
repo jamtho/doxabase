@@ -285,11 +285,13 @@ supporting observation/claim/pattern/evidence links.
 
 `describe_staged_revision()` returns staged patch payloads, stance, review
 notes/recommendations, validation status, structured validation diagnostics,
-support links, revision anchors, count previews, and deterministic impact review
-context for important consequences of the patch. Impact entries are not an apply
-gate; they make nearby lore visible when a proposal removes a caveat, changes a
-type, changes nullability, changes row/grain signals, changes layout/path
-assertions, or removes documentation from a subject that also has semantic
+support links, revision anchors, count previews, optional `judgement_panel`, and
+deterministic impact review context for important consequences of the patch. The
+judgement panel is present for simple single-assertion `map` changes that still
+replay cleanly. Impact entries are not an apply gate; they make nearby lore
+visible when a proposal removes a caveat, changes a type, changes nullability,
+changes row/grain signals, changes layout/path assertions, or removes
+documentation from a subject that also has semantic
 changes. Caveat impact values include the caveat description, impact, and
 severity inline when those facts are known.
 `export_staged_revision()` writes a Markdown review bundle with diagnostics and

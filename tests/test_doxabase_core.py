@@ -940,6 +940,13 @@ def test_stage_map_assertion_change_packages_support_context(
     description = db.describe_staged_revision(
         staged_change.staged_revision.revision_iri
     )
+    assert description.judgement_panel is not None
+    assert description.judgement_panel.proposed_value is not None
+    assert description.judgement_panel.proposed_value.label == "DOUBLE"
+    assert description.judgement_panel.value_type_context
+    assert description.judgement_panel.value_type_context[0].note.startswith(
+        "Value type Raw price payload requires physical type VARCHAR"
+    )
     assert [patch.operation for patch in description.patches] == [
         RC + "AdditionPatch",
         RC + "RemovalPatch",

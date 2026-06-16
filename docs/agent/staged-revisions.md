@@ -77,10 +77,13 @@ review objects until `doxabase.apply_staged_revision` applies one.
 
 Use `doxabase.describe_staged_revision` to inspect patch payloads, stance,
 validation status, structured validation result diagnostics, support links, and
-before/after count previews. It also returns `impacts`: deterministic review
-context for consequences such as caveat removals, physical/value type changes,
-row-semantics changes, grouping changes, and layout/path changes. Treat impacts
-as a spotlight, not a judge. They exist to show linked observations, claims,
+before/after count previews. For simple single-assertion `map` changes that
+still replay cleanly, it also returns `judgement_panel`, the same compact review
+surface used by `stage_map_assertion_change`. It also returns `impacts`:
+deterministic review context for consequences such as caveat removals,
+physical/value type changes, row-semantics changes, grouping changes, and
+layout/path changes. Treat impacts as a spotlight, not a judge. They exist to
+show linked observations, claims,
 patterns, evidence, and revisions that may explain why a map assertion or caveat
 was there. They do not make the proposal invalid by themselves.
 

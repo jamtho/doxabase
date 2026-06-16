@@ -498,9 +498,17 @@ description.supporting_claims
 description.supporting_patterns
 description.revision_anchors
 description.evidence
+description.judgement_panel
 ```
 
 Use `revision_stance`, not `stance`.
+
+`description.judgement_panel` is present for simple single-assertion `map`
+staged changes that still replay cleanly against current graph counts. It has
+the same shape as `change.judgement_panel` from
+`stage_map_assertion_change`. It is `None` for complex revisions, stale staged
+patches, already-applied staged revisions, or changes that cannot be reduced to
+one subject/predicate assertion.
 
 Each patch in `description.patches` is a `GraphPatchDescription`:
 

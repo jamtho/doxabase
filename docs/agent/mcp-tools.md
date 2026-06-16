@@ -280,7 +280,10 @@ as revision anchors before delegating to the staged systematisation workflow.
 Returns a staged revision with stance, rationale, support links, revision
 anchors, review note/recommendation, patch payloads, before/after count
 previews, validation status, structured SHACL diagnostics such as focus node,
-result path, constraint, and messages, and `impacts` review context. Impact
+result path, constraint, and messages, optional `judgement_panel`, and `impacts`
+review context. `judgement_panel` is present for simple single-assertion `map`
+changes that still replay cleanly; it is absent for complex or stale staged
+revisions. Impact
 entries are deterministic consequence notes, not validation failures. They call
 out changes such as removed caveats, changed physical/value types,
 nullability, row/grain signals, grouping, layout/path assertions, and
