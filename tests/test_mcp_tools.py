@@ -21,6 +21,7 @@ from doxabase.mcp_tools import (
     graph_overview_tool,
     list_docs_tool,
     list_entities_tool,
+    list_graph_revisions_tool,
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
@@ -59,6 +60,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
+    assert "doxabase.list_graph_revisions" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
     assert "doxabase.check_staged_revision_apply" in tool_names
     assert "doxabase.describe_pattern" in tool_names
@@ -369,6 +371,42 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         db,
         iri=restaged["revision_iri"],
     )["status"] == "ready"
+
+
+def test_list_graph_revisions_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    result = list_graph_revisions_tool(
+        db,
+        revision_type="rc:StagedRevision",
+        include_apply_checks=True,
+    )
+
+    assert result["count"] == 1
+    assert result["include_apply_checks"] is True
+    assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
+    assert result["revisions"][0]["iri"] == staged["revision_iri"]
+    assert result["revisions"][0]["application_status"] == "ready"
+    assert result["revisions"][0]["application_decision"] == "review_then_apply"
+    assert result["revisions"][0]["application_can_apply"] is True
 
 
 def test_stage_map_assertion_change_tool_returns_json_like_payload(

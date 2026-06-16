@@ -466,6 +466,45 @@ revision.validation_result_count
 revision.validation_results
 ```
 
+`db.list_graph_revisions(...)` returns `GraphRevisionList`:
+
+```python
+revisions.revisions
+revisions.count
+revisions.limit
+revisions.offset
+revisions.revision_type
+revisions.include_apply_checks
+```
+
+Each item in `revisions.revisions` has:
+
+```python
+item.iri
+item.summary
+item.revision_type
+item.revision_type_label
+item.revision_stance
+item.revision_stance_label
+item.created_at
+item.changed_graphs
+item.validation_scope
+item.validation_conforms
+item.validation_result_count
+item.applied_by
+item.applies_staged_revision
+item.alternative_to
+item.restaged_from
+item.application_status
+item.application_decision
+item.application_can_apply
+```
+
+`application_*` fields are only populated when `include_apply_checks=True` and
+the revision has staged patch payloads. Use `list_graph_revisions` to discover
+reviewable or applied history before calling `describe_graph_revision` or
+`describe_staged_revision` on a specific IRI.
+
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:
 

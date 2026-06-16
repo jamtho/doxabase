@@ -22,6 +22,7 @@ Current implementation status:
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
 - `describe_pattern()` for compact handoff context around pattern syntheses.
+- `list_graph_revisions()` for discovering staged, applied, and history records.
 - `describe_graph_revision()` for compact review of history records.
 - `describe_dataset()` for bounded table schema, row semantics, relationship, caveat, provenance, and linked-pattern context.
 - `describe_context_slice()` for route-explained dataset, pattern, and deep-lore graph slices.

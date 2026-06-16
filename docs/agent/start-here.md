@@ -110,6 +110,9 @@ Do not write ordinary user or project facts to immutable package seed graphs:
   before `apply_staged_revision`.
 - Staged patch blocked by count drift but still semantically useful: use
   `restage_staged_revision`, then check and review the refreshed proposal.
+- Unknown staged/applied/history record: use `list_graph_revisions`, then
+  inspect a specific result with `describe_graph_revision` or
+  `describe_staged_revision`.
 - Meaningful graph change or exported review bundle: use `record_graph_revision`
   so later agents know what changed and why.
 

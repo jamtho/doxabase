@@ -1328,6 +1328,55 @@ def test_restage_staged_revision_rejects_non_conflicted_revision(
         db.restage_staged_revision(staged.revision_iri)
 
 
+def test_list_graph_revisions_summarizes_history_and_apply_status(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+
+    staged_listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        include_apply_checks=True,
+    )
+    assert staged_listing.count == 1
+    assert staged_listing.revisions[0].iri == staged.revision_iri
+    assert staged_listing.revisions[0].revision_type == RC + "StagedRevision"
+    assert staged_listing.revisions[0].revision_type_label == "staged revision"
+    assert staged_listing.revisions[0].application_status == "ready"
+    assert staged_listing.revisions[0].application_can_apply is True
+
+    applied = db.apply_staged_revision(
+        staged.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+    listing = db.list_graph_revisions(include_apply_checks=True)
+
+    assert listing.count == 2
+    by_iri = {item.iri: item for item in listing.revisions}
+    assert by_iri[staged.revision_iri].applied_by == applied.applied_revision_iri
+    assert by_iri[staged.revision_iri].application_status == "already_applied"
+    assert by_iri[applied.applied_revision_iri].applies_staged_revision == (
+        staged.revision_iri
+    )
+    assert by_iri[applied.applied_revision_iri].application_status is None
+    assert listing.revisions[0].iri == applied.applied_revision_iri
+
+
 def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     staged = db.stage_graph_revision(

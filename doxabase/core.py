@@ -394,6 +394,38 @@ class GraphRevisionDescription:
 
 
 @dataclass(frozen=True)
+class GraphRevisionListItem:
+    iri: str
+    summary: str | None
+    revision_type: str | None
+    revision_type_label: str | None
+    revision_stance: str | None
+    revision_stance_label: str | None
+    created_at: str | None
+    changed_graphs: list[str]
+    validation_scope: str | None
+    validation_conforms: bool | None
+    validation_result_count: int | None
+    applied_by: str | None
+    applies_staged_revision: str | None
+    alternative_to: str | None
+    restaged_from: str | None
+    application_status: str | None
+    application_decision: str | None
+    application_can_apply: bool | None
+
+
+@dataclass(frozen=True)
+class GraphRevisionList:
+    revisions: list[GraphRevisionListItem]
+    count: int
+    limit: int
+    offset: int
+    revision_type: str | None
+    include_apply_checks: bool
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionDescription:
     iri: str
     graph: str | None
@@ -1772,6 +1804,144 @@ class DoxaBase:
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
             ),
+        )
+
+    def list_graph_revisions(
+        self,
+        *,
+        revision_type: str | None = None,
+        graph: str | None = "history",
+        include_apply_checks: bool = False,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> GraphRevisionList:
+        self._ensure_non_negative("limit", limit)
+        self._ensure_non_negative("offset", offset)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        ontology_graphs = self._expand_graphs(["ontology"])
+        revision_type_filter = (
+            self.expand_iri(revision_type) if revision_type is not None else None
+        )
+        revision_iris = self._subjects(
+            data_graphs,
+            str(RDF.type),
+            self.expand_iri("rc:GraphRevision"),
+        )
+        items: list[GraphRevisionListItem] = []
+        for revision_iri in revision_iris:
+            item_revision_type = self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:revisionType",
+            )
+            if (
+                revision_type_filter is not None
+                and item_revision_type != revision_type_filter
+            ):
+                continue
+            revision_stance = self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:revisionStance",
+            )
+            application_status: str | None = None
+            application_decision: str | None = None
+            application_can_apply: bool | None = None
+            if include_apply_checks and self._objects(
+                data_graphs,
+                revision_iri,
+                "rc:hasGraphPatch",
+            ):
+                try:
+                    check = self.check_staged_revision_apply(revision_iri)
+                except DoxaBaseError:
+                    application_status = "not_available"
+                    application_decision = "inspect_staged_revision"
+                    application_can_apply = None
+                else:
+                    application_status = check.status
+                    application_decision = check.decision
+                    application_can_apply = check.can_apply
+
+            items.append(
+                GraphRevisionListItem(
+                    iri=revision_iri,
+                    summary=self._first_object(data_graphs, revision_iri, "rc:summary"),
+                    revision_type=item_revision_type,
+                    revision_type_label=(
+                        self._label_from_graphs(ontology_graphs, item_revision_type)
+                        if item_revision_type is not None
+                        else None
+                    ),
+                    revision_stance=revision_stance,
+                    revision_stance_label=self._label_for_resource(revision_stance),
+                    created_at=self._first_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:createdAt",
+                    ),
+                    changed_graphs=self._objects(
+                        data_graphs,
+                        revision_iri,
+                        "rc:changedGraph",
+                    ),
+                    validation_scope=self._first_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:validationScope",
+                    ),
+                    validation_conforms=self._bool_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:validationConforms",
+                    ),
+                    validation_result_count=self._int_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:validationResultCount",
+                    ),
+                    applied_by=self._first_subject(
+                        data_graphs,
+                        "rc:appliesStagedRevision",
+                        revision_iri,
+                    ),
+                    applies_staged_revision=self._first_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:appliesStagedRevision",
+                    ),
+                    alternative_to=self._first_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:alternativeTo",
+                    ),
+                    restaged_from=self._first_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:restagesRevision",
+                    ),
+                    application_status=application_status,
+                    application_decision=application_decision,
+                    application_can_apply=application_can_apply,
+                )
+            )
+
+        items.sort(
+            key=lambda item: (
+                item.created_at or "",
+                item.summary or "",
+                item.iri,
+            ),
+            reverse=True,
+        )
+        sliced_items = items[offset : offset + limit]
+        return GraphRevisionList(
+            revisions=sliced_items,
+            count=len(items),
+            limit=limit,
+            offset=offset,
+            revision_type=revision_type_filter,
+            include_apply_checks=include_apply_checks,
         )
 
     def describe_staged_revision(

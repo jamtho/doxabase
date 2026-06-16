@@ -71,8 +71,9 @@ that distinction explicit for readers.
 include `history` merely because `record_graph_revision()` writes revision
 metadata there.
 
-Use `describe_graph_revision()` when you want a compact review of a revision
-record instead of generic outgoing triples.
+Use `list_graph_revisions()` when you need to discover staged, applied, or
+historical revision records. Use `describe_graph_revision()` when you want a
+compact review of one revision record instead of generic outgoing triples.
 
 ## Revision Types
 

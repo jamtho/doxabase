@@ -67,6 +67,7 @@ Implemented:
 - `search()` for lexical retrieval over literal RDF claims.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
 - `describe_pattern()` for compact handoff context around pattern syntheses.
+- `list_graph_revisions()` for discovering staged, applied, and history records.
 - `describe_graph_revision()` for compact history review over revision records.
 - `describe_dataset()` for bounded table schema, row semantics, relationship,
   caveat, provenance, and linked-pattern context.
@@ -198,33 +199,35 @@ Useful first tool calls for an agent:
    `rc:Pattern`
 11. `doxabase.describe_resource` for typed resources such as `rc:Claim`,
    `rc:Evidence`, or `rc:SourceSpan`
-12. `doxabase.record_observation` for useful point-in-time findings
-13. `doxabase.record_claim_observation` for structured claim observations
-14. `doxabase.record_dataset_profile` for profile outputs that should write an
+12. `doxabase.list_graph_revisions` when you need to find staged, applied, or
+    historical revision records before inspecting a specific one
+13. `doxabase.record_observation` for useful point-in-time findings
+14. `doxabase.record_claim_observation` for structured claim observations
+15. `doxabase.record_dataset_profile` for profile outputs that should write an
     observation and optionally update map/pattern context together
-15. `doxabase.record_column_profile` for column profile outputs that should
+16. `doxabase.record_column_profile` for column profile outputs that should
     write an observation and optionally update map/pattern context together
-16. `doxabase.record_pattern` for syntheses over related findings
-17. `doxabase.stage_graph_revision` for reviewable additions/removals that
+17. `doxabase.record_pattern` for syntheses over related findings
+18. `doxabase.stage_graph_revision` for reviewable additions/removals that
     should not be applied yet, including validation diagnostics for failed
     previews
-18. `doxabase.stage_systematisation` for alternative RDF framings of one
+19. `doxabase.stage_systematisation` for alternative RDF framings of one
     modelling hunch, optionally with shared proposed context
-19. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
+20. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
     should remain reviewable before becoming durable structure
-20. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
-21. `doxabase.check_staged_revision_apply` before turning a staged proposal
+21. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
+22. `doxabase.check_staged_revision_apply` before turning a staged proposal
     into durable graph state
-22. `doxabase.restage_staged_revision` when count drift made a still-useful
+23. `doxabase.restage_staged_revision` when count drift made a still-useful
     staged proposal stale
-23. `doxabase.apply_staged_revision` when a staged proposal should become
+24. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-24. `doxabase.record_map_dataset` and related map helpers for current-best facts
-25. `doxabase.validate_graph` with `scope="all"`
-26. `doxabase.export_trig` when you need a named-graph project review bundle
-27. `doxabase.record_graph_revision` when the bundle/change rationale should be
+25. `doxabase.record_map_dataset` and related map helpers for current-best facts
+26. `doxabase.validate_graph` with `scope="all"`
+27. `doxabase.export_trig` when you need a named-graph project review bundle
+28. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-28. `doxabase.describe_graph_revision` when reviewing a history record
+29. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -236,6 +239,7 @@ Current MCP tools:
 - `doxabase.describe_resource`
 - `doxabase.describe_pattern`
 - `doxabase.describe_graph_revision`
+- `doxabase.list_graph_revisions`
 - `doxabase.describe_staged_revision`
 - `doxabase.describe_dataset`
 - `doxabase.describe_context_slice`

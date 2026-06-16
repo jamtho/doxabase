@@ -50,14 +50,16 @@ compaction, read `start_here` first.
 22. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph
     roles were included for review, and why.
-23. Use `doxabase.check_staged_revision_apply` when a staged proposal is being
+23. Use `doxabase.list_graph_revisions` when you need to discover staged,
+    applied, or historical revision records before choosing one to inspect.
+24. Use `doxabase.check_staged_revision_apply` when a staged proposal is being
     reviewed for application.
-24. Use `doxabase.restage_staged_revision` when the apply check reports a
+25. Use `doxabase.restage_staged_revision` when the apply check reports a
     count-drift conflict and the same patch intent should be replayed against
     current graph counts.
-25. Use `doxabase.apply_staged_revision` when a staged proposal should become
+26. Use `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks.
-26. Use `doxabase.describe_graph_revision` when reviewing a history record, and
+27. Use `doxabase.describe_graph_revision` when reviewing a history record, and
     `doxabase.describe_staged_revision` when reviewing a staged patch proposal.
 
 When reading linked-pattern reasons from `describe_dataset`, scan

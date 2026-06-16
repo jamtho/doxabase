@@ -95,6 +95,25 @@ def describe_graph_revision_tool(
     return asdict(db.describe_graph_revision(iri=iri, graph=graph))
 
 
+def list_graph_revisions_tool(
+    db: DoxaBase,
+    revision_type: str | None = None,
+    graph: str | None = "history",
+    include_apply_checks: bool = False,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    return asdict(
+        db.list_graph_revisions(
+            revision_type=revision_type,
+            graph=graph,
+            include_apply_checks=include_apply_checks,
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+
 def describe_staged_revision_tool(
     db: DoxaBase,
     iri: str,

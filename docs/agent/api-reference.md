@@ -283,6 +283,12 @@ rationale, changed/included graph roles, graph-count snapshots, validation
 result, structured validation diagnostics, export path, revision anchors, and
 supporting observation/claim/pattern/evidence links.
 
+`list_graph_revisions()` returns compact history rows for `rc:GraphRevision`
+resources, newest first. Each row includes summary, revision type/stance,
+created time, changed graphs, validation headline, relation links such as
+`applied_by`, `applies_staged_revision`, `alternative_to`, and `restaged_from`,
+plus optional staged apply-check status when `include_apply_checks=True`.
+
 `describe_staged_revision()` returns staged patch payloads, stance, review
 notes/recommendations, validation status, structured validation diagnostics,
 support links, revision anchors, count previews, optional `judgement_panel`, and

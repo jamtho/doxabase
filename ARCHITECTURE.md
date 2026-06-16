@@ -100,6 +100,7 @@ DoxaBase.stage_pattern_promotion(patterns, framings, summary=None, ...)
 DoxaBase.check_staged_revision_apply(iri, ...)
 DoxaBase.restage_staged_revision(iri, ...)
 DoxaBase.apply_staged_revision(iri, ...)
+DoxaBase.list_graph_revisions(...)
 DoxaBase.describe_staged_revision(iri)
 DoxaBase.export_staged_revision(iri, path)
 DoxaBase.validate_graph(scope="map", limit_results=100)
@@ -180,6 +181,7 @@ Current MCP tools:
 - `doxabase.describe_resource`
 - `doxabase.describe_pattern`
 - `doxabase.describe_graph_revision`
+- `doxabase.list_graph_revisions`
 - `doxabase.describe_staged_revision`
 - `doxabase.describe_dataset`
 - `doxabase.describe_context_slice`

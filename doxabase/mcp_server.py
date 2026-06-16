@@ -26,6 +26,7 @@ from doxabase.mcp_tools import (
     import_trig_tool,
     list_docs_tool,
     list_entities_tool,
+    list_graph_revisions_tool,
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
@@ -53,7 +54,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -166,6 +167,25 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return compact revision metadata, snapshots, and support links."""
 
         return describe_graph_revision_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.list_graph_revisions")
+    def list_graph_revisions(
+        revision_type: str | None = None,
+        graph: str | None = "history",
+        include_apply_checks: bool = False,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """List graph revisions, optionally with staged apply-check status."""
+
+        return list_graph_revisions_tool(
+            db,
+            revision_type=revision_type,
+            graph=graph,
+            include_apply_checks=include_apply_checks,
+            limit=limit,
+            offset=offset,
+        )
 
     @server.tool(name="doxabase.describe_staged_revision")
     def describe_staged_revision(

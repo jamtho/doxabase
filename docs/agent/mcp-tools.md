@@ -66,6 +66,14 @@ Returns compact revision context for one `rc:GraphRevision`: summary,
 rationale, revision type, changed graph roles, included review/export graph
 roles, validation result, export path, graph-count snapshots, and support links.
 
+`doxabase.list_graph_revisions`
+
+Lists `rc:GraphRevision` resources from `history`, newest first. Use
+`revision_type` such as `rc:StagedRevision` to narrow the list. Set
+`include_apply_checks=True` when you need staged proposal status without already
+knowing which proposals are ready, stale, or already applied. Apply checks are
+only populated for revisions with graph patch payloads.
+
 `doxabase.search`
 
 Lexically searches literal RDF claims and returns matched resources with graph, IRI, label, types, predicate, matched text, and snippet. Use it to rediscover caveats, observations, evidence, labels, path templates, source notes, and column names.
