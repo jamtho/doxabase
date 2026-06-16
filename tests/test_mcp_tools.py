@@ -36,6 +36,7 @@ from doxabase.mcp_tools import (
     record_graph_revision_tool,
     record_observation_tool,
     record_pattern_tool,
+    restage_staged_revision_tool,
     search_tool,
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
@@ -81,6 +82,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.export_trig" in tool_names
     assert "doxabase.record_graph_revision" in tool_names
     assert "doxabase.stage_graph_revision" in tool_names
+    assert "doxabase.restage_staged_revision" in tool_names
     assert "doxabase.stage_map_assertion_change" in tool_names
     assert "doxabase.stage_systematisation" in tool_names
     assert "doxabase.stage_pattern_promotion" in tool_names
@@ -320,6 +322,52 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert "exploratory hunch" in export_path.read_text()
 
 
+def test_restage_staged_revision_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+    stale_check = check_staged_revision_apply_tool(db, iri=staged["revision_iri"])
+    assert stale_check["status"] == "conflict"
+    assert stale_check["validation_skipped_reason"] == "conflicts_present"
+    assert stale_check["suggested_next_actions"][0]["tool_name"] == (
+        "describe_staged_revision"
+    )
+    assert stale_check["suggested_next_actions"][-1]["tool_name"] == (
+        "restage_staged_revision"
+    )
+
+    restaged = restage_staged_revision_tool(db, iri=staged["revision_iri"])
+
+    assert restaged["revision_iri"] != staged["revision_iri"]
+    assert restaged["patches"][0]["before_triple_count"] == db.triple_count("map")
+    description = describe_staged_revision_tool(db, restaged["revision_iri"])
+    assert description["restaged_from"]["iri"] == staged["revision_iri"]
+    assert check_staged_revision_apply_tool(
+        db,
+        iri=restaged["revision_iri"],
+    )["status"] == "ready"
+
+
 def test_stage_map_assertion_change_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:
@@ -458,6 +506,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert check["decision"] == "review_then_apply"
     assert check["review_recommended"] is True
     assert check["blocking_reasons"] == []
+    assert check["validation_skipped_reason"] is None
     assert "proposal is still desired" in check["recommended_resolution"]
     assert check["summary"] == (
         "Ready to apply 1 patch(es) across map: +3 triple(s), -0 triple(s)."
@@ -465,9 +514,12 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert check["conflicts"] == []
     assert check["patch_checks"][0]["preview_triple_count"] == 3
     assert check["suggested_next_actions"][0]["tool_name"] == (
+        "describe_staged_revision"
+    )
+    assert check["suggested_next_calls"][0].startswith("describe_staged_revision(")
+    assert check["suggested_next_actions"][-1]["tool_name"] == (
         "apply_staged_revision"
     )
-    assert check["suggested_next_calls"][0].startswith("apply_staged_revision(")
 
     result = apply_staged_revision_tool(db, iri=staged["revision_iri"])
 

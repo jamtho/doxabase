@@ -281,7 +281,9 @@ Returns a staged revision with stance, rationale, support links, revision
 anchors, review note/recommendation, patch payloads, before/after count
 previews, validation status, structured SHACL diagnostics such as focus node,
 result path, constraint, and messages, optional `judgement_panel`, and `impacts`
-review context. `judgement_panel` is present for simple single-assertion `map`
+review context. `restaged_from` is present when this staged revision was created
+by replaying an older stale staged proposal against current graph counts.
+`judgement_panel` is present for simple single-assertion `map`
 changes that still replay cleanly; it is absent for complex or stale staged
 revisions. Impact
 entries are deterministic consequence notes, not validation failures. They call
@@ -297,13 +299,29 @@ Previews whether one staged revision can apply without mutating graph state.
 Returns `can_apply`, already-applied state, per-patch current/preview counts,
 count-drift conflicts, preview validation diagnostics, `status`, `decision`,
 `summary`, `review_recommended`, `blocking_reasons`,
-`recommended_resolution`, and structured `suggested_next_actions`. Read
-`status`, `decision`, and `summary` first: `ready` means the staged patch replays
+`recommended_resolution`, `validation_skipped_reason`, and structured
+`suggested_next_actions`. Read `status`, `decision`, and `summary` first:
+`ready` means the staged patch replays
 and validates, with decision `review_then_apply`; `conflict` usually means graph
 counts drifted since staging; `validation_failed` means patch counts replay but
 SHACL diagnostics need inspection; `already_applied` means an applied revision
-event exists. Use it before `doxabase.apply_staged_revision` when an agent or
-human wants an explicit read-only check.
+event exists. When validation did not run, `validation_skipped_reason` explains
+why. Suggested actions are ordered review-first, so inspect/export suggestions
+come before mutation calls such as apply or restage. Use it before
+`doxabase.apply_staged_revision` when an agent or human wants an explicit
+read-only check.
+
+`doxabase.restage_staged_revision`
+
+Creates a fresh staged revision from a conflicted staged revision's patch
+payloads, rerunning preview counts and validation against the current graph
+state. Use it for the count-drift branch from
+`check_staged_revision_apply`, especially when an unrelated graph edit made an
+otherwise still-useful proposal stale. The new staged revision records
+`rc:restagesRevision` / `restaged_from` back to the stale proposal and preserves
+support links, anchors, stance, review notes, and patch payloads. It does not
+merge semantic conflicts, repair SHACL failures, or apply the result; review the
+new staged revision and run `check_staged_revision_apply` again.
 
 `doxabase.apply_staged_revision`
 

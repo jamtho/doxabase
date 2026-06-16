@@ -1133,6 +1133,11 @@ rc:alternativeTo a rdf:Property ;
     rdfs:range rc:GraphRevision ;
     rdfs:comment "Links a staged revision to an alternative staged or historical revision it competes with, refines, or supersedes." .
 
+rc:restagesRevision a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range rc:GraphRevision ;
+    rdfs:comment "Links a staged revision to an earlier staged revision whose patch intent it replays against a newer graph state." .
+
 rc:appliesStagedRevision a rdf:Property ;
     rdfs:domain rc:GraphRevision ;
     rdfs:range rc:GraphRevision ;

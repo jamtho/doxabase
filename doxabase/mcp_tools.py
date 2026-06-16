@@ -792,6 +792,26 @@ def stage_graph_revision_tool(
     return asdict(result)
 
 
+def restage_staged_revision_tool(
+    db: DoxaBase,
+    iri: str,
+    summary: str | None = None,
+    rationale: str | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    validation_scope: str | None = None,
+) -> dict[str, Any]:
+    result = db.restage_staged_revision(
+        iri=iri,
+        summary=summary,
+        rationale=rationale,
+        created_at=created_at,
+        created_by=created_by,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return asdict(result)
+
+
 def stage_map_assertion_change_tool(
     db: DoxaBase,
     subject: str,

@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1104
+    assert graphs["base_ontology"].triple_count == 1108
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1112
+    assert graphs["base_shapes"].triple_count == 1118
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -1021,17 +1021,19 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert check.conflicts == []
     assert check.validation_conforms is True
+    assert check.validation_skipped_reason is None
     assert check.patches_checked == 1
     assert check.triples_to_add == 3
     assert check.triples_to_remove == 0
     assert check.patch_checks[0].current_triple_count == 0
     assert check.patch_checks[0].preview_triple_count == 3
-    assert check.suggested_next_actions[0].tool_name == "apply_staged_revision"
+    assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
     assert check.suggested_next_actions[0].mcp_tool_name == (
-        "doxabase.apply_staged_revision"
+        "doxabase.describe_staged_revision"
     )
     assert check.suggested_next_actions[0].arguments == {"iri": staged.revision_iri}
-    assert check.suggested_next_calls[0].startswith("apply_staged_revision(")
+    assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
+    assert check.suggested_next_actions[-1].tool_name == "apply_staged_revision"
 
     result = db.apply_staged_revision(staged.revision_iri)
 
@@ -1068,6 +1070,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_check.decision == "inspect_applied_revision"
     assert applied_check.review_recommended is False
     assert applied_check.blocking_reasons == ["already_applied"]
+    assert applied_check.validation_skipped_reason == "already_applied"
     assert applied_check.recommended_resolution is not None
     assert "do not apply" in applied_check.recommended_resolution
     assert applied_check.summary == (
@@ -1224,16 +1227,98 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "Restage the proposal" in check.recommended_resolution
     assert check.summary.startswith("Blocked by 1 conflict(s); first conflict:")
     assert check.validation_conforms is None
+    assert check.validation_skipped_reason == "conflicts_present"
     assert len(check.conflicts) == 1
     assert "expected 0 triples before patch" in check.conflicts[0]
     assert check.patch_checks[0].can_apply is False
     assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
+    assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
+    assert check.suggested_next_actions[-1].tool_name == "restage_staged_revision"
 
     with pytest.raises(DoxaBaseError, match="Staged revision cannot be applied"):
         db.apply_staged_revision(staged.revision_iri)
 
     with pytest.raises(DoxaBaseError, match="Messages"):
         db.describe_dataset("https://example.test/project#Messages")
+
+
+def test_restage_staged_revision_refreshes_counts_after_conflict(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        review_note="Original note should travel with the refreshed proposal.",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+    stale_check = db.check_staged_revision_apply(staged.revision_iri)
+    assert stale_check.status == "conflict"
+
+    restaged = db.restage_staged_revision(staged.revision_iri)
+
+    assert restaged.revision_iri != staged.revision_iri
+    assert restaged.patches[0].before_triple_count == db.triple_count("map")
+    assert restaged.patches[0].after_triple_count == db.triple_count("map") + 1
+    restaged_description = db.describe_staged_revision(restaged.revision_iri)
+    assert restaged_description.restaged_from is not None
+    assert restaged_description.restaged_from.iri == staged.revision_iri
+    assert restaged_description.review_note == (
+        "Original note should travel with the refreshed proposal."
+    )
+    assert "Restaged stale revision" in (restaged_description.rationale or "")
+
+    fresh_check = db.check_staged_revision_apply(restaged.revision_iri)
+    assert fresh_check.can_apply is True
+    assert fresh_check.status == "ready"
+    assert fresh_check.blocking_reasons == []
+
+    stale_check_after = db.check_staged_revision_apply(staged.revision_iri)
+    assert stale_check_after.status == "conflict"
+
+    result = db.apply_staged_revision(restaged.revision_iri)
+    assert result.triples_added == 1
+    assert db.describe_dataset("https://example.test/project#Messages").iri == (
+        "https://example.test/project#Messages"
+    )
+
+
+def test_restage_staged_revision_rejects_non_conflicted_revision(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    with pytest.raises(DoxaBaseError, match="current status is 'ready'"):
+        db.restage_staged_revision(staged.revision_iri)
 
 
 def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
@@ -1266,6 +1351,7 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     assert "validation_results" in check.recommended_resolution
     assert check.conflicts == []
     assert check.validation_conforms is False
+    assert check.validation_skipped_reason is None
     assert check.validation_results
     assert check.summary == (
         "Patch counts replay cleanly, but preview validation failed with "

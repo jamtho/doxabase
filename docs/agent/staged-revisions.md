@@ -239,11 +239,19 @@ first. Current statuses are `ready`, `already_applied`, `conflict`,
 `inspect_staged_revision`. `review_recommended=True` on `ready` checks means the
 proposal replays and validates, but still needs judgement before application.
 Use `blocking_reasons` and `recommended_resolution` to distinguish count drift
-from validation failure or already-applied state.
+from validation failure or already-applied state. When `validation_conforms` is
+`None`, `validation_skipped_reason` explains why validation did not run.
+Suggested actions are ordered review-first; apply or restage calls come after
+inspection/export suggestions.
 
 This is not a full merge system. A harmless unrelated graph change can still
 show up as a conflict because the first guard is count-based. In that case,
-restage the patch against current graph state rather than forcing it through.
+call `doxabase.restage_staged_revision` to copy the stale proposal into a fresh
+staged revision with current before/after counts, then review and check the new
+revision before applying. The refreshed revision records `rc:restagesRevision`
+back to the stale proposal. Restaging is for count-drift conflicts; validation
+failures still need graph repair, and already-applied revisions should be
+inspected rather than replayed.
 
 ## What Gets Recorded
 
@@ -265,6 +273,11 @@ Patch entries record:
 Use `alternative_to` when recording competing staged systematisations. Keeping
 alternatives side by side is expected; staged revisions are cheap memory for
 creative exploration, not a forced march toward one approved answer.
+
+Use `restaged_from` / `rc:restagesRevision` when a staged revision is the same
+patch intent replayed against a newer graph state. This is different from
+`alternative_to`: alternatives compete as different framings, while restaging
+keeps the older stale proposal as provenance for the refreshed proposal.
 
 ## Validation Notes
 
@@ -338,6 +351,6 @@ templates are legitimate.
 ## Limits
 
 DoxaBase can apply one staged revision with conservative count-based conflict
-checks. It does not yet support rich conflict diagnostics, rebasing, approval
-state machines, or durable graph version storage. Restage proposals when the
-target graph has drifted.
+checks and can restage a stale proposal when the target graph has drifted. It
+does not yet support rich semantic merge diagnostics, rebasing, approval state
+machines, or durable graph version storage.

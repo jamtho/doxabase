@@ -293,7 +293,9 @@ visible when a proposal removes a caveat, changes a type, changes nullability,
 changes row/grain signals, changes layout/path assertions, or removes
 documentation from a subject that also has semantic
 changes. Caveat impact values include the caveat description, impact, and
-severity inline when those facts are known.
+severity inline when those facts are known. `restaged_from` is present when the
+staged revision was created by replaying an older stale proposal against current
+graph counts.
 `export_staged_revision()` writes a Markdown review bundle with diagnostics and
 impact review before patch payloads. For simple single-assertion `map` changes
 that still replay cleanly, it reconstructs a `Judgement Panel` section so the
@@ -307,9 +309,19 @@ needs an agent-authored synthesis at the top of the artifact.
 applied without mutating graph state. It reports already-applied state,
 per-patch count drift, preview triple counts, validation status, and a
 top-level `can_apply` flag. Read `status` and `summary` first; use
-`decision`, `blocking_reasons`, `recommended_resolution`, and
-`suggested_next_actions` to decide whether to review then apply, inspect an
-applied event, review validation diagnostics, or restage after conflicts.
+`decision`, `blocking_reasons`, `validation_skipped_reason`,
+`recommended_resolution`, and `suggested_next_actions` to decide whether to
+review then apply, inspect an applied event, review validation diagnostics, or
+restage after conflicts. Suggested actions are ordered review-first; mutation
+calls come after inspection/export suggestions.
+
+`restage_staged_revision()` creates a fresh staged revision from a conflicted
+staged revision's existing patch payloads, recomputing before/after counts and
+validation against the current graph state. It records `rc:restagesRevision`
+back to the stale proposal and preserves support links, anchors, stance, review
+notes, and review recommendations. Use it for count-drift conflicts; it does not
+merge semantic conflicts, repair invalid RDF proposals, or apply the refreshed
+revision.
 
 `apply_staged_revision()` applies one staged revision after count-based conflict
 checks and preview validation. It rejects already-applied staged revisions,

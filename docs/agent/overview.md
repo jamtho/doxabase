@@ -46,6 +46,8 @@ Current implementation status:
 - `stage_pattern_promotion()` for staging caller-authored graph changes backed
   by existing patterns and their support links.
 - `check_staged_revision_apply()` for read-only application diagnostics.
+- `restage_staged_revision()` for refreshing stale staged proposals after
+  count-drift conflicts.
 - `apply_staged_revision()` for applying one staged revision after count-based
   conflict checks and preview validation.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
@@ -57,7 +59,8 @@ Current implementation status:
 
 Important V1 limits:
 
-- No rich staged revision rebase/conflict workflow or graph version storage yet.
+- No rich staged revision semantic merge/rebase workflow or graph version
+  storage yet.
 - No full SPARQL endpoint.
 - No direct query generation or execution helpers yet.
 - No embedded LLM, semantic search, or embedding index.

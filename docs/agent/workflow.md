@@ -52,9 +52,12 @@ compaction, read `start_here` first.
     roles were included for review, and why.
 23. Use `doxabase.check_staged_revision_apply` when a staged proposal is being
     reviewed for application.
-24. Use `doxabase.apply_staged_revision` when a staged proposal should become
+24. Use `doxabase.restage_staged_revision` when the apply check reports a
+    count-drift conflict and the same patch intent should be replayed against
+    current graph counts.
+25. Use `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks.
-25. Use `doxabase.describe_graph_revision` when reviewing a history record, and
+26. Use `doxabase.describe_graph_revision` when reviewing a history record, and
     `doxabase.describe_staged_revision` when reviewing a staged patch proposal.
 
 When reading linked-pattern reasons from `describe_dataset`, scan

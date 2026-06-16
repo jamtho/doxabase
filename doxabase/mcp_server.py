@@ -41,6 +41,7 @@ from doxabase.mcp_tools import (
     record_graph_revision_tool,
     record_observation_tool,
     record_pattern_tool,
+    restage_staged_revision_tool,
     search_tool,
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
@@ -52,7 +53,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/apply/review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -842,6 +843,27 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             alternative_to=alternative_to,
             review_note=review_note,
             review_recommendation=review_recommendation,
+            validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.restage_staged_revision")
+    def restage_staged_revision(
+        iri: str,
+        summary: str | None = None,
+        rationale: str | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        validation_scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Restage a conflicted staged revision against current graph counts."""
+
+        return restage_staged_revision_tool(
+            db,
+            iri=iri,
+            summary=summary,
+            rationale=rationale,
+            created_at=created_at,
+            created_by=created_by,
             validation_scope=validation_scope,
         )
 

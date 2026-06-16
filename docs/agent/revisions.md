@@ -106,6 +106,8 @@ Use `describe_staged_revision()` to inspect the proposal and
 ## Limits
 
 DoxaBase can apply staged patch proposals with conservative count-based conflict
-checks, but it does not yet provide rich conflict diagnostics, rebasing, approval
-workflows, or durable graph versions. The revision helpers preserve rationale
-and review context now, while leaving fuller slice replacement for later.
+checks and can restage a stale proposal against current graph counts when
+unrelated drift made it obsolete. It does not yet provide rich semantic merge
+diagnostics, approval workflows, or durable graph versions. The revision helpers
+preserve rationale and review context now, while leaving fuller slice
+replacement for later.

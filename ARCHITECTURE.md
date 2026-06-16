@@ -98,6 +98,7 @@ DoxaBase.stage_graph_revision(summary, rationale, additions=None, removals=None,
 DoxaBase.stage_systematisation(summary, intent, framings, anchors=None, shared_additions=None, ...)
 DoxaBase.stage_pattern_promotion(patterns, framings, summary=None, ...)
 DoxaBase.check_staged_revision_apply(iri, ...)
+DoxaBase.restage_staged_revision(iri, ...)
 DoxaBase.apply_staged_revision(iri, ...)
 DoxaBase.describe_staged_revision(iri)
 DoxaBase.export_staged_revision(iri, path)
@@ -202,6 +203,7 @@ Current MCP tools:
 - `doxabase.stage_systematisation`
 - `doxabase.stage_pattern_promotion`
 - `doxabase.check_staged_revision_apply`
+- `doxabase.restage_staged_revision`
 - `doxabase.apply_staged_revision`
 - `doxabase.export_staged_revision`
 - `doxabase.export_staged_revisions`
@@ -283,8 +285,8 @@ uv run python tools/validate_rdf.py
 
 Expected state at the time of writing:
 
-- `rc_core.ttl`: 1104 triples.
-- `rc_shapes.ttl`: 1112 triples.
+- `rc_core.ttl`: 1108 triples.
+- `rc_shapes.ttl`: 1118 triples.
 - `ais.trig`: 325 quads.
 - `polymarket.trig`: 475 quads.
 - All fixtures conform to base SHACL shapes.
@@ -293,9 +295,10 @@ Expected state at the time of writing:
 
 - Storage currently stores term strings directly rather than using interned term IDs.
 - Blank node IDs are imported as-is; this is sufficient for current fixtures but not a robust merge strategy.
-- Staged revisions can be applied with conservative count-based conflict
-  checks, but rebase, rich conflict resolution, and durable graph version
-  storage are not implemented yet.
+- Staged revisions can be applied with conservative count-based conflict checks
+  and stale proposals can be restaged against current counts, but rebase, rich
+  semantic conflict resolution, and durable graph version storage are not
+  implemented yet.
 - Context slices are route-explained first passes, not a complete staged review
   or proof-of-closure mechanism.
 - Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.
@@ -308,7 +311,7 @@ Expected state at the time of writing:
 
 Recommended next implementation steps:
 
-1. Add fuller staged conflict/rebase/version workflows.
+1. Add fuller staged semantic conflict/rebase/version workflows.
 2. Add richer profile metrics and profiling helpers.
 3. Add query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.

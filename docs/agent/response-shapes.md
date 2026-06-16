@@ -482,6 +482,7 @@ description.rationale
 description.review_note
 description.review_recommendation
 description.alternative_to
+description.restaged_from
 description.changed_graphs
 description.included_graphs
 description.created_at
@@ -502,6 +503,11 @@ description.judgement_panel
 ```
 
 Use `revision_stance`, not `stance`.
+
+`description.alternative_to` means this staged revision competes with or refines
+another revision. `description.restaged_from` means this staged revision replayed
+an older stale proposal against current graph counts; it is provenance for a
+count-drift repair, not a competing framing.
 
 `description.judgement_panel` is present for simple single-assertion `map`
 staged changes that still replay cleanly against current graph counts. It has
@@ -588,6 +594,7 @@ check.patch_checks
 check.conflicts
 check.validation_scope
 check.validation_conforms
+check.validation_skipped_reason
 check.validation_result_count
 check.validation_results
 check.patches_checked
@@ -604,9 +611,14 @@ Read `status` and `summary` first. Current statuses are `ready`,
 `inspect_validation_results`. `review_recommended=True` means the patch replays
 and validates, but the caller should still review the staged revision before
 applying. `blocking_reasons` uses compact values such as `target_count_drift`,
-`validation_failed`, or `already_applied`. `suggested_next_actions` uses the
-same structured action shape as assertion support: tool name, MCP tool name,
-arguments, reason, and display call string.
+`validation_failed`, or `already_applied`. When `validation_conforms is None`,
+read `validation_skipped_reason` before guessing why validation did not run;
+common values are `conflicts_present` and `already_applied`.
+`suggested_next_actions` uses the same structured action shape as assertion
+support: tool name, MCP tool name, arguments, reason, and display call string.
+For staged apply checks, actions are ordered review-first; mutating actions such
+as `apply_staged_revision` and `restage_staged_revision` come after inspection
+or export suggestions.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

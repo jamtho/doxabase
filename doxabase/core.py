@@ -229,6 +229,7 @@ class StagedRevisionApplyCheck:
     conflicts: list[str]
     validation_scope: str
     validation_conforms: bool | None
+    validation_skipped_reason: str | None
     validation_result_count: int | None
     validation_results: list[ValidationDiagnostic]
     patches_checked: int
@@ -394,6 +395,7 @@ class StagedGraphRevisionDescription:
     review_note: str | None
     review_recommendation: str | None
     alternative_to: ResourceSummary | None
+    restaged_from: ResourceSummary | None
     changed_graphs: list[str]
     included_graphs: list[str]
     created_at: str | None
@@ -1795,6 +1797,11 @@ class DoxaBase:
             revision_iri,
             "rc:alternativeTo",
         )
+        restaged_from_iri = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:restagesRevision",
+        )
         all_lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
         snapshots = self._graph_revision_snapshots(revision_iri, data_graphs)
         included_graphs = self._objects(data_graphs, revision_iri, "rc:includedGraph")
@@ -1834,6 +1841,11 @@ class DoxaBase:
             alternative_to=(
                 self._resource_summary(all_lookup_graphs, alternative_to_iri)
                 if alternative_to_iri is not None
+                else None
+            ),
+            restaged_from=(
+                self._resource_summary(all_lookup_graphs, restaged_from_iri)
+                if restaged_from_iri is not None
                 else None
             ),
             changed_graphs=self._objects(data_graphs, revision_iri, "rc:changedGraph"),
@@ -6049,6 +6061,147 @@ class DoxaBase:
             validation_results=validation.results,
         )
 
+    def restage_staged_revision(
+        self,
+        iri: str,
+        *,
+        summary: str | None = None,
+        rationale: str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+    ) -> StagedGraphRevisionRecord:
+        source = self.describe_staged_revision(iri)
+        check = self.check_staged_revision_apply(
+            source.iri,
+            validation_scope=validation_scope,
+        )
+        if check.status != "conflict":
+            raise DoxaBaseError(
+                "restage_staged_revision only restages conflicted staged "
+                f"revisions; current status is '{check.status}'."
+            )
+
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        additions: list[dict[str, str]] = []
+        removals: list[dict[str, str]] = []
+        for patch in source.patches:
+            target_graph = self._required_staged_patch_field(
+                patch,
+                "target_graph",
+                patch.target_graph,
+            )
+            operation = self._required_staged_patch_field(
+                patch,
+                "operation",
+                patch.operation,
+            )
+            patch_format = self._required_staged_patch_field(
+                patch,
+                "format",
+                patch.format,
+            )
+            content = self._required_staged_patch_field(
+                patch,
+                "content",
+                patch.content,
+            )
+            patch_role = patch.patch_role or "rc:FramingPatch"
+            spec = {
+                "graph": target_graph,
+                "format": patch_format,
+                "content": content,
+                "patch_role": patch_role,
+            }
+            if operation == addition_operation:
+                additions.append(spec)
+            elif operation == removal_operation:
+                removals.append(spec)
+            else:
+                raise DoxaBaseError(
+                    f"Cannot restage unsupported patch operation '{operation}'"
+                )
+
+        source_summary = source.summary or source.iri
+        restage_summary = (
+            summary.strip()
+            if summary is not None and summary.strip()
+            else f"Restage stale revision: {source_summary}"
+        )
+        restage_rationale = (
+            rationale.strip()
+            if rationale is not None and rationale.strip()
+            else self._restage_rationale(source, check)
+        )
+        staged = self.stage_graph_revision(
+            summary=restage_summary,
+            rationale=restage_rationale,
+            additions=additions,
+            removals=removals,
+            stance=source.revision_stance or "rc:CandidateRevision",
+            revision_type=source.revision_type or "rc:StagedRevision",
+            included_graphs=source.included_graphs,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=[
+                item.iri for item in source.supporting_observations
+            ],
+            supporting_claims=[item.iri for item in source.supporting_claims],
+            supporting_patterns=[item.iri for item in source.supporting_patterns],
+            revision_anchors=[item.iri for item in source.revision_anchors],
+            evidence=[item.iri for item in source.evidence],
+            alternative_to=(
+                source.alternative_to.iri if source.alternative_to is not None else None
+            ),
+            review_note=source.review_note,
+            review_recommendation=source.review_recommendation,
+            validation_scope=validation_scope or source.validation_scope or "all",
+        )
+        metadata = Graph()
+        self._bind_prefixes(metadata)
+        metadata.add(
+            (
+                URIRef(staged.revision_iri),
+                URIRef(self.expand_iri("rc:restagesRevision")),
+                URIRef(source.iri),
+            )
+        )
+        extra_triples = self._insert_graph("history", metadata)
+        return replace(staged, triples=staged.triples + extra_triples)
+
+    def _restage_rationale(
+        self,
+        source: StagedGraphRevisionDescription,
+        check: StagedRevisionApplyCheck,
+    ) -> str:
+        lines = [
+            f"Restaged stale revision {source.iri} against current graph state.",
+            "",
+            "Apply-check status before restaging:",
+            f"- status: {check.status}",
+            f"- decision: {check.decision}",
+            f"- blocking reasons: {', '.join(check.blocking_reasons) or '(none)'}",
+            f"- summary: {check.summary}",
+        ]
+        if check.recommended_resolution:
+            lines.append(f"- recommended resolution: {check.recommended_resolution}")
+        lines.extend(
+            [
+                "",
+                "Original staged rationale:",
+                source.rationale or "(No original rationale recorded.)",
+            ]
+        )
+        return "\n".join(lines)
+
     def stage_systematisation(
         self,
         summary: str,
@@ -6604,6 +6757,9 @@ class DoxaBase:
                 ],
                 validation_scope=validation_scope_value,
                 validation_conforms=None,
+                validation_skipped_reason=(
+                    self._staged_apply_check_validation_skipped_reason(status)
+                ),
                 validation_result_count=None,
                 validation_results=[],
                 patches_checked=0,
@@ -6770,6 +6926,9 @@ class DoxaBase:
             conflicts=conflicts,
             validation_scope=validation_scope_value,
             validation_conforms=validation_conforms,
+            validation_skipped_reason=(
+                self._staged_apply_check_validation_skipped_reason(status)
+            ),
             validation_result_count=validation_result_count,
             validation_results=validation_results,
             patches_checked=len(patch_checks),
@@ -6847,6 +7006,17 @@ class DoxaBase:
 
     def _staged_apply_check_review_recommended(self, status: str) -> bool:
         return status == "ready"
+
+    def _staged_apply_check_validation_skipped_reason(
+        self,
+        status: str,
+    ) -> str | None:
+        reasons = {
+            "already_applied": "already_applied",
+            "conflict": "conflicts_present",
+            "not_ready": "not_ready",
+        }
+        return reasons.get(status)
 
     def _staged_apply_check_blocking_reasons(
         self,
@@ -6927,17 +7097,25 @@ class DoxaBase:
 
         if status == "ready":
             add_action(
-                "apply_staged_revision",
+                "describe_staged_revision",
                 {"iri": staged_revision_iri},
                 (
-                    "Apply this staged revision after human/agent review of "
-                    "patches, validation, impacts, and any judgement panel."
+                    "Review patches, validation, impacts, support, and any "
+                    "judgement panel before deciding to apply."
                 ),
             )
             add_action(
                 "export_staged_revision",
                 {"iri": staged_revision_iri, "path": "/tmp/staged-revision-review.md"},
                 "Write a Markdown review bundle before applying if review is needed.",
+            )
+            add_action(
+                "apply_staged_revision",
+                {"iri": staged_revision_iri},
+                (
+                    "Apply this staged revision after review confirms the "
+                    "proposal is still desired."
+                ),
             )
         elif status == "already_applied" and already_applied_by is not None:
             add_action(
@@ -6958,6 +7136,14 @@ class DoxaBase:
                 "export_staged_revision",
                 {"iri": staged_revision_iri, "path": "/tmp/staged-revision-conflict.md"},
                 "Write a review bundle that captures the stale staged proposal.",
+            )
+            add_action(
+                "restage_staged_revision",
+                {"iri": staged_revision_iri},
+                (
+                    "Create a refreshed staged revision against current graph "
+                    "counts if review confirms the patch intent is still desired."
+                ),
             )
         elif status == "validation_failed":
             add_action(
@@ -9288,6 +9474,18 @@ class DoxaBase:
                     (
                         f"- {description.alternative_to.label or description.alternative_to.iri} "
                         f"(`{description.alternative_to.iri}`)"
+                    ),
+                ]
+            )
+        if description.restaged_from is not None:
+            lines.extend(
+                [
+                    "",
+                    "## Restaged From",
+                    "",
+                    (
+                        f"- {description.restaged_from.label or description.restaged_from.iri} "
+                        f"(`{description.restaged_from.iri}`)"
                     ),
                 ]
             )
