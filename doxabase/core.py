@@ -218,7 +218,11 @@ class StagedRevisionApplyCheck:
     staged_revision_iri: str
     can_apply: bool
     status: str
+    decision: str
     summary: str
+    review_recommended: bool
+    blocking_reasons: list[str]
+    recommended_resolution: str | None
     already_applied_by: str | None
     changed_graphs: list[str]
     patch_checks: list[StagedPatchApplyCheck]
@@ -6571,11 +6575,26 @@ class DoxaBase:
                 status=status,
                 already_applied_by=existing_applied[0],
             )
+            blocking_reasons = self._staged_apply_check_blocking_reasons(
+                status=status,
+                conflicts=[],
+            )
             check = StagedRevisionApplyCheck(
                 staged_revision_iri=staged.iri,
                 can_apply=False,
                 status=status,
+                decision=self._staged_apply_check_decision(status),
                 summary=summary,
+                review_recommended=self._staged_apply_check_review_recommended(
+                    status
+                ),
+                blocking_reasons=blocking_reasons,
+                recommended_resolution=(
+                    self._staged_apply_check_recommended_resolution(
+                        status=status,
+                        blocking_reasons=blocking_reasons,
+                    )
+                ),
                 already_applied_by=existing_applied[0],
                 changed_graphs=changed_graphs,
                 patch_checks=[],
@@ -6729,11 +6748,22 @@ class DoxaBase:
             status=status,
             already_applied_by=None,
         )
+        blocking_reasons = self._staged_apply_check_blocking_reasons(
+            status=status,
+            conflicts=conflicts,
+        )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
             can_apply=can_apply,
             status=status,
+            decision=self._staged_apply_check_decision(status),
             summary=summary,
+            review_recommended=self._staged_apply_check_review_recommended(status),
+            blocking_reasons=blocking_reasons,
+            recommended_resolution=self._staged_apply_check_recommended_resolution(
+                status=status,
+                blocking_reasons=blocking_reasons,
+            ),
             already_applied_by=None,
             changed_graphs=changed_graphs,
             patch_checks=patch_checks,
@@ -6805,6 +6835,71 @@ class DoxaBase:
                 f"{result_count} result(s)."
             )
         return "Not ready to apply; inspect patch checks and validation fields."
+
+    def _staged_apply_check_decision(self, status: str) -> str:
+        decisions = {
+            "ready": "review_then_apply",
+            "already_applied": "inspect_applied_revision",
+            "conflict": "restage_against_current_graph",
+            "validation_failed": "inspect_validation_results",
+        }
+        return decisions.get(status, "inspect_staged_revision")
+
+    def _staged_apply_check_review_recommended(self, status: str) -> bool:
+        return status == "ready"
+
+    def _staged_apply_check_blocking_reasons(
+        self,
+        *,
+        status: str,
+        conflicts: list[str],
+    ) -> list[str]:
+        if status == "ready":
+            return []
+        if status == "already_applied":
+            return ["already_applied"]
+        if status == "conflict":
+            reasons = []
+            if any(
+                "expected" in conflict and "triples before patch" in conflict
+                for conflict in conflicts
+            ):
+                reasons.append("target_count_drift")
+            if any(
+                "expected" in conflict and "triples after patch" in conflict
+                for conflict in conflicts
+            ):
+                reasons.append("preview_count_mismatch")
+            if not reasons:
+                reasons.append("patch_conflict")
+            return list(dict.fromkeys(reasons))
+        if status == "validation_failed":
+            return ["validation_failed"]
+        return ["not_ready"]
+
+    def _staged_apply_check_recommended_resolution(
+        self,
+        *,
+        status: str,
+        blocking_reasons: list[str],
+    ) -> str | None:
+        if status == "ready":
+            return (
+                "Review the staged revision, impacts, validation preview, and any "
+                "judgement panel; apply only if the proposal is still desired."
+            )
+        if status == "already_applied":
+            return "Inspect the applied revision event; do not apply this staged revision again."
+        if "target_count_drift" in blocking_reasons:
+            return (
+                "Restage the proposal against the current graph state; the target "
+                "graph count has changed since staging."
+            )
+        if status == "conflict":
+            return "Inspect patch checks and restage or rewrite the proposal."
+        if status == "validation_failed":
+            return "Inspect validation_results and repair or restage the proposal."
+        return "Inspect staged revision details before taking action."
 
     def _staged_apply_check_next_actions(
         self,

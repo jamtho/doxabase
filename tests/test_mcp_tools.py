@@ -455,6 +455,10 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     check = check_staged_revision_apply_tool(db, iri=staged["revision_iri"])
     assert check["can_apply"] is True
     assert check["status"] == "ready"
+    assert check["decision"] == "review_then_apply"
+    assert check["review_recommended"] is True
+    assert check["blocking_reasons"] == []
+    assert "proposal is still desired" in check["recommended_resolution"]
     assert check["summary"] == (
         "Ready to apply 1 patch(es) across map: +3 triple(s), -0 triple(s)."
     )

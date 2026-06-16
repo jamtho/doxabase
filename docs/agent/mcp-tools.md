@@ -295,13 +295,15 @@ find them.
 
 Previews whether one staged revision can apply without mutating graph state.
 Returns `can_apply`, already-applied state, per-patch current/preview counts,
-count-drift conflicts, preview validation diagnostics, `status`, `summary`, and
-structured `suggested_next_actions`. Read `status` and `summary` first:
-`ready` means the staged patch replays and validates; `conflict` usually means
-graph counts drifted since staging; `validation_failed` means patch counts
-replay but SHACL diagnostics need inspection; `already_applied` means an applied
-revision event exists. Use it before `doxabase.apply_staged_revision` when an
-agent or human wants an explicit read-only check.
+count-drift conflicts, preview validation diagnostics, `status`, `decision`,
+`summary`, `review_recommended`, `blocking_reasons`,
+`recommended_resolution`, and structured `suggested_next_actions`. Read
+`status`, `decision`, and `summary` first: `ready` means the staged patch replays
+and validates, with decision `review_then_apply`; `conflict` usually means graph
+counts drifted since staging; `validation_failed` means patch counts replay but
+SHACL diagnostics need inspection; `already_applied` means an applied revision
+event exists. Use it before `doxabase.apply_staged_revision` when an agent or
+human wants an explicit read-only check.
 
 `doxabase.apply_staged_revision`
 

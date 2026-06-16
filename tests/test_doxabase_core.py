@@ -1009,6 +1009,13 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     check = db.check_staged_revision_apply(staged.revision_iri)
     assert check.can_apply is True
     assert check.status == "ready"
+    assert check.decision == "review_then_apply"
+    assert check.review_recommended is True
+    assert check.blocking_reasons == []
+    assert check.recommended_resolution is not None
+    assert "apply only if the proposal is still desired" in (
+        check.recommended_resolution
+    )
     assert check.summary == (
         "Ready to apply 1 patch(es) across map: +3 triple(s), -0 triple(s)."
     )
@@ -1058,6 +1065,11 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     applied_check = db.check_staged_revision_apply(staged.revision_iri)
     assert applied_check.can_apply is False
     assert applied_check.status == "already_applied"
+    assert applied_check.decision == "inspect_applied_revision"
+    assert applied_check.review_recommended is False
+    assert applied_check.blocking_reasons == ["already_applied"]
+    assert applied_check.recommended_resolution is not None
+    assert "do not apply" in applied_check.recommended_resolution
     assert applied_check.summary == (
         f"Already applied by {result.applied_revision_iri}."
     )
@@ -1205,6 +1217,11 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     check = db.check_staged_revision_apply(staged.revision_iri)
     assert check.can_apply is False
     assert check.status == "conflict"
+    assert check.decision == "restage_against_current_graph"
+    assert check.review_recommended is False
+    assert check.blocking_reasons == ["target_count_drift"]
+    assert check.recommended_resolution is not None
+    assert "Restage the proposal" in check.recommended_resolution
     assert check.summary.startswith("Blocked by 1 conflict(s); first conflict:")
     assert check.validation_conforms is None
     assert len(check.conflicts) == 1
@@ -1217,6 +1234,47 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
 
     with pytest.raises(DoxaBaseError, match="Messages"):
         db.describe_dataset("https://example.test/project#Messages")
+
+
+def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage invalid value type",
+        rationale="Exercise apply-check status for a clean patch with SHACL errors.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:BadValueType a rc:ValueType ;
+                        rc:requiredPhysicalType "VARCHAR" .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.can_apply is False
+    assert check.status == "validation_failed"
+    assert check.decision == "inspect_validation_results"
+    assert check.review_recommended is False
+    assert check.blocking_reasons == ["validation_failed"]
+    assert check.recommended_resolution is not None
+    assert "validation_results" in check.recommended_resolution
+    assert check.conflicts == []
+    assert check.validation_conforms is False
+    assert check.validation_results
+    assert check.summary == (
+        "Patch counts replay cleanly, but preview validation failed with "
+        f"{check.validation_result_count} result(s)."
+    )
+    assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
+
+    with pytest.raises(DoxaBaseError, match="Applying staged revision would fail"):
+        db.apply_staged_revision(staged.revision_iri)
 
 
 def test_stage_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> None:

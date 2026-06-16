@@ -233,7 +233,13 @@ any patch target graph has drifted from its recorded `beforeTripleCount`, the
 preview count for each patch, preview validation diagnostics, `status`,
 `summary`, and structured `suggested_next_actions`. Read `status` and `summary`
 first. Current statuses are `ready`, `already_applied`, `conflict`,
-`validation_failed`, and `not_ready`.
+`validation_failed`, and `not_ready`. `decision` is the compact branch hint:
+`review_then_apply`, `inspect_applied_revision`,
+`restage_against_current_graph`, `inspect_validation_results`, or
+`inspect_staged_revision`. `review_recommended=True` on `ready` checks means the
+proposal replays and validates, but still needs judgement before application.
+Use `blocking_reasons` and `recommended_resolution` to distinguish count drift
+from validation failure or already-applied state.
 
 This is not a full merge system. A harmless unrelated graph change can still
 show up as a conflict because the first guard is count-based. In that case,

@@ -307,8 +307,9 @@ needs an agent-authored synthesis at the top of the artifact.
 applied without mutating graph state. It reports already-applied state,
 per-patch count drift, preview triple counts, validation status, and a
 top-level `can_apply` flag. Read `status` and `summary` first; use
-`suggested_next_actions` to decide whether to apply, inspect an applied event,
-review validation diagnostics, or restage after conflicts.
+`decision`, `blocking_reasons`, `recommended_resolution`, and
+`suggested_next_actions` to decide whether to review then apply, inspect an
+applied event, review validation diagnostics, or restage after conflicts.
 
 `apply_staged_revision()` applies one staged revision after count-based conflict
 checks and preview validation. It rejects already-applied staged revisions,

@@ -577,7 +577,11 @@ review spotlight.
 check.staged_revision_iri
 check.can_apply
 check.status
+check.decision
 check.summary
+check.review_recommended
+check.blocking_reasons
+check.recommended_resolution
 check.already_applied_by
 check.changed_graphs
 check.patch_checks
@@ -595,8 +599,14 @@ check.suggested_next_calls
 
 Read `status` and `summary` first. Current statuses are `ready`,
 `already_applied`, `conflict`, `validation_failed`, and `not_ready`.
-`suggested_next_actions` uses the same structured action shape as assertion
-support: tool name, MCP tool name, arguments, reason, and display call string.
+`decision` is the stable branch hint, for example `review_then_apply`,
+`inspect_applied_revision`, `restage_against_current_graph`, or
+`inspect_validation_results`. `review_recommended=True` means the patch replays
+and validates, but the caller should still review the staged revision before
+applying. `blocking_reasons` uses compact values such as `target_count_drift`,
+`validation_failed`, or `already_applied`. `suggested_next_actions` uses the
+same structured action shape as assertion support: tool name, MCP tool name,
+arguments, reason, and display call string.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,
