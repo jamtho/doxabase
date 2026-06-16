@@ -792,6 +792,62 @@ def stage_graph_revision_tool(
     return asdict(result)
 
 
+def stage_map_assertion_change_tool(
+    db: DoxaBase,
+    subject: str,
+    predicate: str,
+    object: str | None,
+    rationale: str,
+    change_kind: str = "replace",
+    graph: str = "map",
+    object_kind: str = "auto",
+    summary: str | None = None,
+    stance: str = "rc:CandidateRevision",
+    revision_type: str = "rc:StagedRevision",
+    included_graphs: list[str] | None = None,
+    revision_iri: str | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    supporting_observations: list[str] | None = None,
+    supporting_claims: list[str] | None = None,
+    supporting_patterns: list[str] | None = None,
+    revision_anchors: list[str] | None = None,
+    evidence: list[str] | None = None,
+    alternative_to: str | None = None,
+    review_note: str | None = None,
+    review_recommendation: str | None = None,
+    validation_scope: str = "all",
+    limit: int = 20,
+) -> dict[str, Any]:
+    result = db.stage_map_assertion_change(
+        subject=subject,
+        predicate=predicate,
+        object=object,
+        rationale=rationale,
+        change_kind=change_kind,  # type: ignore[arg-type]
+        graph=graph,  # type: ignore[arg-type]
+        object_kind=object_kind,  # type: ignore[arg-type]
+        summary=summary,
+        stance=stance,
+        revision_type=revision_type,
+        included_graphs=included_graphs,
+        revision_iri=revision_iri,
+        created_at=created_at,
+        created_by=created_by,
+        supporting_observations=supporting_observations,
+        supporting_claims=supporting_claims,
+        supporting_patterns=supporting_patterns,
+        revision_anchors=revision_anchors,
+        evidence=evidence,
+        alternative_to=alternative_to,
+        review_note=review_note,
+        review_recommendation=review_recommendation,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+        limit=limit,
+    )
+    return asdict(result)
+
+
 def stage_systematisation_tool(
     db: DoxaBase,
     summary: str,

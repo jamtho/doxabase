@@ -38,6 +38,7 @@ from doxabase.mcp_tools import (
     record_pattern_tool,
     search_tool,
     stage_graph_revision_tool,
+    stage_map_assertion_change_tool,
     stage_pattern_promotion_tool,
     stage_systematisation_tool,
     validate_graph_tool,
@@ -80,6 +81,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.export_trig" in tool_names
     assert "doxabase.record_graph_revision" in tool_names
     assert "doxabase.stage_graph_revision" in tool_names
+    assert "doxabase.stage_map_assertion_change" in tool_names
     assert "doxabase.stage_systematisation" in tool_names
     assert "doxabase.stage_pattern_promotion" in tool_names
     assert "doxabase.apply_staged_revision" in tool_names
@@ -316,6 +318,50 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert export["format"] == "markdown"
     assert export_path.exists()
     assert "exploratory hunch" in export_path.read_text()
+
+
+def test_stage_map_assertion_change_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+    before_map_count = db.triple_count("map")
+
+    result = stage_map_assertion_change_tool(
+        db,
+        subject="https://richcanopy.org/example/manifest/polymarket#px_price",
+        predicate="rc:physicalType",
+        object="rc:Double",
+        rationale=(
+            "Exercise a tempting but unsafe type change so assertion support "
+            "travels with the staged revision."
+        ),
+        change_kind="replace",
+    )
+
+    assert result["change_kind"] == "replace"
+    assert result["assertion_present_before"] is False
+    assert result["assertion_support"]["absence_note"] is not None
+    assert "Current same-subject/predicate value(s): VARCHAR" in (
+        result["assertion_support"]["absence_note"]
+    )
+    assert result["assertion_support"]["related_route_summaries"]
+    assert result["review_recommendation"].startswith("Review assertion support")
+    assert len(result["additions"]) == 1
+    assert len(result["removals"]) == 1
+    assert result["staged_revision"]["changed_graphs"] == ["map"]
+    assert result["staged_revision"]["validation_conforms"] is True
+    assert db.triple_count("map") == before_map_count
+
+    description = describe_staged_revision_tool(
+        db,
+        result["staged_revision"]["revision_iri"],
+    )
+    assert description["supporting_patterns"]
+    assert any(
+        impact["impact_type"] == "changed_physical_type"
+        for impact in description["impacts"]
+    )
 
 
 def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) -> None:

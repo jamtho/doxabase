@@ -43,6 +43,7 @@ from doxabase.mcp_tools import (
     record_pattern_tool,
     search_tool,
     stage_graph_revision_tool,
+    stage_map_assertion_change_tool,
     stage_pattern_promotion_tool,
     stage_systematisation_tool,
     validate_graph_tool,
@@ -51,7 +52,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, systematisation and pattern-promotion staging, staged graph revision apply checks/apply/review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/apply/review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -842,6 +843,63 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             review_note=review_note,
             review_recommendation=review_recommendation,
             validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.stage_map_assertion_change")
+    def stage_map_assertion_change(
+        subject: str,
+        predicate: str,
+        object: str | None,
+        rationale: str,
+        change_kind: str = "replace",
+        graph: str = "map",
+        object_kind: str = "auto",
+        summary: str | None = None,
+        stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: list[str] | None = None,
+        revision_iri: str | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        supporting_observations: list[str] | None = None,
+        supporting_claims: list[str] | None = None,
+        supporting_patterns: list[str] | None = None,
+        revision_anchors: list[str] | None = None,
+        evidence: list[str] | None = None,
+        alternative_to: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
+        validation_scope: str = "all",
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Stage a map assertion add/remove/replace with support context."""
+
+        return stage_map_assertion_change_tool(
+            db,
+            subject=subject,
+            predicate=predicate,
+            object=object,
+            rationale=rationale,
+            change_kind=change_kind,
+            graph=graph,
+            object_kind=object_kind,
+            summary=summary,
+            stance=stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            revision_iri=revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            revision_anchors=revision_anchors,
+            evidence=evidence,
+            alternative_to=alternative_to,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
+            validation_scope=validation_scope,
+            limit=limit,
         )
 
     @server.tool(name="doxabase.stage_systematisation")

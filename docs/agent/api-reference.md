@@ -240,6 +240,16 @@ preview order. When validation reports results, the staged revision stores
 linked `sh:ValidationResult` diagnostics with focus node, result path,
 constraint, severity, value, and messages where pySHACL provides them.
 
+`stage_map_assertion_change()` stages a reviewable add/remove/replace for one
+`map` assertion. Pass `subject`, `predicate`, optional `object`, a `rationale`,
+and `change_kind` (`"add"`, `"remove"`, or `"replace"`). It calls
+`describe_assertion_support()` before staging, generates the Turtle patches,
+links related observations/claims/patterns/evidence and revision anchors, and
+stores an assertion-support summary in the staged revision review note. Use it
+for common assertion changes before reaching for generic `stage_graph_revision`.
+For `replace`, current same-subject/predicate values are staged for removal
+except the requested object, and the requested assertion is staged for addition.
+
 `stage_systematisation()` stages one or more caller-authored RDF framings for a
 modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
 `framings`. Each framing can use `graph` + `content` shorthand or full

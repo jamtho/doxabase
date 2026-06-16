@@ -99,6 +99,8 @@ Do not write ordinary user or project facts to immutable package seed graphs:
   `record_pattern`.
 - Current-best dataset, column, storage, caveat, layout, partition, or
   relationship fact: use the map authoring helpers.
+- Single map assertion add/remove/replace that should be reviewed with nearby
+  lore before apply: use `stage_map_assertion_change`.
 - One modelling hunch with several plausible RDF framings: use
   `stage_systematisation`.
 - Pattern-supported graph change that should be reviewed before becoming

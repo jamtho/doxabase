@@ -901,6 +901,24 @@ class AssertionSupportDescription:
 
 
 @dataclass(frozen=True)
+class StagedMapAssertionChangeRecord:
+    change_kind: str
+    graph: str
+    subject: str
+    predicate: str
+    object_value: str | None
+    object_kind: str
+    assertion_present_before: bool
+    current_values_before: list[ResourceTriple]
+    additions: list[dict[str, str]]
+    removals: list[dict[str, str]]
+    assertion_support: AssertionSupportDescription
+    staged_revision: StagedGraphRevisionRecord
+    review_note: str
+    review_recommendation: str | None
+
+
+@dataclass(frozen=True)
 class ContextSliceRoute:
     route: str
     route_label: str
@@ -1375,6 +1393,194 @@ class DoxaBase:
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
             ],
+        )
+
+    def stage_map_assertion_change(
+        self,
+        subject: str,
+        predicate: str,
+        object: str | None,
+        rationale: str,
+        *,
+        change_kind: TypingLiteral["add", "remove", "replace"] = "replace",
+        graph: TypingLiteral["map"] = "map",
+        object_kind: TypingLiteral["auto", "iri", "uri", "literal"] = "auto",
+        summary: str | None = None,
+        stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: Iterable[str] | str | None = None,
+        revision_iri: str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        supporting_observations: Iterable[str] | str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        supporting_patterns: Iterable[str] | str | None = None,
+        revision_anchors: Iterable[str] | str | None = None,
+        evidence: Iterable[str] | str | None = None,
+        alternative_to: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ] = "all",
+        limit: int = 20,
+    ) -> StagedMapAssertionChangeRecord:
+        if graph != "map":
+            raise DoxaBaseError("stage_map_assertion_change currently targets map only")
+        kind = change_kind.strip().lower()
+        if kind not in {"add", "remove", "replace"}:
+            raise DoxaBaseError("change_kind must be one of 'add', 'remove', or 'replace'")
+        rationale_value = rationale.strip()
+        if not rationale_value:
+            raise DoxaBaseError("rationale must not be empty")
+        if kind in {"add", "replace"} and object is None:
+            raise DoxaBaseError(f"change_kind '{kind}' requires an object")
+
+        support = self.describe_assertion_support(
+            subject,
+            predicate,
+            object,
+            graph=graph,
+            object_kind=object_kind,
+            limit=limit,
+        )
+        subject_iri = support.subject.iri
+        predicate_iri = support.predicate
+        object_filter = self._assertion_object_filter(object, object_kind)
+        requested_node = (
+            self._node_from_object_filter(object_filter)
+            if object_filter is not None
+            else None
+        )
+
+        addition_triples: list[tuple[Identifier, URIRef, Node]] = []
+        removal_triples: list[ResourceTriple] = []
+        if kind == "add":
+            if support.assertion_present:
+                raise DoxaBaseError(
+                    "Exact assertion is already present; no add patch was staged"
+                )
+            if requested_node is None:
+                raise DoxaBaseError("Internal assertion add missing object node")
+            addition_triples.append((URIRef(subject_iri), URIRef(predicate_iri), requested_node))
+        elif kind == "remove":
+            removal_triples = (
+                support.matching_triples
+                if object_filter is not None
+                else support.same_subject_predicate_triples
+            )
+            if not removal_triples:
+                raise DoxaBaseError(
+                    "No matching current assertion triples were found to remove"
+                )
+        else:
+            removal_triples = [
+                triple
+                for triple in support.same_subject_predicate_triples
+                if object_filter is None
+                or not self._resource_triple_matches_filter(triple, object_filter)
+            ]
+            if requested_node is None:
+                raise DoxaBaseError("Internal assertion replace missing object node")
+            if not removal_triples and support.assertion_present:
+                raise DoxaBaseError(
+                    "Exact assertion is already the only current value; no replace patch was staged"
+                )
+            addition_triples.append((URIRef(subject_iri), URIRef(predicate_iri), requested_node))
+
+        additions = (
+            [
+                {
+                    "graph": graph,
+                    "content": self._patch_content_from_triples(addition_triples),
+                }
+            ]
+            if addition_triples
+            else []
+        )
+        removals = (
+            [
+                {
+                    "graph": graph,
+                    "content": self._patch_content_from_resource_triples(removal_triples),
+                }
+            ]
+            if removal_triples
+            else []
+        )
+        summary_value = summary or self._map_assertion_change_summary(
+            kind,
+            support,
+        )
+        merged_review_note = self._map_assertion_change_review_note(
+            support,
+            change_kind=kind,
+            user_review_note=review_note,
+        )
+        recommendation = review_recommendation or (
+            "Review assertion support, caveat scopes, route summaries, and impact "
+            "entries before applying this staged map assertion change."
+        )
+        anchors = self._merge_iri_values(
+            revision_anchors,
+            self._assertion_revision_anchors(support),
+        )
+        staged = self.stage_graph_revision(
+            summary=summary_value,
+            rationale=rationale_value,
+            additions=additions,
+            removals=removals,
+            stance=stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            revision_iri=revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=self._merge_iri_values(
+                supporting_observations,
+                [item.iri for item in support.related_observations],
+            ),
+            supporting_claims=self._merge_iri_values(
+                supporting_claims,
+                [item.iri for item in support.related_claims],
+            ),
+            supporting_patterns=self._merge_iri_values(
+                supporting_patterns,
+                [item.iri for item in support.related_patterns],
+            ),
+            revision_anchors=anchors,
+            evidence=self._merge_iri_values(
+                evidence,
+                [item.iri for item in support.related_evidence],
+            ),
+            alternative_to=alternative_to,
+            review_note=merged_review_note,
+            review_recommendation=recommendation,
+            validation_scope=validation_scope,
+        )
+        return StagedMapAssertionChangeRecord(
+            change_kind=kind,
+            graph=graph,
+            subject=subject_iri,
+            predicate=predicate_iri,
+            object_value=support.requested_object.value
+            if support.requested_object is not None
+            else None,
+            object_kind=support.requested_object.value_kind
+            if support.requested_object is not None
+            else object_kind,
+            assertion_present_before=support.assertion_present,
+            current_values_before=support.same_subject_predicate_triples,
+            additions=additions,
+            removals=removals,
+            assertion_support=support,
+            staged_revision=staged,
+            review_note=merged_review_note,
+            review_recommendation=recommendation,
         )
 
     def describe_graph_revision(
@@ -6828,6 +7034,187 @@ class DoxaBase:
             datatype=datatype,
             lang=lang,
         )
+
+    def _node_from_object_filter(
+        self,
+        object_filter: tuple[str, str, str | None, str | None],
+    ) -> Node:
+        value, value_kind, datatype, lang = object_filter
+        if value_kind == "uri":
+            return URIRef(value)
+        if value_kind == "bnode":
+            return BNode(value)
+        if value_kind == "literal":
+            return Literal(
+                value,
+                datatype=URIRef(datatype) if datatype is not None else None,
+                lang=lang,
+            )
+        raise DoxaBaseError(f"Unsupported assertion object kind '{value_kind}'")
+
+    def _object_node_from_resource_triple(self, triple: ResourceTriple) -> Node:
+        if triple.object_kind == "uri":
+            return URIRef(triple.object)
+        if triple.object_kind == "bnode":
+            return BNode(triple.object)
+        if triple.object_kind == "literal":
+            return Literal(
+                triple.object,
+                datatype=(
+                    URIRef(triple.object_datatype)
+                    if triple.object_datatype is not None
+                    else None
+                ),
+                lang=triple.object_lang,
+            )
+        raise DoxaBaseError(
+            f"Unsupported resource triple object kind '{triple.object_kind}'"
+        )
+
+    def _subject_node_from_resource_triple(self, triple: ResourceTriple) -> Identifier:
+        if triple.subject_kind == "uri":
+            return URIRef(triple.subject)
+        if triple.subject_kind == "bnode":
+            return BNode(triple.subject)
+        raise DoxaBaseError(
+            f"Unsupported resource triple subject kind '{triple.subject_kind}'"
+        )
+
+    def _resource_triple_matches_filter(
+        self,
+        triple: ResourceTriple,
+        object_filter: tuple[str, str, str | None, str | None],
+    ) -> bool:
+        value, value_kind, datatype, lang = object_filter
+        return (
+            triple.object == value
+            and triple.object_kind == value_kind
+            and triple.object_datatype == datatype
+            and triple.object_lang == lang
+        )
+
+    def _patch_content_from_triples(
+        self,
+        triples: Iterable[tuple[Identifier, URIRef, Node]],
+    ) -> str:
+        graph = Graph()
+        self._bind_prefixes(graph)
+        for subject, predicate, object_node in triples:
+            graph.add((subject, predicate, object_node))
+        return graph.serialize(format="turtle").strip()
+
+    def _patch_content_from_resource_triples(
+        self,
+        triples: Iterable[ResourceTriple],
+    ) -> str:
+        return self._patch_content_from_triples(
+            (
+                self._subject_node_from_resource_triple(triple),
+                URIRef(triple.predicate),
+                self._object_node_from_resource_triple(triple),
+            )
+            for triple in triples
+        )
+
+    def _map_assertion_change_summary(
+        self,
+        change_kind: str,
+        support: AssertionSupportDescription,
+    ) -> str:
+        subject_label = (
+            support.subject.label
+            or support.subject.column_name
+            or support.subject.iri
+        )
+        predicate_label = support.predicate_label or self._local_name(support.predicate)
+        if support.requested_object is None:
+            return f"{change_kind.title()} map assertion(s): {subject_label} {predicate_label}"
+        object_label = (
+            support.requested_object.value_label
+            or self._local_name(support.requested_object.value)
+            or support.requested_object.value
+        )
+        return (
+            f"{change_kind.title()} map assertion: "
+            f"{subject_label} {predicate_label} {object_label}"
+        )
+
+    def _map_assertion_change_review_note(
+        self,
+        support: AssertionSupportDescription,
+        *,
+        change_kind: str,
+        user_review_note: str | None,
+    ) -> str:
+        current_values = [
+            triple.object_label or self._local_name(triple.object) or triple.object
+            for triple in support.same_subject_predicate_triples
+        ]
+        route_notes = [
+            f"{summary.rank}. {summary.route_note}"
+            for summary in support.related_route_summaries[:5]
+        ]
+        caveat_notes = [
+            (
+                f"{link.caveat.label or link.caveat.iri} "
+                f"[scope={link.scope}, via={link.via_resource.label or link.via_resource.iri}]"
+            )
+            for link in support.nearby_caveat_links[:5]
+        ]
+        context_values = [
+            (
+                f"{triple.subject_label or self._local_name(triple.subject) or triple.subject} "
+                f"{triple.predicate_label or self._local_name(triple.predicate) or triple.predicate} "
+                f"{triple.object_label or self._local_name(triple.object) or triple.object}"
+            )
+            for triple in support.nearby_context_triples[:5]
+        ]
+        lines = [
+            f"Staged map assertion change kind: {change_kind}.",
+            f"Exact assertion present before staging: {support.assertion_present}.",
+            "Current same-subject/predicate value(s): "
+            + (", ".join(current_values) if current_values else "(none)."),
+        ]
+        if support.absence_note:
+            lines.append(f"Absence note: {support.absence_note}")
+        if caveat_notes:
+            lines.append("Nearby caveats by scope: " + " | ".join(caveat_notes))
+        if route_notes:
+            lines.append("Related route summaries: " + " | ".join(route_notes))
+        if context_values:
+            lines.append("Nearby layout/path context: " + " | ".join(context_values))
+        if user_review_note:
+            lines.append(f"User/agent review note: {user_review_note.strip()}")
+        return "\n".join(lines)
+
+    def _assertion_revision_anchors(
+        self,
+        support: AssertionSupportDescription,
+    ) -> list[str]:
+        anchors = [support.subject.iri]
+        for triple in support.same_subject_predicate_triples:
+            if triple.object_kind == "uri":
+                anchors.append(triple.object)
+        if (
+            support.requested_object is not None
+            and support.requested_object.value_kind == "iri"
+        ):
+            anchors.append(support.requested_object.value)
+        for caveat in support.nearby_caveats:
+            anchors.append(caveat.iri)
+        return list(dict.fromkeys(anchors))
+
+    def _merge_iri_values(
+        self,
+        user_values: Iterable[str] | str | None,
+        discovered_values: Iterable[str],
+    ) -> list[str]:
+        values = [
+            self.expand_iri(value)
+            for value in self._string_values("user_values", user_values)
+        ]
+        values.extend(self.expand_iri(value) for value in discovered_values)
+        return list(dict.fromkeys(values))
 
     def _assertion_target_iris(
         self,

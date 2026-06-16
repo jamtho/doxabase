@@ -57,6 +57,13 @@ result = stage_graph_revision_tool(
 )
 ```
 
+For a single `map` subject/predicate assertion, prefer
+`doxabase.stage_map_assertion_change`. It calls `describe_assertion_support`,
+generates the Turtle patch payloads, links related lore and anchors, and returns
+the normal staged revision record alongside the support snapshot. Use generic
+`stage_graph_revision` when the patch is multi-resource, multi-graph, or cannot
+be expressed as one assertion add/remove/replace.
+
 Each patch must target one mutable graph role. The helper parses the RDF, rejects
 empty or malformed payloads, previews additions/removals in memory, runs SHACL
 validation over the preview scope, and records staged metadata in `history`.

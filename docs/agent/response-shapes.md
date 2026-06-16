@@ -226,6 +226,34 @@ By default `object_kind="auto"` treats known CURIE/IRI-looking values as
 resources and plain strings as literals. Use `object_kind="literal"` when you
 need to match a literal that contains a colon.
 
+## Staged Map Assertion Changes
+
+`db.stage_map_assertion_change(subject, predicate, object, rationale, ...)`
+returns a `StagedMapAssertionChangeRecord`:
+
+```python
+change.change_kind
+change.graph
+change.subject
+change.predicate
+change.object_value
+change.object_kind
+change.assertion_present_before
+change.current_values_before
+change.additions
+change.removals
+change.assertion_support
+change.staged_revision
+change.review_note
+change.review_recommendation
+```
+
+Use this response when reviewing a single map assertion add/remove/replace. The
+`assertion_support` field is the pre-change `AssertionSupportDescription`.
+`additions` and `removals` are the generated Turtle patch specs passed to staged
+revision machinery. `staged_revision` is the normal `StagedGraphRevisionRecord`
+and can be inspected with `describe_staged_revision`.
+
 ## Context Slices
 
 `db.describe_context_slice(seed_iris, ...)` returns a `ContextSlice`:

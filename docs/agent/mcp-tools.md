@@ -228,6 +228,20 @@ metadata plus structured validation diagnostics when validation reports
 results. `revision_anchors` can name graph resources the staged proposal is
 about without treating them as evidence or support.
 
+`doxabase.stage_map_assertion_change`
+
+Stages a reviewable add/remove/replace for one `map` assertion. Use this before
+generic `stage_graph_revision` when the change is a single subject/predicate
+assertion such as a physical type, caveat link, nullability, path, layout, or
+relationship claim. The helper calls `describe_assertion_support`, generates
+small Turtle addition/removal patches, records related observations, claims,
+patterns, evidence, caveat scopes, and assertion anchors on the staged revision,
+and returns both the assertion-support snapshot and the staged revision record.
+For `replace`, the helper removes current same-subject/predicate values except
+the requested object, then stages the requested assertion. It does not apply the
+change; use `describe_staged_revision` and `check_staged_revision_apply` before
+application.
+
 `doxabase.stage_systematisation`
 
 Stages one or more caller-authored RDF framings for the same modelling hunch.

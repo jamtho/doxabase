@@ -30,27 +30,31 @@ compaction, read `start_here` first.
     contradicts, supersedes, or refines an earlier claim. This keeps the earlier
     hunch available while making the changed reading explicit.
 15. Use `doxabase.record_pattern` when several observations or claims belong together and explain a more durable pattern.
-16. Use `doxabase.stage_graph_revision` when you want to propose additions or
+16. Use `doxabase.stage_map_assertion_change` when you want to propose a
+    reviewable add/remove/replace for one current-best map assertion. It carries
+    assertion support, caveat scope, route summaries, generated patches, and
+    staged revision metadata together.
+17. Use `doxabase.stage_graph_revision` when you want to propose additions or
     removals without applying them. This is appropriate for exploratory hunches,
     alternative systematisations, and reviewable candidate map changes.
-17. Use `doxabase.stage_systematisation` when one modelling hunch has several
+18. Use `doxabase.stage_systematisation` when one modelling hunch has several
     plausible RDF framings. This is especially useful for pattern-first versus
     ontology-first alternatives, or for awkward concepts that do not fit current
     helper templates. Use shared proposed context when several framings need the
     same tentative vocabulary or assumptions.
-18. Use `doxabase.stage_pattern_promotion` when existing patterns support a
+19. Use `doxabase.stage_pattern_promotion` when existing patterns support a
     caller-authored map, ontology, shape, or other graph change that should
     remain reviewable before being applied.
-19. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, `doxabase.record_map_physical_layout`, `doxabase.record_map_partition_scheme`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
-20. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
-21. Use `doxabase.record_graph_revision` after a meaningful graph change or
+20. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, `doxabase.record_map_physical_layout`, `doxabase.record_map_partition_scheme`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
+21. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
+22. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph
     roles were included for review, and why.
-22. Use `doxabase.check_staged_revision_apply` when a staged proposal is being
+23. Use `doxabase.check_staged_revision_apply` when a staged proposal is being
     reviewed for application.
-23. Use `doxabase.apply_staged_revision` when a staged proposal should become
+24. Use `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks.
-24. Use `doxabase.describe_graph_revision` when reviewing a history record, and
+25. Use `doxabase.describe_graph_revision` when reviewing a history record, and
     `doxabase.describe_staged_revision` when reviewing a staged patch proposal.
 
 When reading linked-pattern reasons from `describe_dataset`, scan

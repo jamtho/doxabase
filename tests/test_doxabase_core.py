@@ -793,6 +793,134 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     )
 
 
+def test_stage_map_assertion_change_packages_support_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(
+        """
+        @prefix dcterms: <http://purl.org/dc/terms/> .
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        rcg:map {
+            ex:PriceSnapshots a rc:Dataset, rc:Table ;
+                rdfs:label "Price snapshots" ;
+                rc:hasColumn ex:px_price ;
+                rc:hasKnownCaveat ex:mixed_price_payload_caveat .
+
+            ex:px_price a rc:Column ;
+                rc:columnName "price" ;
+                rc:physicalType rc:Varchar .
+
+            ex:mixed_price_payload_caveat a rc:KnownCaveat ;
+                rdfs:label "Mixed price payload caveat" ;
+                rc:caveatDescription "price may contain API error objects." ;
+                rc:impact "Parse payloads before probability analysis." ;
+                rc:severity rc:Moderate .
+        }
+
+        rcg:observations {
+            ex:obs_price_payloads a rc:Observation ;
+                rc:summary "Sample price payloads include API error objects." ;
+                rc:observedAt "2026-06-14T00:00:00Z"^^xsd:dateTime ;
+                rc:observedColumn ex:px_price ;
+                rc:observationStatus rc:Checked ;
+                rc:evidence ex:evidence_price_payloads ;
+                rc:hasClaim ex:claim_price_payloads_are_mixed .
+
+            ex:claim_price_payloads_are_mixed a rc:Claim ;
+                rc:claimKind rc:CaveatClaim ;
+                rc:claimText "The price column is a raw payload lane." ;
+                rc:claimTarget ex:px_price, ex:mixed_price_payload_caveat ;
+                rc:confidence rc:HighConfidence ;
+                rc:observationStatus rc:Checked ;
+                rc:evidence ex:evidence_price_payloads .
+        }
+
+        rcg:patterns {
+            ex:pattern_price_payload_boundary a rc:Pattern ;
+                rc:summary "Raw price payloads need a coercion boundary." ;
+                rc:patternText "Do not treat price as clean probability before parsing." ;
+                rc:patternTarget ex:px_price ;
+                rc:supportingObservation ex:obs_price_payloads ;
+                rc:supportingClaim ex:claim_price_payloads_are_mixed ;
+                rc:evidence ex:evidence_price_payloads .
+        }
+
+        rcg:evidence {
+            ex:evidence_price_payloads a rc:Evidence ;
+                rc:summary "Profile sample of price payload variants." ;
+                dcterms:source "test://price-payload-profile" .
+        }
+        """
+    )
+    before_map_count = db.triple_count("map")
+
+    staged_change = db.stage_map_assertion_change(
+        subject="https://example.test/project#px_price",
+        predicate="rc:physicalType",
+        object="rc:Double",
+        change_kind="replace",
+        rationale=(
+            "Testing a tempting but risky coercion so the review bundle should "
+            "make the existing VARCHAR and attached lore visible."
+        ),
+        review_note="This is deliberately staged for review, not applied.",
+    )
+
+    assert staged_change.change_kind == "replace"
+    assert staged_change.assertion_present_before is False
+    assert [triple.object for triple in staged_change.current_values_before] == [
+        RC + "Varchar"
+    ]
+    assert len(staged_change.additions) == 1
+    assert len(staged_change.removals) == 1
+    assert "Double" in staged_change.additions[0]["content"]
+    assert "Varchar" in staged_change.removals[0]["content"]
+    assert staged_change.assertion_support.absence_note is not None
+    assert "Current same-subject/predicate value(s): VARCHAR" in (
+        staged_change.assertion_support.absence_note
+    )
+    assert "Nearby caveats by scope" in staged_change.review_note
+    assert "Related route summaries" in staged_change.review_note
+    assert "This is deliberately staged for review" in staged_change.review_note
+    assert db.triple_count("map") == before_map_count
+
+    description = db.describe_staged_revision(
+        staged_change.staged_revision.revision_iri
+    )
+    assert [patch.operation for patch in description.patches] == [
+        RC + "AdditionPatch",
+        RC + "RemovalPatch",
+    ]
+    assert {item.iri for item in description.supporting_observations} == {
+        "https://example.test/project#obs_price_payloads"
+    }
+    assert {item.iri for item in description.supporting_claims} == {
+        "https://example.test/project#claim_price_payloads_are_mixed"
+    }
+    assert {item.iri for item in description.supporting_patterns} == {
+        "https://example.test/project#pattern_price_payload_boundary"
+    }
+    assert {item.iri for item in description.evidence} == {
+        "https://example.test/project#evidence_price_payloads"
+    }
+    assert {
+        "https://example.test/project#px_price",
+        RC + "Varchar",
+        RC + "Double",
+        "https://example.test/project#mixed_price_payload_caveat",
+    }.issubset({item.iri for item in description.revision_anchors})
+    assert any(
+        impact.impact_type == "changed_physical_type"
+        for impact in description.impacts
+    )
+
+
 def test_apply_staged_revision_mutates_graph_and_records_history(
     tmp_path: Path,
 ) -> None:
