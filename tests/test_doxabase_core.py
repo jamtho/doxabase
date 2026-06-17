@@ -3095,17 +3095,19 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     assert description.physical_layouts[0].layout_verification_status.iri == (
         RC + "VerifiedByQueryLayout"
     )
-    assert description.partition_schemes[0].partition_column is not None
-    assert description.partition_schemes[0].partition_column.iri == doc_id
-    assert description.partition_schemes[0].granularity is not None
-    assert description.partition_schemes[0].granularity.iri == RC + "Daily"
-    assert description.partition_schemes[0].path_template == (
+    partition_description = description.partition_schemes[0]
+    assert partition_description.partition_column is not None
+    assert partition_description.partition_column.iri == doc_id
+    assert [column.iri for column in partition_description.partition_columns] == [doc_id]
+    assert partition_description.granularity is not None
+    assert partition_description.granularity.iri == RC + "Daily"
+    assert partition_description.path_template == (
         "data/parquet/dt={date}/eml_messages.parquet"
     )
-    assert description.partition_schemes[0].redundant_partition_key is not None
-    assert description.partition_schemes[0].redundant_partition_key.iri == doc_id
-    assert description.partition_schemes[0].layout_verification_status is not None
-    assert description.partition_schemes[0].layout_verification_status.iri == (
+    assert partition_description.redundant_partition_key is not None
+    assert partition_description.redundant_partition_key.iri == doc_id
+    assert partition_description.layout_verification_status is not None
+    assert partition_description.layout_verification_status.iri == (
         RC + "CandidateLayout"
     )
     assert description.storage_accesses[0].storage_root == (
@@ -3395,6 +3397,44 @@ def test_map_helpers_reject_prose_for_resource_fields(
 
     with pytest.raises(DoxaBaseError, match=match):
         call(db)
+
+
+def test_describe_dataset_returns_all_partition_columns(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    table = f"{base}orders"
+    order_date = f"{base}orders__order_date"
+    region = f"{base}orders__region"
+    partition_scheme = f"{base}orders_daily_region_partitioning"
+
+    db.record_map_dataset(table, label="Orders", is_table=True)
+    db.record_map_column(
+        order_date,
+        table_iri=table,
+        column_name="order_date",
+        physical_type="rc:Date",
+    )
+    db.record_map_column(
+        region,
+        table_iri=table,
+        column_name="region",
+        physical_type="rc:Varchar",
+    )
+    db.record_map_partition_scheme(
+        partition_scheme,
+        partition_columns=[region, order_date],
+        granularity="rc:Daily",
+        datasets=[table],
+    )
+
+    partition_description = db.describe_dataset(table).partition_schemes[0]
+
+    assert {column.iri for column in partition_description.partition_columns} == {
+        order_date,
+        region,
+    }
+    assert partition_description.partition_column is not None
+    assert partition_description.partition_column.iri in {order_date, region}
 
 
 def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:

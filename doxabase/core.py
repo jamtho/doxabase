@@ -624,6 +624,7 @@ class PartitionDescription:
     label: str | None
     description: str | None
     partition_column: ResourceSummary | None
+    partition_columns: list[ResourceSummary]
     granularity: ResourceSummary | None
     path_template: str | None
     redundant_partition_key: ResourceSummary | None
@@ -2872,13 +2873,14 @@ class DoxaBase:
                     source_iri=dataset_iri,
                     depth=depth + 1,
                 )
-                add_summary(
-                    partition.partition_column,
-                    "partition_resource",
-                    "partition resource",
-                    source_iri=partition.iri,
-                    depth=depth + 2,
-                )
+                for partition_column in partition.partition_columns:
+                    add_summary(
+                        partition_column,
+                        "partition_resource",
+                        "partition resource",
+                        source_iri=partition.iri,
+                        depth=depth + 2,
+                    )
                 add_summary(
                     partition.granularity,
                     "partition_resource",
@@ -13296,7 +13298,14 @@ class DoxaBase:
         data_graphs: list[str],
         lookup_graphs: list[str],
     ) -> PartitionDescription:
-        partition_column = self._first_object(data_graphs, partition_iri, "rc:partitionColumn")
+        partition_columns = [
+            self._resource_summary(lookup_graphs, partition_column)
+            for partition_column in self._objects(
+                data_graphs,
+                partition_iri,
+                "rc:partitionColumn",
+            )
+        ]
         granularity = self._first_object(data_graphs, partition_iri, "rc:partitionGranularity")
         redundant_partition_key = self._first_object(
             data_graphs,
@@ -13307,11 +13316,8 @@ class DoxaBase:
             iri=partition_iri,
             label=self._label_from_graphs(lookup_graphs, partition_iri),
             description=self._description_from_graphs(lookup_graphs, partition_iri),
-            partition_column=(
-                self._resource_summary(lookup_graphs, partition_column)
-                if partition_column is not None
-                else None
-            ),
+            partition_column=partition_columns[0] if partition_columns else None,
+            partition_columns=partition_columns,
             granularity=(
                 self._resource_summary(lookup_graphs, granularity)
                 if granularity is not None

@@ -263,7 +263,9 @@ ordinary explanation in descriptions, notes, observations, or patterns.
 identifiers, derivations, and aggregations; for aggregations, pass
 `group_by_columns` plus `aggregated_columns` mappings with `target_column`,
 `source_columns`, optional `aggregation_function`, and optional
-`within_group_ordering`.
+`within_group_ordering`. Dataset descriptions expose all partition columns as
+`partition_columns`; the older singular `partition_column` field remains as a
+compatibility shortcut to the first returned column.
 
 `record_graph_revision()` writes metadata to `history` about changed graph
 roles, included review/export graph roles, rationale, supporting resources,
