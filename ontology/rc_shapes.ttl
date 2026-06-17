@@ -600,6 +600,18 @@ rc:ProfileObservationShape a sh:NodeShape ;
         sh:message "sampleSize must be a non-negative integer." ;
     ] ;
     sh:property [
+        sh:path rc:sampleScope ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "sampleScope must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:sampleMethod ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "sampleMethod must be a single string if declared." ;
+    ] ;
+    sh:property [
         sh:path rc:rowCount ;
         sh:maxCount 1 ;
         sh:datatype xsd:integer ;

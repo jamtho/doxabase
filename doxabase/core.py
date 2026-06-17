@@ -568,6 +568,8 @@ class ProfileObservationSummary:
     observed_asset: ResourceSummary | None
     observed_column: ResourceSummary | None
     sample_size: int | None
+    sample_scope: str | None
+    sample_method: str | None
     row_count: int | None
     null_count: int | None
     distinct_count: int | None
@@ -4027,6 +4029,16 @@ class DoxaBase:
                 observation_iri,
                 "rc:sampleSize",
             ),
+            sample_scope=self._first_object(
+                observation_graphs,
+                observation_iri,
+                "rc:sampleScope",
+            ),
+            sample_method=self._first_object(
+                observation_graphs,
+                observation_iri,
+                "rc:sampleMethod",
+            ),
             row_count=self._int_object(
                 observation_graphs,
                 observation_iri,
@@ -4150,6 +4162,8 @@ class DoxaBase:
         evidence_summary: str | None = None,
         evidence_sources: Iterable[str] | None = None,
         sample_size: int | None = None,
+        sample_scope: str | None = None,
+        sample_method: str | None = None,
         row_count: int | None = None,
         null_count: int | None = None,
         distinct_count: int | None = None,
@@ -4234,6 +4248,18 @@ class DoxaBase:
                     self._resource_or_literal(observed_by),
                 )
             )
+        self._add_optional_literal(
+            observation_graph,
+            observation_subject,
+            "rc:sampleScope",
+            sample_scope,
+        )
+        self._add_optional_literal(
+            observation_graph,
+            observation_subject,
+            "rc:sampleMethod",
+            sample_method,
+        )
         for predicate, value in (
             ("rc:sampleSize", sample_size),
             ("rc:rowCount", row_count),
@@ -4975,6 +5001,8 @@ class DoxaBase:
         evidence_summary: str | None = None,
         evidence_sources: Iterable[str] | str | None = None,
         sample_size: int | None = None,
+        sample_scope: str | None = None,
+        sample_method: str | None = None,
         row_count: int | None = None,
         null_count: int | None = None,
         distinct_count: int | None = None,
@@ -5011,6 +5039,8 @@ class DoxaBase:
             evidence_summary=evidence_summary,
             evidence_sources=evidence_sources,
             sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
             row_count=row_count,
             null_count=null_count,
             distinct_count=distinct_count,
@@ -5078,6 +5108,8 @@ class DoxaBase:
         evidence_summary: str | None = None,
         evidence_sources: Iterable[str] | str | None = None,
         sample_size: int | None = None,
+        sample_scope: str | None = None,
+        sample_method: str | None = None,
         row_count: int | None = None,
         null_count: int | None = None,
         distinct_count: int | None = None,
@@ -5122,6 +5154,8 @@ class DoxaBase:
             evidence_summary=evidence_summary,
             evidence_sources=evidence_sources,
             sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
             row_count=row_count,
             null_count=null_count,
             distinct_count=distinct_count,

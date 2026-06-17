@@ -1152,6 +1152,9 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
         summary="MCP helper recorded a profile bundle.",
         evidence_summary="Synthetic profile evidence.",
         evidence_sources=["tests/test_mcp_tools.py"],
+        sample_size=55,
+        sample_scope="All rows in the synthetic Messages table.",
+        sample_method="DuckDB full-table profile.",
         row_count=55,
         distinct_count=54,
         value_frequencies=[
@@ -1179,6 +1182,9 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
     )
     assert describe_dataset_tool(db, dataset)["row_count_snapshot"] == 55
     profile = describe_dataset_tool(db, dataset)["profile_observations"][0]
+    assert profile["sample_size"] == 55
+    assert profile["sample_scope"] == "All rows in the synthetic Messages table."
+    assert profile["sample_method"] == "DuckDB full-table profile."
     assert profile["row_count"] == 55
     assert profile["distinct_count"] == 54
     assert [
@@ -1210,6 +1216,9 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
         summary="MCP helper recorded a column profile bundle.",
         evidence_summary="Synthetic column profile evidence.",
         evidence_sources=["tests/test_mcp_tools.py"],
+        sample_size=55,
+        sample_scope="All doc_id values in the synthetic Messages table.",
+        sample_method="DuckDB column aggregate query.",
         row_count=55,
         null_count=0,
         distinct_count=55,
@@ -1239,6 +1248,11 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
     assert dataset["columns"][0]["iri"] == column
     assert dataset["columns"][0]["nullable"] is False
     profile = dataset["columns"][0]["profile_observations"][0]
+    assert profile["sample_size"] == 55
+    assert profile["sample_scope"] == (
+        "All doc_id values in the synthetic Messages table."
+    )
+    assert profile["sample_method"] == "DuckDB column aggregate query."
     assert profile["row_count"] == 55
     assert profile["null_count"] == 0
     assert profile["distinct_count"] == 55

@@ -804,6 +804,16 @@ rc:sampleSize a rdf:Property ;
     rdfs:range xsd:integer ;
     rdfs:comment "Number of records, rows, values, or items sampled for an observation." .
 
+rc:sampleScope a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Short description of the population, file set, query result, or slice covered by a sample or profile observation." .
+
+rc:sampleMethod a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Short description of how the sample or profile observation was produced, such as full scan, random sample, stratified sample, or top-N query." .
+
 rc:rowCount a rdf:Property ;
     rdfs:domain rc:Observation ;
     rdfs:range xsd:integer ;

@@ -171,6 +171,8 @@ agent-authored profile pattern linked back to the observation. Use it when a
 profile run should preserve both the raw noticing and the emerging synthesis.
 `describe_dataset` surfaces recent dataset profile observations and their
 sample, row, null, distinct, observed value-frequency, and scalar metric values.
+Use `sample_scope` for the population or slice covered by the profile, and
+`sample_method` for how the profile was produced.
 Use `profile_metrics=[{"metric": "rc:MinimumValue", "value": ...}]` for
 observed min/max/mean/median-style profiler output. These scalar metrics are
 observed profile evidence, not constraints, shapes, allowed values, or durable
@@ -181,6 +183,9 @@ include source strings and source spans when recorded.
 `update_map_snapshot` defaults to true; set it to false for scratch or tentative
 row counts that should remain observation-only. If the helper creates a pattern,
 the profile evidence is linked to that pattern as well as the observation.
+For a capsule that only records profile lore, `describe_dataset` may still emit
+missing storage/path/layout warnings. Those are query-planning gaps rather than
+profile validation failures.
 
 `doxabase.record_column_profile`
 
@@ -191,6 +196,8 @@ something useful about nullability, distinctness, physical type, or identity
 behavior for a column. Column profile observations appear on the matching
 `describe_dataset().columns[]` entry, including any observed value-frequency
 pairs and scalar metrics supplied by the profiler.
+Use `sample_scope` and `sample_method` to make sample caveats retrievable
+without parsing the evidence prose.
 Scalar `profile_metrics` are observed evidence, not constraints, shapes, allowed
 values, or durable map semantics by themselves.
 `update_map_column` defaults to true; set it to false when counts or observed

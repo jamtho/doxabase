@@ -457,6 +457,8 @@ profile.observed_by
 profile.observed_asset
 profile.observed_column
 profile.sample_size
+profile.sample_scope
+profile.sample_method
 profile.row_count
 profile.null_count
 profile.distinct_count
@@ -464,6 +466,11 @@ profile.value_frequencies
 profile.profile_metrics
 profile.evidence
 ```
+
+`profile.sample_scope` describes what population, file set, query result, or
+slice the profile covered. `profile.sample_method` describes how the profile was
+produced. Both fields are short strings; use the linked evidence for source
+identity and detailed provenance.
 
 `profile.evidence` items use the richer evidence description shape:
 

@@ -19,9 +19,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1143
+    assert graphs["base_ontology"].triple_count == 1151
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1161
+    assert graphs["base_shapes"].triple_count == 1171
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -4341,6 +4341,9 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
         observed_by="urn:doxabase:test-agent",
         evidence_summary="Synthetic test evidence for the observation writer.",
         evidence_sources=["tests/test_doxabase_core.py"],
+        sample_size=100,
+        sample_scope="Full synthetic AIS fixture used by the test.",
+        sample_method="DuckDB full-table aggregate profile.",
         row_count=123,
         distinct_count=45,
         value_frequencies=[
@@ -4365,6 +4368,21 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
     evidence_iri = URIRef(result.evidence_iri)
 
     assert (observation_iri, RDF.type, URIRef(RC + "ProfileObservation")) in observations
+    assert (
+        observation_iri,
+        URIRef(RC + "sampleSize"),
+        Literal(100),
+    ) in observations
+    assert (
+        observation_iri,
+        URIRef(RC + "sampleScope"),
+        Literal("Full synthetic AIS fixture used by the test."),
+    ) in observations
+    assert (
+        observation_iri,
+        URIRef(RC + "sampleMethod"),
+        Literal("DuckDB full-table aggregate profile."),
+    ) in observations
     assert (
         observation_iri,
         URIRef(RC + "rowCount"),
@@ -4431,6 +4449,9 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
         observed_by="urn:doxabase:test-agent",
         evidence_summary="Synthetic profile output from a local DuckDB query.",
         evidence_sources=["test://messages-profile"],
+        sample_size=123,
+        sample_scope="All rows in the local Messages test table.",
+        sample_method="DuckDB aggregate query over the full table.",
         row_count=123,
         distinct_count=120,
         value_frequencies=[
@@ -4467,6 +4488,9 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     assert len(description.profile_observations) == 1
     profile = description.profile_observations[0]
     assert profile.iri == result.observation.observation_iri
+    assert profile.sample_size == 123
+    assert profile.sample_scope == "All rows in the local Messages test table."
+    assert profile.sample_method == "DuckDB aggregate query over the full table."
     assert profile.row_count == 123
     assert profile.distinct_count == 120
     assert profile.null_count is None
@@ -4532,6 +4556,9 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
         summary="Messages doc_id was profiled for null and distinct counts.",
         evidence_summary="Synthetic column profile output.",
         evidence_sources=["test://messages-doc-id-profile"],
+        sample_size=123,
+        sample_scope="All doc_id values in the local Messages test table.",
+        sample_method="DuckDB column aggregate query over the full table.",
         row_count=123,
         null_count=0,
         distinct_count=123,
@@ -4570,6 +4597,9 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
     assert len(description.columns[0].profile_observations) == 1
     profile = description.columns[0].profile_observations[0]
     assert profile.iri == result.observation.observation_iri
+    assert profile.sample_size == 123
+    assert profile.sample_scope == "All doc_id values in the local Messages test table."
+    assert profile.sample_method == "DuckDB column aggregate query over the full table."
     assert profile.row_count == 123
     assert profile.null_count == 0
     assert profile.distinct_count == 123

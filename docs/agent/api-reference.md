@@ -207,7 +207,8 @@ arrive as observation, optional current-best map context, and optional synthesis
 without making three separate helper calls. `describe_dataset()` surfaces recent
 dataset profile observations and their sample, row, null, distinct, and observed
 value-frequency counts, plus scalar `profile_metrics` such as observed minimum
-or mean values. Pass metrics as
+or mean values. Use `sample_scope` for the bounded population or slice profiled
+and `sample_method` for how the profile was produced. Pass metrics as
 `profile_metrics=[{"metric": "rc:MinimumValue", "value": ...}]`, using project
 metric-kind IRIs when the base metric kinds do not fit. These scalar metrics are
 observed profile evidence, not constraints, shapes, allowed values, or durable
@@ -217,13 +218,17 @@ source strings and source spans when recorded. `update_map_snapshot`
 defaults to true, so pass `false` when a row count is only a scratch sample or
 tentative measurement. When the helper creates a pattern and the profile
 observation has evidence, the same evidence is linked to the pattern.
+If a capsule only contains profile lore, `describe_dataset()` may still report
+missing storage/path/layout warnings; treat those as query-planning gaps, not
+profile validation failures.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as
 physical type and nullability, and can write a linked profile pattern. Column
 profile observations are exposed on the matching `describe_dataset().columns[]`
 entry, including any observed value-frequency pairs and scalar profile metrics
-supplied by the profiler.
+supplied by the profiler. Use `sample_scope` and `sample_method` to distinguish,
+for example, a full-column scan from a top-N value-frequency sample.
 Scalar `profile_metrics` remain observed evidence unless a later claim, pattern,
 or map update interprets them.
 `update_map_column` defaults to true, so pass `false` when observed values or

@@ -35,8 +35,12 @@ Use `observation_type="profile"` for profiling-style findings:
 - scalar profile metrics such as observed minimum, maximum, mean, or median
 - column-specific profiling results
 
-Profile observations may include `sample_size`, `row_count`, `null_count`, and
-`distinct_count`. They may also include `value_frequencies`, a list of
+Profile observations may include `sample_size`, `sample_scope`,
+`sample_method`, `row_count`, `null_count`, and `distinct_count`.
+Use `sample_scope` for the bounded population, file set, query result, or slice
+covered by the profile. Use `sample_method` for how it was produced, such as
+full scan, random sample, stratified sample, or top-N query. Profile observations
+may also include `value_frequencies`, a list of
 `{"value": ..., "frequency": ...}` objects for observed values or value
 buckets, and `profile_metrics`, a list of
 `{"metric": "rc:MinimumValue", "value": ...}` objects. Use base metric kinds
@@ -75,6 +79,11 @@ observation-led and record the interpretation separately:
 When a profile helper creates a pattern and the profile observation has
 evidence, DoxaBase links that same evidence to the pattern so
 `describe_pattern` can show the source directly.
+
+Profile-only capsules may still show `describe_dataset` operational warnings
+about missing storage access, path templates, or physical layouts. Those
+warnings mean DoxaBase cannot yet give complete query-planning context; they do
+not mean the profile observations failed validation.
 
 ## Evidence Resources
 
@@ -167,6 +176,8 @@ db.record_observation(
     observed_by="urn:doxabase:codex-agent",
     evidence_summary="DuckDB scan over local AIS daily index Parquet files.",
     evidence_sources=["s3://ais-noaa/index/*/*.parquet"],
+    sample_scope="All local AIS daily index Parquet files available on 2026-05-31.",
+    sample_method="DuckDB full-table aggregate scan.",
     row_count=14638201,
 )
 ```
