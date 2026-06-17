@@ -76,6 +76,50 @@ observation-led and record the interpretation separately:
 3. Call `record_pattern` over the profile observation and guardrail claim when
    the pair is useful lore for future agents.
 
+For example, a sampled top-N value profile can preserve distribution lore
+without implying a closed domain:
+
+```python
+profile = db.record_column_profile(
+    "https://example.test/project#orders__status",
+    table_iri="https://example.test/project#orders",
+    column_name="status",
+    summary="Sampled top-N profile counted frequent order status values.",
+    evidence_sources=["scratch://orders-status-topn"],
+    sample_size=50000,
+    sample_scope="50,000 sampled orders from the current reporting month.",
+    sample_method="DuckDB reservoir sample, then GROUP BY status LIMIT 5.",
+    null_count=0,
+    distinct_count=7,
+    value_frequencies=[
+        {"value": "fulfilled", "frequency": 38410},
+        {"value": "pending", "frequency": 6412},
+    ],
+    update_map_column=False,
+)
+claim = db.record_claim_observation(
+    summary="Sampled status values are not a closed domain.",
+    claim_text=(
+        "The sampled top-N status values are distribution evidence only; "
+        "they are not an allowed-value domain."
+    ),
+    claim_kind="rc:CaveatClaim",
+    claim_targets=["https://example.test/project#orders__status"],
+    evidence_sources=["scratch://orders-status-topn"],
+)
+db.record_pattern(
+    summary="Status top-N profile needs a domain guardrail.",
+    pattern_text=(
+        "The observed status frequencies are useful operating lore, but the "
+        "profile method can miss rare values."
+    ),
+    rationale="The profile used a sample and a top-N query.",
+    pattern_targets=["https://example.test/project#orders__status"],
+    supporting_observations=[profile.observation.observation_iri],
+    supporting_claims=[claim.claim_iri],
+)
+```
+
 When a profile helper creates a pattern and the profile observation has
 evidence, DoxaBase links that same evidence to the pattern so
 `describe_pattern` can show the source directly.

@@ -620,6 +620,29 @@ description.map_implications
 
 Use `pattern_targets`, not `targets`.
 
+`description.supporting_claims` contains `ClaimDescription` items:
+
+```python
+claim.iri
+claim.label
+claim.claim_text
+claim.claim_kind
+claim.claim_kind_label
+claim.claim_targets
+claim.confidence
+claim.confidence_label
+claim.observation_status
+claim.observation_status_label
+claim.proposed_assertions
+claim.lifecycle_summary
+claim.outgoing_reconsiderations
+claim.incoming_reconsiderations
+```
+
+`claim.claim_kind` is a string IRI, not a `ResourceSummary` object. Use
+`claim.claim_kind_label` when you want display text and `claim.claim_targets`
+when you need the resource summaries the claim is about.
+
 ## Staged Revisions
 
 `db.stage_systematisation(...)` returns a `SystematisationDraftRecord`:
