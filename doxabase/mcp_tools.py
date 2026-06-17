@@ -1101,8 +1101,8 @@ def _pairs_to_dicts(pairs: list[tuple[str, int]], key_name: str) -> list[dict[st
 def _resolve_path(path: str) -> Path:
     candidate = Path(path)
     if candidate.is_absolute():
-        return candidate
-    return ROOT / candidate
+        return candidate.resolve(strict=False)
+    return (ROOT / candidate).resolve(strict=False)
 
 
 def _fixture_graph_roles(fixtures: tuple[Path, ...]) -> list[str]:

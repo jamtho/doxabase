@@ -123,7 +123,8 @@ A stale export should be read like this:
 In grouped exports, `Staged validation` is the validation result from when the
 proposal was created. `Current validation` comes from the live apply check and
 may say `skipped: conflicts_present` when count drift prevents a replay. Prefer
-the current apply status when deciding what to do next.
+the current apply status when deciding what to do next. Validation cells include
+their result count when available, for example `True (0 result(s))`.
 
 ## Systematisation Drafts
 

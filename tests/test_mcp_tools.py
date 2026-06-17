@@ -409,11 +409,11 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     export = export_staged_revisions_tool(
         db,
         revision_iris=[staged["revision_iri"]],
-        path="bundle.md",
+        path="nested/../bundle.md",
         title="Relative bundle",
     )
 
-    expected_path = tmp_path / "bundle.md"
+    expected_path = (tmp_path / "bundle.md").resolve()
     assert export["path"] == str(expected_path)
     assert expected_path.exists()
     assert expected_path.read_text(encoding="utf-8").startswith("# Relative bundle\n")

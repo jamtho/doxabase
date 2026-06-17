@@ -10556,30 +10556,45 @@ class DoxaBase:
         *,
         apply_check: StagedRevisionApplyCheck | None = None,
         apply_check_error: str | None = None,
+        include_heading: bool = True,
     ) -> str:
-        lines = [
-            f"# {description.summary or 'Staged graph revision'}",
-            "",
-            f"- Revision: `{description.iri}`",
-            f"- Stance: {description.revision_stance_label or description.revision_stance or 'unknown'}",
-            f"- Type: {description.revision_type_label or description.revision_type or 'unknown'}",
-            f"- Changed graphs: {', '.join(description.changed_graphs)}",
-            (
-                f"- Validation: {description.validation_scope or 'unknown'} "
-                f"conforms={description.validation_conforms} "
-                f"results={description.validation_result_count}"
-            ),
-            "",
-            *self._staged_apply_check_markdown(
-                apply_check,
-                apply_check_error=apply_check_error,
-                alternative_to=description.alternative_to,
-            ),
-            "",
-            "## Rationale",
-            "",
-            description.rationale or "",
-        ]
+        lines: list[str] = []
+        if include_heading:
+            lines.extend(
+                [
+                    f"# {description.summary or 'Staged graph revision'}",
+                    "",
+                ]
+            )
+        lines.extend(
+            [
+                f"- Revision: `{description.iri}`",
+                (
+                    "- Stance: "
+                    f"{description.revision_stance_label or description.revision_stance or 'unknown'}"
+                ),
+                (
+                    "- Type: "
+                    f"{description.revision_type_label or description.revision_type or 'unknown'}"
+                ),
+                f"- Changed graphs: {', '.join(description.changed_graphs)}",
+                (
+                    f"- Validation: {description.validation_scope or 'unknown'} "
+                    f"conforms={description.validation_conforms} "
+                    f"results={description.validation_result_count}"
+                ),
+                "",
+                *self._staged_apply_check_markdown(
+                    apply_check,
+                    apply_check_error=apply_check_error,
+                    alternative_to=description.alternative_to,
+                ),
+                "",
+                "## Rationale",
+                "",
+                description.rationale or "",
+            ]
+        )
         if description.review_note is not None:
             lines.extend(["", "## Review Note", "", description.review_note])
         if description.review_recommendation is not None:
@@ -11183,7 +11198,9 @@ class DoxaBase:
                         self._markdown_table_cell(apply_status),
                         self._markdown_table_cell(apply_decision),
                         self._markdown_table_cell(current_validation),
-                        str(description.validation_conforms),
+                        self._markdown_table_cell(
+                            self._staged_description_validation_cell(description)
+                        ),
                         str(description.validation_result_count),
                         self._markdown_table_cell(
                             self._validation_diagnostic_headline(description)
@@ -11221,11 +11238,25 @@ class DoxaBase:
                         description,
                         apply_check=apply_checks[index - 1][0],
                         apply_check_error=apply_checks[index - 1][1],
+                        include_heading=False,
                     ).strip(),
                     "",
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_description_validation_cell(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> str:
+        if description.validation_conforms is None:
+            return "unknown"
+        result_count = (
+            "unknown"
+            if description.validation_result_count is None
+            else str(description.validation_result_count)
+        )
+        return f"{description.validation_conforms} ({result_count} result(s))"
 
     def _staged_apply_check_validation_cell(
         self,

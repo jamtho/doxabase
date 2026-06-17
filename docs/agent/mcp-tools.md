@@ -409,7 +409,8 @@ alternative framings should travel together for review. Pass
 `executive_summary` when the bundle should open with the agent's current
 provisional verdict. The summary table includes each staged revision's current
 apply status, decision, current validation state, and staged-time validation
-result.
+result. Relative export paths are resolved from the repository root and returned
+as normalized absolute paths.
 
 ## Import and Validation
 

@@ -1664,6 +1664,7 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "Apply status" in exported
     assert "Current validation" in exported
     assert "Staged validation" in exported
+    assert "True (0 result(s))" in exported
     assert "review_then_apply" in exported
     assert "Recommendation" in exported
     assert "Preferred for now." in exported
@@ -1673,6 +1674,8 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "| 2 | Explore identity-ladder modelling: Pattern first" in exported
     assert "## Revision 1: Explore identity-ladder modelling: Project vocabulary term" in exported
     assert "## Revision 2: Explore identity-ladder modelling: Pattern first" in exported
+    assert "\n# Explore identity-ladder modelling: Project vocabulary term" not in exported
+    assert "\n# Explore identity-ladder modelling: Pattern first" not in exported
     assert "## Alternative To" in exported
     assert "IdentityLadderPattern" in exported
 
