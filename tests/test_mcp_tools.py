@@ -12,6 +12,7 @@ from doxabase.mcp_tools import (
     describe_dataset_tool,
     describe_graph_revision_tool,
     describe_pattern_tool,
+    describe_query_context_tool,
     describe_resource_tool,
     describe_staged_revision_tool,
     export_graph_tool,
@@ -57,6 +58,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.graph_overview" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
+    assert "doxabase.describe_query_context" in tool_names
     assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
@@ -872,6 +874,29 @@ def test_describe_dataset_tool_returns_json_like_context(tmp_path: Path) -> None
         column["column_name"]
         for column in condition_id_reason["related_dataset_columns"]
     ] == ["conditionId"]
+
+
+def test_describe_query_context_tool_returns_planning_projection(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+
+    result = describe_query_context_tool(
+        db,
+        iri="https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
+    )
+
+    assert result["dataset"]["label"] == "AIS Daily Broadcast Positions"
+    assert result["readiness"] == "needs_review"
+    assert "broadcasts/{year}/ais-{date}.parquet" in result["path_templates"]
+    assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
+    assert any(
+        issue["code"] == "layout_needs_verification"
+        and issue["severity"] == "warning"
+        for issue in result["issues"]
+    )
+    assert "non-secret planning metadata" in result["planning_notes"][0]
 
 
 def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> None:

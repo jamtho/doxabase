@@ -15,6 +15,7 @@ from doxabase.mcp_tools import (
     describe_context_slice_tool,
     describe_graph_revision_tool,
     describe_pattern_tool,
+    describe_query_context_tool,
     describe_resource_tool,
     describe_staged_revision_tool,
     export_graph_tool,
@@ -53,8 +54,8 @@ from doxabase.mcp_tools import (
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
-Use graph_overview, search, list_entities, describe_dataset, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, import/export, fixture loading, and validation."""
+Use graph_overview, search, list_entities, describe_dataset, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
+Current V1 tools support inspection, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -103,6 +104,15 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return bounded schema, layout, storage access, caveat, and provenance context."""
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.describe_query_context")
+    def describe_query_context(
+        iri: str,
+        graph: str | None = "map",
+    ) -> dict[str, Any]:
+        """Return compact non-secret query-planning context for one dataset."""
+
+        return describe_query_context_tool(db, iri=iri, graph=graph)
 
     @server.tool(name="doxabase.describe_context_slice")
     def describe_context_slice(

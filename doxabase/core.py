@@ -578,6 +578,30 @@ class PartitionDescription:
 
 
 @dataclass(frozen=True)
+class QueryPlanningIssue:
+    code: str
+    severity: str
+    message: str
+    resource: ResourceSummary | None = None
+
+
+@dataclass(frozen=True)
+class QueryPlanningContext:
+    dataset: ResourceSummary
+    readiness: str
+    issues: list[QueryPlanningIssue]
+    planning_notes: list[str]
+    row_count_snapshot: int | None
+    columns: list[ColumnDescription]
+    path_templates: list[str]
+    physical_layouts: list[PhysicalLayoutDescription]
+    storage_accesses: list[StorageAccessDescription]
+    partition_schemes: list[PartitionDescription]
+    caveats: list[CaveatDescription]
+    upstream_caveats: list[CaveatDescription]
+
+
+@dataclass(frozen=True)
 class RelatedDatasetDescription:
     iri: str
     label: str | None
@@ -3525,6 +3549,220 @@ class DoxaBase:
                 linked_pattern_targets,
             ),
             linked_pattern_reasons=linked_pattern_reasons,
+        )
+
+    def describe_query_context(
+        self,
+        iri: str,
+        graph: str | None = "map",
+    ) -> QueryPlanningContext:
+        dataset = self.describe_dataset(iri, graph=graph)
+        dataset_summary = ResourceSummary(
+            iri=dataset.iri,
+            label=dataset.label or self._local_name(dataset.iri),
+            description=dataset.description,
+        )
+        issues = self._query_planning_issues(dataset)
+        return QueryPlanningContext(
+            dataset=dataset_summary,
+            readiness=self._query_planning_readiness(issues),
+            issues=issues,
+            planning_notes=[
+                (
+                    "DoxaBase records non-secret planning metadata only; local "
+                    "runtime configuration must resolve endpoint profiles, "
+                    "credential references, and actual query execution."
+                ),
+                (
+                    "Read caveats and verification notes before generating or "
+                    "running a query, and record query results or failures as "
+                    "evidence-backed observations."
+                ),
+            ],
+            row_count_snapshot=dataset.row_count_snapshot,
+            columns=dataset.columns,
+            path_templates=dataset.path_templates,
+            physical_layouts=dataset.physical_layouts,
+            storage_accesses=dataset.storage_accesses,
+            partition_schemes=dataset.partition_schemes,
+            caveats=dataset.caveats,
+            upstream_caveats=dataset.upstream_caveats,
+        )
+
+    def _query_planning_issues(
+        self,
+        dataset: DatasetDescription,
+    ) -> list[QueryPlanningIssue]:
+        issues: list[QueryPlanningIssue] = []
+
+        def add_issue(
+            code: str,
+            severity: str,
+            message: str,
+            resource: ResourceSummary | None = None,
+        ) -> None:
+            issues.append(
+                QueryPlanningIssue(
+                    code=code,
+                    severity=severity,
+                    message=message,
+                    resource=resource,
+                )
+            )
+
+        dataset_resource = ResourceSummary(
+            iri=dataset.iri,
+            label=dataset.label or self._local_name(dataset.iri),
+            description=dataset.description,
+        )
+        if not dataset.path_templates:
+            add_issue(
+                "missing_path_template",
+                "error",
+                "No dataset, storage, or partition path template is recorded.",
+                dataset_resource,
+            )
+        if not dataset.storage_accesses:
+            add_issue(
+                "missing_storage_access",
+                "error",
+                "No storage access resource is linked to the dataset.",
+                dataset_resource,
+            )
+        for access in dataset.storage_accesses:
+            access_resource = self._summary_from_description(access)
+            if access.storage_protocol is None:
+                add_issue(
+                    "missing_storage_protocol",
+                    "error",
+                    "Storage access does not declare a storage protocol.",
+                    access_resource,
+                )
+            has_location = any(
+                [
+                    access.storage_root,
+                    access.bucket_name,
+                    access.key_prefix,
+                    access.path_templates,
+                    dataset.path_templates,
+                ]
+            )
+            if not has_location:
+                add_issue(
+                    "missing_storage_location",
+                    "error",
+                    "Storage access does not include a root, bucket, prefix, or path template.",
+                    access_resource,
+                )
+            self._add_layout_status_issue(
+                issues,
+                status=access.layout_verification_status,
+                note=access.layout_verification_note,
+                resource=access_resource,
+                context="storage access",
+            )
+        if not dataset.physical_layouts:
+            add_issue(
+                "missing_physical_layout",
+                "warning",
+                "No physical layout resource is linked to the dataset.",
+                dataset_resource,
+            )
+        for layout in dataset.physical_layouts:
+            layout_resource = self._summary_from_description(layout)
+            if layout.file_format is None:
+                add_issue(
+                    "missing_file_format",
+                    "warning",
+                    "Physical layout does not declare a file format.",
+                    layout_resource,
+                )
+            self._add_layout_status_issue(
+                issues,
+                status=layout.layout_verification_status,
+                note=layout.layout_verification_note,
+                resource=layout_resource,
+                context="physical layout",
+            )
+        self._add_layout_status_issue(
+            issues,
+            status=dataset.layout_verification_status,
+            note=dataset.layout_verification_note,
+            resource=dataset_resource,
+            context="dataset layout",
+        )
+        for partition in dataset.partition_schemes:
+            self._add_layout_status_issue(
+                issues,
+                status=partition.layout_verification_status,
+                note=partition.layout_verification_note,
+                resource=self._summary_from_description(partition),
+                context="partition scheme",
+            )
+
+        severity_rank = {"error": 0, "warning": 1, "info": 2}
+        return sorted(
+            issues,
+            key=lambda issue: (
+                severity_rank.get(issue.severity, 3),
+                issue.code,
+                issue.resource.iri if issue.resource is not None else "",
+            ),
+        )
+
+    def _query_planning_readiness(
+        self,
+        issues: list[QueryPlanningIssue],
+    ) -> str:
+        if any(issue.code == "contradicted_layout" for issue in issues):
+            return "blocked_by_contradiction"
+        if any(issue.severity == "error" for issue in issues):
+            return "insufficient_metadata"
+        if any(issue.severity == "warning" for issue in issues):
+            return "needs_review"
+        return "ready_for_query_planning"
+
+    def _add_layout_status_issue(
+        self,
+        issues: list[QueryPlanningIssue],
+        *,
+        status: ResourceSummary | None,
+        note: str | None,
+        resource: ResourceSummary,
+        context: str,
+    ) -> None:
+        if status is None:
+            return
+        verified_statuses = {
+            self.expand_iri("rc:VerifiedByListingLayout"),
+            self.expand_iri("rc:VerifiedByQueryLayout"),
+        }
+        if status.iri in verified_statuses:
+            return
+        if status.iri == self.expand_iri("rc:ContradictedLayout"):
+            severity = "error"
+            code = "contradicted_layout"
+            message = f"{context} is marked contradicted."
+        else:
+            severity = "warning"
+            code = "layout_needs_verification"
+            message = f"{context} has not been verified by listing or query."
+        if note:
+            message = f"{message} Note: {note}"
+        issues.append(
+            QueryPlanningIssue(
+                code=code,
+                severity=severity,
+                message=message,
+                resource=resource,
+            )
+        )
+
+    def _summary_from_description(self, description: Any) -> ResourceSummary:
+        return ResourceSummary(
+            iri=description.iri,
+            label=description.label or self._local_name(description.iri),
+            description=description.description,
         )
 
     def _upstream_caveats_for_dataset(

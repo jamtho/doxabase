@@ -67,21 +67,23 @@ agent runtime decides how profile X resolves.
 ## How Agents Should Use It
 
 1. Call `doxabase.describe_dataset` for the target dataset.
-2. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
+2. Call `doxabase.describe_query_context` when you want a compact physical
+   planning projection with readiness and missing metadata issues.
+3. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
    `storage_accesses` together.
-3. Check `layout_verification_status` and `layout_verification_note` on the
+4. Check `layout_verification_status` and `layout_verification_note` on the
    dataset and on relevant layout, partition, and storage resources.
-4. Combine storage root or bucket/prefix facts with the dataset path template
+5. Combine storage root or bucket/prefix facts with the dataset path template
    only when the verification status and notes make that reasonable.
-5. Check caveats before generating a query.
-6. If a query is run, record the result or failure with
+6. Check caveats before generating a query.
+7. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
 ## Current Limits
 
-This is catalog metadata, not a query engine. DoxaBase does not yet expose
-helpers that turn these facts directly into DuckDB SQL, S3 settings, or runtime
-connection objects.
+This is catalog metadata, not a query engine. `describe_query_context` projects
+the relevant graph facts and gaps, but DoxaBase does not yet turn them directly
+into DuckDB SQL, S3 settings, or runtime connection objects.
 
 For now, the value is handoff and planning: the next agent can see where the data
 is, how it is physically shaped, what local profile to use, which layout claims

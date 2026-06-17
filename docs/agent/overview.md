@@ -25,6 +25,8 @@ Current implementation status:
 - `list_graph_revisions()` for discovering staged, applied, and history records.
 - `describe_graph_revision()` for compact review of history records.
 - `describe_dataset()` for bounded table schema, row semantics, relationship, caveat, provenance, and linked-pattern context.
+- `describe_query_context()` for compact non-secret query-planning context,
+  readiness, and missing metadata issues.
 - `describe_context_slice()` for route-explained dataset, pattern, and deep-lore graph slices.
 - `record_observation()` for point-in-time findings and linked evidence.
 - `record_dataset_profile()` for profile observations that may also update map

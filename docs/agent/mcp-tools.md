@@ -113,6 +113,15 @@ strongest local relevance signals, while claim/observation-supported groups
 explain the surrounding lore. Call `doxabase.describe_pattern` before using a
 pattern as a decision rule.
 
+`doxabase.describe_query_context`
+
+Returns a compact read-only projection for query planning around one dataset:
+dataset summary, readiness, missing or risky metadata issues, planning notes,
+columns, path templates, physical layouts, storage access descriptions,
+partition schemes, and caveats. Use it before drafting DuckDB/S3/local-file
+queries when you need the physical metadata and warnings without the full
+relationship/pattern handoff in `describe_dataset`.
+
 `doxabase.describe_context_slice`
 
 Returns a bounded, route-explained subgraph around one or more seed IRIs. Use

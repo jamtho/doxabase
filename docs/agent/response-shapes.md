@@ -436,6 +436,38 @@ column.profile_observations
 `description`. There is no `column.semantic_role` field; use `column.value_type`
 for the semantic value concept when present.
 
+`db.describe_query_context(table_iri)` returns a `QueryPlanningContext`:
+
+```python
+query.dataset
+query.readiness
+query.issues
+query.planning_notes
+query.row_count_snapshot
+query.columns
+query.path_templates
+query.physical_layouts
+query.storage_accesses
+query.partition_schemes
+query.caveats
+query.upstream_caveats
+```
+
+`readiness` is one of `ready_for_query_planning`, `needs_review`,
+`insufficient_metadata`, or `blocked_by_contradiction`. Treat it as a planning
+hint, not permission to execute a query. Each issue has:
+
+```python
+issue.code
+issue.severity
+issue.message
+issue.resource
+```
+
+Use `describe_query_context` when the task is physical query planning and you
+need the storage/layout/path/caveat projection without the full relationship and
+pattern handoff in `describe_dataset`.
+
 Each caveat in `dataset.caveats` has:
 
 ```python

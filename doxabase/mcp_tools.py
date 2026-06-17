@@ -151,6 +151,14 @@ def describe_dataset_tool(
     return asdict(db.describe_dataset(iri=iri, graph=graph))
 
 
+def describe_query_context_tool(
+    db: DoxaBase,
+    iri: str,
+    graph: str | None = "map",
+) -> dict[str, Any]:
+    return asdict(db.describe_query_context(iri=iri, graph=graph))
+
+
 def describe_context_slice_tool(
     db: DoxaBase,
     seed_iris: list[str],

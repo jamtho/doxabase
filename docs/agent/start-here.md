@@ -48,11 +48,13 @@ When arriving cold, use this route before reading every reference doc.
    `related_route_summaries` before raw `related_routes` when there is a lot of
    lore attached. Check `nearby_caveat_links.scope` before treating an
    owner-dataset caveat as a direct caveat on one column.
-8. Call `doxabase.describe_context_slice` when you need a route-explained slice
+8. Call `doxabase.describe_query_context` when the task is physical query
+   planning and you need storage/layout/path/caveat readiness.
+9. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread.
-9. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
+10. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
    `doxabase.describe_pattern` when the map points to synthesized lore.
-10. Use the smallest write helper that fits the work, then validate before
+11. Use the smallest write helper that fits the work, then validate before
    finishing.
 
 If the MCP docs tools are not exposed in the current session, follow the same
@@ -67,8 +69,9 @@ Recover the thread of work before making new graph changes.
 
 1. Re-read the user's latest request and `AGENTS.md`.
 2. Check `git status` so you know what is already changed locally.
-3. Read this doc, then use `graph_overview`, `search`, `describe_dataset`, and
-   `describe_context_slice` to reload only the relevant graph context.
+3. Read this doc, then use `graph_overview`, `search`, `describe_dataset`,
+   `describe_query_context`, and `describe_context_slice` to reload only the
+   relevant graph context.
 4. If a previous agent or sub-agent left a report under `/tmp`, read that report
    before rerunning the same trial.
 5. State uncertainty plainly if the compacted context does not contain enough

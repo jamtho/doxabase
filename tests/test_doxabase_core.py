@@ -2431,6 +2431,55 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     )
 
 
+def test_describe_query_context_reports_planning_metadata_and_issues(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    context = db.describe_query_context(
+        "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    )
+
+    assert context.dataset.label == "AIS Daily Broadcast Positions"
+    assert context.readiness == "needs_review"
+    assert context.path_templates == ["broadcasts/{year}/ais-{date}.parquet"]
+    assert context.storage_accesses[0].endpoint_profile == "local-minio"
+    assert context.storage_accesses[0].credential_reference == "profile:ais-readonly"
+    assert {column.column_name for column in context.columns} >= {
+        "mmsi",
+        "timestamp",
+    }
+    assert any(
+        issue.code == "layout_needs_verification"
+        and issue.severity == "warning"
+        and issue.resource is not None
+        and issue.resource.iri
+        == "https://richcanopy.org/example/manifest/ais#daily_date_partition"
+        and "verify against storage listing" in issue.message
+        for issue in context.issues
+    )
+    assert "non-secret planning metadata" in context.planning_notes[0]
+
+
+def test_describe_query_context_reports_missing_planning_metadata(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+    db.record_map_dataset(dataset, label="Messages", is_table=True)
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "insufficient_metadata"
+    assert {issue.code for issue in context.issues} >= {
+        "missing_path_template",
+        "missing_storage_access",
+        "missing_physical_layout",
+    }
+    assert [issue.severity for issue in context.issues[:2]] == ["error", "error"]
+
+
 def test_describe_dataset_reports_missing_dataset(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

@@ -166,6 +166,13 @@ groups when scanning; use claim/observation-supported groups for context; call
 `describe_pattern()` before acting on a pattern; use raw `matches` when you need
 every route.
 
+`describe_query_context()` returns a compact read-only query-planning projection
+for one dataset. It includes the dataset summary, readiness, missing or risky
+metadata issues, planning notes, columns, path templates, physical layouts,
+storage access descriptions, partition schemes, and direct/upstream caveats. It
+does not generate SQL or resolve credentials; use it to decide whether the graph
+has enough non-secret physical context for a query attempt.
+
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
 dataset/table map context and linked lore, `pattern_brief` starts from pattern
