@@ -8062,7 +8062,14 @@ class DoxaBase:
         if format != "markdown":
             raise DoxaBaseError("Only markdown staged revision exports are supported")
         description = self.describe_staged_revision(iri)
-        data = self._staged_revision_markdown(description)
+        apply_check, apply_check_error = self._staged_revision_apply_check_for_export(
+            description
+        )
+        data = self._staged_revision_markdown(
+            description,
+            apply_check=apply_check,
+            apply_check_error=apply_check_error,
+        )
         bytes_written = self._write_export(path, data, overwrite=overwrite)
         return StagedGraphRevisionExportRecord(
             path=str(path),
@@ -8092,8 +8099,13 @@ class DoxaBase:
             self.describe_staged_revision(revision_iri)
             for revision_iri in revision_values
         ]
+        apply_checks = [
+            self._staged_revision_apply_check_for_export(description)
+            for description in descriptions
+        ]
         data = self._staged_revisions_markdown(
             descriptions,
+            apply_checks=apply_checks,
             title=title,
             executive_summary=executive_summary,
         )
@@ -8104,6 +8116,15 @@ class DoxaBase:
             revision_iris=[description.iri for description in descriptions],
             bytes_written=bytes_written,
         )
+
+    def _staged_revision_apply_check_for_export(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> tuple[StagedRevisionApplyCheck | None, str | None]:
+        try:
+            return self.check_staged_revision_apply(description.iri), None
+        except DoxaBaseError as exc:
+            return None, str(exc)
 
     def _staged_revision_impacts(
         self,
@@ -10532,6 +10553,9 @@ class DoxaBase:
     def _staged_revision_markdown(
         self,
         description: StagedGraphRevisionDescription,
+        *,
+        apply_check: StagedRevisionApplyCheck | None = None,
+        apply_check_error: str | None = None,
     ) -> str:
         lines = [
             f"# {description.summary or 'Staged graph revision'}",
@@ -10544,6 +10568,12 @@ class DoxaBase:
                 f"- Validation: {description.validation_scope or 'unknown'} "
                 f"conforms={description.validation_conforms} "
                 f"results={description.validation_result_count}"
+            ),
+            "",
+            *self._staged_apply_check_markdown(
+                apply_check,
+                apply_check_error=apply_check_error,
+                alternative_to=description.alternative_to,
             ),
             "",
             "## Rationale",
@@ -10673,6 +10703,150 @@ class DoxaBase:
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_apply_check_markdown(
+        self,
+        check: StagedRevisionApplyCheck | None,
+        *,
+        apply_check_error: str | None,
+        alternative_to: ResourceSummary | None,
+    ) -> list[str]:
+        lines = ["## Current Apply Check", ""]
+        if check is None:
+            lines.append("- Status: unavailable")
+            if apply_check_error:
+                lines.append(f"- Error: {apply_check_error}")
+            return lines
+
+        lines.extend(
+            [
+                f"- Status: {check.status}",
+                f"- Decision: {check.decision}",
+                f"- Can apply: {check.can_apply}",
+                f"- Review recommended: {check.review_recommended}",
+                f"- Summary: {check.summary}",
+                f"- Changed graphs: {', '.join(check.changed_graphs) or '(none)'}",
+                f"- Patches checked: {check.patches_checked}",
+                f"- Triple delta: +{check.triples_to_add}, -{check.triples_to_remove}",
+            ]
+        )
+        if check.blocking_reasons:
+            lines.append(f"- Blocking reasons: {', '.join(check.blocking_reasons)}")
+        if check.recommended_resolution:
+            lines.append(f"- Recommended resolution: {check.recommended_resolution}")
+        if check.already_applied_by:
+            lines.append(f"- Already applied by: `{check.already_applied_by}`")
+        validation_result_count = (
+            "unknown"
+            if check.validation_result_count is None
+            else str(check.validation_result_count)
+        )
+        lines.append(
+            f"- Validation: {check.validation_scope or 'unknown'} "
+            f"conforms={check.validation_conforms} "
+            f"results={validation_result_count}"
+        )
+        if check.validation_skipped_reason:
+            lines.append(f"- Validation skipped: {check.validation_skipped_reason}")
+        if alternative_to is not None and check.can_apply:
+            label = alternative_to.label or alternative_to.iri
+            lines.append(
+                "- Alternative caution: this staged revision is marked as an "
+                f"alternative to {label} (`{alternative_to.iri}`). Compare the "
+                "related alternatives before applying one framing."
+            )
+
+        if check.conflicts:
+            lines.extend(["", "### Conflicts", ""])
+            lines.extend(f"- {conflict}" for conflict in check.conflicts)
+
+        if check.count_drifts:
+            lines.extend(
+                [
+                    "",
+                    "### Count Drift",
+                    "",
+                    (
+                        "| Patch | Graph | Expected before | Current | Delta | "
+                        "Patch triples | Status | Note |"
+                    ),
+                    "|---|---|---:|---:|---:|---|---|---|",
+                ]
+            )
+            for drift in check.count_drifts:
+                if drift.patch_triples_checked is None:
+                    patch_triples = "unknown"
+                else:
+                    present = drift.patch_triples_currently_present
+                    absent = drift.patch_triples_currently_absent
+                    patch_triples = (
+                        f"{present}/{drift.patch_triples_checked} present"
+                        if present is not None
+                        else f"{drift.patch_triples_checked} checked"
+                    )
+                    if absent is not None:
+                        patch_triples = f"{patch_triples}; {absent} absent"
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        [
+                            self._markdown_table_cell(drift.patch_iri),
+                            self._markdown_table_cell(drift.target_graph),
+                            str(drift.expected_before_triple_count),
+                            str(drift.current_triple_count),
+                            str(drift.delta),
+                            self._markdown_table_cell(patch_triples),
+                            self._markdown_table_cell(
+                                drift.patch_triple_status or "unknown"
+                            ),
+                            self._markdown_table_cell(drift.note),
+                        ]
+                    )
+                    + " |"
+                )
+
+        if check.patch_checks:
+            lines.extend(
+                [
+                    "",
+                    "### Patch Replay",
+                    "",
+                    (
+                        "| Patch | Graph | Operation | Before | Current | After | "
+                        "Preview | Can apply | Conflict |"
+                    ),
+                    "|---|---|---|---:|---:|---:|---:|---|---|",
+                ]
+            )
+            for patch in check.patch_checks:
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        [
+                            self._markdown_table_cell(patch.patch_iri),
+                            self._markdown_table_cell(
+                                patch.target_graph or "(unknown)"
+                            ),
+                            self._markdown_table_cell(
+                                patch.operation_label
+                                or patch.operation
+                                or "(unknown)"
+                            ),
+                            self._markdown_optional_count(patch.before_triple_count),
+                            self._markdown_optional_count(patch.current_triple_count),
+                            self._markdown_optional_count(patch.after_triple_count),
+                            self._markdown_optional_count(patch.preview_triple_count),
+                            str(patch.can_apply),
+                            self._markdown_table_cell(patch.conflict or ""),
+                        ]
+                    )
+                    + " |"
+                )
+
+        if check.suggested_next_calls:
+            lines.extend(["", "### Suggested Next Calls", ""])
+            lines.extend(f"- `{call}`" for call in check.suggested_next_calls[:5])
+        return lines
 
     def _staged_revision_judgement_panel(
         self,
@@ -10947,6 +11121,7 @@ class DoxaBase:
         self,
         descriptions: list[StagedGraphRevisionDescription],
         *,
+        apply_checks: list[tuple[StagedRevisionApplyCheck | None, str | None]],
         title: str | None,
         executive_summary: str | None,
     ) -> str:
@@ -10962,13 +11137,23 @@ class DoxaBase:
             lines.extend(["## Review Summary", "", executive_summary_text, ""])
         lines.extend(
             [
-            "## Summary",
-            "",
-            "| # | Summary | Stance | Changed graphs | Validation | Results | Diagnostics | Recommendation |",
-            "|---|---|---|---|---|---:|---|---|",
+                "## Summary",
+                "",
+                (
+                    "| # | Summary | Stance | Changed graphs | Apply status | "
+                    "Decision | Validation | Results | Diagnostics | Recommendation |"
+                ),
+                "|---|---|---|---|---|---|---|---:|---|---|",
             ]
         )
         for index, description in enumerate(descriptions, start=1):
+            apply_check, apply_check_error = apply_checks[index - 1]
+            apply_status = (
+                apply_check.status
+                if apply_check is not None
+                else f"unavailable: {apply_check_error or 'unknown'}"
+            )
+            apply_decision = apply_check.decision if apply_check is not None else ""
             lines.append(
                 "| "
                 + " | ".join(
@@ -10983,6 +11168,8 @@ class DoxaBase:
                         self._markdown_table_cell(
                             ", ".join(description.changed_graphs) or "none"
                         ),
+                        self._markdown_table_cell(apply_status),
+                        self._markdown_table_cell(apply_decision),
                         str(description.validation_conforms),
                         str(description.validation_result_count),
                         self._markdown_table_cell(
@@ -11017,7 +11204,11 @@ class DoxaBase:
                 [
                     f"## Revision {index}: {description.summary or description.iri}",
                     "",
-                    self._staged_revision_markdown(description).strip(),
+                    self._staged_revision_markdown(
+                        description,
+                        apply_check=apply_checks[index - 1][0],
+                        apply_check_error=apply_checks[index - 1][1],
+                    ).strip(),
                     "",
                 ]
             )
@@ -11133,6 +11324,11 @@ class DoxaBase:
 
     def _markdown_table_cell(self, value: str) -> str:
         return value.replace("|", "\\|").replace("\n", " ")
+
+    def _markdown_optional_count(self, value: int | None) -> str:
+        if value is None:
+            return ""
+        return str(value)
 
     def _diagnostic_markdown_resource(self, iri: str, label: str | None) -> str:
         if label and label != iri:

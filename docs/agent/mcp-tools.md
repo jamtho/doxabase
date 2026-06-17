@@ -394,10 +394,12 @@ first apply path, not a full merge/rebase workflow.
 `doxabase.export_staged_revision`
 
 Writes a Markdown review bundle for a staged revision, including validation
-diagnostics before patch payloads when validation failed. For simple
-single-assertion `map` changes that still replay cleanly, the export includes a
-`Judgement Panel` section with values, value-type context, rationale, caveats,
-routes, and safety notes. This is for human/agent review.
+diagnostics before patch payloads when validation failed. The bundle also
+includes a live `Current Apply Check`, so stale exports show conflict status,
+count drift, validation-skipped reason, and suggested next calls as of export
+time. For simple single-assertion `map` changes that still replay cleanly, the
+export includes a `Judgement Panel` section with values, value-type context,
+rationale, caveats, routes, and safety notes. This is for human/agent review.
 
 `doxabase.export_staged_revisions`
 
@@ -405,7 +407,8 @@ Writes one Markdown review bundle for several staged revisions in caller-chosen
 order. Use it after `stage_systematisation` when failed, repaired, and
 alternative framings should travel together for review. Pass
 `executive_summary` when the bundle should open with the agent's current
-provisional verdict.
+provisional verdict. The summary table includes each staged revision's current
+apply status and decision.
 
 ## Import and Validation
 

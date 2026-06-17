@@ -342,14 +342,17 @@ changes. Caveat impact values include the caveat description, impact, and
 severity inline when those facts are known. `restaged_from` is present when the
 staged revision was created by replaying an older stale proposal against current
 graph counts.
-`export_staged_revision()` writes a Markdown review bundle with diagnostics and
-impact review before patch payloads. For simple single-assertion `map` changes
-that still replay cleanly, it reconstructs a `Judgement Panel` section so the
-export carries values, value-type context, rationale, caveats, routes, and
-safety notes from the JSON review surface.
+`export_staged_revision()` writes a Markdown review bundle with the current
+apply-check status, diagnostics, and impact review before patch payloads. Stale
+exports include conflict status, count drift, validation-skipped reason, and
+suggested next calls as of export time. For simple single-assertion `map`
+changes that still replay cleanly, it reconstructs a `Judgement Panel` section
+so the export carries values, value-type context, rationale, caveats, routes,
+and safety notes from the JSON review surface.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
-revisions in caller-chosen order; pass `executive_summary` when the comparison
-needs an agent-authored synthesis at the top of the artifact.
+revisions in caller-chosen order; its summary table includes each staged
+revision's current apply status and decision. Pass `executive_summary` when the
+comparison needs an agent-authored synthesis at the top of the artifact.
 
 `check_staged_revision_apply()` previews whether one staged revision can be
 applied without mutating graph state. It reports already-applied state,

@@ -800,6 +800,12 @@ For staged apply checks, actions are ordered review-first; mutating actions such
 as `apply_staged_revision` and `restage_staged_revision` come after inspection
 or export suggestions.
 
+`export_staged_revision()` and `export_staged_revisions()` embed this live apply
+check into the Markdown artifact at export time. Treat the `Current Apply Check`
+section as the review bundle's current-status header: it may say a staged
+revision is stale or already applied even when the original staged description
+still records the validation result from the time it was created.
+
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,
 result path, constraint, severity, value, and messages.

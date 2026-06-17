@@ -1263,6 +1263,24 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.count_drifts[0].patch_triples_currently_absent == 1
     assert check.count_drifts[0].patch_triple_status == "all_patch_triples_absent"
     assert "unrelated changed triples" in check.count_drifts[0].note
+
+    export_path = tmp_path / "stale-staged-review.md"
+    db.export_staged_revision(staged.revision_iri, export_path)
+    export_text = export_path.read_text(encoding="utf-8")
+
+    assert "## Current Apply Check" in export_text
+    assert "- Status: conflict" in export_text
+    assert "- Decision: restage_against_current_graph" in export_text
+    assert "- Can apply: False" in export_text
+    assert "- Blocking reasons: target_count_drift" in export_text
+    assert "- Validation skipped: conflicts_present" in export_text
+    assert "### Count Drift" in export_text
+    assert "| Patch | Graph | Expected before | Current | Delta |" in export_text
+    assert "| map | 0 |" in export_text
+    assert f"| 0 | {db.triple_count('map')} |" in export_text
+    assert "all_patch_triples_absent" in export_text
+    assert "### Suggested Next Calls" in export_text
+    assert "restage_staged_revision" in export_text
     assert "expected 0 triples before patch" in check.conflicts[0]
     assert check.patch_checks[0].can_apply is False
     assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
@@ -1639,6 +1657,8 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "## Review Summary" in exported
     assert "Prefer the pattern-first framing for now" in exported
     assert "## Summary" in exported
+    assert "Apply status" in exported
+    assert "review_then_apply" in exported
     assert "Recommendation" in exported
     assert "Preferred for now." in exported
     assert "## Review Notes" in exported
