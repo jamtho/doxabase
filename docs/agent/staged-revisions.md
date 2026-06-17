@@ -300,7 +300,9 @@ show up as a conflict because the guards compare staged graph state with current
 graph state. In that case, call `doxabase.restage_staged_revision` to copy the
 stale proposal into a fresh staged revision with current before/after counts and
 graph snapshots, then review and check the new revision before applying. The
-refreshed revision records `rc:restagesRevision` back to the stale proposal.
+refreshed revision records `rc:restagesRevision` back to the stale proposal, and
+its generated rationale summarizes the stale apply check, including exact
+snapshot drift triples when available.
 Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and already-applied revisions should be inspected rather than
 replayed.

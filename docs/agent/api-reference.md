@@ -385,9 +385,11 @@ inspection/export suggestions.
 staged revision's existing patch payloads, recomputing before/after counts and
 validation against the current graph state. It records `rc:restagesRevision`
 back to the stale proposal and preserves support links, anchors, stance, review
-notes, and review recommendations. Use it for count or digest drift conflicts;
-it does not merge semantic conflicts, repair invalid RDF proposals, or apply the
-refreshed revision.
+notes, and review recommendations. The generated rationale summarizes the stale
+apply check, including count drift and exact snapshot drift triples when
+available, before repeating the original rationale. Use it for count or digest
+drift conflicts; it does not merge semantic conflicts, repair invalid RDF
+proposals, or apply the refreshed revision.
 
 `apply_staged_revision()` applies one staged revision after conservative
 graph-state conflict checks and preview validation. It rejects already-applied

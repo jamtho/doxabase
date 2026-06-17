@@ -385,9 +385,11 @@ state. Use it for `target_count_drift` or `target_digest_drift` from
 `check_staged_revision_apply`, especially when an unrelated graph edit made an
 otherwise still-useful proposal stale. The new staged revision records
 `rc:restagesRevision` / `restaged_from` back to the stale proposal and preserves
-support links, anchors, stance, review notes, and patch payloads. It does not
-merge semantic conflicts, repair SHACL failures, or apply the result; review the
-new staged revision and run `check_staged_revision_apply` again.
+support links, anchors, stance, review notes, and patch payloads. Its generated
+rationale summarizes the stale apply-check drift evidence, including exact
+snapshot drift triples when available. It does not merge semantic conflicts,
+repair SHACL failures, or apply the result; review the new staged revision and
+run `check_staged_revision_apply` again.
 
 `doxabase.apply_staged_revision`
 

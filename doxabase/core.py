@@ -7106,6 +7106,38 @@ class DoxaBase:
         ]
         if check.recommended_resolution:
             lines.append(f"- recommended resolution: {check.recommended_resolution}")
+        if check.count_drifts:
+            lines.extend(["", "Count drift details:"])
+            for drift in check.count_drifts:
+                lines.append(
+                    "- "
+                    f"{drift.target_graph}: expected "
+                    f"{drift.expected_before_triple_count}, current "
+                    f"{drift.current_triple_count}, delta {drift.delta}; "
+                    f"patch triples {drift.patch_triple_status or 'unknown'}."
+                )
+        if check.snapshot_drifts:
+            lines.extend(["", "Snapshot drift details:"])
+            for drift in check.snapshot_drifts:
+                lines.append(
+                    "- "
+                    f"{drift.graph_role}: snapshot count "
+                    f"{drift.snapshot_triple_count}, current count "
+                    f"{drift.current_triple_count}, exact triples available "
+                    f"{drift.exact_changed_triples_available}."
+                )
+                lines.extend(
+                    self._restage_rationale_triple_diff_lines(
+                        "Added since snapshot",
+                        drift.triples_added_since_snapshot,
+                    )
+                )
+                lines.extend(
+                    self._restage_rationale_triple_diff_lines(
+                        "Removed since snapshot",
+                        drift.triples_removed_since_snapshot,
+                    )
+                )
         lines.extend(
             [
                 "",
@@ -7114,6 +7146,27 @@ class DoxaBase:
             ]
         )
         return "\n".join(lines)
+
+    def _restage_rationale_triple_diff_lines(
+        self,
+        label: str,
+        triples: list[GraphTripleDescription],
+        *,
+        limit: int = 5,
+    ) -> list[str]:
+        if not triples:
+            return [f"  - {label}: none"]
+        lines = [f"  - {label}:"]
+        for triple in triples[:limit]:
+            lines.append(
+                "    - "
+                f"{triple.subject_display} {triple.predicate_display} "
+                f"{triple.object_display}"
+            )
+        omitted = len(triples) - limit
+        if omitted > 0:
+            lines.append(f"    - ... {omitted} more")
+        return lines
 
     def stage_systematisation(
         self,

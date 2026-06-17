@@ -1631,6 +1631,11 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
         "Original note should travel with the refreshed proposal."
     )
     assert "Restaged stale revision" in (restaged_description.rationale or "")
+    assert "Count drift details:" in (restaged_description.rationale or "")
+    assert "Snapshot drift details:" in (restaged_description.rationale or "")
+    assert "Added since snapshot:" in (restaged_description.rationale or "")
+    assert "OtherDataset" in (restaged_description.rationale or "")
+    assert "Original staged rationale:" in (restaged_description.rationale or "")
 
     fresh_check = db.check_staged_revision_apply(restaged.revision_iri)
     assert fresh_check.can_apply is True
