@@ -240,6 +240,8 @@ class StagedRevisionApplyCheck:
     decision: str
     summary: str
     review_recommended: bool
+    semantic_risk_level: str
+    semantic_risk_reasons: list[str]
     blocking_reasons: list[str]
     recommended_resolution: str | None
     already_applied_by: str | None
@@ -1105,6 +1107,8 @@ class MapAssertionJudgementPanel:
     current_values: list[MapAssertionJudgementValue]
     proposed_value: MapAssertionJudgementValue | None
     absence_note: str | None
+    semantic_risk_level: str
+    semantic_risk_reasons: list[str]
     value_type_context: list[MapAssertionJudgementValueTypeContext]
     why_current_value_may_be_intentional: list[str]
     caveats: list[MapAssertionJudgementCaveat]
@@ -7554,6 +7558,9 @@ class DoxaBase:
             "rc:appliesStagedRevision",
             staged.iri,
         )
+        semantic_risk_level, semantic_risk_reasons = (
+            self._staged_revision_semantic_risk(staged)
+        )
         if existing_applied:
             status = "already_applied"
             summary = self._staged_apply_check_summary(
@@ -7587,6 +7594,8 @@ class DoxaBase:
                 review_recommended=self._staged_apply_check_review_recommended(
                     status
                 ),
+                semantic_risk_level=semantic_risk_level,
+                semantic_risk_reasons=semantic_risk_reasons,
                 blocking_reasons=blocking_reasons,
                 recommended_resolution=(
                     self._staged_apply_check_recommended_resolution(
@@ -7792,6 +7801,8 @@ class DoxaBase:
             decision=self._staged_apply_check_decision(status),
             summary=summary,
             review_recommended=self._staged_apply_check_review_recommended(status),
+            semantic_risk_level=semantic_risk_level,
+            semantic_risk_reasons=semantic_risk_reasons,
             blocking_reasons=blocking_reasons,
             recommended_resolution=self._staged_apply_check_recommended_resolution(
                 status=status,
@@ -7822,6 +7833,17 @@ class DoxaBase:
             check=check,
             parsed_patches=parsed_patches,
             preview_graphs=preview_graphs,
+        )
+
+    def _staged_revision_semantic_risk(
+        self,
+        staged: StagedGraphRevisionDescription,
+    ) -> tuple[str, list[str]]:
+        if staged.judgement_panel is None:
+            return "none", []
+        return (
+            staged.judgement_panel.semantic_risk_level,
+            staged.judgement_panel.semantic_risk_reasons,
         )
 
     def _staged_apply_check_status(
@@ -8782,6 +8804,28 @@ class DoxaBase:
             self._map_assertion_judgement_impact(impact)
             for impact in staged_description.impacts[:5]
         ]
+        why_current_value_may_be_intentional = (
+            self._map_assertion_current_value_rationale(
+                support,
+                value_type_context=value_type_context,
+            )
+        )
+        safety_notes = self._map_assertion_judgement_safety_notes(
+            support,
+            value_type_context=value_type_context,
+            change_kind=change_kind,
+            impacts=staged_description.impacts,
+        )
+        semantic_risk_level, semantic_risk_reasons = (
+            self._map_assertion_semantic_risk(
+                support,
+                value_type_context=value_type_context,
+                impacts=staged_description.impacts,
+                why_current_value_may_be_intentional=(
+                    why_current_value_may_be_intentional
+                ),
+            )
+        )
         return MapAssertionJudgementPanel(
             headline=self._map_assertion_judgement_headline(
                 support,
@@ -8794,22 +8838,14 @@ class DoxaBase:
             current_values=current_values,
             proposed_value=proposed_value,
             absence_note=support.absence_note,
+            semantic_risk_level=semantic_risk_level,
+            semantic_risk_reasons=semantic_risk_reasons,
             value_type_context=value_type_context,
-            why_current_value_may_be_intentional=(
-                self._map_assertion_current_value_rationale(
-                    support,
-                    value_type_context=value_type_context,
-                )
-            ),
+            why_current_value_may_be_intentional=why_current_value_may_be_intentional,
             caveats=caveats,
             strongest_routes=strongest_routes,
             impacts=impacts,
-            safety_notes=self._map_assertion_judgement_safety_notes(
-                support,
-                value_type_context=value_type_context,
-                change_kind=change_kind,
-                impacts=staged_description.impacts,
-            ),
+            safety_notes=safety_notes,
         )
 
     def _map_assertion_judgement_value_from_triple(
@@ -9242,6 +9278,60 @@ class DoxaBase:
                 "treating that as broad absence of risk."
             )
         return notes
+
+    def _map_assertion_semantic_risk(
+        self,
+        support: AssertionSupportDescription,
+        *,
+        value_type_context: list[MapAssertionJudgementValueTypeContext],
+        impacts: list[StagedRevisionImpact],
+        why_current_value_may_be_intentional: list[str],
+    ) -> tuple[str, list[str]]:
+        reasons: list[str] = []
+        if why_current_value_may_be_intentional:
+            reasons.append(
+                "Related observations, claims, patterns, or value-type context "
+                "explain why the current value may be intentional."
+            )
+        if support.nearby_caveat_links:
+            reasons.append(
+                "Nearby caveats are attached to the assertion subject, object, "
+                "or owning dataset."
+            )
+        if support.related_route_summaries:
+            reasons.append(
+                "Related lore routes are present; review them before treating the "
+                "change as cleanup."
+            )
+        if any(impact.severity == "attention" for impact in impacts):
+            reasons.append(
+                "The staged revision has attention-level impact entries."
+            )
+        if any(
+            context.current_physical_type_matches
+            and context.proposed_physical_type_matches is False
+            for context in value_type_context
+        ):
+            reasons.append(
+                "Value-type context supports the current physical type and not "
+                "the proposed one."
+            )
+        if not reasons:
+            return "none", []
+        high_signal_count = sum(
+            [
+                bool(why_current_value_may_be_intentional),
+                bool(support.related_route_summaries),
+                any(impact.severity == "attention" for impact in impacts),
+                any(
+                    context.current_physical_type_matches
+                    and context.proposed_physical_type_matches is False
+                    for context in value_type_context
+                ),
+            ]
+        )
+        level = "high" if high_signal_count >= 2 else "attention"
+        return level, reasons
 
     def _assertion_revision_anchors(
         self,
@@ -10566,6 +10656,11 @@ class DoxaBase:
                     "",
                 ]
             )
+        semantic_warning = self._semantic_review_warning_markdown(
+            description.judgement_panel
+        )
+        if semantic_warning:
+            semantic_warning.append("")
         lines.extend(
             [
                 f"- Revision: `{description.iri}`",
@@ -10584,6 +10679,7 @@ class DoxaBase:
                     f"results={description.validation_result_count}"
                 ),
                 "",
+                *semantic_warning,
                 *self._staged_apply_check_markdown(
                     apply_check,
                     apply_check_error=apply_check_error,
@@ -10719,6 +10815,26 @@ class DoxaBase:
             )
         return "\n".join(lines).rstrip() + "\n"
 
+    def _semantic_review_warning_markdown(
+        self,
+        panel: MapAssertionJudgementPanel | None,
+    ) -> list[str]:
+        if panel is None or panel.semantic_risk_level == "none":
+            return []
+        lines = [
+            "## Semantic Review Warning",
+            "",
+            f"- Level: {panel.semantic_risk_level}",
+            (
+                "- Meaning: this staged revision may replay and validate cleanly, "
+                "but nearby lore says it still needs semantic review."
+            ),
+        ]
+        if panel.semantic_risk_reasons:
+            lines.append("- Reasons:")
+            lines.extend(f"  - {reason}" for reason in panel.semantic_risk_reasons)
+        return lines
+
     def _staged_apply_check_markdown(
         self,
         check: StagedRevisionApplyCheck | None,
@@ -10739,12 +10855,16 @@ class DoxaBase:
                 f"- Decision: {check.decision}",
                 f"- Can apply: {check.can_apply}",
                 f"- Review recommended: {check.review_recommended}",
+                f"- Semantic risk: {check.semantic_risk_level}",
                 f"- Summary: {check.summary}",
                 f"- Changed graphs: {', '.join(check.changed_graphs) or '(none)'}",
                 f"- Patches checked: {check.patches_checked}",
                 f"- Triple delta: +{check.triples_to_add}, -{check.triples_to_remove}",
             ]
         )
+        if check.semantic_risk_reasons:
+            lines.append("- Semantic risk reasons:")
+            lines.extend(f"  - {reason}" for reason in check.semantic_risk_reasons)
         if check.blocking_reasons:
             lines.append(f"- Blocking reasons: {', '.join(check.blocking_reasons)}")
         if check.recommended_resolution:
@@ -11033,7 +11153,11 @@ class DoxaBase:
         lines = [
             f"- Headline: {panel.headline}",
             f"- Exact assertion present before staging: {panel.assertion_present_before}",
+            f"- Semantic risk: {panel.semantic_risk_level}",
         ]
+        if panel.semantic_risk_reasons:
+            lines.append("- Semantic risk reasons:")
+            lines.extend(f"  - {reason}" for reason in panel.semantic_risk_reasons)
         if panel.recommendation is not None:
             lines.append(f"- Recommendation: {panel.recommendation}")
         if panel.absence_note is not None:

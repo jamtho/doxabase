@@ -63,8 +63,9 @@ generates the Turtle patch payloads, links related lore and anchors, and returns
 the normal staged revision record alongside the support snapshot and a compact
 `judgement_panel`. Read the panel first when deciding whether a single assertion
 change is plausible: it brings current/proposed values, value-type context,
-reasons the current value may be intentional, caveat scopes, strongest routes,
-impact entries, and safety notes into one place. Use generic
+semantic risk level/reasons, reasons the current value may be intentional,
+caveat scopes, strongest routes, impact entries, and safety notes into one
+place. Use generic
 `stage_graph_revision` when the patch is multi-resource, multi-graph, or cannot
 be expressed as one assertion add/remove/replace.
 
@@ -92,9 +93,11 @@ proposal. The export includes a live `Current Apply Check` section generated at
 export time, so stale proposals carry their current conflict status, count drift,
 validation-skipped reason, and suggested next calls in the review artifact
 itself. For simple single-assertion `map` changes that still replay cleanly, the
-export also includes a `Judgement Panel` section so human and agent reviewers can
-see the same compact values, value-type context, caveats, routes, and safety
-notes that the JSON helper returned. Use `doxabase.export_staged_revisions` when
+export may include a `Semantic Review Warning` before the apply check, and also
+includes a `Judgement Panel` section so human and agent reviewers can see the
+same compact values, value-type context, caveats, routes, and safety notes that
+the JSON helper returned. `can_apply=True` means replay and validation readiness,
+not semantic approval. Use `doxabase.export_staged_revisions` when
 several alternatives, failed candidates, and repaired candidates should be
 reviewed together; its summary table includes the current apply status and
 decision, plus current and staged-time validation state for each staged

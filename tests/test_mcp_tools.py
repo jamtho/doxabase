@@ -116,7 +116,7 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     tables = list_entities_tool(db, type="rc:Table", graph="map")
     validation = validate_graph_tool(db, scope="all")
 
-    assert load_result["total_imported"] == 800
+    assert load_result["total_imported"] == 805
     assert load_result["totals"]["patterns"] == 14
     assert overview["key_counts"]["tables"] >= 7
     assert overview["key_counts"]["patterns"] >= 1
@@ -489,6 +489,13 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     panel = result["judgement_panel"]
     assert panel["proposed_value"]["label"] == "DOUBLE"
     assert [value["label"] for value in panel["current_values"]] == ["VARCHAR"]
+    assert panel["semantic_risk_level"] == "high"
+    assert panel["semantic_risk_reasons"]
+    assert panel["value_type_context"][0]["value_type"]["label"] == (
+        "Raw CLOB Price Payload"
+    )
+    assert panel["value_type_context"][0]["current_physical_type_matches"] is True
+    assert panel["value_type_context"][0]["proposed_physical_type_matches"] is False
     assert panel["caveats"]
     assert any(
         impact["impact_type"] == "changed_physical_type"
@@ -505,6 +512,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
         result["staged_revision"]["revision_iri"],
     )
     assert description["judgement_panel"]["proposed_value"]["label"] == "DOUBLE"
+    assert description["judgement_panel"]["semantic_risk_level"] == "high"
     assert description["supporting_patterns"]
     assert "https://richcanopy.org/ns/rc#Varchar" not in {
         anchor["iri"] for anchor in description["revision_anchors"]
@@ -516,6 +524,14 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
         impact["impact_type"] == "changed_physical_type"
         for impact in description["impacts"]
     )
+    check = check_staged_revision_apply_tool(
+        db,
+        result["staged_revision"]["revision_iri"],
+    )
+    assert check["can_apply"] is True
+    assert check["status"] == "ready"
+    assert check["semantic_risk_level"] == "high"
+    assert check["semantic_risk_reasons"]
 
     ais_result = stage_map_assertion_change_tool(
         db,

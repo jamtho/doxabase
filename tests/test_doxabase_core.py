@@ -844,7 +844,9 @@ def test_stage_map_assertion_change_packages_support_context(
             ex:px_price a rc:Column ;
                 rc:columnName "price" ;
                 rc:physicalType rc:Varchar ;
-                rc:valueType ex:RawPricePayload .
+                rc:valueType ex:RawPricePayload ;
+                rc:nullable true ;
+                rdfs:comment "Raw payload lane." .
 
             ex:mixed_price_payload_caveat a rc:KnownCaveat ;
                 rdfs:label "Mixed price payload caveat" ;
@@ -875,6 +877,7 @@ def test_stage_map_assertion_change_packages_support_context(
             ex:pattern_price_payload_boundary a rc:Pattern ;
                 rc:summary "Raw price payloads need a coercion boundary." ;
                 rc:patternText "Do not treat price as clean probability before parsing." ;
+                rc:rationale "The current raw lane caveat is supported by the sample observation and claim." ;
                 rc:patternTarget ex:px_price ;
                 rc:supportingObservation ex:obs_price_payloads ;
                 rc:supportingClaim ex:claim_price_payloads_are_mixed ;
@@ -928,6 +931,11 @@ def test_stage_map_assertion_change_packages_support_context(
     assert panel.proposed_value is not None
     assert panel.proposed_value.label == "DOUBLE"
     assert panel.absence_note is not None
+    assert panel.semantic_risk_level == "high"
+    assert any(
+        "current value may be intentional" in reason
+        for reason in panel.semantic_risk_reasons
+    )
     assert "Current same-subject/predicate value(s): VARCHAR" in panel.absence_note
     assert len(panel.value_type_context) == 1
     value_type_context = panel.value_type_context[0]
@@ -997,15 +1005,44 @@ def test_stage_map_assertion_change_packages_support_context(
         impact.impact_type == "changed_physical_type"
         for impact in description.impacts
     )
+    check = db.check_staged_revision_apply(
+        staged_change.staged_revision.revision_iri
+    )
+    assert check.can_apply is True
+    assert check.status == "ready"
+    assert check.semantic_risk_level == "high"
+    assert check.semantic_risk_reasons == panel.semantic_risk_reasons
     export_path = tmp_path / "price-change-review.md"
     db.export_staged_revision(staged_change.staged_revision.revision_iri, export_path)
     exported = export_path.read_text()
+    assert exported.index("## Semantic Review Warning") < exported.index(
+        "## Current Apply Check"
+    )
+    assert "- Semantic risk: high" in exported
     assert "## Judgement Panel" in exported
     assert "### Value Type Context" in exported
     assert "Raw price payload" in exported
     assert "Current matches" in exported
     assert "Proposed matches" in exported
     assert "Why Current Value May Be Intentional" in exported
+
+    comment_change = db.stage_map_assertion_change(
+        subject="https://example.test/project#px_price",
+        predicate="rdfs:comment",
+        object="Clean probability column.",
+        object_kind="literal",
+        change_kind="replace",
+        rationale=(
+            "This comment cleanup has no shape-level blocker, but it still needs "
+            "semantic review because the same column has attached caveats and lore."
+        ),
+    )
+    comment_check = db.check_staged_revision_apply(
+        comment_change.staged_revision.revision_iri
+    )
+    assert comment_check.can_apply is True
+    assert comment_check.semantic_risk_level == "high"
+    assert comment_check.semantic_risk_reasons
 
 
 def test_apply_staged_revision_mutates_graph_and_records_history(

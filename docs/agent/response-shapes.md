@@ -271,6 +271,8 @@ panel.assertion_present_before
 panel.current_values
 panel.proposed_value
 panel.absence_note
+panel.semantic_risk_level
+panel.semantic_risk_reasons
 panel.value_type_context
 panel.why_current_value_may_be_intentional
 panel.caveats
@@ -283,7 +285,8 @@ The panel does not decide whether the change is right. It packages the current
 and proposed values, physical/value-type context, reasons the current value may
 be intentional, caveat scopes, strongest related-lore routes, deterministic
 impact spotlight entries, and safety notes that a reviewer should consider
-before apply.
+before apply. `semantic_risk_level` is `none`, `attention`, or `high`; it is a
+review cue, not a validation failure.
 
 For physical type changes, `panel.value_type_context` lists current
 `rc:valueType` resources and any `rc:requiredPhysicalType` they declare, with
@@ -757,6 +760,8 @@ check.status
 check.decision
 check.summary
 check.review_recommended
+check.semantic_risk_level
+check.semantic_risk_reasons
 check.blocking_reasons
 check.recommended_resolution
 check.already_applied_by
@@ -776,8 +781,8 @@ check.suggested_next_actions
 check.suggested_next_calls
 ```
 
-Read `status` and `summary` first. Current statuses are `ready`,
-`already_applied`, `conflict`, `validation_failed`, and `not_ready`.
+Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
+`ready`, `already_applied`, `conflict`, `validation_failed`, and `not_ready`.
 `decision` is the stable branch hint, for example `review_then_apply`,
 `inspect_applied_revision`, `restage_against_current_graph`, or
 `inspect_validation_results`. `review_recommended=True` means the patch replays
@@ -799,6 +804,9 @@ support: tool name, MCP tool name, arguments, reason, and display call string.
 For staged apply checks, actions are ordered review-first; mutating actions such
 as `apply_staged_revision` and `restage_staged_revision` come after inspection
 or export suggestions.
+`can_apply=True` means the patch replays and validates mechanically; it is not
+semantic approval. If `semantic_risk_level` is `attention` or `high`, inspect the
+judgement panel, impacts, and supporting lore before applying.
 
 `export_staged_revision()` and `export_staged_revisions()` embed this live apply
 check into the Markdown artifact at export time. Treat the `Current Apply Check`

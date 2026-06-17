@@ -285,11 +285,12 @@ and `change_kind` (`"add"`, `"remove"`, or `"replace"`). It calls
 links related observations/claims/patterns/evidence and revision anchors, and
 stores an assertion-support summary in the staged revision review note. The
 returned `judgement_panel` is the compact reviewer view: headline,
-current/proposed values, value-type context, reasons the current value may be
-intentional, caveat scopes, strongest related-lore routes, impact spotlight
-entries, and safety notes. For physical type changes, the panel includes current
-`rc:valueType` resources and any declared `rc:requiredPhysicalType`. Use it for
-common assertion changes before reaching for generic `stage_graph_revision`.
+current/proposed values, semantic risk level/reasons, value-type context, reasons
+the current value may be intentional, caveat scopes, strongest related-lore
+routes, impact spotlight entries, and safety notes. For physical type changes,
+the panel includes current `rc:valueType` resources and any declared
+`rc:requiredPhysicalType`. Use it for common assertion changes before reaching
+for generic `stage_graph_revision`.
 For `replace`, the generated patch set adds the requested assertion and removes
 current same-subject/predicate values except the requested object. The recorded
 patch sequence shows the exact preview/apply order.
@@ -346,9 +347,10 @@ graph counts.
 apply-check status, diagnostics, and impact review before patch payloads. Stale
 exports include conflict status, count drift, validation-skipped reason, and
 suggested next calls as of export time. For simple single-assertion `map`
-changes that still replay cleanly, it reconstructs a `Judgement Panel` section
-so the export carries values, value-type context, rationale, caveats, routes,
-and safety notes from the JSON review surface.
+changes that still replay cleanly, it may add a `Semantic Review Warning` before
+the apply check, and reconstructs a `Judgement Panel` section so the export
+carries values, value-type context, rationale, caveats, routes, and safety notes
+from the JSON review surface.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and
@@ -359,8 +361,9 @@ paths.
 
 `check_staged_revision_apply()` previews whether one staged revision can be
 applied without mutating graph state. It reports already-applied state,
-per-patch count drift, preview triple counts, validation status, and a
-top-level `can_apply` flag. Read `status` and `summary` first; use
+per-patch count drift, preview triple counts, validation status, semantic risk,
+and a top-level `can_apply` flag. Read `status`, `summary`, and
+`semantic_risk_level` first; use
 `decision`, `blocking_reasons`, `validation_skipped_reason`,
 `recommended_resolution`, `count_drifts`, and `suggested_next_actions` to decide
 whether to review then apply, inspect an applied event, review validation
@@ -369,6 +372,7 @@ counts and deltas, plus whether the staged patch triples themselves are
 currently present, absent, or mixed in the target graph. Exact unrelated changed
 triples still need future graph version storage. Suggested actions are ordered
 review-first; mutation calls come after inspection/export suggestions.
+`can_apply=True` means replay and validation readiness, not semantic approval.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted
 staged revision's existing patch payloads, recomputing before/after counts and

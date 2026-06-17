@@ -292,18 +292,20 @@ small Turtle addition/removal patches, records related observations, claims,
 patterns, evidence, caveat scopes, and assertion anchors on the staged revision,
 and returns the assertion-support snapshot, staged revision record, and a compact
 `judgement_panel`. Check the panel first for current/proposed values, caveat
-scopes, value-type context, reasons the current value may be intentional,
-strongest route summaries, impact spotlight entries, and safety notes. For
-physical type changes, `value_type_context` surfaces current `rc:valueType`
-resources and declared `rc:requiredPhysicalType` values. Routes marked
-`generic_value_only` matched only shared values such as `rc:Varchar`; treat them
-as weak context. Drill into `assertion_support` and `describe_staged_revision`
-when the change needs more thought.
+scopes, semantic risk level/reasons, value-type context, reasons the current
+value may be intentional, strongest route summaries, impact spotlight entries,
+and safety notes. For physical type changes, `value_type_context` surfaces
+current `rc:valueType` resources and declared `rc:requiredPhysicalType` values.
+Routes marked `generic_value_only` matched only shared values such as
+`rc:Varchar`; treat them as weak context. Drill into `assertion_support` and
+`describe_staged_revision` when the change needs more thought.
 For `replace`, the generated patch set adds the requested assertion and removes
 current same-subject/predicate values except the requested object. The recorded
 patch sequence shows the exact preview/apply order. It does not apply the change;
 use `describe_staged_revision` and `check_staged_revision_apply` before
 application.
+`can_apply=True` means the patch replays and validates mechanically; it does not
+mean the semantic change is wise.
 
 `doxabase.stage_systematisation`
 
