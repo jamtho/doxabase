@@ -55,9 +55,9 @@ compaction, read `start_here` first.
     applied, or historical revision records before choosing one to inspect.
 25. Use `doxabase.check_staged_revision_apply` when a staged proposal is being
     reviewed for application.
-26. Use `doxabase.restage_staged_revision` when the apply check reports a
-    count-drift conflict and the same patch intent should be replayed against
-    current graph counts.
+26. Use `doxabase.restage_staged_revision` when the apply check reports
+    `target_count_drift` or `target_digest_drift` and the same patch intent
+    should be replayed against current graph state.
 27. Use `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks.
 28. Use `doxabase.describe_graph_revision` when reviewing a history record, and
@@ -85,5 +85,5 @@ Do not write to `base_ontology` or `base_shapes`; they are immutable package see
 
 In the current V1 slice, the MCP interface exposes route-explained context
 slices and reviewable staged revisions. It can apply one staged revision with
-conservative count-based conflict checks, but it does not yet provide rich
+conservative graph-state conflict checks, but it does not yet provide rich
 conflict handling, rebasing, or durable graph version storage.

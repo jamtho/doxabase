@@ -694,11 +694,11 @@ not as semantic proof that a graph change is safe.
 
 `description.alternative_to` means this staged revision competes with or refines
 another revision. `description.restaged_from` means this staged revision replayed
-an older stale proposal against current graph counts; it is provenance for a
-count-drift repair, not a competing framing.
+an older stale proposal against current graph state; it is provenance for a
+graph-state drift repair, not a competing framing.
 
 `description.judgement_panel` is present for simple single-assertion `map`
-staged changes that still replay cleanly against current graph counts. It has
+staged changes that still replay cleanly against current graph state. It has
 the same shape as `change.judgement_panel` from
 `stage_map_assertion_change`. It is `None` for complex revisions, stale staged
 patches, already-applied staged revisions, or changes that cannot be reduced to

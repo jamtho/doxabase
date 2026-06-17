@@ -53,8 +53,8 @@ terms, deprecated mappings, and consolidation notes.
 Use `record_graph_revision()` for routine revision metadata and
 `stage_graph_revision()` for reviewable patch proposals.
 `apply_staged_revision()` can apply one staged proposal after conservative
-count-based conflict checks and preview validation. `restage_staged_revision()`
-can refresh a stale staged proposal against current graph counts. Fuller graph
+graph-state conflict checks and preview validation. `restage_staged_revision()`
+can refresh a stale staged proposal against current graph state. Fuller graph
 replacement, semantic merge/rebase, and version storage are not implemented yet.
 
 ## Logical Includes

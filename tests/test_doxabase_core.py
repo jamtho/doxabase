@@ -1318,13 +1318,17 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "- Status: conflict" in export_text
     assert "- Decision: restage_against_current_graph" in export_text
     assert "- Mechanically can apply: False" in export_text
+    assert "- Replayable triple delta: +0, -0 (conflicted patches excluded)" in (
+        export_text
+    )
     assert "- Blocking reasons: target_count_drift" in export_text
     assert "- Validation skipped: conflicts_present" in export_text
     assert "### Count Drift" in export_text
     assert "| Patch | Graph | Expected before | Current | Delta |" in export_text
     assert (
-        "| Patch | Graph | Operation | Recorded before | Current before | "
-        "Recorded after | Current preview | Mechanically can apply | Conflict |"
+        "| Patch | Graph | Operation | Recorded preview before | "
+        "Current preview before | Recorded preview after | Current preview | "
+        "Mechanically can apply | Conflict |"
     ) in export_text
     assert "| map | 0 |" in export_text
     assert f"| 0 | {db.triple_count('map')} |" in export_text
@@ -1432,6 +1436,12 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     export_text = export_path.read_text(encoding="utf-8")
     assert "- Blocking reasons: target_digest_drift" in export_text
     assert "### Snapshot Drift" in export_text
+    assert (
+        "| Graph | Snapshot stored count | Current stored count | "
+        "Snapshot digest | Current digest | Exact changed triples | Note |"
+    ) in export_text
+    assert "| map | 2 | 2 |" in export_text
+    assert "| False |" in export_text
     assert "sha256:" in export_text
 
     listing = db.list_graph_revisions(
@@ -1442,6 +1452,111 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert listed.application_status == "conflict"
     assert listed.application_blocking_reasons == ["target_digest_drift"]
     assert listed.application_snapshot_drifts[0].graph_role == "map"
+
+
+def test_apply_check_resolution_mentions_count_and_digest_drift(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:SeedDataset a rc:Dataset ;
+            rdfs:label "Seed dataset" .
+        """,
+        graph="map",
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:SeedPattern rdfs:label "Seed pattern" .
+        """,
+        graph="patterns",
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage map and pattern additions",
+        rationale="Exercise mixed count and digest drift messaging.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:CandidateDataset a rc:Dataset .
+                """,
+            },
+            {
+                "graph": "patterns",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:CandidatePattern rdfs:label "Candidate pattern" .
+                """,
+            },
+        ],
+        validation_scope="map",
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:MapCountDrift a rc:Dataset .
+        """,
+        graph="map",
+    )
+    pattern_drift = db.stage_graph_revision(
+        summary="Rename seed pattern without changing count",
+        rationale="Exercise digest drift on a second changed graph.",
+        additions=[
+            {
+                "graph": "patterns",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:SeedPattern rdfs:label "Seed pattern renamed" .
+                """,
+            }
+        ],
+        removals=[
+            {
+                "graph": "patterns",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:SeedPattern rdfs:label "Seed pattern" .
+                """,
+            }
+        ],
+        validation_scope="map",
+    )
+    db.apply_staged_revision(pattern_drift.revision_iri, validation_scope="map")
+
+    check = db.check_staged_revision_apply(
+        staged.revision_iri,
+        validation_scope="map",
+    )
+
+    assert check.status == "conflict"
+    assert check.blocking_reasons == ["target_count_drift", "target_digest_drift"]
+    assert len(check.count_drifts) == 1
+    assert {drift.graph_role for drift in check.snapshot_drifts} == {
+        "map",
+        "patterns",
+    }
+    assert check.recommended_resolution == (
+        "Restage the proposal against the current graph state; the target graph "
+        "count and content digest both changed since staging."
+    )
 
 
 def test_restage_staged_revision_refreshes_counts_after_conflict(

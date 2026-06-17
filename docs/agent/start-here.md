@@ -111,8 +111,9 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 - Generic reviewable graph patch: use `stage_graph_revision`.
 - Staged patch that may be ready to apply: use `check_staged_revision_apply`
   before `apply_staged_revision`.
-- Staged patch blocked by count drift but still semantically useful: use
-  `restage_staged_revision`, then check and review the refreshed proposal.
+- Staged patch blocked by count drift or digest drift but still semantically
+  useful: use `restage_staged_revision`, then check and review the refreshed
+  proposal.
 - Unknown staged/applied/history record: use `list_graph_revisions`, then
   inspect a specific result with `describe_graph_revision` or
   `describe_staged_revision`.

@@ -343,10 +343,10 @@ documentation from a subject that also has semantic
 changes. Caveat impact values include the caveat description, impact, and
 severity inline when those facts are known. `restaged_from` is present when the
 staged revision was created by replaying an older stale proposal against current
-graph counts.
+graph state.
 `export_staged_revision()` writes a Markdown review bundle with the current
 apply-check status, diagnostics, and impact review before patch payloads. Stale
-exports include conflict status, count drift, validation-skipped reason, and
+exports include conflict status, count or digest drift, validation-skipped reason, and
 suggested next calls as of export time. For simple single-assertion `map`
 changes that still replay cleanly, it may add a `Semantic Review Warning` before
 the apply check, and reconstructs a `Judgement Panel` section so the export
@@ -362,8 +362,9 @@ paths.
 
 `check_staged_revision_apply()` previews whether one staged revision can be
 applied without mutating graph state. It reports already-applied state,
-per-patch count drift, preview triple counts, validation status, semantic risk,
-and a top-level `can_apply` flag. Read `status`, `summary`, and
+per-patch count drift, graph snapshot digest drift, preview triple counts,
+validation status, semantic risk, and a top-level `can_apply` flag. Read
+`status`, `summary`, and
 `semantic_risk_level` first; use
 `decision`, `blocking_reasons`, `validation_skipped_reason`,
 `recommended_resolution`, `count_drifts`, `snapshot_drifts`, and
@@ -381,15 +382,16 @@ mutation calls come after inspection/export suggestions.
 staged revision's existing patch payloads, recomputing before/after counts and
 validation against the current graph state. It records `rc:restagesRevision`
 back to the stale proposal and preserves support links, anchors, stance, review
-notes, and review recommendations. Use it for count-drift conflicts; it does not
-merge semantic conflicts, repair invalid RDF proposals, or apply the refreshed
-revision.
+notes, and review recommendations. Use it for count or digest drift conflicts;
+it does not merge semantic conflicts, repair invalid RDF proposals, or apply the
+refreshed revision.
 
-`apply_staged_revision()` applies one staged revision after count-based conflict
-checks and preview validation. It rejects already-applied staged revisions,
-rejects target graph count drift from the patch `beforeTripleCount` values, and
-records an `rc:AppliedStagedRevision` history event linked to the staged
-revision. This is a conservative first apply path, not a full conflict/rebase or
+`apply_staged_revision()` applies one staged revision after conservative
+graph-state conflict checks and preview validation. It rejects already-applied
+staged revisions, rejects target graph count or digest drift from the patch
+`beforeTripleCount` values and graph snapshots, and records an
+`rc:AppliedStagedRevision` history event linked to the staged revision. This is
+a conservative first apply path, not a full conflict/rebase or
 graph-version workflow.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,

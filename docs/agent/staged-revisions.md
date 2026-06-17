@@ -90,14 +90,15 @@ was there. They do not make the proposal invalid by themselves.
 
 Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
 proposal. The export includes a live `Current Apply Check` section generated at
-export time, so stale proposals carry their current conflict status, count drift,
-validation-skipped reason, and suggested next calls in the review artifact
-itself. For simple single-assertion `map` changes that still replay cleanly, the
-export may include a `Semantic Review Warning` before the apply check, and also
-includes a `Judgement Panel` section so human and agent reviewers can see the
-same compact values, value-type context, caveats, routes, and safety notes that
-the JSON helper returned. `can_apply=True` means replay and validation readiness,
-not semantic approval. Use `doxabase.export_staged_revisions` when
+export time, so stale proposals carry their current conflict status, count or
+digest drift, validation-skipped reason, and suggested next calls in the review
+artifact itself. For simple single-assertion `map` changes that still replay
+cleanly, the export may include a `Semantic Review Warning` before the apply
+check, and also includes a `Judgement Panel` section so human and agent
+reviewers can see the same compact values, value-type context, caveats, routes,
+and safety notes that the JSON helper returned. `can_apply=True` means replay
+and validation readiness, not semantic approval. Use
+`doxabase.export_staged_revisions` when
 several alternatives, failed candidates, and repaired candidates should be
 reviewed together; its summary table includes the current apply status and
 decision, plus current and staged-time validation state for each staged
@@ -117,6 +118,9 @@ A stale export should be read like this:
 ### Count Drift
 ...
 
+### Snapshot Drift
+...
+
 ### Suggested Next Calls
 - describe_staged_revision(...)
 - export_staged_revision(...)
@@ -125,9 +129,10 @@ A stale export should be read like this:
 
 In grouped exports, `Staged validation` is the validation result from when the
 proposal was created. `Current validation` comes from the live apply check and
-may say `skipped: conflicts_present` when count drift prevents a replay. Prefer
-the current apply status when deciding what to do next. Validation cells include
-their result count when available, for example `True (0 result(s))`.
+may say `skipped: conflicts_present` when count or digest drift prevents a
+replay. Prefer the current apply status when deciding what to do next.
+Validation cells include their result count when available, for example
+`True (0 result(s))`.
 
 ## Systematisation Drafts
 
@@ -263,33 +268,37 @@ conservative:
 
 Use `doxabase.check_staged_revision_apply` first when you want a read-only
 answer. It reports whether the staged revision has already been applied, whether
-any patch target graph has drifted from its recorded `beforeTripleCount`, the
-preview count for each patch, preview validation diagnostics, `status`,
-`summary`, and structured `suggested_next_actions`. Read `status` and `summary`
-first. Current statuses are `ready`, `already_applied`, `conflict`,
-`validation_failed`, and `not_ready`. `decision` is the compact branch hint:
-`review_then_apply`, `inspect_applied_revision`,
+any patch target graph has drifted from its recorded `beforeTripleCount` or
+staging-time graph digest, the preview count for each patch, preview validation
+diagnostics, `status`, `summary`, and structured `suggested_next_actions`. Read
+`status` and `summary` first. Current statuses are `ready`, `already_applied`,
+`conflict`, `validation_failed`, and `not_ready`. `decision` is the compact
+branch hint: `review_then_apply`, `inspect_applied_revision`,
 `restage_against_current_graph`, `inspect_validation_results`, or
 `inspect_staged_revision`. `review_recommended=True` on `ready` checks means the
 proposal replays and validates, but still needs judgement before application.
-Use `blocking_reasons` and `recommended_resolution` to distinguish count drift
-from validation failure or already-applied state. When `validation_conforms` is
-`None`, `validation_skipped_reason` explains why validation did not run.
+Use `blocking_reasons` and `recommended_resolution` to distinguish count drift,
+digest drift, validation failure, and already-applied state. When
+`validation_conforms` is `None`, `validation_skipped_reason` explains why
+validation did not run.
 `count_drifts` gives expected/current graph counts and deltas for count drift.
 It can also say whether the staged patch triples themselves are currently
 present, absent, or mixed in the target graph. Exact unrelated changed triples
-still need future graph version storage.
+still need future graph version storage. `snapshot_drifts` gives staged/current
+graph content digests and stored graph counts for digest drift, including
+same-count graph changes.
 Suggested actions are ordered review-first; apply or restage calls come after
 inspection/export suggestions.
 
 This is not a full merge system. A harmless unrelated graph change can still
-show up as a conflict because the first guard is count-based. In that case,
-call `doxabase.restage_staged_revision` to copy the stale proposal into a fresh
-staged revision with current before/after counts, then review and check the new
-revision before applying. The refreshed revision records `rc:restagesRevision`
-back to the stale proposal. Restaging is for count-drift conflicts; validation
-failures still need graph repair, and already-applied revisions should be
-inspected rather than replayed.
+show up as a conflict because the guards compare staged graph state with current
+graph state. In that case, call `doxabase.restage_staged_revision` to copy the
+stale proposal into a fresh staged revision with current before/after counts and
+graph snapshots, then review and check the new revision before applying. The
+refreshed revision records `rc:restagesRevision` back to the stale proposal.
+Restaging is for count or digest drift conflicts; validation failures still need
+graph repair, and already-applied revisions should be inspected rather than
+replayed.
 
 ## What Gets Recorded
 
@@ -391,7 +400,7 @@ templates are legitimate.
 
 ## Limits
 
-DoxaBase can apply one staged revision with conservative count-based conflict
+DoxaBase can apply one staged revision with conservative graph-state conflict
 checks and can restage a stale proposal when the target graph has drifted. It
 does not yet support rich semantic merge diagnostics, rebasing, approval state
 machines, or durable graph version storage.

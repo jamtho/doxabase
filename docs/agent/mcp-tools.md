@@ -339,7 +339,7 @@ anchors, review note/recommendation, patch payloads, before/after count
 previews, validation status, structured SHACL diagnostics such as focus node,
 result path, constraint, and messages, optional `judgement_panel`, and `impacts`
 review context. `restaged_from` is present when this staged revision was created
-by replaying an older stale staged proposal against current graph counts.
+by replaying an older stale staged proposal against current graph state.
 `judgement_panel` is present for simple single-assertion `map`
 changes that still replay cleanly; it is absent for complex or stale staged
 revisions. Impact
@@ -379,7 +379,7 @@ read-only check.
 
 Creates a fresh staged revision from a conflicted staged revision's patch
 payloads, rerunning preview counts and validation against the current graph
-state. Use it for the count-drift branch from
+state. Use it for `target_count_drift` or `target_digest_drift` from
 `check_staged_revision_apply`, especially when an unrelated graph edit made an
 otherwise still-useful proposal stale. The new staged revision records
 `rc:restagesRevision` / `restaged_from` back to the stale proposal and preserves
@@ -390,19 +390,19 @@ new staged revision and run `check_staged_revision_apply` again.
 `doxabase.apply_staged_revision`
 
 Applies one staged revision to its target graph roles after conservative
-count-based conflict checks and preview SHACL validation. The helper rejects
-already-applied staged revisions and rejects graph-count drift from the staged
-`beforeTripleCount` values. Patch checks follow the recorded
-`rc:patchSequence` order from the original preview. On success it records an
-`rc:AppliedStagedRevision` history event linked to the staged revision. It is a
-first apply path, not a full merge/rebase workflow.
+graph-state conflict checks and preview SHACL validation. The helper rejects
+already-applied staged revisions and rejects target graph count or digest drift
+from the staged `beforeTripleCount` values and graph snapshots. Patch checks
+follow the recorded `rc:patchSequence` order from the original preview. On
+success it records an `rc:AppliedStagedRevision` history event linked to the
+staged revision. It is a first apply path, not a full merge/rebase workflow.
 
 `doxabase.export_staged_revision`
 
 Writes a Markdown review bundle for a staged revision, including validation
 diagnostics before patch payloads when validation failed. The bundle also
 includes a live `Current Apply Check`, so stale exports show conflict status,
-count drift, validation-skipped reason, and suggested next calls as of export
+count or digest drift, validation-skipped reason, and suggested next calls as of export
 time. For simple single-assertion `map` changes that still replay cleanly, the
 export includes a `Judgement Panel` section with values, value-type context,
 rationale, caveats, routes, and safety notes. This is for human/agent review.

@@ -8061,6 +8061,14 @@ class DoxaBase:
             )
         if status == "already_applied":
             return "Inspect the applied revision event; do not apply this staged revision again."
+        if (
+            "target_count_drift" in blocking_reasons
+            and "target_digest_drift" in blocking_reasons
+        ):
+            return (
+                "Restage the proposal against the current graph state; the target "
+                "graph count and content digest both changed since staging."
+            )
         if "target_count_drift" in blocking_reasons:
             return (
                 "Restage the proposal against the current graph state; the target "
@@ -10941,6 +10949,10 @@ class DoxaBase:
             if apply_check_error:
                 lines.append(f"- Error: {apply_check_error}")
             return lines
+        delta_label = (
+            "Replayable triple delta" if check.conflicts else "Triple delta"
+        )
+        delta_suffix = " (conflicted patches excluded)" if check.conflicts else ""
 
         lines.extend(
             [
@@ -10952,7 +10964,10 @@ class DoxaBase:
                 f"- Summary: {check.summary}",
                 f"- Changed graphs: {', '.join(check.changed_graphs) or '(none)'}",
                 f"- Patches checked: {check.patches_checked}",
-                f"- Triple delta: +{check.triples_to_add}, -{check.triples_to_remove}",
+                (
+                    f"- {delta_label}: +{check.triples_to_add}, "
+                    f"-{check.triples_to_remove}{delta_suffix}"
+                ),
             ]
         )
         if check.semantic_risk_reasons:
@@ -11040,10 +11055,11 @@ class DoxaBase:
                     "### Snapshot Drift",
                     "",
                     (
-                        "| Graph | Snapshot count | Current count | "
-                        "Snapshot digest | Current digest | Note |"
+                        "| Graph | Snapshot stored count | Current stored count | "
+                        "Snapshot digest | Current digest | Exact changed triples | "
+                        "Note |"
                     ),
-                    "|---|---:|---:|---|---|---|",
+                    "|---|---:|---:|---|---|---|---|",
                 ]
             )
             for drift in check.snapshot_drifts:
@@ -11058,6 +11074,7 @@ class DoxaBase:
                                 drift.snapshot_content_digest
                             ),
                             self._markdown_table_cell(drift.current_content_digest),
+                            str(drift.exact_changed_triples_available),
                             self._markdown_table_cell(drift.note),
                         ]
                     )
@@ -11071,8 +11088,8 @@ class DoxaBase:
                     "### Patch Replay",
                     "",
                     (
-                        "| Patch | Graph | Operation | Recorded before | "
-                        "Current before | Recorded after | Current preview | "
+                        "| Patch | Graph | Operation | Recorded preview before | "
+                        "Current preview before | Recorded preview after | Current preview | "
                         "Mechanically can apply | Conflict |"
                     ),
                     "|---|---|---|---:|---:|---:|---:|---|---|",

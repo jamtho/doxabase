@@ -50,9 +50,9 @@ Current implementation status:
   by existing patterns and their support links.
 - `check_staged_revision_apply()` for read-only application diagnostics.
 - `restage_staged_revision()` for refreshing stale staged proposals after
-  count-drift conflicts.
-- `apply_staged_revision()` for applying one staged revision after count-based
-  conflict checks and preview validation.
+  count or digest drift conflicts.
+- `apply_staged_revision()` for applying one staged revision after conservative
+  graph-state conflict checks and preview validation.
 - Agent-authored observation and pattern RDF for structured claims, source spans, confidence, and status.
 - Stricter SHACL checks for observation, pattern, evidence, claim, and source-span resources.
 - Non-secret storage access metadata for physical query planning.
