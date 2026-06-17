@@ -154,7 +154,8 @@ visible when interpreting an aggregation, derivation, or foreign key.
 caveats and is intentionally separate from direct `caveats`.
 `profile_summary` gives quick counts of the profile observations returned in the
 bounded dataset description, split across dataset-level, mapped-column, and
-unmapped-column profile lore.
+unmapped-column profile lore. It also rolls up profile evidence IRIs and lists
+`shared_evidence_iris` that appear on every returned profile observation.
 Check `layout_verification_status` and `layout_verification_note` before using
 `path_templates` for executable query planning. Child physical layout, storage,
 and partition descriptions may carry their own verification fields when the

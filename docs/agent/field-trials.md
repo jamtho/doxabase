@@ -267,6 +267,9 @@ few useful gaps:
   unmapped-column profiles. It also showed that quick returned-profile counts
   on `describe_dataset` and top-level `shared_evidence_iri` on the bundle return
   make the retrieval check easier than inferring success from nested profiles.
+  A tighter verification suggested rolling up returned profile evidence IRIs in
+  `profile_summary` so shared-evidence handoffs can be checked without walking
+  every nested profile.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

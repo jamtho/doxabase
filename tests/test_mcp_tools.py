@@ -1318,13 +1318,16 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
 
     assert dataset["row_count_snapshot"] == 1000
     assert dataset["columns"] == []
-    assert dataset["profile_summary"] == {
-        "returned_dataset_profile_count": 1,
-        "returned_mapped_column_profile_count": 0,
-        "returned_unmapped_column_profile_count": 1,
-        "returned_profile_count": 2,
-        "mapped_profiled_column_count": 0,
+    assert dataset["profile_summary"]["returned_dataset_profile_count"] == 1
+    assert dataset["profile_summary"]["returned_mapped_column_profile_count"] == 0
+    assert dataset["profile_summary"]["returned_unmapped_column_profile_count"] == 1
+    assert dataset["profile_summary"]["returned_profile_count"] == 2
+    assert dataset["profile_summary"]["mapped_profiled_column_count"] == 0
+    assert dataset["profile_summary"]["evidence_iris"] == [shared_evidence]
+    assert dataset["profile_summary"]["evidence_profile_counts"] == {
+        shared_evidence: 2,
     }
+    assert dataset["profile_summary"]["shared_evidence_iris"] == [shared_evidence]
     profile = dataset["unmapped_column_profile_observations"][0]
     assert profile["sample_scope"] == "Twenty-five sampled Orders rows."
     assert profile["sample_method"] == "DuckDB sampled profile query."

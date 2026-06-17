@@ -484,10 +484,17 @@ profile_summary.returned_mapped_column_profile_count
 profile_summary.returned_unmapped_column_profile_count
 profile_summary.returned_profile_count
 profile_summary.mapped_profiled_column_count
+profile_summary.evidence_iris
+profile_summary.evidence_profile_counts
+profile_summary.shared_evidence_iris
 ```
 
 These are response counts, not a promise that the capsule has no older profile
-observations beyond the returned limit.
+observations beyond the returned limit. `evidence_iris` lists unique evidence
+IRIs linked from returned profile observations. `evidence_profile_counts` counts
+how many returned profile observations link to each evidence IRI.
+`shared_evidence_iris` lists evidence IRIs that are linked from every returned
+profile observation in the bounded response.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:

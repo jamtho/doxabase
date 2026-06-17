@@ -104,7 +104,8 @@ tags, linked patterns include pattern text as their description, and
 `linked_pattern_reasons` explains why each pattern matched when available.
 The `profile_summary` field gives quick counts of the profile observations
 returned in this bounded response, including dataset-level, mapped-column, and
-unmapped-column profile counts.
+unmapped-column profile counts. It also rolls up profile evidence IRIs and
+lists `shared_evidence_iris` that appear on every returned profile observation.
 Relationship entries and grouped reasons may include `source_caveats`, meaning
 caveats attached to source datasets or source-side columns that should remain
 visible when interpreting an aggregation, derivation, or foreign key. The

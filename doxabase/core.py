@@ -808,6 +808,9 @@ class ProfileSummary:
     returned_unmapped_column_profile_count: int
     returned_profile_count: int
     mapped_profiled_column_count: int
+    evidence_iris: list[str]
+    evidence_profile_counts: dict[str, int]
+    shared_evidence_iris: list[str]
 
 
 @dataclass(frozen=True)
@@ -4050,16 +4053,43 @@ class DoxaBase:
         )
         dataset_profile_count = len(dataset_profiles)
         unmapped_column_profile_count = len(unmapped_column_profiles)
+        returned_profiles = [
+            *dataset_profiles,
+            *unmapped_column_profiles,
+            *(
+                profile
+                for column in columns
+                for profile in column.profile_observations
+            ),
+        ]
+        evidence_profile_counts: dict[str, int] = {}
+        for profile in returned_profiles:
+            for evidence_iri in {
+                evidence.iri for evidence in profile.evidence if evidence.iri
+            }:
+                evidence_profile_counts[evidence_iri] = (
+                    evidence_profile_counts.get(evidence_iri, 0) + 1
+                )
+        evidence_iris = sorted(evidence_profile_counts)
+        returned_profile_count = (
+            dataset_profile_count
+            + mapped_column_profile_count
+            + unmapped_column_profile_count
+        )
         return ProfileSummary(
             returned_dataset_profile_count=dataset_profile_count,
             returned_mapped_column_profile_count=mapped_column_profile_count,
             returned_unmapped_column_profile_count=unmapped_column_profile_count,
-            returned_profile_count=(
-                dataset_profile_count
-                + mapped_column_profile_count
-                + unmapped_column_profile_count
-            ),
+            returned_profile_count=returned_profile_count,
             mapped_profiled_column_count=mapped_profiled_column_count,
+            evidence_iris=evidence_iris,
+            evidence_profile_counts=evidence_profile_counts,
+            shared_evidence_iris=[
+                evidence_iri
+                for evidence_iri in evidence_iris
+                if returned_profile_count > 0
+                and evidence_profile_counts[evidence_iri] == returned_profile_count
+            ],
         )
 
     def _profile_observation_summary(
