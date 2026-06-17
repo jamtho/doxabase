@@ -75,6 +75,17 @@ Use a scratch capsule, for example:
 /tmp/doxabase-field-trial.sqlite
 ```
 
+For repeated sub-agent runs, prefer a fresh timestamped directory such as:
+
+```text
+/tmp/doxabase-field-trial/run-20260617T193000Z/
+```
+
+Do not start trials by deleting old scratch directories. If cleanup is blocked
+or ambiguous, leave the old artifacts in place and create a new run directory.
+Use `DoxaBase.create(path, overwrite=True)` for the capsule inside that run
+directory.
+
 Do not modify the main project capsule. Do not commit trial artifacts unless the
 user explicitly wants them preserved in git.
 
@@ -236,6 +247,14 @@ few useful gaps:
   that helper-created patterns should show their profile evidence directly, and
   that assertion support should match common typed scalar literals supplied as
   plain strings.
+- Later profile-scope trials showed that `sample_scope` and `sample_method`
+  make full-scan versus sampled/top-N profile lore much easier to retrieve. They
+  also confirmed the preferred guardrail workflow: record sampled observed
+  values with `record_column_profile(update_map_column=false)`, add a caveat
+  claim that the values are not a closed domain, then synthesize both with a
+  pattern. Remaining profiling questions include whether dataset-level scalar
+  metrics need explicit metric targets, and whether profile-only handoffs should
+  de-emphasize expected storage/layout warnings.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
