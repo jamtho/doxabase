@@ -63,7 +63,7 @@ db.record_graph_revision(
 )
 ```
 
-When `graph_counts` is supplied, DoxyBase also records those graph roles as
+When `graph_counts` is supplied, DoxaBase also records those graph roles as
 included review/snapshot context. Passing `included_graphs=export.graphs` makes
 that distinction explicit for readers.
 
@@ -76,6 +76,58 @@ historical revision records. Use `describe_graph_revision()` when you want a
 compact review of one revision record instead of generic outgoing triples.
 Graph snapshots include both `triple_count` and a `sha256:<hex>` content digest;
 matching counts alone do not prove two revision contexts are identical.
+
+## Revision List Triage
+
+When reviewing unknown or possibly stale staged proposals, start with the list
+row before opening the full staged revision:
+
+```python
+staged = db.stage_graph_revision(
+    summary="Add trial dataset",
+    rationale="Keep this proposal reviewable before making it current-best map context.",
+    stance="rc:CandidateRevision",
+    additions=[
+        {
+            "graph": "map",
+            "format": "turtle",
+            "content": """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:TrialDataset a rc:Dataset, rc:Table ;
+                    rdfs:label "Trial dataset" .
+            """,
+        }
+    ],
+    validation_scope="all",
+)
+
+before = db.list_graph_revisions(include_apply_checks=True)
+
+# Any ordinary map write can make an older staged snapshot stale.
+db.record_map_dataset(
+    iri="https://example.test/project#InterveningDataset",
+    label="Intervening dataset",
+    is_table=True,
+)
+
+after = db.list_graph_revisions(include_apply_checks=True)
+```
+
+Read `application_status`, `application_decision`, `application_can_apply`,
+`application_summary`, `application_blocking_reasons`, and
+`suggested_next_calls` first. They tell you whether the staged proposal is ready
+for review, already applied, blocked by graph drift, or needs fuller inspection.
+Then use `describe_staged_revision()`, `check_staged_revision_apply()`, or an
+export helper when you need patch details, exact drift triples, validation
+diagnostics, or a human review bundle.
+
+A staged patch can be blocked even when its own triples are still absent from the
+target graph. DoxaBase applies staged revisions conservatively: unrelated count
+or digest drift means the target graph is no longer the same graph state the
+proposal was previewed against, so restage or inspect before applying.
 
 ## Revision Types
 

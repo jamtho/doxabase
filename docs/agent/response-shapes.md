@@ -639,10 +639,31 @@ item.suggested_next_calls
 the revision has staged patch payloads, except applied revision events report
 `application_status="applied_event"` for scanning. `record_kind` is a compact row
 class such as `staged_patch`, `applied_event`, `export_record`, `import_record`,
-or `history_record`. Use `application_summary`,
-`application_recommended_resolution`, `application_validation_skipped_reason`,
-and `application_blocking_reasons` as the first triage view before inspecting
-full drift or validation details. Use `has_patch_payload` and `patch_count` to
+or `history_record`.
+
+First-read triage fields:
+
+```python
+item.record_kind
+item.has_patch_payload
+item.patch_count
+item.changed_graphs
+item.application_status
+item.application_decision
+item.application_can_apply
+item.application_summary
+item.application_recommended_resolution
+item.application_validation_skipped_reason
+item.application_blocking_reasons
+item.suggested_next_calls
+```
+
+Use those to decide whether the row is ready to review, already applied, blocked
+by graph drift, or better handled by an export or detail call. Then inspect
+detail fields such as `application_count_drifts`,
+`application_snapshot_drifts`, `suggested_next_actions`, validation fields, and
+relation links when you need exact drift triples, machine-readable action
+records, or revision provenance. Use `has_patch_payload` and `patch_count` to
 decide whether `describe_staged_revision` is available. Use
 `list_graph_revisions` to discover reviewable or applied history before calling
 `describe_graph_revision` or `describe_staged_revision` on a specific IRI.
