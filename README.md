@@ -79,10 +79,11 @@ Implemented:
 - `record_claim_observation()` for common observation, claim, evidence, and source-span capture.
 - `record_pattern()` for syntheses that connect related findings to map targets.
 - `record_dataset_profile()` for bundling a profile observation, including
-  optional observed value-frequency pairs, with an optional map row-count
-  snapshot and agent-authored profile pattern.
+  optional observed value-frequency pairs and scalar metrics, with an optional
+  map row-count snapshot and agent-authored profile pattern.
 - `record_column_profile()` for bundling a column profile observation with
-  optional observed value-frequency pairs, map column metadata, and an
+  optional observed value-frequency pairs, scalar metrics, map column metadata,
+  and an
   agent-authored profile pattern.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, physical layouts, partition schemes, and relationships.
@@ -308,6 +309,6 @@ Logical includes:
 The next useful implementation steps are:
 
 1. Add fuller staged semantic conflict/rebase/version workflows.
-2. Add richer profile metrics and profiling helpers.
+2. Add deeper profiling helpers and field-tested metric recipes.
 3. Consider query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, after the lexical RDF search surface has settled.

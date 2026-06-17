@@ -728,6 +728,12 @@ rc:ProfileObservation a rdfs:Class ;
 rc:ObservedValueFrequency a rdfs:Class ;
     rdfs:comment "A profiled value or value bucket paired with its observed frequency for one profile observation." .
 
+rc:ObservedProfileMetric a rdfs:Class ;
+    rdfs:comment "A named scalar profile metric, such as an observed minimum, maximum, mean, or median value." .
+
+rc:ProfileMetricKind a rdfs:Class ;
+    rdfs:comment "A reusable kind of scalar profile metric. Projects may define additional metric kinds in their own ontology graph." .
+
 rc:Evidence a rdfs:Class ;
     rdfs:comment "A record that supports an observation or map assertion." .
 
@@ -812,6 +818,20 @@ rc:distinctCount a rdf:Property ;
     rdfs:domain rc:Observation ;
     rdfs:range xsd:integer ;
     rdfs:comment "Observed distinct-value count." .
+
+rc:observedProfileMetric a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range rc:ObservedProfileMetric ;
+    rdfs:comment "Links a profile observation to a named scalar metric value." .
+
+rc:profileMetricKind a rdf:Property ;
+    rdfs:domain rc:ObservedProfileMetric ;
+    rdfs:range rc:ProfileMetricKind ;
+    rdfs:comment "The kind of scalar metric being recorded." .
+
+rc:profileMetricValue a rdf:Property ;
+    rdfs:domain rc:ObservedProfileMetric ;
+    rdfs:comment "The observed scalar metric value." .
 
 rc:observedValueFrequency a rdf:Property ;
     rdfs:domain rc:Observation ;
@@ -1058,6 +1078,12 @@ rc:TransformationClaim a rc:ClaimKind ; rdfs:label "transformation claim" .
 rc:AccessClaim a rc:ClaimKind ; rdfs:label "access claim" .
 rc:ProfileClaim a rc:ClaimKind ; rdfs:label "profile claim" .
 rc:InterpretationClaim a rc:ClaimKind ; rdfs:label "interpretation claim" .
+
+rc:MinimumValue a rc:ProfileMetricKind ; rdfs:label "minimum value" .
+rc:MaximumValue a rc:ProfileMetricKind ; rdfs:label "maximum value" .
+rc:MeanValue a rc:ProfileMetricKind ; rdfs:label "mean value" .
+rc:MedianValue a rc:ProfileMetricKind ; rdfs:label "median value" .
+rc:StandardDeviationValue a rc:ProfileMetricKind ; rdfs:label "standard deviation value" .
 
 rc:LowConfidence a rc:ConfidenceLevel ; rdfs:label "low confidence" .
 rc:MediumConfidence a rc:ConfidenceLevel ; rdfs:label "medium confidence" .

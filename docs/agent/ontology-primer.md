@@ -28,7 +28,9 @@ Useful distinction:
 - Declared allowed values belong to the model, using `rc:AllowedValues`.
 - Observed values from a profiler belong to observations, using
   `rc:Observation` or `rc:ProfileObservation`; counted values can be paired as
-  `rc:ObservedValueFrequency` resources.
+  `rc:ObservedValueFrequency` resources, while scalar metrics such as observed
+  minimum/maximum/mean values can be paired as `rc:ObservedProfileMetric`
+  resources.
 - Syntheses over related observations or claims belong to patterns, using
   `rc:Pattern`.
 

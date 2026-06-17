@@ -32,13 +32,19 @@ Use `observation_type="profile"` for profiling-style findings:
 - null counts
 - distinct counts
 - top observed values or value buckets with frequencies
+- scalar profile metrics such as observed minimum, maximum, mean, or median
 - column-specific profiling results
 
 Profile observations may include `sample_size`, `row_count`, `null_count`, and
 `distinct_count`. They may also include `value_frequencies`, a list of
 `{"value": ..., "frequency": ...}` objects for observed values or value
-buckets. Counts and frequencies must be non-negative. Treat these as observed
-sample/profile facts, not declared allowed values.
+buckets, and `profile_metrics`, a list of
+`{"metric": "rc:MinimumValue", "value": ...}` objects. Use base metric kinds
+such as `rc:MinimumValue`, `rc:MaximumValue`, `rc:MeanValue`,
+`rc:MedianValue`, and `rc:StandardDeviationValue` when they fit; use project
+metric-kind IRIs for more specific profiler output. Counts and frequencies must
+be non-negative. Treat these as observed sample/profile facts, not declared
+allowed values or constraints.
 
 Use `doxabase.record_dataset_profile` when a dataset-level profile should also
 update the current-best map row-count snapshot or preserve a linked pattern

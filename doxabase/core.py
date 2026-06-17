@@ -508,6 +508,15 @@ class ObservedValueFrequencySummary:
 
 
 @dataclass(frozen=True)
+class ObservedProfileMetricSummary:
+    iri: str
+    metric: ResourceSummary
+    value: str
+    value_datatype: str | None
+    value_lang: str | None
+
+
+@dataclass(frozen=True)
 class ProfileObservationSummary:
     iri: str
     summary: str | None
@@ -520,6 +529,7 @@ class ProfileObservationSummary:
     null_count: int | None
     distinct_count: int | None
     value_frequencies: list[ObservedValueFrequencySummary]
+    profile_metrics: list[ObservedProfileMetricSummary]
     evidence: list[EvidenceDescription]
 
 
@@ -3928,6 +3938,11 @@ class DoxaBase:
                 observation_graphs,
                 observation_iri,
             ),
+            profile_metrics=self._observed_profile_metric_summaries(
+                observation_graphs,
+                lookup_graphs,
+                observation_iri,
+            ),
             evidence=[
                 self._describe_evidence(evidence_iri, evidence_graphs, lookup_graphs)
                 for evidence_iri in self._objects(
@@ -3973,6 +3988,48 @@ class DoxaBase:
             key=lambda item: (-item.frequency, item.value, item.iri),
         )
 
+    def _observed_profile_metric_summaries(
+        self,
+        graphs: list[str],
+        lookup_graphs: list[str],
+        observation_iri: str,
+    ) -> list[ObservedProfileMetricSummary]:
+        summaries: list[ObservedProfileMetricSummary] = []
+        for metric_iri in self._objects(
+            graphs,
+            observation_iri,
+            "rc:observedProfileMetric",
+        ):
+            metric_kind = self._first_object(
+                graphs,
+                metric_iri,
+                "rc:profileMetricKind",
+            )
+            value_row = self._first_object_row(
+                graphs,
+                metric_iri,
+                "rc:profileMetricValue",
+            )
+            if metric_kind is None or value_row is None:
+                continue
+            summaries.append(
+                ObservedProfileMetricSummary(
+                    iri=metric_iri,
+                    metric=self._resource_summary(lookup_graphs, metric_kind),
+                    value=value_row["object"],
+                    value_datatype=value_row["datatype"],
+                    value_lang=value_row["lang"],
+                )
+            )
+        return sorted(
+            summaries,
+            key=lambda item: (
+                item.metric.label or item.metric.iri,
+                item.value,
+                item.iri,
+            ),
+        )
+
     def record_observation(
         self,
         summary: str,
@@ -3989,6 +4046,7 @@ class DoxaBase:
         null_count: int | None = None,
         distinct_count: int | None = None,
         value_frequencies: Iterable[Mapping[str, Any]] | None = None,
+        profile_metrics: Iterable[Mapping[str, Any]] | None = None,
         observation_iri: str | None = None,
         evidence_iri: str | None = None,
     ) -> ObservationRecord:
@@ -4012,6 +4070,7 @@ class DoxaBase:
         value_frequency_values = self._profile_value_frequency_values(
             value_frequencies
         )
+        profile_metric_values = self._profile_metric_values(profile_metrics)
 
         evidence_source_values = (
             [evidence_sources]
@@ -4111,6 +4170,44 @@ class DoxaBase:
                     value_frequency_subject,
                     URIRef(self.expand_iri("rc:valueFrequency")),
                     Literal(frequency, datatype=XSD.integer),
+                )
+            )
+        for metric_kind, metric_value, datatype, lang in profile_metric_values:
+            metric_subject = URIRef(self._mint_iri("observed-profile-metric"))
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedProfileMetric")),
+                    metric_subject,
+                )
+            )
+            observation_graph.add(
+                (
+                    metric_subject,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:ObservedProfileMetric")),
+                )
+            )
+            observation_graph.add(
+                (
+                    metric_subject,
+                    URIRef(self.expand_iri("rc:profileMetricKind")),
+                    URIRef(self.expand_iri(metric_kind)),
+                )
+            )
+            literal = (
+                Literal(str(metric_value), lang=lang)
+                if lang is not None
+                else Literal(
+                    metric_value,
+                    datatype=URIRef(self.expand_iri(datatype)) if datatype else None,
+                )
+            )
+            observation_graph.add(
+                (
+                    metric_subject,
+                    URIRef(self.expand_iri("rc:profileMetricValue")),
+                    literal,
                 )
             )
         if evidence_subject is not None:
@@ -4774,6 +4871,7 @@ class DoxaBase:
         null_count: int | None = None,
         distinct_count: int | None = None,
         value_frequencies: Iterable[Mapping[str, Any]] | None = None,
+        profile_metrics: Iterable[Mapping[str, Any]] | None = None,
         update_map_snapshot: bool = True,
         map_label: str | None = None,
         map_description: str | None = None,
@@ -4809,6 +4907,7 @@ class DoxaBase:
             null_count=null_count,
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
             observation_iri=observation_iri,
             evidence_iri=evidence_iri,
         )
@@ -4875,6 +4974,7 @@ class DoxaBase:
         null_count: int | None = None,
         distinct_count: int | None = None,
         value_frequencies: Iterable[Mapping[str, Any]] | None = None,
+        profile_metrics: Iterable[Mapping[str, Any]] | None = None,
         update_map_column: bool = True,
         map_label: str | None = None,
         map_description: str | None = None,
@@ -4918,6 +5018,7 @@ class DoxaBase:
             null_count=null_count,
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
             observation_iri=observation_iri,
             evidence_iri=evidence_iri,
         )
@@ -13269,6 +13370,26 @@ class DoxaBase:
         objects = self._objects(graphs, subject, predicate)
         return objects[0] if objects else None
 
+    def _first_object_row(
+        self,
+        graphs: list[str],
+        subject: str,
+        predicate: str,
+    ) -> sqlite3.Row | None:
+        graph_filter, params = self._graph_filter(graphs, alias="q")
+        return self._conn.execute(
+            f"""
+            SELECT q.object, q.object_kind, q.datatype, q.lang
+            FROM quads q
+            WHERE q.subject = ?
+              AND q.predicate = ?
+              {graph_filter}
+            ORDER BY q.object
+            LIMIT 1
+            """,
+            [subject, self.expand_iri(predicate), *params],
+        ).fetchone()
+
     def _first_subject(
         self,
         graphs: list[str],
@@ -13892,6 +14013,60 @@ class DoxaBase:
                 frequency,
             )
             values.append((item["value"], frequency))
+        return values
+
+    def _profile_metric_values(
+        self,
+        profile_metrics: Iterable[Mapping[str, Any]] | None,
+    ) -> list[tuple[str, Any, str | None, str | None]]:
+        values: list[tuple[str, Any, str | None, str | None]] = []
+        for index, item in enumerate(profile_metrics or []):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(f"profile_metrics[{index}] must be an object")
+            metric = item.get("metric") or item.get("metric_kind")
+            if not isinstance(metric, str) or not metric.strip():
+                raise DoxaBaseError(
+                    f"profile_metrics[{index}] must include a metric IRI or CURIE"
+                )
+            if "value" not in item:
+                raise DoxaBaseError(f"profile_metrics[{index}] must include a value")
+            value = item["value"]
+            if value is None or isinstance(value, (list, tuple, dict)):
+                raise DoxaBaseError(
+                    f"profile_metrics[{index}].value must be a scalar value"
+                )
+            datatype = item.get("datatype")
+            lang = item.get("lang")
+            if datatype is not None and (
+                not isinstance(datatype, str) or not datatype.strip()
+            ):
+                raise DoxaBaseError(
+                    f"profile_metrics[{index}].datatype must be an IRI or CURIE"
+                )
+            if lang is not None and (not isinstance(lang, str) or not lang.strip()):
+                raise DoxaBaseError(
+                    f"profile_metrics[{index}].lang must be a non-empty string"
+                )
+            if datatype is not None and lang is not None:
+                raise DoxaBaseError(
+                    f"profile_metrics[{index}] cannot set both datatype and lang"
+                )
+            metric_iri = str(
+                self._resource_ref(f"profile_metrics[{index}].metric", metric)
+            )
+            datatype_iri = (
+                str(
+                    self._resource_ref(
+                        f"profile_metrics[{index}].datatype",
+                        datatype,
+                    )
+                )
+                if datatype is not None
+                else None
+            )
+            values.append(
+                (metric_iri, value, datatype_iri, lang.strip() if lang else None)
+            )
         return values
 
     def _string_values(

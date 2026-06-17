@@ -92,9 +92,9 @@ DoxaBase.search(query, graph=None, limit=20, offset=0)
 DoxaBase.describe_dataset(iri, graph="map")
 DoxaBase.describe_query_context(iri, graph="map")
 DoxaBase.describe_context_slice(seed_iris, profile="dataset_brief", ...)
-DoxaBase.record_observation(summary, ..., value_frequencies=None)
-DoxaBase.record_dataset_profile(dataset_iri, summary, ..., value_frequencies=None)
-DoxaBase.record_column_profile(column_iri, column_name, summary, ..., value_frequencies=None)
+DoxaBase.record_observation(summary, ..., value_frequencies=None, profile_metrics=None)
+DoxaBase.record_dataset_profile(dataset_iri, summary, ..., value_frequencies=None, profile_metrics=None)
+DoxaBase.record_column_profile(column_iri, column_name, summary, ..., value_frequencies=None, profile_metrics=None)
 DoxaBase.record_graph_revision(summary, rationale, changed_graphs, included_graphs=None, ...)
 DoxaBase.stage_graph_revision(summary, rationale, additions=None, removals=None, ...)
 DoxaBase.stage_systematisation(summary, intent, framings, anchors=None, shared_additions=None, ...)
@@ -290,8 +290,8 @@ uv run python tools/validate_rdf.py
 
 Expected state at the time of writing:
 
-- `rc_core.ttl`: 1114 triples.
-- `rc_shapes.ttl`: 1137 triples.
+- `rc_core.ttl`: 1139 triples.
+- `rc_shapes.ttl`: 1155 triples.
 - `ais.trig`: 325 quads.
 - `polymarket.trig`: 475 quads.
 - All fixtures conform to base SHACL shapes.
@@ -317,7 +317,7 @@ Expected state at the time of writing:
 Recommended next implementation steps:
 
 1. Add fuller staged semantic conflict/rebase/version workflows.
-2. Add richer profile metrics and profiling helpers.
+2. Add deeper profiling helpers and field-tested metric recipes.
 3. Add query-planning helpers that consume storage access metadata.
 4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.
 

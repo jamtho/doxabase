@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1114
+    assert graphs["base_ontology"].triple_count == 1139
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1137
+    assert graphs["base_shapes"].triple_count == 1155
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -3762,6 +3762,10 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
             {"value": "open", "frequency": 70},
             {"value": "closed", "frequency": 53},
         ],
+        profile_metrics=[
+            {"metric": "rc:MinimumValue", "value": 1.5},
+            {"metric": "rc:MaximumValue", "value": "9.25", "datatype": "xsd:decimal"},
+        ],
     )
 
     assert result.observation_type == "profile"
@@ -3801,6 +3805,24 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
         (value_iri, RDF.type, URIRef(RC + "ObservedValueFrequency")) in observations
         for value_iri in value_frequency_iris
     )
+    metric_iris = list(
+        observations.objects(observation_iri, URIRef(RC + "observedProfileMetric"))
+    )
+    assert len(metric_iris) == 2
+    assert {
+        (
+            str(observations.value(metric_iri, URIRef(RC + "profileMetricKind"))),
+            str(observations.value(metric_iri, URIRef(RC + "profileMetricValue"))),
+        )
+        for metric_iri in metric_iris
+    } == {
+        (RC + "MinimumValue", "1.5"),
+        (RC + "MaximumValue", "9.25"),
+    }
+    assert all(
+        (metric_iri, RDF.type, URIRef(RC + "ObservedProfileMetric")) in observations
+        for metric_iri in metric_iris
+    )
     assert (evidence_iri, RDF.type, URIRef(RC + "Evidence")) in evidence
     assert (
         evidence_iri,
@@ -3829,6 +3851,10 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
         value_frequencies=[
             {"value": "open", "frequency": 80},
             {"value": "closed", "frequency": 43},
+        ],
+        profile_metrics=[
+            {"metric": "rc:MinimumValue", "value": 1},
+            {"metric": "rc:MaximumValue", "value": 123},
         ],
         map_label="Messages",
         is_table=True,
@@ -3863,6 +3889,13 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
         ("open", 80),
         ("closed", 43),
     ]
+    assert {
+        (item.metric.iri, item.value, item.value_datatype)
+        for item in profile.profile_metrics
+    } == {
+        (RC + "MinimumValue", "1", str(XSD.integer)),
+        (RC + "MaximumValue", "123", str(XSD.integer)),
+    }
     assert profile.evidence[0].iri == result.observation.evidence_iri
     assert profile.evidence[0].sources == ["test://messages-profile"]
 

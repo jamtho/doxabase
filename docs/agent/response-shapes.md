@@ -405,6 +405,7 @@ profile.row_count
 profile.null_count
 profile.distinct_count
 profile.value_frequencies
+profile.profile_metrics
 profile.evidence
 ```
 
@@ -427,10 +428,22 @@ value_frequency.value
 value_frequency.frequency
 ```
 
+`profile.profile_metrics` contains scalar profiler outputs such as min, max,
+mean, median, or project-specific metric kinds:
+
+```python
+profile_metric.iri
+profile_metric.metric
+profile_metric.value
+profile_metric.value_datatype
+profile_metric.value_lang
+```
+
 Each `dataset.columns[]` item can also include `profile_observations` for recent
 profile observations whose `observed_column` is that column. Use these before
 searching raw observation triples when you need profile counts, distinctness,
-null counts, or top observed values attached to a dataset handoff.
+null counts, top observed values, or scalar metrics attached to a dataset
+handoff.
 Observed value frequencies are profile evidence, not allowed-value domains by
 themselves. Look for linked claims and patterns before treating them as map
 semantics.

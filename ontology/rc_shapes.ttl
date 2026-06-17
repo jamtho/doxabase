@@ -625,6 +625,12 @@ rc:ProfileObservationShape a sh:NodeShape ;
         sh:nodeKind sh:IRI ;
         sh:class rc:ObservedValueFrequency ;
         sh:message "observedValueFrequency values should be named ObservedValueFrequency resources." ;
+    ] ;
+    sh:property [
+        sh:path rc:observedProfileMetric ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:ObservedProfileMetric ;
+        sh:message "observedProfileMetric values should be named ObservedProfileMetric resources." ;
     ] .
 
 rc:ObservedValueFrequencyShape a sh:NodeShape ;
@@ -642,6 +648,22 @@ rc:ObservedValueFrequencyShape a sh:NodeShape ;
         sh:datatype xsd:integer ;
         sh:minInclusive 0 ;
         sh:message "valueFrequency must be a non-negative integer." ;
+    ] .
+
+rc:ObservedProfileMetricShape a sh:NodeShape ;
+    sh:targetClass rc:ObservedProfileMetric ;
+    sh:property [
+        sh:path rc:profileMetricKind ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "ObservedProfileMetric resources must name exactly one profile metric kind." ;
+    ] ;
+    sh:property [
+        sh:path rc:profileMetricValue ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "ObservedProfileMetric resources must name exactly one scalar metric value." ;
     ] .
 
 rc:ClaimShape a sh:NodeShape ;

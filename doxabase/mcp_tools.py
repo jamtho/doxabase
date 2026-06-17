@@ -191,6 +191,7 @@ def record_observation_tool(
     null_count: int | None = None,
     distinct_count: int | None = None,
     value_frequencies: list[dict[str, Any]] | None = None,
+    profile_metrics: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     result = db.record_observation(
         summary=summary,
@@ -206,6 +207,7 @@ def record_observation_tool(
         null_count=null_count,
         distinct_count=distinct_count,
         value_frequencies=value_frequencies,
+        profile_metrics=profile_metrics,
     )
     return asdict(result)
 
@@ -313,6 +315,7 @@ def record_dataset_profile_tool(
     null_count: int | None = None,
     distinct_count: int | None = None,
     value_frequencies: list[dict[str, Any]] | None = None,
+    profile_metrics: list[dict[str, Any]] | None = None,
     update_map_snapshot: bool = True,
     map_label: str | None = None,
     map_description: str | None = None,
@@ -337,6 +340,7 @@ def record_dataset_profile_tool(
         null_count=null_count,
         distinct_count=distinct_count,
         value_frequencies=value_frequencies,
+        profile_metrics=profile_metrics,
         update_map_snapshot=update_map_snapshot,
         map_label=map_label,
         map_description=map_description,
@@ -367,6 +371,7 @@ def record_column_profile_tool(
     null_count: int | None = None,
     distinct_count: int | None = None,
     value_frequencies: list[dict[str, Any]] | None = None,
+    profile_metrics: list[dict[str, Any]] | None = None,
     update_map_column: bool = True,
     map_label: str | None = None,
     map_description: str | None = None,
@@ -395,6 +400,7 @@ def record_column_profile_tool(
         null_count=null_count,
         distinct_count=distinct_count,
         value_frequencies=value_frequencies,
+        profile_metrics=profile_metrics,
         update_map_column=update_map_column,
         map_label=map_label,
         map_description=map_description,

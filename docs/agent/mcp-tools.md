@@ -167,8 +167,10 @@ an optional current-best map row-count snapshot, and an optional
 agent-authored profile pattern linked back to the observation. Use it when a
 profile run should preserve both the raw noticing and the emerging synthesis.
 `describe_dataset` surfaces recent dataset profile observations and their
-sample, row, null, distinct, and observed value-frequency counts. Profile
-evidence entries include source strings and source spans when recorded.
+sample, row, null, distinct, observed value-frequency, and scalar metric values.
+Use `profile_metrics=[{"metric": "rc:MinimumValue", "value": ...}]` for
+observed min/max/mean/median-style profiler output. Profile evidence entries
+include source strings and source spans when recorded.
 `update_map_snapshot` defaults to true; set it to false for scratch or tentative
 row counts that should remain observation-only. If the helper creates a pattern,
 the profile evidence is linked to that pattern as well as the observation.
@@ -181,7 +183,7 @@ and an optional linked profile pattern. Use it when profiling output says
 something useful about nullability, distinctness, physical type, or identity
 behavior for a column. Column profile observations appear on the matching
 `describe_dataset().columns[]` entry, including any observed value-frequency
-pairs supplied by the profiler.
+pairs and scalar metrics supplied by the profiler.
 `update_map_column` defaults to true; set it to false when counts or observed
 values are only sample evidence. For value-frequency guardrails, record the
 profile, then add a `record_claim_observation` and synthesize both with

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from rdflib.namespace import XSD
 
 from doxabase import DoxaBase
 from doxabase.mcp_server import build_server
@@ -1086,6 +1087,10 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
             {"value": "open", "frequency": 40},
             {"value": "closed", "frequency": 15},
         ],
+        profile_metrics=[
+            {"metric": "rc:MinimumValue", "value": 3},
+            {"metric": "rc:MaximumValue", "value": 99},
+        ],
         map_label="Messages",
         is_table=True,
         pattern_summary="Messages profile looks stable.",
@@ -1108,6 +1113,13 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
     assert [
         (item["value"], item["frequency"]) for item in profile["value_frequencies"]
     ] == [("open", 40), ("closed", 15)]
+    assert {
+        (item["metric"]["iri"], item["value"], item["value_datatype"])
+        for item in profile["profile_metrics"]
+    } == {
+        ("https://richcanopy.org/ns/rc#MinimumValue", "3", str(XSD.integer)),
+        ("https://richcanopy.org/ns/rc#MaximumValue", "99", str(XSD.integer)),
+    }
     assert profile["evidence"][0]["iri"] == result["observation"]["evidence_iri"]
     assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
@@ -1134,6 +1146,9 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
             {"value": "doc-001", "frequency": 1},
             {"value": "doc-002", "frequency": 1},
         ],
+        profile_metrics=[
+            {"metric": "rc:MeanValue", "value": 12.5},
+        ],
         map_label="Messages.doc_id",
         physical_type="rc:Varchar",
         nullable=False,
@@ -1159,6 +1174,10 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
     assert [
         (item["value"], item["frequency"]) for item in profile["value_frequencies"]
     ] == [("doc-001", 1), ("doc-002", 1)]
+    assert profile["profile_metrics"][0]["metric"]["iri"] == (
+        "https://richcanopy.org/ns/rc#MeanValue"
+    )
+    assert profile["profile_metrics"][0]["value"] == "12.5"
     assert profile["observed_column"]["iri"] == column
     assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True

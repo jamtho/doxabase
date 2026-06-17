@@ -243,6 +243,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         null_count: int | None = None,
         distinct_count: int | None = None,
         value_frequencies: list[dict[str, Any]] | None = None,
+        profile_metrics: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Record a structured observation, optionally linked to evidence."""
 
@@ -261,6 +262,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             null_count=null_count,
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
         )
 
     @server.tool(name="doxabase.record_claim_observation")
@@ -368,6 +370,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         null_count: int | None = None,
         distinct_count: int | None = None,
         value_frequencies: list[dict[str, Any]] | None = None,
+        profile_metrics: list[dict[str, Any]] | None = None,
         update_map_snapshot: bool = True,
         map_label: str | None = None,
         map_description: str | None = None,
@@ -395,6 +398,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             null_count=null_count,
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
             update_map_snapshot=update_map_snapshot,
             map_label=map_label,
             map_description=map_description,
@@ -423,6 +427,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         null_count: int | None = None,
         distinct_count: int | None = None,
         value_frequencies: list[dict[str, Any]] | None = None,
+        profile_metrics: list[dict[str, Any]] | None = None,
         update_map_column: bool = True,
         map_label: str | None = None,
         map_description: str | None = None,
@@ -454,6 +459,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             null_count=null_count,
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
             update_map_column=update_map_column,
             map_label=map_label,
             map_description=map_description,
