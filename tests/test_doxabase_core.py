@@ -1308,14 +1308,14 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "## Current Apply Check" in export_text
     assert "- Status: conflict" in export_text
     assert "- Decision: restage_against_current_graph" in export_text
-    assert "- Can apply: False" in export_text
+    assert "- Mechanically can apply: False" in export_text
     assert "- Blocking reasons: target_count_drift" in export_text
     assert "- Validation skipped: conflicts_present" in export_text
     assert "### Count Drift" in export_text
     assert "| Patch | Graph | Expected before | Current | Delta |" in export_text
     assert (
         "| Patch | Graph | Operation | Recorded before | Current before | "
-        "Recorded after | Current preview | Can apply | Conflict |"
+        "Recorded after | Current preview | Mechanically can apply | Conflict |"
     ) in export_text
     assert "| map | 0 |" in export_text
     assert f"| 0 | {db.triple_count('map')} |" in export_text

@@ -110,7 +110,7 @@ A stale export should be read like this:
 
 - Status: conflict
 - Decision: restage_against_current_graph
-- Can apply: False
+- Mechanically can apply: False
 - Blocking reasons: target_count_drift
 - Validation skipped: conflicts_present
 

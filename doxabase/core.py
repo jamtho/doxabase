@@ -10853,7 +10853,7 @@ class DoxaBase:
             [
                 f"- Status: {check.status}",
                 f"- Decision: {check.decision}",
-                f"- Can apply: {check.can_apply}",
+                f"- Mechanically can apply: {check.can_apply}",
                 f"- Review recommended: {check.review_recommended}",
                 f"- Semantic risk: {check.semantic_risk_level}",
                 f"- Summary: {check.summary}",
@@ -10949,7 +10949,7 @@ class DoxaBase:
                     (
                         "| Patch | Graph | Operation | Recorded before | "
                         "Current before | Recorded after | Current preview | "
-                        "Can apply | Conflict |"
+                        "Mechanically can apply | Conflict |"
                     ),
                     "|---|---|---|---:|---:|---:|---:|---|---|",
                 ]
