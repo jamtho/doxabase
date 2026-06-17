@@ -31,6 +31,10 @@ Useful distinction:
   `rc:ObservedValueFrequency` resources, while scalar metrics such as observed
   minimum/maximum/mean values can be paired as `rc:ObservedProfileMetric`
   resources.
+- Project-specific profile metric kinds can start as ordinary project IRIs in
+  scratch observations. When later agents should recognize the metric as shared
+  project vocabulary, add a labelled term in the project `ontology` graph rather
+  than the base `rc:` ontology.
 - Syntheses over related observations or claims belong to patterns, using
   `rc:Pattern`.
 

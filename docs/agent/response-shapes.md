@@ -439,6 +439,12 @@ profile_metric.value_datatype
 profile_metric.value_lang
 ```
 
+Treat `profile.profile_metrics` as an unordered list unless the response says
+otherwise. Use `profile_metric.metric.iri` rather than list position when
+reading specific values. Like observed value frequencies, profile metrics are
+observed evidence rather than allowed-value domains, constraints, or durable map
+semantics by themselves.
+
 Each `dataset.columns[]` item can also include `profile_observations` for recent
 profile observations whose `observed_column` is that column. Use these before
 searching raw observation triples when you need profile counts, distinctness,
@@ -520,6 +526,12 @@ pattern.source_span_iri
 pattern.pattern_triples
 pattern.evidence_triples
 ```
+
+`pattern.evidence_triples` is the number of new evidence triples written during
+that call. It may be `0` when the pattern links to evidence that already exists,
+for example profile evidence created by `record_dataset_profile` or
+`record_column_profile`. Use `describe_pattern(pattern_iri)` when you need the
+evidence surface available to readers.
 
 `db.describe_pattern(pattern_iri)` returns a `PatternDescription`:
 

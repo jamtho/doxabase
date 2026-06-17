@@ -169,7 +169,11 @@ profile run should preserve both the raw noticing and the emerging synthesis.
 `describe_dataset` surfaces recent dataset profile observations and their
 sample, row, null, distinct, observed value-frequency, and scalar metric values.
 Use `profile_metrics=[{"metric": "rc:MinimumValue", "value": ...}]` for
-observed min/max/mean/median-style profiler output. Profile evidence entries
+observed min/max/mean/median-style profiler output. These scalar metrics are
+observed profile evidence, not constraints, shapes, allowed values, or durable
+map semantics by themselves. Use project-specific metric kind IRIs for profiler
+outputs that do not fit the base `rc:` metric kinds; define those terms in the
+project ontology once they become durable vocabulary. Profile evidence entries
 include source strings and source spans when recorded.
 `update_map_snapshot` defaults to true; set it to false for scratch or tentative
 row counts that should remain observation-only. If the helper creates a pattern,
@@ -184,6 +188,8 @@ something useful about nullability, distinctness, physical type, or identity
 behavior for a column. Column profile observations appear on the matching
 `describe_dataset().columns[]` entry, including any observed value-frequency
 pairs and scalar metrics supplied by the profiler.
+Scalar `profile_metrics` are observed evidence, not constraints, shapes, allowed
+values, or durable map semantics by themselves.
 `update_map_column` defaults to true; set it to false when counts or observed
 values are only sample evidence. For value-frequency guardrails, record the
 profile, then add a `record_claim_observation` and synthesize both with

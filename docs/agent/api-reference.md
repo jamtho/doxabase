@@ -209,8 +209,11 @@ dataset profile observations and their sample, row, null, distinct, and observed
 value-frequency counts, plus scalar `profile_metrics` such as observed minimum
 or mean values. Pass metrics as
 `profile_metrics=[{"metric": "rc:MinimumValue", "value": ...}]`, using project
-metric-kind IRIs when the base metric kinds do not fit. Profile evidence entries
-include source strings and source spans when recorded. `update_map_snapshot`
+metric-kind IRIs when the base metric kinds do not fit. These scalar metrics are
+observed profile evidence, not constraints, shapes, allowed values, or durable
+map semantics by themselves. Define project metric kinds in the project ontology
+once they become stable shared vocabulary. Profile evidence entries include
+source strings and source spans when recorded. `update_map_snapshot`
 defaults to true, so pass `false` when a row count is only a scratch sample or
 tentative measurement. When the helper creates a pattern and the profile
 observation has evidence, the same evidence is linked to the pattern.
@@ -221,6 +224,8 @@ physical type and nullability, and can write a linked profile pattern. Column
 profile observations are exposed on the matching `describe_dataset().columns[]`
 entry, including any observed value-frequency pairs and scalar profile metrics
 supplied by the profiler.
+Scalar `profile_metrics` remain observed evidence unless a later claim, pattern,
+or map update interprets them.
 `update_map_column` defaults to true, so pass `false` when observed values or
 counts should stay observation-only. For a profile such as "BUY/SELL appeared in
 this sample, but that is not an allowed-value domain", combine
