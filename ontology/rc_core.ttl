@@ -839,6 +839,11 @@ rc:profileMetricKind a rdf:Property ;
     rdfs:range rc:ProfileMetricKind ;
     rdfs:comment "The kind of scalar metric being recorded." .
 
+rc:profileMetricTarget a rdf:Property ;
+    rdfs:domain rc:ObservedProfileMetric ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "Optional resource the scalar metric is specifically about, when narrower than or different from the profile observation as a whole." .
+
 rc:profileMetricValue a rdf:Property ;
     rdfs:domain rc:ObservedProfileMetric ;
     rdfs:comment "The observed scalar metric value." .

@@ -217,8 +217,10 @@ and `sample_method` for how the profile was produced. Pass metrics as
 metric-kind IRIs when the base metric kinds do not fit. These scalar metrics are
 observed profile evidence, not constraints, shapes, allowed values, or durable
 map semantics by themselves. Define project metric kinds in the project ontology
-once they become stable shared vocabulary. Profile evidence entries include
-source strings and source spans when recorded. `update_map_snapshot`
+once they become stable shared vocabulary. A metric item may include `target`
+when the scalar is specifically about a resource narrower than the profile
+observation as a whole. Profile evidence entries include source strings and
+source spans when recorded. `update_map_snapshot`
 defaults to true, so pass `false` when a row count is only a scratch sample or
 tentative measurement. When the helper creates a pattern and the profile
 observation has evidence, the same evidence is linked to the pattern.

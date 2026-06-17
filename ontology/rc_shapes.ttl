@@ -672,6 +672,12 @@ rc:ObservedProfileMetricShape a sh:NodeShape ;
         sh:message "ObservedProfileMetric resources must name exactly one profile metric kind." ;
     ] ;
     sh:property [
+        sh:path rc:profileMetricTarget ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "profileMetricTarget must be a single IRI when supplied." ;
+    ] ;
+    sh:property [
         sh:path rc:profileMetricValue ;
         sh:minCount 1 ;
         sh:maxCount 1 ;

@@ -30,7 +30,8 @@ Useful distinction:
   `rc:Observation` or `rc:ProfileObservation`; counted values can be paired as
   `rc:ObservedValueFrequency` resources, while scalar metrics such as observed
   minimum/maximum/mean values can be paired as `rc:ObservedProfileMetric`
-  resources.
+  resources. Use `rc:profileMetricTarget` when a scalar metric is specifically
+  about a resource narrower than the whole profile observation.
 - Project-specific profile metric kinds can start as ordinary project IRIs in
   scratch observations. When later agents should recognize the metric as shared
   project vocabulary, add a labelled term in the project `ontology` graph rather

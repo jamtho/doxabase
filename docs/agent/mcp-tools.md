@@ -182,8 +182,10 @@ observed min/max/mean/median-style profiler output. These scalar metrics are
 observed profile evidence, not constraints, shapes, allowed values, or durable
 map semantics by themselves. Use project-specific metric kind IRIs for profiler
 outputs that do not fit the base `rc:` metric kinds; define those terms in the
-project ontology once they become durable vocabulary. Profile evidence entries
-include source strings and source spans when recorded.
+project ontology once they become durable vocabulary. A metric item may include
+`target` when the scalar is specifically about a resource narrower than the
+profile observation as a whole. Profile evidence entries include source strings
+and source spans when recorded.
 `update_map_snapshot` defaults to true; set it to false for scratch or tentative
 row counts that should remain observation-only. If the helper creates a pattern,
 the profile evidence is linked to that pattern as well as the observation.

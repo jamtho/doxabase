@@ -252,9 +252,10 @@ few useful gaps:
   also confirmed the preferred guardrail workflow: record sampled observed
   values with `record_column_profile(update_map_column=false)`, add a caveat
   claim that the values are not a closed domain, then synthesize both with a
-  pattern. Remaining profiling questions include whether dataset-level scalar
-  metrics need explicit metric targets, and whether profile-only handoffs should
-  de-emphasize expected storage/layout warnings.
+  pattern. Profile metrics now support optional targets for scalars that are
+  about a narrower resource than the profile as a whole. A remaining profiling
+  question is whether profile-only handoffs should de-emphasize expected
+  storage/layout warnings.
 - A profile-bundle trial confirmed that `record_profile_bundle` gives agents a
   natural way to record one profiling pass without manually repeating run
   metadata across every profile. It also showed that "shared evidence" must be

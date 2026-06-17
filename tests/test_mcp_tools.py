@@ -1164,7 +1164,7 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
             {"value": "closed", "frequency": 15},
         ],
         profile_metrics=[
-            {"metric": "rc:MinimumValue", "value": 3},
+            {"metric": "rc:MinimumValue", "value": 3, "target": dataset},
             {"metric": "rc:MaximumValue", "value": 99},
         ],
         map_label="Messages",
@@ -1193,11 +1193,26 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
         (item["value"], item["frequency"]) for item in profile["value_frequencies"]
     ] == [("open", 40), ("closed", 15)]
     assert {
-        (item["metric"]["iri"], item["value"], item["value_datatype"])
+        (
+            item["metric"]["iri"],
+            item["target"]["iri"] if item["target"] is not None else None,
+            item["value"],
+            item["value_datatype"],
+        )
         for item in profile["profile_metrics"]
     } == {
-        ("https://richcanopy.org/ns/rc#MinimumValue", "3", str(XSD.integer)),
-        ("https://richcanopy.org/ns/rc#MaximumValue", "99", str(XSD.integer)),
+        (
+            "https://richcanopy.org/ns/rc#MinimumValue",
+            dataset,
+            "3",
+            str(XSD.integer),
+        ),
+        (
+            "https://richcanopy.org/ns/rc#MaximumValue",
+            None,
+            "99",
+            str(XSD.integer),
+        ),
     }
     assert profile["evidence"][0]["iri"] == result["observation"]["evidence_iri"]
     assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]

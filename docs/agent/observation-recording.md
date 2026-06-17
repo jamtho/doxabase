@@ -47,8 +47,10 @@ buckets, and `profile_metrics`, a list of
 such as `rc:MinimumValue`, `rc:MaximumValue`, `rc:MeanValue`,
 `rc:MedianValue`, and `rc:StandardDeviationValue` when they fit; use project
 metric-kind IRIs for more specific profiler output. Counts and frequencies must
-be non-negative. Treat these as observed sample/profile facts, not declared
-allowed values or constraints.
+be non-negative. A profile metric may also include `target` when the scalar is
+specifically about a resource narrower than the profile as a whole, for example
+a column measured during a dataset-level profile. Treat these as observed
+sample/profile facts, not declared allowed values or constraints.
 
 Use `doxabase.record_dataset_profile` when a dataset-level profile should also
 update the current-best map row-count snapshot or preserve a linked pattern

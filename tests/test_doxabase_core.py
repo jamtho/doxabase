@@ -19,9 +19,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1151
+    assert graphs["base_ontology"].triple_count == 1155
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1171
+    assert graphs["base_shapes"].triple_count == 1176
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -4332,11 +4332,12 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
     before = db.graph_overview().key_counts["observations"]
+    observed_asset = "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
 
     result = db.record_observation(
         summary="AIS daily broadcasts were sampled for row coverage.",
         observation_type="profile",
-        observed_asset="https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
+        observed_asset=observed_asset,
         observed_at="2026-05-31T12:00:00Z",
         observed_by="urn:doxabase:test-agent",
         evidence_summary="Synthetic test evidence for the observation writer.",
@@ -4351,7 +4352,7 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
             {"value": "closed", "frequency": 53},
         ],
         profile_metrics=[
-            {"metric": "rc:MinimumValue", "value": 1.5},
+            {"metric": "rc:MinimumValue", "value": 1.5, "target": observed_asset},
             {"metric": "rc:MaximumValue", "value": "9.25", "datatype": "xsd:decimal"},
         ],
     )
@@ -4422,6 +4423,15 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
         (RC + "MinimumValue", "1.5"),
         (RC + "MaximumValue", "9.25"),
     }
+    assert any(
+        (
+            metric_iri,
+            URIRef(RC + "profileMetricTarget"),
+            URIRef(observed_asset),
+        )
+        in observations
+        for metric_iri in metric_iris
+    )
     assert all(
         (metric_iri, RDF.type, URIRef(RC + "ObservedProfileMetric")) in observations
         for metric_iri in metric_iris
@@ -4459,7 +4469,7 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
             {"value": "closed", "frequency": 43},
         ],
         profile_metrics=[
-            {"metric": "rc:MinimumValue", "value": 1},
+            {"metric": "rc:MinimumValue", "value": 1, "target": dataset},
             {"metric": "rc:MaximumValue", "value": 123},
         ],
         map_label="Messages",
@@ -4506,11 +4516,16 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
         ("closed", 43),
     ]
     assert {
-        (item.metric.iri, item.value, item.value_datatype)
+        (
+            item.metric.iri,
+            item.target.iri if item.target is not None else None,
+            item.value,
+            item.value_datatype,
+        )
         for item in profile.profile_metrics
     } == {
-        (RC + "MinimumValue", "1", str(XSD.integer)),
-        (RC + "MaximumValue", "123", str(XSD.integer)),
+        (RC + "MinimumValue", dataset, "1", str(XSD.integer)),
+        (RC + "MaximumValue", None, "123", str(XSD.integer)),
     }
     assert profile.evidence[0].iri == result.observation.evidence_iri
     assert profile.evidence[0].sources == ["test://messages-profile"]

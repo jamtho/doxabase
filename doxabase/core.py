@@ -554,6 +554,7 @@ class ObservedValueFrequencySummary:
 class ObservedProfileMetricSummary:
     iri: str
     metric: ResourceSummary
+    target: ResourceSummary | None
     value: str
     value_datatype: str | None
     value_lang: str | None
@@ -4238,12 +4239,18 @@ class DoxaBase:
                 metric_iri,
                 "rc:profileMetricValue",
             )
+            target_iri = self._first_object(
+                graphs,
+                metric_iri,
+                "rc:profileMetricTarget",
+            )
             if metric_kind is None or value_row is None:
                 continue
             summaries.append(
                 ObservedProfileMetricSummary(
                     iri=metric_iri,
                     metric=self._resource_summary(lookup_graphs, metric_kind),
+                    target=self._optional_resource_summary(lookup_graphs, target_iri),
                     value=value_row["object"],
                     value_datatype=value_row["datatype"],
                     value_lang=value_row["lang"],
@@ -4414,7 +4421,13 @@ class DoxaBase:
                     Literal(frequency, datatype=XSD.integer),
                 )
             )
-        for metric_kind, metric_value, datatype, lang in profile_metric_values:
+        for (
+            metric_kind,
+            metric_value,
+            datatype,
+            lang,
+            metric_target,
+        ) in profile_metric_values:
             metric_subject = URIRef(self._mint_iri("observed-profile-metric"))
             observation_graph.add(
                 (
@@ -4437,6 +4450,14 @@ class DoxaBase:
                     URIRef(self.expand_iri(metric_kind)),
                 )
             )
+            if metric_target is not None:
+                observation_graph.add(
+                    (
+                        metric_subject,
+                        URIRef(self.expand_iri("rc:profileMetricTarget")),
+                        URIRef(metric_target),
+                    )
+                )
             literal = (
                 Literal(str(metric_value), lang=lang)
                 if lang is not None
@@ -15523,8 +15544,8 @@ class DoxaBase:
     def _profile_metric_values(
         self,
         profile_metrics: Iterable[Mapping[str, Any]] | None,
-    ) -> list[tuple[str, Any, str | None, str | None]]:
-        values: list[tuple[str, Any, str | None, str | None]] = []
+    ) -> list[tuple[str, Any, str | None, str | None, str | None]]:
+        values: list[tuple[str, Any, str | None, str | None, str | None]] = []
         for index, item in enumerate(profile_metrics or []):
             if not isinstance(item, MappingABC):
                 raise DoxaBaseError(f"profile_metrics[{index}] must be an object")
@@ -15556,6 +15577,16 @@ class DoxaBase:
                 raise DoxaBaseError(
                     f"profile_metrics[{index}] cannot set both datatype and lang"
                 )
+            target = item.get(
+                "target",
+                item.get("metric_target", item.get("target_iri")),
+            )
+            if target is not None and (
+                not isinstance(target, str) or not target.strip()
+            ):
+                raise DoxaBaseError(
+                    f"profile_metrics[{index}].target must be an IRI or CURIE"
+                )
             metric_iri = str(
                 self._resource_ref(f"profile_metrics[{index}].metric", metric)
             )
@@ -15569,8 +15600,24 @@ class DoxaBase:
                 if datatype is not None
                 else None
             )
+            target_iri = (
+                str(
+                    self._resource_ref(
+                        f"profile_metrics[{index}].target",
+                        target,
+                    )
+                )
+                if target is not None
+                else None
+            )
             values.append(
-                (metric_iri, value, datatype_iri, lang.strip() if lang else None)
+                (
+                    metric_iri,
+                    value,
+                    datatype_iri,
+                    lang.strip() if lang else None,
+                    target_iri,
+                )
             )
         return values
 
