@@ -330,6 +330,10 @@ presence/count, relation links such as `applied_by`, `applies_staged_revision`,
 `alternative_to`, `restaged_from`, and `restaged_by`, plus optional staged
 apply-check status, summary, recommended resolution, validation-skipped reason,
 blockers, drift summaries, and suggested actions when `include_apply_checks=True`.
+`drift_detail="summary"` is the default list mode: snapshot drift rows keep
+counts and digests but omit exact changed-triple arrays. Use
+`drift_detail="exact"` when you need those arrays in the list response, or call
+`check_staged_revision_apply()` for a focused exact payload.
 
 `describe_staged_revision()` returns staged patch payloads, stance, review
 notes/recommendations, validation status, structured validation diagnostics,

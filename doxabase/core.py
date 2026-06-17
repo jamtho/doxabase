@@ -260,6 +260,7 @@ class StagedGraphSnapshotDrift:
     snapshot_content_digest: str
     current_content_digest: str
     exact_changed_triples_available: bool
+    exact_changed_triples_included: bool
     triples_added_since_snapshot: list[GraphTripleDescription]
     triples_removed_since_snapshot: list[GraphTripleDescription]
     note: str
@@ -480,6 +481,7 @@ class GraphRevisionList:
     offset: int
     revision_type: str | None
     include_apply_checks: bool
+    drift_detail: str
 
 
 @dataclass(frozen=True)
@@ -1963,9 +1965,12 @@ class DoxaBase:
         revision_type: str | None = None,
         graph: str | None = "history",
         include_apply_checks: bool = False,
+        drift_detail: TypingLiteral["summary", "exact"] = "summary",
         limit: int = 50,
         offset: int = 0,
     ) -> GraphRevisionList:
+        if drift_detail not in {"summary", "exact"}:
+            raise DoxaBaseError("drift_detail must be 'summary' or 'exact'")
         self._ensure_non_negative("limit", limit)
         self._ensure_non_negative("offset", offset)
         data_graphs = self._expand_graphs([graph] if graph else None)
@@ -2028,7 +2033,12 @@ class DoxaBase:
                     )
                     application_blocking_reasons = check.blocking_reasons
                     application_count_drifts = check.count_drifts
-                    application_snapshot_drifts = check.snapshot_drifts
+                    if drift_detail == "exact":
+                        application_snapshot_drifts = check.snapshot_drifts
+                    else:
+                        application_snapshot_drifts = (
+                            self._summary_snapshot_drifts(check.snapshot_drifts)
+                        )
                     suggested_next_actions = check.suggested_next_actions
 
             applies_staged_revision = self._first_object(
@@ -2140,7 +2150,41 @@ class DoxaBase:
             offset=offset,
             revision_type=revision_type_filter,
             include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
         )
+
+    def _summary_snapshot_drifts(
+        self,
+        drifts: Iterable[StagedGraphSnapshotDrift],
+    ) -> list[StagedGraphSnapshotDrift]:
+        summary_drifts: list[StagedGraphSnapshotDrift] = []
+        for drift in drifts:
+            if drift.exact_changed_triples_available:
+                note = (
+                    drift.note
+                    + " Exact changed triples are available but omitted from "
+                    "this revision list row; call check_staged_revision_apply() "
+                    "or list_graph_revisions(drift_detail='exact') for them."
+                )
+            else:
+                note = drift.note
+            summary_drifts.append(
+                StagedGraphSnapshotDrift(
+                    graph_role=drift.graph_role,
+                    snapshot_triple_count=drift.snapshot_triple_count,
+                    current_triple_count=drift.current_triple_count,
+                    snapshot_content_digest=drift.snapshot_content_digest,
+                    current_content_digest=drift.current_content_digest,
+                    exact_changed_triples_available=(
+                        drift.exact_changed_triples_available
+                    ),
+                    exact_changed_triples_included=False,
+                    triples_added_since_snapshot=[],
+                    triples_removed_since_snapshot=[],
+                    note=note,
+                )
+            )
+        return summary_drifts
 
     def _graph_revision_record_kind(
         self,
@@ -8056,6 +8100,9 @@ class DoxaBase:
                     snapshot_content_digest=snapshot.content_digest,
                     current_content_digest=current_digest,
                     exact_changed_triples_available=exact_changed_triples_available,
+                    exact_changed_triples_included=(
+                        exact_changed_triples_available
+                    ),
                     triples_added_since_snapshot=triples_added_since_snapshot,
                     triples_removed_since_snapshot=triples_removed_since_snapshot,
                     note=note,

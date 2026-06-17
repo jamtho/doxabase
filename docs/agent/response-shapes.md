@@ -598,6 +598,7 @@ revisions.limit
 revisions.offset
 revisions.revision_type
 revisions.include_apply_checks
+revisions.drift_detail
 ```
 
 Each item in `revisions.revisions` has:
@@ -667,6 +668,9 @@ records, or revision provenance. Use `has_patch_payload` and `patch_count` to
 decide whether `describe_staged_revision` is available. Use
 `list_graph_revisions` to discover reviewable or applied history before calling
 `describe_graph_revision` or `describe_staged_revision` on a specific IRI.
+`drift_detail="summary"` is the default and omits exact changed-triple arrays
+from list-row snapshot drift entries; use `drift_detail="exact"` or
+`check_staged_revision_apply()` when those arrays should be included.
 
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:
@@ -845,11 +849,15 @@ snapshot rows exist, exact target graph additions and removals are available in
 `snapshot_drifts`.
 `snapshot_drifts` reports graph-level digest mismatches: graph role, snapshot
 triple count, current triple count, staged snapshot digest, current graph digest,
-whether exact changed triples are available,
+whether exact changed triples are available, whether they are included in this
+response,
 `triples_added_since_snapshot`, and `triples_removed_since_snapshot`. A digest
 mismatch means the target graph state is not identical to the state at staging
 time, even when triple counts still match. Older revisions can report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
+Revision-list summary mode may report `exact_changed_triples_available=True`
+and `exact_changed_triples_included=False`; that means exact triples exist but
+were intentionally omitted from the list response.
 Each changed-triple item carries exact raw RDF fields (`subject`, `subject_kind`,
 `predicate`, `object`, `object_kind`, `datatype`, `lang`) plus scan-friendly
 fields (`subject_curie`, `subject_display`, `predicate_curie`,

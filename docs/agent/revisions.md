@@ -120,9 +120,12 @@ Read `application_status`, `application_decision`, `application_can_apply`,
 `application_summary`, `application_blocking_reasons`, and
 `suggested_next_calls` first. They tell you whether the staged proposal is ready
 for review, already applied, blocked by graph drift, or needs fuller inspection.
-Then use `describe_staged_revision()`, `check_staged_revision_apply()`, or an
-export helper when you need patch details, exact drift triples, validation
-diagnostics, or a human review bundle.
+The default list call uses `drift_detail="summary"` so snapshot drift rows carry
+counts and digests without large exact changed-triple arrays. Then use
+`describe_staged_revision()`, `check_staged_revision_apply()`,
+`list_graph_revisions(drift_detail="exact")`, or an export helper when you need
+patch details, exact drift triples, validation diagnostics, or a human review
+bundle.
 
 A staged patch can be blocked even when its own triples are still absent from the
 target graph. DoxaBase applies staged revisions conservatively: unrelated count

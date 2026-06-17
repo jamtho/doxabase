@@ -1436,6 +1436,7 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert drift.current_content_digest.startswith("sha256:")
     assert drift.snapshot_content_digest != drift.current_content_digest
     assert drift.exact_changed_triples_available is True
+    assert drift.exact_changed_triples_included is True
     assert [triple.object for triple in drift.triples_added_since_snapshot] == [
         "Seed dataset renamed"
     ]
@@ -1477,10 +1478,33 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
         revision_type="rc:StagedRevision",
         include_apply_checks=True,
     )
+    assert listing.drift_detail == "summary"
     listed = {item.iri: item for item in listing.revisions}[staged.revision_iri]
     assert listed.application_status == "conflict"
     assert listed.application_blocking_reasons == ["target_digest_drift"]
-    assert listed.application_snapshot_drifts[0].graph_role == "map"
+    summary_drift = listed.application_snapshot_drifts[0]
+    assert summary_drift.graph_role == "map"
+    assert summary_drift.exact_changed_triples_available is True
+    assert summary_drift.exact_changed_triples_included is False
+    assert summary_drift.triples_added_since_snapshot == []
+    assert summary_drift.triples_removed_since_snapshot == []
+    assert "omitted from this revision list row" in summary_drift.note
+
+    exact_listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        include_apply_checks=True,
+        drift_detail="exact",
+    )
+    assert exact_listing.drift_detail == "exact"
+    exact_listed = {
+        item.iri: item for item in exact_listing.revisions
+    }[staged.revision_iri]
+    exact_drift = exact_listed.application_snapshot_drifts[0]
+    assert exact_drift.exact_changed_triples_available is True
+    assert exact_drift.exact_changed_triples_included is True
+    assert [triple.object for triple in exact_drift.triples_added_since_snapshot] == [
+        "Seed dataset renamed"
+    ]
 
 
 def test_apply_check_resolution_mentions_count_and_digest_drift(
@@ -1702,6 +1726,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         include_apply_checks=True,
     )
     assert staged_listing.count == 1
+    assert staged_listing.drift_detail == "summary"
     assert staged_listing.revisions[0].iri == staged.revision_iri
     assert staged_listing.revisions[0].record_kind == "staged_patch"
     assert staged_listing.revisions[0].revision_type == RC + "StagedRevision"
@@ -1767,6 +1792,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     )
 
     drift_listing = db.list_graph_revisions(include_apply_checks=True)
+    assert drift_listing.drift_detail == "summary"
     drift_by_iri = {item.iri: item for item in drift_listing.revisions}
     stale_item = drift_by_iri[stale.revision_iri]
     assert stale_item.application_status == "conflict"

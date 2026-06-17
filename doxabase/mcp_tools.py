@@ -100,6 +100,7 @@ def list_graph_revisions_tool(
     revision_type: str | None = None,
     graph: str | None = "history",
     include_apply_checks: bool = False,
+    drift_detail: str = "summary",
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
@@ -108,6 +109,7 @@ def list_graph_revisions_tool(
             revision_type=revision_type,
             graph=graph,
             include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,  # type: ignore[arg-type]
             limit=limit,
             offset=offset,
         )

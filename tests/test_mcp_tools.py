@@ -465,6 +465,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
 
     assert result["count"] == 1
     assert result["include_apply_checks"] is True
+    assert result["drift_detail"] == "summary"
     assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
     assert result["revisions"][0]["iri"] == staged["revision_iri"]
     assert result["revisions"][0]["record_kind"] == "staged_patch"
