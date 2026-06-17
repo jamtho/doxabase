@@ -268,7 +268,8 @@ rather than to the whole dataset. Use IRIs or CURIEs for partition columns,
 granularity, redundant partition keys, layout verification status, and linked
 datasets. Dataset descriptions expose all partition columns as
 `partition_columns`; the older singular `partition_column` field is retained as
-a first-column compatibility shortcut.
+a first-column compatibility shortcut. Treat `partition_columns` as unordered
+unless a future response explicitly carries ordering metadata.
 
 `doxabase.record_map_relationship`
 

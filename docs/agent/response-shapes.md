@@ -392,6 +392,59 @@ dataset.linked_patterns
 dataset.linked_pattern_reasons
 ```
 
+Partition schemes under `dataset.partition_schemes[]` include both a compatibility
+shortcut and the full list:
+
+```python
+partition.iri
+partition.label
+partition.description
+partition.partition_column      # first returned column, compatibility shortcut
+partition.partition_columns     # full list of ResourceSummary objects
+partition.granularity
+partition.path_template
+partition.redundant_partition_key
+partition.layout_verification_status
+partition.layout_verification_note
+```
+
+Treat `partition.partition_columns` as an unordered set of resources unless a
+future response explicitly carries an ordering field. The singular
+`partition.partition_column` is useful for old single-column callers, not for
+inferring authoring order.
+
+Relationship entries under `dataset.relationships[]` include RDF class context
+and helper-style tokens:
+
+```python
+relationship.iri
+relationship.label
+relationship.description
+relationship.types
+relationship.relationship_kind        # RDF class IRI, such as rc:ForeignKey
+relationship.relationship_kind_label
+relationship.relationship_type        # helper token, such as "foreign_key"
+relationship.source_dataset
+relationship.target_dataset
+relationship.foreign_key_from
+relationship.foreign_key_to
+relationship.referential_integrity
+relationship.declared
+relationship.identifying_columns
+relationship.source_columns
+relationship.derived_columns
+relationship.derivation_function
+relationship.derivation_properties
+relationship.group_by_columns
+relationship.aggregated_columns
+relationship.source_caveats
+```
+
+For foreign keys, use `foreign_key_from` and `foreign_key_to`; there are no
+generic `from_column` or `to_column` response fields. For derivations, use
+`source_columns` and `derived_columns`. For aggregations, use `group_by_columns`
+and `aggregated_columns`.
+
 `dataset.profile_observations` contains recent dataset-scoped
 `ProfileObservationSummary` items for observations whose `observed_asset` is the
 dataset and whose `observed_column` is absent:
