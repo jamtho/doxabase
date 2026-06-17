@@ -222,6 +222,12 @@ class StagedGraphCountDrift:
     current_triple_count: int
     delta: int
     exact_changed_triples_available: bool
+    patch_operation: str | None
+    patch_operation_label: str | None
+    patch_triples_checked: int | None
+    patch_triples_currently_present: int | None
+    patch_triples_currently_absent: int | None
+    patch_triple_status: str | None
     note: str
 
 
@@ -7269,10 +7275,15 @@ class DoxaBase:
                     self.to_graph([target_graph]),
                 )
                 current_count = len(current_preview)
+                patch_graph = self._parse_staged_patch_description(patch)
                 if (
                     patch.before_triple_count is not None
                     and current_count != patch.before_triple_count
                 ):
+                    patch_triples_present = sum(
+                        1 for triple in patch_graph if triple in current_preview
+                    )
+                    patch_triples_absent = len(patch_graph) - patch_triples_present
                     count_drifts.append(
                         StagedGraphCountDrift(
                             patch_iri=patch.iri,
@@ -7281,10 +7292,20 @@ class DoxaBase:
                             current_triple_count=current_count,
                             delta=current_count - patch.before_triple_count,
                             exact_changed_triples_available=False,
+                            patch_operation=operation,
+                            patch_operation_label=patch.operation_label,
+                            patch_triples_checked=len(patch_graph),
+                            patch_triples_currently_present=patch_triples_present,
+                            patch_triples_currently_absent=patch_triples_absent,
+                            patch_triple_status=self._patch_triple_presence_status(
+                                patch_triples_checked=len(patch_graph),
+                                patch_triples_present=patch_triples_present,
+                            ),
                             note=(
                                 "DoxaBase can report staged/current graph counts "
-                                "for this conflict, but exact changed triples "
-                                "need future graph version storage."
+                                "and whether the staged patch triples are present "
+                                "in the current graph, but exact unrelated changed "
+                                "triples need future graph version storage."
                             ),
                         )
                     )
@@ -7293,7 +7314,6 @@ class DoxaBase:
                         f"{patch.before_triple_count} triples before patch, "
                         f"found {current_count}"
                     )
-                patch_graph = self._parse_staged_patch_description(patch)
                 candidate_preview = self._clone_graph(current_preview)
                 if operation == addition_operation:
                     for triple in patch_graph:
@@ -7492,6 +7512,20 @@ class DoxaBase:
             "not_ready": "not_ready",
         }
         return reasons.get(status)
+
+    def _patch_triple_presence_status(
+        self,
+        *,
+        patch_triples_checked: int,
+        patch_triples_present: int,
+    ) -> str:
+        if patch_triples_checked == 0:
+            return "empty_patch"
+        if patch_triples_present == 0:
+            return "all_patch_triples_absent"
+        if patch_triples_present == patch_triples_checked:
+            return "all_patch_triples_present"
+        return "mixed_patch_triples_present"
 
     def _staged_apply_check_blocking_reasons(
         self,

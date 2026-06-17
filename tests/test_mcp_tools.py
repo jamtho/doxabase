@@ -354,6 +354,12 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert stale_check["count_drifts"][0]["target_graph"] == "map"
     assert stale_check["count_drifts"][0]["delta"] == db.triple_count("map")
     assert stale_check["count_drifts"][0]["exact_changed_triples_available"] is False
+    assert stale_check["count_drifts"][0]["patch_triples_checked"] == 1
+    assert stale_check["count_drifts"][0]["patch_triples_currently_present"] == 0
+    assert stale_check["count_drifts"][0]["patch_triples_currently_absent"] == 1
+    assert stale_check["count_drifts"][0]["patch_triple_status"] == (
+        "all_patch_triples_absent"
+    )
     assert stale_check["suggested_next_actions"][0]["tool_name"] == (
         "describe_staged_revision"
     )

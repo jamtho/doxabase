@@ -241,9 +241,10 @@ proposal replays and validates, but still needs judgement before application.
 Use `blocking_reasons` and `recommended_resolution` to distinguish count drift
 from validation failure or already-applied state. When `validation_conforms` is
 `None`, `validation_skipped_reason` explains why validation did not run.
-`count_drifts` gives expected/current graph counts and deltas for count drift,
-while explicitly noting that exact changed triples need future graph version
-storage.
+`count_drifts` gives expected/current graph counts and deltas for count drift.
+It can also say whether the staged patch triples themselves are currently
+present, absent, or mixed in the target graph. Exact unrelated changed triples
+still need future graph version storage.
 Suggested actions are ordered review-first; apply or restage calls come after
 inspection/export suggestions.
 

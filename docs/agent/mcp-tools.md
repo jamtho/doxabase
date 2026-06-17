@@ -327,7 +327,9 @@ counts drifted since staging; `validation_failed` means patch counts replay but
 SHACL diagnostics need inspection; `already_applied` means an applied revision
 event exists. When validation did not run, `validation_skipped_reason` explains
 why. `count_drifts` records expected/current graph counts and deltas for count
-conflicts, but exact changed triples require future graph version storage.
+conflicts, plus whether the staged patch triples themselves are currently
+present, absent, or mixed in the target graph. Exact unrelated changed triples
+still require future graph version storage.
 Suggested actions are ordered review-first, so inspect/export suggestions
 come before mutation calls such as apply or restage. Use it before
 `doxabase.apply_staged_revision` when an agent or human wants an explicit

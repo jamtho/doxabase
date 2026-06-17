@@ -327,7 +327,9 @@ top-level `can_apply` flag. Read `status` and `summary` first; use
 `recommended_resolution`, `count_drifts`, and `suggested_next_actions` to decide
 whether to review then apply, inspect an applied event, review validation
 diagnostics, or restage after conflicts. `count_drifts` gives expected/current
-counts and deltas but not exact changed triples. Suggested actions are ordered
+counts and deltas, plus whether the staged patch triples themselves are
+currently present, absent, or mixed in the target graph. Exact unrelated changed
+triples still need future graph version storage. Suggested actions are ordered
 review-first; mutation calls come after inspection/export suggestions.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted

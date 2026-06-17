@@ -703,8 +703,12 @@ read `validation_skipped_reason` before guessing why validation did not run;
 common values are `conflicts_present` and `already_applied`.
 `count_drifts` gives patch-level count drift context: target graph, expected
 before count, current count, delta, and whether exact changed triples are
-available. In the current runtime, exact changed triples are not available
-because graph version storage is still future work.
+available. It also reports `patch_operation`, `patch_triples_checked`,
+`patch_triples_currently_present`, `patch_triples_currently_absent`, and
+`patch_triple_status` (`all_patch_triples_absent`,
+`all_patch_triples_present`, or `mixed_patch_triples_present`). In the current
+runtime, DoxaBase can inspect the staged patch triples themselves, but exact
+unrelated changed triples still require future graph version storage.
 `suggested_next_actions` uses the same structured action shape as assertion
 support: tool name, MCP tool name, arguments, reason, and display call string.
 For staged apply checks, actions are ordered review-first; mutating actions such
