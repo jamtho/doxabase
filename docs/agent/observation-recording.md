@@ -52,6 +52,26 @@ specifically about a resource narrower than the profile as a whole, for example
 a column measured during a dataset-level profile. Treat these as observed
 sample/profile facts, not declared allowed values or constraints.
 
+For example, an untargeted dataset metric applies to the profile observation
+or observed asset as a whole, while a targeted metric points at the narrower
+resource it measured:
+
+```python
+profile_metrics=[
+    {
+        "metric": "proj:CompletenessRatio",
+        "value": "0.9167",
+        "datatype": "xsd:decimal",
+    },
+    {
+        "metric": "proj:MeanCharacterLength",
+        "target": "proj:customer_name",
+        "value": "14.25",
+        "datatype": "xsd:decimal",
+    },
+]
+```
+
 Use `doxabase.record_dataset_profile` when a dataset-level profile should also
 update the current-best map row-count snapshot or preserve a linked pattern
 synthesis. Use plain `record_observation` when the profile result is only a

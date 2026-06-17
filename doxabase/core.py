@@ -12956,11 +12956,23 @@ class DoxaBase:
         before = self.triple_count(graph)
         self._conn.executemany(
             """
-            INSERT OR IGNORE INTO quads
+            INSERT INTO quads
                 (graph, subject, subject_kind, predicate, object, object_kind, datatype, lang, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM quads
+                WHERE graph = ?
+                  AND subject = ?
+                  AND subject_kind = ?
+                  AND predicate = ?
+                  AND object = ?
+                  AND object_kind = ?
+                  AND datatype IS ?
+                  AND lang IS ?
+            )
             """,
-            rows,
+            [(*row, *row[:8]) for row in rows],
         )
         self._conn.commit()
         inserted = self.triple_count(graph) - before
@@ -14854,7 +14866,7 @@ class DoxaBase:
             row["object"]
             for row in self._conn.execute(
                 f"""
-                SELECT q.object
+                SELECT DISTINCT q.object
                 FROM quads q
                 WHERE q.subject = ?
                   AND q.predicate = ?
@@ -14871,7 +14883,7 @@ class DoxaBase:
             row["subject"]
             for row in self._conn.execute(
                 f"""
-                SELECT q.subject
+                SELECT DISTINCT q.subject
                 FROM quads q
                 WHERE q.predicate = ?
                   AND q.object = ?

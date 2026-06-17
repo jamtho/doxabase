@@ -3228,6 +3228,28 @@ def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) 
     assert RC + "Table" in description.types
 
 
+def test_map_helpers_do_not_duplicate_column_links(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#messages"
+    column = "https://example.test/project#message_id"
+
+    db.record_map_dataset(
+        table,
+        label="Messages",
+        is_table=True,
+        columns=[column],
+    )
+    db.record_map_column(
+        column,
+        table_iri=table,
+        column_name="message_id",
+    )
+
+    description = db.describe_dataset(table)
+    assert [item.iri for item in description.columns] == [column]
+    assert db.triple_count("map") == 6
+
+
 @pytest.mark.parametrize(
     ("call", "match"),
     [

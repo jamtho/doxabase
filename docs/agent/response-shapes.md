@@ -615,10 +615,11 @@ profile_metric.value_lang
 
 Treat `profile.profile_metrics` as an unordered list unless the response says
 otherwise. Use `profile_metric.metric.iri` rather than list position when
-reading specific values. `profile_metric.target` may be `None`; when present it
-is the resource the scalar is specifically about. Like observed value
-frequencies, profile metrics are observed evidence rather than allowed-value
-domains, constraints, or durable map semantics by themselves.
+reading specific values. `profile_metric.target` may be `None`; that means the
+metric applies to the profile observation or observed asset as a whole. When
+present, it is the narrower resource the scalar is specifically about. Like
+observed value frequencies, profile metrics are observed evidence rather than
+allowed-value domains, constraints, or durable map semantics by themselves.
 
 Each `dataset.columns[]` item can also include `profile_observations` for recent
 profile observations whose `observed_column` is that column. Use these before

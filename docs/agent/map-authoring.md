@@ -28,6 +28,10 @@ facts, while still leaving the graph open for project-specific RDF.
 For `record_map_dataset`, omit `is_table` on partial updates when you want to
 preserve the current dataset/table typing. Pass `is_table=True` or
 `is_table=False` when you intentionally want to set that typing.
+You can link columns either with `record_map_dataset(columns=[...])` or with
+`record_map_column(table_iri=...)`. Supplying the same link through both helpers
+is harmless; DoxaBase treats repeated identical RDF edges as one graph fact in
+descriptions.
 Resource-valued fields across these helpers expect IRIs or CURIEs, not
 descriptive prose. Pass terms such as `rc:EventRow`, `rc:FixedSchema`,
 `rc:Parquet`, or a project IRI for columns, datasets, caveats, storage access,
