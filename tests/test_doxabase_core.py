@@ -3237,6 +3237,60 @@ def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) 
             id="dataset-row-semantics",
         ),
         pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                columns=["plain doc id column"],
+            ),
+            "columns.*not prose",
+            id="dataset-column-link",
+        ),
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                caveats=["body caveat prose"],
+            ),
+            "caveats.*not prose",
+            id="dataset-caveat-link",
+        ),
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                storage_accesses=["local parquet access"],
+            ),
+            "storage_accesses.*not prose",
+            id="dataset-storage-link",
+        ),
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                physical_layouts=["parquet physical layout"],
+            ),
+            "physical_layouts.*not prose",
+            id="dataset-layout-link",
+        ),
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                companion_datasets=["attachment companion table"],
+            ),
+            "companion_datasets.*not prose",
+            id="dataset-companion-link",
+        ),
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                extra_types=["special table class"],
+            ),
+            "extra_types.*not prose",
+            id="dataset-extra-type",
+        ),
+        pytest.param(
             lambda db: db.record_map_column(
                 "https://example.test/project#messages__doc_id",
                 column_name="doc_id",

@@ -5524,6 +5524,24 @@ class DoxaBase:
         physical_layout_values = self._string_values("physical_layouts", physical_layouts)
         companion_values = self._string_values("companion_datasets", companion_datasets)
         extra_type_values = self._string_values("extra_types", extra_types)
+        column_refs = [self._resource_ref("columns", column) for column in column_values]
+        caveat_refs = [self._resource_ref("caveats", caveat) for caveat in caveat_values]
+        storage_access_refs = [
+            self._resource_ref("storage_accesses", access)
+            for access in storage_access_values
+        ]
+        physical_layout_refs = [
+            self._resource_ref("physical_layouts", layout)
+            for layout in physical_layout_values
+        ]
+        companion_refs = [
+            self._resource_ref("companion_datasets", companion)
+            for companion in companion_values
+        ]
+        extra_type_refs = [
+            self._resource_ref("extra_types", type_value)
+            for type_value in extra_type_values
+        ]
         row_semantics_ref = (
             self._resource_ref("row_semantics", row_semantics)
             if row_semantics is not None
@@ -5550,9 +5568,7 @@ class DoxaBase:
 
         dataset_type = self.expand_iri("rc:Dataset")
         table_type = self.expand_iri("rc:Table")
-        expanded_extra_types = [
-            self.expand_iri(type_value) for type_value in extra_type_values
-        ]
+        expanded_extra_types = [str(type_ref) for type_ref in extra_type_refs]
         current_types = set(self._types("map", dataset_iri))
         dataset_is_table = is_table is True or (
             is_table is None
@@ -5565,16 +5581,16 @@ class DoxaBase:
         graph.add((subject, RDF.type, URIRef(dataset_type)))
         if dataset_is_table:
             graph.add((subject, RDF.type, URIRef(table_type)))
-        for type_value in expanded_extra_types:
-            graph.add((subject, RDF.type, URIRef(type_value)))
+        for type_ref in extra_type_refs:
+            graph.add((subject, RDF.type, type_ref))
         self._add_optional_literal(graph, subject, str(RDFS.label), label)
         self._add_optional_literal(graph, subject, str(RDFS.comment), description)
-        for column in column_values:
+        for column_ref in column_refs:
             graph.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:hasColumn")),
-                    URIRef(self.expand_iri(column)),
+                    column_ref,
                 )
             )
         for path_template in path_template_values:
@@ -5631,36 +5647,36 @@ class DoxaBase:
             "rc:layoutVerificationNote",
             layout_verification_note,
         )
-        for caveat in caveat_values:
+        for caveat_ref in caveat_refs:
             graph.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:hasKnownCaveat")),
-                    URIRef(self.expand_iri(caveat)),
+                    caveat_ref,
                 )
             )
-        for access in storage_access_values:
+        for access_ref in storage_access_refs:
             graph.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:hasStorageAccess")),
-                    URIRef(self.expand_iri(access)),
+                    access_ref,
                 )
             )
-        for layout in physical_layout_values:
+        for layout_ref in physical_layout_refs:
             graph.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:hasPhysicalLayout")),
-                    URIRef(self.expand_iri(layout)),
+                    layout_ref,
                 )
             )
-        for companion in companion_values:
+        for companion_ref in companion_refs:
             graph.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:companionOf")),
-                    URIRef(self.expand_iri(companion)),
+                    companion_ref,
                 )
             )
 
