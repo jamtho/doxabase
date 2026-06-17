@@ -189,13 +189,14 @@ also update the map row-count snapshot and write an agent-authored profile
 pattern linked back to the observation. Use it when a profiling result should
 arrive as observation, optional current-best map context, and optional synthesis
 without making three separate helper calls. `describe_dataset()` surfaces recent
-dataset profile observations and their sample, row, null, and distinct counts.
+dataset profile observations and their sample, row, null, distinct, and observed
+value-frequency counts.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as
 physical type and nullability, and can write a linked profile pattern. Column
 profile observations are exposed on the matching `describe_dataset().columns[]`
-entry.
+entry, including any observed value-frequency pairs supplied by the profiler.
 
 `record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common

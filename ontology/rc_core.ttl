@@ -725,6 +725,9 @@ rc:ProfileObservation a rdfs:Class ;
     rdfs:subClassOf rc:Observation ;
     rdfs:comment "An observation produced by profiling a data asset, table, file, or column." .
 
+rc:ObservedValueFrequency a rdfs:Class ;
+    rdfs:comment "A profiled value or value bucket paired with its observed frequency for one profile observation." .
+
 rc:Evidence a rdfs:Class ;
     rdfs:comment "A record that supports an observation or map assertion." .
 
@@ -810,12 +813,17 @@ rc:distinctCount a rdf:Property ;
     rdfs:range xsd:integer ;
     rdfs:comment "Observed distinct-value count." .
 
-rc:observedValue a rdf:Property ;
+rc:observedValueFrequency a rdf:Property ;
     rdfs:domain rc:Observation ;
+    rdfs:range rc:ObservedValueFrequency ;
+    rdfs:comment "Links a profile observation to a value or bucket with its observed frequency." .
+
+rc:observedValue a rdf:Property ;
     rdfs:comment "A value observed during profiling. This is not a declared allowed value." .
 
 rc:valueFrequency a rdf:Property ;
-    rdfs:domain rc:Observation ;
+    rdfs:domain rc:ObservedValueFrequency ;
+    rdfs:range xsd:integer ;
     rdfs:comment "Observed frequency for a value or value bucket." .
 
 rc:evidence a rdf:Property ;

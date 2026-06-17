@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import sqlite3
 import warnings
+from collections.abc import Mapping as MappingABC
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -493,6 +494,13 @@ class ResourceSummary:
 
 
 @dataclass(frozen=True)
+class ObservedValueFrequencySummary:
+    iri: str
+    value: str
+    frequency: int
+
+
+@dataclass(frozen=True)
 class ProfileObservationSummary:
     iri: str
     summary: str | None
@@ -504,6 +512,7 @@ class ProfileObservationSummary:
     row_count: int | None
     null_count: int | None
     distinct_count: int | None
+    value_frequencies: list[ObservedValueFrequencySummary]
     evidence: list[ResourceSummary]
 
 
@@ -3474,6 +3483,7 @@ class DoxaBase:
             profile_observations=self._profile_observations_for_target(
                 target_iri=dataset_iri,
                 target_predicate="rc:observedAsset",
+                exclude_observed_column=True,
             ),
             columns=columns,
             path_templates=path_templates,
@@ -3532,6 +3542,7 @@ class DoxaBase:
         *,
         target_iri: str,
         target_predicate: str,
+        exclude_observed_column: bool = False,
         limit: int = 5,
     ) -> list[ProfileObservationSummary]:
         observation_graphs = ["observations"]
@@ -3546,6 +3557,15 @@ class DoxaBase:
             )
             if profile_type
             in self._types_from_graphs(observation_graphs, observation_iri)
+            and (
+                not exclude_observed_column
+                or self._first_object(
+                    observation_graphs,
+                    observation_iri,
+                    "rc:observedColumn",
+                )
+                is None
+            )
         ]
         summaries = [
             self._profile_observation_summary(observation_iri, lookup_graphs)
@@ -3621,11 +3641,50 @@ class DoxaBase:
                 observation_iri,
                 "rc:distinctCount",
             ),
+            value_frequencies=self._observed_value_frequency_summaries(
+                observation_graphs,
+                observation_iri,
+            ),
             evidence=self._resource_summaries(
                 evidence_graphs,
                 self._objects(observation_graphs, observation_iri, "rc:evidence"),
                 description_predicate="rc:summary",
             ),
+        )
+
+    def _observed_value_frequency_summaries(
+        self,
+        graphs: list[str],
+        observation_iri: str,
+    ) -> list[ObservedValueFrequencySummary]:
+        summaries: list[ObservedValueFrequencySummary] = []
+        for value_frequency_iri in self._objects(
+            graphs,
+            observation_iri,
+            "rc:observedValueFrequency",
+        ):
+            value = self._first_object(
+                graphs,
+                value_frequency_iri,
+                "rc:observedValue",
+            )
+            frequency = self._int_object(
+                graphs,
+                value_frequency_iri,
+                "rc:valueFrequency",
+            )
+            if value is None or frequency is None:
+                continue
+            summaries.append(
+                ObservedValueFrequencySummary(
+                    iri=value_frequency_iri,
+                    value=value,
+                    frequency=frequency,
+                )
+            )
+        return sorted(
+            summaries,
+            key=lambda item: (-item.frequency, item.value, item.iri),
         )
 
     def record_observation(
@@ -3643,6 +3702,7 @@ class DoxaBase:
         row_count: int | None = None,
         null_count: int | None = None,
         distinct_count: int | None = None,
+        value_frequencies: Iterable[Mapping[str, Any]] | None = None,
         observation_iri: str | None = None,
         evidence_iri: str | None = None,
     ) -> ObservationRecord:
@@ -3663,6 +3723,9 @@ class DoxaBase:
             "distinct_count": distinct_count,
         }.items():
             self._ensure_non_negative(name, value)
+        value_frequency_values = self._profile_value_frequency_values(
+            value_frequencies
+        )
 
         evidence_source_values = (
             [evidence_sources]
@@ -3732,6 +3795,38 @@ class DoxaBase:
                         Literal(value, datatype=XSD.integer),
                     )
                 )
+        for observed_value, frequency in value_frequency_values:
+            value_frequency_subject = URIRef(
+                self._mint_iri("observed-value-frequency")
+            )
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedValueFrequency")),
+                    value_frequency_subject,
+                )
+            )
+            observation_graph.add(
+                (
+                    value_frequency_subject,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:ObservedValueFrequency")),
+                )
+            )
+            observation_graph.add(
+                (
+                    value_frequency_subject,
+                    URIRef(self.expand_iri("rc:observedValue")),
+                    Literal(observed_value),
+                )
+            )
+            observation_graph.add(
+                (
+                    value_frequency_subject,
+                    URIRef(self.expand_iri("rc:valueFrequency")),
+                    Literal(frequency, datatype=XSD.integer),
+                )
+            )
         if evidence_subject is not None:
             observation_graph.add(
                 (
@@ -4392,6 +4487,7 @@ class DoxaBase:
         row_count: int | None = None,
         null_count: int | None = None,
         distinct_count: int | None = None,
+        value_frequencies: Iterable[Mapping[str, Any]] | None = None,
         update_map_snapshot: bool = True,
         map_label: str | None = None,
         map_description: str | None = None,
@@ -4426,6 +4522,7 @@ class DoxaBase:
             row_count=row_count,
             null_count=null_count,
             distinct_count=distinct_count,
+            value_frequencies=value_frequencies,
             observation_iri=observation_iri,
             evidence_iri=evidence_iri,
         )
@@ -4490,6 +4587,7 @@ class DoxaBase:
         row_count: int | None = None,
         null_count: int | None = None,
         distinct_count: int | None = None,
+        value_frequencies: Iterable[Mapping[str, Any]] | None = None,
         update_map_column: bool = True,
         map_label: str | None = None,
         map_description: str | None = None,
@@ -4532,6 +4630,7 @@ class DoxaBase:
             row_count=row_count,
             null_count=null_count,
             distinct_count=distinct_count,
+            value_frequencies=value_frequencies,
             observation_iri=observation_iri,
             evidence_iri=evidence_iri,
         )
@@ -13225,6 +13324,32 @@ class DoxaBase:
     def _ensure_non_negative(self, name: str, value: int | None) -> None:
         if value is not None and value < 0:
             raise DoxaBaseError(f"{name} must be non-negative")
+
+    def _profile_value_frequency_values(
+        self,
+        value_frequencies: Iterable[Mapping[str, Any]] | None,
+    ) -> list[tuple[Any, int]]:
+        values: list[tuple[Any, int]] = []
+        for index, item in enumerate(value_frequencies or []):
+            if not isinstance(item, MappingABC):
+                raise DoxaBaseError(
+                    f"value_frequencies[{index}] must be an object"
+                )
+            if "value" not in item:
+                raise DoxaBaseError(
+                    f"value_frequencies[{index}] must include a value"
+                )
+            frequency = item.get("frequency")
+            if not isinstance(frequency, int) or isinstance(frequency, bool):
+                raise DoxaBaseError(
+                    f"value_frequencies[{index}].frequency must be an integer"
+                )
+            self._ensure_non_negative(
+                f"value_frequencies[{index}].frequency",
+                frequency,
+            )
+            values.append((item["value"], frequency))
+        return values
 
     def _string_values(
         self,

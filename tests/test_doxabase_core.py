@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1108
+    assert graphs["base_ontology"].triple_count == 1114
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1118
+    assert graphs["base_shapes"].triple_count == 1137
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -3649,6 +3649,10 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
         evidence_sources=["tests/test_doxabase_core.py"],
         row_count=123,
         distinct_count=45,
+        value_frequencies=[
+            {"value": "open", "frequency": 70},
+            {"value": "closed", "frequency": 53},
+        ],
     )
 
     assert result.observation_type == "profile"
@@ -3673,6 +3677,21 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
         URIRef(RC + "evidence"),
         evidence_iri,
     ) in observations
+    value_frequency_iris = list(
+        observations.objects(observation_iri, URIRef(RC + "observedValueFrequency"))
+    )
+    assert len(value_frequency_iris) == 2
+    assert {
+        (
+            str(observations.value(value_iri, URIRef(RC + "observedValue"))),
+            int(str(observations.value(value_iri, URIRef(RC + "valueFrequency")))),
+        )
+        for value_iri in value_frequency_iris
+    } == {("open", 70), ("closed", 53)}
+    assert all(
+        (value_iri, RDF.type, URIRef(RC + "ObservedValueFrequency")) in observations
+        for value_iri in value_frequency_iris
+    )
     assert (evidence_iri, RDF.type, URIRef(RC + "Evidence")) in evidence
     assert (
         evidence_iri,
@@ -3698,6 +3717,10 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
         evidence_sources=["test://messages-profile"],
         row_count=123,
         distinct_count=120,
+        value_frequencies=[
+            {"value": "open", "frequency": 80},
+            {"value": "closed", "frequency": 43},
+        ],
         map_label="Messages",
         is_table=True,
         pattern_summary="Messages profile is internally consistent.",
@@ -3727,6 +3750,10 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     assert profile.row_count == 123
     assert profile.distinct_count == 120
     assert profile.null_count is None
+    assert [(item.value, item.frequency) for item in profile.value_frequencies] == [
+        ("open", 80),
+        ("closed", 43),
+    ]
     assert profile.evidence[0].iri == result.observation.evidence_iri
 
     pattern = db.describe_pattern(result.pattern.pattern_iri)
@@ -3738,6 +3765,25 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
 
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text
+
+
+def test_describe_dataset_profile_without_value_frequencies_returns_empty_list(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled before value-frequency capture existed.",
+        evidence_summary="Synthetic profile output.",
+        row_count=10,
+    )
+
+    description = db.describe_dataset(dataset)
+
+    assert len(description.profile_observations) == 1
+    assert description.profile_observations[0].value_frequencies == []
 
 
 def test_record_column_profile_writes_observation_map_column_and_pattern(
@@ -3758,6 +3804,10 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
         row_count=123,
         null_count=0,
         distinct_count=123,
+        value_frequencies=[
+            {"value": "doc-001", "frequency": 1},
+            {"value": "doc-002", "frequency": 1},
+        ],
         map_label="Messages.doc_id",
         physical_type="rc:Varchar",
         nullable=False,
@@ -3778,6 +3828,7 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
 
     description = db.describe_dataset(table)
     assert [item.iri for item in description.columns] == [column]
+    assert description.profile_observations == []
     assert description.columns[0].nullable is False
     assert description.columns[0].physical_type is not None
     assert description.columns[0].physical_type.iri == RC + "Varchar"
@@ -3787,6 +3838,10 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
     assert profile.row_count == 123
     assert profile.null_count == 0
     assert profile.distinct_count == 123
+    assert [(item.value, item.frequency) for item in profile.value_frequencies] == [
+        ("doc-001", 1),
+        ("doc-002", 1),
+    ]
     assert profile.observed_asset is not None
     assert profile.observed_asset.iri == table
     assert profile.observed_column is not None
@@ -3810,5 +3865,11 @@ def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
         db.record_observation("   ")
     with pytest.raises(DoxaBaseError, match="row_count"):
         db.record_observation("Bad count", row_count=-1)
+    with pytest.raises(DoxaBaseError, match="value_frequencies"):
+        db.record_observation(
+            "Bad value frequency",
+            observation_type="profile",
+            value_frequencies=[{"value": "open", "frequency": -1}],
+        )
     with pytest.raises(DoxaBaseError, match="observation_type"):
         db.record_observation("Bad type", observation_type="note")  # type: ignore[arg-type]

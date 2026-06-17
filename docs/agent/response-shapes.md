@@ -376,8 +376,9 @@ dataset.linked_patterns
 dataset.linked_pattern_reasons
 ```
 
-`dataset.profile_observations` contains recent `ProfileObservationSummary`
-items for observations whose `observed_asset` is the dataset:
+`dataset.profile_observations` contains recent dataset-scoped
+`ProfileObservationSummary` items for observations whose `observed_asset` is the
+dataset and whose `observed_column` is absent:
 
 ```python
 profile.iri
@@ -390,13 +391,23 @@ profile.sample_size
 profile.row_count
 profile.null_count
 profile.distinct_count
+profile.value_frequencies
 profile.evidence
+```
+
+`profile.value_frequencies` contains recent profiled values or value buckets
+paired with their observed frequencies:
+
+```python
+value_frequency.iri
+value_frequency.value
+value_frequency.frequency
 ```
 
 Each `dataset.columns[]` item can also include `profile_observations` for recent
 profile observations whose `observed_column` is that column. Use these before
-searching raw observation triples when you need profile counts, distinctness, or
-null counts attached to a dataset handoff.
+searching raw observation triples when you need profile counts, distinctness,
+null counts, or top observed values attached to a dataset handoff.
 
 Each column in `dataset.columns` is a `ColumnDescription`:
 
@@ -408,6 +419,7 @@ column.column_name
 column.physical_type
 column.value_type
 column.nullable
+column.profile_observations
 ```
 
 `physical_type` and `value_type` are resource summaries with `iri`, `label`, and

@@ -26,7 +26,9 @@ Use project namespaces for domain-specific ideas:
 Useful distinction:
 
 - Declared allowed values belong to the model, using `rc:AllowedValues`.
-- Observed values from a profiler belong to observations, using `rc:Observation` or `rc:ProfileObservation`.
+- Observed values from a profiler belong to observations, using
+  `rc:Observation` or `rc:ProfileObservation`; counted values can be paired as
+  `rc:ObservedValueFrequency` resources.
 - Syntheses over related observations or claims belong to patterns, using
   `rc:Pattern`.
 

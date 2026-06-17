@@ -31,10 +31,14 @@ Use `observation_type="profile"` for profiling-style findings:
 - sample sizes
 - null counts
 - distinct counts
+- top observed values or value buckets with frequencies
 - column-specific profiling results
 
 Profile observations may include `sample_size`, `row_count`, `null_count`, and
-`distinct_count`. Counts must be non-negative.
+`distinct_count`. They may also include `value_frequencies`, a list of
+`{"value": ..., "frequency": ...}` objects for observed values or value
+buckets. Counts and frequencies must be non-negative. Treat these as observed
+sample/profile facts, not declared allowed values.
 
 Use `doxabase.record_dataset_profile` when a dataset-level profile should also
 update the current-best map row-count snapshot or preserve a linked pattern

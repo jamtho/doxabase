@@ -305,6 +305,7 @@ rc:sampleSize
 rc:rowCount
 rc:nullCount
 rc:distinctCount
+rc:observedValueFrequency
 rc:observedValue
 rc:valueFrequency
 rc:evidence
@@ -322,7 +323,16 @@ Example:
     rc:rowCount 1000 ;
     rc:nullCount 0 ;
     rc:distinctCount 2 ;
-    rc:observedValue "open", "closed" .
+    rc:observedValueFrequency :profile_2026_05_30_status_open,
+        :profile_2026_05_30_status_closed .
+
+:profile_2026_05_30_status_open a rc:ObservedValueFrequency ;
+    rc:observedValue "open" ;
+    rc:valueFrequency 740 .
+
+:profile_2026_05_30_status_closed a rc:ObservedValueFrequency ;
+    rc:observedValue "closed" ;
+    rc:valueFrequency 260 .
 ```
 
 ### Caveats

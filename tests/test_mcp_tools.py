@@ -1022,6 +1022,10 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
         evidence_sources=["tests/test_mcp_tools.py"],
         row_count=55,
         distinct_count=54,
+        value_frequencies=[
+            {"value": "open", "frequency": 40},
+            {"value": "closed", "frequency": 15},
+        ],
         map_label="Messages",
         is_table=True,
         pattern_summary="Messages profile looks stable.",
@@ -1041,6 +1045,9 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
     profile = describe_dataset_tool(db, dataset)["profile_observations"][0]
     assert profile["row_count"] == 55
     assert profile["distinct_count"] == 54
+    assert [
+        (item["value"], item["frequency"]) for item in profile["value_frequencies"]
+    ] == [("open", 40), ("closed", 15)]
     assert profile["evidence"][0]["iri"] == result["observation"]["evidence_iri"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
@@ -1062,6 +1069,10 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
         row_count=55,
         null_count=0,
         distinct_count=55,
+        value_frequencies=[
+            {"value": "doc-001", "frequency": 1},
+            {"value": "doc-002", "frequency": 1},
+        ],
         map_label="Messages.doc_id",
         physical_type="rc:Varchar",
         nullable=False,
@@ -1084,6 +1095,9 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
     assert profile["row_count"] == 55
     assert profile["null_count"] == 0
     assert profile["distinct_count"] == 55
+    assert [
+        (item["value"], item["frequency"]) for item in profile["value_frequencies"]
+    ] == [("doc-001", 1), ("doc-002", 1)]
     assert profile["observed_column"]["iri"] == column
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 

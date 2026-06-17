@@ -619,6 +619,29 @@ rc:ProfileObservationShape a sh:NodeShape ;
         sh:datatype xsd:integer ;
         sh:minInclusive 0 ;
         sh:message "distinctCount must be a non-negative integer." ;
+    ] ;
+    sh:property [
+        sh:path rc:observedValueFrequency ;
+        sh:nodeKind sh:IRI ;
+        sh:class rc:ObservedValueFrequency ;
+        sh:message "observedValueFrequency values should be named ObservedValueFrequency resources." ;
+    ] .
+
+rc:ObservedValueFrequencyShape a sh:NodeShape ;
+    sh:targetClass rc:ObservedValueFrequency ;
+    sh:property [
+        sh:path rc:observedValue ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "ObservedValueFrequency resources must name exactly one observed value." ;
+    ] ;
+    sh:property [
+        sh:path rc:valueFrequency ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "valueFrequency must be a non-negative integer." ;
     ] .
 
 rc:ClaimShape a sh:NodeShape ;

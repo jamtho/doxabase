@@ -76,10 +76,12 @@ Implemented:
 - `record_observation()` for first-class observation and evidence resources.
 - `record_claim_observation()` for common observation, claim, evidence, and source-span capture.
 - `record_pattern()` for syntheses that connect related findings to map targets.
-- `record_dataset_profile()` for bundling a profile observation with an
-  optional map row-count snapshot and agent-authored profile pattern.
+- `record_dataset_profile()` for bundling a profile observation, including
+  optional observed value-frequency pairs, with an optional map row-count
+  snapshot and agent-authored profile pattern.
 - `record_column_profile()` for bundling a column profile observation with
-  optional map column metadata and an agent-authored profile pattern.
+  optional observed value-frequency pairs, map column metadata, and an
+  agent-authored profile pattern.
 - Map authoring helpers for current-best datasets, columns, caveats, storage
   access, physical layouts, partition schemes, and relationships.
 - `record_graph_revision()` for history metadata about graph changes and review
