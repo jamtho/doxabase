@@ -1710,6 +1710,10 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert staged_listing.revisions[0].patch_count == 1
     assert staged_listing.revisions[0].application_status == "ready"
     assert staged_listing.revisions[0].application_can_apply is True
+    assert staged_listing.revisions[0].application_summary is not None
+    assert staged_listing.revisions[0].application_summary.startswith("Ready to apply")
+    assert staged_listing.revisions[0].application_recommended_resolution is not None
+    assert staged_listing.revisions[0].application_validation_skipped_reason is None
     assert staged_listing.revisions[0].suggested_next_actions
 
     applied = db.apply_staged_revision(
@@ -1722,6 +1726,12 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     by_iri = {item.iri: item for item in listing.revisions}
     assert by_iri[staged.revision_iri].applied_by == applied.applied_revision_iri
     assert by_iri[staged.revision_iri].application_status == "already_applied"
+    assert by_iri[staged.revision_iri].application_summary == (
+        f"Already applied by {applied.applied_revision_iri}."
+    )
+    assert by_iri[staged.revision_iri].application_validation_skipped_reason == (
+        "already_applied"
+    )
     assert by_iri[applied.applied_revision_iri].applies_staged_revision == (
         staged.revision_iri
     )
@@ -1760,6 +1770,11 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     drift_by_iri = {item.iri: item for item in drift_listing.revisions}
     stale_item = drift_by_iri[stale.revision_iri]
     assert stale_item.application_status == "conflict"
+    assert stale_item.application_summary is not None
+    assert stale_item.application_summary.startswith("Blocked by 1 conflict")
+    assert stale_item.application_recommended_resolution is not None
+    assert "Restage the proposal" in stale_item.application_recommended_resolution
+    assert stale_item.application_validation_skipped_reason == "conflicts_present"
     assert stale_item.application_blocking_reasons == ["target_count_drift"]
     assert stale_item.application_count_drifts[0].target_graph == "map"
     assert stale_item.suggested_next_actions[-1].tool_name == "restage_staged_revision"

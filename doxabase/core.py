@@ -462,6 +462,9 @@ class GraphRevisionListItem:
     application_status: str | None
     application_decision: str | None
     application_can_apply: bool | None
+    application_summary: str | None
+    application_recommended_resolution: str | None
+    application_validation_skipped_reason: str | None
     application_blocking_reasons: list[str]
     application_count_drifts: list[StagedGraphCountDrift]
     application_snapshot_drifts: list[StagedGraphSnapshotDrift]
@@ -1995,6 +1998,9 @@ class DoxaBase:
             application_status: str | None = None
             application_decision: str | None = None
             application_can_apply: bool | None = None
+            application_summary: str | None = None
+            application_recommended_resolution: str | None = None
+            application_validation_skipped_reason: str | None = None
             application_blocking_reasons: list[str] = []
             application_count_drifts: list[StagedGraphCountDrift] = []
             application_snapshot_drifts: list[StagedGraphSnapshotDrift] = []
@@ -2015,6 +2021,11 @@ class DoxaBase:
                     application_status = check.status
                     application_decision = check.decision
                     application_can_apply = check.can_apply
+                    application_summary = check.summary
+                    application_recommended_resolution = check.recommended_resolution
+                    application_validation_skipped_reason = (
+                        check.validation_skipped_reason
+                    )
                     application_blocking_reasons = check.blocking_reasons
                     application_count_drifts = check.count_drifts
                     application_snapshot_drifts = check.snapshot_drifts
@@ -2096,6 +2107,13 @@ class DoxaBase:
                     application_status=application_status,
                     application_decision=application_decision,
                     application_can_apply=application_can_apply,
+                    application_summary=application_summary,
+                    application_recommended_resolution=(
+                        application_recommended_resolution
+                    ),
+                    application_validation_skipped_reason=(
+                        application_validation_skipped_reason
+                    ),
                     application_blocking_reasons=application_blocking_reasons,
                     application_count_drifts=application_count_drifts,
                     application_snapshot_drifts=application_snapshot_drifts,
