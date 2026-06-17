@@ -110,8 +110,8 @@ Use `describe_staged_revision()` to inspect the proposal and
 
 DoxaBase can apply staged patch proposals with conservative graph-state conflict
 checks, and can restage a stale proposal against current graph state when
-unrelated drift made it obsolete. It does not yet
-provide rich semantic merge
-diagnostics, approval workflows, or durable graph versions. The revision helpers
-preserve rationale and review context now, while leaving fuller slice
-replacement for later.
+unrelated drift made it obsolete. New staged revisions store snapshot rows for
+exact count/digest drift reporting, but DoxaBase does not yet provide rich
+semantic merge diagnostics, approval workflows, or durable graph version
+browsing beyond those staged snapshots. The revision helpers preserve rationale
+and review context now, while leaving fuller slice replacement for later.

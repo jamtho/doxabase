@@ -104,6 +104,8 @@ Implemented:
   revision event in history.
 - `restage_staged_revision()` for refreshing a stale staged proposal against
   current graph state while preserving a link to the older proposal.
+- Row-level staged graph snapshot storage for exact count/digest drift reporting
+  in apply checks and staged-review Markdown.
 - Agent-authored observation and pattern RDF vocabulary for structured claims,
   source spans, confidence, and status.
 - Stricter SHACL validation for observation/pattern/evidence/claim resources.
@@ -116,7 +118,7 @@ Implemented:
 Not implemented yet:
 
 - Full staged revision semantic conflict resolution, rebase, and graph version
-  storage.
+  storage beyond the staged snapshot rows used for drift reporting.
 - Query generation or execution helpers.
 - Full SPARQL endpoint.
 

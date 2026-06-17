@@ -45,6 +45,9 @@ The current storage is intentionally direct:
 - Subjects and objects carry simple kind markers: `uri`, `bnode`, or `literal`.
 - Literal datatype and language are stored separately.
 - RDFLib is used for parsing source RDF and reconstructing RDF graphs for validation.
+- Staged revisions store row-level snapshots of their target graphs so apply
+  checks can report exact triples added or removed since staging when count or
+  digest drift occurs.
 
 This is not a custom RDF engine. It is a small local graph memory with enough structure to build V1 behavior.
 
@@ -301,9 +304,10 @@ Expected state at the time of writing:
 - Storage currently stores term strings directly rather than using interned term IDs.
 - Blank node IDs are imported as-is; this is sufficient for current fixtures but not a robust merge strategy.
 - Staged revisions can be applied with conservative graph-state conflict checks
-  and stale proposals can be restaged against current graph state, but rebase,
-  rich semantic conflict resolution, and durable graph version storage are not
-  implemented yet.
+  and stale proposals can be restaged against current graph state. New staged
+  snapshots can explain exact count/digest drift triples, but rebase, rich
+  semantic conflict resolution, and durable graph version browsing beyond those
+  staged snapshots are not implemented yet.
 - Context slices are route-explained first passes, not a complete staged review
   or proof-of-closure mechanism.
 - Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.

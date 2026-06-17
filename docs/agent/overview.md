@@ -62,8 +62,8 @@ Current implementation status:
 
 Important V1 limits:
 
-- No rich staged revision semantic merge/rebase workflow or graph version
-  storage yet.
+- No rich staged revision semantic merge/rebase workflow or durable graph version
+  browsing beyond the row-level staged snapshots used for drift reporting yet.
 - No full SPARQL endpoint.
 - No direct query generation or execution helpers yet.
 - No embedded LLM, semantic search, or embedding index.
