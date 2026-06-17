@@ -135,7 +135,12 @@ map implications.
 
 `doxabase.record_observation`
 
-Records a structured observation in the `observations` graph. Optional evidence fields create a linked `rc:Evidence` resource in the `evidence` graph. Use this for point-in-time findings, profile counts, query outputs, and workflow notes that should remain available to later agents.
+Records a structured observation in the `observations` graph. Optional evidence
+fields create a linked `rc:Evidence` resource in the `evidence` graph. Use this
+for point-in-time findings, profile counts, query outputs, and workflow notes
+that should remain available to later agents. For validation-clean evidence,
+include `evidence_sources`; `evidence_summary` alone is descriptive prose, not a
+source identity.
 
 `doxabase.record_dataset_profile`
 

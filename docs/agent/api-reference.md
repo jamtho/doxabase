@@ -182,7 +182,9 @@ selected slice. Use `candidate_triple_count`, `returned_triple_count`, and
 
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are
-supplied, it also writes a linked `rc:Evidence` resource to the `evidence` graph.
+supplied, it also writes a linked `rc:Evidence` resource to the `evidence`
+graph. Include `evidence_sources` or a source span when you need validation-clean
+evidence; `evidence_summary` alone is descriptive prose.
 
 `record_dataset_profile()` records a profile observation for one dataset and can
 also update the map row-count snapshot and write an agent-authored profile

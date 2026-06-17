@@ -63,6 +63,10 @@ Evidence should explain how the observation was produced:
 - profiler names or run summaries
 - short notes about sampling scope
 
+`evidence_summary` is useful prose, but it is not by itself a source identity.
+For validation-clean capsules, include `evidence_sources` or a source span when
+you create evidence.
+
 Do not put credentials or secrets in evidence summaries or sources.
 
 The base observation SHACL expects observations to link to evidence. The helper
