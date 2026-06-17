@@ -43,6 +43,7 @@ from doxabase.mcp_tools import (
     record_graph_revision_tool,
     record_observation_tool,
     record_pattern_tool,
+    record_profile_bundle_tool,
     restage_staged_revision_tool,
     search_tool,
     stage_graph_revision_tool,
@@ -55,7 +56,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -487,6 +488,69 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             pattern_map_implications=pattern_map_implications,
+        )
+
+    @server.tool(name="doxabase.record_profile_bundle")
+    def record_profile_bundle(
+        dataset_iri: str,
+        dataset_summary: str,
+        column_profiles: list[dict[str, Any]] | None = None,
+        observed_at: str | None = None,
+        observed_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: list[str] | None = None,
+        sample_size: int | None = None,
+        sample_scope: str | None = None,
+        sample_method: str | None = None,
+        row_count: int | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+        value_frequencies: list[dict[str, Any]] | None = None,
+        profile_metrics: list[dict[str, Any]] | None = None,
+        update_map_snapshot: bool = True,
+        map_label: str | None = None,
+        map_description: str | None = None,
+        is_table: bool | None = None,
+        pattern_summary: str | None = None,
+        pattern_text: str | None = None,
+        pattern_rationale: str | None = None,
+        pattern_confidence: str | None = "rc:MediumConfidence",
+        pattern_status: str | None = "rc:Tentative",
+        pattern_stability: str | None = "rc:EmergingPattern",
+        pattern_map_implications: list[str] | None = None,
+        column_defaults: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Record one dataset profile and related column profiles in one pass."""
+
+        return record_profile_bundle_tool(
+            db,
+            dataset_iri=dataset_iri,
+            dataset_summary=dataset_summary,
+            column_profiles=column_profiles,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
+            update_map_snapshot=update_map_snapshot,
+            map_label=map_label,
+            map_description=map_description,
+            is_table=is_table,
+            pattern_summary=pattern_summary,
+            pattern_text=pattern_text,
+            pattern_rationale=pattern_rationale,
+            pattern_confidence=pattern_confidence,
+            pattern_status=pattern_status,
+            pattern_stability=pattern_stability,
+            pattern_map_implications=pattern_map_implications,
+            column_defaults=column_defaults,
         )
 
     @server.tool(name="doxabase.record_claim_reconsideration")

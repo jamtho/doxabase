@@ -33,6 +33,8 @@ Current implementation status:
   row-count snapshots and linked profile patterns.
 - `record_column_profile()` for column profile observations that may also
   update map column metadata and linked profile patterns.
+- `record_profile_bundle()` for one dataset profile plus related column
+  profiles from the same profiling pass.
 - `record_claim_observation()` for structured observation, claim, evidence, and source-span capture.
 - `record_claim_reconsideration()` for marking when later claims weaken,
   contradict, supersede, or refine earlier claims.

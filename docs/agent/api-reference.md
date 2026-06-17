@@ -222,6 +222,20 @@ If a capsule only contains profile lore, `describe_dataset()` may still report
 missing storage/path/layout warnings; treat those as query-planning gaps, not
 profile validation failures.
 
+`record_profile_bundle()` records one dataset profile plus zero or more related
+column profiles from the same profiling pass. It composes
+`record_dataset_profile()` and `record_column_profile()`, so it does not create
+a special bundle ontology object. Use it when the profiler produced a
+dataset-level summary and several column-level summaries that share evidence or
+sample context. Top-level `observed_at`, `observed_by`, `evidence_summary`,
+`evidence_sources`, `sample_size`, `sample_scope`, and `sample_method` default
+into each column profile unless the column item overrides them.
+Use `column_defaults` for repeated column options, for example
+`{"update_map_column": false}` when sampled column profiles should stay
+observation-only. Each `column_profiles[]` item accepts the same fields as
+`record_column_profile()` and must include `column_iri`, `column_name`, and
+`summary`.
+
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as
 physical type and nullability, and can write a linked profile pattern. Column

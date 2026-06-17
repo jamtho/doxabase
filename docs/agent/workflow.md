@@ -25,29 +25,32 @@ compaction, read `start_here` first.
 13. Use `doxabase.record_column_profile` when a column profiling result should
     write a profile observation and optionally update map/pattern context
     together.
-14. Use `doxabase.record_claim_observation` for the common observation + claim + evidence + source-span pattern.
+14. Use `doxabase.record_profile_bundle` when one profiling pass produced a
+    dataset-level profile and several related column profiles that should share
+    run metadata, evidence, or sample context.
+15. Use `doxabase.record_claim_observation` for the common observation + claim + evidence + source-span pattern.
     For more complex caveat, join, transformation, access, or source-span claims, write agent-authored observation RDF using the `observation_rdf` patterns.
-15. Use `doxabase.record_claim_reconsideration` when a newer claim weakens,
+16. Use `doxabase.record_claim_reconsideration` when a newer claim weakens,
     contradicts, supersedes, or refines an earlier claim. This keeps the earlier
     hunch available while making the changed reading explicit.
-16. Use `doxabase.record_pattern` when several observations or claims belong together and explain a more durable pattern.
-17. Use `doxabase.stage_map_assertion_change` when you want to propose a
+17. Use `doxabase.record_pattern` when several observations or claims belong together and explain a more durable pattern.
+18. Use `doxabase.stage_map_assertion_change` when you want to propose a
     reviewable add/remove/replace for one current-best map assertion. It carries
     assertion support, caveat scope, route summaries, generated patches, and
     staged revision metadata together.
-18. Use `doxabase.stage_graph_revision` when you want to propose additions or
+19. Use `doxabase.stage_graph_revision` when you want to propose additions or
     removals without applying them. This is appropriate for exploratory hunches,
     alternative systematisations, and reviewable candidate map changes.
-19. Use `doxabase.stage_systematisation` when one modelling hunch has several
+20. Use `doxabase.stage_systematisation` when one modelling hunch has several
     plausible RDF framings. This is especially useful for pattern-first versus
     ontology-first alternatives, or for awkward concepts that do not fit current
     helper templates. Use shared proposed context when several framings need the
     same tentative vocabulary or assumptions.
-20. Use `doxabase.stage_pattern_promotion` when existing patterns support a
+21. Use `doxabase.stage_pattern_promotion` when existing patterns support a
     caller-authored map, ontology, shape, or other graph change that should
     remain reviewable before being applied.
-21. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, `doxabase.record_map_physical_layout`, `doxabase.record_map_partition_scheme`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
-22. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
+22. Use map authoring helpers such as `doxabase.record_map_dataset`, `doxabase.record_map_column`, `doxabase.record_map_caveat`, `doxabase.record_map_storage_access`, `doxabase.record_map_physical_layout`, `doxabase.record_map_partition_scheme`, and `doxabase.record_map_relationship` when a finding is ready to become current-best map context.
+23. Use `doxabase.validate_graph` when you need an explicit SHACL diagnostic.
 23. Use `doxabase.record_graph_revision` after a meaningful graph change or
     review-bundle export when later agents should know what changed, what graph
     roles were included for review, and why.

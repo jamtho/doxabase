@@ -40,6 +40,7 @@ from doxabase.mcp_tools import (
     record_graph_revision_tool,
     record_observation_tool,
     record_pattern_tool,
+    record_profile_bundle_tool,
     restage_staged_revision_tool,
     search_tool,
     stage_graph_revision_tool,
@@ -73,6 +74,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_claim_reconsideration" in tool_names
     assert "doxabase.record_column_profile" in tool_names
     assert "doxabase.record_dataset_profile" in tool_names
+    assert "doxabase.record_profile_bundle" in tool_names
     assert "doxabase.record_pattern" in tool_names
     assert "doxabase.record_map_dataset" in tool_names
     assert "doxabase.record_map_column" in tool_names
@@ -1264,6 +1266,56 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert profile["profile_metrics"][0]["value"] == "12.5"
     assert profile["observed_column"]["iri"] == column
+    assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
+def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+
+    result = record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="MCP helper recorded a dataset and column profile pass.",
+        evidence_summary="Synthetic profile bundle evidence.",
+        evidence_sources=["tests/test_mcp_tools.py"],
+        sample_size=25,
+        sample_scope="Twenty-five sampled Orders rows.",
+        sample_method="DuckDB sampled profile query.",
+        row_count=1000,
+        map_label="Orders",
+        is_table=True,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Sampled status values were profiled.",
+                "distinct_count": 3,
+                "value_frequencies": [
+                    {"value": "fulfilled", "frequency": 18},
+                    {"value": "pending", "frequency": 4},
+                ],
+            }
+        ],
+    )
+
+    assert result["dataset_iri"] == table
+    assert result["dataset_profile"]["observation"]["observation_type"] == "profile"
+    assert result["dataset_profile"]["map_dataset"]["iri"] == table
+    assert len(result["column_profiles"]) == 1
+    assert result["column_profiles"][0]["column_iri"] == status_column
+    assert result["column_profiles"][0]["map_column"] is None
+
+    dataset = describe_dataset_tool(db, table)
+
+    assert dataset["row_count_snapshot"] == 1000
+    assert dataset["columns"] == []
+    profile = dataset["unmapped_column_profile_observations"][0]
+    assert profile["sample_scope"] == "Twenty-five sampled Orders rows."
+    assert profile["sample_method"] == "DuckDB sampled profile query."
     assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 

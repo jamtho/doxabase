@@ -479,6 +479,20 @@ is not one of the dataset's current map columns. Use it when a sampled or
 scratch column profile was recorded with `update_map_column=false`. These
 profiles are observation lore, not map column assertions.
 
+`db.record_profile_bundle(...)` returns a `ProfileBundleRecord`:
+
+```python
+bundle.dataset_iri
+bundle.dataset_profile
+bundle.column_profiles
+```
+
+`bundle.dataset_profile` has the same return shape as
+`record_dataset_profile(...)`, and each `bundle.column_profiles[]` item has the
+same return shape as `record_column_profile(...)`. The bundle helper does not
+create a separate RDF bundle node; it is an API convenience over the normal
+profile records.
+
 `profile.evidence` items use the richer evidence description shape:
 
 ```python

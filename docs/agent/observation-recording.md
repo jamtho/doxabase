@@ -59,6 +59,15 @@ Use `doxabase.record_column_profile` when a column-level profile should also
 update current-best map column metadata, such as nullability or physical type,
 or preserve a linked pattern synthesis.
 
+Use `doxabase.record_profile_bundle` when one profiling pass produced a
+dataset-level summary and several column-level summaries. The bundle helper
+writes the same ordinary dataset and column profile records as the single
+helpers, but lets column entries share run metadata such as `observed_at`,
+`observed_by`, `evidence_summary`, `evidence_sources`, `sample_size`,
+`sample_scope`, and `sample_method`. Column entries can override shared values,
+and `column_defaults` can set repeated column options such as
+`update_map_column=false`.
+
 Be explicit about the map update booleans. `record_dataset_profile` defaults
 `update_map_snapshot=true` and can write `rc:rowCountSnapshot` when `row_count`
 is supplied. `record_column_profile` defaults `update_map_column=true` and can

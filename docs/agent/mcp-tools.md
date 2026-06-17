@@ -165,7 +165,7 @@ source identity.
 
 `doxabase.record_dataset_profile`
 
-Records one dataset profile bundle: a profile observation, optional evidence,
+Records one dataset profile: a profile observation, optional evidence,
 an optional current-best map row-count snapshot, and an optional
 agent-authored profile pattern linked back to the observation. Use it when a
 profile run should preserve both the raw noticing and the emerging synthesis.
@@ -187,9 +187,25 @@ For a capsule that only records profile lore, `describe_dataset` may still emit
 missing storage/path/layout warnings. Those are query-planning gaps rather than
 profile validation failures.
 
+`doxabase.record_profile_bundle`
+
+Records one dataset profile plus zero or more related column profiles from the
+same profiling pass. It writes ordinary profile observations, optional map
+updates, optional linked profile patterns, and evidence using the same semantics
+as `record_dataset_profile` and `record_column_profile`.
+Use it when a profiler has produced a dataset-level summary and a set of column
+summaries that share run metadata, evidence, or sample context.
+The top-level `observed_at`, `observed_by`, `evidence_summary`,
+`evidence_sources`, `sample_size`, `sample_scope`, and `sample_method` values
+default into each column profile unless the column entry overrides them.
+Use `column_defaults` for repeated column options such as
+`{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
+fields as `record_column_profile` and must include `column_iri`, `column_name`,
+and `summary`.
+
 `doxabase.record_column_profile`
 
-Records one column profile bundle: a profile observation with
+Records one column profile: a profile observation with
 `observed_column`, optional evidence, optional current-best map column metadata,
 and an optional linked profile pattern. Use it when profiling output says
 something useful about nullability, distinctness, physical type, or identity

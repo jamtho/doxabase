@@ -4681,6 +4681,108 @@ def test_describe_dataset_surfaces_unmapped_column_profile_observations(
     assert validation.conforms, validation.report_text
 
 
+def test_record_profile_bundle_writes_dataset_and_column_profiles(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    amount_column = "https://example.test/project#OrdersAmount"
+
+    result = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled with row count and column sketches.",
+        observed_by="urn:doxabase:test-agent",
+        evidence_summary="Synthetic DuckDB profiling pass.",
+        evidence_sources=["test://orders-profile"],
+        sample_size=100,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table profiling query.",
+        row_count=100,
+        map_label="Orders",
+        is_table=True,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Top status values were observed in the profile.",
+                "distinct_count": 3,
+                "value_frequencies": [
+                    {"value": "fulfilled", "frequency": 70},
+                    {"value": "pending", "frequency": 20},
+                ],
+            },
+            {
+                "column_iri": amount_column,
+                "column_name": "amount",
+                "summary": "Order amount was profiled as a non-null decimal.",
+                "null_count": 0,
+                "profile_metrics": [{"metric": "rc:MeanValue", "value": 42.5}],
+                "update_map_column": True,
+                "physical_type": "rc:Decimal",
+                "nullable": False,
+            },
+        ],
+    )
+
+    assert result.dataset_iri == dataset
+    assert result.dataset_profile.observation.observation_type == "profile"
+    assert result.dataset_profile.map_dataset is not None
+    assert len(result.column_profiles) == 2
+    assert result.column_profiles[0].map_column is None
+    assert result.column_profiles[1].map_column is not None
+
+    description = db.describe_dataset(dataset)
+
+    assert description.label == "Orders"
+    assert description.row_count_snapshot == 100
+    assert len(description.profile_observations) == 1
+    dataset_profile = description.profile_observations[0]
+    assert dataset_profile.sample_scope == "All rows in the local Orders table."
+    assert dataset_profile.evidence[0].sources == ["test://orders-profile"]
+
+    assert [column.iri for column in description.columns] == [amount_column]
+    amount_profile = description.columns[0].profile_observations[0]
+    assert amount_profile.sample_method == "DuckDB full-table profiling query."
+    assert amount_profile.null_count == 0
+    assert amount_profile.profile_metrics[0].metric.iri == RC + "MeanValue"
+    assert description.columns[0].nullable is False
+    assert description.columns[0].physical_type is not None
+    assert description.columns[0].physical_type.iri == RC + "Decimal"
+
+    unmapped = description.unmapped_column_profile_observations
+    assert len(unmapped) == 1
+    assert unmapped[0].observed_column is not None
+    assert unmapped[0].observed_column.iri == status_column
+    assert unmapped[0].sample_size == 100
+    assert [(item.value, item.frequency) for item in unmapped[0].value_frequencies] == [
+        ("fulfilled", 70),
+        ("pending", 20),
+    ]
+
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_profile_bundle_rejects_unknown_column_fields(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="unsupported record_column_profile"):
+        db.record_profile_bundle(
+            "https://example.test/project#Orders",
+            dataset_summary="Orders were profiled.",
+            column_profiles=[
+                {
+                    "column_iri": "https://example.test/project#OrdersStatus",
+                    "column_name": "status",
+                    "summary": "Status was profiled.",
+                    "allowed_values": ["fulfilled"],
+                }
+            ],
+        )
+
+
 def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

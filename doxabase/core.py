@@ -880,6 +880,13 @@ class ColumnProfileRecord:
 
 
 @dataclass(frozen=True)
+class ProfileBundleRecord:
+    dataset_iri: str
+    dataset_profile: DatasetProfileRecord
+    column_profiles: list[ColumnProfileRecord]
+
+
+@dataclass(frozen=True)
 class ClaimReconsiderationRecord:
     reconsideration_iri: str
     newer_claim_iri: str
@@ -5242,6 +5249,159 @@ class DoxaBase:
             observation=observation,
             map_column=map_column,
             pattern=pattern,
+        )
+
+    def record_profile_bundle(
+        self,
+        dataset_iri: str,
+        *,
+        dataset_summary: str,
+        column_profiles: Iterable[Mapping[str, Any]] | None = None,
+        observed_at: datetime | str | None = None,
+        observed_by: str | None = None,
+        evidence_summary: str | None = None,
+        evidence_sources: Iterable[str] | str | None = None,
+        sample_size: int | None = None,
+        sample_scope: str | None = None,
+        sample_method: str | None = None,
+        row_count: int | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+        value_frequencies: Iterable[Mapping[str, Any]] | None = None,
+        profile_metrics: Iterable[Mapping[str, Any]] | None = None,
+        update_map_snapshot: bool = True,
+        map_label: str | None = None,
+        map_description: str | None = None,
+        is_table: bool | None = None,
+        pattern_summary: str | None = None,
+        pattern_text: str | None = None,
+        pattern_rationale: str | None = None,
+        pattern_confidence: str | None = "rc:MediumConfidence",
+        pattern_status: str | None = "rc:Tentative",
+        pattern_stability: str | None = "rc:EmergingPattern",
+        pattern_map_implications: Iterable[str] | str | None = None,
+        column_defaults: Mapping[str, Any] | None = None,
+    ) -> ProfileBundleRecord:
+        dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        dataset_profile = self.record_dataset_profile(
+            dataset_value,
+            summary=dataset_summary,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
+            update_map_snapshot=update_map_snapshot,
+            map_label=map_label,
+            map_description=map_description,
+            is_table=is_table,
+            pattern_summary=pattern_summary,
+            pattern_text=pattern_text,
+            pattern_rationale=pattern_rationale,
+            pattern_confidence=pattern_confidence,
+            pattern_status=pattern_status,
+            pattern_stability=pattern_stability,
+            pattern_map_implications=pattern_map_implications,
+        )
+
+        allowed_column_keys = {
+            "column_iri",
+            "column_name",
+            "summary",
+            "table_iri",
+            "observed_at",
+            "observed_by",
+            "evidence_summary",
+            "evidence_sources",
+            "sample_size",
+            "sample_scope",
+            "sample_method",
+            "row_count",
+            "null_count",
+            "distinct_count",
+            "value_frequencies",
+            "profile_metrics",
+            "update_map_column",
+            "map_label",
+            "map_description",
+            "physical_type",
+            "value_type",
+            "nullable",
+            "pattern_summary",
+            "pattern_text",
+            "pattern_rationale",
+            "pattern_confidence",
+            "pattern_status",
+            "pattern_stability",
+            "pattern_map_implications",
+            "observation_iri",
+            "evidence_iri",
+            "pattern_iri",
+        }
+        required_column_keys = {"column_iri", "column_name", "summary"}
+
+        shared_column_defaults: dict[str, Any] = {
+            "table_iri": dataset_value,
+            "observed_at": observed_at,
+            "observed_by": observed_by,
+            "evidence_summary": evidence_summary,
+            "evidence_sources": evidence_sources,
+            "sample_size": sample_size,
+            "sample_scope": sample_scope,
+            "sample_method": sample_method,
+        }
+        merged_defaults = {
+            key: value
+            for key, value in shared_column_defaults.items()
+            if value is not None
+        }
+        if column_defaults is not None:
+            merged_defaults.update(dict(column_defaults))
+        unknown_defaults = sorted(set(merged_defaults) - allowed_column_keys)
+        if unknown_defaults:
+            raise DoxaBaseError(
+                "column_defaults contains unsupported record_column_profile "
+                f"field(s): {', '.join(unknown_defaults)}"
+            )
+
+        recorded_columns: list[ColumnProfileRecord] = []
+        for index, profile_mapping in enumerate(column_profiles or []):
+            try:
+                profile_values = dict(profile_mapping)
+            except (TypeError, ValueError) as exc:
+                raise DoxaBaseError(
+                    f"column_profiles[{index}] must be a mapping"
+                ) from exc
+            unknown_keys = sorted(set(profile_values) - allowed_column_keys)
+            if unknown_keys:
+                raise DoxaBaseError(
+                    f"column_profiles[{index}] contains unsupported "
+                    f"record_column_profile field(s): {', '.join(unknown_keys)}"
+                )
+            column_kwargs = {**merged_defaults, **profile_values}
+            missing_keys = sorted(
+                key for key in required_column_keys if not column_kwargs.get(key)
+            )
+            if missing_keys:
+                raise DoxaBaseError(
+                    f"column_profiles[{index}] is missing required field(s): "
+                    f"{', '.join(missing_keys)}"
+                )
+            recorded_columns.append(
+                self.record_column_profile(**column_kwargs)  # type: ignore[arg-type]
+            )
+
+        return ProfileBundleRecord(
+            dataset_iri=dataset_value,
+            dataset_profile=dataset_profile,
+            column_profiles=recorded_columns,
         )
 
     def _profile_pattern_requested(
