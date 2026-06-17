@@ -8066,8 +8066,9 @@ class DoxaBase:
             and "target_digest_drift" in blocking_reasons
         ):
             return (
-                "Restage the proposal against the current graph state; the target "
-                "graph count and content digest both changed since staging."
+                "Restage the proposal against the current graph state; at least "
+                "one target graph count and at least one target graph content "
+                "digest changed since staging."
             )
         if "target_count_drift" in blocking_reasons:
             return (

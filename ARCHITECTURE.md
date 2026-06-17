@@ -300,9 +300,9 @@ Expected state at the time of writing:
 
 - Storage currently stores term strings directly rather than using interned term IDs.
 - Blank node IDs are imported as-is; this is sufficient for current fixtures but not a robust merge strategy.
-- Staged revisions can be applied with conservative count-based conflict checks
-  and stale proposals can be restaged against current counts, but rebase, rich
-  semantic conflict resolution, and durable graph version storage are not
+- Staged revisions can be applied with conservative graph-state conflict checks
+  and stale proposals can be restaged against current graph state, but rebase,
+  rich semantic conflict resolution, and durable graph version storage are not
   implemented yet.
 - Context slices are route-explained first passes, not a complete staged review
   or proof-of-closure mechanism.

@@ -99,11 +99,11 @@ Implemented:
   reviewable alternatives.
 - `stage_pattern_promotion()` for staging caller-authored graph changes
   supported by existing patterns while preserving support links and anchors.
-- `apply_staged_revision()` for applying one staged revision after count-based
-  conflict checks and preview validation, while recording an applied revision
-  event in history.
+- `apply_staged_revision()` for applying one staged revision after conservative
+  graph-state conflict checks and preview validation, while recording an applied
+  revision event in history.
 - `restage_staged_revision()` for refreshing a stale staged proposal against
-  current graph counts while preserving a link to the older proposal.
+  current graph state while preserving a link to the older proposal.
 - Agent-authored observation and pattern RDF vocabulary for structured claims,
   source spans, confidence, and status.
 - Stricter SHACL validation for observation/pattern/evidence/claim resources.
@@ -228,8 +228,8 @@ Useful first tool calls for an agent:
 22. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
 23. `doxabase.check_staged_revision_apply` before turning a staged proposal
     into durable graph state
-24. `doxabase.restage_staged_revision` when count drift made a still-useful
-    staged proposal stale
+24. `doxabase.restage_staged_revision` when count or digest drift made a
+    still-useful staged proposal stale
 25. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
 26. `doxabase.record_map_dataset` and related map helpers for current-best facts

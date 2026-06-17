@@ -103,7 +103,7 @@ mechanical conversions. The AIS fixture is intentionally reduced and should not
 be treated as a full executable catalog.
 
 Revision metadata and staged graph patch proposals exist. The current runtime
-can apply one staged revision with conservative count-based conflict checks, but
+can apply one staged revision with conservative graph-state conflict checks, but
 rich conflict handling, rebasing, and graph version storage are not implemented
 yet. For the longer plan, see
 `doxabase_design_docs/03-doxabase-v1-storage-schema.md` and the revision model

@@ -1554,8 +1554,9 @@ def test_apply_check_resolution_mentions_count_and_digest_drift(
         "patterns",
     }
     assert check.recommended_resolution == (
-        "Restage the proposal against the current graph state; the target graph "
-        "count and content digest both changed since staging."
+        "Restage the proposal against the current graph state; at least one "
+        "target graph count and at least one target graph content digest changed "
+        "since staging."
     )
 
 
