@@ -79,6 +79,26 @@ agent runtime decides how profile X resolves.
 7. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
+Tiny scratch example:
+
+```python
+from pathlib import Path
+
+from doxabase import DoxaBase
+from doxabase.mcp_tools import describe_query_context_tool, load_example_fixtures_tool
+
+db = DoxaBase.create(Path("/tmp/doxabase-query-context.sqlite"), overwrite=True)
+load_example_fixtures_tool(db)
+
+context = describe_query_context_tool(
+    db,
+    "https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
+)
+print(context["readiness"])
+print(context["path_templates"])
+print([issue["code"] for issue in context["issues"]])
+```
+
 ## Current Limits
 
 This is catalog metadata, not a query engine. `describe_query_context` projects
