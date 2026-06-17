@@ -627,6 +627,7 @@ item.application_decision
 item.application_can_apply
 item.application_blocking_reasons
 item.application_count_drifts
+item.application_snapshot_drifts
 item.suggested_next_actions
 item.suggested_next_calls
 ```
@@ -781,6 +782,7 @@ check.already_applied_by
 check.changed_graphs
 check.patch_checks
 check.count_drifts
+check.snapshot_drifts
 check.conflicts
 check.validation_scope
 check.validation_conforms
@@ -801,9 +803,10 @@ Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `inspect_validation_results`. `review_recommended=True` means the patch replays
 and validates, but the caller should still review the staged revision before
 applying. `blocking_reasons` uses compact values such as `target_count_drift`,
-`validation_failed`, or `already_applied`. When `validation_conforms is None`,
-read `validation_skipped_reason` before guessing why validation did not run;
-common values are `conflicts_present` and `already_applied`.
+`target_digest_drift`, `validation_failed`, or `already_applied`. When
+`validation_conforms is None`, read `validation_skipped_reason` before guessing
+why validation did not run; common values are `conflicts_present` and
+`already_applied`.
 `count_drifts` gives patch-level count drift context: target graph, expected
 before count, current count, delta, and whether exact changed triples are
 available. It also reports `patch_operation`, `patch_triples_checked`,
@@ -812,6 +815,11 @@ available. It also reports `patch_operation`, `patch_triples_checked`,
 `all_patch_triples_present`, or `mixed_patch_triples_present`). In the current
 runtime, DoxaBase can inspect the staged patch triples themselves, but exact
 unrelated changed triples still require future graph version storage.
+`snapshot_drifts` reports graph-level digest mismatches: graph role, snapshot
+triple count, current triple count, staged snapshot digest, current graph digest,
+and whether exact changed triples are available. A digest mismatch means the
+target graph state is not identical to the state at staging time, even when
+triple counts still match.
 `suggested_next_actions` uses the same structured action shape as assertion
 support: tool name, MCP tool name, arguments, reason, and display call string.
 For staged apply checks, actions are ordered review-first; mutating actions such

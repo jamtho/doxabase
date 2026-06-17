@@ -365,6 +365,13 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert stale_check["count_drifts"][0]["patch_triple_status"] == (
         "all_patch_triples_absent"
     )
+    assert stale_check["snapshot_drifts"][0]["graph_role"] == "map"
+    assert stale_check["snapshot_drifts"][0]["snapshot_content_digest"].startswith(
+        "sha256:"
+    )
+    assert stale_check["snapshot_drifts"][0]["current_content_digest"].startswith(
+        "sha256:"
+    )
     assert stale_check["suggested_next_actions"][0]["tool_name"] == (
         "describe_staged_revision"
     )

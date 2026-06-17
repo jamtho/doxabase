@@ -234,6 +234,17 @@ class StagedGraphCountDrift:
 
 
 @dataclass(frozen=True)
+class StagedGraphSnapshotDrift:
+    graph_role: str
+    snapshot_triple_count: int
+    current_triple_count: int
+    snapshot_content_digest: str
+    current_content_digest: str
+    exact_changed_triples_available: bool
+    note: str
+
+
+@dataclass(frozen=True)
 class StagedRevisionApplyCheck:
     staged_revision_iri: str
     can_apply: bool
@@ -249,6 +260,7 @@ class StagedRevisionApplyCheck:
     changed_graphs: list[str]
     patch_checks: list[StagedPatchApplyCheck]
     count_drifts: list[StagedGraphCountDrift]
+    snapshot_drifts: list[StagedGraphSnapshotDrift]
     conflicts: list[str]
     validation_scope: str
     validation_conforms: bool | None
@@ -431,6 +443,7 @@ class GraphRevisionListItem:
     application_can_apply: bool | None
     application_blocking_reasons: list[str]
     application_count_drifts: list[StagedGraphCountDrift]
+    application_snapshot_drifts: list[StagedGraphSnapshotDrift]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
 
@@ -1963,6 +1976,7 @@ class DoxaBase:
             application_can_apply: bool | None = None
             application_blocking_reasons: list[str] = []
             application_count_drifts: list[StagedGraphCountDrift] = []
+            application_snapshot_drifts: list[StagedGraphSnapshotDrift] = []
             suggested_next_actions: list[SuggestedNextAction] = []
             patch_iris = self._objects(
                 data_graphs,
@@ -1982,6 +1996,7 @@ class DoxaBase:
                     application_can_apply = check.can_apply
                     application_blocking_reasons = check.blocking_reasons
                     application_count_drifts = check.count_drifts
+                    application_snapshot_drifts = check.snapshot_drifts
                     suggested_next_actions = check.suggested_next_actions
 
             applies_staged_revision = self._first_object(
@@ -2062,6 +2077,7 @@ class DoxaBase:
                     application_can_apply=application_can_apply,
                     application_blocking_reasons=application_blocking_reasons,
                     application_count_drifts=application_count_drifts,
+                    application_snapshot_drifts=application_snapshot_drifts,
                     suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=[
                         action.call for action in suggested_next_actions
@@ -7577,6 +7593,13 @@ class DoxaBase:
         semantic_risk_level, semantic_risk_reasons = (
             self._staged_revision_semantic_risk(staged)
         )
+        snapshot_drifts = self._staged_revision_snapshot_drifts(
+            staged,
+            changed_graphs,
+        )
+        snapshot_drift_by_graph = {
+            drift.graph_role: drift for drift in snapshot_drifts
+        }
         if existing_applied:
             status = "already_applied"
             summary = self._staged_apply_check_summary(
@@ -7623,6 +7646,7 @@ class DoxaBase:
                 changed_graphs=changed_graphs,
                 patch_checks=[],
                 count_drifts=[],
+                snapshot_drifts=[],
                 conflicts=[
                     "Staged revision has already been applied by "
                     f"'{existing_applied[0]}'"
@@ -7721,6 +7745,13 @@ class DoxaBase:
                         f"graph '{target_graph}' expected "
                         f"{patch.before_triple_count} triples before patch, "
                         f"found {current_count}"
+                    )
+                if conflict is None and target_graph in snapshot_drift_by_graph:
+                    drift = snapshot_drift_by_graph[target_graph]
+                    conflict = (
+                        f"graph '{target_graph}' content digest changed since "
+                        f"staging: expected {drift.snapshot_content_digest}, "
+                        f"found {drift.current_content_digest}"
                     )
                 candidate_preview = self._clone_graph(current_preview)
                 if operation == addition_operation:
@@ -7828,6 +7859,7 @@ class DoxaBase:
             changed_graphs=changed_graphs,
             patch_checks=patch_checks,
             count_drifts=count_drifts,
+            snapshot_drifts=snapshot_drifts,
             conflicts=conflicts,
             validation_scope=validation_scope_value,
             validation_conforms=validation_conforms,
@@ -7861,6 +7893,40 @@ class DoxaBase:
             staged.judgement_panel.semantic_risk_level,
             staged.judgement_panel.semantic_risk_reasons,
         )
+
+    def _staged_revision_snapshot_drifts(
+        self,
+        staged: StagedGraphRevisionDescription,
+        changed_graphs: list[str],
+    ) -> list[StagedGraphSnapshotDrift]:
+        snapshot_by_graph = {
+            snapshot.graph_role: snapshot for snapshot in staged.graph_snapshots
+        }
+        drifts: list[StagedGraphSnapshotDrift] = []
+        for graph_role in changed_graphs:
+            snapshot = snapshot_by_graph.get(graph_role)
+            if snapshot is None or snapshot.content_digest is None:
+                continue
+            current_digest = self._graph_content_digest(graph_role)
+            if current_digest == snapshot.content_digest:
+                continue
+            drifts.append(
+                StagedGraphSnapshotDrift(
+                    graph_role=graph_role,
+                    snapshot_triple_count=snapshot.triple_count,
+                    current_triple_count=self.triple_count(graph_role),
+                    snapshot_content_digest=snapshot.content_digest,
+                    current_content_digest=current_digest,
+                    exact_changed_triples_available=False,
+                    note=(
+                        "The graph content digest changed since this revision was "
+                        "staged. DoxaBase can detect that the graph state is not "
+                        "identical, but exact changed triples need future graph "
+                        "version storage."
+                    ),
+                )
+            )
+        return drifts
 
     def _staged_apply_check_status(
         self,
@@ -7970,6 +8036,11 @@ class DoxaBase:
                 for conflict in conflicts
             ):
                 reasons.append("preview_count_mismatch")
+            if any(
+                "content digest changed since staging" in conflict
+                for conflict in conflicts
+            ):
+                reasons.append("target_digest_drift")
             if not reasons:
                 reasons.append("patch_conflict")
             return list(dict.fromkeys(reasons))
@@ -7994,6 +8065,12 @@ class DoxaBase:
             return (
                 "Restage the proposal against the current graph state; the target "
                 "graph count has changed since staging."
+            )
+        if "target_digest_drift" in blocking_reasons:
+            return (
+                "Restage the proposal against the current graph state; the target "
+                "graph content digest changed since staging even though counts may "
+                "still match."
             )
         if status == "conflict":
             return "Inspect patch checks and restage or rewrite the proposal."
@@ -10950,6 +11027,37 @@ class DoxaBase:
                             self._markdown_table_cell(
                                 drift.patch_triple_status or "unknown"
                             ),
+                            self._markdown_table_cell(drift.note),
+                        ]
+                    )
+                    + " |"
+                )
+
+        if check.snapshot_drifts:
+            lines.extend(
+                [
+                    "",
+                    "### Snapshot Drift",
+                    "",
+                    (
+                        "| Graph | Snapshot count | Current count | "
+                        "Snapshot digest | Current digest | Note |"
+                    ),
+                    "|---|---:|---:|---|---|---|",
+                ]
+            )
+            for drift in check.snapshot_drifts:
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        [
+                            self._markdown_table_cell(drift.graph_role),
+                            str(drift.snapshot_triple_count),
+                            str(drift.current_triple_count),
+                            self._markdown_table_cell(
+                                drift.snapshot_content_digest
+                            ),
+                            self._markdown_table_cell(drift.current_content_digest),
                             self._markdown_table_cell(drift.note),
                         ]
                     )

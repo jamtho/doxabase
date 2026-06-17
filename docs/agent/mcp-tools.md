@@ -354,18 +354,21 @@ find them.
 
 Previews whether one staged revision can apply without mutating graph state.
 Returns `can_apply`, already-applied state, per-patch current/preview counts,
-count-drift conflicts, preview validation diagnostics, `status`, `decision`,
-`summary`, `review_recommended`, `blocking_reasons`,
-`recommended_resolution`, `validation_skipped_reason`, `count_drifts`, and
+count-drift and snapshot-digest conflicts, preview validation diagnostics,
+`status`, `decision`, `summary`, `review_recommended`, `blocking_reasons`,
+`recommended_resolution`, `validation_skipped_reason`, `count_drifts`,
+`snapshot_drifts`, and
 structured `suggested_next_actions`. Read `status`, `decision`, and `summary` first:
 `ready` means the staged patch replays
 and validates, with decision `review_then_apply`; `conflict` usually means graph
-counts drifted since staging; `validation_failed` means patch counts replay but
-SHACL diagnostics need inspection; `already_applied` means an applied revision
-event exists. When validation did not run, `validation_skipped_reason` explains
-why. `count_drifts` records expected/current graph counts and deltas for count
-conflicts, plus whether the staged patch triples themselves are currently
-present, absent, or mixed in the target graph. Exact unrelated changed triples
+counts or content digests drifted since staging; `validation_failed` means patch
+counts replay but SHACL diagnostics need inspection; `already_applied` means an
+applied revision event exists. When validation did not run,
+`validation_skipped_reason` explains why. `count_drifts` records
+expected/current graph counts and deltas for count conflicts, plus whether the
+staged patch triples themselves are currently present, absent, or mixed in the
+target graph. `snapshot_drifts` records staged/current `sha256:<hex>` digest
+mismatches, including same-count graph changes. Exact unrelated changed triples
 still require future graph version storage.
 Suggested actions are ordered review-first, so inspect/export suggestions
 come before mutation calls such as apply or restage. Use it before

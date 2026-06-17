@@ -1344,6 +1344,106 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
         db.describe_dataset("https://example.test/project#Messages")
 
 
+def test_apply_check_reports_same_count_snapshot_digest_drift(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:SeedDataset a rc:Dataset ;
+            rdfs:label "Seed dataset" .
+        """,
+        graph="map",
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage candidate dataset",
+        rationale="This candidate should detect same-count graph drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:CandidateDataset a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    label_swap = db.stage_graph_revision(
+        summary="Rename seed dataset without changing count",
+        rationale=(
+            "Exercise digest drift: the map content changes but triple count "
+            "returns to the staged baseline."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:SeedDataset rdfs:label "Seed dataset renamed" .
+                """,
+            }
+        ],
+        removals=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:SeedDataset rdfs:label "Seed dataset" .
+                """,
+            }
+        ],
+    )
+    db.apply_staged_revision(label_swap.revision_iri)
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+
+    assert check.can_apply is False
+    assert check.status == "conflict"
+    assert check.decision == "restage_against_current_graph"
+    assert check.blocking_reasons == ["target_digest_drift"]
+    assert check.count_drifts == []
+    assert len(check.snapshot_drifts) == 1
+    drift = check.snapshot_drifts[0]
+    assert drift.graph_role == "map"
+    assert drift.snapshot_triple_count == 2
+    assert drift.current_triple_count == 2
+    assert drift.snapshot_content_digest.startswith("sha256:")
+    assert drift.current_content_digest.startswith("sha256:")
+    assert drift.snapshot_content_digest != drift.current_content_digest
+    assert drift.exact_changed_triples_available is False
+    assert "exact changed triples" in drift.note
+    assert check.patch_checks[0].can_apply is False
+    assert "content digest changed since staging" in (
+        check.patch_checks[0].conflict or ""
+    )
+
+    export_path = tmp_path / "same-count-drift-review.md"
+    db.export_staged_revision(staged.revision_iri, export_path)
+    export_text = export_path.read_text(encoding="utf-8")
+    assert "- Blocking reasons: target_digest_drift" in export_text
+    assert "### Snapshot Drift" in export_text
+    assert "sha256:" in export_text
+
+    listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        include_apply_checks=True,
+    )
+    listed = {item.iri: item for item in listing.revisions}[staged.revision_iri]
+    assert listed.application_status == "conflict"
+    assert listed.application_blocking_reasons == ["target_digest_drift"]
+    assert listed.application_snapshot_drifts[0].graph_role == "map"
+
+
 def test_restage_staged_revision_refreshes_counts_after_conflict(
     tmp_path: Path,
 ) -> None:

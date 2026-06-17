@@ -297,6 +297,9 @@ Staged revisions are `rc:GraphRevision` resources with `rc:StagedRevision` type,
 optional support links to observations, claims, patterns, and evidence, optional
 `rc:revisionAnchor` topical links, optional linked `sh:ValidationResult`
 diagnostics, plus one or more `rc:GraphPatch` resources.
+Each graph snapshot records the graph role, triple count, and `content_digest`
+for the graph state at staging time. Apply checks compare those digests when
+available, so same-count graph changes can still surface as conflicts.
 
 Patch entries record:
 
