@@ -271,6 +271,15 @@ few useful gaps:
   A tighter verification suggested rolling up returned profile evidence IRIs in
   `profile_summary` so shared-evidence handoffs can be checked without walking
   every nested profile.
+- A profile-metric-target trial confirmed that optional `target` values let one
+  dataset-level profile carry both whole-profile scalar metrics and narrower
+  column-targeted metrics without promoting either into map facts or
+  constraints. The same trial exposed a SQLite/RDF edge case: linking a column
+  through both dataset and column helpers inserted repeated `rc:hasColumn`
+  edges because SQL uniqueness does not treat `NULL` datatype/lang values as
+  equal. Quad insertion now uses explicit RDF-style existence checks, response
+  reads de-duplicate repeated objects, and the profile docs show `target=None`
+  versus a narrower metric target.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
