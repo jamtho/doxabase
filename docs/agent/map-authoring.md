@@ -129,6 +129,23 @@ record_map_relationship_tool(
 )
 ```
 
+## Grain And Row Units
+
+DoxaBase does not yet have a single generic `grain` helper or ontology pattern.
+Use the existing map signals together:
+
+- `rowSemantics` for the broad row kind: event, snapshot, aggregate, or
+  dimension.
+- `entityKey` and `snapshotTimestamp` for recurring entity snapshots.
+- `record_map_relationship(..., relationship_type="aggregation")` with
+  `group_by_columns` when a target dataset has one row per source group.
+- `aggregated_columns` when target columns are computed from source columns.
+- Caveats when the row unit is only approximate, inferred, or source-dependent.
+
+If an agent needs a richer grain concept, it should say so explicitly and stage
+or document the modelling hunch rather than forcing it into a misleading
+current helper. This is an active design area for field trials.
+
 ## Limits
 
 These helpers do not promote patterns automatically. If a pattern supports a
