@@ -360,6 +360,46 @@ route.source_label
 route.depth
 ```
 
+## Profile Helper Records
+
+`db.record_dataset_profile(...)` returns a `DatasetProfileRecord`:
+
+```python
+profile.dataset_iri
+profile.observation
+profile.map_dataset
+profile.pattern
+```
+
+`db.record_column_profile(...)` returns a `ColumnProfileRecord`:
+
+```python
+profile.column_iri
+profile.table_iri
+profile.observation
+profile.map_column
+profile.pattern
+```
+
+`profile.map_dataset`, `profile.map_column`, and `profile.pattern` may be
+`None` when the caller kept the profile observation-only or did not request a
+linked synthesis.
+
+`db.record_profile_bundle(...)` returns a `ProfileBundleRecord`:
+
+```python
+bundle.dataset_iri
+bundle.dataset_profile
+bundle.column_profiles
+```
+
+`bundle.dataset_profile` has the same shape as `DatasetProfileRecord`, and each
+`bundle.column_profiles[]` item has the same shape as `ColumnProfileRecord`.
+The bundle helper does not create a separate RDF bundle node; it is an API
+convenience over the normal profile records. `shared_evidence_iri`, when
+supplied, makes the returned profile observations point at the same evidence
+IRI unless a column item overrides it with its own `evidence_iri`.
+
 ## Dataset Description
 
 `db.describe_dataset(table_iri)` returns a `DatasetDescription` with common
@@ -479,20 +519,6 @@ is not one of the dataset's current map columns. Use it when a sampled or
 scratch column profile was recorded with `update_map_column=false`. These
 profiles are observation lore, not map column assertions.
 
-`db.record_profile_bundle(...)` returns a `ProfileBundleRecord`:
-
-```python
-bundle.dataset_iri
-bundle.dataset_profile
-bundle.column_profiles
-```
-
-`bundle.dataset_profile` has the same return shape as
-`record_dataset_profile(...)`, and each `bundle.column_profiles[]` item has the
-same return shape as `record_column_profile(...)`. The bundle helper does not
-create a separate RDF bundle node; it is an API convenience over the normal
-profile records.
-
 `profile.evidence` items use the richer evidence description shape:
 
 ```python
@@ -576,7 +602,9 @@ query.upstream_caveats
 `insufficient_metadata`, or `blocked_by_contradiction`. Treat it as a planning
 hint, not permission to execute a query. Missing or risky metadata warnings and
 errors are returned in `query.issues`; there is no
-`query.missing_or_risky_metadata` field. Each issue has:
+`query.missing_or_risky_metadata` field. An issue with `severity="error"` can
+mean "not enough physical metadata to plan a query"; it does not necessarily
+mean profile observations, map lore, or validation are broken. Each issue has:
 
 ```python
 issue.code

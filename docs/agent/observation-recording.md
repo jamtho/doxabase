@@ -66,7 +66,9 @@ helpers, but lets column entries share run metadata such as `observed_at`,
 `observed_by`, `evidence_summary`, `evidence_sources`, `sample_size`,
 `sample_scope`, and `sample_method`. Column entries can override shared values,
 and `column_defaults` can set repeated column options such as
-`update_map_column=false`.
+`update_map_column=false`. By default, shared evidence means shared evidence
+fields and source strings. Pass `shared_evidence_iri` when all profiles in the
+pass should link to the same `rc:Evidence` resource.
 
 Be explicit about the map update booleans. `record_dataset_profile` defaults
 `update_map_snapshot=true` and can write `rc:rowCountSnapshot` when `row_count`

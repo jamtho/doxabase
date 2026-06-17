@@ -194,10 +194,13 @@ same profiling pass. It writes ordinary profile observations, optional map
 updates, optional linked profile patterns, and evidence using the same semantics
 as `record_dataset_profile` and `record_column_profile`.
 Use it when a profiler has produced a dataset-level summary and a set of column
-summaries that share run metadata, evidence, or sample context.
+summaries that share run metadata, evidence fields, or sample context.
 The top-level `observed_at`, `observed_by`, `evidence_summary`,
 `evidence_sources`, `sample_size`, `sample_scope`, and `sample_method` values
 default into each column profile unless the column entry overrides them.
+Pass `shared_evidence_iri` when the dataset profile and column profiles should
+all point at one shared profiler-run `rc:Evidence` resource. A column entry can
+still override that with its own `evidence_iri`.
 Use `column_defaults` for repeated column options such as
 `{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
 fields as `record_column_profile` and must include `column_iri`, `column_name`,

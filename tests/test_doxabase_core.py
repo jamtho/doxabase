@@ -4688,6 +4688,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     dataset = "https://example.test/project#Orders"
     status_column = "https://example.test/project#OrdersStatus"
     amount_column = "https://example.test/project#OrdersAmount"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
 
     result = db.record_profile_bundle(
         dataset,
@@ -4701,6 +4702,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         row_count=100,
         map_label="Orders",
         is_table=True,
+        shared_evidence_iri=shared_evidence,
         column_defaults={"update_map_column": False},
         column_profiles=[
             {
@@ -4732,6 +4734,11 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert len(result.column_profiles) == 2
     assert result.column_profiles[0].map_column is None
     assert result.column_profiles[1].map_column is not None
+    assert result.dataset_profile.observation.evidence_iri == shared_evidence
+    assert {
+        column_profile.observation.evidence_iri
+        for column_profile in result.column_profiles
+    } == {shared_evidence}
 
     description = db.describe_dataset(dataset)
 
@@ -4740,6 +4747,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert len(description.profile_observations) == 1
     dataset_profile = description.profile_observations[0]
     assert dataset_profile.sample_scope == "All rows in the local Orders table."
+    assert dataset_profile.evidence[0].iri == shared_evidence
     assert dataset_profile.evidence[0].sources == ["test://orders-profile"]
 
     assert [column.iri for column in description.columns] == [amount_column]

@@ -518,6 +518,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         pattern_status: str | None = "rc:Tentative",
         pattern_stability: str | None = "rc:EmergingPattern",
         pattern_map_implications: list[str] | None = None,
+        shared_evidence_iri: str | None = None,
         column_defaults: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Record one dataset profile and related column profiles in one pass."""
@@ -550,6 +551,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             pattern_map_implications=pattern_map_implications,
+            shared_evidence_iri=shared_evidence_iri,
             column_defaults=column_defaults,
         )
 

@@ -255,6 +255,13 @@ few useful gaps:
   pattern. Remaining profiling questions include whether dataset-level scalar
   metrics need explicit metric targets, and whether profile-only handoffs should
   de-emphasize expected storage/layout warnings.
+- A profile-bundle trial confirmed that `record_profile_bundle` gives agents a
+  natural way to record one profiling pass without manually repeating run
+  metadata across every profile. It also showed that "shared evidence" must be
+  explicit: shared evidence fields are only defaults, while `shared_evidence_iri`
+  links the dataset profile and column profiles to one profiler-run evidence
+  resource. Query-planning `error` issues in profile-only capsules should be
+  read as missing physical metadata, not failed profile recording.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

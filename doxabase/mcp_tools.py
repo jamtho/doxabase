@@ -394,6 +394,7 @@ def record_profile_bundle_tool(
     pattern_status: str | None = "rc:Tentative",
     pattern_stability: str | None = "rc:EmergingPattern",
     pattern_map_implications: list[str] | None = None,
+    shared_evidence_iri: str | None = None,
     column_defaults: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     result = db.record_profile_bundle(
@@ -423,6 +424,7 @@ def record_profile_bundle_tool(
         pattern_status=pattern_status,
         pattern_stability=pattern_stability,
         pattern_map_implications=pattern_map_implications,
+        shared_evidence_iri=shared_evidence_iri,
         column_defaults=column_defaults,
     )
     return asdict(result)

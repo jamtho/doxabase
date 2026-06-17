@@ -1274,6 +1274,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     table = "https://example.test/project#Orders"
     status_column = "https://example.test/project#OrdersStatus"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
 
     result = record_profile_bundle_tool(
         db,
@@ -1287,6 +1288,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         row_count=1000,
         map_label="Orders",
         is_table=True,
+        shared_evidence_iri=shared_evidence,
         column_defaults={"update_map_column": False},
         column_profiles=[
             {
@@ -1308,6 +1310,8 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     assert len(result["column_profiles"]) == 1
     assert result["column_profiles"][0]["column_iri"] == status_column
     assert result["column_profiles"][0]["map_column"] is None
+    assert result["dataset_profile"]["observation"]["evidence_iri"] == shared_evidence
+    assert result["column_profiles"][0]["observation"]["evidence_iri"] == shared_evidence
 
     dataset = describe_dataset_tool(db, table)
 
@@ -1316,6 +1320,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     profile = dataset["unmapped_column_profile_observations"][0]
     assert profile["sample_scope"] == "Twenty-five sampled Orders rows."
     assert profile["sample_method"] == "DuckDB sampled profile query."
+    assert profile["evidence"][0]["iri"] == shared_evidence
     assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 

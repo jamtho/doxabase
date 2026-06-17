@@ -5280,6 +5280,7 @@ class DoxaBase:
         pattern_status: str | None = "rc:Tentative",
         pattern_stability: str | None = "rc:EmergingPattern",
         pattern_map_implications: Iterable[str] | str | None = None,
+        shared_evidence_iri: str | None = None,
         column_defaults: Mapping[str, Any] | None = None,
     ) -> ProfileBundleRecord:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
@@ -5309,6 +5310,7 @@ class DoxaBase:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             pattern_map_implications=pattern_map_implications,
+            evidence_iri=shared_evidence_iri,
         )
 
         allowed_column_keys = {
@@ -5356,6 +5358,7 @@ class DoxaBase:
             "sample_size": sample_size,
             "sample_scope": sample_scope,
             "sample_method": sample_method,
+            "evidence_iri": shared_evidence_iri,
         }
         merged_defaults = {
             key: value
@@ -15153,10 +15156,14 @@ class DoxaBase:
             iri=evidence_iri,
             label=self._display_label_from_graphs(lookup_graphs, evidence_iri),
             summary=self._first_object(graphs, evidence_iri, "rc:summary"),
-            sources=self._objects(graphs, evidence_iri, str(DCTERMS.source)),
+            sources=list(
+                dict.fromkeys(self._objects(graphs, evidence_iri, str(DCTERMS.source)))
+            ),
             source_spans=[
                 self._describe_source_span(span_iri, graphs)
-                for span_iri in self._objects(graphs, evidence_iri, "rc:sourceSpan")
+                for span_iri in dict.fromkeys(
+                    self._objects(graphs, evidence_iri, "rc:sourceSpan")
+                )
             ],
         )
 

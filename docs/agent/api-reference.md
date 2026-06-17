@@ -226,10 +226,14 @@ profile validation failures.
 column profiles from the same profiling pass. It composes
 `record_dataset_profile()` and `record_column_profile()`, so it does not create
 a special bundle ontology object. Use it when the profiler produced a
-dataset-level summary and several column-level summaries that share evidence or
-sample context. Top-level `observed_at`, `observed_by`, `evidence_summary`,
-`evidence_sources`, `sample_size`, `sample_scope`, and `sample_method` default
-into each column profile unless the column item overrides them.
+dataset-level summary and several column-level summaries that share evidence
+fields or sample context. Top-level `observed_at`, `observed_by`,
+`evidence_summary`, `evidence_sources`, `sample_size`, `sample_scope`, and
+`sample_method` default into each column profile unless the column item
+overrides them.
+Pass `shared_evidence_iri` when the dataset profile and column profiles should
+all link to one shared profiler-run `rc:Evidence` resource. A column item can
+override that by supplying its own `evidence_iri`.
 Use `column_defaults` for repeated column options, for example
 `{"update_map_column": false}` when sampled column profiles should stay
 observation-only. Each `column_profiles[]` item accepts the same fields as

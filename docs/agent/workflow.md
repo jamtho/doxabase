@@ -27,7 +27,9 @@ compaction, read `start_here` first.
     together.
 14. Use `doxabase.record_profile_bundle` when one profiling pass produced a
     dataset-level profile and several related column profiles that should share
-    run metadata, evidence, or sample context.
+    run metadata, evidence fields, or sample context. Pass
+    `shared_evidence_iri` when they should all point at one shared evidence
+    resource.
 15. Use `doxabase.record_claim_observation` for the common observation + claim + evidence + source-span pattern.
     For more complex caveat, join, transformation, access, or source-span claims, write agent-authored observation RDF using the `observation_rdf` patterns.
 16. Use `doxabase.record_claim_reconsideration` when a newer claim weakens,
