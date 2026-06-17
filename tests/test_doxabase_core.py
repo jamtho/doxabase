@@ -18,9 +18,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1139
+    assert graphs["base_ontology"].triple_count == 1143
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1155
+    assert graphs["base_shapes"].triple_count == 1161
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -227,10 +227,17 @@ def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
     assert description.export_path == "/tmp/ais-review-bundle.trig"
     assert description.validation_conforms is True
     assert description.validation_result_count == 0
+    snapshots = {
+        snapshot.graph_role: snapshot for snapshot in description.graph_snapshots
+    }
     assert {
-        snapshot.graph_role: snapshot.triple_count
-        for snapshot in description.graph_snapshots
+        graph_role: snapshot.triple_count
+        for graph_role, snapshot in snapshots.items()
     } == graph_counts
+    for snapshot in snapshots.values():
+        assert snapshot.content_digest is not None
+        assert snapshot.content_digest.startswith("sha256:")
+        assert len(snapshot.content_digest) == len("sha256:") + 64
     assert [support.iri for support in description.supporting_observations] == [
         observation.observation_iri
     ]
@@ -1113,6 +1120,8 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied.validation_conforms is True
     assert applied.graph_snapshots[0].graph_role == "map"
     assert applied.graph_snapshots[0].triple_count == 3
+    assert applied.graph_snapshots[0].content_digest is not None
+    assert applied.graph_snapshots[0].content_digest.startswith("sha256:")
     context = db.describe_resource(result.applied_revision_iri, graph="history")
     assert any(
         triple.predicate == RC + "appliesStagedRevision"

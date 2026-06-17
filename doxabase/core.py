@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 import sqlite3
 import warnings
@@ -332,6 +333,7 @@ class _StagedRevisionApplicationPreview:
 class GraphSnapshotDescription:
     graph_role: str
     triple_count: int
+    content_digest: str | None
 
 
 @dataclass(frozen=True)
@@ -6639,7 +6641,14 @@ class DoxaBase:
             )
             self._add_validation_diagnostic_triples(graph, result_subject, result)
 
-        for index, (graph_name, count) in enumerate(sorted(snapshot_counts.items()), start=1):
+        snapshot_digests = {
+            graph_name: self._graph_content_digest(graph_name)
+            for graph_name in snapshot_counts
+        }
+        for index, (graph_name, count) in enumerate(
+            sorted(snapshot_counts.items()),
+            start=1,
+        ):
             snapshot = URIRef(f"{revision_subject}/snapshot/{index}")
             graph.add(
                 (
@@ -6661,6 +6670,13 @@ class DoxaBase:
                     snapshot,
                     URIRef(self.expand_iri("rc:tripleCount")),
                     Literal(count, datatype=XSD.integer),
+                )
+            )
+            graph.add(
+                (
+                    snapshot,
+                    URIRef(self.expand_iri("rc:contentDigest")),
+                    Literal(snapshot_digests[graph_name]),
                 )
             )
 
@@ -12239,6 +12255,38 @@ class DoxaBase:
     def _graph_counts(self, graphs: Iterable[str]) -> dict[str, int]:
         return {graph: self.triple_count(graph) for graph in graphs}
 
+    def _graph_content_digest(self, graph: str) -> str:
+        digest = hashlib.sha256()
+        for row in self._conn.execute(
+            """
+            SELECT
+                subject,
+                subject_kind,
+                predicate,
+                object,
+                object_kind,
+                COALESCE(datatype, '') AS datatype,
+                COALESCE(lang, '') AS lang
+            FROM quads
+            WHERE graph = ?
+            ORDER BY subject, subject_kind, predicate, object, object_kind, datatype, lang
+            """,
+            (graph,),
+        ):
+            for key in (
+                "subject",
+                "subject_kind",
+                "predicate",
+                "object",
+                "object_kind",
+                "datatype",
+                "lang",
+            ):
+                digest.update(str(row[key]).encode("utf-8"))
+                digest.update(b"\x1f")
+            digest.update(b"\n")
+        return f"sha256:{digest.hexdigest()}"
+
     def _graphs_for_subject(self, graphs: list[str], subject: str) -> list[str]:
         graph_filter, params = self._graph_filter(graphs, alias="q")
         return [
@@ -14210,12 +14258,18 @@ class DoxaBase:
         for snapshot_iri in self._objects(graphs, revision_iri, "rc:hasGraphSnapshot"):
             graph_role = self._first_object(graphs, snapshot_iri, "rc:graphRole")
             triple_count = self._int_object(graphs, snapshot_iri, "rc:tripleCount")
+            content_digest = self._first_object(
+                graphs,
+                snapshot_iri,
+                "rc:contentDigest",
+            )
             if graph_role is None or triple_count is None:
                 continue
             snapshots.append(
                 GraphSnapshotDescription(
                     graph_role=graph_role,
                     triple_count=triple_count,
+                    content_digest=content_digest,
                 )
             )
         return sorted(snapshots, key=lambda snapshot: snapshot.graph_role)

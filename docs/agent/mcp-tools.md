@@ -69,7 +69,8 @@ assuming the map lacks the concept.
 
 Returns compact revision context for one `rc:GraphRevision`: summary,
 rationale, revision type, changed graph roles, included review/export graph
-roles, validation result, export path, graph-count snapshots, and support links.
+roles, validation result, export path, graph snapshots with counts and
+`sha256:<hex>` content digests, and support links.
 
 `doxabase.list_graph_revisions`
 

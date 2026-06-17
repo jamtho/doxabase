@@ -271,6 +271,7 @@ def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert description["validation_conforms"] is True
     assert description["graph_snapshots"]
+    assert description["graph_snapshots"][0]["content_digest"].startswith("sha256:")
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

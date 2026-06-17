@@ -74,6 +74,8 @@ metadata there.
 Use `list_graph_revisions()` when you need to discover staged, applied, or
 historical revision records. Use `describe_graph_revision()` when you want a
 compact review of one revision record instead of generic outgoing triples.
+Graph snapshots include both `triple_count` and a `sha256:<hex>` content digest;
+matching counts alone do not prove two revision contexts are identical.
 
 ## Revision Types
 

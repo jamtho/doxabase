@@ -1237,6 +1237,11 @@ rc:tripleCount a rdf:Property ;
     rdfs:range xsd:integer ;
     rdfs:comment "Triple count for one graph role at the time a revision was recorded." .
 
+rc:contentDigest a rdf:Property ;
+    rdfs:domain rc:GraphSnapshot ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A digest of the graph role contents at the time a revision snapshot was recorded, written as algorithm-prefixed text such as sha256:<hex>." .
+
 rc:patchOperation a rdf:Property ;
     rdfs:domain rc:GraphPatch ;
     rdfs:range rc:GraphPatchOperation ;

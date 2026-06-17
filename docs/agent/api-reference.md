@@ -318,9 +318,10 @@ revision anchors, and delegates validation/review packaging to
 shape.
 
 `describe_graph_revision()` returns compact revision context: summary,
-rationale, changed/included graph roles, graph-count snapshots, validation
-result, structured validation diagnostics, export path, revision anchors, and
-supporting observation/claim/pattern/evidence links.
+rationale, changed/included graph roles, graph snapshots with counts and
+`sha256:<hex>` content digests, validation result, structured validation
+diagnostics, export path, revision anchors, and supporting
+observation/claim/pattern/evidence links.
 
 `list_graph_revisions()` returns compact history rows for `rc:GraphRevision`
 resources, newest first. Each row includes summary, revision type/stance,

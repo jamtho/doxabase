@@ -1174,6 +1174,13 @@ rc:GraphSnapshotShape a sh:NodeShape ;
         sh:datatype xsd:integer ;
         sh:minInclusive 0 ;
         sh:message "GraphSnapshot resources must have exactly one non-negative tripleCount." ;
+    ] ;
+    sh:property [
+        sh:path rc:contentDigest ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^sha256:[0-9a-f]{64}$" ;
+        sh:message "GraphSnapshot contentDigest must be sha256:<64 lowercase hex characters> when declared." ;
     ] .
 
 rc:KnownCaveatShape a sh:NodeShape ;

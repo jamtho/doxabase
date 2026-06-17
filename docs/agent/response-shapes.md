@@ -678,6 +678,19 @@ description.judgement_panel
 
 Use `revision_stance`, not `stance`.
 
+Each `description.graph_snapshots[]` item has:
+
+```python
+snapshot.graph_role
+snapshot.triple_count
+snapshot.content_digest
+```
+
+`content_digest` is currently `sha256:<hex>` when present. It fingerprints the
+graph role contents at the time the revision snapshot was recorded; use it with
+`triple_count` when deciding whether two revision contexts are exactly the same,
+not as semantic proof that a graph change is safe.
+
 `description.alternative_to` means this staged revision competes with or refines
 another revision. `description.restaged_from` means this staged revision replayed
 an older stale proposal against current graph counts; it is provenance for a
