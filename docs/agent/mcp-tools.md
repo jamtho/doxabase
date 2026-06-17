@@ -227,7 +227,9 @@ claims, and claim descriptions include a compact `lifecycle_summary`.
 
 Records or updates a dataset/table resource in the `map` graph. Omit
 `is_table` for partial updates that should preserve existing dataset/table
-typing.
+typing. Resource-valued controls such as `row_semantics`,
+`schema_stability`, and `layout_verification_status` expect IRIs or CURIEs
+like `rc:EventRow`, not descriptive prose.
 
 `doxabase.record_map_column`
 

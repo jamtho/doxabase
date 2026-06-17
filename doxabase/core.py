@@ -5524,6 +5524,29 @@ class DoxaBase:
         physical_layout_values = self._string_values("physical_layouts", physical_layouts)
         companion_values = self._string_values("companion_datasets", companion_datasets)
         extra_type_values = self._string_values("extra_types", extra_types)
+        row_semantics_ref = (
+            self._resource_ref("row_semantics", row_semantics)
+            if row_semantics is not None
+            else None
+        )
+        entity_key_ref = (
+            self._resource_ref("entity_key", entity_key)
+            if entity_key is not None
+            else None
+        )
+        schema_stability_ref = (
+            self._resource_ref("schema_stability", schema_stability)
+            if schema_stability is not None
+            else None
+        )
+        layout_verification_status_ref = (
+            self._resource_ref(
+                "layout_verification_status",
+                layout_verification_status,
+            )
+            if layout_verification_status is not None
+            else None
+        )
 
         dataset_type = self.expand_iri("rc:Dataset")
         table_type = self.expand_iri("rc:Table")
@@ -5575,7 +5598,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:rowSemantics")),
-                    URIRef(self.expand_iri(row_semantics)),
+                    row_semantics_ref,
                 )
             )
         if entity_key is not None:
@@ -5583,7 +5606,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:entityKey")),
-                    URIRef(self.expand_iri(entity_key)),
+                    entity_key_ref,
                 )
             )
         if schema_stability is not None:
@@ -5591,7 +5614,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:schemaStability")),
-                    URIRef(self.expand_iri(schema_stability)),
+                    schema_stability_ref,
                 )
             )
         if layout_verification_status is not None:
@@ -5599,7 +5622,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:layoutVerificationStatus")),
-                    URIRef(self.expand_iri(layout_verification_status)),
+                    layout_verification_status_ref,
                 )
             )
         self._add_optional_literal(

@@ -3223,6 +3223,17 @@ def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) 
     assert RC + "Table" in description.types
 
 
+def test_record_map_dataset_rejects_prose_for_resource_fields(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="row_semantics.*not prose"):
+        db.record_map_dataset(
+            "https://example.test/project#messages",
+            label="Messages",
+            row_semantics="One row per source message.",
+        )
+
+
 def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     base = "https://example.test/enron#"

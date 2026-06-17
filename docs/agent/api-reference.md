@@ -255,7 +255,10 @@ observations or patterns are ready to become operating context for future
 agents. On partial dataset updates, omit `is_table` to preserve existing
 dataset/table typing. Use physical-layout and partition helpers when path or
 layout verification belongs to one part of the executable catalog rather than
-to the whole dataset. `record_map_relationship()` supports foreign keys, shared
+to the whole dataset. `record_map_dataset(row_semantics=...)` expects a
+controlled `rc:RowSemanticsType` value such as `rc:EventRow`, not prose.
+`schema_stability` and `layout_verification_status` similarly expect resource
+IRIs/CURIEs. `record_map_relationship()` supports foreign keys, shared
 identifiers, derivations, and aggregations; for aggregations, pass
 `group_by_columns` plus `aggregated_columns` mappings with `target_column`,
 `source_columns`, optional `aggregation_function`, and optional
@@ -334,6 +337,9 @@ blockers, drift summaries, and suggested actions when `include_apply_checks=True
 counts and digests but omit exact changed-triple arrays. Use
 `drift_detail="exact"` when you need those arrays in the list response, or call
 `check_staged_revision_apply()` for a focused exact payload.
+The drift row shape is the same as the apply-check shape, except list summary
+mode may set `exact_changed_triples_included=False` and leave changed-triple
+arrays empty.
 
 `describe_staged_revision()` returns staged patch payloads, stance, review
 notes/recommendations, validation status, structured validation diagnostics,

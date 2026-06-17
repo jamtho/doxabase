@@ -26,6 +26,9 @@ facts, while still leaving the graph open for project-specific RDF.
 For `record_map_dataset`, omit `is_table` on partial updates when you want to
 preserve the current dataset/table typing. Pass `is_table=True` or
 `is_table=False` when you intentionally want to set that typing.
+Fields such as `row_semantics`, `schema_stability`, and
+`layout_verification_status` are resource-valued controls. Pass `rc:` terms such
+as `rc:EventRow` or `rc:FixedSchema`, not descriptive prose.
 
 ## When To Use Map Helpers
 

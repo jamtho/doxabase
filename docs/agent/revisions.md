@@ -127,6 +127,18 @@ counts and digests without large exact changed-triple arrays. Then use
 patch details, exact drift triples, validation diagnostics, or a human review
 bundle.
 
+In summary mode, a snapshot drift row can deliberately say:
+
+```python
+exact_changed_triples_available=True
+exact_changed_triples_included=False
+triples_added_since_snapshot=[]
+triples_removed_since_snapshot=[]
+```
+
+That means exact changed triples exist, but the list row omitted them for
+scanning. It is not missing evidence; ask for exact detail when you need it.
+
 A staged patch can be blocked even when its own triples are still absent from the
 target graph. DoxaBase applies staged revisions conservatively: unrelated count
 or digest drift means the target graph is no longer the same graph state the
