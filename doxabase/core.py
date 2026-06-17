@@ -802,6 +802,15 @@ class RelationshipDescription:
 
 
 @dataclass(frozen=True)
+class ProfileSummary:
+    returned_dataset_profile_count: int
+    returned_mapped_column_profile_count: int
+    returned_unmapped_column_profile_count: int
+    returned_profile_count: int
+    mapped_profiled_column_count: int
+
+
+@dataclass(frozen=True)
 class DatasetDescription:
     iri: str
     graph: str | None
@@ -815,6 +824,7 @@ class DatasetDescription:
     row_count_snapshot: int | None
     layout_verification_status: ResourceSummary | None
     layout_verification_note: str | None
+    profile_summary: ProfileSummary
     profile_observations: list[ProfileObservationSummary]
     unmapped_column_profile_observations: list[ProfileObservationSummary]
     columns: list[ColumnDescription]
@@ -882,6 +892,7 @@ class ColumnProfileRecord:
 @dataclass(frozen=True)
 class ProfileBundleRecord:
     dataset_iri: str
+    shared_evidence_iri: str | None
     dataset_profile: DatasetProfileRecord
     column_profiles: list[ColumnProfileRecord]
 
@@ -3631,6 +3642,17 @@ class DoxaBase:
             self._describe_caveat(caveat_iri, data_graphs, lookup_graphs)
             for caveat_iri in caveat_iris
         ]
+        profile_observations = self._profile_observations_for_target(
+            target_iri=dataset_iri,
+            target_predicate="rc:observedAsset",
+            exclude_observed_column=True,
+        )
+        unmapped_column_profile_observations = (
+            self._unmapped_column_profile_observations_for_dataset(
+                dataset_iri,
+                mapped_column_iris=column_iris,
+            )
+        )
 
         description = DatasetDescription(
             iri=dataset_iri,
@@ -3672,17 +3694,13 @@ class DoxaBase:
                 dataset_iri,
                 "rc:layoutVerificationNote",
             ),
-            profile_observations=self._profile_observations_for_target(
-                target_iri=dataset_iri,
-                target_predicate="rc:observedAsset",
-                exclude_observed_column=True,
+            profile_summary=self._profile_summary(
+                profile_observations,
+                columns,
+                unmapped_column_profile_observations,
             ),
-            unmapped_column_profile_observations=(
-                self._unmapped_column_profile_observations_for_dataset(
-                    dataset_iri,
-                    mapped_column_iris=column_iris,
-                )
-            ),
+            profile_observations=profile_observations,
+            unmapped_column_profile_observations=unmapped_column_profile_observations,
             columns=columns,
             path_templates=path_templates,
             physical_layouts=physical_layouts,
@@ -4017,6 +4035,32 @@ class DoxaBase:
             if profile.observed_column is not None
             and profile.observed_column.iri not in mapped_columns
         ][:limit]
+
+    def _profile_summary(
+        self,
+        dataset_profiles: list[ProfileObservationSummary],
+        columns: list[ColumnDescription],
+        unmapped_column_profiles: list[ProfileObservationSummary],
+    ) -> ProfileSummary:
+        mapped_column_profile_count = sum(
+            len(column.profile_observations) for column in columns
+        )
+        mapped_profiled_column_count = sum(
+            1 for column in columns if column.profile_observations
+        )
+        dataset_profile_count = len(dataset_profiles)
+        unmapped_column_profile_count = len(unmapped_column_profiles)
+        return ProfileSummary(
+            returned_dataset_profile_count=dataset_profile_count,
+            returned_mapped_column_profile_count=mapped_column_profile_count,
+            returned_unmapped_column_profile_count=unmapped_column_profile_count,
+            returned_profile_count=(
+                dataset_profile_count
+                + mapped_column_profile_count
+                + unmapped_column_profile_count
+            ),
+            mapped_profiled_column_count=mapped_profiled_column_count,
+        )
 
     def _profile_observation_summary(
         self,
@@ -5403,6 +5447,7 @@ class DoxaBase:
 
         return ProfileBundleRecord(
             dataset_iri=dataset_value,
+            shared_evidence_iri=shared_evidence_iri,
             dataset_profile=dataset_profile,
             column_profiles=recorded_columns,
         )

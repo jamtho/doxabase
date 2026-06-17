@@ -102,6 +102,9 @@ owning dataset context when available; related dataset entries include
 relationship labels/kinds, grouped reasons can fold same-column relationship
 tags, linked patterns include pattern text as their description, and
 `linked_pattern_reasons` explains why each pattern matched when available.
+The `profile_summary` field gives quick counts of the profile observations
+returned in this bounded response, including dataset-level, mapped-column, and
+unmapped-column profile counts.
 Relationship entries and grouped reasons may include `source_caveats`, meaning
 caveats attached to source datasets or source-side columns that should remain
 visible when interpreting an aggregation, derivation, or foreign key. The
@@ -201,6 +204,8 @@ default into each column profile unless the column entry overrides them.
 Pass `shared_evidence_iri` when the dataset profile and column profiles should
 all point at one shared profiler-run `rc:Evidence` resource. A column entry can
 still override that with its own `evidence_iri`.
+The returned bundle includes `shared_evidence_iri` at top level for quick
+run-level checks.
 Use `column_defaults` for repeated column options such as
 `{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
 fields as `record_column_profile` and must include `column_iri`, `column_name`,

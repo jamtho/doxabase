@@ -389,6 +389,7 @@ linked synthesis.
 
 ```python
 bundle.dataset_iri
+bundle.shared_evidence_iri
 bundle.dataset_profile
 bundle.column_profiles
 ```
@@ -399,6 +400,46 @@ The bundle helper does not create a separate RDF bundle node; it is an API
 convenience over the normal profile records. `shared_evidence_iri`, when
 supplied, makes the returned profile observations point at the same evidence
 IRI unless a column item overrides it with its own `evidence_iri`.
+
+Copyable bundle shape:
+
+```python
+bundle = db.record_profile_bundle(
+    "https://example.test/project#orders",
+    dataset_summary="Orders were profiled in one full-table pass.",
+    evidence_summary="DuckDB profile query over the local Orders table.",
+    evidence_sources=["scratch://orders-profile.sql"],
+    sample_size=1000,
+    sample_scope="All rows in the local Orders table.",
+    sample_method="DuckDB aggregate profile query.",
+    row_count=1000,
+    map_label="Orders",
+    is_table=True,
+    shared_evidence_iri="https://example.test/project#OrdersProfileRunEvidence",
+    column_defaults={"update_map_column": False},
+    column_profiles=[
+        {
+            "column_iri": "https://example.test/project#orders__status",
+            "column_name": "status",
+            "summary": "Sampled status values were observed.",
+            "distinct_count": 3,
+            "value_frequencies": [
+                {"value": "fulfilled", "frequency": 700},
+                {"value": "pending", "frequency": 200},
+            ],
+        },
+        {
+            "column_iri": "https://example.test/project#orders__amount",
+            "column_name": "amount",
+            "summary": "Amount was profiled as a non-null decimal.",
+            "null_count": 0,
+            "physical_type": "rc:Decimal",
+            "nullable": False,
+            "update_map_column": True,
+        },
+    ],
+)
+```
 
 ## Dataset Description
 
@@ -418,6 +459,7 @@ dataset.schema_stability
 dataset.row_count_snapshot
 dataset.layout_verification_status
 dataset.layout_verification_note
+dataset.profile_summary
 dataset.profile_observations
 dataset.unmapped_column_profile_observations
 dataset.columns
@@ -432,6 +474,20 @@ dataset.relationships
 dataset.linked_patterns
 dataset.linked_pattern_reasons
 ```
+
+`dataset.profile_summary` is a quick count of the profile lore returned in this
+bounded `describe_dataset` response:
+
+```python
+profile_summary.returned_dataset_profile_count
+profile_summary.returned_mapped_column_profile_count
+profile_summary.returned_unmapped_column_profile_count
+profile_summary.returned_profile_count
+profile_summary.mapped_profiled_column_count
+```
+
+These are response counts, not a promise that the capsule has no older profile
+observations beyond the returned limit.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:

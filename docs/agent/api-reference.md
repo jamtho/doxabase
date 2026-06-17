@@ -152,6 +152,9 @@ caveats attached to source datasets or source-side columns that should remain
 visible when interpreting an aggregation, derivation, or foreign key.
 `upstream_caveats` is the dataset-level deduped rollup of those relationship
 caveats and is intentionally separate from direct `caveats`.
+`profile_summary` gives quick counts of the profile observations returned in the
+bounded dataset description, split across dataset-level, mapped-column, and
+unmapped-column profile lore.
 Check `layout_verification_status` and `layout_verification_note` before using
 `path_templates` for executable query planning. Child physical layout, storage,
 and partition descriptions may carry their own verification fields when the
@@ -234,6 +237,8 @@ overrides them.
 Pass `shared_evidence_iri` when the dataset profile and column profiles should
 all link to one shared profiler-run `rc:Evidence` resource. A column item can
 override that by supplying its own `evidence_iri`.
+The returned bundle includes `shared_evidence_iri` at top level for quick
+run-level checks.
 Use `column_defaults` for repeated column options, for example
 `{"update_map_column": false}` when sampled column profiles should stay
 observation-only. Each `column_profiles[]` item accepts the same fields as

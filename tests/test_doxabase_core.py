@@ -4486,6 +4486,10 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     assert description.label == "Messages"
     assert description.row_count_snapshot == 123
     assert len(description.profile_observations) == 1
+    assert description.profile_summary.returned_dataset_profile_count == 1
+    assert description.profile_summary.returned_mapped_column_profile_count == 0
+    assert description.profile_summary.returned_unmapped_column_profile_count == 0
+    assert description.profile_summary.returned_profile_count == 1
     profile = description.profile_observations[0]
     assert profile.iri == result.observation.observation_iri
     assert profile.sample_size == 123
@@ -4655,6 +4659,10 @@ def test_describe_dataset_surfaces_unmapped_column_profile_observations(
 
     assert description.columns == []
     assert description.profile_observations == []
+    assert description.profile_summary.returned_dataset_profile_count == 0
+    assert description.profile_summary.returned_mapped_column_profile_count == 0
+    assert description.profile_summary.returned_unmapped_column_profile_count == 1
+    assert description.profile_summary.returned_profile_count == 1
     assert len(description.unmapped_column_profile_observations) == 1
     profile = description.unmapped_column_profile_observations[0]
     assert profile.iri == result.observation.observation_iri
@@ -4673,6 +4681,9 @@ def test_describe_dataset_surfaces_unmapped_column_profile_observations(
     description = db.describe_dataset(table)
     assert [item.iri for item in description.columns] == [column]
     assert description.unmapped_column_profile_observations == []
+    assert description.profile_summary.returned_mapped_column_profile_count == 1
+    assert description.profile_summary.returned_unmapped_column_profile_count == 0
+    assert description.profile_summary.mapped_profiled_column_count == 1
     assert description.columns[0].profile_observations[0].iri == (
         result.observation.observation_iri
     )
@@ -4729,6 +4740,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     )
 
     assert result.dataset_iri == dataset
+    assert result.shared_evidence_iri == shared_evidence
     assert result.dataset_profile.observation.observation_type == "profile"
     assert result.dataset_profile.map_dataset is not None
     assert len(result.column_profiles) == 2
@@ -4744,6 +4756,11 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
 
     assert description.label == "Orders"
     assert description.row_count_snapshot == 100
+    assert description.profile_summary.returned_dataset_profile_count == 1
+    assert description.profile_summary.returned_mapped_column_profile_count == 1
+    assert description.profile_summary.returned_unmapped_column_profile_count == 1
+    assert description.profile_summary.returned_profile_count == 3
+    assert description.profile_summary.mapped_profiled_column_count == 1
     assert len(description.profile_observations) == 1
     dataset_profile = description.profile_observations[0]
     assert dataset_profile.sample_scope == "All rows in the local Orders table."

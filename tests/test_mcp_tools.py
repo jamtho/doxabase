@@ -1305,6 +1305,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     )
 
     assert result["dataset_iri"] == table
+    assert result["shared_evidence_iri"] == shared_evidence
     assert result["dataset_profile"]["observation"]["observation_type"] == "profile"
     assert result["dataset_profile"]["map_dataset"]["iri"] == table
     assert len(result["column_profiles"]) == 1
@@ -1317,6 +1318,13 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
 
     assert dataset["row_count_snapshot"] == 1000
     assert dataset["columns"] == []
+    assert dataset["profile_summary"] == {
+        "returned_dataset_profile_count": 1,
+        "returned_mapped_column_profile_count": 0,
+        "returned_unmapped_column_profile_count": 1,
+        "returned_profile_count": 2,
+        "mapped_profiled_column_count": 0,
+    }
     profile = dataset["unmapped_column_profile_observations"][0]
     assert profile["sample_scope"] == "Twenty-five sampled Orders rows."
     assert profile["sample_method"] == "DuckDB sampled profile query."
@@ -1357,6 +1365,8 @@ def test_describe_dataset_tool_returns_unmapped_column_profiles(
 
     assert dataset["columns"] == []
     assert dataset["profile_observations"] == []
+    assert dataset["profile_summary"]["returned_unmapped_column_profile_count"] == 1
+    assert dataset["profile_summary"]["returned_profile_count"] == 1
     profiles = dataset["unmapped_column_profile_observations"]
     assert len(profiles) == 1
     assert profiles[0]["iri"] == result["observation"]["observation_iri"]

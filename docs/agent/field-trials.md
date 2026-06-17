@@ -262,6 +262,11 @@ few useful gaps:
   links the dataset profile and column profiles to one profiler-run evidence
   resource. Query-planning `error` issues in profile-only capsules should be
   read as missing physical metadata, not failed profile recording.
+- A follow-up shared-evidence trial confirmed that agents can now record one
+  profiler-run evidence resource across dataset, mapped-column, and
+  unmapped-column profiles. It also showed that quick returned-profile counts
+  on `describe_dataset` and top-level `shared_evidence_iri` on the bundle return
+  make the retrieval check easier than inferring success from nested profiles.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
