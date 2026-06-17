@@ -5720,6 +5720,21 @@ class DoxaBase:
         column_name_value = column_name.strip()
         if not column_name_value:
             raise DoxaBaseError("column_name must not be empty")
+        physical_type_ref = (
+            self._resource_ref("physical_type", physical_type)
+            if physical_type is not None
+            else None
+        )
+        value_type_ref = (
+            self._resource_ref("value_type", value_type)
+            if value_type is not None
+            else None
+        )
+        table_ref = (
+            self._resource_ref("table_iri", table_iri)
+            if table_iri is not None
+            else None
+        )
 
         graph = Graph()
         self._bind_prefixes(graph)
@@ -5739,7 +5754,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:physicalType")),
-                    URIRef(self.expand_iri(physical_type)),
+                    physical_type_ref,
                 )
             )
         if value_type is not None:
@@ -5747,7 +5762,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:valueType")),
-                    URIRef(self.expand_iri(value_type)),
+                    value_type_ref,
                 )
             )
         if nullable is not None:
@@ -5775,12 +5790,11 @@ class DoxaBase:
             predicates.append(self.expand_iri("rc:nullable"))
         triples = self._replace_subject_triples("map", column_iri, predicates, graph)
         if table_iri is not None:
-            table_subject = self._required_iri("table_iri", table_iri)
             link_graph = Graph()
             self._bind_prefixes(link_graph)
             link_graph.add(
                 (
-                    URIRef(table_subject),
+                    table_ref,
                     URIRef(self.expand_iri("rc:hasColumn")),
                     subject,
                 )
@@ -5808,6 +5822,11 @@ class DoxaBase:
         if not description_value:
             raise DoxaBaseError("description must not be empty")
         target_values = self._string_values("targets", targets)
+        severity_ref = (
+            self._resource_ref("severity", severity)
+            if severity is not None
+            else None
+        )
 
         graph = Graph()
         self._bind_prefixes(graph)
@@ -5827,7 +5846,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:severity")),
-                    URIRef(self.expand_iri(severity)),
+                    severity_ref,
                 )
             )
 
@@ -5848,7 +5867,7 @@ class DoxaBase:
             for target in target_values:
                 link_graph.add(
                     (
-                        URIRef(self.expand_iri(target)),
+                        self._resource_ref("targets", target),
                         URIRef(self.expand_iri("rc:hasKnownCaveat")),
                         subject,
                     )
@@ -5884,6 +5903,24 @@ class DoxaBase:
         access_iri = self._required_iri("iri", iri)
         path_template_values = self._string_values("path_templates", path_templates)
         dataset_values = self._string_values("datasets", datasets)
+        storage_protocol_ref = (
+            self._resource_ref("storage_protocol", storage_protocol)
+            if storage_protocol is not None
+            else None
+        )
+        access_mode_ref = (
+            self._resource_ref("access_mode", access_mode)
+            if access_mode is not None
+            else None
+        )
+        layout_verification_status_ref = (
+            self._resource_ref(
+                "layout_verification_status",
+                layout_verification_status,
+            )
+            if layout_verification_status is not None
+            else None
+        )
 
         graph = Graph()
         self._bind_prefixes(graph)
@@ -5896,7 +5933,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:storageProtocol")),
-                    URIRef(self.expand_iri(storage_protocol)),
+                    storage_protocol_ref,
                 )
             )
         if access_mode is not None:
@@ -5904,7 +5941,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:accessMode")),
-                    URIRef(self.expand_iri(access_mode)),
+                    access_mode_ref,
                 )
             )
         for predicate, value in (
@@ -5937,7 +5974,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:layoutVerificationStatus")),
-                    URIRef(self.expand_iri(layout_verification_status)),
+                    layout_verification_status_ref,
                 )
             )
         self._add_optional_literal(
@@ -5983,7 +6020,7 @@ class DoxaBase:
             for dataset in dataset_values:
                 link_graph.add(
                     (
-                        URIRef(self.expand_iri(dataset)),
+                        self._resource_ref("datasets", dataset),
                         URIRef(self.expand_iri("rc:hasStorageAccess")),
                         subject,
                     )
@@ -6010,6 +6047,24 @@ class DoxaBase:
     ) -> MapResourceRecord:
         layout_iri = self._required_iri("iri", iri)
         dataset_values = self._string_values("datasets", datasets)
+        file_format_ref = (
+            self._resource_ref("file_format", file_format)
+            if file_format is not None
+            else None
+        )
+        compression_codec_ref = (
+            self._resource_ref("compression_codec", compression_codec)
+            if compression_codec is not None
+            else None
+        )
+        layout_verification_status_ref = (
+            self._resource_ref(
+                "layout_verification_status",
+                layout_verification_status,
+            )
+            if layout_verification_status is not None
+            else None
+        )
 
         graph = Graph()
         self._bind_prefixes(graph)
@@ -6022,7 +6077,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:fileFormat")),
-                    URIRef(self.expand_iri(file_format)),
+                    file_format_ref,
                 )
             )
         if compression_codec is not None:
@@ -6030,7 +6085,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:compressionCodec")),
-                    URIRef(self.expand_iri(compression_codec)),
+                    compression_codec_ref,
                 )
             )
         if layout_verification_status is not None:
@@ -6038,7 +6093,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:layoutVerificationStatus")),
-                    URIRef(self.expand_iri(layout_verification_status)),
+                    layout_verification_status_ref,
                 )
             )
         self._add_optional_literal(
@@ -6068,7 +6123,7 @@ class DoxaBase:
             for dataset in dataset_values:
                 link_graph.add(
                     (
-                        URIRef(self.expand_iri(dataset)),
+                        self._resource_ref("datasets", dataset),
                         URIRef(self.expand_iri("rc:hasPhysicalLayout")),
                         subject,
                     )
@@ -6101,6 +6156,24 @@ class DoxaBase:
             partition_columns,
         )
         dataset_values = self._string_values("datasets", datasets)
+        granularity_ref = (
+            self._resource_ref("granularity", granularity)
+            if granularity is not None
+            else None
+        )
+        redundant_partition_key_ref = (
+            self._resource_ref("redundant_partition_key", redundant_partition_key)
+            if redundant_partition_key is not None
+            else None
+        )
+        layout_verification_status_ref = (
+            self._resource_ref(
+                "layout_verification_status",
+                layout_verification_status,
+            )
+            if layout_verification_status is not None
+            else None
+        )
 
         graph = Graph()
         self._bind_prefixes(graph)
@@ -6113,7 +6186,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:partitionColumn")),
-                    URIRef(self.expand_iri(partition_column)),
+                    self._resource_ref("partition_columns", partition_column),
                 )
             )
         if granularity is not None:
@@ -6121,7 +6194,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:partitionGranularity")),
-                    URIRef(self.expand_iri(granularity)),
+                    granularity_ref,
                 )
             )
         self._add_optional_literal(graph, subject, "rc:pathTemplate", path_template)
@@ -6130,7 +6203,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:redundantPartitionKey")),
-                    URIRef(self.expand_iri(redundant_partition_key)),
+                    redundant_partition_key_ref,
                 )
             )
         if layout_verification_status is not None:
@@ -6138,7 +6211,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:layoutVerificationStatus")),
-                    URIRef(self.expand_iri(layout_verification_status)),
+                    layout_verification_status_ref,
                 )
             )
         self._add_optional_literal(
@@ -6172,7 +6245,7 @@ class DoxaBase:
             for dataset in dataset_values:
                 link_graph.add(
                     (
-                        URIRef(self.expand_iri(dataset)),
+                        self._resource_ref("datasets", dataset),
                         URIRef(self.expand_iri("rc:partitionedBy")),
                         subject,
                     )
@@ -6273,7 +6346,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:sourceDataset")),
-                    URIRef(self.expand_iri(source_dataset)),
+                    self._resource_ref("source_dataset", source_dataset),
                 )
             )
         if target_dataset is not None:
@@ -6281,7 +6354,7 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:targetDataset")),
-                    URIRef(self.expand_iri(target_dataset)),
+                    self._resource_ref("target_dataset", target_dataset),
                 )
             )
         if relationship_type == "foreign_key":
@@ -6291,14 +6364,14 @@ class DoxaBase:
                 (
                     subject,
                     URIRef(self.expand_iri("rc:foreignKeyFrom")),
-                    URIRef(self.expand_iri(from_column)),
+                    self._resource_ref("from_column", from_column),
                 )
             )
             graph.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:foreignKeyTo")),
-                    URIRef(self.expand_iri(to_column)),
+                    self._resource_ref("to_column", to_column),
                 )
             )
             if declared is not None:
@@ -6314,7 +6387,10 @@ class DoxaBase:
                     (
                         subject,
                         URIRef(self.expand_iri("rc:referentialIntegrity")),
-                        URIRef(self.expand_iri(referential_integrity)),
+                        self._resource_ref(
+                            "referential_integrity",
+                            referential_integrity,
+                        ),
                     )
                 )
         if relationship_type == "shared_identifier":
@@ -6323,7 +6399,7 @@ class DoxaBase:
                     (
                         subject,
                         URIRef(self.expand_iri("rc:identifyingColumn")),
-                        URIRef(self.expand_iri(column)),
+                        self._resource_ref("identifying_columns", column),
                     )
                 )
         if relationship_type == "derivation":
@@ -6332,7 +6408,7 @@ class DoxaBase:
                     (
                         subject,
                         URIRef(self.expand_iri("rc:sourceColumn")),
-                        URIRef(self.expand_iri(column)),
+                        self._resource_ref("source_columns", column),
                     )
                 )
             for column in derived_column_values:
@@ -6340,7 +6416,7 @@ class DoxaBase:
                     (
                         subject,
                         URIRef(self.expand_iri("rc:derivedColumn")),
-                        URIRef(self.expand_iri(column)),
+                        self._resource_ref("derived_columns", column),
                     )
                 )
             if derivation_function is not None:
@@ -6348,7 +6424,10 @@ class DoxaBase:
                     (
                         subject,
                         URIRef(self.expand_iri("rc:derivationFunction")),
-                        URIRef(self.expand_iri(derivation_function)),
+                        self._resource_ref(
+                            "derivation_function",
+                            derivation_function,
+                        ),
                     )
                 )
             for derivation_property in derivation_property_values:
@@ -6356,7 +6435,10 @@ class DoxaBase:
                     (
                         subject,
                         URIRef(self.expand_iri("rc:hasDerivationProperty")),
-                        URIRef(self.expand_iri(derivation_property)),
+                        self._resource_ref(
+                            "derivation_properties",
+                            derivation_property,
+                        ),
                     )
                 )
 
@@ -6366,12 +6448,15 @@ class DoxaBase:
                     (
                         subject,
                         URIRef(self.expand_iri("rc:groupByColumn")),
-                        URIRef(self.expand_iri(column)),
+                        self._resource_ref("group_by_columns", column),
                     )
                 )
             for index, aggregated_column in enumerate(aggregated_column_values, start=1):
                 mapping_subject = (
-                    URIRef(self.expand_iri(aggregated_column["iri"]))
+                    self._resource_ref(
+                        f"aggregated_columns[{index}].iri",
+                        aggregated_column["iri"],
+                    )
                     if aggregated_column["iri"] is not None
                     else URIRef(f"{relationship_iri}/aggregated-column/{index}")
                 )
@@ -6393,7 +6478,10 @@ class DoxaBase:
                     (
                         mapping_subject,
                         URIRef(self.expand_iri("rc:targetColumn")),
-                        URIRef(self.expand_iri(aggregated_column["target_column"])),
+                        self._resource_ref(
+                            f"aggregated_columns[{index}].target_column",
+                            aggregated_column["target_column"],
+                        ),
                     )
                 )
                 for column in aggregated_column["source_columns"]:
@@ -6401,7 +6489,10 @@ class DoxaBase:
                         (
                             mapping_subject,
                             URIRef(self.expand_iri("rc:aggregationSourceColumn")),
-                            URIRef(self.expand_iri(column)),
+                            self._resource_ref(
+                                f"aggregated_columns[{index}].source_columns",
+                                column,
+                            ),
                         )
                     )
                 if aggregated_column["aggregation_function"] is not None:
@@ -6409,10 +6500,9 @@ class DoxaBase:
                         (
                             mapping_subject,
                             URIRef(self.expand_iri("rc:aggregationFunction")),
-                            URIRef(
-                                self.expand_iri(
-                                    aggregated_column["aggregation_function"]
-                                )
+                            self._resource_ref(
+                                f"aggregated_columns[{index}].aggregation_function",
+                                aggregated_column["aggregation_function"],
                             ),
                         )
                     )
@@ -6421,10 +6511,9 @@ class DoxaBase:
                         (
                             mapping_subject,
                             URIRef(self.expand_iri("rc:withinGroupOrdering")),
-                            URIRef(
-                                self.expand_iri(
-                                    aggregated_column["within_group_ordering"]
-                                )
+                            self._resource_ref(
+                                f"aggregated_columns[{index}].within_group_ordering",
+                                aggregated_column["within_group_ordering"],
                             ),
                         )
                     )

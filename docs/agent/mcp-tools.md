@@ -234,30 +234,38 @@ like `rc:EventRow`, not descriptive prose.
 `doxabase.record_map_column`
 
 Records or updates a column resource and can link it to a table with
-`rc:hasColumn`.
+`rc:hasColumn`. Resource-valued fields such as `physical_type`, `value_type`,
+and `table_iri` expect IRIs or CURIEs, not prose.
 
 `doxabase.record_map_caveat`
 
 Records or updates a `rc:KnownCaveat` and can link it to affected datasets.
+Use prose for the caveat description, and use IRIs or CURIEs for `severity` and
+`targets`.
 
 `doxabase.record_map_storage_access`
 
 Records or updates non-secret storage access metadata and can link it to
-datasets.
+datasets. Use IRIs or CURIEs for resource-valued controls such as
+`storage_protocol`, `access_mode`, `layout_verification_status`, and
+`datasets`.
 
 `doxabase.record_map_physical_layout`
 
 Records or updates file-format/compression layout metadata and can link it to
 datasets. Use `layout_verification_status` and `layout_verification_note` when
 the physical format or layout has only been generated, proposed, listed, or
-query-verified.
+query-verified. Use IRIs or CURIEs for resource-valued controls such as
+`file_format`, `compression_codec`, and `datasets`.
 
 `doxabase.record_map_partition_scheme`
 
 Records or updates partition metadata, including partition columns,
 granularity, path template, redundant partition key, and layout verification
 status/notes. Use it when uncertainty belongs to a partition/path template
-rather than to the whole dataset.
+rather than to the whole dataset. Use IRIs or CURIEs for partition columns,
+granularity, redundant partition keys, layout verification status, and linked
+datasets.
 
 `doxabase.record_map_relationship`
 
@@ -265,7 +273,9 @@ Records or updates a relationship resource. Supported relationship types are
 `foreign_key`, `shared_identifier`, `derivation`, and `aggregation`. Aggregation
 relationships accept `group_by_columns` and `aggregated_columns`; each aggregate
 mapping should include `target_column`, `source_columns`, optional
-`aggregation_function`, and optional `within_group_ordering`.
+`aggregation_function`, and optional `within_group_ordering`. Relationship
+endpoints, columns, functions, and properties are resource-valued fields, so use
+IRIs or CURIEs rather than prose.
 
 `doxabase.record_graph_revision`
 

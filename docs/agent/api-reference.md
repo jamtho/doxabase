@@ -255,10 +255,11 @@ observations or patterns are ready to become operating context for future
 agents. On partial dataset updates, omit `is_table` to preserve existing
 dataset/table typing. Use physical-layout and partition helpers when path or
 layout verification belongs to one part of the executable catalog rather than
-to the whole dataset. `record_map_dataset(row_semantics=...)` expects a
-controlled `rc:RowSemanticsType` value such as `rc:EventRow`, not prose.
-`schema_stability` and `layout_verification_status` similarly expect resource
-IRIs/CURIEs. `record_map_relationship()` supports foreign keys, shared
+to the whole dataset. Resource-valued fields across these helpers expect
+IRIs/CURIEs, not prose: use terms such as `rc:EventRow`, `rc:Parquet`, or
+project IRIs for datasets, columns, caveats, and relationship endpoints. Put
+ordinary explanation in descriptions, notes, observations, or patterns.
+`record_map_relationship()` supports foreign keys, shared
 identifiers, derivations, and aggregations; for aggregations, pass
 `group_by_columns` plus `aggregated_columns` mappings with `target_column`,
 `source_columns`, optional `aggregation_function`, and optional

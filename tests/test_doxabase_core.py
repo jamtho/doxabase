@@ -1,4 +1,5 @@
 import warnings
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -3223,15 +3224,123 @@ def test_record_map_dataset_partial_update_preserves_table_type(tmp_path: Path) 
     assert RC + "Table" in description.types
 
 
-def test_record_map_dataset_rejects_prose_for_resource_fields(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("call", "match"),
+    [
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                row_semantics="One row per source message.",
+            ),
+            "row_semantics.*not prose",
+            id="dataset-row-semantics",
+        ),
+        pytest.param(
+            lambda db: db.record_map_column(
+                "https://example.test/project#messages__doc_id",
+                column_name="doc_id",
+                physical_type="plain varchar prose",
+            ),
+            "physical_type.*not prose",
+            id="column-physical-type",
+        ),
+        pytest.param(
+            lambda db: db.record_map_column(
+                "https://example.test/project#messages__doc_id",
+                table_iri="plain table prose",
+                column_name="doc_id",
+            ),
+            "table_iri.*not prose",
+            id="column-table",
+        ),
+        pytest.param(
+            lambda db: db.record_map_caveat(
+                "https://example.test/project#body_caveat",
+                description="Body text is cleaned text, not raw source text.",
+                severity="high confidence warning",
+            ),
+            "severity.*not prose",
+            id="caveat-severity",
+        ),
+        pytest.param(
+            lambda db: db.record_map_caveat(
+                "https://example.test/project#body_caveat",
+                description="Body text is cleaned text, not raw source text.",
+                targets=["the messages table"],
+            ),
+            "targets.*not prose",
+            id="caveat-target",
+        ),
+        pytest.param(
+            lambda db: db.record_map_storage_access(
+                "https://example.test/project#local_access",
+                storage_protocol="local filesystem storage",
+            ),
+            "storage_protocol.*not prose",
+            id="storage-protocol",
+        ),
+        pytest.param(
+            lambda db: db.record_map_storage_access(
+                "https://example.test/project#local_access",
+                datasets=["the messages table"],
+            ),
+            "datasets.*not prose",
+            id="storage-dataset",
+        ),
+        pytest.param(
+            lambda db: db.record_map_physical_layout(
+                "https://example.test/project#messages_layout",
+                file_format="parquet files",
+            ),
+            "file_format.*not prose",
+            id="layout-file-format",
+        ),
+        pytest.param(
+            lambda db: db.record_map_partition_scheme(
+                "https://example.test/project#messages_partitioning",
+                partition_columns=["the date column"],
+            ),
+            "partition_columns.*not prose",
+            id="partition-column",
+        ),
+        pytest.param(
+            lambda db: db.record_map_relationship(
+                "https://example.test/project#attachment_parent_fk",
+                relationship_type="foreign_key",
+                from_column="parent doc id column",
+                to_column="https://example.test/project#messages__doc_id",
+            ),
+            "from_column.*not prose",
+            id="relationship-foreign-key-column",
+        ),
+        pytest.param(
+            lambda db: db.record_map_relationship(
+                "https://example.test/project#attachment_count_rollup",
+                relationship_type="aggregation",
+                aggregated_columns=[
+                    {
+                        "target_column": "attachment count column",
+                        "source_columns": [
+                            "https://example.test/project#attachments__parent_doc_id",
+                        ],
+                    },
+                ],
+            ),
+            r"aggregated_columns\[1\]\.target_column.*not prose",
+            id="relationship-aggregate-target",
+        ),
+    ],
+)
+def test_map_helpers_reject_prose_for_resource_fields(
+    tmp_path: Path,
+    call: Callable[[DoxaBase], object],
+    match: str,
+) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
-    with pytest.raises(DoxaBaseError, match="row_semantics.*not prose"):
-        db.record_map_dataset(
-            "https://example.test/project#messages",
-            label="Messages",
-            row_semantics="One row per source message.",
-        )
+    with pytest.raises(DoxaBaseError, match=match):
+        call(db)
 
 
 def test_describe_dataset_links_relevant_patterns(tmp_path: Path) -> None:
