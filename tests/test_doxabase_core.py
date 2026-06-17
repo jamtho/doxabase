@@ -1442,6 +1442,12 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert [triple.object for triple in drift.triples_removed_since_snapshot] == [
         "Seed dataset"
     ]
+    assert drift.triples_added_since_snapshot[0].subject_display == "SeedDataset"
+    assert drift.triples_added_since_snapshot[0].predicate_curie == "rdfs:label"
+    assert drift.triples_added_since_snapshot[0].predicate_display == "rdfs:label"
+    assert drift.triples_added_since_snapshot[0].object_display == (
+        "Seed dataset renamed"
+    )
     assert "Exact triples" in drift.note
     assert check.patch_checks[0].can_apply is False
     assert "content digest changed since staging" in (
@@ -1461,6 +1467,9 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert "| map | 2 | 2 |" in export_text
     assert "| True | 1 | 1 |" in export_text
     assert "#### Snapshot Drift Triples: map" in export_text
+    assert "exact raw RDF terms remain available" in export_text
+    assert "SeedDataset" in export_text
+    assert "rdfs:label" in export_text
     assert "Seed dataset renamed" in export_text
     assert "sha256:" in export_text
 

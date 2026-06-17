@@ -289,7 +289,9 @@ removed since staging. Older revisions can still report
 `exact_changed_triples_available=False` if they were recorded before snapshot
 row storage existed. `snapshot_drifts` also gives staged/current graph content
 digests and stored graph counts for digest drift, including same-count graph
-changes.
+changes. Markdown exports show compact display values in the exact-drift tables;
+use the API payload's raw fields when a follow-up graph edit needs exact RDF
+terms.
 Suggested actions are ordered review-first; apply or restage calls come after
 inspection/export suggestions.
 

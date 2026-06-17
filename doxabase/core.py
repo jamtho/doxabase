@@ -239,9 +239,15 @@ class StagedGraphCountDrift:
 class GraphTripleDescription:
     subject: str
     subject_kind: str
+    subject_curie: str | None
+    subject_display: str
     predicate: str
+    predicate_curie: str | None
+    predicate_display: str
     object: str
     object_kind: str
+    object_curie: str | None
+    object_display: str
     datatype: str | None
     lang: str | None
 
@@ -11207,7 +11213,16 @@ class DoxaBase:
     ) -> list[str]:
         if not drift.exact_changed_triples_available:
             return []
-        lines = ["", f"#### Snapshot Drift Triples: {drift.graph_role}", ""]
+        lines = [
+            "",
+            f"#### Snapshot Drift Triples: {drift.graph_role}",
+            "",
+            (
+                "Display values use CURIEs or local names when possible; exact "
+                "raw RDF terms remain available in the apply-check payload."
+            ),
+            "",
+        ]
         for title, triples in (
             ("Added since snapshot", drift.triples_added_since_snapshot),
             ("Removed since snapshot", drift.triples_removed_since_snapshot),
@@ -11226,9 +11241,9 @@ class DoxaBase:
                         "| "
                         + " | ".join(
                             [
-                                self._markdown_table_cell(triple.subject),
-                                self._markdown_table_cell(triple.predicate),
-                                self._markdown_table_cell(triple.object),
+                                self._markdown_table_cell(triple.subject_display),
+                                self._markdown_table_cell(triple.predicate_display),
+                                self._markdown_table_cell(triple.object_display),
                                 self._markdown_table_cell(triple.object_kind),
                                 self._markdown_table_cell(triple.datatype or ""),
                                 self._markdown_table_cell(triple.lang or ""),
@@ -12731,15 +12746,49 @@ class DoxaBase:
         row: GraphStorageRow,
     ) -> GraphTripleDescription:
         subject, subject_kind, predicate, object_value, object_kind, datatype, lang = row
+        subject_curie = self._compact_iri(subject) if subject_kind == "uri" else None
+        predicate_curie = self._compact_iri(predicate)
+        object_curie = (
+            self._compact_iri(object_value) if object_kind == "uri" else None
+        )
         return GraphTripleDescription(
             subject=subject,
             subject_kind=subject_kind,
+            subject_curie=subject_curie,
+            subject_display=self._graph_term_display(
+                subject,
+                subject_kind,
+                curie=subject_curie,
+            ),
             predicate=predicate,
+            predicate_curie=predicate_curie,
+            predicate_display=self._graph_term_display(
+                predicate,
+                "uri",
+                curie=predicate_curie,
+            ),
             object=object_value,
             object_kind=object_kind,
+            object_curie=object_curie,
+            object_display=self._graph_term_display(
+                object_value,
+                object_kind,
+                curie=object_curie,
+            ),
             datatype=datatype,
             lang=lang,
         )
+
+    def _graph_term_display(
+        self,
+        value: str,
+        kind: str,
+        *,
+        curie: str | None,
+    ) -> str:
+        if kind == "literal":
+            return value
+        return curie or self._local_name(value) or value
 
     def _graphs_for_subject(self, graphs: list[str], subject: str) -> list[str]:
         graph_filter, params = self._graph_filter(graphs, alias="q")

@@ -375,6 +375,12 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert stale_check["snapshot_drifts"][0]["exact_changed_triples_available"] is True
     assert stale_check["snapshot_drifts"][0]["triples_added_since_snapshot"]
     assert stale_check["snapshot_drifts"][0]["triples_removed_since_snapshot"] == []
+    added_drift_triple = stale_check["snapshot_drifts"][0][
+        "triples_added_since_snapshot"
+    ][0]
+    assert "subject_display" in added_drift_triple
+    assert "predicate_display" in added_drift_triple
+    assert "object_display" in added_drift_triple
     assert stale_check["suggested_next_actions"][0]["tool_name"] == (
         "describe_staged_revision"
     )

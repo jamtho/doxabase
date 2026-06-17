@@ -823,6 +823,11 @@ whether exact changed triples are available,
 mismatch means the target graph state is not identical to the state at staging
 time, even when triple counts still match. Older revisions can report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
+Each changed-triple item carries exact raw RDF fields (`subject`, `subject_kind`,
+`predicate`, `object`, `object_kind`, `datatype`, `lang`) plus scan-friendly
+fields (`subject_curie`, `subject_display`, `predicate_curie`,
+`predicate_display`, `object_curie`, `object_display`). Use the raw fields for
+precise graph work and the display fields for human review.
 `suggested_next_actions` uses the same structured action shape as assertion
 support: tool name, MCP tool name, arguments, reason, and display call string.
 For staged apply checks, actions are ordered review-first; mutating actions such
