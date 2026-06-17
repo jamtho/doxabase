@@ -813,13 +813,16 @@ available. It also reports `patch_operation`, `patch_triples_checked`,
 `patch_triples_currently_present`, `patch_triples_currently_absent`, and
 `patch_triple_status` (`all_patch_triples_absent`,
 `all_patch_triples_present`, or `mixed_patch_triples_present`). In the current
-runtime, DoxaBase can inspect the staged patch triples themselves, but exact
-unrelated changed triples still require future graph version storage.
+runtime, DoxaBase can inspect the staged patch triples themselves; when stored
+snapshot rows exist, exact target graph additions and removals are available in
+`snapshot_drifts`.
 `snapshot_drifts` reports graph-level digest mismatches: graph role, snapshot
 triple count, current triple count, staged snapshot digest, current graph digest,
-and whether exact changed triples are available. A digest mismatch means the
-target graph state is not identical to the state at staging time, even when
-triple counts still match.
+whether exact changed triples are available,
+`triples_added_since_snapshot`, and `triples_removed_since_snapshot`. A digest
+mismatch means the target graph state is not identical to the state at staging
+time, even when triple counts still match. Older revisions can report
+`exact_changed_triples_available=False` when they predate snapshot row storage.
 `suggested_next_actions` uses the same structured action shape as assertion
 support: tool name, MCP tool name, arguments, reason, and display call string.
 For staged apply checks, actions are ordered review-first; mutating actions such

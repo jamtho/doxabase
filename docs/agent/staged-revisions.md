@@ -283,10 +283,13 @@ digest drift, validation failure, and already-applied state. When
 validation did not run.
 `count_drifts` gives expected/current graph counts and deltas for count drift.
 It can also say whether the staged patch triples themselves are currently
-present, absent, or mixed in the target graph. Exact unrelated changed triples
-still need future graph version storage. `snapshot_drifts` gives staged/current
-graph content digests and stored graph counts for digest drift, including
-same-count graph changes.
+present, absent, or mixed in the target graph. When stored snapshot rows are
+available, `snapshot_drifts` carries the exact target graph triples added and
+removed since staging. Older revisions can still report
+`exact_changed_triples_available=False` if they were recorded before snapshot
+row storage existed. `snapshot_drifts` also gives staged/current graph content
+digests and stored graph counts for digest drift, including same-count graph
+changes.
 Suggested actions are ordered review-first; apply or restage calls come after
 inspection/export suggestions.
 

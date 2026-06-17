@@ -358,7 +358,7 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert stale_check["validation_skipped_reason"] == "conflicts_present"
     assert stale_check["count_drifts"][0]["target_graph"] == "map"
     assert stale_check["count_drifts"][0]["delta"] == db.triple_count("map")
-    assert stale_check["count_drifts"][0]["exact_changed_triples_available"] is False
+    assert stale_check["count_drifts"][0]["exact_changed_triples_available"] is True
     assert stale_check["count_drifts"][0]["patch_triples_checked"] == 1
     assert stale_check["count_drifts"][0]["patch_triples_currently_present"] == 0
     assert stale_check["count_drifts"][0]["patch_triples_currently_absent"] == 1
@@ -372,6 +372,9 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert stale_check["snapshot_drifts"][0]["current_content_digest"].startswith(
         "sha256:"
     )
+    assert stale_check["snapshot_drifts"][0]["exact_changed_triples_available"] is True
+    assert stale_check["snapshot_drifts"][0]["triples_added_since_snapshot"]
+    assert stale_check["snapshot_drifts"][0]["triples_removed_since_snapshot"] == []
     assert stale_check["suggested_next_actions"][0]["tool_name"] == (
         "describe_staged_revision"
     )

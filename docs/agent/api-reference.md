@@ -373,9 +373,12 @@ applied event, review validation diagnostics, or restage after conflicts.
 `count_drifts` gives expected/current counts and deltas, plus whether the staged
 patch triples themselves are currently present, absent, or mixed in the target
 graph. `snapshot_drifts` gives staged/current `sha256:<hex>` digest mismatches,
-including same-count graph changes. Exact unrelated changed triples still need
-future graph version storage. Suggested actions are ordered review-first;
-mutation calls come after inspection/export suggestions.
+including same-count graph changes. For new revisions, `snapshot_drifts` also
+includes exact triples added to and removed from the target graph since the
+stored snapshot. Older revisions may report
+`exact_changed_triples_available=False` if no snapshot rows were stored.
+Suggested actions are ordered review-first; mutation calls come after
+inspection/export suggestions.
 `can_apply=True` means replay and validation readiness, not semantic approval.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted

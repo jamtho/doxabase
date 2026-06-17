@@ -29,6 +29,8 @@ GraphName = TypingLiteral[
     "history",
 ]
 
+GraphStorageRow = tuple[str, str, str, str, str, str | None, str | None]
+
 ROOT = Path(__file__).resolve().parents[1]
 BASE_ONTOLOGY_PATH = ROOT / "ontology" / "rc_core.ttl"
 BASE_SHAPES_PATH = ROOT / "ontology" / "rc_shapes.ttl"
@@ -234,6 +236,17 @@ class StagedGraphCountDrift:
 
 
 @dataclass(frozen=True)
+class GraphTripleDescription:
+    subject: str
+    subject_kind: str
+    predicate: str
+    object: str
+    object_kind: str
+    datatype: str | None
+    lang: str | None
+
+
+@dataclass(frozen=True)
 class StagedGraphSnapshotDrift:
     graph_role: str
     snapshot_triple_count: int
@@ -241,6 +254,8 @@ class StagedGraphSnapshotDrift:
     snapshot_content_digest: str
     current_content_digest: str
     exact_changed_triples_available: bool
+    triples_added_since_snapshot: list[GraphTripleDescription]
+    triples_removed_since_snapshot: list[GraphTripleDescription]
     note: str
 
 
@@ -6536,6 +6551,10 @@ class DoxaBase:
                 f"Unknown graph role(s) in graph_counts: {', '.join(sorted(unknown_count_graphs))}"
             )
 
+        snapshot_rows = {
+            graph_name: self._graph_storage_rows(graph_name)
+            for graph_name in snapshot_counts
+        }
         graph = Graph()
         self._bind_prefixes(graph)
         subject = URIRef(revision_subject)
@@ -6697,6 +6716,12 @@ class DoxaBase:
             )
 
         triples = self._insert_graph("history", graph)
+        self._store_graph_snapshot_rows(
+            revision_subject,
+            snapshot_rows=snapshot_rows,
+            snapshot_counts=snapshot_counts,
+            snapshot_digests=snapshot_digests,
+        )
         return GraphRevisionRecord(
             revision_iri=revision_subject,
             revision_type=revision_type_iri,
@@ -7712,10 +7737,32 @@ class DoxaBase:
                     patch.before_triple_count is not None
                     and current_count != patch.before_triple_count
                 ):
+                    snapshot_drift = snapshot_drift_by_graph.get(target_graph)
+                    exact_graph_diff_available = (
+                        snapshot_drift.exact_changed_triples_available
+                        if snapshot_drift is not None
+                        else False
+                    )
                     patch_triples_present = sum(
                         1 for triple in patch_graph if triple in current_preview
                     )
                     patch_triples_absent = len(patch_graph) - patch_triples_present
+                    if exact_graph_diff_available:
+                        count_drift_note = (
+                            "DoxaBase can report staged/current graph counts and "
+                            "whether the staged patch triples are present in the "
+                            "current graph. Exact target graph additions and "
+                            "removals since the staged snapshot are available in "
+                            "snapshot_drifts."
+                        )
+                    else:
+                        count_drift_note = (
+                            "DoxaBase can report staged/current graph counts "
+                            "and whether the staged patch triples are present "
+                            "in the current graph, but exact unrelated changed "
+                            "triples need graph snapshot storage for this "
+                            "revision."
+                        )
                     count_drifts.append(
                         StagedGraphCountDrift(
                             patch_iri=patch.iri,
@@ -7723,7 +7770,7 @@ class DoxaBase:
                             expected_before_triple_count=patch.before_triple_count,
                             current_triple_count=current_count,
                             delta=current_count - patch.before_triple_count,
-                            exact_changed_triples_available=False,
+                            exact_changed_triples_available=exact_graph_diff_available,
                             patch_operation=operation,
                             patch_operation_label=patch.operation_label,
                             patch_triples_checked=len(patch_graph),
@@ -7733,12 +7780,7 @@ class DoxaBase:
                                 patch_triples_checked=len(patch_graph),
                                 patch_triples_present=patch_triples_present,
                             ),
-                            note=(
-                                "DoxaBase can report staged/current graph counts "
-                                "and whether the staged patch triples are present "
-                                "in the current graph, but exact unrelated changed "
-                                "triples need future graph version storage."
-                            ),
+                            note=count_drift_note,
                         )
                     )
                     conflict = (
@@ -7910,6 +7952,25 @@ class DoxaBase:
             current_digest = self._graph_content_digest(graph_role)
             if current_digest == snapshot.content_digest:
                 continue
+            diff = self._snapshot_triple_diff(staged.iri, graph_role)
+            if diff is None:
+                triples_added_since_snapshot: list[GraphTripleDescription] = []
+                triples_removed_since_snapshot: list[GraphTripleDescription] = []
+                exact_changed_triples_available = False
+                note = (
+                    "The graph content digest changed since this revision was "
+                    "staged. DoxaBase can detect that the graph state is not "
+                    "identical, but this revision has no stored snapshot rows for "
+                    "exact changed-triple reporting."
+                )
+            else:
+                triples_added_since_snapshot, triples_removed_since_snapshot = diff
+                exact_changed_triples_available = True
+                note = (
+                    "The graph content digest changed since this revision was "
+                    "staged. Exact triples added to and removed from the target "
+                    "graph since the stored snapshot are included."
+                )
             drifts.append(
                 StagedGraphSnapshotDrift(
                     graph_role=graph_role,
@@ -7917,13 +7978,10 @@ class DoxaBase:
                     current_triple_count=self.triple_count(graph_role),
                     snapshot_content_digest=snapshot.content_digest,
                     current_content_digest=current_digest,
-                    exact_changed_triples_available=False,
-                    note=(
-                        "The graph content digest changed since this revision was "
-                        "staged. DoxaBase can detect that the graph state is not "
-                        "identical, but exact changed triples need future graph "
-                        "version storage."
-                    ),
+                    exact_changed_triples_available=exact_changed_triples_available,
+                    triples_added_since_snapshot=triples_added_since_snapshot,
+                    triples_removed_since_snapshot=triples_removed_since_snapshot,
+                    note=note,
                 )
             )
         return drifts
@@ -10971,6 +11029,11 @@ class DoxaBase:
                 ),
             ]
         )
+        if check.conflicts:
+            lines.append(
+                "- Patch replay note: conflicted patch triples are shown in "
+                "Patch Replay; replayable delta excludes them."
+            )
         if check.semantic_risk_reasons:
             lines.append("- Semantic risk reasons:")
             lines.extend(f"  - {reason}" for reason in check.semantic_risk_reasons)
@@ -11056,11 +11119,11 @@ class DoxaBase:
                     "### Snapshot Drift",
                     "",
                     (
-                        "| Graph | Snapshot stored count | Current stored count | "
+                        "| Graph | Snapshot stored count | Current count | "
                         "Snapshot digest | Current digest | Exact changed triples | "
-                        "Note |"
+                        "Added since snapshot | Removed since snapshot | Note |"
                     ),
-                    "|---|---:|---:|---|---|---|---|",
+                    "|---|---:|---:|---|---|---|---:|---:|---|",
                 ]
             )
             for drift in check.snapshot_drifts:
@@ -11076,11 +11139,15 @@ class DoxaBase:
                             ),
                             self._markdown_table_cell(drift.current_content_digest),
                             str(drift.exact_changed_triples_available),
+                            str(len(drift.triples_added_since_snapshot)),
+                            str(len(drift.triples_removed_since_snapshot)),
                             self._markdown_table_cell(drift.note),
                         ]
                     )
                     + " |"
                 )
+            for drift in check.snapshot_drifts:
+                lines.extend(self._snapshot_drift_triples_markdown(drift))
 
         if check.patch_checks:
             lines.extend(
@@ -11130,6 +11197,51 @@ class DoxaBase:
                 ):
                     note = " (only after comparing alternatives)"
                 lines.append(f"- `{call}`{note}")
+        return lines
+
+    def _snapshot_drift_triples_markdown(
+        self,
+        drift: StagedGraphSnapshotDrift,
+        *,
+        limit: int = 25,
+    ) -> list[str]:
+        if not drift.exact_changed_triples_available:
+            return []
+        lines = ["", f"#### Snapshot Drift Triples: {drift.graph_role}", ""]
+        for title, triples in (
+            ("Added since snapshot", drift.triples_added_since_snapshot),
+            ("Removed since snapshot", drift.triples_removed_since_snapshot),
+        ):
+            lines.extend(
+                [
+                    title,
+                    "",
+                    "| Subject | Predicate | Object | Object kind | Datatype | Lang |",
+                    "|---|---|---|---|---|---|",
+                ]
+            )
+            if triples:
+                for triple in triples[:limit]:
+                    lines.append(
+                        "| "
+                        + " | ".join(
+                            [
+                                self._markdown_table_cell(triple.subject),
+                                self._markdown_table_cell(triple.predicate),
+                                self._markdown_table_cell(triple.object),
+                                self._markdown_table_cell(triple.object_kind),
+                                self._markdown_table_cell(triple.datatype or ""),
+                                self._markdown_table_cell(triple.lang or ""),
+                            ]
+                        )
+                        + " |"
+                    )
+                omitted = len(triples) - limit
+                if omitted > 0:
+                    lines.append(f"| ... | ... | {omitted} more omitted | | | |")
+            else:
+                lines.append("| (none) | | | | | |")
+            lines.append("")
         return lines
 
     def _staged_revision_judgement_panel(
@@ -12153,6 +12265,42 @@ class DoxaBase:
             CREATE INDEX IF NOT EXISTS quads_gspo ON quads(graph, subject, predicate, object);
             CREATE INDEX IF NOT EXISTS quads_graph ON quads(graph);
 
+            CREATE TABLE IF NOT EXISTS graph_snapshot_storage (
+                revision_iri TEXT NOT NULL,
+                graph_role TEXT NOT NULL,
+                stored_at TEXT NOT NULL,
+                triple_count INTEGER NOT NULL,
+                content_digest TEXT NOT NULL,
+                PRIMARY KEY (revision_iri, graph_role)
+            );
+
+            CREATE TABLE IF NOT EXISTS graph_snapshot_quads (
+                revision_iri TEXT NOT NULL,
+                graph_role TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                subject_kind TEXT NOT NULL,
+                predicate TEXT NOT NULL,
+                object TEXT NOT NULL,
+                object_kind TEXT NOT NULL,
+                datatype TEXT,
+                lang TEXT,
+                created_at TEXT NOT NULL,
+                UNIQUE (
+                    revision_iri,
+                    graph_role,
+                    subject,
+                    subject_kind,
+                    predicate,
+                    object,
+                    object_kind,
+                    datatype,
+                    lang
+                )
+            );
+
+            CREATE INDEX IF NOT EXISTS graph_snapshot_quads_revision_graph
+                ON graph_snapshot_quads(revision_iri, graph_role);
+
             """
         )
         self._create_search_index()
@@ -12383,7 +12531,15 @@ class DoxaBase:
 
     def _graph_content_digest(self, graph: str) -> str:
         digest = hashlib.sha256()
-        for row in self._conn.execute(
+        for row in self._graph_storage_rows(graph):
+            for value in row:
+                digest.update((value or "").encode("utf-8"))
+                digest.update(b"\x1f")
+            digest.update(b"\n")
+        return f"sha256:{digest.hexdigest()}"
+
+    def _graph_storage_rows(self, graph: str) -> list[GraphStorageRow]:
+        rows = self._conn.execute(
             """
             SELECT
                 subject,
@@ -12391,27 +12547,199 @@ class DoxaBase:
                 predicate,
                 object,
                 object_kind,
-                COALESCE(datatype, '') AS datatype,
-                COALESCE(lang, '') AS lang
+                datatype,
+                lang
             FROM quads
             WHERE graph = ?
-            ORDER BY subject, subject_kind, predicate, object, object_kind, datatype, lang
+            ORDER BY
+                subject,
+                subject_kind,
+                predicate,
+                object,
+                object_kind,
+                COALESCE(datatype, ''),
+                COALESCE(lang, '')
             """,
             (graph,),
-        ):
-            for key in (
-                "subject",
-                "subject_kind",
-                "predicate",
-                "object",
-                "object_kind",
-                "datatype",
-                "lang",
-            ):
-                digest.update(str(row[key]).encode("utf-8"))
-                digest.update(b"\x1f")
-            digest.update(b"\n")
-        return f"sha256:{digest.hexdigest()}"
+        ).fetchall()
+        return [
+            (
+                row["subject"],
+                row["subject_kind"],
+                row["predicate"],
+                row["object"],
+                row["object_kind"],
+                row["datatype"],
+                row["lang"],
+            )
+            for row in rows
+        ]
+
+    def _store_graph_snapshot_rows(
+        self,
+        revision_iri: str,
+        *,
+        snapshot_rows: dict[str, list[GraphStorageRow]],
+        snapshot_counts: dict[str, int],
+        snapshot_digests: dict[str, str],
+    ) -> None:
+        stored_at = _now()
+        for graph_role, rows in snapshot_rows.items():
+            self._conn.execute(
+                """
+                DELETE FROM graph_snapshot_quads
+                WHERE revision_iri = ? AND graph_role = ?
+                """,
+                (revision_iri, graph_role),
+            )
+            self._conn.execute(
+                """
+                INSERT OR REPLACE INTO graph_snapshot_storage
+                    (revision_iri, graph_role, stored_at, triple_count, content_digest)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    revision_iri,
+                    graph_role,
+                    stored_at,
+                    snapshot_counts[graph_role],
+                    snapshot_digests[graph_role],
+                ),
+            )
+            self._conn.executemany(
+                """
+                INSERT OR IGNORE INTO graph_snapshot_quads
+                    (
+                        revision_iri,
+                        graph_role,
+                        subject,
+                        subject_kind,
+                        predicate,
+                        object,
+                        object_kind,
+                        datatype,
+                        lang,
+                        created_at
+                    )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        revision_iri,
+                        graph_role,
+                        subject,
+                        subject_kind,
+                        predicate,
+                        object,
+                        object_kind,
+                        datatype,
+                        lang,
+                        stored_at,
+                    )
+                    for (
+                        subject,
+                        subject_kind,
+                        predicate,
+                        object,
+                        object_kind,
+                        datatype,
+                        lang,
+                    ) in rows
+                ],
+            )
+        self._conn.commit()
+
+    def _snapshot_triple_diff(
+        self,
+        revision_iri: str,
+        graph_role: str,
+    ) -> tuple[list[GraphTripleDescription], list[GraphTripleDescription]] | None:
+        if not self._graph_snapshot_storage_exists(revision_iri, graph_role):
+            return None
+        snapshot_rows = set(self._graph_snapshot_storage_rows(revision_iri, graph_role))
+        current_rows = set(self._graph_storage_rows(graph_role))
+        added_rows = self._sort_graph_storage_rows(current_rows - snapshot_rows)
+        removed_rows = self._sort_graph_storage_rows(snapshot_rows - current_rows)
+        return (
+            [self._graph_triple_description(row) for row in added_rows],
+            [self._graph_triple_description(row) for row in removed_rows],
+        )
+
+    def _graph_snapshot_storage_exists(self, revision_iri: str, graph_role: str) -> bool:
+        row = self._conn.execute(
+            """
+            SELECT 1
+            FROM graph_snapshot_storage
+            WHERE revision_iri = ? AND graph_role = ?
+            """,
+            (revision_iri, graph_role),
+        ).fetchone()
+        return row is not None
+
+    def _graph_snapshot_storage_rows(
+        self,
+        revision_iri: str,
+        graph_role: str,
+    ) -> list[GraphStorageRow]:
+        rows = self._conn.execute(
+            """
+            SELECT
+                subject,
+                subject_kind,
+                predicate,
+                object,
+                object_kind,
+                datatype,
+                lang
+            FROM graph_snapshot_quads
+            WHERE revision_iri = ? AND graph_role = ?
+            ORDER BY
+                subject,
+                subject_kind,
+                predicate,
+                object,
+                object_kind,
+                COALESCE(datatype, ''),
+                COALESCE(lang, '')
+            """,
+            (revision_iri, graph_role),
+        ).fetchall()
+        return [
+            (
+                row["subject"],
+                row["subject_kind"],
+                row["predicate"],
+                row["object"],
+                row["object_kind"],
+                row["datatype"],
+                row["lang"],
+            )
+            for row in rows
+        ]
+
+    def _sort_graph_storage_rows(
+        self,
+        rows: Iterable[GraphStorageRow],
+    ) -> list[GraphStorageRow]:
+        return sorted(
+            rows,
+            key=lambda row: tuple(value or "" for value in row),
+        )
+
+    def _graph_triple_description(
+        self,
+        row: GraphStorageRow,
+    ) -> GraphTripleDescription:
+        subject, subject_kind, predicate, object_value, object_kind, datatype, lang = row
+        return GraphTripleDescription(
+            subject=subject,
+            subject_kind=subject_kind,
+            predicate=predicate,
+            object=object_value,
+            object_kind=object_kind,
+            datatype=datatype,
+            lang=lang,
+        )
 
     def _graphs_for_subject(self, graphs: list[str], subject: str) -> list[str]:
         graph_filter, params = self._graph_filter(graphs, alias="q")

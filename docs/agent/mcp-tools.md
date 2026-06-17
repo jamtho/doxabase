@@ -368,8 +368,10 @@ applied revision event exists. When validation did not run,
 expected/current graph counts and deltas for count conflicts, plus whether the
 staged patch triples themselves are currently present, absent, or mixed in the
 target graph. `snapshot_drifts` records staged/current `sha256:<hex>` digest
-mismatches, including same-count graph changes. Exact unrelated changed triples
-still require future graph version storage.
+mismatches, including same-count graph changes. For revisions staged with the
+current runtime, it also includes exact triples added to and removed from the
+target graph since the stored snapshot. Older revisions may report
+`exact_changed_triples_available=False` when they predate snapshot row storage.
 Suggested actions are ordered review-first, so inspect/export suggestions
 come before mutation calls such as apply or restage. Use it before
 `doxabase.apply_staged_revision` when an agent or human wants an explicit

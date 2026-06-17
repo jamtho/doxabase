@@ -1302,13 +1302,17 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.count_drifts[0].expected_before_triple_count == 0
     assert check.count_drifts[0].current_triple_count == db.triple_count("map")
     assert check.count_drifts[0].delta == db.triple_count("map")
-    assert check.count_drifts[0].exact_changed_triples_available is False
+    assert check.count_drifts[0].exact_changed_triples_available is True
     assert check.count_drifts[0].patch_operation == RC + "AdditionPatch"
     assert check.count_drifts[0].patch_triples_checked == 1
     assert check.count_drifts[0].patch_triples_currently_present == 0
     assert check.count_drifts[0].patch_triples_currently_absent == 1
     assert check.count_drifts[0].patch_triple_status == "all_patch_triples_absent"
-    assert "unrelated changed triples" in check.count_drifts[0].note
+    assert "available in snapshot_drifts" in check.count_drifts[0].note
+    assert len(check.snapshot_drifts) == 1
+    assert check.snapshot_drifts[0].exact_changed_triples_available is True
+    assert check.snapshot_drifts[0].triples_added_since_snapshot
+    assert check.snapshot_drifts[0].triples_removed_since_snapshot == []
 
     export_path = tmp_path / "stale-staged-review.md"
     db.export_staged_revision(staged.revision_iri, export_path)
@@ -1321,10 +1325,17 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "- Replayable triple delta: +0, -0 (conflicted patches excluded)" in (
         export_text
     )
+    assert (
+        "- Patch replay note: conflicted patch triples are shown in Patch Replay; "
+        "replayable delta excludes them."
+    ) in export_text
     assert "- Blocking reasons: target_count_drift" in export_text
     assert "- Validation skipped: conflicts_present" in export_text
     assert "### Count Drift" in export_text
     assert "| Patch | Graph | Expected before | Current | Delta |" in export_text
+    assert "### Snapshot Drift" in export_text
+    assert "#### Snapshot Drift Triples: map" in export_text
+    assert "Added since snapshot" in export_text
     assert (
         "| Patch | Graph | Operation | Recorded preview before | "
         "Current preview before | Recorded preview after | Current preview | "
@@ -1424,8 +1435,14 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert drift.snapshot_content_digest.startswith("sha256:")
     assert drift.current_content_digest.startswith("sha256:")
     assert drift.snapshot_content_digest != drift.current_content_digest
-    assert drift.exact_changed_triples_available is False
-    assert "exact changed triples" in drift.note
+    assert drift.exact_changed_triples_available is True
+    assert [triple.object for triple in drift.triples_added_since_snapshot] == [
+        "Seed dataset renamed"
+    ]
+    assert [triple.object for triple in drift.triples_removed_since_snapshot] == [
+        "Seed dataset"
+    ]
+    assert "Exact triples" in drift.note
     assert check.patch_checks[0].can_apply is False
     assert "content digest changed since staging" in (
         check.patch_checks[0].conflict or ""
@@ -1437,11 +1454,14 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert "- Blocking reasons: target_digest_drift" in export_text
     assert "### Snapshot Drift" in export_text
     assert (
-        "| Graph | Snapshot stored count | Current stored count | "
-        "Snapshot digest | Current digest | Exact changed triples | Note |"
+        "| Graph | Snapshot stored count | Current count | "
+        "Snapshot digest | Current digest | Exact changed triples | "
+        "Added since snapshot | Removed since snapshot | Note |"
     ) in export_text
     assert "| map | 2 | 2 |" in export_text
-    assert "| False |" in export_text
+    assert "| True | 1 | 1 |" in export_text
+    assert "#### Snapshot Drift Triples: map" in export_text
+    assert "Seed dataset renamed" in export_text
     assert "sha256:" in export_text
 
     listing = db.list_graph_revisions(
@@ -1553,6 +1573,9 @@ def test_apply_check_resolution_mentions_count_and_digest_drift(
         "map",
         "patterns",
     }
+    assert all(
+        drift.exact_changed_triples_available for drift in check.snapshot_drifts
+    )
     assert check.recommended_resolution == (
         "Restage the proposal against the current graph state; at least one "
         "target graph count and at least one target graph content digest changed "
