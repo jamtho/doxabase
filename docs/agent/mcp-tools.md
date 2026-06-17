@@ -278,7 +278,9 @@ relationships accept `group_by_columns` and `aggregated_columns`; each aggregate
 mapping should include `target_column`, `source_columns`, optional
 `aggregation_function`, and optional `within_group_ordering`. Relationship
 endpoints, columns, functions, and properties are resource-valued fields, so use
-IRIs or CURIEs rather than prose.
+IRIs or CURIEs rather than prose. Dataset relationship descriptions expose
+`relationship_kind` as the RDF class IRI and `relationship_type` as the helper
+token such as `foreign_key` or `aggregation`.
 
 `doxabase.record_graph_revision`
 

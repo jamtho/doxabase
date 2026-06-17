@@ -265,7 +265,9 @@ identifiers, derivations, and aggregations; for aggregations, pass
 `source_columns`, optional `aggregation_function`, and optional
 `within_group_ordering`. Dataset descriptions expose all partition columns as
 `partition_columns`; the older singular `partition_column` field remains as a
-compatibility shortcut to the first returned column.
+compatibility shortcut to the first returned column. Relationship descriptions
+expose `relationship_kind` as the RDF class IRI and `relationship_type` as the
+helper-style token such as `foreign_key` or `aggregation`.
 
 `record_graph_revision()` writes metadata to `history` about changed graph
 roles, included review/export graph roles, rationale, supporting resources,

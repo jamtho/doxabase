@@ -782,6 +782,7 @@ class RelationshipDescription:
     types: list[str]
     relationship_kind: str | None
     relationship_kind_label: str | None
+    relationship_type: str | None
     source_dataset: ResourceSummary | None
     target_dataset: ResourceSummary | None
     foreign_key_from: ResourceSummary | None
@@ -14013,6 +14014,7 @@ class DoxaBase:
             types=types,
             relationship_kind=relationship_kind,
             relationship_kind_label=self._label_for_resource(relationship_kind),
+            relationship_type=self._relationship_type_token(relationship_kind),
             source_dataset=source_dataset_summary,
             target_dataset=target_dataset_summary,
             foreign_key_from=foreign_key_from_summary,
@@ -14094,6 +14096,14 @@ class DoxaBase:
                 within_group_ordering,
             ),
         )
+
+    def _relationship_type_token(self, relationship_kind: str | None) -> str | None:
+        return {
+            self.expand_iri("rc:ForeignKey"): "foreign_key",
+            self.expand_iri("rc:SharedIdentifier"): "shared_identifier",
+            self.expand_iri("rc:Derivation"): "derivation",
+            self.expand_iri("rc:Aggregation"): "aggregation",
+        }.get(relationship_kind)
 
     def _relationship_source_caveats(
         self,

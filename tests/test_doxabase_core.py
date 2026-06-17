@@ -3128,6 +3128,7 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
     relationship_description = description.relationships[0]
     assert relationship_description.relationship_kind == RC + "ForeignKey"
     assert relationship_description.relationship_kind_label == "ForeignKey"
+    assert relationship_description.relationship_type == "foreign_key"
     assert relationship_description.foreign_key_from is not None
     assert relationship_description.foreign_key_from.iri == parent_doc_id
     assert relationship_description.foreign_key_from.column_name == "parent_doc_id"
@@ -3180,6 +3181,7 @@ def test_record_map_helpers_write_describable_map_resources(tmp_path: Path) -> N
         for relationship in count_description.relationships
         if relationship.relationship_kind == RC + "Aggregation"
     )
+    assert count_relationship.relationship_type == "aggregation"
     assert count_relationship.source_dataset is not None
     assert count_relationship.source_dataset.iri == attachments
     assert [column.column_name for column in count_relationship.group_by_columns] == [
