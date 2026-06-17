@@ -60,7 +60,9 @@ nearby lore item. Prefer `suggested_next_actions` over parsing
 `nearby_caveat_links.scope` before treating a table-level caveat as specific to
 one column. When no current triples use the requested predicate on the subject,
 `predicate_hints` lists nearby predicates already present on that subject with
-sample values; use it to recover from plausible predicate-name guesses before
+sample values. Each hint keeps the full predicate IRI and may also include
+`predicate_curie`, such as `rc:partitionedBy`, for faster display and follow-up
+calls. Use these hints to recover from plausible predicate-name guesses before
 assuming the map lacks the concept.
 
 `doxabase.describe_graph_revision`

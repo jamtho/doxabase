@@ -384,7 +384,10 @@ lore item entered the payload. Scan summaries first when there are many rows;
 use raw routes when you need exact links. Use it when the question is "why is
 this map assertion here?" rather than "show me everything around this dataset."
 If an exact requested object is absent, the same-subject/predicate triples and
-`absence_note` show what the current map does say for that slot. For column
+`absence_note` show whether the requested predicate is present with a different
+value or absent on that subject in the selected graph. If the predicate is
+absent, inspect `predicate_hints`; each hint keeps the full predicate IRI and may
+also include a compact `predicate_curie` such as `rc:partitionedBy`. For column
 subjects, follow the owner-dataset suggested actions when table-level lore may
 matter, but check caveat-link `scope` before treating table caveats as
 column-specific. For layout, partition, or storage assertions, inspect

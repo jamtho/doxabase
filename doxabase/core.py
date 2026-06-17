@@ -986,6 +986,7 @@ class AssertionSupportRouteSummary:
 @dataclass(frozen=True)
 class AssertionPredicateHint:
     predicate: str
+    predicate_curie: str | None
     predicate_label: str | None
     predicate_description: str | None
     triple_count: int
@@ -9303,6 +9304,7 @@ class DoxaBase:
         return [
             AssertionPredicateHint(
                 predicate=predicate,
+                predicate_curie=self._compact_iri(predicate),
                 predicate_label=self._label_for_resource(predicate),
                 predicate_description=self._description_from_graphs(
                     lookup_graphs,
@@ -9406,15 +9408,16 @@ class DoxaBase:
                 for triple in same_subject_predicate_triples
             )
             return (
-                f"Exact requested assertion for {requested_label} is absent. "
+                f"Exact requested assertion for {requested_label} is absent, but "
+                "the requested predicate is present on this subject. "
                 "Current same-subject/predicate value(s): "
                 f"{current_values}. Do not infer a replacement without inspecting "
                 "these values and nearby lore."
             )
         hint_note = self._assertion_predicate_hint_note(predicate_hints)
         return (
-            f"Exact requested assertion for {requested_label} is absent, and no "
-            "current same-subject/predicate triples were found in the selected "
+            f"Exact requested assertion for {requested_label} is absent because "
+            "the requested predicate is absent on this subject in the selected "
             f"graph.{hint_note}"
         )
 
@@ -9425,7 +9428,10 @@ class DoxaBase:
         if not predicate_hints:
             return ""
         labels = [
-            hint.predicate_label or self._local_name(hint.predicate) or hint.predicate
+            hint.predicate_curie
+            or hint.predicate_label
+            or self._local_name(hint.predicate)
+            or hint.predicate
             for hint in predicate_hints[:3]
         ]
         return (
@@ -11405,6 +11411,18 @@ class DoxaBase:
         if namespace is None:
             return value
         return namespace + local
+
+    def _compact_iri(self, iri: str) -> str | None:
+        for prefix, namespace in sorted(
+            PREFIXES.items(),
+            key=lambda item: len(item[1]),
+            reverse=True,
+        ):
+            if iri.startswith(namespace):
+                local = iri[len(namespace) :]
+                if local and re.match(r"^[A-Za-z_][A-Za-z0-9._-]*$", local):
+                    return f"{prefix}:{local}"
+        return None
 
     def _ensure_schema(self) -> None:
         self._conn.executescript(

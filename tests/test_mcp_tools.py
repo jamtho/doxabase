@@ -954,11 +954,16 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
         object_kind="iri",
     )
     assert wrong_predicate["assertion_present"] is False
+    assert "the requested predicate is absent on this subject" in (
+        wrong_predicate["absence_note"]
+    )
     assert "Nearby predicates on the same subject include" in (
         wrong_predicate["absence_note"]
     )
+    assert "rc:partitionedBy" in wrong_predicate["absence_note"]
     assert any(
         hint["predicate"] == "https://richcanopy.org/ns/rc#partitionedBy"
+        and hint["predicate_curie"] == "rc:partitionedBy"
         and hint["sample_values"][0]["value"]
         == "https://richcanopy.org/example/manifest/ais#daily_date_partition"
         for hint in wrong_predicate["predicate_hints"]

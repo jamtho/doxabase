@@ -212,7 +212,10 @@ few useful gaps:
   `describe_query_context`. Use `operational_warnings` for those issues, and
   inspect `predicate_hints` on assertion-support misses when a guessed predicate
   such as `rc:hasPartitionScheme` is absent but a nearby shape like
-  `rc:partitionedBy` is present.
+  `rc:partitionedBy` is present. A follow-up regression confirmed this route
+  works and suggested adding `predicate_curie` plus sharper absence-note wording
+  so agents can see the likely predicate shape without mentally compacting full
+  IRIs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

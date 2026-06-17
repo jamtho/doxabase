@@ -2445,14 +2445,19 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     )
     assert wrong_predicate_support.assertion_present is False
     assert wrong_predicate_support.absence_note is not None
+    assert "the requested predicate is absent on this subject" in (
+        wrong_predicate_support.absence_note
+    )
     assert "Nearby predicates on the same subject include" in (
         wrong_predicate_support.absence_note
     )
+    assert "rc:partitionedBy" in wrong_predicate_support.absence_note
     partition_hint = next(
         hint
         for hint in wrong_predicate_support.predicate_hints
         if hint.predicate == RC + "partitionedBy"
     )
+    assert partition_hint.predicate_curie == "rc:partitionedBy"
     assert partition_hint.triple_count == 1
     assert partition_hint.sample_values[0].value == (
         "https://richcanopy.org/example/manifest/ais#daily_date_partition"

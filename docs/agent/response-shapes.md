@@ -143,16 +143,19 @@ nearby resources only contributed caveat context. For column subjects,
 `owner_dataset` gives the owning dataset summary when the map has one; use the
 owner-seeded suggested actions for broader dataset lore. The first suggested
 context slice action is owner-seeded when the assertion subject is a column.
-`absence_note` is present when an exact requested object is absent and summarizes
-the current same-slot values, if any. `nearby_context_triples` contains selected
-direct layout/path facts such as `rc:layoutVerificationStatus`,
+`absence_note` is present when an exact requested object is absent. It
+distinguishes wrong-object cases, where the requested predicate is present with
+different current values, from wrong-predicate cases, where the requested
+predicate is absent on the subject in the selected graph. `nearby_context_triples`
+contains selected direct layout/path facts such as `rc:layoutVerificationStatus`,
 `rc:layoutVerificationNote`, and `rc:pathTemplate`; these can matter when an
 assertion is present but not yet safe to use for executable planning.
 When no current triples use the requested predicate on the subject,
 `predicate_hints` lists nearby predicates already present on that subject,
-ranked by local-name similarity and including sample values. Use it to recover
-from predicate-shape guesses such as asking for `rc:hasPartitionScheme` when the
-map actually uses `rc:partitionedBy`.
+ranked by local-name similarity and including full predicate IRIs,
+`predicate_curie` display values when known, labels, descriptions, triple counts,
+and sample values. Use it to recover from predicate-shape guesses such as asking
+for `rc:hasPartitionScheme` when the map actually uses `rc:partitionedBy`.
 
 `nearby_caveats` is the unique list of caveats near the assertion.
 `nearby_caveat_links` explains why each caveat was included:
