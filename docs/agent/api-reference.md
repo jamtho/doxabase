@@ -236,6 +236,8 @@ counts should stay observation-only. For a profile such as "BUY/SELL appeared in
 this sample, but that is not an allowed-value domain", combine
 `record_column_profile(update_map_column=false)`,
 `record_claim_observation()`, and `record_pattern()`.
+If the column is not yet in the map, `describe_dataset()` returns that profile
+under `unmapped_column_profile_observations` rather than `columns[]`.
 
 `record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common

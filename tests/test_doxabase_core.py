@@ -4624,6 +4624,63 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
     assert validation.conforms, validation.report_text
 
 
+def test_describe_dataset_surfaces_unmapped_column_profile_observations(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    column = "https://example.test/project#OrdersStatus"
+    db.record_map_dataset(table, label="Orders", is_table=True)
+
+    result = db.record_column_profile(
+        column,
+        column_name="status",
+        table_iri=table,
+        summary="Sampled status values were profiled without updating the map.",
+        evidence_summary="Synthetic sampled top-N profile output.",
+        evidence_sources=["test://orders-status-topn"],
+        sample_size=50,
+        sample_scope="Fifty sampled Orders rows.",
+        sample_method="Top-N value-frequency query over a sample.",
+        null_count=0,
+        distinct_count=4,
+        value_frequencies=[
+            {"value": "fulfilled", "frequency": 38},
+            {"value": "pending", "frequency": 8},
+        ],
+        update_map_column=False,
+    )
+
+    description = db.describe_dataset(table)
+
+    assert description.columns == []
+    assert description.profile_observations == []
+    assert len(description.unmapped_column_profile_observations) == 1
+    profile = description.unmapped_column_profile_observations[0]
+    assert profile.iri == result.observation.observation_iri
+    assert profile.observed_asset is not None
+    assert profile.observed_asset.iri == table
+    assert profile.observed_column is not None
+    assert profile.observed_column.iri == column
+    assert profile.sample_scope == "Fifty sampled Orders rows."
+    assert [(item.value, item.frequency) for item in profile.value_frequencies] == [
+        ("fulfilled", 38),
+        ("pending", 8),
+    ]
+
+    db.record_map_column(column, column_name="status", table_iri=table)
+
+    description = db.describe_dataset(table)
+    assert [item.iri for item in description.columns] == [column]
+    assert description.unmapped_column_profile_observations == []
+    assert description.columns[0].profile_observations[0].iri == (
+        result.observation.observation_iri
+    )
+
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
 def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

@@ -816,6 +816,7 @@ class DatasetDescription:
     layout_verification_status: ResourceSummary | None
     layout_verification_note: str | None
     profile_observations: list[ProfileObservationSummary]
+    unmapped_column_profile_observations: list[ProfileObservationSummary]
     columns: list[ColumnDescription]
     path_templates: list[str]
     physical_layouts: list[PhysicalLayoutDescription]
@@ -3669,6 +3670,12 @@ class DoxaBase:
                 target_predicate="rc:observedAsset",
                 exclude_observed_column=True,
             ),
+            unmapped_column_profile_observations=(
+                self._unmapped_column_profile_observations_for_dataset(
+                    dataset_iri,
+                    mapped_column_iris=column_iris,
+                )
+            ),
             columns=columns,
             path_templates=path_templates,
             physical_layouts=physical_layouts,
@@ -3946,7 +3953,7 @@ class DoxaBase:
         target_iri: str,
         target_predicate: str,
         exclude_observed_column: bool = False,
-        limit: int = 5,
+        limit: int | None = 5,
     ) -> list[ProfileObservationSummary]:
         observation_graphs = ["observations"]
         lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
@@ -3982,7 +3989,27 @@ class DoxaBase:
             ),
             reverse=True,
         )
-        return summaries[:limit]
+        return summaries if limit is None else summaries[:limit]
+
+    def _unmapped_column_profile_observations_for_dataset(
+        self,
+        dataset_iri: str,
+        *,
+        mapped_column_iris: Iterable[str],
+        limit: int = 5,
+    ) -> list[ProfileObservationSummary]:
+        mapped_columns = set(mapped_column_iris)
+        profile_observations = self._profile_observations_for_target(
+            target_iri=dataset_iri,
+            target_predicate="rc:observedAsset",
+            limit=None,
+        )
+        return [
+            profile
+            for profile in profile_observations
+            if profile.observed_column is not None
+            and profile.observed_column.iri not in mapped_columns
+        ][:limit]
 
     def _profile_observation_summary(
         self,

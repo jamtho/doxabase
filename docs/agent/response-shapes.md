@@ -379,6 +379,7 @@ dataset.row_count_snapshot
 dataset.layout_verification_status
 dataset.layout_verification_note
 dataset.profile_observations
+dataset.unmapped_column_profile_observations
 dataset.columns
 dataset.path_templates
 dataset.physical_layouts
@@ -471,6 +472,12 @@ profile.evidence
 slice the profile covered. `profile.sample_method` describes how the profile was
 produced. Both fields are short strings; use the linked evidence for source
 identity and detailed provenance.
+
+`dataset.unmapped_column_profile_observations` contains recent column profile
+observations whose `observed_asset` is the dataset but whose `observed_column`
+is not one of the dataset's current map columns. Use it when a sampled or
+scratch column profile was recorded with `update_map_column=false`. These
+profiles are observation lore, not map column assertions.
 
 `profile.evidence` items use the richer evidence description shape:
 

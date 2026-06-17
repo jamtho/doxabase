@@ -1268,6 +1268,50 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
+def test_describe_dataset_tool_returns_unmapped_column_profiles(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    column = "https://example.test/project#OrdersStatus"
+    record_map_dataset_tool(db, table, label="Orders", is_table=True)
+
+    result = record_column_profile_tool(
+        db,
+        column_iri=column,
+        column_name="status",
+        table_iri=table,
+        summary="MCP helper recorded an unmapped sampled column profile.",
+        evidence_summary="Synthetic sampled profile evidence.",
+        evidence_sources=["tests/test_mcp_tools.py"],
+        sample_size=25,
+        sample_scope="Twenty-five sampled Orders rows.",
+        sample_method="Top-N sampled value-frequency query.",
+        null_count=0,
+        distinct_count=3,
+        value_frequencies=[
+            {"value": "fulfilled", "frequency": 18},
+            {"value": "pending", "frequency": 4},
+        ],
+        update_map_column=False,
+    )
+
+    dataset = describe_dataset_tool(db, table)
+
+    assert dataset["columns"] == []
+    assert dataset["profile_observations"] == []
+    profiles = dataset["unmapped_column_profile_observations"]
+    assert len(profiles) == 1
+    assert profiles[0]["iri"] == result["observation"]["observation_iri"]
+    assert profiles[0]["observed_column"]["iri"] == column
+    assert profiles[0]["sample_method"] == "Top-N sampled value-frequency query."
+    assert [
+        (item["value"], item["frequency"])
+        for item in profiles[0]["value_frequencies"]
+    ] == [("fulfilled", 18), ("pending", 4)]
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
 def test_record_claim_observation_tool_and_resource_context(
     tmp_path: Path,
 ) -> None:

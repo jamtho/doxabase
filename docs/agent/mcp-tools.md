@@ -204,6 +204,9 @@ values, or durable map semantics by themselves.
 values are only sample evidence. For value-frequency guardrails, record the
 profile, then add a `record_claim_observation` and synthesize both with
 `record_pattern`.
+If `update_map_column=false` and the observed column is not yet in the map,
+`describe_dataset` surfaces the profile under
+`unmapped_column_profile_observations`.
 
 `doxabase.record_claim_observation`
 

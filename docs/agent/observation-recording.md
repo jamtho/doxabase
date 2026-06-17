@@ -65,6 +65,9 @@ is supplied. `record_column_profile` defaults `update_map_column=true` and can
 write map column metadata when map fields are supplied. Set these booleans to
 `false` when the profile result is a scratch sample, a tentative measurement, or
 otherwise not ready to become current-best map context.
+When a column profile uses `update_map_column=false` and the column is not yet a
+map column, `describe_dataset` surfaces it under
+`unmapped_column_profile_observations` rather than `columns[]`.
 
 When observed values should not become durable semantics, keep the profile
 observation-led and record the interpretation separately:
