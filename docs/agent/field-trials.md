@@ -292,6 +292,13 @@ few useful gaps:
   intended when caveats still make aggregation analytically risky. The first
   two API follow-ups were public `to_dict` / `to_jsonable` helpers and
   query-context `analysis_warnings` plus `readiness_note`.
+- A follow-up query-readiness trial confirmed that fresh agents can use the
+  public serializers and read the readiness/caveat split. It also showed that
+  missing layout verification status should not be silent: query context now
+  returns info-level `verification_status_not_recorded` issues for usable
+  path/layout metadata without explicit verification status, the executable
+  catalog doc includes a direct Python serialization example, and analysis
+  warning messages avoid doubled punctuation before impact text.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

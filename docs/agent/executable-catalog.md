@@ -68,36 +68,47 @@ agent runtime decides how profile X resolves.
 
 1. Call `doxabase.describe_dataset` for the target dataset.
 2. Call `doxabase.describe_query_context` when you want a compact physical
-   planning projection with readiness and an `issues` list for missing or risky
-   metadata.
+   planning projection with readiness and an `issues` list for missing, risky,
+   or informational physical metadata.
 3. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
    `storage_accesses` together.
 4. Check `layout_verification_status` and `layout_verification_note` on the
-   dataset and on relevant layout, partition, and storage resources.
+   dataset and on relevant layout, partition, and storage resources. When a
+   status is not recorded for otherwise usable path/layout metadata,
+   `describe_query_context().issues` reports an informational
+   `verification_status_not_recorded` issue.
 5. Combine storage root or bucket/prefix facts with the dataset path template
    only when the verification status and notes make that reasonable.
-6. Check caveats before generating a query.
+6. Check `analysis_warnings` and caveats before trusting aggregations or
+   interpretations.
 7. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
-Tiny scratch example:
+Tiny direct Python scratch example:
 
 ```python
+import json
 from pathlib import Path
 
-from doxabase import DoxaBase
-from doxabase.mcp_tools import describe_query_context_tool, load_example_fixtures_tool
+from doxabase import DoxaBase, to_dict
 
 db = DoxaBase.create(Path("/tmp/doxabase-query-context.sqlite"), overwrite=True)
-load_example_fixtures_tool(db)
+db.import_trig("examples/manifest-prototype-rc/ais.trig")
 
-context = describe_query_context_tool(
-    db,
+context = db.describe_query_context(
     "https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
 )
-print(context["readiness"])
-print(context["path_templates"])
-print([issue["code"] for issue in context["issues"]])
+payload = to_dict(context)
+print(
+    json.dumps(
+        {
+            "readiness": payload["readiness"],
+            "issues": payload["issues"],
+            "analysis_warnings": payload["analysis_warnings"],
+        },
+        indent=2,
+    )
+)
 ```
 
 ## Current Limits

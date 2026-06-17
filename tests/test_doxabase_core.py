@@ -2950,8 +2950,16 @@ def test_describe_query_context_separates_analysis_caveats(
 
     assert context.readiness == "ready_for_query_planning"
     assert "Enough non-secret physical metadata" in context.readiness_note
+    assert "Informational physical metadata notes" in context.readiness_note
     assert "Analysis warnings are separate caveats" in context.readiness_note
-    assert context.issues == []
+    assert all(issue.severity == "info" for issue in context.issues)
+    assert any(
+        issue.code == "verification_status_not_recorded"
+        and issue.resource is not None
+        and issue.resource.iri
+        == "https://richcanopy.org/example/manifest/polymarket#PriceSnapshots"
+        for issue in context.issues
+    )
     mixed_price_caveat = (
         "https://richcanopy.org/example/manifest/polymarket#"
         "caveat_mixed_type_price"
@@ -2962,6 +2970,7 @@ def test_describe_query_context_separates_analysis_caveats(
         and warning.resource is not None
         and warning.resource.iri == mixed_price_caveat
         and "Price analysis must filter" in warning.message
+        and ".. Impact:" not in warning.message
         for warning in context.analysis_warnings
     )
 

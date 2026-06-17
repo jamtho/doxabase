@@ -3790,6 +3790,7 @@ class DoxaBase:
             readiness=readiness,
             readiness_note=self._query_readiness_note(
                 readiness,
+                issues=issues,
                 analysis_warnings=analysis_warnings,
             ),
             issues=issues,
@@ -3887,6 +3888,7 @@ class DoxaBase:
                 note=access.layout_verification_note,
                 resource=access_resource,
                 context="storage access",
+                include_missing_status=has_location,
             )
         if not dataset.physical_layouts:
             add_issue(
@@ -3910,6 +3912,7 @@ class DoxaBase:
                 note=layout.layout_verification_note,
                 resource=layout_resource,
                 context="physical layout",
+                include_missing_status=layout.file_format is not None,
             )
         self._add_layout_status_issue(
             issues,
@@ -3917,6 +3920,7 @@ class DoxaBase:
             note=dataset.layout_verification_note,
             resource=dataset_resource,
             context="dataset layout",
+            include_missing_status=bool(dataset.path_templates),
         )
         for partition in dataset.partition_schemes:
             self._add_layout_status_issue(
@@ -3925,6 +3929,7 @@ class DoxaBase:
                 note=partition.layout_verification_note,
                 resource=self._summary_from_description(partition),
                 context="partition scheme",
+                include_missing_status=partition.path_template is not None,
             )
 
         severity_rank = {"error": 0, "warning": 1, "info": 2}
@@ -3966,7 +3971,10 @@ class DoxaBase:
                 seen.add(key)
                 summary = self._summary_from_description(caveat)
                 severity = self._analysis_caveat_severity(caveat.severity)
-                label = caveat.label or caveat.description or caveat.iri
+                label = (
+                    caveat.label or caveat.description or caveat.iri
+                ).strip()
+                label = label.rstrip(".?!")
                 message = (
                     f"{scope.capitalize()} caveat may affect query interpretation: "
                     f"{label}."
@@ -4008,6 +4016,7 @@ class DoxaBase:
         self,
         readiness: str,
         *,
+        issues: list[QueryPlanningIssue],
         analysis_warnings: list[QueryPlanningIssue],
     ) -> str:
         notes = {
@@ -4028,6 +4037,11 @@ class DoxaBase:
             ),
         }
         note = notes.get(readiness, "Query planning readiness is unknown.")
+        if any(issue.severity == "info" for issue in issues):
+            note = (
+                f"{note} Informational physical metadata notes are present but "
+                "do not block planning."
+            )
         if analysis_warnings:
             note = (
                 f"{note} Analysis warnings are separate caveats to review before "
@@ -4043,8 +4057,25 @@ class DoxaBase:
         note: str | None,
         resource: ResourceSummary,
         context: str,
+        include_missing_status: bool = False,
     ) -> None:
         if status is None:
+            if include_missing_status:
+                message = (
+                    f"No layout verification status is recorded for {context}; "
+                    "treat the path/layout metadata as needing confirmation "
+                    "before executable use."
+                )
+                if note:
+                    message = f"{message} Note: {note}"
+                issues.append(
+                    QueryPlanningIssue(
+                        code="verification_status_not_recorded",
+                        severity="info",
+                        message=message,
+                        resource=resource,
+                    )
+                )
             return
         verified_statuses = {
             self.expand_iri("rc:VerifiedByListingLayout"),

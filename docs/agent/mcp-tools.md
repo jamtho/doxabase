@@ -118,8 +118,11 @@ status/notes when the uncertainty belongs to one part of the physical metadata.
 The `operational_warnings` field mirrors the physical-metadata
 `QueryPlanningIssue` objects returned as `describe_query_context.issues`; scan
 it when a full dataset handoff should still surface query-planning hazards such
-as unverified layouts. Query-context `analysis_warnings` are separate caveat
-warnings for analytical interpretation after a query can be planned.
+as unverified layouts. Info-level issues such as
+`verification_status_not_recorded` make missing verification status visible
+without changing query-planning readiness. Query-context `analysis_warnings`
+are separate caveat warnings for analytical interpretation after a query can be
+planned.
 Within each linked-pattern reason, `iri` and `pattern_iri` both name the linked
 pattern. Scan `match_groups` first for relevance tiers, route labels, resource
 kinds, and supporting resources; use raw `matches` when every route matters.
@@ -134,12 +137,12 @@ pattern as a decision rule.
 
 Returns a compact read-only projection for query planning around one dataset:
 dataset summary, physical-metadata readiness, `readiness_note`, an `issues`
-list for missing or risky physical metadata, `analysis_warnings` for caveats
-that matter after a query can be planned, planning notes, columns, path
-templates, physical layouts, storage access descriptions, partition schemes,
-and caveats. Use it before drafting DuckDB/S3/local-file queries when you need
-the physical metadata and warnings without the full relationship/pattern
-handoff in `describe_dataset`.
+list for missing, risky, or informational physical metadata, `analysis_warnings`
+for caveats that matter after a query can be planned, planning notes, columns,
+path templates, physical layouts, storage access descriptions, partition
+schemes, and caveats. Use it before drafting DuckDB/S3/local-file queries when
+you need the physical metadata and warnings without the full
+relationship/pattern handoff in `describe_dataset`.
 
 `doxabase.describe_context_slice`
 

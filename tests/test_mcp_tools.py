@@ -972,6 +972,11 @@ def test_describe_query_context_tool_returns_planning_projection(
         and issue["severity"] == "warning"
         for issue in result["issues"]
     )
+    assert any(
+        issue["code"] == "verification_status_not_recorded"
+        and issue["severity"] == "info"
+        for issue in result["issues"]
+    )
     assert "non-secret planning metadata" in result["planning_notes"][0]
 
 

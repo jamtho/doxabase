@@ -681,11 +681,13 @@ query.upstream_caveats
 query-planning metadata, not analytical safety. `readiness_note` says that
 explicitly and points to analysis caveats when present.
 
-Missing or risky physical metadata warnings and errors are returned in
+Missing, risky, or informational physical metadata notes are returned in
 `query.issues`; there is no `query.missing_or_risky_metadata` field. An issue
 with `severity="error"` can mean "not enough physical metadata to plan a
 query"; it does not necessarily mean profile observations, map lore, or
-validation are broken.
+validation are broken. An issue with `severity="info"` does not change
+`readiness`; for example, `verification_status_not_recorded` means path/layout
+metadata exists but no explicit verification status has been recorded.
 
 `query.analysis_warnings` returns caveat-shaped interpretation warnings that
 matter after a query can be planned, such as deduplication, mixed payload
