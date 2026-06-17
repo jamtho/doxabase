@@ -5,6 +5,7 @@ import sqlite3
 import warnings
 from collections.abc import Mapping as MappingABC
 from dataclasses import dataclass, replace
+from difflib import SequenceMatcher
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable, Literal as TypingLiteral, Mapping
@@ -765,6 +766,7 @@ class DatasetDescription:
     partition_schemes: list[PartitionDescription]
     caveats: list[CaveatDescription]
     upstream_caveats: list[CaveatDescription]
+    operational_warnings: list[QueryPlanningIssue]
     provenance: list[ResourceSummary]
     transformations: list[TransformationDescription]
     related_datasets: list[RelatedDatasetDescription]
@@ -982,6 +984,15 @@ class AssertionSupportRouteSummary:
 
 
 @dataclass(frozen=True)
+class AssertionPredicateHint:
+    predicate: str
+    predicate_label: str | None
+    predicate_description: str | None
+    triple_count: int
+    sample_values: list[AssertionValue]
+
+
+@dataclass(frozen=True)
 class SuggestedNextAction:
     tool_name: str
     mcp_tool_name: str
@@ -1012,6 +1023,7 @@ class AssertionSupportDescription:
     related_revisions: list[ResourceSummary]
     related_routes: list[AssertionSupportRoute]
     related_route_summaries: list[AssertionSupportRouteSummary]
+    predicate_hints: list[AssertionPredicateHint]
     context_note: str
     support_scope_note: str
     absence_note: str | None
@@ -1503,6 +1515,17 @@ class DoxaBase:
             lookup_graphs,
             limit=limit,
         )
+        predicate_hints = (
+            self._assertion_predicate_hints(
+                subject_iri,
+                predicate_iri,
+                graphs,
+                lookup_graphs,
+                limit=min(limit, 8),
+            )
+            if not same_subject_predicate_triples
+            else []
+        )
         context_note = (
             "Assertion support is a retrieval aid, not proof. It gathers nearby "
             "observations, claims, patterns, evidence, revisions, and caveats linked "
@@ -1531,6 +1554,7 @@ class DoxaBase:
             matching_triples,
             same_subject_predicate_triples,
             requested_object,
+            predicate_hints,
         )
         has_related_lore = any(related.values())
         if not has_related_lore and (nearby_caveats or nearby_context_triples):
@@ -1577,6 +1601,7 @@ class DoxaBase:
             related_revisions=related["revisions"],
             related_routes=related_routes,
             related_route_summaries=related_route_summaries,
+            predicate_hints=predicate_hints,
             context_note=context_note,
             support_scope_note=support_scope_note,
             absence_note=absence_note,
@@ -3470,7 +3495,7 @@ class DoxaBase:
             for caveat_iri in caveat_iris
         ]
 
-        return DatasetDescription(
+        description = DatasetDescription(
             iri=dataset_iri,
             graph=graph,
             label=self._label_from_graphs(lookup_graphs, dataset_iri),
@@ -3525,6 +3550,7 @@ class DoxaBase:
                 caveat_iris,
                 relationships,
             ),
+            operational_warnings=[],
             provenance=[
                 self._resource_summary(
                     lookup_graphs,
@@ -3550,6 +3576,10 @@ class DoxaBase:
             ),
             linked_pattern_reasons=linked_pattern_reasons,
         )
+        return replace(
+            description,
+            operational_warnings=self._query_planning_issues(description),
+        )
 
     def describe_query_context(
         self,
@@ -3562,7 +3592,7 @@ class DoxaBase:
             label=dataset.label or self._local_name(dataset.iri),
             description=dataset.description,
         )
-        issues = self._query_planning_issues(dataset)
+        issues = dataset.operational_warnings
         return QueryPlanningContext(
             dataset=dataset_summary,
             readiness=self._query_planning_readiness(issues),
@@ -9231,11 +9261,141 @@ class DoxaBase:
         ).fetchall()
         return [self._resource_triple_from_row(row) for row in rows]
 
+    def _assertion_predicate_hints(
+        self,
+        subject_iri: str,
+        predicate_iri: str,
+        graphs: list[str],
+        lookup_graphs: list[str],
+        *,
+        limit: int,
+    ) -> list[AssertionPredicateHint]:
+        if limit < 1:
+            return []
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        rows = self._conn.execute(
+            f"""
+            SELECT q.predicate, COUNT(*) AS triple_count
+            FROM quads q
+            WHERE q.subject = ?
+              AND q.predicate != ?
+              {graph_filter}
+            GROUP BY q.predicate
+            """,
+            [subject_iri, predicate_iri, *graph_params],
+        ).fetchall()
+        skipped = {str(RDF.type), str(RDFS.label), str(RDFS.comment)}
+        scored: list[tuple[float, str, int]] = []
+        for row in rows:
+            predicate = row["predicate"]
+            if predicate in skipped:
+                continue
+            score = self._predicate_hint_score(predicate_iri, predicate)
+            scored.append((score, predicate, int(row["triple_count"])))
+        scored.sort(
+            key=lambda item: (
+                -item[0],
+                self._label_for_resource(item[1])
+                or self._local_name(item[1])
+                or item[1],
+            )
+        )
+        return [
+            AssertionPredicateHint(
+                predicate=predicate,
+                predicate_label=self._label_for_resource(predicate),
+                predicate_description=self._description_from_graphs(
+                    lookup_graphs,
+                    predicate,
+                ),
+                triple_count=triple_count,
+                sample_values=self._assertion_predicate_hint_sample_values(
+                    subject_iri,
+                    predicate,
+                    graphs,
+                    lookup_graphs,
+                ),
+            )
+            for _, predicate, triple_count in scored[:limit]
+        ]
+
+    def _assertion_predicate_hint_sample_values(
+        self,
+        subject_iri: str,
+        predicate_iri: str,
+        graphs: list[str],
+        lookup_graphs: list[str],
+        *,
+        limit: int = 3,
+    ) -> list[AssertionValue]:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        rows = self._conn.execute(
+            f"""
+            SELECT q.object, q.object_kind, q.datatype, q.lang
+            FROM quads q
+            WHERE q.subject = ?
+              AND q.predicate = ?
+              {graph_filter}
+            ORDER BY q.object
+            LIMIT ?
+            """,
+            [subject_iri, predicate_iri, *graph_params, limit],
+        ).fetchall()
+        return [
+            self._assertion_value_from_filter(
+                lookup_graphs,
+                (
+                    row["object"],
+                    row["object_kind"],
+                    row["datatype"],
+                    row["lang"],
+                ),
+            )
+            for row in rows
+        ]
+
+    def _predicate_hint_score(
+        self,
+        requested_predicate_iri: str,
+        candidate_predicate_iri: str,
+    ) -> float:
+        requested = (
+            self._local_name(requested_predicate_iri) or requested_predicate_iri
+        ).lower()
+        candidate = (
+            self._local_name(candidate_predicate_iri) or candidate_predicate_iri
+        ).lower()
+        score = SequenceMatcher(None, requested, candidate).ratio()
+        requested_tokens = self._predicate_hint_tokens(requested)
+        candidate_tokens = self._predicate_hint_tokens(candidate)
+        for requested_token in requested_tokens:
+            for candidate_token in candidate_tokens:
+                if requested_token == candidate_token:
+                    score += 0.35
+                elif (
+                    len(requested_token) >= 5
+                    and requested_token in candidate_token
+                ) or (
+                    len(candidate_token) >= 5
+                    and candidate_token in requested_token
+                ):
+                    score += 0.25
+        return score
+
+    def _predicate_hint_tokens(self, local_name: str) -> set[str]:
+        spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", local_name)
+        return {
+            token.lower()
+            for token in re.findall(r"[A-Za-z0-9]+", spaced)
+            if token.lower() not in {"a", "an", "by", "has", "is", "of", "the"}
+        }
+
     def _assertion_absence_note(
         self,
         matching_triples: list[ResourceTriple],
         same_subject_predicate_triples: list[ResourceTriple],
         requested_object: AssertionValue | None,
+        predicate_hints: list[AssertionPredicateHint],
     ) -> str | None:
         if requested_object is None or matching_triples:
             return None
@@ -9251,10 +9411,27 @@ class DoxaBase:
                 f"{current_values}. Do not infer a replacement without inspecting "
                 "these values and nearby lore."
             )
+        hint_note = self._assertion_predicate_hint_note(predicate_hints)
         return (
             f"Exact requested assertion for {requested_label} is absent, and no "
             "current same-subject/predicate triples were found in the selected "
-            "graph."
+            f"graph.{hint_note}"
+        )
+
+    def _assertion_predicate_hint_note(
+        self,
+        predicate_hints: list[AssertionPredicateHint],
+    ) -> str:
+        if not predicate_hints:
+            return ""
+        labels = [
+            hint.predicate_label or self._local_name(hint.predicate) or hint.predicate
+            for hint in predicate_hints[:3]
+        ]
+        return (
+            " Nearby predicates on the same subject include: "
+            + ", ".join(labels)
+            + "."
         )
 
     def _suggested_call_string(

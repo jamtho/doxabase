@@ -2409,6 +2409,13 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     assert "index/{year}/ais-{date}.parquet" in (
         index_description.layout_verification_note
     )
+    assert any(
+        warning.code == "layout_needs_verification"
+        and warning.resource is not None
+        and warning.resource.iri
+        == "https://richcanopy.org/example/manifest/ais#DailyIndex"
+        for warning in index_description.operational_warnings
+    )
     assert index_description.caveats == []
     assert any(
         caveat.description
@@ -2428,6 +2435,27 @@ def test_describe_dataset_returns_bounded_table_context(tmp_path: Path) -> None:
     assert any(
         caveat.impact and "Grouping by MMSI may conflate" in caveat.impact
         for caveat in broadcast_reason.source_caveats
+    )
+
+    wrong_predicate_support = db.describe_assertion_support(
+        "https://richcanopy.org/example/manifest/ais#DailyIndex",
+        "rc:hasPartitionScheme",
+        "https://richcanopy.org/example/manifest/ais#daily_date_partition",
+        object_kind="iri",
+    )
+    assert wrong_predicate_support.assertion_present is False
+    assert wrong_predicate_support.absence_note is not None
+    assert "Nearby predicates on the same subject include" in (
+        wrong_predicate_support.absence_note
+    )
+    partition_hint = next(
+        hint
+        for hint in wrong_predicate_support.predicate_hints
+        if hint.predicate == RC + "partitionedBy"
+    )
+    assert partition_hint.triple_count == 1
+    assert partition_hint.sample_values[0].value == (
+        "https://richcanopy.org/example/manifest/ais#daily_date_partition"
     )
 
 

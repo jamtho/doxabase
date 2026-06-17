@@ -120,6 +120,7 @@ support.related_evidence
 support.related_revisions
 support.related_routes
 support.related_route_summaries
+support.predicate_hints
 support.context_note
 support.support_scope_note
 support.absence_note
@@ -147,6 +148,11 @@ the current same-slot values, if any. `nearby_context_triples` contains selected
 direct layout/path facts such as `rc:layoutVerificationStatus`,
 `rc:layoutVerificationNote`, and `rc:pathTemplate`; these can matter when an
 assertion is present but not yet safe to use for executable planning.
+When no current triples use the requested predicate on the subject,
+`predicate_hints` lists nearby predicates already present on that subject,
+ranked by local-name similarity and including sample values. Use it to recover
+from predicate-shape guesses such as asking for `rc:hasPartitionScheme` when the
+map actually uses `rc:partitionedBy`.
 
 `nearby_caveats` is the unique list of caveats near the assertion.
 `nearby_caveat_links` explains why each caveat was included:
@@ -371,6 +377,7 @@ dataset.storage_accesses
 dataset.partition_schemes
 dataset.caveats
 dataset.upstream_caveats
+dataset.operational_warnings
 dataset.relationships
 dataset.linked_patterns
 dataset.linked_pattern_reasons

@@ -207,6 +207,12 @@ few useful gaps:
   that physical-type reviews need explicit `rc:valueType` /
   `rc:requiredPhysicalType` context and weak labels for routes that only match
   generic shared values such as `rc:Varchar`.
+- A deeper AIS takeover trial showed that `describe_dataset` needs to surface
+  query-planning hazards even when callers do not switch to
+  `describe_query_context`. Use `operational_warnings` for those issues, and
+  inspect `predicate_hints` on assertion-support misses when a guessed predicate
+  such as `rc:hasPartitionScheme` is absent but a nearby shape like
+  `rc:partitionedBy` is present.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -924,6 +924,12 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
     assert result["partition_schemes"][0]["layout_verification_status"]["iri"] == (
         "https://richcanopy.org/ns/rc#GeneratedFromManifestLayout"
     )
+    assert any(
+        warning["code"] == "layout_needs_verification"
+        and warning["resource"]["iri"]
+        == "https://richcanopy.org/example/manifest/ais#DailyIndex"
+        for warning in result["operational_warnings"]
+    )
     assert result["caveats"] == []
     assert any(
         caveat["description"]
@@ -938,6 +944,24 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
     assert message_count_mapping["source_columns"][0]["column_name"] == "mmsi"
     assert message_count_mapping["aggregation_function"]["iri"] == (
         "https://richcanopy.org/ns/rc#Count"
+    )
+
+    wrong_predicate = describe_assertion_support_tool(
+        db,
+        subject="https://richcanopy.org/example/manifest/ais#DailyIndex",
+        predicate="rc:hasPartitionScheme",
+        object="https://richcanopy.org/example/manifest/ais#daily_date_partition",
+        object_kind="iri",
+    )
+    assert wrong_predicate["assertion_present"] is False
+    assert "Nearby predicates on the same subject include" in (
+        wrong_predicate["absence_note"]
+    )
+    assert any(
+        hint["predicate"] == "https://richcanopy.org/ns/rc#partitionedBy"
+        and hint["sample_values"][0]["value"]
+        == "https://richcanopy.org/example/manifest/ais#daily_date_partition"
+        for hint in wrong_predicate["predicate_hints"]
     )
     assert any(
         caveat["description"]

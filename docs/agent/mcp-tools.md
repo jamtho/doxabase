@@ -58,7 +58,10 @@ nearby lore item. Prefer `suggested_next_actions` over parsing
 `suggested_next_calls`; each action has `tool_name`, `mcp_tool_name`,
 `arguments`, `reason`, and `call`. Use `mcp_tool_name` for MCP dispatch. Check
 `nearby_caveat_links.scope` before treating a table-level caveat as specific to
-one column.
+one column. When no current triples use the requested predicate on the subject,
+`predicate_hints` lists nearby predicates already present on that subject with
+sample values; use it to recover from plausible predicate-name guesses before
+assuming the map lacks the concept.
 
 `doxabase.describe_graph_revision`
 
@@ -103,6 +106,9 @@ Check `layout_verification_status` and `layout_verification_note` before using
 `path_templates` for executable query planning. Child `physical_layouts`,
 `storage_accesses`, and `partition_schemes` may carry their own verification
 status/notes when the uncertainty belongs to one part of the physical metadata.
+The `operational_warnings` field mirrors the missing/risky metadata issues used
+by `describe_query_context`; scan it when a full dataset handoff should still
+surface query-planning hazards such as unverified layouts.
 Within each linked-pattern reason, `iri` and `pattern_iri` both name the linked
 pattern. Scan `match_groups` first for relevance tiers, route labels, resource
 kinds, and supporting resources; use raw `matches` when every route matters.
