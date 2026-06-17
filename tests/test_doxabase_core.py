@@ -2938,6 +2938,34 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert [issue.severity for issue in context.issues[:2]] == ["error", "error"]
 
 
+def test_describe_query_context_separates_analysis_caveats(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(POLYMARKET_FIXTURE)
+
+    context = db.describe_query_context(
+        "https://richcanopy.org/example/manifest/polymarket#PriceSnapshots"
+    )
+
+    assert context.readiness == "ready_for_query_planning"
+    assert "Enough non-secret physical metadata" in context.readiness_note
+    assert "Analysis warnings are separate caveats" in context.readiness_note
+    assert context.issues == []
+    mixed_price_caveat = (
+        "https://richcanopy.org/example/manifest/polymarket#"
+        "caveat_mixed_type_price"
+    )
+    assert any(
+        warning.code == "direct_analysis_caveat"
+        and warning.severity == "warning"
+        and warning.resource is not None
+        and warning.resource.iri == mixed_price_caveat
+        and "Price analysis must filter" in warning.message
+        for warning in context.analysis_warnings
+    )
+
+
 def test_describe_dataset_reports_missing_dataset(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

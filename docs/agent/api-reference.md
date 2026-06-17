@@ -182,11 +182,14 @@ groups when scanning; use claim/observation-supported groups for context; call
 every route.
 
 `describe_query_context()` returns a compact read-only query-planning projection
-for one dataset. It includes the dataset summary, readiness, an `issues` list
-for missing or risky metadata, planning notes, columns, path templates, physical
-layouts, storage access descriptions, partition schemes, and direct/upstream
-caveats. It does not generate SQL or resolve credentials; use it to decide
-whether the graph has enough non-secret physical context for a query attempt.
+for one dataset. It includes the dataset summary, physical-metadata readiness,
+a `readiness_note`, an `issues` list for missing or risky physical metadata,
+`analysis_warnings` for caveats that matter after a query can be planned,
+planning notes, columns, path templates, physical layouts, storage access
+descriptions, partition schemes, and direct/upstream caveats. It does not
+generate SQL or resolve credentials; use it to decide whether the graph has
+enough non-secret physical context for a query attempt, then review caveats
+before trusting aggregations or interpretations.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

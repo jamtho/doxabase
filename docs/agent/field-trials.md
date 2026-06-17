@@ -289,7 +289,9 @@ few useful gaps:
   friction: direct Python scripts needed an obvious serializer for response
   dataclasses, broad lexical searches can miss useful lore when terms are split
   across literals, and `ready_for_query_planning` can sound stronger than
-  intended when caveats still make aggregation analytically risky.
+  intended when caveats still make aggregation analytically risky. The first
+  two API follow-ups were public `to_dict` / `to_jsonable` helpers and
+  query-context `analysis_warnings` plus `readiness_note`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

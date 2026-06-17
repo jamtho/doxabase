@@ -670,7 +670,9 @@ class QueryPlanningIssue:
 class QueryPlanningContext:
     dataset: ResourceSummary
     readiness: str
+    readiness_note: str
     issues: list[QueryPlanningIssue]
+    analysis_warnings: list[QueryPlanningIssue]
     planning_notes: list[str]
     row_count_snapshot: int | None
     columns: list[ColumnDescription]
@@ -3781,10 +3783,17 @@ class DoxaBase:
             description=dataset.description,
         )
         issues = dataset.operational_warnings
+        analysis_warnings = self._query_analysis_warnings(dataset)
+        readiness = self._query_planning_readiness(issues)
         return QueryPlanningContext(
             dataset=dataset_summary,
-            readiness=self._query_planning_readiness(issues),
+            readiness=readiness,
+            readiness_note=self._query_readiness_note(
+                readiness,
+                analysis_warnings=analysis_warnings,
+            ),
             issues=issues,
+            analysis_warnings=analysis_warnings,
             planning_notes=[
                 (
                     "DoxaBase records non-secret planning metadata only; local "
@@ -3939,6 +3948,92 @@ class DoxaBase:
         if any(issue.severity == "warning" for issue in issues):
             return "needs_review"
         return "ready_for_query_planning"
+
+    def _query_analysis_warnings(
+        self,
+        dataset: DatasetDescription,
+    ) -> list[QueryPlanningIssue]:
+        warnings: list[QueryPlanningIssue] = []
+        seen: set[tuple[str, str]] = set()
+        for scope, caveats in (
+            ("direct", dataset.caveats),
+            ("upstream", dataset.upstream_caveats),
+        ):
+            for caveat in caveats:
+                key = (scope, caveat.iri)
+                if key in seen:
+                    continue
+                seen.add(key)
+                summary = self._summary_from_description(caveat)
+                severity = self._analysis_caveat_severity(caveat.severity)
+                label = caveat.label or caveat.description or caveat.iri
+                message = (
+                    f"{scope.capitalize()} caveat may affect query interpretation: "
+                    f"{label}."
+                )
+                if caveat.impact:
+                    message = f"{message} Impact: {caveat.impact}"
+                warnings.append(
+                    QueryPlanningIssue(
+                        code=f"{scope}_analysis_caveat",
+                        severity=severity,
+                        message=message,
+                        resource=summary,
+                    )
+                )
+        severity_rank = {"warning": 0, "info": 1}
+        return sorted(
+            warnings,
+            key=lambda warning: (
+                severity_rank.get(warning.severity, 2),
+                warning.code,
+                warning.resource.iri if warning.resource is not None else "",
+            ),
+        )
+
+    def _analysis_caveat_severity(
+        self,
+        severity: ResourceSummary | None,
+    ) -> str:
+        if severity is None:
+            return "info"
+        if severity.iri in {
+            self.expand_iri("rc:Moderate"),
+            self.expand_iri("rc:Severe"),
+        }:
+            return "warning"
+        return "info"
+
+    def _query_readiness_note(
+        self,
+        readiness: str,
+        *,
+        analysis_warnings: list[QueryPlanningIssue],
+    ) -> str:
+        notes = {
+            "ready_for_query_planning": (
+                "Enough non-secret physical metadata is present to plan a query."
+            ),
+            "needs_review": (
+                "Physical query planning is possible, but metadata warnings should "
+                "be reviewed first."
+            ),
+            "insufficient_metadata": (
+                "Required physical metadata is missing, so query planning is "
+                "incomplete."
+            ),
+            "blocked_by_contradiction": (
+                "A layout contradiction blocks physical query planning until it is "
+                "resolved."
+            ),
+        }
+        note = notes.get(readiness, "Query planning readiness is unknown.")
+        if analysis_warnings:
+            note = (
+                f"{note} Analysis warnings are separate caveats to review before "
+                "trusting aggregations or interpretations."
+            )
+        return note
 
     def _add_layout_status_issue(
         self,

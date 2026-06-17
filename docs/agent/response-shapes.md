@@ -662,7 +662,9 @@ for the semantic value concept when present.
 ```python
 query.dataset
 query.readiness
+query.readiness_note
 query.issues
+query.analysis_warnings
 query.planning_notes
 query.row_count_snapshot
 query.columns
@@ -675,12 +677,20 @@ query.upstream_caveats
 ```
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
-`insufficient_metadata`, or `blocked_by_contradiction`. Treat it as a planning
-hint, not permission to execute a query. Missing or risky metadata warnings and
-errors are returned in `query.issues`; there is no
-`query.missing_or_risky_metadata` field. An issue with `severity="error"` can
-mean "not enough physical metadata to plan a query"; it does not necessarily
-mean profile observations, map lore, or validation are broken. Each issue has:
+`insufficient_metadata`, or `blocked_by_contradiction`. It is about physical
+query-planning metadata, not analytical safety. `readiness_note` says that
+explicitly and points to analysis caveats when present.
+
+Missing or risky physical metadata warnings and errors are returned in
+`query.issues`; there is no `query.missing_or_risky_metadata` field. An issue
+with `severity="error"` can mean "not enough physical metadata to plan a
+query"; it does not necessarily mean profile observations, map lore, or
+validation are broken.
+
+`query.analysis_warnings` returns caveat-shaped interpretation warnings that
+matter after a query can be planned, such as deduplication, mixed payload
+coercion, or JSON parsing caveats. These warnings do not change `readiness`.
+Each issue or analysis warning has:
 
 ```python
 issue.code
