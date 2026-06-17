@@ -68,7 +68,8 @@ agent runtime decides how profile X resolves.
 
 1. Call `doxabase.describe_dataset` for the target dataset.
 2. Call `doxabase.describe_query_context` when you want a compact physical
-   planning projection with readiness and missing metadata issues.
+   planning projection with readiness and an `issues` list for missing or risky
+   metadata.
 3. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
    `storage_accesses` together.
 4. Check `layout_verification_status` and `layout_verification_note` on the

@@ -140,6 +140,10 @@ When running a scratch script from `/tmp`, set:
 PYTHONPATH=/home/james/github.com/jamtho/doxybase
 ```
 
+In Python, use `DoxaBase.create(path, overwrite=True)` to create or replace a
+scratch capsule, and `DoxaBase(path)` to reopen an existing capsule. There is no
+`DoxaBase.open()` helper in the current API.
+
 Sandboxed sub-agents may not have access to the user's uv cache. Do not rely on
 `uv run` inside a sub-agent trial unless the trial is explicitly testing the
 developer environment. Require a final thread report and, for non-trivial

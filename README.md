@@ -72,7 +72,7 @@ Implemented:
 - `describe_dataset()` for bounded table schema, row semantics, relationship,
   caveat, provenance, and linked-pattern context.
 - `describe_query_context()` for compact non-secret query-planning context,
-  readiness, and missing metadata issues.
+  readiness, and an `issues` list for missing or risky metadata.
 - `describe_context_slice()` for route-explained dataset, pattern, and deep-lore
   graph slices.
 - `record_observation()` for first-class observation and evidence resources.
@@ -173,6 +173,9 @@ observation = db.record_observation(
 )
 validation = db.validate_graph(scope="all")
 ```
+
+Use `DoxaBase(path)` to reopen an existing capsule. `DoxaBase.create(...)`
+creates or replaces a capsule depending on `overwrite`.
 
 The capsule seeds immutable `base_ontology` and `base_shapes` graphs from
 `ontology/rc_core.ttl` and `ontology/rc_shapes.ttl`. Project imports can write

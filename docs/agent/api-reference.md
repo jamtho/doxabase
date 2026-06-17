@@ -15,7 +15,10 @@ common dataclass and MCP helper fields that agents usually need when scripting.
 db = DoxaBase.create(".doxabase.sqlite", overwrite=True)
 ```
 
-This initializes the SQLite schema, registers default graph roles, and seeds immutable `base_ontology` and `base_shapes`.
+This initializes the SQLite schema, registers default graph roles, and seeds
+immutable `base_ontology` and `base_shapes`.
+Use `DoxaBase(path)` to open an existing capsule. There is no `DoxaBase.open()`
+helper in the current API.
 
 ## Import Data
 
@@ -153,8 +156,8 @@ Check `layout_verification_status` and `layout_verification_note` before using
 `path_templates` for executable query planning. Child physical layout, storage,
 and partition descriptions may carry their own verification fields when the
 uncertainty belongs to one part of the path/layout model.
-`operational_warnings` carries the same missing/risky metadata issue objects
-used by `describe_query_context`, so a full dataset handoff can still flag
+`operational_warnings` carries the same `QueryPlanningIssue` objects returned
+as `describe_query_context().issues`, so a full dataset handoff can still flag
 unverified layouts, missing storage access, or missing physical layout before an
 agent writes query plans.
 `linked_pattern_reasons` explains whether a pattern matched through a direct
@@ -171,11 +174,11 @@ groups when scanning; use claim/observation-supported groups for context; call
 every route.
 
 `describe_query_context()` returns a compact read-only query-planning projection
-for one dataset. It includes the dataset summary, readiness, missing or risky
-metadata issues, planning notes, columns, path templates, physical layouts,
-storage access descriptions, partition schemes, and direct/upstream caveats. It
-does not generate SQL or resolve credentials; use it to decide whether the graph
-has enough non-secret physical context for a query attempt.
+for one dataset. It includes the dataset summary, readiness, an `issues` list
+for missing or risky metadata, planning notes, columns, path templates, physical
+layouts, storage access descriptions, partition schemes, and direct/upstream
+caveats. It does not generate SQL or resolve credentials; use it to decide
+whether the graph has enough non-secret physical context for a query attempt.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

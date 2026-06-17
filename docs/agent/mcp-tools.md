@@ -108,9 +108,9 @@ Check `layout_verification_status` and `layout_verification_note` before using
 `path_templates` for executable query planning. Child `physical_layouts`,
 `storage_accesses`, and `partition_schemes` may carry their own verification
 status/notes when the uncertainty belongs to one part of the physical metadata.
-The `operational_warnings` field mirrors the missing/risky metadata issues used
-by `describe_query_context`; scan it when a full dataset handoff should still
-surface query-planning hazards such as unverified layouts.
+The `operational_warnings` field mirrors the `QueryPlanningIssue` objects
+returned as `describe_query_context.issues`; scan it when a full dataset handoff
+should still surface query-planning hazards such as unverified layouts.
 Within each linked-pattern reason, `iri` and `pattern_iri` both name the linked
 pattern. Scan `match_groups` first for relevance tiers, route labels, resource
 kinds, and supporting resources; use raw `matches` when every route matters.
@@ -124,7 +124,8 @@ pattern as a decision rule.
 `doxabase.describe_query_context`
 
 Returns a compact read-only projection for query planning around one dataset:
-dataset summary, readiness, missing or risky metadata issues, planning notes,
+dataset summary, readiness, an `issues` list for missing or risky metadata,
+planning notes,
 columns, path templates, physical layouts, storage access descriptions,
 partition schemes, and caveats. Use it before drafting DuckDB/S3/local-file
 queries when you need the physical metadata and warnings without the full

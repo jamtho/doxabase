@@ -42,6 +42,10 @@ user's uv cache. If import paths are unclear, set:
 PYTHONPATH=/home/james/github.com/jamtho/doxybase
 ```
 
+Create or replace a scratch capsule with `DoxaBase.create(path, overwrite=True)`.
+Reopen an existing capsule with `DoxaBase(path)`. There is no `DoxaBase.open()`
+helper in the current API.
+
 When running a trial through Codex sub-agents, keep the harness explicit:
 
 - require a final thread report and a backup report file under `/tmp`;
@@ -216,6 +220,10 @@ few useful gaps:
   works and suggested adding `predicate_curie` plus sharper absence-note wording
   so agents can see the likely predicate shape without mentally compacting full
   IRIs.
+- A follow-up predicate-CURIE trial confirmed that wrong-predicate recovery is
+  learnable from the docs. It also showed two small recurrent frictions: agents
+  may guess a nonexistent `DoxaBase.open()` helper, and query-context warnings
+  must be documented under the actual `issues` field name.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

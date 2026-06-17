@@ -465,7 +465,9 @@ query.upstream_caveats
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
 `insufficient_metadata`, or `blocked_by_contradiction`. Treat it as a planning
-hint, not permission to execute a query. Each issue has:
+hint, not permission to execute a query. Missing or risky metadata warnings and
+errors are returned in `query.issues`; there is no
+`query.missing_or_risky_metadata` field. Each issue has:
 
 ```python
 issue.code

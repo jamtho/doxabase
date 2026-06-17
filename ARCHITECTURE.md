@@ -80,6 +80,7 @@ Ordinary imports reject writes to immutable seed graphs unless internal seeding 
 Implemented:
 
 ```python
+DoxaBase(path)
 DoxaBase.create(path, overwrite=False, seed=True)
 DoxaBase.import_turtle(source, graph="map", replace=False)
 DoxaBase.import_trig(source, replace=False)
