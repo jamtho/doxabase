@@ -1055,6 +1055,7 @@ def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -
         (item["value"], item["frequency"]) for item in profile["value_frequencies"]
     ] == [("open", 40), ("closed", 15)]
     assert profile["evidence"][0]["iri"] == result["observation"]["evidence_iri"]
+    assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
@@ -1105,6 +1106,7 @@ def test_record_column_profile_tool_returns_json_like_payload(tmp_path: Path) ->
         (item["value"], item["frequency"]) for item in profile["value_frequencies"]
     ] == [("doc-001", 1), ("doc-002", 1)]
     assert profile["observed_column"]["iri"] == column
+    assert profile["evidence"][0]["sources"] == ["tests/test_mcp_tools.py"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

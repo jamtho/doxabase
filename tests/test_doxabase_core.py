@@ -3760,6 +3760,7 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
         ("closed", 43),
     ]
     assert profile.evidence[0].iri == result.observation.evidence_iri
+    assert profile.evidence[0].sources == ["test://messages-profile"]
 
     pattern = db.describe_pattern(result.pattern.pattern_iri)
     assert [target.iri for target in pattern.pattern_targets] == [dataset]
@@ -3851,6 +3852,7 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
     assert profile.observed_asset.iri == table
     assert profile.observed_column is not None
     assert profile.observed_column.iri == column
+    assert profile.evidence[0].sources == ["test://messages-doc-id-profile"]
 
     pattern = db.describe_pattern(result.pattern.pattern_iri)
     assert [target.iri for target in pattern.pattern_targets] == [column]

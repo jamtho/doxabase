@@ -519,7 +519,7 @@ class ProfileObservationSummary:
     null_count: int | None
     distinct_count: int | None
     value_frequencies: list[ObservedValueFrequencySummary]
-    evidence: list[ResourceSummary]
+    evidence: list[EvidenceDescription]
 
 
 @dataclass(frozen=True)
@@ -3651,11 +3651,14 @@ class DoxaBase:
                 observation_graphs,
                 observation_iri,
             ),
-            evidence=self._resource_summaries(
-                evidence_graphs,
-                self._objects(observation_graphs, observation_iri, "rc:evidence"),
-                description_predicate="rc:summary",
-            ),
+            evidence=[
+                self._describe_evidence(evidence_iri, evidence_graphs, lookup_graphs)
+                for evidence_iri in self._objects(
+                    observation_graphs,
+                    observation_iri,
+                    "rc:evidence",
+                )
+            ],
         )
 
     def _observed_value_frequency_summaries(

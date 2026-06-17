@@ -395,6 +395,16 @@ profile.value_frequencies
 profile.evidence
 ```
 
+`profile.evidence` items use the richer evidence description shape:
+
+```python
+evidence.iri
+evidence.label
+evidence.summary
+evidence.sources
+evidence.source_spans
+```
+
 `profile.value_frequencies` contains recent profiled values or value buckets
 paired with their observed frequencies:
 

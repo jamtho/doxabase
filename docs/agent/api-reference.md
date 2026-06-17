@@ -192,7 +192,8 @@ pattern linked back to the observation. Use it when a profiling result should
 arrive as observation, optional current-best map context, and optional synthesis
 without making three separate helper calls. `describe_dataset()` surfaces recent
 dataset profile observations and their sample, row, null, distinct, and observed
-value-frequency counts.
+value-frequency counts. Profile evidence entries include source strings and
+source spans when recorded.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as

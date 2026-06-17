@@ -149,7 +149,8 @@ an optional current-best map row-count snapshot, and an optional
 agent-authored profile pattern linked back to the observation. Use it when a
 profile run should preserve both the raw noticing and the emerging synthesis.
 `describe_dataset` surfaces recent dataset profile observations and their
-sample, row, null, distinct, and observed value-frequency counts.
+sample, row, null, distinct, and observed value-frequency counts. Profile
+evidence entries include source strings and source spans when recorded.
 
 `doxabase.record_column_profile`
 
