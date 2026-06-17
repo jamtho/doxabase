@@ -10812,8 +10812,9 @@ class DoxaBase:
                     "### Patch Replay",
                     "",
                     (
-                        "| Patch | Graph | Operation | Before | Current | After | "
-                        "Preview | Can apply | Conflict |"
+                        "| Patch | Graph | Operation | Recorded before | "
+                        "Current before | Recorded after | Current preview | "
+                        "Can apply | Conflict |"
                     ),
                     "|---|---|---|---:|---:|---:|---:|---|---|",
                 ]
@@ -10845,7 +10846,13 @@ class DoxaBase:
 
         if check.suggested_next_calls:
             lines.extend(["", "### Suggested Next Calls", ""])
-            lines.extend(f"- `{call}`" for call in check.suggested_next_calls[:5])
+            for call in check.suggested_next_calls[:5]:
+                note = ""
+                if alternative_to is not None and call.startswith(
+                    "apply_staged_revision("
+                ):
+                    note = " (only after comparing alternatives)"
+                lines.append(f"- `{call}`{note}")
         return lines
 
     def _staged_revision_judgement_panel(
@@ -11141,9 +11148,10 @@ class DoxaBase:
                 "",
                 (
                     "| # | Summary | Stance | Changed graphs | Apply status | "
-                    "Decision | Validation | Results | Diagnostics | Recommendation |"
+                    "Decision | Current validation | Staged validation | "
+                    "Staged results | Diagnostics | Recommendation |"
                 ),
-                "|---|---|---|---|---|---|---|---:|---|---|",
+                "|---|---|---|---|---|---|---|---|---:|---|---|",
             ]
         )
         for index, description in enumerate(descriptions, start=1):
@@ -11154,6 +11162,10 @@ class DoxaBase:
                 else f"unavailable: {apply_check_error or 'unknown'}"
             )
             apply_decision = apply_check.decision if apply_check is not None else ""
+            current_validation = self._staged_apply_check_validation_cell(
+                apply_check,
+                apply_check_error=apply_check_error,
+            )
             lines.append(
                 "| "
                 + " | ".join(
@@ -11170,6 +11182,7 @@ class DoxaBase:
                         ),
                         self._markdown_table_cell(apply_status),
                         self._markdown_table_cell(apply_decision),
+                        self._markdown_table_cell(current_validation),
                         str(description.validation_conforms),
                         str(description.validation_result_count),
                         self._markdown_table_cell(
@@ -11213,6 +11226,25 @@ class DoxaBase:
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_apply_check_validation_cell(
+        self,
+        check: StagedRevisionApplyCheck | None,
+        *,
+        apply_check_error: str | None,
+    ) -> str:
+        if check is None:
+            return f"unavailable: {apply_check_error or 'unknown'}"
+        if check.validation_skipped_reason:
+            return f"skipped: {check.validation_skipped_reason}"
+        if check.validation_conforms is None:
+            return "unknown"
+        result_count = (
+            "unknown"
+            if check.validation_result_count is None
+            else str(check.validation_result_count)
+        )
+        return f"{check.validation_conforms} ({result_count} result(s))"
 
     def _staged_revision_impact_markdown(
         self,

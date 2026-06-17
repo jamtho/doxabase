@@ -97,7 +97,33 @@ see the same compact values, value-type context, caveats, routes, and safety
 notes that the JSON helper returned. Use `doxabase.export_staged_revisions` when
 several alternatives, failed candidates, and repaired candidates should be
 reviewed together; its summary table includes the current apply status and
-decision for each staged revision.
+decision, plus current and staged-time validation state for each staged
+revision.
+
+A stale export should be read like this:
+
+```text
+## Current Apply Check
+
+- Status: conflict
+- Decision: restage_against_current_graph
+- Can apply: False
+- Blocking reasons: target_count_drift
+- Validation skipped: conflicts_present
+
+### Count Drift
+...
+
+### Suggested Next Calls
+- describe_staged_revision(...)
+- export_staged_revision(...)
+- restage_staged_revision(...)
+```
+
+In grouped exports, `Staged validation` is the validation result from when the
+proposal was created. `Current validation` comes from the live apply check and
+may say `skipped: conflicts_present` when count drift prevents a replay. Prefer
+the current apply status when deciding what to do next.
 
 ## Systematisation Drafts
 

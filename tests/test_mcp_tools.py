@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from rdflib.namespace import XSD
 
+import doxabase.mcp_tools as mcp_tools
 from doxabase import DoxaBase
 from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
@@ -380,6 +381,42 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         db,
         iri=restaged["revision_iri"],
     )["status"] == "ready"
+
+
+def test_export_staged_revisions_tool_resolves_relative_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mcp_tools, "ROOT", tmp_path)
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    export = export_staged_revisions_tool(
+        db,
+        revision_iris=[staged["revision_iri"]],
+        path="bundle.md",
+        title="Relative bundle",
+    )
+
+    expected_path = tmp_path / "bundle.md"
+    assert export["path"] == str(expected_path)
+    assert expected_path.exists()
+    assert expected_path.read_text(encoding="utf-8").startswith("# Relative bundle\n")
 
 
 def test_list_graph_revisions_tool_returns_json_like_payload(

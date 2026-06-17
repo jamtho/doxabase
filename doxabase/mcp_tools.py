@@ -1049,9 +1049,10 @@ def export_staged_revisions_tool(
     format: str = "markdown",
     overwrite: bool = False,
 ) -> dict[str, Any]:
+    resolved_path = _resolve_path(path)
     result = db.export_staged_revisions(
         revision_iris=revision_iris,
-        path=path,
+        path=resolved_path,
         title=title,
         executive_summary=executive_summary,
         format=format,  # type: ignore[arg-type]

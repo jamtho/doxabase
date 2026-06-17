@@ -805,6 +805,9 @@ check into the Markdown artifact at export time. Treat the `Current Apply Check`
 section as the review bundle's current-status header: it may say a staged
 revision is stale or already applied even when the original staged description
 still records the validation result from the time it was created.
+In grouped exports, `Staged validation` is the staged description's original
+preview result, while `Current validation` is derived from the live apply check
+and can be `skipped: conflicts_present`.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

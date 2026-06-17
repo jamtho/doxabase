@@ -1276,6 +1276,10 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "- Validation skipped: conflicts_present" in export_text
     assert "### Count Drift" in export_text
     assert "| Patch | Graph | Expected before | Current | Delta |" in export_text
+    assert (
+        "| Patch | Graph | Operation | Recorded before | Current before | "
+        "Recorded after | Current preview | Can apply | Conflict |"
+    ) in export_text
     assert "| map | 0 |" in export_text
     assert f"| 0 | {db.triple_count('map')} |" in export_text
     assert "all_patch_triples_absent" in export_text
@@ -1658,6 +1662,8 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "Prefer the pattern-first framing for now" in exported
     assert "## Summary" in exported
     assert "Apply status" in exported
+    assert "Current validation" in exported
+    assert "Staged validation" in exported
     assert "review_then_apply" in exported
     assert "Recommendation" in exported
     assert "Preferred for now." in exported

@@ -136,6 +136,11 @@ A useful trial usually asks the agent to:
 - use `describe_graph_revision` to inspect the resulting history record;
 - report what worked, what was awkward, and what should change next.
 
+When running a sub-agent field trial under `codex exec`, set a scratch uv cache
+inside the writable trial directory, for example
+`UV_CACHE_DIR=/tmp/doxabase-trial/uv-cache uv run python ...`. This avoids
+user-cache permission issues while keeping trial artifacts disposable.
+
 For systematisation-helper trials, include at least one awkward systematisation
 that does not fit neatly into current helper templates. The agent should be
 allowed to propose a new project vocabulary term, an ontology extension, or

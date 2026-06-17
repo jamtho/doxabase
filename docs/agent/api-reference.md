@@ -351,8 +351,9 @@ so the export carries values, value-type context, rationale, caveats, routes,
 and safety notes from the JSON review surface.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
-revision's current apply status and decision. Pass `executive_summary` when the
-comparison needs an agent-authored synthesis at the top of the artifact.
+revision's current apply status, decision, current validation state, and
+staged-time validation result. Pass `executive_summary` when the comparison
+needs an agent-authored synthesis at the top of the artifact.
 
 `check_staged_revision_apply()` previews whether one staged revision can be
 applied without mutating graph state. It reports already-applied state,
