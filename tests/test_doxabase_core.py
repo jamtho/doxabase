@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from rdflib import Dataset, Graph, Literal, URIRef
-from rdflib.namespace import DCTERMS, RDF
+from rdflib.namespace import DCTERMS, RDF, XSD
 
 from doxabase import DoxaBase, DoxaBaseError, ImmutableGraphError
 
@@ -522,11 +522,13 @@ def test_describe_assertion_support_explains_map_assertion_lore(
             ex:PriceSnapshots a rc:Dataset, rc:Table ;
                 rdfs:label "Price snapshots" ;
                 rc:hasColumn ex:px_price ;
+                rc:rowCountSnapshot 12 ;
                 rc:hasKnownCaveat ex:mixed_price_payload_caveat .
 
             ex:px_price a rc:Column ;
                 rc:columnName "price" ;
                 rc:physicalType rc:Varchar ;
+                rc:nullable true ;
                 rdfs:comment "Raw payload column." .
 
             ex:mixed_price_payload_caveat a rc:KnownCaveat ;
@@ -791,6 +793,26 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert "No related observations, claims, patterns, evidence, or revisions" in (
         partition_support.context_note
     )
+
+    row_count_support = db.describe_assertion_support(
+        "https://example.test/project#PriceSnapshots",
+        "rc:rowCountSnapshot",
+        "12",
+        object_kind="literal",
+    )
+    assert row_count_support.assertion_present is True
+    assert row_count_support.matching_triples[0].object == "12"
+    assert row_count_support.matching_triples[0].object_datatype == str(XSD.integer)
+
+    nullable_support = db.describe_assertion_support(
+        "https://example.test/project#px_price",
+        "rc:nullable",
+        "true",
+        object_kind="literal",
+    )
+    assert nullable_support.assertion_present is True
+    assert nullable_support.matching_triples[0].object == "true"
+    assert nullable_support.matching_triples[0].object_datatype == str(XSD.boolean)
 
 
 def test_stage_map_assertion_change_packages_support_context(
@@ -3850,6 +3872,9 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     assert [item.iri for item in pattern.supporting_observations] == [
         result.observation.observation_iri
     ]
+    assert [item.iri for item in pattern.evidence] == [
+        result.observation.evidence_iri
+    ]
 
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text
@@ -3913,6 +3938,10 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
     assert result.map_column is not None
     assert result.map_column.iri == column
     assert result.pattern is not None
+    pattern = db.describe_pattern(result.pattern.pattern_iri)
+    assert [item.iri for item in pattern.evidence] == [
+        result.observation.evidence_iri
+    ]
 
     description = db.describe_dataset(table)
     assert [item.iri for item in description.columns] == [column]

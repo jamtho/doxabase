@@ -130,9 +130,12 @@ support.suggested_next_calls
 
 Use this when the question is "why is this map assertion here?" or "what lore
 hangs off this caveat/type/relationship assertion?" It is retrieval context, not
-proof. `assertion_present=False` means the exact requested triple was not found
-in the selected graph; the helper may still return context for the subject or
-requested object.
+proof. `assertion_present=False` means the requested triple was not found in the
+selected graph; the helper may still return context for the subject or requested
+object. Literal object matching accepts common typed scalar equivalents, so
+plain string inputs such as `"12"` and `"true"` can match stored integer and
+boolean literals. Inspect `matching_triples[].object_datatype` to see what the
+graph actually stores.
 
 When `object` is supplied, `same_subject_predicate_triples` lists the current
 triples for the same subject and predicate in the selected graph. This is
@@ -428,6 +431,9 @@ Each `dataset.columns[]` item can also include `profile_observations` for recent
 profile observations whose `observed_column` is that column. Use these before
 searching raw observation triples when you need profile counts, distinctness,
 null counts, or top observed values attached to a dataset handoff.
+Observed value frequencies are profile evidence, not allowed-value domains by
+themselves. Look for linked claims and patterns before treating them as map
+semantics.
 
 Each column in `dataset.columns` is a `ColumnDescription`:
 

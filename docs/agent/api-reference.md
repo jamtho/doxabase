@@ -207,13 +207,21 @@ arrive as observation, optional current-best map context, and optional synthesis
 without making three separate helper calls. `describe_dataset()` surfaces recent
 dataset profile observations and their sample, row, null, distinct, and observed
 value-frequency counts. Profile evidence entries include source strings and
-source spans when recorded.
+source spans when recorded. `update_map_snapshot` defaults to true, so pass
+`false` when a row count is only a scratch sample or tentative measurement. When
+the helper creates a pattern and the profile observation has evidence, the same
+evidence is linked to the pattern.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as
 physical type and nullability, and can write a linked profile pattern. Column
 profile observations are exposed on the matching `describe_dataset().columns[]`
 entry, including any observed value-frequency pairs supplied by the profiler.
+`update_map_column` defaults to true, so pass `false` when observed values or
+counts should stay observation-only. For a profile such as "BUY/SELL appeared in
+this sample, but that is not an allowed-value domain", combine
+`record_column_profile(update_map_column=false)`,
+`record_claim_observation()`, and `record_pattern()`.
 
 `record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common
@@ -395,7 +403,10 @@ subjects, follow the owner-dataset suggested actions when table-level lore may
 matter, but check caveat-link `scope` before treating table caveats as
 column-specific. For layout, partition, or storage assertions, inspect
 `nearby_context_triples` for verification notes before treating the assertion as
-executable planning context.
+executable planning context. Literal matching is forgiving for common scalar
+inputs: an untyped string object such as `"12"` or `"true"` can match stored
+typed integer or boolean literals while the returned triple still reports the
+actual datatype.
 
 `search()` lexically searches literal RDF claims and returns matched resources,
 their graph role, RDF types, matched predicate, matched text, and snippet. Use

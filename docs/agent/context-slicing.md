@@ -51,3 +51,8 @@ Treat a slice as a conversation brief, not a proof of closure. If an important
 resource is absent, use the routes and raw triples to decide whether the profile
 is too narrow, the map lacks a relationship, or the ontology needs a new
 predicate.
+
+When `dataset_brief` is truncated but `pattern_contexts` identifies the relevant
+synthesis, switch to `pattern_brief` seeded with that pattern for a smaller
+handoff. Raise `max_triples` only when you need the raw RDF payload rather than
+the structured dataset, pattern, and route summaries.

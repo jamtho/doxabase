@@ -1470,6 +1470,14 @@ class DoxaBase:
             object_filter=object_filter,
             limit=limit,
         )
+        if object_filter is not None and not matching_triples:
+            matching_triples = self._assertion_compatible_literal_triples(
+                graphs,
+                subject=subject_iri,
+                predicate=predicate_iri,
+                object_filter=object_filter,
+                limit=limit,
+            )
         same_subject_predicate_triples = (
             self._assertion_triples(
                 graphs,
@@ -4836,6 +4844,7 @@ class DoxaBase:
                 rationale=pattern_rationale,
                 pattern_targets=[dataset_value],
                 supporting_observations=[observation.observation_iri],
+                evidence_iri=observation.evidence_iri,
                 confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
@@ -4949,6 +4958,7 @@ class DoxaBase:
                 rationale=pattern_rationale,
                 pattern_targets=[column_value],
                 supporting_observations=[observation.observation_iri],
+                evidence_iri=observation.evidence_iri,
                 confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
@@ -8333,6 +8343,69 @@ class DoxaBase:
                 "object_kind must be one of 'auto', 'iri', 'uri', or 'literal'"
             )
         return self._object_to_storage(node)
+
+    def _assertion_compatible_literal_filters(
+        self,
+        object_filter: tuple[str, str, str | None, str | None],
+    ) -> list[tuple[str, str, str | None, str | None]]:
+        value, value_kind, datatype, lang = object_filter
+        if value_kind != "literal" or datatype is not None or lang is not None:
+            return []
+
+        candidates: list[tuple[str, str, str | None, str | None]] = [
+            (value, "literal", str(XSD.string), None),
+        ]
+        normalized = value.strip()
+        lowered = normalized.lower()
+        if lowered in {"true", "false"}:
+            candidates.append((lowered, "literal", str(XSD.boolean), None))
+        if re.fullmatch(r"[+-]?\d+", normalized):
+            candidates.append((str(int(normalized)), "literal", str(XSD.integer), None))
+
+        compatible: list[tuple[str, str, str | None, str | None]] = []
+        seen = {object_filter}
+        for candidate in candidates:
+            if candidate not in seen:
+                compatible.append(candidate)
+                seen.add(candidate)
+        return compatible
+
+    def _assertion_compatible_literal_triples(
+        self,
+        graphs: list[str],
+        *,
+        subject: str,
+        predicate: str,
+        object_filter: tuple[str, str, str | None, str | None],
+        limit: int,
+    ) -> list[ResourceTriple]:
+        triples: list[ResourceTriple] = []
+        seen: set[tuple[str, str, str, str, str | None, str | None]] = set()
+        for compatible_filter in self._assertion_compatible_literal_filters(
+            object_filter
+        ):
+            remaining = limit - len(triples)
+            if remaining < 1:
+                break
+            for triple in self._assertion_triples(
+                graphs,
+                subject=subject,
+                predicate=predicate,
+                object_filter=compatible_filter,
+                limit=remaining,
+            ):
+                key = (
+                    triple.graph,
+                    triple.subject,
+                    triple.predicate,
+                    triple.object,
+                    triple.object_datatype,
+                    triple.object_lang,
+                )
+                if key not in seen:
+                    triples.append(triple)
+                    seen.add(key)
+        return triples
 
     def _assertion_value_from_filter(
         self,

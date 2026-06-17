@@ -224,6 +224,13 @@ few useful gaps:
   learnable from the docs. It also showed two small recurrent frictions: agents
   may guess a nonexistent `DoxaBase.open()` helper, and query-context warnings
   must be documented under the actual `issues` field name.
+- A profile-helper trial confirmed that `record_dataset_profile` and
+  `record_column_profile` make profile observations, evidence, map context, and
+  patterns discoverable through `describe_dataset`. It also showed that agents
+  need explicit reminders to turn off map updates for scratch profile results,
+  that helper-created patterns should show their profile evidence directly, and
+  that assertion support should match common typed scalar literals supplied as
+  plain strings.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

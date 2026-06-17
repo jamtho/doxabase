@@ -49,6 +49,27 @@ Use `doxabase.record_column_profile` when a column-level profile should also
 update current-best map column metadata, such as nullability or physical type,
 or preserve a linked pattern synthesis.
 
+Be explicit about the map update booleans. `record_dataset_profile` defaults
+`update_map_snapshot=true` and can write `rc:rowCountSnapshot` when `row_count`
+is supplied. `record_column_profile` defaults `update_map_column=true` and can
+write map column metadata when map fields are supplied. Set these booleans to
+`false` when the profile result is a scratch sample, a tentative measurement, or
+otherwise not ready to become current-best map context.
+
+When observed values should not become durable semantics, keep the profile
+observation-led and record the interpretation separately:
+
+1. Call `record_column_profile(..., update_map_column=false)` with the observed
+   counts and value frequencies.
+2. Call `record_claim_observation` for the guardrail, such as "these observed
+   values are not an allowed-value domain".
+3. Call `record_pattern` over the profile observation and guardrail claim when
+   the pair is useful lore for future agents.
+
+When a profile helper creates a pattern and the profile observation has
+evidence, DoxaBase links that same evidence to the pattern so
+`describe_pattern` can show the source directly.
+
 ## Evidence Resources
 
 Evidence belongs in the `evidence` graph. `record_observation` can create one
