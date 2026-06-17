@@ -12954,12 +12954,15 @@ class DoxaBase:
                 )
             )
         before = self.triple_count(graph)
-        self._conn.executemany(
-            """
-            INSERT INTO quads
-                (graph, subject, subject_kind, predicate, object, object_kind, datatype, lang, created_at)
-            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
-            WHERE NOT EXISTS (
+        rows_to_insert = []
+        seen: set[tuple[str, str, str, str, str, str, str | None, str | None]] = set()
+        for row in rows:
+            key = row[:8]
+            if key in seen:
+                continue
+            seen.add(key)
+            exists = self._conn.execute(
+                """
                 SELECT 1
                 FROM quads
                 WHERE graph = ?
@@ -12970,9 +12973,19 @@ class DoxaBase:
                   AND object_kind = ?
                   AND datatype IS ?
                   AND lang IS ?
-            )
+                LIMIT 1
+                """,
+                key,
+            ).fetchone()
+            if exists is None:
+                rows_to_insert.append(row)
+        self._conn.executemany(
+            """
+            INSERT INTO quads
+                (graph, subject, subject_kind, predicate, object, object_kind, datatype, lang, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            [(*row, *row[:8]) for row in rows],
+            rows_to_insert,
         )
         self._conn.commit()
         inserted = self.triple_count(graph) - before
