@@ -4,10 +4,20 @@ Use this doc when scripting against the Python API or MCP helper payloads. The
 workflow docs explain what to do; this page names the fields agents commonly
 need so they do not have to infer near-miss attribute names.
 
-Python API calls return dataclass-like objects. MCP helper functions in
-`doxabase.mcp_tools` return JSON-like dictionaries. Prefer MCP helpers when you
-need serializable payloads; prefer the Python API when you are running a local
-scratch capsule script.
+Python API calls return dataclass-like objects. Use `to_dict()` for one returned
+object and `to_jsonable()` for lists or nested structures when a scratch script
+needs a serializable payload:
+
+```python
+from doxabase import to_dict, to_jsonable
+
+pattern_payload = to_dict(db.describe_pattern(pattern_iri))
+tables_payload = to_jsonable(db.list_entities(type="rc:Table").entities)
+```
+
+MCP helper functions in `doxabase.mcp_tools` already return JSON-like
+dictionaries. Prefer MCP helpers when you need serializable payloads; prefer the
+Python API when you are running a local scratch capsule script.
 
 ## Docs And Overview
 

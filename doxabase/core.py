@@ -5,7 +5,7 @@ import re
 import sqlite3
 import warnings
 from collections.abc import Mapping as MappingABC
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, is_dataclass, replace
 from difflib import SequenceMatcher
 from datetime import UTC, datetime
 from pathlib import Path
@@ -58,6 +58,29 @@ PREFIXES = {
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
 }
+
+
+def to_jsonable(value: Any) -> Any:
+    """Return a JSON-like plain-Python representation of DoxaBase API values."""
+    if is_dataclass(value) and not isinstance(value, type):
+        return {
+            field.name: to_jsonable(getattr(value, field.name))
+            for field in fields(value)
+        }
+    if isinstance(value, MappingABC):
+        return {str(key): to_jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [to_jsonable(item) for item in value]
+    return value
+
+
+def to_dict(value: Any) -> dict[str, Any]:
+    """Return a dict representation of one DoxaBase dataclass-like API value."""
+    result = to_jsonable(value)
+    if not isinstance(result, dict):
+        raise TypeError("to_dict() expects a DoxaBase dataclass or mapping value")
+    return result
+
 
 CLAIM_RECONSIDERATION_RELATIONS = {
     "weakens": ("rc:Weakening", "rc:weakens", "rc:Weakened"),

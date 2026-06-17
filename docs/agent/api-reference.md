@@ -3,7 +3,7 @@
 Current Python API entry point:
 
 ```python
-from doxabase import DoxaBase
+from doxabase import DoxaBase, to_dict, to_jsonable
 ```
 
 For compact returned-field examples, read `response_shapes`. It names the
@@ -19,6 +19,10 @@ This initializes the SQLite schema, registers default graph roles, and seeds
 immutable `base_ontology` and `base_shapes`.
 Use `DoxaBase(path)` to open an existing capsule. There is no `DoxaBase.open()`
 helper in the current API.
+
+Use `to_dict(result)` or `to_jsonable(results)` when a direct Python script
+needs serializable versions of returned dataclass-like API objects. MCP helpers
+already return JSON-like dictionaries.
 
 ## Import Data
 

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from rdflib import Dataset
 
 from doxabase.agent_docs import get_agent_doc, list_agent_docs
-from doxabase.core import DoxaBase, RCG_PREFIX, ROOT
+from doxabase.core import DoxaBase, RCG_PREFIX, ROOT, to_dict
 
 EXAMPLE_FIXTURES = (
     ROOT / "examples" / "manifest-prototype-rc" / "ais.trig",
@@ -26,7 +25,7 @@ def get_doc_tool(doc_id: str, max_chars: int = 12000) -> dict[str, Any]:
 def graph_overview_tool(db: DoxaBase, limit: int = 100) -> dict[str, Any]:
     overview = db.graph_overview(limit=limit)
     return {
-        "named_graphs": [asdict(graph) for graph in overview.named_graphs],
+        "named_graphs": [to_dict(graph) for graph in overview.named_graphs],
         "class_counts": _pairs_to_dicts(overview.class_counts, "class"),
         "predicate_counts": _pairs_to_dicts(overview.predicate_counts, "predicate"),
         "key_counts": overview.key_counts,
@@ -44,7 +43,7 @@ def list_entities_tool(
 ) -> dict[str, Any]:
     result = db.list_entities(type=type, graph=graph, text=text, limit=limit, offset=offset)
     return {
-        "entities": [asdict(entity) for entity in result.entities],
+        "entities": [to_dict(entity) for entity in result.entities],
         "limit": result.limit,
         "offset": result.offset,
         "count": len(result.entities),
@@ -64,7 +63,7 @@ def describe_resource_tool(
         include_incoming=include_incoming,
         limit=limit,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def describe_assertion_support_tool(
@@ -84,7 +83,7 @@ def describe_assertion_support_tool(
         object_kind=object_kind,  # type: ignore[arg-type]
         limit=limit,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def describe_graph_revision_tool(
@@ -92,7 +91,7 @@ def describe_graph_revision_tool(
     iri: str,
     graph: str | None = "history",
 ) -> dict[str, Any]:
-    return asdict(db.describe_graph_revision(iri=iri, graph=graph))
+    return to_dict(db.describe_graph_revision(iri=iri, graph=graph))
 
 
 def list_graph_revisions_tool(
@@ -104,7 +103,7 @@ def list_graph_revisions_tool(
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
-    return asdict(
+    return to_dict(
         db.list_graph_revisions(
             revision_type=revision_type,
             graph=graph,
@@ -121,7 +120,7 @@ def describe_staged_revision_tool(
     iri: str,
     graph: str | None = "history",
 ) -> dict[str, Any]:
-    return asdict(db.describe_staged_revision(iri=iri, graph=graph))
+    return to_dict(db.describe_staged_revision(iri=iri, graph=graph))
 
 
 def check_staged_revision_apply_tool(
@@ -129,7 +128,7 @@ def check_staged_revision_apply_tool(
     iri: str,
     validation_scope: str | None = None,
 ) -> dict[str, Any]:
-    return asdict(
+    return to_dict(
         db.check_staged_revision_apply(
             iri=iri,
             validation_scope=validation_scope,  # type: ignore[arg-type]
@@ -142,7 +141,7 @@ def describe_pattern_tool(
     iri: str,
     graph: str | None = "patterns",
 ) -> dict[str, Any]:
-    return asdict(db.describe_pattern(iri=iri, graph=graph))
+    return to_dict(db.describe_pattern(iri=iri, graph=graph))
 
 
 def describe_dataset_tool(
@@ -150,7 +149,7 @@ def describe_dataset_tool(
     iri: str,
     graph: str | None = "map",
 ) -> dict[str, Any]:
-    return asdict(db.describe_dataset(iri=iri, graph=graph))
+    return to_dict(db.describe_dataset(iri=iri, graph=graph))
 
 
 def describe_query_context_tool(
@@ -158,7 +157,7 @@ def describe_query_context_tool(
     iri: str,
     graph: str | None = "map",
 ) -> dict[str, Any]:
-    return asdict(db.describe_query_context(iri=iri, graph=graph))
+    return to_dict(db.describe_query_context(iri=iri, graph=graph))
 
 
 def describe_context_slice_tool(
@@ -168,7 +167,7 @@ def describe_context_slice_tool(
     max_triples: int = 500,
     include_trig: bool = False,
 ) -> dict[str, Any]:
-    return asdict(
+    return to_dict(
         db.describe_context_slice(
             seed_iris,
             profile=profile,  # type: ignore[arg-type]
@@ -215,7 +214,7 @@ def record_observation_tool(
         value_frequencies=value_frequencies,
         profile_metrics=profile_metrics,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_claim_observation_tool(
@@ -259,7 +258,7 @@ def record_claim_observation_tool(
         observation_status=observation_status,
         proposed_assertions=proposed_assertions,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_pattern_tool(
@@ -305,7 +304,7 @@ def record_pattern_tool(
         pattern_stability=pattern_stability,
         map_implications=map_implications,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_dataset_profile_tool(
@@ -363,7 +362,7 @@ def record_dataset_profile_tool(
         pattern_stability=pattern_stability,
         pattern_map_implications=pattern_map_implications,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_profile_bundle_tool(
@@ -427,7 +426,7 @@ def record_profile_bundle_tool(
         shared_evidence_iri=shared_evidence_iri,
         column_defaults=column_defaults,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_column_profile_tool(
@@ -493,7 +492,7 @@ def record_column_profile_tool(
         pattern_stability=pattern_stability,
         pattern_map_implications=pattern_map_implications,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_claim_reconsideration_tool(
@@ -531,7 +530,7 @@ def record_claim_reconsideration_tool(
         source_kind=source_kind,
         older_claim_status=older_claim_status,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_map_dataset_tool(
@@ -573,7 +572,7 @@ def record_map_dataset_tool(
         companion_datasets=companion_datasets,
         extra_types=extra_types,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_map_column_tool(
@@ -597,7 +596,7 @@ def record_map_column_tool(
         value_type=value_type,
         nullable=nullable,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_map_caveat_tool(
@@ -617,7 +616,7 @@ def record_map_caveat_tool(
         severity=severity,
         targets=targets,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_map_storage_access_tool(
@@ -657,7 +656,7 @@ def record_map_storage_access_tool(
         layout_verification_note=layout_verification_note,
         datasets=datasets,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_map_physical_layout_tool(
@@ -681,7 +680,7 @@ def record_map_physical_layout_tool(
         layout_verification_note=layout_verification_note,
         datasets=datasets,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_map_partition_scheme_tool(
@@ -709,7 +708,7 @@ def record_map_partition_scheme_tool(
         layout_verification_note=layout_verification_note,
         datasets=datasets,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_map_relationship_tool(
@@ -751,7 +750,7 @@ def record_map_relationship_tool(
         derivation_function=derivation_function,
         derivation_properties=derivation_properties,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def search_tool(
@@ -765,7 +764,7 @@ def search_tool(
     return {
         "query": result.query,
         "graph": result.graph,
-        "matches": [asdict(match) for match in result.matches],
+        "matches": [to_dict(match) for match in result.matches],
         "limit": result.limit,
         "offset": result.offset,
         "count": len(result.matches),
@@ -801,7 +800,7 @@ def export_graph_tool(
         format=format,
         overwrite=overwrite,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def export_trig_tool(
@@ -816,7 +815,7 @@ def export_trig_tool(
         graphs=graphs,
         overwrite=overwrite,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def record_graph_revision_tool(
@@ -860,7 +859,7 @@ def record_graph_revision_tool(
         validation_conforms=validation_conforms,
         validation_result_count=validation_result_count,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def stage_graph_revision_tool(
@@ -906,7 +905,7 @@ def stage_graph_revision_tool(
         review_recommendation=review_recommendation,
         validation_scope=validation_scope,  # type: ignore[arg-type]
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def restage_staged_revision_tool(
@@ -926,7 +925,7 @@ def restage_staged_revision_tool(
         created_by=created_by,
         validation_scope=validation_scope,  # type: ignore[arg-type]
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def stage_map_assertion_change_tool(
@@ -982,7 +981,7 @@ def stage_map_assertion_change_tool(
         validation_scope=validation_scope,  # type: ignore[arg-type]
         limit=limit,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def stage_systematisation_tool(
@@ -1030,7 +1029,7 @@ def stage_systematisation_tool(
         link_alternatives=link_alternatives,
         validation_scope=validation_scope,  # type: ignore[arg-type]
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def stage_pattern_promotion_tool(
@@ -1078,7 +1077,7 @@ def stage_pattern_promotion_tool(
         link_alternatives=link_alternatives,
         validation_scope=validation_scope,  # type: ignore[arg-type]
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def apply_staged_revision_tool(
@@ -1098,7 +1097,7 @@ def apply_staged_revision_tool(
         allow_validation_failure=allow_validation_failure,
         validation_scope=validation_scope,  # type: ignore[arg-type]
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def export_staged_revision_tool(
@@ -1115,7 +1114,7 @@ def export_staged_revision_tool(
         format=format,  # type: ignore[arg-type]
         overwrite=overwrite,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def export_staged_revisions_tool(
@@ -1136,7 +1135,7 @@ def export_staged_revisions_tool(
         format=format,  # type: ignore[arg-type]
         overwrite=overwrite,
     )
-    return asdict(result)
+    return to_dict(result)
 
 
 def load_example_fixtures_tool(db: DoxaBase, replace: bool = False) -> dict[str, Any]:
@@ -1169,7 +1168,7 @@ def validate_graph_tool(
     limit_results: int = 100,
 ) -> dict[str, Any]:
     result = db.validate_graph(scope=scope, limit_results=limit_results)  # type: ignore[arg-type]
-    return asdict(result)
+    return to_dict(result)
 
 
 def _pairs_to_dicts(pairs: list[tuple[str, int]], key_name: str) -> list[dict[str, Any]]:

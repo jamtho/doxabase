@@ -280,6 +280,16 @@ few useful gaps:
   equal. Quad insertion now uses explicit RDF-style existence checks, response
   reads de-duplicate repeated objects, and the profile docs show `target=None`
   versus a narrower metric target.
+- A deeper mini-handoff trial on the Polymarket fixture recorded four claim
+  observations plus one synthesis pattern around snapshot/event grain,
+  condition-ID versus CLOB-token-ID join lanes, embedded JSON/string payloads,
+  and the raw CLOB price payload boundary. The resulting capsule validated and
+  the lore was retrievable through `describe_pattern`, `describe_dataset`,
+  `describe_context_slice`, and targeted search terms. It also showed practical
+  friction: direct Python scripts needed an obvious serializer for response
+  dataclasses, broad lexical searches can miss useful lore when terms are split
+  across literals, and `ready_for_query_planning` can sound stronger than
+  intended when caveats still make aggregation analytically risky.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

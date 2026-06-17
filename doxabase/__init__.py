@@ -77,6 +77,8 @@ from doxabase.core import (
     TransformationDescription,
     ValidationDiagnostic,
     ValidationResult,
+    to_dict,
+    to_jsonable,
 )
 
 __all__ = [
@@ -158,4 +160,6 @@ __all__ = [
     "TransformationDescription",
     "ValidationDiagnostic",
     "ValidationResult",
+    "to_dict",
+    "to_jsonable",
 ]

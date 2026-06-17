@@ -6,7 +6,13 @@ import pytest
 from rdflib import Dataset, Graph, Literal, URIRef
 from rdflib.namespace import DCTERMS, RDF, XSD
 
-from doxabase import DoxaBase, DoxaBaseError, ImmutableGraphError
+from doxabase import (
+    DoxaBase,
+    DoxaBaseError,
+    ImmutableGraphError,
+    to_dict,
+    to_jsonable,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 AIS_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "ais.trig"
@@ -77,6 +83,33 @@ def test_import_trig_maps_patterns_graph_role(tmp_path: Path) -> None:
 
     assert imported["patterns"] > 0
     assert db.validate_graph(scope="all").conforms
+
+
+def test_to_dict_serializes_api_dataclasses(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(POLYMARKET_FIXTURE)
+
+    pattern = db.describe_pattern(
+        "https://richcanopy.org/example/manifest/polymarket#"
+        "pattern_price_payload_boundary"
+    )
+    pattern_payload = to_dict(pattern)
+    assert "targets" not in pattern_payload
+    assert pattern_payload["pattern_targets"][0]["iri"] == (
+        "https://richcanopy.org/example/manifest/polymarket#PriceSnapshots"
+    )
+    assert pattern_payload["supporting_claims"][0]["claim_text"]
+
+    entity_rows = db.list_entities(type="rc:Table", graph="map", limit=1).entities
+    entity_payload = to_jsonable(entity_rows)
+    assert entity_payload == [
+        {
+            "iri": entity_rows[0].iri,
+            "label": entity_rows[0].label,
+            "types": entity_rows[0].types,
+            "graph": "map",
+        }
+    ]
 
 
 def test_export_graph_writes_flattened_turtle(tmp_path: Path) -> None:
