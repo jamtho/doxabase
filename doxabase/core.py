@@ -15908,7 +15908,9 @@ class DoxaBase:
         expanded = self.expand_iri(text)
         if "://" not in expanded and not expanded.startswith("urn:") and ":" not in text:
             raise DoxaBaseError(
-                f"{name} values must be IRIs or CURIEs, not plain names: {value!r}"
+                f"{name} values must be IRIs or CURIEs, not plain names: "
+                f"{value!r}. Use a CURIE such as 'rc:Moderate' or 'rc:Varchar', "
+                "or a full project IRI."
             )
         return URIRef(expanded)
 

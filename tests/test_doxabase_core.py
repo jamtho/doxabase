@@ -3641,6 +3641,22 @@ def test_map_helpers_reject_prose_for_resource_fields(
         call(db)
 
 
+def test_map_helper_plain_name_error_suggests_curie(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.record_map_caveat(
+            "https://example.test/project#body_caveat",
+            description="Body text is cleaned text, not raw source text.",
+            severity="warning",
+        )
+
+    message = str(excinfo.value)
+    assert "severity values must be IRIs or CURIEs" in message
+    assert "not plain names: 'warning'" in message
+    assert "rc:Moderate" in message
+
+
 def test_describe_dataset_returns_all_partition_columns(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     base = "https://example.test/project#"
