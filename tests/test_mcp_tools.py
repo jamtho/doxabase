@@ -1353,6 +1353,8 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     }
     assert dataset["profile_summary"]["shared_evidence_iris"] == [shared_evidence]
     profile = dataset["unmapped_column_profile_observations"][0]
+    assert profile["observed_column_name"] == "status"
+    assert profile["observed_column"]["column_name"] == "status"
     assert profile["sample_scope"] == "Twenty-five sampled Orders rows."
     assert profile["sample_method"] == "DuckDB sampled profile query."
     assert profile["evidence"][0]["iri"] == shared_evidence
@@ -1398,6 +1400,8 @@ def test_describe_dataset_tool_returns_unmapped_column_profiles(
     assert len(profiles) == 1
     assert profiles[0]["iri"] == result["observation"]["observation_iri"]
     assert profiles[0]["observed_column"]["iri"] == column
+    assert profiles[0]["observed_column_name"] == "status"
+    assert profiles[0]["observed_column"]["column_name"] == "status"
     assert profiles[0]["sample_method"] == "Top-N sampled value-frequency query."
     assert [
         (item["value"], item["frequency"])

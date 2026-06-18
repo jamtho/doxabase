@@ -213,7 +213,10 @@ selected slice. Use `candidate_triple_count`, `returned_triple_count`, and
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are
 supplied, it also writes a linked `rc:Evidence` resource to the `evidence`
 graph. Include `evidence_sources` or a source span when you need validation-clean
-evidence; `evidence_summary` alone is descriptive prose.
+evidence; `evidence_summary` alone is descriptive prose. When
+`observed_column` names a column that is not yet in the map,
+`observed_column_name` can preserve the source-level column name without
+promoting the column into current map state.
 
 `record_dataset_profile()` records a profile observation for one dataset and can
 also update the map row-count snapshot and write an agent-authored profile
@@ -278,7 +281,10 @@ this sample, but that is not an allowed-value domain", combine
 `record_column_profile(update_map_column=false)`,
 `record_claim_observation()`, and `record_pattern()`.
 If the column is not yet in the map, `describe_dataset()` returns that profile
-under `unmapped_column_profile_observations` rather than `columns[]`.
+under `unmapped_column_profile_observations` rather than `columns[]`. The
+profile keeps the supplied column name as `observed_column_name`;
+`observed_column.column_name` also uses that name as a fallback until the
+column becomes a current map column.
 
 `record_claim_observation()` writes one `rc:Observation`, one linked `rc:Claim`,
 one `rc:Evidence`, and optionally one `rc:SourceSpan`. Use it for the common

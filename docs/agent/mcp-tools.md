@@ -175,7 +175,9 @@ fields create a linked `rc:Evidence` resource in the `evidence` graph. Use this
 for point-in-time findings, profile counts, query outputs, and workflow notes
 that should remain available to later agents. For validation-clean evidence,
 include `evidence_sources`; `evidence_summary` alone is descriptive prose, not a
-source identity.
+source identity. When `observed_column` names a column that is not yet in the
+map, `observed_column_name` can preserve the source-level column name without
+promoting the column into current map state.
 
 `doxabase.record_dataset_profile`
 
@@ -247,7 +249,9 @@ profile, then add a `record_claim_observation` and synthesize both with
 `record_pattern`.
 If `update_map_column=false` and the observed column is not yet in the map,
 `describe_dataset` surfaces the profile under
-`unmapped_column_profile_observations`.
+`unmapped_column_profile_observations`. The profile keeps the supplied column
+name as `observed_column_name`; `observed_column.column_name` also uses that
+name as a fallback until the column becomes a current map column.
 
 `doxabase.record_claim_observation`
 

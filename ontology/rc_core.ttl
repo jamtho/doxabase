@@ -799,6 +799,11 @@ rc:observedColumn a rdf:Property ;
     rdfs:range rc:Column ;
     rdfs:comment "The column observed." .
 
+rc:observedColumnName a rdf:Property ;
+    rdfs:domain rc:Observation ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The source-level column name supplied with an observed column, useful when the column is not yet a current map column." .
+
 rc:sampleSize a rdf:Property ;
     rdfs:domain rc:Observation ;
     rdfs:range xsd:integer ;

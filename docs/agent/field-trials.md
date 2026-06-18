@@ -253,9 +253,7 @@ few useful gaps:
   values with `record_column_profile(update_map_column=false)`, add a caveat
   claim that the values are not a closed domain, then synthesize both with a
   pattern. Profile metrics now support optional targets for scalars that are
-  about a narrower resource than the profile as a whole. A remaining profiling
-  question is whether profile-only handoffs should de-emphasize expected
-  storage/layout warnings.
+  about a narrower resource than the profile as a whole.
 - A profile-bundle trial confirmed that `record_profile_bundle` gives agents a
   natural way to record one profiling pass without manually repeating run
   metadata across every profile. It also showed that "shared evidence" must be
@@ -271,6 +269,12 @@ few useful gaps:
   A tighter verification suggested rolling up returned profile evidence IRIs in
   `profile_summary` so shared-evidence handoffs can be checked without walking
   every nested profile.
+- A profile-only handoff trial confirmed that `profile_summary.handoff_note`
+  helps fresh agents separate successful profile recording from expected
+  missing physical query-planning metadata. The same trial exposed that unmapped
+  column profiles needed to preserve the supplied source-level column name
+  without promoting the column into the map; use `observed_column_name` and the
+  `observed_column.column_name` fallback for that handoff.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

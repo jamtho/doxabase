@@ -25,9 +25,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1155
+    assert graphs["base_ontology"].triple_count == 1159
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1176
+    assert graphs["base_shapes"].triple_count == 1181
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -4934,6 +4934,8 @@ def test_describe_dataset_surfaces_unmapped_column_profile_observations(
     assert profile.observed_asset.iri == table
     assert profile.observed_column is not None
     assert profile.observed_column.iri == column
+    assert profile.observed_column_name == "status"
+    assert profile.observed_column.column_name == "status"
     assert profile.sample_scope == "Fifty sampled Orders rows."
     assert [(item.value, item.frequency) for item in profile.value_frequencies] == [
         ("fulfilled", 38),
@@ -5051,6 +5053,8 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert len(unmapped) == 1
     assert unmapped[0].observed_column is not None
     assert unmapped[0].observed_column.iri == status_column
+    assert unmapped[0].observed_column_name == "status"
+    assert unmapped[0].observed_column.column_name == "status"
     assert unmapped[0].sample_size == 100
     assert [(item.value, item.frequency) for item in unmapped[0].value_frequencies] == [
         ("fulfilled", 70),
@@ -5094,3 +5098,11 @@ def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
         )
     with pytest.raises(DoxaBaseError, match="observation_type"):
         db.record_observation("Bad type", observation_type="note")  # type: ignore[arg-type]
+    with pytest.raises(DoxaBaseError, match="observed_column_name requires"):
+        db.record_observation("Bad column name", observed_column_name="status")
+    with pytest.raises(DoxaBaseError, match="observed_column_name must not be empty"):
+        db.record_observation(
+            "Bad empty column name",
+            observed_column="https://example.test/project#OrdersStatus",
+            observed_column_name=" ",
+        )

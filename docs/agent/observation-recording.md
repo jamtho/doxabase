@@ -51,6 +51,9 @@ be non-negative. A profile metric may also include `target` when the scalar is
 specifically about a resource narrower than the profile as a whole, for example
 a column measured during a dataset-level profile. Treat these as observed
 sample/profile facts, not declared allowed values or constraints.
+Column profile helpers also record the supplied source-level name as
+`observed_column_name`, so observation-only columns can be read without parsing
+their IRIs.
 
 For example, an untargeted dataset metric applies to the profile observation
 or observed asset as a whole, while a targeted metric points at the narrower
@@ -104,7 +107,9 @@ write map column metadata when map fields are supplied. Set these booleans to
 otherwise not ready to become current-best map context.
 When a column profile uses `update_map_column=false` and the column is not yet a
 map column, `describe_dataset` surfaces it under
-`unmapped_column_profile_observations` rather than `columns[]`.
+`unmapped_column_profile_observations` rather than `columns[]`. The supplied
+column name remains available as `observed_column_name` and as a fallback on
+`observed_column.column_name`, without promoting the column into the map.
 
 When observed values should not become durable semantics, keep the profile
 observation-led and record the interpretation separately:

@@ -573,6 +573,7 @@ profile.observed_at
 profile.observed_by
 profile.observed_asset
 profile.observed_column
+profile.observed_column_name
 profile.sample_size
 profile.sample_scope
 profile.sample_method
@@ -593,7 +594,10 @@ identity and detailed provenance.
 observations whose `observed_asset` is the dataset but whose `observed_column`
 is not one of the dataset's current map columns. Use it when a sampled or
 scratch column profile was recorded with `update_map_column=false`. These
-profiles are observation lore, not map column assertions.
+profiles are observation lore, not map column assertions. When the helper was
+given a column name, `profile.observed_column_name` preserves that observed name
+and `profile.observed_column.column_name` uses it as a fallback if the column is
+not mapped.
 
 `profile.evidence` items use the richer evidence description shape:
 

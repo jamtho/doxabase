@@ -594,6 +594,7 @@ class ProfileObservationSummary:
     observed_by: str | None
     observed_asset: ResourceSummary | None
     observed_column: ResourceSummary | None
+    observed_column_name: str | None
     sample_size: int | None
     sample_scope: str | None
     sample_method: str | None
@@ -4308,6 +4309,11 @@ class DoxaBase:
             observation_iri,
             "rc:observedColumn",
         )
+        observed_column_name = self._first_object(
+            observation_graphs,
+            observation_iri,
+            "rc:observedColumnName",
+        )
         return ProfileObservationSummary(
             iri=observation_iri,
             summary=self._first_object(observation_graphs, observation_iri, "rc:summary"),
@@ -4327,10 +4333,15 @@ class DoxaBase:
                 else None
             ),
             observed_column=(
-                self._resource_summary(lookup_graphs, observed_column)
+                self._profile_observed_column_summary(
+                    lookup_graphs,
+                    observed_column,
+                    observed_column_name=observed_column_name,
+                )
                 if observed_column is not None
                 else None
             ),
+            observed_column_name=observed_column_name,
             sample_size=self._int_object(
                 observation_graphs,
                 observation_iri,
@@ -4378,6 +4389,22 @@ class DoxaBase:
                     "rc:evidence",
                 )
             ],
+        )
+
+    def _profile_observed_column_summary(
+        self,
+        lookup_graphs: list[str],
+        observed_column: str,
+        *,
+        observed_column_name: str | None,
+    ) -> ResourceSummary:
+        summary = self._resource_summary(lookup_graphs, observed_column)
+        if summary.column_name is not None or observed_column_name is None:
+            return summary
+        return replace(
+            summary,
+            label=observed_column_name,
+            column_name=observed_column_name,
         )
 
     def _observed_value_frequency_summaries(
@@ -4470,6 +4497,7 @@ class DoxaBase:
         observation_type: TypingLiteral["observation", "profile"] = "observation",
         observed_asset: str | None = None,
         observed_column: str | None = None,
+        observed_column_name: str | None = None,
         observed_at: datetime | str | None = None,
         observed_by: str | None = None,
         evidence_summary: str | None = None,
@@ -4551,6 +4579,21 @@ class DoxaBase:
                     observation_subject,
                     URIRef(self.expand_iri("rc:observedColumn")),
                     URIRef(self.expand_iri(observed_column)),
+                )
+            )
+        if observed_column_name is not None:
+            if observed_column is None:
+                raise DoxaBaseError(
+                    "observed_column_name requires observed_column"
+                )
+            column_name_value = observed_column_name.strip()
+            if not column_name_value:
+                raise DoxaBaseError("observed_column_name must not be empty")
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedColumnName")),
+                    Literal(column_name_value),
                 )
             )
         if observed_by is not None:
@@ -5476,6 +5519,7 @@ class DoxaBase:
             observation_type="profile",
             observed_asset=table_value,
             observed_column=column_value,
+            observed_column_name=column_name,
             observed_at=observed_at,
             observed_by=observed_by,
             evidence_summary=evidence_summary,

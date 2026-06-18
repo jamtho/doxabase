@@ -588,6 +588,12 @@ rc:ObservationShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:nodeKind sh:IRI ;
         sh:message "observedColumn should be a named column resource." ;
+    ] ;
+    sh:property [
+        sh:path rc:observedColumnName ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "observedColumnName must be a single string if declared." ;
     ] .
 
 rc:ProfileObservationShape a sh:NodeShape ;

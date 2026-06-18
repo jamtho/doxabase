@@ -183,6 +183,7 @@ def record_observation_tool(
     observation_type: str = "observation",
     observed_asset: str | None = None,
     observed_column: str | None = None,
+    observed_column_name: str | None = None,
     observed_at: str | None = None,
     observed_by: str | None = None,
     evidence_summary: str | None = None,
@@ -201,6 +202,7 @@ def record_observation_tool(
         observation_type=observation_type,  # type: ignore[arg-type]
         observed_asset=observed_asset,
         observed_column=observed_column,
+        observed_column_name=observed_column_name,
         observed_at=observed_at,
         observed_by=observed_by,
         evidence_summary=evidence_summary,
