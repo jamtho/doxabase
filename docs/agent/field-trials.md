@@ -276,7 +276,8 @@ few useful gaps:
   without promoting the column into the map; use `observed_column_name` and the
   `observed_column.column_name` fallback for that handoff. Query-planning issues
   and analysis warnings now carry a `domain` field so agents can read severity
-  in the right lane.
+  in the right lane. A retest confirmed the new affordances and also showed
+  that plain resource-field names should error with a concrete CURIE/IRI hint.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or
