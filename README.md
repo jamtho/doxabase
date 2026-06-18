@@ -72,7 +72,8 @@ Implemented:
 - `describe_dataset()` for bounded table schema, row semantics, relationship,
   caveat, provenance, and linked-pattern context.
 - `describe_query_context()` for compact non-secret query-planning context,
-  readiness, and an `issues` list for missing or risky metadata.
+  physical-metadata readiness, info/warning/error issues, and separate
+  analytical caveat warnings.
 - `describe_context_slice()` for route-explained dataset, pattern, and deep-lore
   graph slices.
 - `record_observation()` for first-class observation and evidence resources.
