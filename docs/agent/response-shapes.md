@@ -667,6 +667,8 @@ query.issues
 query.analysis_warnings
 query.planning_notes
 query.row_count_snapshot
+query.layout_verification_status
+query.layout_verification_note
 query.columns
 query.path_templates
 query.physical_layouts

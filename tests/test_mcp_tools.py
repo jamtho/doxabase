@@ -965,6 +965,8 @@ def test_describe_query_context_tool_returns_planning_projection(
     assert result["readiness"] == "needs_review"
     assert "readiness_note" in result
     assert "analysis_warnings" in result
+    assert "layout_verification_status" in result
+    assert "layout_verification_note" in result
     assert "broadcasts/{year}/ais-{date}.parquet" in result["path_templates"]
     assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
     assert any(

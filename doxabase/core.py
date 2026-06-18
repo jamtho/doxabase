@@ -675,6 +675,8 @@ class QueryPlanningContext:
     analysis_warnings: list[QueryPlanningIssue]
     planning_notes: list[str]
     row_count_snapshot: int | None
+    layout_verification_status: ResourceSummary | None
+    layout_verification_note: str | None
     columns: list[ColumnDescription]
     path_templates: list[str]
     physical_layouts: list[PhysicalLayoutDescription]
@@ -3808,6 +3810,8 @@ class DoxaBase:
                 ),
             ],
             row_count_snapshot=dataset.row_count_snapshot,
+            layout_verification_status=dataset.layout_verification_status,
+            layout_verification_note=dataset.layout_verification_note,
             columns=dataset.columns,
             path_templates=dataset.path_templates,
             physical_layouts=dataset.physical_layouts,

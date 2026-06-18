@@ -298,7 +298,9 @@ few useful gaps:
   returns info-level `verification_status_not_recorded` issues for usable
   path/layout metadata without explicit verification status, the executable
   catalog doc includes a direct Python serialization example, and analysis
-  warning messages avoid doubled punctuation before impact text.
+  warning messages avoid doubled punctuation before impact text. A retest found
+  the split clear and suggested exposing dataset-level verification status
+  directly in query context for a complete compact inventory.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

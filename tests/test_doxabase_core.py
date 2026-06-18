@@ -2952,6 +2952,8 @@ def test_describe_query_context_separates_analysis_caveats(
     assert "Enough non-secret physical metadata" in context.readiness_note
     assert "Informational physical metadata notes" in context.readiness_note
     assert "Analysis warnings are separate caveats" in context.readiness_note
+    assert context.layout_verification_status is None
+    assert context.layout_verification_note is None
     assert all(issue.severity == "info" for issue in context.issues)
     assert any(
         issue.code == "verification_status_not_recorded"
