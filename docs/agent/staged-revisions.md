@@ -96,7 +96,9 @@ artifact itself. For simple single-assertion `map` changes that still replay
 cleanly, the export may include a `Semantic Review Warning` before the apply
 check, and also includes a `Judgement Panel` section so human and agent
 reviewers can see the same compact values, value-type context, caveats, routes,
-and safety notes that the JSON helper returned. `can_apply=True` means replay
+and safety notes that the JSON helper returned. Stale single-assertion exports
+can still include a `Semantic Review Warning` reconstructed from the live apply
+check even when the judgement panel is unavailable. `can_apply=True` means replay
 and validation readiness, not semantic approval. Use
 `doxabase.export_staged_revisions` when
 several alternatives, failed candidates, and repaired candidates should be

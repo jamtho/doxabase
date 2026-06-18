@@ -11703,7 +11703,8 @@ class DoxaBase:
                 ]
             )
         semantic_warning = self._semantic_review_warning_markdown(
-            description.judgement_panel
+            description.judgement_panel,
+            apply_check=apply_check,
         )
         if semantic_warning:
             semantic_warning.append("")
@@ -11864,21 +11865,44 @@ class DoxaBase:
     def _semantic_review_warning_markdown(
         self,
         panel: MapAssertionJudgementPanel | None,
+        *,
+        apply_check: StagedRevisionApplyCheck | None = None,
     ) -> list[str]:
-        if panel is None or panel.semantic_risk_level == "none":
+        if panel is not None and panel.semantic_risk_level != "none":
+            level = panel.semantic_risk_level
+            reasons = panel.semantic_risk_reasons
+            source_note = None
+        elif apply_check is not None and apply_check.semantic_risk_level != "none":
+            level = apply_check.semantic_risk_level
+            reasons = apply_check.semantic_risk_reasons
+            if apply_check.status == "conflict":
+                source_note = (
+                    "The compact judgement panel is unavailable because this "
+                    "staged revision cannot currently replay cleanly; this "
+                    "warning is reconstructed from stored review context."
+                )
+            else:
+                source_note = (
+                    "The compact judgement panel is unavailable; this warning "
+                    "is reconstructed from stored review context."
+                )
+        else:
             return []
         lines = [
             "## Semantic Review Warning",
             "",
-            f"- Level: {panel.semantic_risk_level}",
+            f"- Level: {level}",
             (
-                "- Meaning: this staged revision may replay and validate cleanly, "
-                "but nearby lore says it still needs semantic review."
+                "- Meaning: mechanical replay or validation status is not "
+                "semantic approval; nearby or stored lore says this staged "
+                "revision needs semantic review."
             ),
         ]
-        if panel.semantic_risk_reasons:
+        if source_note:
+            lines.append(f"- Source: {source_note}")
+        if reasons:
             lines.append("- Reasons:")
-            lines.extend(f"  - {reason}" for reason in panel.semantic_risk_reasons)
+            lines.extend(f"  - {reason}" for reason in reasons)
         return lines
 
     def _staged_apply_check_markdown(

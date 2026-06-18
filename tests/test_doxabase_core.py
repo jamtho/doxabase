@@ -1200,6 +1200,15 @@ def test_stale_map_assertion_apply_check_preserves_review_risk(
     assert drift.patch_overlap_subjects == []
     assert RC + "entityKey" in drift.patch_overlap_predicates
 
+    export_path = tmp_path / "stale-entity-key-review.md"
+    db.export_staged_revision(staged_change.staged_revision.revision_iri, export_path)
+    exported = export_path.read_text(encoding="utf-8")
+    assert exported.index("## Semantic Review Warning") < exported.index(
+        "## Current Apply Check"
+    )
+    assert "reconstructed from stored review context" in exported
+    assert "- Semantic risk: high" in exported
+
 
 def test_apply_staged_revision_mutates_graph_and_records_history(
     tmp_path: Path,

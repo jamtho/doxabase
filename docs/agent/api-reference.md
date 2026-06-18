@@ -405,11 +405,12 @@ graph state.
 `export_staged_revision()` writes a Markdown review bundle with the current
 apply-check status, diagnostics, and impact review before patch payloads. Stale
 exports include conflict status, count or digest drift, validation-skipped reason, and
-suggested next calls as of export time. For simple single-assertion `map`
-changes that still replay cleanly, it may add a `Semantic Review Warning` before
-the apply check, and reconstructs a `Judgement Panel` section so the export
-carries values, value-type context, rationale, caveats, routes, and safety notes
-from the JSON review surface.
+suggested next calls as of export time. When the live apply check reports
+semantic risk, it may add a `Semantic Review Warning` before the apply check even
+if the compact judgement panel is unavailable because the proposal is stale. For
+simple single-assertion `map` changes that still replay cleanly, it reconstructs
+a `Judgement Panel` section so the export carries values, value-type context,
+rationale, caveats, routes, and safety notes from the JSON review surface.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and

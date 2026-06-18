@@ -474,10 +474,13 @@ staged revision. It is a first apply path, not a full merge/rebase workflow.
 Writes a Markdown review bundle for a staged revision, including validation
 diagnostics before patch payloads when validation failed. The bundle also
 includes a live `Current Apply Check`, so stale exports show conflict status,
-count or digest drift, validation-skipped reason, and suggested next calls as of export
-time. For simple single-assertion `map` changes that still replay cleanly, the
-export includes a `Judgement Panel` section with values, value-type context,
-rationale, caveats, routes, and safety notes. This is for human/agent review.
+count or digest drift, validation-skipped reason, and suggested next calls as of
+export time. Exports can include a `Semantic Review Warning` before the apply
+check when the live apply check reports semantic risk. For simple
+single-assertion `map` changes that still replay cleanly, the export includes a
+`Judgement Panel` section with values, value-type context, rationale, caveats,
+routes, and safety notes. Stale single-assertion exports may lack the judgement
+panel but still warn from stored review context. This is for human/agent review.
 
 `doxabase.export_staged_revisions`
 
