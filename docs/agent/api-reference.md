@@ -160,6 +160,9 @@ caveats and is intentionally separate from direct `caveats`.
 bounded dataset description, split across dataset-level, mapped-column, and
 unmapped-column profile lore. It also rolls up profile evidence IRIs and lists
 `shared_evidence_iris` that appear on every returned profile observation.
+`profile_summary.handoff_note` gives a short reading cue for profile-only
+handoffs: profile lore is observed evidence, while storage/path/layout warnings
+remain physical query-planning metadata gaps.
 Check `layout_verification_status` and `layout_verification_note` before using
 `path_templates` for executable query planning. Child physical layout, storage,
 and partition descriptions may carry their own verification fields when the
@@ -234,7 +237,9 @@ tentative measurement. When the helper creates a pattern and the profile
 observation has evidence, the same evidence is linked to the pattern.
 If a capsule only contains profile lore, `describe_dataset()` may still report
 missing storage/path/layout warnings; treat those as query-planning gaps, not
-profile validation failures.
+profile validation failures. Check `profile_summary.handoff_note` when deciding
+whether a profile-only handoff is missing physical query-planning metadata or
+missing profile evidence.
 
 `record_profile_bundle()` records one dataset profile plus zero or more related
 column profiles from the same profiling pass. It composes
@@ -254,7 +259,9 @@ Use `column_defaults` for repeated column options, for example
 `{"update_map_column": false}` when sampled column profiles should stay
 observation-only. Each `column_profiles[]` item accepts the same fields as
 `record_column_profile()` and must include `column_iri`, `column_name`, and
-`summary`.
+`summary`. After recording a bundle, `describe_dataset().profile_summary` lists
+shared evidence IRIs and includes a handoff note that can help a later agent
+recognise one profiler run without walking every observation.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as

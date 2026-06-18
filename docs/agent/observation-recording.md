@@ -91,6 +91,10 @@ and `column_defaults` can set repeated column options such as
 `update_map_column=false`. By default, shared evidence means shared evidence
 fields and source strings. Pass `shared_evidence_iri` when all profiles in the
 pass should link to the same `rc:Evidence` resource.
+`describe_dataset().profile_summary.handoff_note` then gives later agents a
+compact cue that profile lore is observed evidence, while storage/path/layout
+warnings are physical query-planning metadata gaps rather than profile-recording
+failures.
 
 Be explicit about the map update booleans. `record_dataset_profile` defaults
 `update_map_snapshot=true` and can write `rc:rowCountSnapshot` when `row_count`

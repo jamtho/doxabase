@@ -106,6 +106,9 @@ The `profile_summary` field gives quick counts of the profile observations
 returned in this bounded response, including dataset-level, mapped-column, and
 unmapped-column profile counts. It also rolls up profile evidence IRIs and
 lists `shared_evidence_iris` that appear on every returned profile observation.
+Its `handoff_note` is a compact reading cue for profile-only handoffs: profile
+lore is observed evidence, while storage/path/layout warnings remain physical
+query-planning metadata gaps.
 Relationship entries and grouped reasons may include `source_caveats`, meaning
 caveats attached to source datasets or source-side columns that should remain
 visible when interpreting an aggregation, derivation, or foreign key. The
@@ -198,7 +201,9 @@ row counts that should remain observation-only. If the helper creates a pattern,
 the profile evidence is linked to that pattern as well as the observation.
 For a capsule that only records profile lore, `describe_dataset` may still emit
 missing storage/path/layout warnings. Those are query-planning gaps rather than
-profile validation failures.
+profile validation failures. Read `profile_summary.handoff_note` when deciding
+whether a profile-only handoff is missing physical query-planning metadata or
+missing profile evidence.
 
 `doxabase.record_profile_bundle`
 
@@ -219,7 +224,9 @@ run-level checks.
 Use `column_defaults` for repeated column options such as
 `{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
 fields as `record_column_profile` and must include `column_iri`, `column_name`,
-and `summary`.
+and `summary`. After recording a bundle, `describe_dataset().profile_summary`
+lists shared evidence IRIs and includes a handoff note that can help a later
+agent recognise one profiler run without walking every observation.
 
 `doxabase.record_column_profile`
 

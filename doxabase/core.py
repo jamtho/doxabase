@@ -842,6 +842,7 @@ class ProfileSummary:
     evidence_iris: list[str]
     evidence_profile_counts: dict[str, int]
     shared_evidence_iris: list[str]
+    handoff_note: str
 
 
 @dataclass(frozen=True)
@@ -4237,6 +4238,12 @@ class DoxaBase:
             + mapped_column_profile_count
             + unmapped_column_profile_count
         )
+        shared_evidence_iris = [
+            evidence_iri
+            for evidence_iri in evidence_iris
+            if returned_profile_count > 0
+            and evidence_profile_counts[evidence_iri] == returned_profile_count
+        ]
         return ProfileSummary(
             returned_dataset_profile_count=dataset_profile_count,
             returned_mapped_column_profile_count=mapped_column_profile_count,
@@ -4245,13 +4252,44 @@ class DoxaBase:
             mapped_profiled_column_count=mapped_profiled_column_count,
             evidence_iris=evidence_iris,
             evidence_profile_counts=evidence_profile_counts,
-            shared_evidence_iris=[
-                evidence_iri
-                for evidence_iri in evidence_iris
-                if returned_profile_count > 0
-                and evidence_profile_counts[evidence_iri] == returned_profile_count
-            ],
+            shared_evidence_iris=shared_evidence_iris,
+            handoff_note=self._profile_handoff_note(
+                returned_profile_count=returned_profile_count,
+                unmapped_column_profile_count=unmapped_column_profile_count,
+                shared_evidence_count=len(shared_evidence_iris),
+            ),
         )
+
+    def _profile_handoff_note(
+        self,
+        *,
+        returned_profile_count: int,
+        unmapped_column_profile_count: int,
+        shared_evidence_count: int,
+    ) -> str:
+        if returned_profile_count == 0:
+            return (
+                "No profile observations are included in this bounded dataset "
+                "description; do not treat that as evidence that profiling has "
+                "never been run."
+            )
+        note = (
+            f"This bounded dataset description includes {returned_profile_count} "
+            "profile observation(s). Profile lore is observed evidence, not "
+            "physical query-planning metadata; storage/path/layout warnings "
+            "remain physical metadata gaps rather than profile-recording failures."
+        )
+        if unmapped_column_profile_count:
+            note += (
+                f" {unmapped_column_profile_count} returned column profile(s) "
+                "are not mapped as current columns."
+            )
+        if shared_evidence_count:
+            note += (
+                " At least one evidence resource is shared by every returned "
+                "profile observation, which usually indicates one profiler run."
+            )
+        return note
 
     def _profile_observation_summary(
         self,

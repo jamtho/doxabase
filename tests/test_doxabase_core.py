@@ -4739,6 +4739,10 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     assert description.profile_summary.shared_evidence_iris == [
         result.observation.evidence_iri
     ]
+    assert "Profile lore is observed evidence" in (
+        description.profile_summary.handoff_note
+    )
+    assert "physical metadata gaps" in description.profile_summary.handoff_note
     profile = description.profile_observations[0]
     assert profile.iri == result.observation.observation_iri
     assert profile.sample_size == 123
@@ -4920,6 +4924,9 @@ def test_describe_dataset_surfaces_unmapped_column_profile_observations(
     assert description.profile_summary.shared_evidence_iris == [
         result.observation.evidence_iri
     ]
+    assert "not mapped as current columns" in (
+        description.profile_summary.handoff_note
+    )
     assert len(description.unmapped_column_profile_observations) == 1
     profile = description.unmapped_column_profile_observations[0]
     assert profile.iri == result.observation.observation_iri
@@ -5023,6 +5030,8 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         shared_evidence: 3,
     }
     assert description.profile_summary.shared_evidence_iris == [shared_evidence]
+    assert "3 profile observation(s)" in description.profile_summary.handoff_note
+    assert "one profiler run" in description.profile_summary.handoff_note
     assert len(description.profile_observations) == 1
     dataset_profile = description.profile_observations[0]
     assert dataset_profile.sample_scope == "All rows in the local Orders table."

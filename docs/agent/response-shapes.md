@@ -497,6 +497,7 @@ profile_summary.mapped_profiled_column_count
 profile_summary.evidence_iris
 profile_summary.evidence_profile_counts
 profile_summary.shared_evidence_iris
+profile_summary.handoff_note
 ```
 
 These are response counts, not a promise that the capsule has no older profile
@@ -504,7 +505,9 @@ observations beyond the returned limit. `evidence_iris` lists unique evidence
 IRIs linked from returned profile observations. `evidence_profile_counts` counts
 how many returned profile observations link to each evidence IRI.
 `shared_evidence_iris` lists evidence IRIs that are linked from every returned
-profile observation in the bounded response.
+profile observation in the bounded response. `handoff_note` is a compact reading
+cue for profile-only handoffs: profile lore is observed evidence, while
+storage/path/layout warnings remain physical query-planning metadata gaps.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:
