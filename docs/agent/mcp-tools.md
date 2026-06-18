@@ -434,7 +434,11 @@ staged patch triples themselves are currently present, absent, or mixed in the
 target graph. `snapshot_drifts` records staged/current `sha256:<hex>` digest
 mismatches, including same-count graph changes. For revisions staged with the
 current runtime, it also includes exact triples added to and removed from the
-target graph since the stored snapshot. Older revisions may report
+target graph since the stored snapshot. It also includes `drift_relevance`,
+`patch_overlap_subjects`, and `patch_overlap_predicates` so agents can separate
+"no staged patch subject changed" from stronger overlaps. Predicate overlap can
+be broad, so it is a review hint rather than an apply decision. Older revisions
+may report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
 Suggested actions are ordered review-first, so inspect/export suggestions
 come before mutation calls such as apply or restage. Use it before

@@ -1053,9 +1053,11 @@ Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `ready`, `already_applied`, `conflict`, `validation_failed`, and `not_ready`.
 `decision` is the stable branch hint, for example `review_then_apply`,
 `inspect_applied_revision`, `restage_against_current_graph`, or
-`inspect_validation_results`. `review_recommended=True` means the patch replays
-and validates, but the caller should still review the staged revision before
-applying. `blocking_reasons` uses compact values such as `target_count_drift`,
+`inspect_validation_results`. `review_recommended=True` means the caller should
+review the staged revision before the next mutation. For `ready` checks that
+means review before applying; for `conflict` checks it means review before
+restaging or rewriting the stale proposal. `blocking_reasons` uses compact
+values such as `target_count_drift`,
 `target_digest_drift`, `validation_failed`, or `already_applied`. When
 `validation_conforms is None`, read `validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
@@ -1073,9 +1075,16 @@ snapshot rows exist, exact target graph additions and removals are available in
 triple count, current triple count, staged snapshot digest, current graph digest,
 whether exact changed triples are available, whether they are included in this
 response,
-`triples_added_since_snapshot`, and `triples_removed_since_snapshot`. A digest
-mismatch means the target graph state is not identical to the state at staging
-time, even when triple counts still match. Older revisions can report
+`drift_relevance`, `patch_overlap_subjects`, `patch_overlap_predicates`,
+`triples_added_since_snapshot`, and `triples_removed_since_snapshot`.
+`drift_relevance` is a conservative hint, not an auto-merge decision. Current
+values include `no_patch_subject_overlap`, `patch_subject_overlap`,
+`patch_subject_and_predicate_overlap`, `unknown_no_exact_diff`, and
+`unknown_no_patch_terms`. Predicate overlap is reported separately because broad
+predicates such as `rdf:type` or project identity predicates can overlap even
+when exact drift is on different subjects. A digest mismatch means the target
+graph state is not identical to the state at staging time, even when triple
+counts still match. Older revisions can report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
 Revision-list summary mode may report `exact_changed_triples_available=True`
 and `exact_changed_triples_included=False`; that means exact triples exist but

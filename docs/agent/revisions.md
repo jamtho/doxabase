@@ -138,6 +138,10 @@ triples_removed_since_snapshot=[]
 
 That means exact changed triples exist, but the list row omitted them for
 scanning. It is not missing evidence; ask for exact detail when you need it.
+Snapshot drift rows can also include `drift_relevance`,
+`patch_overlap_subjects`, and `patch_overlap_predicates`. Treat these as triage
+hints: `no_patch_subject_overlap` says exact drift did not touch the staged
+patch subjects, while predicate overlap may still reveal broad schema activity.
 
 A staged patch can be blocked even when its own triples are still absent from the
 target graph. DoxaBase applies staged revisions conservatively: unrelated count

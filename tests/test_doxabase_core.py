@@ -1086,6 +1086,121 @@ def test_stage_map_assertion_change_packages_support_context(
     assert comment_check.semantic_risk_reasons
 
 
+def test_stale_map_assertion_apply_check_preserves_review_risk(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/adversarial#"
+    event_log = f"{base}EventLog"
+    event_id = f"{base}event_log__event_id"
+    account_id = f"{base}event_log__account_id"
+
+    db.record_map_dataset(
+        event_log,
+        label="Event log",
+        description="Scratch event stream with event-row and account identifiers.",
+        is_table=True,
+        row_semantics="rc:EventRow",
+        entity_key=event_id,
+    )
+    db.record_map_column(
+        event_id,
+        table_iri=event_log,
+        column_name="event_id",
+        label="event_id",
+        physical_type="rc:Varchar",
+        nullable=False,
+    )
+    db.record_map_column(
+        account_id,
+        table_iri=event_log,
+        column_name="account_id",
+        label="account_id",
+        description="Operational account identifier.",
+        physical_type="rc:Varchar",
+        nullable=False,
+    )
+    claim = db.record_claim_observation(
+        summary="Account ids may not be durable person identity.",
+        claim_text=(
+            "account_id appears useful for joining records, but may be an "
+            "operational account key rather than a person-level entity key."
+        ),
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=[event_log, account_id],
+        observed_asset=event_log,
+        observed_column=account_id,
+        confidence="rc:MediumConfidence",
+        observation_status="rc:Tentative",
+        evidence_summary="Synthetic field-test note for account identity.",
+        evidence_sources=["test://account-identity"],
+    )
+    pattern = db.record_pattern(
+        summary="Account identity should stay reviewable before map promotion.",
+        pattern_text=(
+            "The event log has a tempting account_id join surface, but the "
+            "current map still treats event_id as the event-row key."
+        ),
+        rationale="Changing entity key changes row-grain interpretation.",
+        pattern_targets=[event_log, account_id],
+        supporting_claims=[claim.claim_iri],
+        map_implications=[f"{base}account_id_as_entity_key_candidate"],
+    )
+    staged_change = db.stage_map_assertion_change(
+        event_log,
+        "rc:entityKey",
+        account_id,
+        "Candidate entity-key replacement staged for semantic review.",
+        change_kind="replace",
+        object_kind="iri",
+        supporting_claims=[claim.claim_iri],
+        supporting_patterns=[pattern.pattern_iri],
+        review_note=(
+            "This is risky because account_id may identify an account rather "
+            "than the event row."
+        ),
+        review_recommendation=(
+            "Do not apply without domain confirmation of row grain."
+        ),
+        validation_scope="all",
+    )
+    ready_check = db.check_staged_revision_apply(
+        staged_change.staged_revision.revision_iri
+    )
+    assert ready_check.status == "ready"
+    assert ready_check.semantic_risk_level == "high"
+
+    db.record_map_dataset(
+        f"{base}UnrelatedAuditLog",
+        label="Unrelated audit log",
+        is_table=True,
+        row_semantics="rc:EventRow",
+        entity_key=f"{base}unrelated_audit__id",
+    )
+
+    stale_description = db.describe_staged_revision(
+        staged_change.staged_revision.revision_iri
+    )
+    assert stale_description.judgement_panel is None
+
+    stale_check = db.check_staged_revision_apply(
+        staged_change.staged_revision.revision_iri
+    )
+    assert stale_check.status == "conflict"
+    assert stale_check.decision == "restage_against_current_graph"
+    assert stale_check.review_recommended is True
+    assert stale_check.validation_skipped_reason == "conflicts_present"
+    assert stale_check.semantic_risk_level == "high"
+    assert "attention-level impact entries" in " ".join(
+        stale_check.semantic_risk_reasons
+    )
+    assert len(stale_check.snapshot_drifts) == 1
+    drift = stale_check.snapshot_drifts[0]
+    assert drift.drift_relevance == "no_patch_subject_overlap"
+    assert drift.patch_overlap_subjects == []
+    assert RC + "entityKey" in drift.patch_overlap_predicates
+
+
 def test_apply_staged_revision_mutates_graph_and_records_history(
     tmp_path: Path,
 ) -> None:
@@ -1323,7 +1438,7 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.can_apply is False
     assert check.status == "conflict"
     assert check.decision == "restage_against_current_graph"
-    assert check.review_recommended is False
+    assert check.review_recommended is True
     assert check.blocking_reasons == ["target_count_drift"]
     assert check.recommended_resolution is not None
     assert "Restage the proposal" in check.recommended_resolution
@@ -1347,6 +1462,15 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.snapshot_drifts[0].exact_changed_triples_available is True
     assert check.snapshot_drifts[0].triples_added_since_snapshot
     assert check.snapshot_drifts[0].triples_removed_since_snapshot == []
+    assert (
+        check.snapshot_drifts[0].drift_relevance
+        == "no_patch_subject_overlap"
+    )
+    assert check.snapshot_drifts[0].patch_overlap_subjects == []
+    assert str(RDF.type) in check.snapshot_drifts[0].patch_overlap_predicates
+    assert "does not touch staged patch subjects" in (
+        check.snapshot_drifts[0].note
+    )
 
     export_path = tmp_path / "stale-staged-review.md"
     db.export_staged_revision(staged.revision_iri, export_path)
@@ -1471,6 +1595,9 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert drift.snapshot_content_digest != drift.current_content_digest
     assert drift.exact_changed_triples_available is True
     assert drift.exact_changed_triples_included is True
+    assert drift.drift_relevance == "no_patch_subject_overlap"
+    assert drift.patch_overlap_subjects == []
+    assert drift.patch_overlap_predicates == []
     assert [triple.object for triple in drift.triples_added_since_snapshot] == [
         "Seed dataset renamed"
     ]
@@ -1497,7 +1624,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert (
         "| Graph | Snapshot stored count | Current count | "
         "Snapshot digest | Current digest | Exact changed triples | "
-        "Added since snapshot | Removed since snapshot | Note |"
+        "Added since snapshot | Removed since snapshot | Drift relevance | "
+        "Patch subject overlap | Patch predicate overlap | Note |"
     ) in export_text
     assert "| map | 2 | 2 |" in export_text
     assert "| True | 1 | 1 |" in export_text
@@ -1522,7 +1650,12 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert summary_drift.exact_changed_triples_included is False
     assert summary_drift.triples_added_since_snapshot == []
     assert summary_drift.triples_removed_since_snapshot == []
+    assert (
+        summary_drift.drift_relevance
+        == "no_patch_subject_overlap"
+    )
     assert "omitted from this revision list row" in summary_drift.note
+    assert "are included" not in summary_drift.note
 
     exact_listing = db.list_graph_revisions(
         revision_type="rc:StagedRevision",

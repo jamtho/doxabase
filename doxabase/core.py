@@ -284,6 +284,9 @@ class StagedGraphSnapshotDrift:
     current_content_digest: str
     exact_changed_triples_available: bool
     exact_changed_triples_included: bool
+    drift_relevance: str
+    patch_overlap_subjects: list[str]
+    patch_overlap_predicates: list[str]
     triples_added_since_snapshot: list[GraphTripleDescription]
     triples_removed_since_snapshot: list[GraphTripleDescription]
     note: str
@@ -2215,10 +2218,11 @@ class DoxaBase:
         for drift in drifts:
             if drift.exact_changed_triples_available:
                 note = (
-                    drift.note
-                    + " Exact changed triples are available but omitted from "
-                    "this revision list row; call check_staged_revision_apply() "
-                    "or list_graph_revisions(drift_detail='exact') for them."
+                    "The graph content digest changed since this revision was "
+                    "staged. Exact changed triples are available but omitted "
+                    "from this revision list row; call "
+                    "check_staged_revision_apply() or "
+                    "list_graph_revisions(drift_detail='exact') for them."
                 )
             else:
                 note = drift.note
@@ -2233,6 +2237,9 @@ class DoxaBase:
                         drift.exact_changed_triples_available
                     ),
                     exact_changed_triples_included=False,
+                    drift_relevance=drift.drift_relevance,
+                    patch_overlap_subjects=drift.patch_overlap_subjects,
+                    patch_overlap_predicates=drift.patch_overlap_predicates,
                     triples_added_since_snapshot=[],
                     triples_removed_since_snapshot=[],
                     note=note,
@@ -8381,7 +8388,8 @@ class DoxaBase:
                 decision=self._staged_apply_check_decision(status),
                 summary=summary,
                 review_recommended=self._staged_apply_check_review_recommended(
-                    status
+                    status,
+                    semantic_risk_level=semantic_risk_level,
                 ),
                 semantic_risk_level=semantic_risk_level,
                 semantic_risk_reasons=semantic_risk_reasons,
@@ -8614,7 +8622,10 @@ class DoxaBase:
             status=status,
             decision=self._staged_apply_check_decision(status),
             summary=summary,
-            review_recommended=self._staged_apply_check_review_recommended(status),
+            review_recommended=self._staged_apply_check_review_recommended(
+                status,
+                semantic_risk_level=semantic_risk_level,
+            ),
             semantic_risk_level=semantic_risk_level,
             semantic_risk_reasons=semantic_risk_reasons,
             blocking_reasons=blocking_reasons,
@@ -8655,7 +8666,49 @@ class DoxaBase:
         staged: StagedGraphRevisionDescription,
     ) -> tuple[str, list[str]]:
         if staged.judgement_panel is None:
-            return "none", []
+            reasons: list[str] = []
+            review_note = staged.review_note or ""
+            if "Why current value may be intentional:" in review_note:
+                reasons.append(
+                    "Stored review context explains why the current value may "
+                    "be intentional."
+                )
+            if "Related route summaries:" in review_note:
+                reasons.append(
+                    "Stored review context includes related lore routes."
+                )
+            if (
+                staged.supporting_observations
+                or staged.supporting_claims
+                or staged.supporting_patterns
+                or staged.evidence
+            ):
+                reasons.append(
+                    "The staged revision has linked observations, claims, "
+                    "patterns, or evidence."
+                )
+            if any(impact.severity == "attention" for impact in staged.impacts):
+                reasons.append(
+                    "The staged revision has attention-level impact entries."
+                )
+            reasons = list(dict.fromkeys(reasons))
+            if not reasons:
+                return "none", []
+            high_signal_count = sum(
+                [
+                    "Why current value may be intentional:" in review_note,
+                    "Related route summaries:" in review_note,
+                    bool(
+                        staged.supporting_observations
+                        or staged.supporting_claims
+                        or staged.supporting_patterns
+                        or staged.evidence
+                    ),
+                    any(impact.severity == "attention" for impact in staged.impacts),
+                ]
+            )
+            level = "high" if high_signal_count >= 2 else "attention"
+            return level, reasons
         return (
             staged.judgement_panel.semantic_risk_level,
             staged.judgement_panel.semantic_risk_reasons,
@@ -8669,6 +8722,7 @@ class DoxaBase:
         snapshot_by_graph = {
             snapshot.graph_role: snapshot for snapshot in staged.graph_snapshots
         }
+        patch_terms_by_graph = self._staged_revision_patch_terms_by_graph(staged)
         drifts: list[StagedGraphSnapshotDrift] = []
         for graph_role in changed_graphs:
             snapshot = snapshot_by_graph.get(graph_role)
@@ -8696,6 +8750,18 @@ class DoxaBase:
                     "staged. Exact triples added to and removed from the target "
                     "graph since the stored snapshot are included."
                 )
+            (
+                drift_relevance,
+                patch_overlap_subjects,
+                patch_overlap_predicates,
+                relevance_note,
+            ) = self._staged_snapshot_drift_relevance(
+                exact_changed_triples_available=exact_changed_triples_available,
+                triples_added_since_snapshot=triples_added_since_snapshot,
+                triples_removed_since_snapshot=triples_removed_since_snapshot,
+                patch_terms=patch_terms_by_graph.get(graph_role),
+            )
+            note = f"{note} {relevance_note}"
             drifts.append(
                 StagedGraphSnapshotDrift(
                     graph_role=graph_role,
@@ -8707,12 +8773,97 @@ class DoxaBase:
                     exact_changed_triples_included=(
                         exact_changed_triples_available
                     ),
+                    drift_relevance=drift_relevance,
+                    patch_overlap_subjects=patch_overlap_subjects,
+                    patch_overlap_predicates=patch_overlap_predicates,
                     triples_added_since_snapshot=triples_added_since_snapshot,
                     triples_removed_since_snapshot=triples_removed_since_snapshot,
                     note=note,
                 )
             )
         return drifts
+
+    def _staged_revision_patch_terms_by_graph(
+        self,
+        staged: StagedGraphRevisionDescription,
+    ) -> dict[str, tuple[set[str], set[str]]]:
+        terms_by_graph: dict[str, tuple[set[str], set[str]]] = {}
+        for patch in staged.patches:
+            if patch.target_graph is None:
+                continue
+            try:
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                continue
+            graph_terms = terms_by_graph.setdefault(
+                patch.target_graph,
+                (set(), set()),
+            )
+            patch_subjects, patch_predicates = graph_terms
+            for subject, predicate, _object in patch_graph:
+                patch_subjects.add(str(subject))
+                patch_predicates.add(str(predicate))
+        return terms_by_graph
+
+    def _staged_snapshot_drift_relevance(
+        self,
+        *,
+        exact_changed_triples_available: bool,
+        triples_added_since_snapshot: list[GraphTripleDescription],
+        triples_removed_since_snapshot: list[GraphTripleDescription],
+        patch_terms: tuple[set[str], set[str]] | None,
+    ) -> tuple[str, list[str], list[str], str]:
+        if not exact_changed_triples_available:
+            return (
+                "unknown_no_exact_diff",
+                [],
+                [],
+                "Drift relevance to the staged patch cannot be classified "
+                "because exact changed triples are unavailable.",
+            )
+        if patch_terms is None:
+            return (
+                "unknown_no_patch_terms",
+                [],
+                [],
+                "Drift relevance to the staged patch cannot be classified "
+                "because patch terms were unavailable.",
+            )
+
+        patch_subjects, patch_predicates = patch_terms
+        changed_triples = [
+            *triples_added_since_snapshot,
+            *triples_removed_since_snapshot,
+        ]
+        changed_subjects = {triple.subject for triple in changed_triples}
+        changed_predicates = {triple.predicate for triple in changed_triples}
+        subject_overlap = sorted(patch_subjects & changed_subjects)
+        predicate_overlap = sorted(patch_predicates & changed_predicates)
+        if subject_overlap and predicate_overlap:
+            return (
+                "patch_subject_and_predicate_overlap",
+                subject_overlap,
+                predicate_overlap,
+                "Exact drift overlaps the staged patch subjects and predicates; "
+                "review carefully before restaging.",
+            )
+        if subject_overlap:
+            return (
+                "patch_subject_overlap",
+                subject_overlap,
+                predicate_overlap,
+                "Exact drift overlaps the staged patch subjects; review "
+                "carefully before restaging.",
+            )
+        return (
+            "no_patch_subject_overlap",
+            [],
+            predicate_overlap,
+            "Exact drift does not touch staged patch subjects. Predicate "
+            "overlap is reported separately and may reflect broad schema "
+            "activity; DoxaBase still blocks apply until the proposal is "
+            "reviewed and restaged.",
+        )
 
     def _staged_apply_check_status(
         self,
@@ -8772,8 +8923,15 @@ class DoxaBase:
         }
         return decisions.get(status, "inspect_staged_revision")
 
-    def _staged_apply_check_review_recommended(self, status: str) -> bool:
-        return status == "ready"
+    def _staged_apply_check_review_recommended(
+        self,
+        status: str,
+        *,
+        semantic_risk_level: str = "none",
+    ) -> bool:
+        if status in {"ready", "conflict"}:
+            return True
+        return status == "validation_failed" and semantic_risk_level != "none"
 
     def _staged_apply_check_validation_skipped_reason(
         self,
@@ -11849,9 +12007,11 @@ class DoxaBase:
                     (
                         "| Graph | Snapshot stored count | Current count | "
                         "Snapshot digest | Current digest | Exact changed triples | "
-                        "Added since snapshot | Removed since snapshot | Note |"
+                        "Added since snapshot | Removed since snapshot | "
+                        "Drift relevance | Patch subject overlap | "
+                        "Patch predicate overlap | Note |"
                     ),
-                    "|---|---:|---:|---|---|---|---:|---:|---|",
+                    "|---|---:|---:|---|---|---|---:|---:|---|---|---|---|",
                 ]
             )
             for drift in check.snapshot_drifts:
@@ -11869,6 +12029,15 @@ class DoxaBase:
                             str(drift.exact_changed_triples_available),
                             str(len(drift.triples_added_since_snapshot)),
                             str(len(drift.triples_removed_since_snapshot)),
+                            self._markdown_table_cell(drift.drift_relevance),
+                            self._markdown_table_cell(
+                                ", ".join(drift.patch_overlap_subjects)
+                                or "(none)"
+                            ),
+                            self._markdown_table_cell(
+                                ", ".join(drift.patch_overlap_predicates)
+                                or "(none)"
+                            ),
                             self._markdown_table_cell(drift.note),
                         ]
                     )

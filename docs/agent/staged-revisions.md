@@ -275,8 +275,10 @@ diagnostics, `status`, `summary`, and structured `suggested_next_actions`. Read
 `conflict`, `validation_failed`, and `not_ready`. `decision` is the compact
 branch hint: `review_then_apply`, `inspect_applied_revision`,
 `restage_against_current_graph`, `inspect_validation_results`, or
-`inspect_staged_revision`. `review_recommended=True` on `ready` checks means the
-proposal replays and validates, but still needs judgement before application.
+`inspect_staged_revision`. `review_recommended=True` means the staged revision
+needs review before the next mutation. On `ready` checks that means review
+before application; on `conflict` checks that means review before restaging or
+rewriting the stale proposal.
 Use `blocking_reasons` and `recommended_resolution` to distinguish count drift,
 digest drift, validation failure, and already-applied state. When
 `validation_conforms` is `None`, `validation_skipped_reason` explains why
@@ -285,7 +287,10 @@ validation did not run.
 It can also say whether the staged patch triples themselves are currently
 present, absent, or mixed in the target graph. When stored snapshot rows are
 available, `snapshot_drifts` carries the exact target graph triples added and
-removed since staging. Older revisions can still report
+removed since staging, plus a conservative `drift_relevance` hint and any
+patch-subject or patch-predicate overlaps. Treat `no_patch_subject_overlap` as
+"probably unrelated but still stale", not as permission to apply without
+review. Older revisions can still report
 `exact_changed_triples_available=False` if they were recorded before snapshot
 row storage existed. `snapshot_drifts` also gives staged/current graph content
 digests and stored graph counts for digest drift, including same-count graph

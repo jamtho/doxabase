@@ -433,7 +433,9 @@ patch triples themselves are currently present, absent, or mixed in the target
 graph. `snapshot_drifts` gives staged/current `sha256:<hex>` digest mismatches,
 including same-count graph changes. For new revisions, `snapshot_drifts` also
 includes exact triples added to and removed from the target graph since the
-stored snapshot. Older revisions may report
+stored snapshot, a `drift_relevance` hint, and any patch-subject or
+patch-predicate overlaps. `no_patch_subject_overlap` is useful triage context,
+not semantic approval to apply. Older revisions may report
 `exact_changed_triples_available=False` if no snapshot rows were stored.
 Suggested actions are ordered review-first; mutation calls come after
 inspection/export suggestions.
