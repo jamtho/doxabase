@@ -274,7 +274,9 @@ few useful gaps:
   missing physical query-planning metadata. The same trial exposed that unmapped
   column profiles needed to preserve the supplied source-level column name
   without promoting the column into the map; use `observed_column_name` and the
-  `observed_column.column_name` fallback for that handoff.
+  `observed_column.column_name` fallback for that handoff. Query-planning issues
+  and analysis warnings now carry a `domain` field so agents can read severity
+  in the right lane.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

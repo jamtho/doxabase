@@ -705,10 +705,17 @@ Each issue or analysis warning has:
 
 ```python
 issue.code
+issue.domain
 issue.severity
 issue.message
 issue.resource
 ```
+
+`domain` is `query_planning` for physical metadata readiness issues and
+`analysis` for caveat-shaped interpretation warnings. Read it before reacting
+to `severity`: an `error` in `query_planning` means executable query-planning
+metadata is missing or contradicted, not that profile lore or graph validation
+failed.
 
 Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and

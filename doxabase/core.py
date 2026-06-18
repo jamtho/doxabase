@@ -667,6 +667,7 @@ class QueryPlanningIssue:
     code: str
     severity: str
     message: str
+    domain: str = "query_planning"
     resource: ResourceSummary | None = None
 
 
@@ -3999,6 +4000,7 @@ class DoxaBase:
                         code=f"{scope}_analysis_caveat",
                         severity=severity,
                         message=message,
+                        domain="analysis",
                         resource=summary,
                     )
                 )

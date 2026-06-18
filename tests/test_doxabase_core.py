@@ -3052,6 +3052,7 @@ def test_describe_query_context_reports_planning_metadata_and_issues(
     }
     assert any(
         issue.code == "layout_needs_verification"
+        and issue.domain == "query_planning"
         and issue.severity == "warning"
         and issue.resource is not None
         and issue.resource.iri
@@ -3078,6 +3079,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "missing_physical_layout",
     }
     assert [issue.severity for issue in context.issues[:2]] == ["error", "error"]
+    assert {issue.domain for issue in context.issues} == {"query_planning"}
 
 
 def test_describe_query_context_separates_analysis_caveats(
@@ -3099,6 +3101,7 @@ def test_describe_query_context_separates_analysis_caveats(
     assert all(issue.severity == "info" for issue in context.issues)
     assert any(
         issue.code == "verification_status_not_recorded"
+        and issue.domain == "query_planning"
         and issue.resource is not None
         and issue.resource.iri
         == "https://richcanopy.org/example/manifest/polymarket#PriceSnapshots"
@@ -3110,6 +3113,7 @@ def test_describe_query_context_separates_analysis_caveats(
     )
     assert any(
         warning.code == "direct_analysis_caveat"
+        and warning.domain == "analysis"
         and warning.severity == "warning"
         and warning.resource is not None
         and warning.resource.iri == mixed_price_caveat

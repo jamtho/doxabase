@@ -971,11 +971,13 @@ def test_describe_query_context_tool_returns_planning_projection(
     assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
     assert any(
         issue["code"] == "layout_needs_verification"
+        and issue["domain"] == "query_planning"
         and issue["severity"] == "warning"
         for issue in result["issues"]
     )
     assert any(
         issue["code"] == "verification_status_not_recorded"
+        and issue["domain"] == "query_planning"
         and issue["severity"] == "info"
         for issue in result["issues"]
     )
@@ -1009,6 +1011,7 @@ def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> No
     )
     assert any(
         warning["code"] == "layout_needs_verification"
+        and warning["domain"] == "query_planning"
         and warning["resource"]["iri"]
         == "https://richcanopy.org/example/manifest/ais#DailyIndex"
         for warning in result["operational_warnings"]

@@ -121,11 +121,13 @@ status/notes when the uncertainty belongs to one part of the physical metadata.
 The `operational_warnings` field mirrors the physical-metadata
 `QueryPlanningIssue` objects returned as `describe_query_context.issues`; scan
 it when a full dataset handoff should still surface query-planning hazards such
-as unverified layouts. Info-level issues such as
+as unverified layouts. These warnings carry `domain="query_planning"` so their
+severity is not confused with profile recording or graph validation status.
+Info-level issues such as
 `verification_status_not_recorded` make missing verification status visible
 without changing query-planning readiness. Query-context `analysis_warnings`
 are separate caveat warnings for analytical interpretation after a query can be
-planned.
+planned and carry `domain="analysis"`.
 Within each linked-pattern reason, `iri` and `pattern_iri` both name the linked
 pattern. Scan `match_groups` first for relevance tiers, route labels, resource
 kinds, and supporting resources; use raw `matches` when every route matters.

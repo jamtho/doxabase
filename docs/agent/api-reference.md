@@ -170,7 +170,9 @@ uncertainty belongs to one part of the path/layout model.
 `operational_warnings` carries the same `QueryPlanningIssue` objects returned
 as `describe_query_context().issues`, so a full dataset handoff can still flag
 unverified layouts, missing storage access, or missing physical layout before an
-agent writes query plans.
+agent writes query plans. These warnings carry `domain="query_planning"` so
+their severity is not confused with profile recording or graph validation
+status. Query-context `analysis_warnings` carry `domain="analysis"`.
 `linked_pattern_reasons` explains whether a pattern matched through a direct
 target, map implication, supporting claim, or supporting observation. Each
 reason uses `iri` for the pattern IRI and also exposes the same value as
