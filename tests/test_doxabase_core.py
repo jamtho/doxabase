@@ -2469,7 +2469,24 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
         "Patch counts replay cleanly, but preview validation failed with "
         f"{check.validation_result_count} result(s)."
     )
-    assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
+    assert [action.tool_name for action in check.suggested_next_actions] == [
+        "describe_staged_revision",
+        "export_staged_revision",
+    ]
+    assert "stage a repaired" in check.suggested_next_actions[0].reason
+    assert "validation-failed" in check.suggested_next_actions[1].arguments["path"]
+
+    export = db.export_staged_revisions(
+        [staged.revision_iri],
+        tmp_path / "validation-failed-review.md",
+    )
+    assert export.bundle_summary.validation_failed_revision_iris == [
+        staged.revision_iri
+    ]
+    assert export.bundle_summary.recommended_mutation_review_iris == [
+        staged.revision_iri
+    ]
+    assert export.bundle_summary.recommended_applied_inspection_iris == []
 
     with pytest.raises(DoxaBaseError, match="Applying staged revision would fail"):
         db.apply_staged_revision(staged.revision_iri)

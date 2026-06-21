@@ -332,6 +332,11 @@ few useful gaps:
   `applies_staged_revision`; staged descriptions expose `applied_by` and
   `application_status` once applied; grouped bundle summaries split
   `recommended_mutation_review_iris` from `recommended_applied_inspection_iris`.
+  A validation-repair trial showed that agents could diagnose a
+  `validation_failed` revision but needed a stronger repair branch hint. Failed
+  validation checks now suggest exporting diagnostics before staging a repaired
+  or alternative candidate, and grouped bundle summaries list
+  `validation_failed_revision_iris` directly.
   A larger 10-successor recovery trial confirmed batch restage/export remains
   desirable for big runs but not necessary yet.
 - A profile-metric-target trial confirmed that optional `target` values let one

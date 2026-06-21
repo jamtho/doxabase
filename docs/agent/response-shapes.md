@@ -1247,6 +1247,7 @@ bundle.stale_resolution_state_counts
 bundle.unresolved_stale_revision_iris
 bundle.stale_handled_by_restage_revision_iris
 bundle.ready_restage_successor_revision_iris
+bundle.validation_failed_revision_iris
 bundle.recommended_review_iris
 bundle.recommended_mutation_review_iris
 bundle.recommended_applied_inspection_iris
@@ -1257,8 +1258,10 @@ still need restaging. `stale_handled_by_restage` means the source is stale but
 already points to a refreshed successor. `restaged_successor_ready` marks a
 ready refreshed proposal. The bundle's `recommended_review_iris` de-duplicates
 the current review set in bundle order, replacing handled stale sources with
-their successors. Use `recommended_mutation_review_iris` when you only want
-staged revisions that may still need restage, repair, or apply decisions. Use
+their successors. `validation_failed_revision_iris` lists rows whose patch counts
+replay but whose preview validation does not conform. Use
+`recommended_mutation_review_iris` when you only want staged revisions that may
+still need restage, repair, or apply decisions. Use
 `recommended_applied_inspection_iris` for already-applied staged revisions that
 are useful to inspect but should not be applied again.
 

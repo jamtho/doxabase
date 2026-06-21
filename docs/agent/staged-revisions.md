@@ -334,8 +334,9 @@ include per-row `stale_resolution_state`, `current_alternative_to`, and a
 already-handled stale sources, ready successors, the current mutation-review
 set, and already-applied inspection set without recomputing those buckets.
 Restaging is for count or digest drift conflicts; validation failures still need
-graph repair, and already-applied revisions should be inspected rather than
-replayed.
+graph repair, and their suggested actions now point agents toward structured
+diagnostics plus a Markdown review export before staging a repaired candidate.
+Already-applied revisions should be inspected rather than replayed.
 
 ## What Gets Recorded
 

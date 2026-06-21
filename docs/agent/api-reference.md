@@ -485,10 +485,12 @@ refreshed successor instead of another restage. `current_alternative_to` follows
 restage successors while preserving the stored `alternative_to` provenance link.
 The returned `bundle_summary` counts apply statuses and stale-resolution states,
 lists unresolved stale sources, handled stale sources, ready successors, and a
-deduped `recommended_review_iris` set. It also splits that set into
-`recommended_mutation_review_iris` for proposals that may still need restage,
-repair, or apply decisions and `recommended_applied_inspection_iris` for already
-applied staged revisions that are useful context but not mutation targets.
+deduped `recommended_review_iris` set. It also lists validation-failed revisions
+whose patches replay but whose preview validation does not conform, then splits
+the review set into `recommended_mutation_review_iris` for proposals that may
+still need restage, repair, or apply decisions and
+`recommended_applied_inspection_iris` for already applied staged revisions that
+are useful context but not mutation targets.
 Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
 

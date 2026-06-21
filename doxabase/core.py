@@ -435,6 +435,7 @@ class StagedGraphRevisionBundleSummary:
     unresolved_stale_revision_iris: list[str]
     stale_handled_by_restage_revision_iris: list[str]
     ready_restage_successor_revision_iris: list[str]
+    validation_failed_revision_iris: list[str]
     recommended_review_iris: list[str]
     recommended_mutation_review_iris: list[str]
     recommended_applied_inspection_iris: list[str]
@@ -9540,7 +9541,22 @@ class DoxaBase:
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
-                "Inspect structured validation_results before changing the patch.",
+                (
+                    "Inspect structured validation_results, then stage a repaired "
+                    "or alternative candidate while preserving this failed revision "
+                    "for comparison."
+                ),
+            )
+            add_action(
+                "export_staged_revision",
+                {
+                    "iri": staged_revision_iri,
+                    "path": "/tmp/staged-revision-validation-failed.md",
+                },
+                (
+                    "Write a review bundle with validation diagnostics before "
+                    "staging a repaired candidate from validation_results."
+                ),
             )
         else:
             add_action(
@@ -9753,6 +9769,7 @@ class DoxaBase:
         unresolved_stale: list[str] = []
         handled_stale: list[str] = []
         ready_successors: list[str] = []
+        validation_failed: list[str] = []
         recommended_review: list[str] = []
         recommended_mutation_review: list[str] = []
         recommended_applied_inspection: list[str] = []
@@ -9790,9 +9807,11 @@ class DoxaBase:
             elif state == "restaged_successor_ready":
                 ready_successors.append(summary.revision_iri)
                 recommend_mutation(summary.revision_iri)
+            elif state == "validation_failed":
+                validation_failed.append(summary.revision_iri)
+                recommend_mutation(summary.revision_iri)
             elif state in {
                 "ready",
-                "validation_failed",
                 "not_ready",
                 "not_available",
                 "restaged_successor_not_ready",
@@ -9810,6 +9829,7 @@ class DoxaBase:
             unresolved_stale_revision_iris=unresolved_stale,
             stale_handled_by_restage_revision_iris=handled_stale,
             ready_restage_successor_revision_iris=ready_successors,
+            validation_failed_revision_iris=validation_failed,
             recommended_review_iris=recommended_review,
             recommended_mutation_review_iris=recommended_mutation_review,
             recommended_applied_inspection_iris=recommended_applied_inspection,

@@ -522,8 +522,9 @@ sources that already have `restaged_by` point suggested actions at the refreshed
 successor instead of another restage. `current_alternative_to` follows refreshed
 successors while `alternative_to` preserves provenance. The payload also returns
 `bundle_summary` with status/state counts, unresolved stale sources, handled
-stale sources, ready successors, deduped `recommended_review_iris`,
-`recommended_mutation_review_iris`, and `recommended_applied_inspection_iris`.
+stale sources, ready successors, validation-failed revisions, deduped
+`recommended_review_iris`, `recommended_mutation_review_iris`, and
+`recommended_applied_inspection_iris`.
 Bundles with restaged revisions include a `Restage Context` section near the
 top. Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
