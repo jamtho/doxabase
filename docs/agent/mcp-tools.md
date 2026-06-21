@@ -462,14 +462,16 @@ find them.
 `doxabase.check_staged_revision_apply`
 
 Previews whether one staged revision can apply without mutating graph state.
-Returns `can_apply`, already-applied state, per-patch current/preview counts,
+Returns `can_apply`, already-applied state, per-patch current/preview/effective counts,
 count-drift and snapshot-digest conflicts, preview validation diagnostics,
 `status`, `decision`, `summary`, `review_recommended`, `blocking_reasons`,
 `recommended_resolution`, `validation_skipped_reason`, `count_drifts`,
 `snapshot_drifts`, and
 structured `suggested_next_actions`. Read `status`, `decision`, and `summary` first:
 `ready` means the staged patch replays
-and validates, with decision `review_then_apply`; `conflict` with
+and validates with an effective graph delta, with decision `review_then_apply`;
+`noop` means replay validates but would not change graph triples and uses
+decision `inspect_no_effective_change`; `conflict` with
 `target_count_drift` or `target_digest_drift` means graph counts or content
 digests drifted since staging and can usually be restaged; `conflict` with
 `patch_conflict` means the stored patch is unreplayable and uses decision
@@ -479,7 +481,9 @@ event exists. When validation did not run,
 `validation_skipped_reason` explains why. `count_drifts` records
 expected/current graph counts and deltas for count conflicts, plus whether the
 staged patch triples themselves are currently present, absent, or mixed in the
-target graph. `snapshot_drifts` records staged/current `sha256:<hex>` digest
+target graph. `patch_checks` records effective add/remove counts and
+already-present/absent payload triples for partial or no-op replay.
+`snapshot_drifts` records staged/current `sha256:<hex>` digest
 mismatches, including same-count graph changes. For revisions staged with the
 current runtime, it also includes exact triples added to and removed from the
 target graph since the stored snapshot. It also includes `drift_relevance`,

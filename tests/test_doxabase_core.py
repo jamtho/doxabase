@@ -1979,6 +1979,7 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert (
         "| Patch | Graph | Operation | Recorded preview before | "
         "Current preview before | Recorded preview after | Current preview | "
+        "Effective + | Effective - | Already present | Already absent | "
         "Mechanically can apply | Conflict |"
     ) in export_text
     assert "| map | 0 |" in export_text
@@ -2535,6 +2536,136 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     ]
     assert db.describe_dataset("https://example.test/project#Messages").iri == (
         "https://example.test/project#Messages"
+    )
+
+
+def test_restaged_revision_with_realized_addition_reports_noop(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages dataset",
+        rationale="Exercise restage when another route already added the fact.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#Messages",
+        label="Messages",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+
+    stale_check = db.check_staged_revision_apply(staged.revision_iri)
+    assert stale_check.status == "conflict"
+    assert stale_check.count_drifts[0].patch_triple_status == (
+        "all_patch_triples_present"
+    )
+
+    restaged = db.restage_staged_revision(staged.revision_iri)
+    check = db.check_staged_revision_apply(restaged.revision_iri)
+
+    assert check.status == "noop"
+    assert check.can_apply is False
+    assert check.decision == "inspect_no_effective_change"
+    assert check.blocking_reasons == ["no_effective_patch_triples"]
+    assert check.triples_to_add == 0
+    assert check.triples_to_remove == 0
+    assert check.validation_conforms is True
+    patch_check = check.patch_checks[0]
+    assert patch_check.effective_triples_to_add == 0
+    assert patch_check.effective_triples_to_remove == 0
+    assert patch_check.already_present_triples == 1
+    assert patch_check.already_absent_triples == 0
+    assert not any(
+        action.tool_name == "apply_staged_revision"
+        for action in check.suggested_next_actions
+    )
+    with pytest.raises(DoxaBaseError, match="no effective patch triples"):
+        db.apply_staged_revision(restaged.revision_iri)
+
+    export = db.export_staged_revisions(
+        [staged.revision_iri, restaged.revision_iri],
+        tmp_path / "noop-restage-review.md",
+    )
+    restaged_summary = export.revision_summaries[1]
+    assert restaged_summary.apply_status == "noop"
+    assert restaged_summary.stale_resolution_state == "restaged_successor_noop"
+    assert export.bundle_summary.recommended_mutation_review_iris == []
+    exported_text = (tmp_path / "noop-restage-review.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Effective +" in exported_text
+    assert "no_effective_patch_triples" in exported_text
+
+
+def test_restaged_revision_reports_effective_delta_for_mixed_addition(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages and threads datasets",
+        rationale="Exercise restage when part of the patch already exists.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                    ex:Threads a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#Messages",
+        label="Messages",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+
+    stale_check = db.check_staged_revision_apply(staged.revision_iri)
+    assert stale_check.status == "conflict"
+    assert stale_check.count_drifts[0].patch_triple_status == (
+        "mixed_patch_triples_present"
+    )
+
+    restaged = db.restage_staged_revision(staged.revision_iri)
+    check = db.check_staged_revision_apply(restaged.revision_iri)
+
+    assert check.status == "ready"
+    assert check.can_apply is True
+    assert check.triples_to_add == 1
+    assert check.triples_to_remove == 0
+    assert check.summary == (
+        "Ready to apply 1 patch(es) across map: +1 triple(s), -0 triple(s)."
+    )
+    patch_check = check.patch_checks[0]
+    assert patch_check.effective_triples_to_add == 1
+    assert patch_check.effective_triples_to_remove == 0
+    assert patch_check.already_present_triples == 1
+    assert patch_check.already_absent_triples == 1
+
+    result = db.apply_staged_revision(restaged.revision_iri)
+
+    assert result.triples_added == 1
+    assert db.describe_dataset("https://example.test/project#Threads").iri == (
+        "https://example.test/project#Threads"
     )
 
 

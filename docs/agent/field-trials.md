@@ -361,6 +361,11 @@ few useful gaps:
   ordinary `restaged_by` routing and inviting no-op apply noise later. The
   helper now refuses to restage a source that already has a refreshed successor;
   agents should inspect or restage `current_restaged_by` instead.
+  A no-op replay trial showed that stale patches can be restaged after another
+  route has already realized all or part of the payload. Apply checks now report
+  effective add/remove counts, already-present/absent payload triples, and a
+  `noop` status with `no_effective_patch_triples` when replay validates but
+  would not mutate graph state.
   A post-apply history trial showed the documented two-hop recipe worked but
   repeated detail calls for basic source context. Applied graph-revision
   descriptions now include compact `applied_source` cards while leaving patch

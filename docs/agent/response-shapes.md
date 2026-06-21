@@ -1274,18 +1274,20 @@ check.suggested_next_calls
 ```
 
 Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
-`ready`, `already_applied`, `conflict`, `validation_failed`, and `not_ready`.
-`decision` is the stable branch hint, for example `review_then_apply`,
+`ready`, `noop`, `already_applied`, `conflict`, `validation_failed`, and
+`not_ready`. `decision` is the stable branch hint, for example
+`review_then_apply`, `inspect_no_effective_change`,
 `inspect_applied_revision`, `restage_against_current_graph`,
 `inspect_patch_conflict`, or `inspect_validation_results`.
 `review_recommended=True` means the caller should
-review the staged revision before the next mutation. For `ready` checks that
+review the staged revision before the next mutation or replacement. For `ready` checks that
 means review before applying; for count/digest-drift `conflict` checks it means
 review before restaging; for `patch_conflict` checks it means inspect/export
-before staging a repaired or alternative candidate. `blocking_reasons` uses compact
-values such as `target_count_drift`,
-`target_digest_drift`, `patch_conflict`, `validation_failed`, or
-`already_applied`. When
+before staging a repaired or alternative candidate. `noop` means replay
+validates but would not change graph triples; inspect or replace it instead of
+applying. `blocking_reasons` uses compact values such as `target_count_drift`,
+`target_digest_drift`, `patch_conflict`, `validation_failed`,
+`no_effective_patch_triples`, or `already_applied`. When
 `validation_conforms is None`, read `validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
 `already_applied`.
@@ -1293,6 +1295,11 @@ For `patch_conflict`, inspect `patch_checks[].conflict` before mutating; it
 means the stored patch cannot currently be replayed, not merely that the target
 graph count or digest drifted. Suggested actions for `patch_conflict` omit
 `restage_staged_revision`.
+`triples_to_add` and `triples_to_remove` are effective graph deltas for the
+current preview, not raw patch payload sizes. Each `patch_checks[]` row carries
+`effective_triples_to_add`, `effective_triples_to_remove`,
+`already_present_triples`, and `already_absent_triples` so agents can see
+partial or no-op replay before applying.
 `count_drifts` gives patch-level count drift context: target graph, expected
 before count, current count, delta, and whether exact changed triples are
 available. It also reports `patch_operation`, `patch_triples_checked`,
@@ -1436,9 +1443,11 @@ bundle.recommended_applied_inspection_iris
 Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
 still need restaging. `stale_handled_by_restage` means the source is stale but
 already points to a refreshed successor. `restaged_successor_ready` marks a
-ready refreshed proposal. The bundle's `recommended_review_iris` de-duplicates
-the current review set in bundle order, replacing handled stale sources with
-their successors. `validation_failed_revision_iris` lists rows whose patch counts
+ready refreshed proposal. `restaged_successor_noop` marks a refreshed proposal
+whose replay validates but has no effective graph delta. The bundle's
+`recommended_review_iris` de-duplicates the current review set in bundle order,
+replacing handled stale sources with their successors.
+`validation_failed_revision_iris` lists rows whose patch counts
 replay but whose preview validation does not conform. Use
 `recommended_mutation_review_iris` when you only want staged revisions that may
 still need restage, repair, or apply decisions. Use

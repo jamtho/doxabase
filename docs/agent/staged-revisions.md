@@ -292,9 +292,10 @@ answer. It reports whether the staged revision has already been applied, whether
 any patch target graph has drifted from its recorded `beforeTripleCount` or
 staging-time graph digest, the preview count for each patch, preview validation
 diagnostics, `status`, `summary`, and structured `suggested_next_actions`. Read
-`status` and `summary` first. Current statuses are `ready`, `already_applied`,
-`conflict`, `validation_failed`, and `not_ready`. `decision` is the compact
-branch hint: `review_then_apply`, `inspect_applied_revision`,
+`status` and `summary` first. Current statuses are `ready`, `noop`,
+`already_applied`, `conflict`, `validation_failed`, and `not_ready`. `decision`
+is the compact branch hint: `review_then_apply`,
+`inspect_no_effective_change`, `inspect_applied_revision`,
 `restage_against_current_graph`, `inspect_patch_conflict`,
 `inspect_validation_results`, or
 `inspect_staged_revision`. `review_recommended=True` means the staged revision
@@ -306,6 +307,12 @@ Use `blocking_reasons` and `recommended_resolution` to distinguish count drift,
 digest drift, validation failure, and already-applied state. When
 `validation_conforms` is `None`, `validation_skipped_reason` explains why
 validation did not run.
+`noop` uses `no_effective_patch_triples` and means the patch replay validates
+but would not change graph triples, usually because another path already
+realized the proposed addition or removal. Inspect/export or stage a replacement
+instead of applying it. `triples_to_add` and `triples_to_remove` are effective
+current-preview deltas; `patch_checks` also reports effective add/remove counts
+and already-present/absent payload triples.
 If `blocking_reasons` contains `patch_conflict`, the stored patch itself could
 not be replayed. Inspect `patch_checks[].conflict` and export the staged
 revision before mutating. Common causes are malformed stored patch Turtle or a

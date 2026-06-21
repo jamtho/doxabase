@@ -896,6 +896,10 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert check["conflicts"] == []
     assert check["patch_checks"][0]["preview_triple_count"] == 3
+    assert check["patch_checks"][0]["effective_triples_to_add"] == 3
+    assert check["patch_checks"][0]["effective_triples_to_remove"] == 0
+    assert check["patch_checks"][0]["already_present_triples"] == 0
+    assert check["patch_checks"][0]["already_absent_triples"] == 3
     assert check["suggested_next_actions"][0]["tool_name"] == (
         "describe_staged_revision"
     )

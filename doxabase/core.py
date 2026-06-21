@@ -256,6 +256,10 @@ class StagedPatchApplyCheck:
     current_triple_count: int | None
     after_triple_count: int | None
     preview_triple_count: int | None
+    effective_triples_to_add: int | None
+    effective_triples_to_remove: int | None
+    already_present_triples: int | None
+    already_absent_triples: int | None
     can_apply: bool
     conflict: str | None
 
@@ -2564,11 +2568,14 @@ class DoxaBase:
         if restaged_from is not None:
             if status == "ready":
                 return "restaged_successor_ready"
+            if status == "noop":
+                return "restaged_successor_noop"
             if status == "already_applied":
                 return "restaged_successor_already_applied"
             return "restaged_successor_not_ready"
         if status in {
             "ready",
+            "noop",
             "already_applied",
             "validation_failed",
             "not_ready",
@@ -9960,6 +9967,12 @@ class DoxaBase:
                 "Applying staged revision would fail validation; inspect "
                 "validation_results or pass allow_validation_failure=True."
             )
+        if check.status == "noop":
+            raise DoxaBaseError(
+                "Staged revision cannot be applied because replay has no "
+                "effective patch triples; inspect the staged revision and "
+                "current graph state instead."
+            )
 
         addition_operation = self.expand_iri("rc:AdditionPatch")
         triples_added = 0
@@ -10174,6 +10187,10 @@ class DoxaBase:
             operation: str | None = None
             current_count: int | None = None
             preview_count: int | None = None
+            effective_triples_to_add: int | None = None
+            effective_triples_to_remove: int | None = None
+            already_present_triples: int | None = None
+            already_absent_triples: int | None = None
             conflict: str | None = None
             patch_graph: Graph | None = None
             try:
@@ -10189,6 +10206,16 @@ class DoxaBase:
                 )
                 current_count = len(current_preview)
                 patch_graph = self._parse_staged_patch_description(patch)
+                already_present_triples = sum(
+                    1 for triple in patch_graph if triple in current_preview
+                )
+                already_absent_triples = len(patch_graph) - already_present_triples
+                if operation == addition_operation:
+                    effective_triples_to_add = already_absent_triples
+                    effective_triples_to_remove = 0
+                elif operation == removal_operation:
+                    effective_triples_to_add = 0
+                    effective_triples_to_remove = already_present_triples
                 if (
                     patch.before_triple_count is not None
                     and current_count != patch.before_triple_count
@@ -10199,10 +10226,6 @@ class DoxaBase:
                         if snapshot_drift is not None
                         else False
                     )
-                    patch_triples_present = sum(
-                        1 for triple in patch_graph if triple in current_preview
-                    )
-                    patch_triples_absent = len(patch_graph) - patch_triples_present
                     if exact_graph_diff_available:
                         count_drift_note = (
                             "DoxaBase can report staged/current graph counts and "
@@ -10230,11 +10253,11 @@ class DoxaBase:
                             patch_operation=operation,
                             patch_operation_label=patch.operation_label,
                             patch_triples_checked=len(patch_graph),
-                            patch_triples_currently_present=patch_triples_present,
-                            patch_triples_currently_absent=patch_triples_absent,
+                            patch_triples_currently_present=already_present_triples,
+                            patch_triples_currently_absent=already_absent_triples,
                             patch_triple_status=self._patch_triple_presence_status(
                                 patch_triples_checked=len(patch_graph),
-                                patch_triples_present=patch_triples_present,
+                                patch_triples_present=already_present_triples,
                             ),
                             note=count_drift_note,
                         )
@@ -10275,9 +10298,9 @@ class DoxaBase:
                     preview_graphs[target_graph] = candidate_preview
                     parsed_patches.append((patch, patch_graph))
                     if operation == addition_operation:
-                        triples_to_add += len(patch_graph)
+                        triples_to_add += effective_triples_to_add or 0
                     elif operation == removal_operation:
-                        triples_to_remove += len(patch_graph)
+                        triples_to_remove += effective_triples_to_remove or 0
             except DoxaBaseError as exc:
                 conflict = str(exc)
 
@@ -10297,6 +10320,10 @@ class DoxaBase:
                     current_triple_count=current_count,
                     after_triple_count=patch.after_triple_count,
                     preview_triple_count=preview_count,
+                    effective_triples_to_add=effective_triples_to_add,
+                    effective_triples_to_remove=effective_triples_to_remove,
+                    already_present_triples=already_present_triples,
+                    already_absent_triples=already_absent_triples,
                     can_apply=can_apply_patch,
                     conflict=conflict,
                 )
@@ -10314,11 +10341,17 @@ class DoxaBase:
             validation_result_count = validation.result_count
             validation_results = validation.results
 
-        can_apply = not conflicts and validation_conforms is True
+        has_effective_patch_triples = (triples_to_add + triples_to_remove) > 0
+        can_apply = (
+            not conflicts
+            and validation_conforms is True
+            and has_effective_patch_triples
+        )
         status = self._staged_apply_check_status(
             can_apply=can_apply,
             conflicts=conflicts,
             validation_conforms=validation_conforms,
+            has_effective_patch_triples=has_effective_patch_triples,
         )
         summary = self._staged_apply_check_summary(
             status=status,
@@ -10673,6 +10706,7 @@ class DoxaBase:
         can_apply: bool,
         conflicts: list[str],
         validation_conforms: bool | None,
+        has_effective_patch_triples: bool,
     ) -> str:
         if can_apply:
             return "ready"
@@ -10680,6 +10714,8 @@ class DoxaBase:
             return "conflict"
         if validation_conforms is False:
             return "validation_failed"
+        if validation_conforms is True and not has_effective_patch_triples:
+            return "noop"
         return "not_ready"
 
     def _staged_apply_check_summary(
@@ -10698,6 +10734,12 @@ class DoxaBase:
         if status == "ready":
             return (
                 f"Ready to apply {patches_checked} patch(es) across {graph_text}: "
+                f"+{triples_to_add} triple(s), -{triples_to_remove} triple(s)."
+            )
+        if status == "noop":
+            return (
+                f"Patch replay validates across {graph_text}, but has no "
+                f"effective graph delta across {patches_checked} patch(es): "
                 f"+{triples_to_add} triple(s), -{triples_to_remove} triple(s)."
             )
         if status == "already_applied":
@@ -10729,6 +10771,7 @@ class DoxaBase:
                 return "inspect_patch_conflict"
         decisions = {
             "ready": "review_then_apply",
+            "noop": "inspect_no_effective_change",
             "already_applied": "inspect_applied_revision",
             "conflict": "restage_against_current_graph",
             "validation_failed": "inspect_validation_results",
@@ -10742,6 +10785,8 @@ class DoxaBase:
         semantic_risk_level: str = "none",
     ) -> bool:
         if status in {"ready", "conflict"}:
+            return True
+        if status == "noop":
             return True
         return status == "validation_failed" and semantic_risk_level != "none"
 
@@ -10778,6 +10823,8 @@ class DoxaBase:
     ) -> list[str]:
         if status == "ready":
             return []
+        if status == "noop":
+            return ["no_effective_patch_triples"]
         if status == "already_applied":
             return ["already_applied"]
         if status == "conflict":
@@ -10821,6 +10868,12 @@ class DoxaBase:
             return (
                 "Review the staged revision, impacts, validation preview, and any "
                 "judgement panel; apply only if the proposal is still desired."
+            )
+        if status == "noop":
+            return (
+                "Patch replay would not change any graph triples. Inspect the "
+                "staged revision and current graph state instead of applying a "
+                "no-op revision."
             )
         if status == "already_applied":
             return "Inspect the applied revision event; do not apply this staged revision again."
@@ -10909,6 +10962,20 @@ class DoxaBase:
                     "Apply this staged revision after review confirms the "
                     "proposal is still desired."
                 ),
+            )
+        elif status == "noop":
+            add_action(
+                "describe_staged_revision",
+                {"iri": staged_revision_iri},
+                (
+                    "Inspect the staged revision and current graph state; replay "
+                    "validates but would not change graph triples."
+                ),
+            )
+            add_action(
+                "export_staged_revision",
+                {"iri": staged_revision_iri, "path": "/tmp/staged-revision-noop.md"},
+                "Write a Markdown review bundle before deciding whether to replace it.",
             )
         elif status == "already_applied" and already_applied_by is not None:
             add_action(
@@ -11240,6 +11307,8 @@ class DoxaBase:
             elif state == "validation_failed":
                 validation_failed.append(summary.revision_iri)
                 recommend_mutation(summary.revision_iri)
+            elif state in {"noop", "restaged_successor_noop"}:
+                recommend(summary.revision_iri)
             elif state in {
                 "ready",
                 "not_ready",
@@ -14247,9 +14316,10 @@ class DoxaBase:
                     (
                         "| Patch | Graph | Operation | Recorded preview before | "
                         "Current preview before | Recorded preview after | Current preview | "
+                        "Effective + | Effective - | Already present | Already absent | "
                         "Mechanically can apply | Conflict |"
                     ),
-                    "|---|---|---|---:|---:|---:|---:|---|---|",
+                    "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|",
                 ]
             )
             for patch in check.patch_checks:
@@ -14270,6 +14340,18 @@ class DoxaBase:
                             self._markdown_optional_count(patch.current_triple_count),
                             self._markdown_optional_count(patch.after_triple_count),
                             self._markdown_optional_count(patch.preview_triple_count),
+                            self._markdown_optional_count(
+                                patch.effective_triples_to_add
+                            ),
+                            self._markdown_optional_count(
+                                patch.effective_triples_to_remove
+                            ),
+                            self._markdown_optional_count(
+                                patch.already_present_triples
+                            ),
+                            self._markdown_optional_count(
+                                patch.already_absent_triples
+                            ),
                             str(patch.can_apply),
                             self._markdown_table_cell(patch.conflict or ""),
                         ]
