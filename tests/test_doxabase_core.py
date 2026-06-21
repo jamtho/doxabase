@@ -5041,6 +5041,76 @@ def test_describe_query_context_warns_on_key_prefix_repeated_in_template(
     )
 
 
+def test_query_target_candidate_template_warnings_do_not_bleed_to_siblings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    partition = db.record_map_partition_scheme(
+        "https://example.test/project#events_verified_partition",
+        label="Verified event partition",
+        path_template="events/good/dt={date}.parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        path_templates=["s3://remote-bucket/events/bad/*.parquet"],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert any(
+        issue.code == "storage_protocol_location_mismatch"
+        and issue.resource is not None
+        and issue.resource.iri == storage.iri
+        and "path template from Events" in issue.message
+        for issue in context.issues
+    )
+
+    dataset_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.template_source == "dataset"
+    )
+    assert dataset_target.candidate_path == "s3://remote-bucket/events/bad/*.parquet"
+    assert dataset_target.candidate_path_status == "orientation_only"
+    assert dataset_target.review_required is True
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "path template from Events" in reason.message
+        for reason in dataset_target.review_reasons
+    )
+
+    partition_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.source_resource.iri == partition.iri
+    )
+    assert partition_target.candidate_path == "/warehouse/events/good/dt={date}.parquet"
+    assert partition_target.candidate_path_status == "ready"
+    assert partition_target.review_required is False
+    assert partition_target.review_reasons == []
+
+
 def test_query_target_candidates_scope_partition_blockers(
     tmp_path: Path,
 ) -> None:

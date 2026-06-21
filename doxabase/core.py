@@ -4619,6 +4619,25 @@ class DoxaBase:
                 source_resource=source_resource,
                 storage_access=access_resource,
             )
+            if storage_access is not None:
+                candidate_metadata_issue = self._query_candidate_metadata_issue(
+                    template=template,
+                    source_resource=source_resource,
+                    storage_access=storage_access,
+                )
+                if candidate_metadata_issue is not None and not any(
+                    reason.code == candidate_metadata_issue.code
+                    and (
+                        reason.resource.iri if reason.resource is not None else None
+                    )
+                    == (
+                        candidate_metadata_issue.resource.iri
+                        if candidate_metadata_issue.resource is not None
+                        else None
+                    )
+                    for reason in review_reasons
+                ):
+                    review_reasons.append(candidate_metadata_issue)
             review_required = any(
                 reason.severity in {"error", "warning"}
                 for reason in review_reasons
@@ -4688,6 +4707,33 @@ class DoxaBase:
 
         return candidates
 
+    def _query_candidate_metadata_issue(
+        self,
+        *,
+        template: str,
+        source_resource: ResourceSummary,
+        storage_access: StorageAccessDescription,
+    ) -> QueryPlanningIssue | None:
+        mismatch_reasons = self._candidate_storage_location_mismatch_reasons(
+            storage_access,
+            template,
+        )
+        if not mismatch_reasons:
+            return None
+        source_label = source_resource.label or source_resource.iri
+        return QueryPlanningIssue(
+            code="storage_protocol_location_mismatch",
+            severity="warning",
+            message=(
+                "Storage access metadata conflicts with path "
+                f"template from {source_label}: "
+                + "; ".join(mismatch_reasons)
+                + ". Record protocol-appropriate storage metadata "
+                "or simplify the template before executable use."
+            ),
+            resource=self._summary_from_description(storage_access),
+        )
+
     def _query_target_candidate_metadata_issues(
         self,
         dataset: DatasetDescription,
@@ -4712,31 +4758,14 @@ class DoxaBase:
 
         issues: list[QueryPlanningIssue] = []
         for storage_access in dataset.storage_accesses:
-            access_resource = self._summary_from_description(storage_access)
             for template, source_resource in template_sources:
-                mismatch_reasons = (
-                    self._candidate_storage_location_mismatch_reasons(
-                        storage_access,
-                        template,
-                    )
+                issue = self._query_candidate_metadata_issue(
+                    template=template,
+                    source_resource=source_resource,
+                    storage_access=storage_access,
                 )
-                if not mismatch_reasons:
-                    continue
-                source_label = source_resource.label or source_resource.iri
-                issues.append(
-                    QueryPlanningIssue(
-                        code="storage_protocol_location_mismatch",
-                        severity="warning",
-                        message=(
-                            "Storage access metadata conflicts with path "
-                            f"template from {source_label}: "
-                            + "; ".join(mismatch_reasons)
-                            + ". Record protocol-appropriate storage metadata "
-                            "or simplify the template before executable use."
-                        ),
-                        resource=access_resource,
-                    )
-                )
+                if issue is not None:
+                    issues.append(issue)
         return issues
 
     def _query_candidate_path_status(
@@ -4805,6 +4834,8 @@ class DoxaBase:
         seen: set[tuple[str, str | None]] = set()
         excluded_blockers: list[QueryPlanningIssue] = []
         for issue in issues:
+            if self._is_candidate_metadata_issue(issue):
+                continue
             resource_iri = issue.resource.iri if issue.resource is not None else None
             if resource_iri is not None and resource_iri not in related_iris:
                 if issue.severity in {"error", "warning"}:
@@ -4839,6 +4870,14 @@ class DoxaBase:
                 )
             )
         return review_reasons
+
+    def _is_candidate_metadata_issue(self, issue: QueryPlanningIssue) -> bool:
+        return (
+            issue.code == "storage_protocol_location_mismatch"
+            and issue.message.startswith(
+                "Storage access metadata conflicts with path template from "
+            )
+        )
 
     def _is_complete_path_template(self, template: str) -> bool:
         return bool(re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", template)) or template.startswith(
