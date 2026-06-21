@@ -1341,6 +1341,63 @@ def test_stage_map_assertion_change_packages_support_context(
     assert comment_check.semantic_risk_reasons
 
 
+def test_stage_map_assertion_replace_existing_value_warns_about_removals(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders a rc:Dataset, rc:Table ;
+            rc:hasColumn ex:order_count .
+
+        ex:order_count a rc:Column ;
+            rc:columnName "order_count" ;
+            rc:physicalType rc:Integer, rc:Varchar .
+        """,
+        graph="map",
+    )
+
+    staged_change = db.stage_map_assertion_change(
+        subject="https://example.test/project#order_count",
+        predicate="rc:physicalType",
+        object="rc:Integer",
+        change_kind="replace",
+        rationale=(
+            "Keep INTEGER and remove the competing VARCHAR physical type after "
+            "review."
+        ),
+    )
+
+    assert staged_change.assertion_present_before is True
+    assert {value.label for value in staged_change.judgement_panel.current_values} == {
+        "INTEGER",
+        "VARCHAR",
+    }
+    assert staged_change.judgement_panel.proposed_value is not None
+    assert staged_change.judgement_panel.proposed_value.label == "INTEGER"
+    assert len(staged_change.removals) == 1
+    assert "Varchar" in staged_change.removals[0]["content"]
+    assert any(
+        "replacement value is already present" in note
+        for note in staged_change.judgement_panel.safety_notes
+    )
+    assert any(
+        "would mainly remove other current values" in reason
+        for reason in staged_change.judgement_panel.semantic_risk_reasons
+    )
+    check = db.check_staged_revision_apply(
+        staged_change.staged_revision.revision_iri
+    )
+    assert check.status == "ready"
+    assert any(
+        "would mainly remove other current values" in reason
+        for reason in check.semantic_risk_reasons
+    )
+
+
 def test_stale_map_assertion_apply_check_preserves_review_risk(
     tmp_path: Path,
 ) -> None:

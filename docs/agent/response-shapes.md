@@ -324,6 +324,11 @@ impact spotlight entries, and safety notes that a reviewer should consider
 before apply. `semantic_risk_level` is `none`, `attention`, or `high`; it is a
 review cue, not a validation failure.
 
+For `replace`, if `panel.assertion_present_before` is true and
+`panel.current_values` includes other values, the meaningful mutation is removal
+of those other values. Check `panel.safety_notes`,
+`panel.semantic_risk_reasons`, and the related support routes before applying.
+
 For physical type changes, `panel.value_type_context` lists current
 `rc:valueType` resources and any `rc:requiredPhysicalType` they declare, with
 booleans for whether that required type matches the current or proposed physical

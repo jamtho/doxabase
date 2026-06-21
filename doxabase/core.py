@@ -11257,6 +11257,7 @@ class DoxaBase:
                 why_current_value_may_be_intentional=(
                     why_current_value_may_be_intentional
                 ),
+                change_kind=change_kind,
             )
         )
         return MapAssertionJudgementPanel(
@@ -11662,6 +11663,16 @@ class DoxaBase:
                 "The map already has value(s) for this subject/predicate, so this "
                 "proposal may create or replace competing semantics."
             )
+        if (
+            change_kind == "replace"
+            and support.assertion_present
+            and len(support.same_subject_predicate_triples) > 1
+        ):
+            notes.append(
+                "The requested replacement value is already present; the "
+                "meaningful mutation is removal of other current values. Review "
+                "support routes for the removed values before applying."
+            )
         if any(link.scope == "owner_dataset" for link in support.nearby_caveat_links):
             notes.append(
                 "At least one caveat comes from the owning dataset; treat it as "
@@ -11719,8 +11730,19 @@ class DoxaBase:
         value_type_context: list[MapAssertionJudgementValueTypeContext],
         impacts: list[StagedRevisionImpact],
         why_current_value_may_be_intentional: list[str],
+        change_kind: str,
     ) -> tuple[str, list[str]]:
         reasons: list[str] = []
+        replace_removes_other_values = (
+            change_kind == "replace"
+            and support.assertion_present
+            and len(support.same_subject_predicate_triples) > 1
+        )
+        if replace_removes_other_values:
+            reasons.append(
+                "The requested replacement value is already present; applying "
+                "would mainly remove other current values."
+            )
         if why_current_value_may_be_intentional:
             reasons.append(
                 "Related observations, claims, patterns, or value-type context "
@@ -11761,6 +11783,7 @@ class DoxaBase:
                     and context.proposed_physical_type_matches is False
                     for context in value_type_context
                 ),
+                replace_removes_other_values,
             ]
         )
         level = "high" if high_signal_count >= 2 else "attention"

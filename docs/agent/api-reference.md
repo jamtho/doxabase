@@ -413,7 +413,10 @@ the panel includes current `rc:valueType` resources and any declared
 for generic `stage_graph_revision`.
 For `replace`, the generated patch set adds the requested assertion and removes
 current same-subject/predicate values except the requested object. The recorded
-patch sequence shows the exact preview/apply order.
+patch sequence shows the exact preview/apply order. If the requested value is
+already present on a multi-valued predicate, treat the replace as mainly a
+removal of the other current values and review their support routes before
+applying.
 
 `stage_systematisation()` stages one or more caller-authored RDF framings for a
 modelling hunch. Pass `summary`, `intent`, optional `anchors`, and a list of
