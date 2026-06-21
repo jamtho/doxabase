@@ -25,6 +25,15 @@ These helpers write to `map` and update the common predicates they own for a
 resource. They avoid hand-authored TriG for ordinary table/column/caveat/storage
 facts, while still leaving the graph open for project-specific RDF.
 
+When you supply helper-owned fields on the resource being recorded, those
+same-subject predicates are replaced for that resource. Incoming convenience
+links are different: arguments such as `record_map_caveat(targets=[...])`,
+`record_map_storage_access(datasets=[...])`, and
+`record_map_column(table_iri=...)` add links from other resources and do not
+prune older incoming links. To narrow those links, update the owning dataset or
+table helper where applicable, stage a reviewed assertion change, or use
+`replace_graph_triples()` for exact graph maintenance.
+
 For `record_map_dataset`, omit `is_table` on partial updates when you want to
 preserve the current dataset/table typing. Pass `is_table=True` or
 `is_table=False` when you intentionally want to set that typing.

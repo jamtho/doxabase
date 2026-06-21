@@ -362,6 +362,13 @@ to the whole dataset. Resource-valued fields across these helpers expect
 IRIs/CURIEs, not prose: use terms such as `rc:EventRow`, `rc:Parquet`, or
 project IRIs for datasets, columns, caveats, and relationship endpoints. Put
 ordinary explanation in descriptions, notes, observations, or patterns.
+Supplied same-subject fields replace the helper-owned predicates on the
+resource being recorded, but incoming convenience links such as
+`record_map_caveat(targets=...)`, `record_map_storage_access(datasets=...)`,
+and `record_map_column(table_iri=...)` add links and do not prune old incoming
+links. To narrow links, update the owning dataset/table helper when possible,
+stage a reviewed assertion change, or use `replace_graph_triples()` for exact
+maintenance.
 `record_map_relationship()` supports foreign keys, shared
 identifiers, derivations, and aggregations; for aggregations, pass
 `group_by_columns` plus `aggregated_columns` mappings with `target_column`,
