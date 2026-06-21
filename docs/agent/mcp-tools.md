@@ -462,10 +462,13 @@ count-drift and snapshot-digest conflicts, preview validation diagnostics,
 `snapshot_drifts`, and
 structured `suggested_next_actions`. Read `status`, `decision`, and `summary` first:
 `ready` means the staged patch replays
-and validates, with decision `review_then_apply`; `conflict` usually means graph
-counts or content digests drifted since staging; `validation_failed` means patch
-counts replay but SHACL diagnostics need inspection; `already_applied` means an
-applied revision event exists. When validation did not run,
+and validates, with decision `review_then_apply`; `conflict` with
+`target_count_drift` or `target_digest_drift` means graph counts or content
+digests drifted since staging and can usually be restaged; `conflict` with
+`patch_conflict` means the stored patch is unreplayable and uses decision
+`inspect_patch_conflict`; `validation_failed` means patch counts replay but
+SHACL diagnostics need inspection; `already_applied` means an applied revision
+event exists. When validation did not run,
 `validation_skipped_reason` explains why. `count_drifts` records
 expected/current graph counts and deltas for count conflicts, plus whether the
 staged patch triples themselves are currently present, absent, or mixed in the
@@ -502,14 +505,16 @@ run `check_staged_revision_apply` again.
 `doxabase.restage_staged_revisions`
 
 Batch recovery helper for stale staged revisions. It accepts staged revision
-IRIs, checks each current apply state, restages conflicted rows that do not
-already have a `restaged_by` successor, skips already-handled stale sources and
-non-conflicted rows, and returns per-source actions, old-to-current mappings,
+IRIs, checks each current apply state, restages count/digest-drift rows that do
+not already have a `restaged_by` successor, skips already-handled stale sources
+and non-restageable rows, and returns per-source actions, old-to-current mappings,
 `review_revision_iris`, `revision_summaries`, and `bundle_summary`. Pass `path`
 to write the grouped Markdown bundle over stale sources and current refreshed
 successors. Pass `dry_run=true` to classify the same batch without creating
-successors; unhandled conflicts return `action="would_restage"` and are listed
-in `would_restage_revision_iris`. In dry-run rows that would be restaged,
+successors; restageable drift conflicts return `action="would_restage"` and are
+listed in `would_restage_revision_iris`. `patch_conflict` rows are
+`skipped_not_restageable` and should be repaired or replaced with a new staged
+candidate. In dry-run rows that would be restaged,
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. For `skipped_not_restageable`, inspect `status_before` and
 `decision_before` to distinguish ready, validation-failed, and already-applied

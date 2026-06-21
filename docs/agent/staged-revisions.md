@@ -295,11 +295,13 @@ diagnostics, `status`, `summary`, and structured `suggested_next_actions`. Read
 `status` and `summary` first. Current statuses are `ready`, `already_applied`,
 `conflict`, `validation_failed`, and `not_ready`. `decision` is the compact
 branch hint: `review_then_apply`, `inspect_applied_revision`,
-`restage_against_current_graph`, `inspect_validation_results`, or
+`restage_against_current_graph`, `inspect_patch_conflict`,
+`inspect_validation_results`, or
 `inspect_staged_revision`. `review_recommended=True` means the staged revision
 needs review before the next mutation. On `ready` checks that means review
-before application; on `conflict` checks that means review before restaging or
-rewriting the stale proposal.
+before application; on count/digest-drift `conflict` checks that means review
+before restaging; on `patch_conflict` checks that means inspect/export before
+staging a repaired or alternative candidate.
 Use `blocking_reasons` and `recommended_resolution` to distinguish count drift,
 digest drift, validation failure, and already-applied state. When
 `validation_conforms` is `None`, `validation_skipped_reason` explains why

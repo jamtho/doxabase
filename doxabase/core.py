@@ -8757,6 +8757,14 @@ class DoxaBase:
                 "restage_staged_revision only restages conflicted staged "
                 f"revisions; current status is '{check.status}'."
             )
+        if not self._staged_apply_check_is_restageable_conflict(
+            check.blocking_reasons
+        ):
+            raise DoxaBaseError(
+                "restage_staged_revision only handles count/digest drift; "
+                "inspect patch checks and stage a repaired or alternative "
+                "candidate for unreplayable patch conflicts."
+            )
 
         addition_operation = self.expand_iri("rc:AdditionPatch")
         removal_operation = self.expand_iri("rc:RemovalPatch")
@@ -8920,7 +8928,13 @@ class DoxaBase:
             restaged_revision_iri: str | None = None
             current_revision_iri = current_restaged_by or source.iri
 
-            if check.status == "conflict" and restaged_by is None:
+            is_restageable_conflict = (
+                check.status == "conflict"
+                and self._staged_apply_check_is_restageable_conflict(
+                    check.blocking_reasons
+                )
+            )
+            if is_restageable_conflict and restaged_by is None:
                 if dry_run:
                     would_restage_revision_iris.append(source.iri)
                     action = "would_restage"
@@ -8946,7 +8960,7 @@ class DoxaBase:
                         "Created a refreshed staged revision against current graph "
                         "state; review it before applying."
                     )
-            elif check.status == "conflict" and restaged_by is not None:
+            elif is_restageable_conflict and restaged_by is not None:
                 skipped_revision_iris.append(source.iri)
                 already_handled_revision_iris.append(source.iri)
                 action = "skipped_already_handled"
@@ -8959,8 +8973,9 @@ class DoxaBase:
                 not_restageable_revision_iris.append(source.iri)
                 action = "skipped_not_restageable"
                 note = (
-                    "Skipped because the current apply status is "
-                    f"'{check.status}', not 'conflict'."
+                    "Skipped because the current apply state is not restageable "
+                    f"(status='{check.status}', blocking_reasons="
+                    f"{check.blocking_reasons})."
                 )
 
             current_revision_by_source[source.iri] = current_revision_iri
@@ -9638,6 +9653,7 @@ class DoxaBase:
             suggested_next_actions = self._staged_apply_check_next_actions(
                 staged.iri,
                 status=status,
+                blocking_reasons=["already_applied"],
                 already_applied_by=existing_applied[0],
                 restaged_by=(
                     staged.restaged_by.iri if staged.restaged_by is not None else None
@@ -9656,7 +9672,10 @@ class DoxaBase:
                 staged_revision_iri=staged.iri,
                 can_apply=False,
                 status=status,
-                decision=self._staged_apply_check_decision(status),
+                decision=self._staged_apply_check_decision(
+                    status,
+                    blocking_reasons=blocking_reasons,
+                ),
                 summary=summary,
                 review_recommended=self._staged_apply_check_review_recommended(
                     status,
@@ -9873,9 +9892,14 @@ class DoxaBase:
             triples_to_remove=triples_to_remove,
             already_applied_by=None,
         )
+        blocking_reasons = self._staged_apply_check_blocking_reasons(
+            status=status,
+            conflicts=conflicts,
+        )
         suggested_next_actions = self._staged_apply_check_next_actions(
             staged.iri,
             status=status,
+            blocking_reasons=blocking_reasons,
             already_applied_by=None,
             restaged_by=(
                 staged.restaged_by.iri if staged.restaged_by is not None else None
@@ -9886,15 +9910,14 @@ class DoxaBase:
                 else None
             ),
         )
-        blocking_reasons = self._staged_apply_check_blocking_reasons(
-            status=status,
-            conflicts=conflicts,
-        )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
             can_apply=can_apply,
             status=status,
-            decision=self._staged_apply_check_decision(status),
+            decision=self._staged_apply_check_decision(
+                status,
+                blocking_reasons=blocking_reasons,
+            ),
             summary=summary,
             review_recommended=self._staged_apply_check_review_recommended(
                 status,
@@ -10255,7 +10278,17 @@ class DoxaBase:
             )
         return "Not ready to apply; inspect patch checks and validation fields."
 
-    def _staged_apply_check_decision(self, status: str) -> str:
+    def _staged_apply_check_decision(
+        self,
+        status: str,
+        *,
+        blocking_reasons: list[str] | None = None,
+    ) -> str:
+        if status == "conflict" and blocking_reasons is not None:
+            if not self._staged_apply_check_is_restageable_conflict(
+                blocking_reasons
+            ):
+                return "inspect_patch_conflict"
         decisions = {
             "ready": "review_then_apply",
             "already_applied": "inspect_applied_revision",
@@ -10333,6 +10366,13 @@ class DoxaBase:
             return ["validation_failed"]
         return ["not_ready"]
 
+    def _staged_apply_check_is_restageable_conflict(
+        self,
+        blocking_reasons: list[str],
+    ) -> bool:
+        restageable_reasons = {"target_count_drift", "target_digest_drift"}
+        return any(reason in restageable_reasons for reason in blocking_reasons)
+
     def _staged_apply_check_recommended_resolution(
         self,
         *,
@@ -10366,10 +10406,21 @@ class DoxaBase:
                 "graph content digest changed since staging even though counts may "
                 "still match."
             )
+        if "patch_conflict" in blocking_reasons:
+            return (
+                "Inspect patch_checks[].conflict and stage a repaired or "
+                "alternative candidate; restage only handles count/digest drift."
+            )
         if status == "conflict":
-            return "Inspect patch checks and restage or rewrite the proposal."
+            return (
+                "Inspect patch checks and stage a repaired or alternative "
+                "candidate unless the conflict is count/digest drift."
+            )
         if status == "validation_failed":
-            return "Inspect validation_results and repair or restage the proposal."
+            return (
+                "Inspect validation_results and stage a repaired or alternative "
+                "candidate."
+            )
         return "Inspect staged revision details before taking action."
 
     def _staged_apply_check_next_actions(
@@ -10377,6 +10428,7 @@ class DoxaBase:
         staged_revision_iri: str,
         *,
         status: str,
+        blocking_reasons: list[str] | None = None,
         already_applied_by: str | None,
         restaged_by: str | None,
         current_restaged_by: str | None,
@@ -10427,20 +10479,32 @@ class DoxaBase:
                 "Inspect the applied revision event instead of applying again.",
             )
         elif status == "conflict":
+            is_restageable_conflict = (
+                self._staged_apply_check_is_restageable_conflict(
+                    blocking_reasons or []
+                )
+            )
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
                 (
                     "Review the original patch payloads, count previews, impacts, "
-                    "and support before restaging against current graph state."
+                    "and support before deciding how to handle this conflict."
                 ),
             )
             add_action(
                 "export_staged_revision",
-                {"iri": staged_revision_iri, "path": "/tmp/staged-revision-conflict.md"},
-                "Write a review bundle that captures the stale staged proposal.",
+                {
+                    "iri": staged_revision_iri,
+                    "path": (
+                        "/tmp/staged-revision-conflict.md"
+                        if is_restageable_conflict
+                        else "/tmp/staged-revision-patch-conflict.md"
+                    ),
+                },
+                "Write a review bundle that captures the blocked staged proposal.",
             )
-            if restaged_by is None:
+            if restaged_by is None and is_restageable_conflict:
                 add_action(
                     "restage_staged_revision",
                     {"iri": staged_revision_iri},
@@ -10449,7 +10513,7 @@ class DoxaBase:
                         "counts if review confirms the patch intent is still desired."
                     ),
                 )
-            else:
+            elif restaged_by is not None:
                 successor_iri = current_restaged_by or restaged_by
                 add_action(
                     "describe_staged_revision",

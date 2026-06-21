@@ -1254,11 +1254,13 @@ check.suggested_next_calls
 Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `ready`, `already_applied`, `conflict`, `validation_failed`, and `not_ready`.
 `decision` is the stable branch hint, for example `review_then_apply`,
-`inspect_applied_revision`, `restage_against_current_graph`, or
-`inspect_validation_results`. `review_recommended=True` means the caller should
+`inspect_applied_revision`, `restage_against_current_graph`,
+`inspect_patch_conflict`, or `inspect_validation_results`.
+`review_recommended=True` means the caller should
 review the staged revision before the next mutation. For `ready` checks that
-means review before applying; for `conflict` checks it means review before
-restaging or rewriting the stale proposal. `blocking_reasons` uses compact
+means review before applying; for count/digest-drift `conflict` checks it means
+review before restaging; for `patch_conflict` checks it means inspect/export
+before staging a repaired or alternative candidate. `blocking_reasons` uses compact
 values such as `target_count_drift`,
 `target_digest_drift`, `patch_conflict`, `validation_failed`, or
 `already_applied`. When
@@ -1267,7 +1269,8 @@ why validation did not run; common values are `conflicts_present` and
 `already_applied`.
 For `patch_conflict`, inspect `patch_checks[].conflict` before mutating; it
 means the stored patch cannot currently be replayed, not merely that the target
-graph count or digest drifted.
+graph count or digest drifted. Suggested actions for `patch_conflict` omit
+`restage_staged_revision`.
 `count_drifts` gives patch-level count drift context: target graph, expected
 before count, current count, delta, and whether exact changed triples are
 available. It also reports `patch_operation`, `patch_triples_checked`,
@@ -1453,9 +1456,10 @@ that case no successor is created, `restaged_revision_iris` stays empty, and
 `would_restage_revision_iris` lists the stale source revisions that a real run
 would refresh. For those would-restage rows, `current_revision_by_source` still
 points at the stale source because no current successor exists yet.
-`skipped_not_restageable` includes ready, validation-failed, and already-applied
-rows; read `status_before` and `decision_before` before deciding whether the row
-needs apply, repair, or inspection. If `path` was passed, `export_record` is the
+`skipped_not_restageable` includes ready, validation-failed, already-applied,
+and `patch_conflict` rows; read `status_before`, `decision_before`, and
+`blocking_reasons_before` before deciding whether the row needs apply, repair,
+or inspection. If `path` was passed, `export_record` is the
 grouped Markdown export for `review_revision_iris`; otherwise it is `None` and
 the summary fields are computed in memory. In dry-run mode, `path` still writes
 the requested review export even though no refreshed successor is created.

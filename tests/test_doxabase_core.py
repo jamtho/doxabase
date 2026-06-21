@@ -1719,9 +1719,16 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
     check = db.check_staged_revision_apply(staged.revision_iri)
     assert check.can_apply is False
     assert check.status == "conflict"
+    assert check.decision == "inspect_patch_conflict"
     assert check.blocking_reasons == ["patch_conflict"]
+    assert check.recommended_resolution is not None
+    assert "stage a repaired or alternative candidate" in check.recommended_resolution
     assert check.validation_conforms is None
     assert check.validation_skipped_reason == "conflicts_present"
+    assert [action.tool_name for action in check.suggested_next_actions] == [
+        "describe_staged_revision",
+        "export_staged_revision",
+    ]
     assert check.patch_checks[0].target_graph == unknown_graph
     assert check.patch_checks[0].can_apply is False
     assert check.patch_checks[0].conflict is not None
@@ -1730,6 +1737,14 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
 
     with pytest.raises(DoxaBaseError, match="targets unknown graph role"):
         db.apply_staged_revision(staged.revision_iri)
+    with pytest.raises(DoxaBaseError, match="only handles count/digest drift"):
+        db.restage_staged_revision(staged.revision_iri)
+
+    batch = db.restage_staged_revisions([staged.revision_iri], dry_run=True)
+    assert batch.would_restage_revision_iris == []
+    assert batch.not_restageable_revision_iris == [staged.revision_iri]
+    assert batch.items[0].action == "skipped_not_restageable"
+    assert batch.items[0].decision_before == "inspect_patch_conflict"
 
     assert _mutable_graph_counts(db) == before_counts
     assert db.triple_count(unknown_graph) == 0
@@ -1771,7 +1786,12 @@ def test_stored_malformed_staged_patch_conflict_includes_parser_detail(
     check = db.check_staged_revision_apply(staged.revision_iri)
     assert check.can_apply is False
     assert check.status == "conflict"
+    assert check.decision == "inspect_patch_conflict"
     assert check.blocking_reasons == ["patch_conflict"]
+    assert all(
+        action.tool_name != "restage_staged_revision"
+        for action in check.suggested_next_actions
+    )
     assert check.patch_checks[0].conflict is not None
     assert "Could not parse staged patch" in check.patch_checks[0].conflict
     assert "at line" in check.patch_checks[0].conflict
