@@ -6332,35 +6332,6 @@ class DoxaBase:
         column_defaults: Mapping[str, Any] | None = None,
     ) -> ProfileBundleRecord:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
-        dataset_profile = self.record_dataset_profile(
-            dataset_value,
-            summary=dataset_summary,
-            observed_at=observed_at,
-            observed_by=observed_by,
-            evidence_summary=evidence_summary,
-            evidence_sources=evidence_sources,
-            sample_size=sample_size,
-            sample_scope=sample_scope,
-            sample_method=sample_method,
-            row_count=row_count,
-            null_count=null_count,
-            distinct_count=distinct_count,
-            value_frequencies=value_frequencies,
-            profile_metrics=profile_metrics,
-            update_map_snapshot=update_map_snapshot,
-            map_label=map_label,
-            map_description=map_description,
-            is_table=is_table,
-            pattern_summary=pattern_summary,
-            pattern_text=pattern_text,
-            pattern_rationale=pattern_rationale,
-            pattern_confidence=pattern_confidence,
-            pattern_status=pattern_status,
-            pattern_stability=pattern_stability,
-            pattern_map_implications=pattern_map_implications,
-            evidence_iri=shared_evidence_iri,
-        )
-
         allowed_column_keys = {
             "column_iri",
             "column_name",
@@ -6421,8 +6392,21 @@ class DoxaBase:
                 "column_defaults contains unsupported record_column_profile "
                 f"field(s): {', '.join(unknown_defaults)}"
             )
+        if self._profile_pattern_requested(
+            pattern_summary,
+            pattern_text,
+            pattern_rationale,
+        ):
+            implication_values = self._string_values(
+                "pattern_map_implications",
+                pattern_map_implications,
+            )
+            self._validate_resource_values(
+                "pattern_map_implications",
+                implication_values or [dataset_value],
+            )
 
-        recorded_columns: list[ColumnProfileRecord] = []
+        prepared_column_profiles: list[dict[str, Any]] = []
         for index, profile_mapping in enumerate(column_profiles or []):
             try:
                 profile_values = dict(profile_mapping)
@@ -6445,6 +6429,40 @@ class DoxaBase:
                     f"column_profiles[{index}] is missing required field(s): "
                     f"{', '.join(missing_keys)}"
                 )
+            self._preflight_profile_bundle_column(index, column_kwargs)
+            prepared_column_profiles.append(column_kwargs)
+
+        dataset_profile = self.record_dataset_profile(
+            dataset_value,
+            summary=dataset_summary,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary,
+            evidence_sources=evidence_sources,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
+            update_map_snapshot=update_map_snapshot,
+            map_label=map_label,
+            map_description=map_description,
+            is_table=is_table,
+            pattern_summary=pattern_summary,
+            pattern_text=pattern_text,
+            pattern_rationale=pattern_rationale,
+            pattern_confidence=pattern_confidence,
+            pattern_status=pattern_status,
+            pattern_stability=pattern_stability,
+            pattern_map_implications=pattern_map_implications,
+            evidence_iri=shared_evidence_iri,
+        )
+
+        recorded_columns: list[ColumnProfileRecord] = []
+        for column_kwargs in prepared_column_profiles:
             recorded_columns.append(
                 self.record_column_profile(**column_kwargs)  # type: ignore[arg-type]
             )
@@ -6455,6 +6473,96 @@ class DoxaBase:
             dataset_profile=dataset_profile,
             column_profiles=recorded_columns,
         )
+
+    def _preflight_profile_bundle_column(
+        self,
+        index: int,
+        column_kwargs: Mapping[str, Any],
+    ) -> None:
+        column_value = self._required_iri(
+            f"column_profiles[{index}].column_iri",
+            column_kwargs["column_iri"],
+        )
+        table_value = (
+            self._required_iri(
+                f"column_profiles[{index}].table_iri",
+                column_kwargs["table_iri"],
+            )
+            if column_kwargs.get("table_iri") is not None
+            else None
+        )
+        column_name = column_kwargs["column_name"]
+        column_name_value = column_name.strip()
+        if not column_name_value:
+            raise DoxaBaseError(
+                f"column_profiles[{index}].column_name must not be empty"
+            )
+        summary = column_kwargs["summary"]
+        if not summary.strip():
+            raise DoxaBaseError(
+                f"column_profiles[{index}].summary must not be empty"
+            )
+        for name in (
+            "sample_size",
+            "row_count",
+            "null_count",
+            "distinct_count",
+        ):
+            self._ensure_non_negative(
+                f"column_profiles[{index}].{name}",
+                column_kwargs.get(name),
+            )
+        self._profile_value_frequency_values(column_kwargs.get("value_frequencies"))
+        self._profile_metric_values(column_kwargs.get("profile_metrics"))
+
+        evidence_sources = column_kwargs.get("evidence_sources")
+        if isinstance(evidence_sources, str):
+            evidence_source_values = [evidence_sources]
+        else:
+            evidence_source_values = list(evidence_sources or [])
+        if any(not isinstance(source, str) for source in evidence_source_values):
+            raise DoxaBaseError(
+                f"column_profiles[{index}].evidence_sources must contain strings"
+            )
+
+        should_update_map = column_kwargs.get("update_map_column", True) and (
+            table_value is not None
+            or column_kwargs.get("map_label") is not None
+            or column_kwargs.get("map_description") is not None
+            or column_kwargs.get("physical_type") is not None
+            or column_kwargs.get("value_type") is not None
+            or column_kwargs.get("nullable") is not None
+        )
+        if should_update_map:
+            if column_kwargs.get("physical_type") is not None:
+                self._resource_ref(
+                    f"column_profiles[{index}].physical_type",
+                    column_kwargs["physical_type"],
+                )
+            if column_kwargs.get("value_type") is not None:
+                self._resource_ref(
+                    f"column_profiles[{index}].value_type",
+                    column_kwargs["value_type"],
+                )
+            if table_value is not None:
+                self._resource_ref(
+                    f"column_profiles[{index}].table_iri",
+                    table_value,
+                )
+
+        if self._profile_pattern_requested(
+            column_kwargs.get("pattern_summary"),
+            column_kwargs.get("pattern_text"),
+            column_kwargs.get("pattern_rationale"),
+        ):
+            implication_values = self._string_values(
+                f"column_profiles[{index}].pattern_map_implications",
+                column_kwargs.get("pattern_map_implications"),
+            )
+            self._validate_resource_values(
+                f"column_profiles[{index}].pattern_map_implications",
+                implication_values or [column_value],
+            )
 
     def _profile_pattern_requested(
         self,

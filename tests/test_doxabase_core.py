@@ -18,6 +18,19 @@ ROOT = Path(__file__).resolve().parents[1]
 AIS_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "ais.trig"
 POLYMARKET_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "polymarket.trig"
 RC = "https://richcanopy.org/ns/rc#"
+MUTABLE_GRAPHS = (
+    "map",
+    "ontology",
+    "observations",
+    "patterns",
+    "evidence",
+    "shapes",
+    "history",
+)
+
+
+def _mutable_graph_counts(db: DoxaBase) -> dict[str, int]:
+    return {graph: db.triple_count(graph) for graph in MUTABLE_GRAPHS}
 
 
 def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
@@ -254,6 +267,65 @@ def test_replace_graph_triples_rejects_count_change_before_mutating(
     assert db.triple_count("map") == 1
     assert db._graph_content_digest("map") == before_digest
     assert db.search("Customers", graph="map").matches == []
+
+
+def test_replace_graph_triples_updates_stale_incoming_link_and_search_index(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:Orders a rc:Dataset ;
+            rc:hasColumn ex:CustomerV1 .
+
+        ex:CustomerV1 a rc:Column ;
+            rc:columnName "customer_id" ;
+            rdfs:label "Customer feed v1" .
+        """,
+        graph="map",
+    )
+    before_digest = db._graph_content_digest("map")
+
+    result = db.replace_graph_triples(
+        "map",
+        removals="""
+            @prefix ex: <https://example.test/project#> .
+            @prefix rc: <https://richcanopy.org/ns/rc#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            ex:Orders rc:hasColumn ex:CustomerV1 .
+
+            ex:CustomerV1 a rc:Column ;
+                rc:columnName "customer_id" ;
+                rdfs:label "Customer feed v1" .
+        """,
+        additions="""
+            @prefix ex: <https://example.test/project#> .
+            @prefix rc: <https://richcanopy.org/ns/rc#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            ex:Orders rc:hasColumn ex:CustomerV2 .
+
+            ex:CustomerV2 a rc:Column ;
+                rc:columnName "customer_id" ;
+                rdfs:label "Customer feed v2" .
+        """,
+        expected_count=5,
+    )
+
+    assert result.before_count == 5
+    assert result.after_count == 5
+    assert result.same_count is True
+    assert result.triples_removed == 4
+    assert result.triples_added == 4
+    assert result.before_digest == before_digest
+    assert result.after_digest != before_digest
+    assert db.search("Customer feed v1", graph="map").matches == []
+    assert len(db.search("Customer feed v2", graph="map").matches) == 1
 
 
 def test_export_trig_preserves_graph_roles_for_round_trip(tmp_path: Path) -> None:
@@ -6261,6 +6333,7 @@ def test_profile_run_candidates_are_count_ranked_and_ignore_singletons(
 
 def test_record_profile_bundle_rejects_unknown_column_fields(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
 
     with pytest.raises(DoxaBaseError, match="unsupported record_column_profile"):
         db.record_profile_bundle(
@@ -6275,6 +6348,38 @@ def test_record_profile_bundle_rejects_unknown_column_fields(tmp_path: Path) -> 
                 }
             ],
         )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.search("Orders were profiled", graph="observations").matches == []
+
+
+def test_record_profile_bundle_rejects_invalid_column_values_without_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="value_frequencies\\[0\\]\\.frequency"):
+        db.record_profile_bundle(
+            "https://example.test/project#Orders",
+            dataset_summary="Orders were profiled.",
+            evidence_summary="Shared profiler run.",
+            evidence_sources=["test://profile-run"],
+            column_profiles=[
+                {
+                    "column_iri": "https://example.test/project#OrdersStatus",
+                    "column_name": "status",
+                    "summary": "Status was profiled.",
+                    "value_frequencies": [
+                        {"value": "fulfilled", "frequency": -1},
+                    ],
+                }
+            ],
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.search("Orders were profiled", graph="observations").matches == []
+    assert db.search("Shared profiler run", graph="evidence").matches == []
 
 
 def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
