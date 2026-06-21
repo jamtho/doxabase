@@ -11923,23 +11923,28 @@ class DoxaBase:
         )
         if semantic_warning:
             semantic_warning.append("")
+        metadata_lines = [
+            f"- Revision: `{description.iri}`",
+            (
+                "- Stance: "
+                f"{description.revision_stance_label or description.revision_stance or 'unknown'}"
+            ),
+            (
+                "- Type: "
+                f"{description.revision_type_label or description.revision_type or 'unknown'}"
+            ),
+            f"- Changed graphs: {', '.join(description.changed_graphs)}",
+            (
+                f"- Validation: {description.validation_scope or 'unknown'} "
+                f"conforms={description.validation_conforms} "
+                f"results={description.validation_result_count}"
+            ),
+        ]
+        if description.restage_reason is not None:
+            metadata_lines.append(f"- Restage headline: {description.restage_reason}")
         lines.extend(
             [
-                f"- Revision: `{description.iri}`",
-                (
-                    "- Stance: "
-                    f"{description.revision_stance_label or description.revision_stance or 'unknown'}"
-                ),
-                (
-                    "- Type: "
-                    f"{description.revision_type_label or description.revision_type or 'unknown'}"
-                ),
-                f"- Changed graphs: {', '.join(description.changed_graphs)}",
-                (
-                    f"- Validation: {description.validation_scope or 'unknown'} "
-                    f"conforms={description.validation_conforms} "
-                    f"results={description.validation_result_count}"
-                ),
+                *metadata_lines,
                 "",
                 *semantic_warning,
                 *self._staged_apply_check_markdown(
@@ -12746,6 +12751,25 @@ class DoxaBase:
                 )
                 + " |"
             )
+        restage_context = []
+        for index, description in enumerate(descriptions, start=1):
+            if description.restage_reason is not None:
+                label = description.summary or description.iri
+                restage_context.append(
+                    f"{index}. {label}: {description.restage_reason}"
+                )
+            elif description.restaged_from is not None:
+                label = description.summary or description.iri
+                source = description.restaged_from.label or description.restaged_from.iri
+                restage_context.append(
+                    (
+                        f"{index}. {label}: Restaged from {source} "
+                        f"(`{description.restaged_from.iri}`); see rationale for details."
+                    )
+                )
+        if restage_context:
+            lines.extend(["", "## Restage Context", ""])
+            lines.extend(restage_context)
         if any(description.review_note for description in descriptions):
             lines.extend(["", "## Review Notes", ""])
             for index, description in enumerate(descriptions, start=1):

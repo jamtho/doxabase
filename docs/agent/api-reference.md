@@ -427,13 +427,16 @@ if the compact judgement panel is unavailable because the proposal is stale. For
 simple single-assertion `map` changes that still replay cleanly, it reconstructs
 a `Judgement Panel` section so the export carries values, value-type context,
 rationale, caveats, routes, and safety notes from the JSON review surface.
+Restaged exports include a top metadata `Restage headline` before the current
+apply check.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and
-staged-time validation result. Pass `executive_summary` when the comparison
-needs an agent-authored synthesis at the top of the artifact. Relative export
-paths are resolved from the repository root and returned as normalized absolute
-paths.
+staged-time validation result. Bundles with restaged revisions include a
+`Restage Context` section near the top. Pass `executive_summary` when the
+comparison needs an agent-authored synthesis at the top of the artifact.
+Relative export paths are resolved from the repository root and returned as
+normalized absolute paths.
 
 `check_staged_revision_apply()` previews whether one staged revision can be
 applied without mutating graph state. It reports already-applied state,

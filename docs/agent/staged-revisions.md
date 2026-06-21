@@ -99,12 +99,15 @@ reviewers can see the same compact values, value-type context, caveats, routes,
 and safety notes that the JSON helper returned. Stale single-assertion exports
 can still include a `Semantic Review Warning` reconstructed from the live apply
 check even when the judgement panel is unavailable. `can_apply=True` means replay
-and validation readiness, not semantic approval. Use
+and validation readiness, not semantic approval. Restaged single exports include
+a top metadata `Restage headline` before the current apply check, so reviewers
+can see why the stale proposal was refreshed before reading patch payloads. Use
 `doxabase.export_staged_revisions` when
 several alternatives, failed candidates, and repaired candidates should be
 reviewed together; its summary table includes the current apply status and
 decision, plus current and staged-time validation state for each staged
-revision.
+revision. When the bundle contains restaged revisions, a `Restage Context`
+section appears near the top before the detailed revision bodies.
 
 A stale export should be read like this:
 
@@ -313,6 +316,8 @@ refreshed revision records `rc:restagesRevision` back to the stale proposal, and
 its generated rationale summarizes the stale apply check, including exact
 snapshot drift triples when available. `describe_staged_revision` also surfaces
 a compact `restage_reason` when it can derive one from that rationale.
+Markdown exports surface that same reason as a top `Restage headline`, and
+grouped exports collect restage reasons in `Restage Context`.
 Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and already-applied revisions should be inspected rather than
 replayed.
@@ -345,8 +350,8 @@ Use `restaged_from` / `rc:restagesRevision` when a staged revision is the same
 patch intent replayed against a newer graph state. This is different from
 `alternative_to`: alternatives compete as different framings, while restaging
 keeps the older stale proposal as provenance for the refreshed proposal.
-`restage_reason` is the quick review headline; read the full rationale when
-the drift evidence matters.
+`restage_reason` is the quick review headline and appears early in Markdown
+exports; read the full rationale when the drift evidence matters.
 
 ## Validation Notes
 

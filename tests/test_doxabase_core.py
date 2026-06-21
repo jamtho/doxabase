@@ -1932,7 +1932,25 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert "Original staged rationale:" in (restaged_description.rationale or "")
     export_path = tmp_path / "restaged-review.md"
     db.export_staged_revision(restaged.revision_iri, export_path)
-    assert "- Reason: " in export_path.read_text(encoding="utf-8")
+    export_text = export_path.read_text(encoding="utf-8")
+    assert "- Restage headline: " in export_text
+    assert export_text.index("- Restage headline: ") < export_text.index(
+        "## Current Apply Check"
+    )
+    assert "- Reason: " in export_text
+
+    grouped_export_path = tmp_path / "restaged-comparison.md"
+    db.export_staged_revisions(
+        [staged.revision_iri, restaged.revision_iri],
+        grouped_export_path,
+        title="Restaged comparison",
+    )
+    grouped_export = grouped_export_path.read_text(encoding="utf-8")
+    assert "## Restage Context" in grouped_export
+    assert grouped_export.index("## Restage Context") < grouped_export.index(
+        "## Revisions"
+    )
+    assert "prior status conflict" in grouped_export
 
     fresh_check = db.check_staged_revision_apply(restaged.revision_iri)
     assert fresh_check.can_apply is True

@@ -497,7 +497,9 @@ check when the live apply check reports semantic risk. For simple
 single-assertion `map` changes that still replay cleanly, the export includes a
 `Judgement Panel` section with values, value-type context, rationale, caveats,
 routes, and safety notes. Stale single-assertion exports may lack the judgement
-panel but still warn from stored review context. This is for human/agent review.
+panel but still warn from stored review context. Restaged exports include a
+top metadata `Restage headline` before the apply check. This is for human/agent
+review.
 
 `doxabase.export_staged_revisions`
 
@@ -507,7 +509,8 @@ alternative framings should travel together for review. Pass
 `executive_summary` when the bundle should open with the agent's current
 provisional verdict. The summary table includes each staged revision's current
 apply status, decision, current validation state, and staged-time validation
-result. Relative export paths are resolved from the repository root and returned
+result. Bundles with restaged revisions include a `Restage Context` section near
+the top. Relative export paths are resolved from the repository root and returned
 as normalized absolute paths.
 
 ## Import and Validation

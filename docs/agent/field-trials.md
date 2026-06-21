@@ -294,10 +294,12 @@ few useful gaps:
   `describe_staged_revision` and Markdown exports. A same-count ontology drift
   trial then showed that drift relevance also needed patch-object and
   revision-anchor overlap fields, because a changed superclass/anchor can be
-  semantically relevant even when staged patch subjects are untouched. Remaining
-  useful pressure points include a public same-count graph replacement helper
-  for trials and a short "why stale" headline near the current apply-check
-  section of restaged exports.
+  semantically relevant even when staged patch subjects are untouched. A
+  follow-up export-readability trial showed that the compact restage reason also
+  needs to appear early in Markdown review bundles, not only under the later
+  `Restaged From` section. Remaining useful pressure points include a public
+  same-count graph replacement helper for trials and stale-original exports that
+  can point to an already-created restaged sibling.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or
