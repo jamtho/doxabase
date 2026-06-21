@@ -553,8 +553,12 @@ grouped exports. Pass `path` to also write the grouped Markdown bundle over
 stale sources and their current refreshed successors. Pass `dry_run=True` to get
 the same per-source classifications without creating refreshed successors;
 unhandled conflicts then report `action="would_restage"` and appear in
-`would_restage_revision_iris`. The helper deliberately does not apply anything;
-applying one successor can make sibling successors stale again.
+`would_restage_revision_iris`. In dry-run rows that would be restaged,
+`current_revision_by_source` still points to the stale source because no
+successor exists yet. `skipped_not_restageable` rows may be ready,
+validation-failed, or already applied; inspect `status_before` and
+`decision_before`. The helper deliberately does not apply anything; applying one
+successor can make sibling successors stale again.
 
 `apply_staged_revision()` applies one staged revision after conservative
 graph-state conflict checks and preview validation. It rejects already-applied

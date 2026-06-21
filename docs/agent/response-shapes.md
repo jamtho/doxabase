@@ -1354,9 +1354,13 @@ Each `batch.items` row reports `source_revision_iri`, `summary`,
 `skipped_not_restageable`. `would_restage` only appears when `dry_run=True`; in
 that case no successor is created, `restaged_revision_iris` stays empty, and
 `would_restage_revision_iris` lists the stale source revisions that a real run
-would refresh. If `path` was passed, `export_record` is the grouped Markdown
-export for `review_revision_iris`; otherwise it is `None` and the summary fields
-are computed in memory.
+would refresh. For those would-restage rows, `current_revision_by_source` still
+points at the stale source because no current successor exists yet.
+`skipped_not_restageable` includes ready, validation-failed, and already-applied
+rows; read `status_before` and `decision_before` before deciding whether the row
+needs apply, repair, or inspection. If `path` was passed, `export_record` is the
+grouped Markdown export for `review_revision_iris`; otherwise it is `None` and
+the summary fields are computed in memory.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

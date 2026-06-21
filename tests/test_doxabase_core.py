@@ -2330,6 +2330,22 @@ def test_batch_restage_dry_run_reports_plan_without_creating_successors(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    applied_staged = db.stage_graph_revision(
+        summary="Stage applied table",
+        rationale="Exercise already-applied dry-run classification.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:AlreadyApplied a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.apply_staged_revision(applied_staged.revision_iri)
     first = db.stage_graph_revision(
         summary="Stage order events table",
         rationale="Keep the raw order event framing available for review.",
@@ -2365,6 +2381,23 @@ def test_batch_restage_dry_run_reports_plan_without_creating_successors(
         label="Drift dataset",
     )
     already_restaged = db.restage_staged_revision(first.revision_iri)
+    validation_failed = db.stage_graph_revision(
+        summary="Stage invalid value type",
+        rationale="Exercise validation-failed dry-run classification.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:BadValueType a rc:ValueType ;
+                        rc:requiredPhysicalType "VARCHAR" .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
     ready = db.stage_graph_revision(
         summary="Stage current shipment table",
         rationale="This proposal was staged after the drift.",
@@ -2383,9 +2416,20 @@ def test_batch_restage_dry_run_reports_plan_without_creating_successors(
     staged_count_before = db.list_graph_revisions(
         revision_type="rc:StagedRevision"
     ).count
+    total_revision_count_before = db.list_graph_revisions().count
+    history_triples_before = db.triple_count("history")
+    export_path = tmp_path / "dry-run-batch-review.md"
 
     batch = db.restage_staged_revisions(
-        [first.revision_iri, second.revision_iri, ready.revision_iri],
+        [
+            first.revision_iri,
+            second.revision_iri,
+            validation_failed.revision_iri,
+            applied_staged.revision_iri,
+            ready.revision_iri,
+        ],
+        path=export_path,
+        title="Dry-run batch review",
         dry_run=True,
     )
 
@@ -2394,6 +2438,8 @@ def test_batch_restage_dry_run_reports_plan_without_creating_successors(
         "skipped_already_handled",
         "would_restage",
         "skipped_not_restageable",
+        "skipped_not_restageable",
+        "skipped_not_restageable",
     ]
     assert batch.would_restage_revision_iris == [second.revision_iri]
     assert batch.restaged_revision_iris == []
@@ -2401,26 +2447,49 @@ def test_batch_restage_dry_run_reports_plan_without_creating_successors(
     assert batch.current_revision_by_source == {
         first.revision_iri: already_restaged.revision_iri,
         second.revision_iri: second.revision_iri,
+        validation_failed.revision_iri: validation_failed.revision_iri,
+        applied_staged.revision_iri: applied_staged.revision_iri,
         ready.revision_iri: ready.revision_iri,
     }
-    assert batch.skipped_revision_iris == [first.revision_iri, ready.revision_iri]
+    assert batch.skipped_revision_iris == [
+        first.revision_iri,
+        validation_failed.revision_iri,
+        applied_staged.revision_iri,
+        ready.revision_iri,
+    ]
     assert batch.already_handled_revision_iris == [first.revision_iri]
-    assert batch.not_restageable_revision_iris == [ready.revision_iri]
+    assert batch.not_restageable_revision_iris == [
+        validation_failed.revision_iri,
+        applied_staged.revision_iri,
+        ready.revision_iri,
+    ]
     assert batch.review_revision_iris == [
         first.revision_iri,
         already_restaged.revision_iri,
         second.revision_iri,
+        validation_failed.revision_iri,
+        applied_staged.revision_iri,
         ready.revision_iri,
     ]
     assert batch.bundle_summary.unresolved_stale_revision_iris == [
         second.revision_iri
     ]
+    assert batch.bundle_summary.validation_failed_revision_iris == [
+        validation_failed.revision_iri
+    ]
+    assert batch.export_record is not None
+    assert batch.export_record.path == str(export_path)
+    assert export_path.read_text(encoding="utf-8").startswith(
+        "# Dry-run batch review\n"
+    )
     assert "Dry run" in batch.items[1].note
     assert db.describe_staged_revision(second.revision_iri).restaged_by is None
     assert (
         db.list_graph_revisions(revision_type="rc:StagedRevision").count
         == staged_count_before
     )
+    assert db.list_graph_revisions().count == total_revision_count_before
+    assert db.triple_count("history") == history_triples_before
 
 
 def test_restage_chain_routes_to_current_successor(

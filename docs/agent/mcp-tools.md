@@ -494,8 +494,12 @@ non-conflicted rows, and returns per-source actions, old-to-current mappings,
 to write the grouped Markdown bundle over stale sources and current refreshed
 successors. Pass `dry_run=true` to classify the same batch without creating
 successors; unhandled conflicts return `action="would_restage"` and are listed
-in `would_restage_revision_iris`. It does not apply refreshed revisions; review
-and apply remain explicit follow-up steps.
+in `would_restage_revision_iris`. In dry-run rows that would be restaged,
+`current_revision_by_source` still points to the stale source because no
+successor exists yet. For `skipped_not_restageable`, inspect `status_before` and
+`decision_before` to distinguish ready, validation-failed, and already-applied
+rows. It does not apply refreshed revisions; review and apply remain explicit
+follow-up steps.
 
 `doxabase.apply_staged_revision`
 
