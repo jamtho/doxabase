@@ -1280,6 +1280,54 @@ def test_describe_query_context_tool_matches_python_target_candidates(
         ]
 
 
+def test_describe_query_context_tool_warns_on_complete_s3_template_without_resolution(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        path_templates=["s3://orders-bucket/warehouse/orders/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["readiness"] == "needs_review"
+    assert any(
+        issue["code"] == "s3_access_resolution_unrecorded"
+        and issue["resource"]["iri"] == storage["iri"]
+        for issue in result["issues"]
+    )
+    candidate = result["query_target_candidates"][0]
+    assert candidate["candidate_path"] == "s3://orders-bucket/warehouse/orders/*.parquet"
+    assert candidate["composition"] == "template_as_returned"
+    assert candidate["candidate_path_status"] == "orientation_only"
+    assert candidate["review_required"] is True
+    assert any(
+        reason["code"] == "s3_access_resolution_unrecorded"
+        for reason in candidate["review_reasons"]
+    )
+
+
 def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)
