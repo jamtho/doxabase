@@ -1025,8 +1025,9 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         created_at: str | None = None,
         created_by: str | None = None,
         validation_scope: str | None = None,
+        dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Restage several conflicted staged revisions and optionally export review."""
+        """Restage or dry-run several conflicted staged revisions."""
 
         return restage_staged_revisions_tool(
             db,
@@ -1039,6 +1040,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             created_at=created_at,
             created_by=created_by,
             validation_scope=validation_scope,
+            dry_run=dry_run,
         )
 
     @server.tool(name="doxabase.stage_map_assertion_change")

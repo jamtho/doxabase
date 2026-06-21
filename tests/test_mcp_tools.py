@@ -534,6 +534,73 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert "## Restage Context" in expected_path.read_text(encoding="utf-8")
 
 
+def test_restage_staged_revisions_tool_can_dry_run(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    second = stage_graph_revision_tool(
+        db,
+        summary="Stage threads table",
+        rationale="Threads should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Threads a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+    staged_count_before = list_graph_revisions_tool(
+        db,
+        revision_type="rc:StagedRevision",
+    )["count"]
+
+    result = restage_staged_revisions_tool(
+        db,
+        revision_iris=[first["revision_iri"], second["revision_iri"]],
+        dry_run=True,
+    )
+
+    assert result["dry_run"] is True
+    assert result["would_restage_revision_iris"] == [
+        first["revision_iri"],
+        second["revision_iri"],
+    ]
+    assert result["restaged_revision_iris"] == []
+    assert [item["action"] for item in result["items"]] == [
+        "would_restage",
+        "would_restage",
+    ]
+    assert list_graph_revisions_tool(
+        db,
+        revision_type="rc:StagedRevision",
+    )["count"] == staged_count_before
+
+
 def test_export_staged_revisions_tool_resolves_relative_paths(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

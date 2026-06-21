@@ -550,8 +550,11 @@ not already have a `restaged_by` successor, skips already-handled stale sources
 and non-conflicted rows, preserves caller order, and returns old-to-current
 mappings plus the same `revision_summaries` and `bundle_summary` shape used by
 grouped exports. Pass `path` to also write the grouped Markdown bundle over
-stale sources and their current refreshed successors. It deliberately does not
-apply anything; applying one successor can make sibling successors stale again.
+stale sources and their current refreshed successors. Pass `dry_run=True` to get
+the same per-source classifications without creating refreshed successors;
+unhandled conflicts then report `action="would_restage"` and appear in
+`would_restage_revision_iris`. The helper deliberately does not apply anything;
+applying one successor can make sibling successors stale again.
 
 `apply_staged_revision()` applies one staged revision after conservative
 graph-state conflict checks and preview validation. It rejects already-applied

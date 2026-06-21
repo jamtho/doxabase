@@ -961,6 +961,7 @@ def restage_staged_revisions_tool(
     created_at: str | None = None,
     created_by: str | None = None,
     validation_scope: str | None = None,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path) if path is not None else None
     result = db.restage_staged_revisions(
@@ -973,6 +974,7 @@ def restage_staged_revisions_tool(
         created_at=created_at,
         created_by=created_by,
         validation_scope=validation_scope,  # type: ignore[arg-type]
+        dry_run=dry_run,
     )
     return to_dict(result)
 

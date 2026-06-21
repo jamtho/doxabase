@@ -1331,6 +1331,8 @@ are useful to inspect but should not be applied again.
 ```python
 batch.requested_revision_iris
 batch.processed_revision_iris
+batch.dry_run
+batch.would_restage_revision_iris
 batch.restaged_revision_iris
 batch.skipped_revision_iris
 batch.already_handled_revision_iris
@@ -1348,10 +1350,13 @@ Each `batch.items` row reports `source_revision_iri`, `summary`,
 `status_before`, `decision_before`, `stale_resolution_state_before`,
 `blocking_reasons_before`, `action`, `restaged_revision_iri`,
 `current_restaged_by`, `current_revision_iri`, and `note`. Current actions are
-`restaged`, `skipped_already_handled`, and `skipped_not_restageable`. If `path`
-was passed, `export_record` is the grouped Markdown export for
-`review_revision_iris`; otherwise it is `None` and the summary fields are
-computed in memory.
+`restaged`, `would_restage`, `skipped_already_handled`, and
+`skipped_not_restageable`. `would_restage` only appears when `dry_run=True`; in
+that case no successor is created, `restaged_revision_iris` stays empty, and
+`would_restage_revision_iris` lists the stale source revisions that a real run
+would refresh. If `path` was passed, `export_record` is the grouped Markdown
+export for `review_revision_iris`; otherwise it is `None` and the summary fields
+are computed in memory.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

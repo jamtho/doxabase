@@ -2272,6 +2272,8 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     )
     restaged_second = batch.restaged_revision_iris[0]
 
+    assert batch.dry_run is False
+    assert batch.would_restage_revision_iris == []
     assert [item.action for item in batch.items] == [
         "skipped_already_handled",
         "restaged",
@@ -2322,6 +2324,103 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert "## Restage Context" in exported
     assert "Stage order lifecycle table" in exported
     assert db.check_staged_revision_apply(restaged_second).status == "ready"
+
+
+def test_batch_restage_dry_run_reports_plan_without_creating_successors(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first = db.stage_graph_revision(
+        summary="Stage order events table",
+        rationale="Keep the raw order event framing available for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderEvents a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    second = db.stage_graph_revision(
+        summary="Stage order lifecycle table",
+        rationale="Keep the lifecycle framing available for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderLifecycle a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftDataset",
+        label="Drift dataset",
+    )
+    already_restaged = db.restage_staged_revision(first.revision_iri)
+    ready = db.stage_graph_revision(
+        summary="Stage current shipment table",
+        rationale="This proposal was staged after the drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:CurrentShipments a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    staged_count_before = db.list_graph_revisions(
+        revision_type="rc:StagedRevision"
+    ).count
+
+    batch = db.restage_staged_revisions(
+        [first.revision_iri, second.revision_iri, ready.revision_iri],
+        dry_run=True,
+    )
+
+    assert batch.dry_run is True
+    assert [item.action for item in batch.items] == [
+        "skipped_already_handled",
+        "would_restage",
+        "skipped_not_restageable",
+    ]
+    assert batch.would_restage_revision_iris == [second.revision_iri]
+    assert batch.restaged_revision_iris == []
+    assert batch.restaged_revision_by_source == {}
+    assert batch.current_revision_by_source == {
+        first.revision_iri: already_restaged.revision_iri,
+        second.revision_iri: second.revision_iri,
+        ready.revision_iri: ready.revision_iri,
+    }
+    assert batch.skipped_revision_iris == [first.revision_iri, ready.revision_iri]
+    assert batch.already_handled_revision_iris == [first.revision_iri]
+    assert batch.not_restageable_revision_iris == [ready.revision_iri]
+    assert batch.review_revision_iris == [
+        first.revision_iri,
+        already_restaged.revision_iri,
+        second.revision_iri,
+        ready.revision_iri,
+    ]
+    assert batch.bundle_summary.unresolved_stale_revision_iris == [
+        second.revision_iri
+    ]
+    assert "Dry run" in batch.items[1].note
+    assert db.describe_staged_revision(second.revision_iri).restaged_by is None
+    assert (
+        db.list_graph_revisions(revision_type="rc:StagedRevision").count
+        == staged_count_before
+    )
 
 
 def test_restage_chain_routes_to_current_successor(

@@ -492,8 +492,10 @@ already have a `restaged_by` successor, skips already-handled stale sources and
 non-conflicted rows, and returns per-source actions, old-to-current mappings,
 `review_revision_iris`, `revision_summaries`, and `bundle_summary`. Pass `path`
 to write the grouped Markdown bundle over stale sources and current refreshed
-successors. It does not apply refreshed revisions; review and apply remain
-explicit follow-up steps.
+successors. Pass `dry_run=true` to classify the same batch without creating
+successors; unhandled conflicts return `action="would_restage"` and are listed
+in `would_restage_revision_iris`. It does not apply refreshed revisions; review
+and apply remain explicit follow-up steps.
 
 `doxabase.apply_staged_revision`
 

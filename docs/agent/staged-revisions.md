@@ -140,7 +140,9 @@ For larger stale sets, use `doxabase.restage_staged_revisions(...)` instead of
 looping manually. It restages conflicted rows that do not already have a
 successor, skips already-handled or non-conflicted rows, preserves caller order,
 returns source-to-current mappings, and can write the grouped review bundle when
-you pass `path`.
+you pass `path`. Use `dry_run=true` first when you want the same per-source
+classification without creating refreshed successors; unhandled conflicts report
+`action="would_restage"`.
 
 In grouped exports, `Staged validation` is the validation result from when the
 proposal was created. `Current validation` comes from the live apply check and
@@ -354,7 +356,9 @@ Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying
 one successor can make sibling successors stale. When a requested stale source
 already has a restage chain, batch restage maps it to `current_restaged_by` so
-the review bundle opens the latest known successor.
+the review bundle opens the latest known successor. Use `dry_run=true` when an
+autonomous loop wants to inspect which rows would be refreshed before taking the
+mutation.
 
 ## What Gets Recorded
 

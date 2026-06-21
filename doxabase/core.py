@@ -471,6 +471,8 @@ class StagedGraphRevisionBatchRestageItem:
 class StagedGraphRevisionBatchRestageRecord:
     requested_revision_iris: list[str]
     processed_revision_iris: list[str]
+    dry_run: bool
+    would_restage_revision_iris: list[str]
     restaged_revision_iris: list[str]
     skipped_revision_iris: list[str]
     already_handled_revision_iris: list[str]
@@ -8544,6 +8546,7 @@ class DoxaBase:
             "all",
         ]
         | None = None,
+        dry_run: bool = False,
     ) -> StagedGraphRevisionBatchRestageRecord:
         requested_revision_iris = self._string_values(
             "revision_iris",
@@ -8551,6 +8554,7 @@ class DoxaBase:
             required=True,
         )
         processed_revision_iris = list(dict.fromkeys(requested_revision_iris))
+        would_restage_revision_iris: list[str] = []
         restaged_revision_iris: list[str] = []
         skipped_revision_iris: list[str] = []
         already_handled_revision_iris: list[str] = []
@@ -8592,22 +8596,31 @@ class DoxaBase:
             current_revision_iri = current_restaged_by or source.iri
 
             if check.status == "conflict" and restaged_by is None:
-                restaged = self.restage_staged_revision(
-                    source.iri,
-                    created_at=created_at,
-                    created_by=created_by,
-                    validation_scope=validation_scope,
-                )
-                restaged_revision_iri = restaged.revision_iri
-                current_restaged_by = restaged.revision_iri
-                current_revision_iri = restaged.revision_iri
-                restaged_revision_iris.append(restaged.revision_iri)
-                restaged_revision_by_source[source.iri] = restaged.revision_iri
-                action = "restaged"
-                note = (
-                    "Created a refreshed staged revision against current graph "
-                    "state; review it before applying."
-                )
+                if dry_run:
+                    would_restage_revision_iris.append(source.iri)
+                    action = "would_restage"
+                    note = (
+                        "Dry run: would create a refreshed staged revision "
+                        "against current graph state; no graph mutation was "
+                        "performed."
+                    )
+                else:
+                    restaged = self.restage_staged_revision(
+                        source.iri,
+                        created_at=created_at,
+                        created_by=created_by,
+                        validation_scope=validation_scope,
+                    )
+                    restaged_revision_iri = restaged.revision_iri
+                    current_restaged_by = restaged.revision_iri
+                    current_revision_iri = restaged.revision_iri
+                    restaged_revision_iris.append(restaged.revision_iri)
+                    restaged_revision_by_source[source.iri] = restaged.revision_iri
+                    action = "restaged"
+                    note = (
+                        "Created a refreshed staged revision against current graph "
+                        "state; review it before applying."
+                    )
             elif check.status == "conflict" and restaged_by is not None:
                 skipped_revision_iris.append(source.iri)
                 already_handled_revision_iris.append(source.iri)
@@ -8676,6 +8689,8 @@ class DoxaBase:
         return StagedGraphRevisionBatchRestageRecord(
             requested_revision_iris=requested_revision_iris,
             processed_revision_iris=processed_revision_iris,
+            dry_run=dry_run,
+            would_restage_revision_iris=would_restage_revision_iris,
             restaged_revision_iris=restaged_revision_iris,
             skipped_revision_iris=skipped_revision_iris,
             already_handled_revision_iris=already_handled_revision_iris,
