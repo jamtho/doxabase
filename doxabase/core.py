@@ -12976,7 +12976,8 @@ class DoxaBase:
         if not lines:
             return exc.__class__.__name__
         if lines[0].startswith("at line") and len(lines) > 1:
-            return f"{lines[0]}: {lines[1]}"
+            reason = lines[1].split(" at ^ in", 1)[0]
+            return f"{lines[0]}: {reason}"
         return lines[0].split(" at ^ in", 1)[0][:500]
 
     def _required_staged_patch_target_graph(

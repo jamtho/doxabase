@@ -387,9 +387,11 @@ Routes marked `generic_value_only` matched only shared values such as
 `describe_staged_revision` when the change needs more thought.
 For `replace`, the generated patch set adds the requested assertion and removes
 current same-subject/predicate values except the requested object. The recorded
-patch sequence shows the exact preview/apply order. It does not apply the change;
-use `describe_staged_revision` and `check_staged_revision_apply` before
-application.
+patch sequence shows the exact preview/apply order. If the requested value is
+already present on a multi-valued predicate, treat the replace as mainly a
+removal of the other current values and review their support routes before
+applying. It does not apply the change; use `describe_staged_revision` and
+`check_staged_revision_apply` before application.
 `can_apply=True` means the patch replays and validates mechanically; it does not
 mean the semantic change is wise.
 

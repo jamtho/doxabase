@@ -611,6 +611,7 @@ def test_stage_graph_revision_parse_errors_include_parser_detail(
     assert "Could not parse staged patch for graph 'map' as turtle" in message
     assert "at line" in message
     assert "expected '.'" in message
+    assert "at ^ in" not in message
 
 
 def test_staged_revision_impacts_surface_lore_for_caveat_and_type_changes(
@@ -1775,6 +1776,7 @@ def test_stored_malformed_staged_patch_conflict_includes_parser_detail(
     assert "Could not parse staged patch" in check.patch_checks[0].conflict
     assert "at line" in check.patch_checks[0].conflict
     assert "expected '.'" in check.patch_checks[0].conflict
+    assert "at ^ in" not in check.patch_checks[0].conflict
 
     with pytest.raises(DoxaBaseError, match="expected '\\.'"):
         db.apply_staged_revision(staged.revision_iri)
