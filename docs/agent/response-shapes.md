@@ -1453,6 +1453,7 @@ batch.restaged_revision_iris
 batch.skipped_revision_iris
 batch.already_handled_revision_iris
 batch.not_restageable_revision_iris
+batch.not_restageable_revision_iris_by_reason
 batch.restaged_revision_by_source
 batch.current_revision_by_source
 batch.review_revision_iris
@@ -1464,7 +1465,8 @@ batch.export_record
 
 Each `batch.items` row reports `source_revision_iri`, `summary`,
 `status_before`, `decision_before`, `stale_resolution_state_before`,
-`blocking_reasons_before`, `action`, `restaged_revision_iri`,
+`blocking_reasons_before`, `action`, `not_restageable_reason`,
+`restaged_revision_iri`,
 `restaged_from`, `current_restaged_by`, `current_revision_iri`, and `note`.
 `restaged_from` is present when the source item is itself a refreshed successor
 of an older stale proposal. Current actions are
@@ -1477,7 +1479,10 @@ points at the stale source because no current successor exists yet.
 `skipped_not_restageable` includes ready, validation-failed, already-applied,
 and `patch_conflict` rows; read `status_before`, `decision_before`, and
 `blocking_reasons_before` before deciding whether the row needs apply, repair,
-or inspection. If `path` was passed, `export_record` is the
+or inspection. `not_restageable_reason` gives the compact reason for those rows,
+and `not_restageable_revision_iris_by_reason` groups skipped source IRIs by the
+same value, for example `ready`, `already_applied`, `validation_failed`, or
+`patch_conflict`. If `path` was passed, `export_record` is the
 grouped Markdown export for `review_revision_iris`; otherwise it is `None` and
 the summary fields are computed in memory. In dry-run mode, `path` still writes
 the requested review export even though no refreshed successor is created.

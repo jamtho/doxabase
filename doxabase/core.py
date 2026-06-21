@@ -461,6 +461,7 @@ class StagedGraphRevisionBatchRestageItem:
     stale_resolution_state_before: str | None
     blocking_reasons_before: list[str]
     action: str
+    not_restageable_reason: str | None
     restaged_from: str | None
     restaged_revision_iri: str | None
     current_restaged_by: str | None
@@ -478,6 +479,7 @@ class StagedGraphRevisionBatchRestageRecord:
     skipped_revision_iris: list[str]
     already_handled_revision_iris: list[str]
     not_restageable_revision_iris: list[str]
+    not_restageable_revision_iris_by_reason: dict[str, list[str]]
     restaged_revision_by_source: dict[str, str]
     current_revision_by_source: dict[str, str]
     review_revision_iris: list[str]
@@ -9111,6 +9113,7 @@ class DoxaBase:
         skipped_revision_iris: list[str] = []
         already_handled_revision_iris: list[str] = []
         not_restageable_revision_iris: list[str] = []
+        not_restageable_revision_iris_by_reason: dict[str, list[str]] = {}
         restaged_revision_by_source: dict[str, str] = {}
         current_revision_by_source: dict[str, str] = {}
         review_revision_iris: list[str] = []
@@ -9147,6 +9150,7 @@ class DoxaBase:
             )
             restaged_revision_iri: str | None = None
             current_revision_iri = current_restaged_by or source.iri
+            not_restageable_reason: str | None = None
 
             is_restageable_conflict = (
                 check.status == "conflict"
@@ -9191,11 +9195,19 @@ class DoxaBase:
             else:
                 skipped_revision_iris.append(source.iri)
                 not_restageable_revision_iris.append(source.iri)
+                not_restageable_reason = (
+                    self._batch_restage_not_restageable_reason(check)
+                )
+                not_restageable_revision_iris_by_reason.setdefault(
+                    not_restageable_reason,
+                    [],
+                ).append(source.iri)
                 action = "skipped_not_restageable"
                 note = (
                     "Skipped because the current apply state is not restageable "
-                    f"(status='{check.status}', blocking_reasons="
-                    f"{check.blocking_reasons})."
+                    f"(reason='{not_restageable_reason}', "
+                    f"status='{check.status}', "
+                    f"blocking_reasons={check.blocking_reasons})."
                 )
 
             current_revision_by_source[source.iri] = current_revision_iri
@@ -9211,6 +9223,7 @@ class DoxaBase:
                     stale_resolution_state_before=stale_resolution_state,
                     blocking_reasons_before=check.blocking_reasons,
                     action=action,
+                    not_restageable_reason=not_restageable_reason,
                     restaged_from=restaged_from,
                     restaged_revision_iri=restaged_revision_iri,
                     current_restaged_by=current_restaged_by,
@@ -9256,6 +9269,9 @@ class DoxaBase:
             skipped_revision_iris=skipped_revision_iris,
             already_handled_revision_iris=already_handled_revision_iris,
             not_restageable_revision_iris=not_restageable_revision_iris,
+            not_restageable_revision_iris_by_reason=(
+                not_restageable_revision_iris_by_reason
+            ),
             restaged_revision_by_source=restaged_revision_by_source,
             current_revision_by_source=current_revision_by_source,
             review_revision_iris=review_revision_iris,
@@ -9264,6 +9280,16 @@ class DoxaBase:
             bundle_summary=bundle_summary,
             export_record=export_record,
         )
+
+    def _batch_restage_not_restageable_reason(
+        self,
+        check: StagedRevisionApplyCheck,
+    ) -> str:
+        if "patch_conflict" in check.blocking_reasons:
+            return "patch_conflict"
+        if check.status == "conflict":
+            return "conflict"
+        return check.status
 
     def _restage_rationale(
         self,

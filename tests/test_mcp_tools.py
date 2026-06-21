@@ -574,6 +574,22 @@ def test_restage_staged_revisions_tool_can_dry_run(
         "https://example.test/project#OtherDataset",
         label="Other dataset",
     )
+    ready = stage_graph_revision_tool(
+        db,
+        summary="Stage current shipments table",
+        rationale="This proposal was staged after the drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:CurrentShipments a rc:Dataset .
+                """,
+            }
+        ],
+    )
     staged_count_before = list_graph_revisions_tool(
         db,
         revision_type="rc:StagedRevision",
@@ -581,7 +597,11 @@ def test_restage_staged_revisions_tool_can_dry_run(
 
     result = restage_staged_revisions_tool(
         db,
-        revision_iris=[first["revision_iri"], second["revision_iri"]],
+        revision_iris=[
+            first["revision_iri"],
+            second["revision_iri"],
+            ready["revision_iri"],
+        ],
         dry_run=True,
     )
 
@@ -591,9 +611,19 @@ def test_restage_staged_revisions_tool_can_dry_run(
         second["revision_iri"],
     ]
     assert result["restaged_revision_iris"] == []
+    assert result["not_restageable_revision_iris"] == [ready["revision_iri"]]
+    assert result["not_restageable_revision_iris_by_reason"] == {
+        "ready": [ready["revision_iri"]],
+    }
     assert [item["action"] for item in result["items"]] == [
         "would_restage",
         "would_restage",
+        "skipped_not_restageable",
+    ]
+    assert [item["not_restageable_reason"] for item in result["items"]] == [
+        None,
+        None,
+        "ready",
     ]
     assert list_graph_revisions_tool(
         db,

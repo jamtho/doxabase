@@ -517,8 +517,11 @@ to write the grouped Markdown bundle over stale sources and current refreshed
 successors. Pass `dry_run=true` to classify the same batch without creating
 successors; restageable drift conflicts return `action="would_restage"` and are
 listed in `would_restage_revision_iris`. `patch_conflict` rows are
-`skipped_not_restageable` and should be repaired or replaced with a new staged
-candidate. In dry-run rows that would be restaged,
+`skipped_not_restageable` with `not_restageable_reason="patch_conflict"` and
+should be repaired or replaced with a new staged candidate. Ready,
+already-applied, and validation-failed rows use the same action with their own
+compact reasons; `not_restageable_revision_iris_by_reason` groups those skipped
+IRIs for triage. In dry-run rows that would be restaged,
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. For `skipped_not_restageable`, inspect `status_before` and
 `decision_before` to distinguish ready, validation-failed, and already-applied

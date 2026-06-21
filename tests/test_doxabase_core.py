@@ -1743,7 +1743,11 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
     batch = db.restage_staged_revisions([staged.revision_iri], dry_run=True)
     assert batch.would_restage_revision_iris == []
     assert batch.not_restageable_revision_iris == [staged.revision_iri]
+    assert batch.not_restageable_revision_iris_by_reason == {
+        "patch_conflict": [staged.revision_iri],
+    }
     assert batch.items[0].action == "skipped_not_restageable"
+    assert batch.items[0].not_restageable_reason == "patch_conflict"
     assert batch.items[0].decision_before == "inspect_patch_conflict"
 
     assert _mutable_graph_counts(db) == before_counts
@@ -2606,6 +2610,10 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert batch.skipped_revision_iris == [first.revision_iri, ready.revision_iri]
     assert batch.already_handled_revision_iris == [first.revision_iri]
     assert batch.not_restageable_revision_iris == [ready.revision_iri]
+    assert batch.not_restageable_revision_iris_by_reason == {
+        "ready": [ready.revision_iri],
+    }
+    assert batch.items[2].not_restageable_reason == "ready"
     assert batch.review_revision_iris == [
         first.revision_iri,
         already_restaged.revision_iri,
@@ -2778,6 +2786,18 @@ def test_batch_restage_dry_run_reports_plan_without_creating_successors(
         validation_failed.revision_iri,
         applied_staged.revision_iri,
         ready.revision_iri,
+    ]
+    assert batch.not_restageable_revision_iris_by_reason == {
+        "validation_failed": [validation_failed.revision_iri],
+        "already_applied": [applied_staged.revision_iri],
+        "ready": [ready.revision_iri],
+    }
+    assert [item.not_restageable_reason for item in batch.items] == [
+        None,
+        None,
+        "validation_failed",
+        "already_applied",
+        "ready",
     ]
     assert batch.review_revision_iris == [
         first.revision_iri,
