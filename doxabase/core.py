@@ -12883,9 +12883,10 @@ class DoxaBase:
                 try:
                     patch_graph.parse(data=content, format=patch_format)
                 except Exception as exc:
+                    detail = self._rdf_parse_error_detail(exc)
                     raise DoxaBaseError(
                         f"Could not parse staged patch for graph '{target_graph}' "
-                        f"as {patch_format}"
+                        f"as {patch_format}: {detail}"
                     ) from exc
                 if len(patch_graph) == 0:
                     raise DoxaBaseError("Staged patch content must contain triples")
@@ -12938,13 +12939,22 @@ class DoxaBase:
             patch_graph.parse(data=content, format=patch_format)
         except Exception as exc:
             target_graph = patch.target_graph or "(unknown graph)"
+            detail = self._rdf_parse_error_detail(exc)
             raise DoxaBaseError(
                 f"Could not parse staged patch '{patch.iri}' for graph "
-                f"'{target_graph}' as {patch_format}"
+                f"'{target_graph}' as {patch_format}: {detail}"
             ) from exc
         if len(patch_graph) == 0:
             raise DoxaBaseError(f"Staged patch '{patch.iri}' content has no triples")
         return patch_graph
+
+    def _rdf_parse_error_detail(self, exc: Exception) -> str:
+        lines = [line.strip() for line in str(exc).splitlines() if line.strip()]
+        if not lines:
+            return exc.__class__.__name__
+        if lines[0].startswith("at line") and len(lines) > 1:
+            return f"{lines[0]}: {lines[1]}"
+        return lines[0].split(" at ^ in", 1)[0][:500]
 
     def _required_staged_patch_target_graph(
         self,

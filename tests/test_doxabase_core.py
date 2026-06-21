@@ -51,6 +51,24 @@ def _corrupt_staged_patch_target_graph(
     db._conn.commit()
 
 
+def _corrupt_staged_patch_content(
+    db: DoxaBase,
+    patch_iri: str,
+    content: str,
+) -> None:
+    db._conn.execute(
+        """
+        UPDATE quads
+        SET object = ?
+        WHERE graph = 'history'
+          AND subject = ?
+          AND predicate = ?
+        """,
+        (content, patch_iri, RC + "patchContent"),
+    )
+    db._conn.commit()
+
+
 def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     overview = db.graph_overview()
@@ -563,6 +581,36 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     export_text = export_path.read_text()
     assert "exploratory hunch" in export_text
     assert "ex:Messages" in export_text
+
+
+def test_stage_graph_revision_parse_errors_include_parser_detail(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    malformed_patch = (
+        "@prefix ex: <https://example.test/project#> .\n"
+        "@prefix rc: <https://richcanopy.org/ns/rc#> .\n"
+        "\n"
+        "ex:Messages a rc:Dataset\n"
+        "ex:Other a rc:Dataset ."
+    )
+
+    with pytest.raises(DoxaBaseError) as exc_info:
+        db.stage_graph_revision(
+            summary="Stage malformed patch",
+            rationale="Malformed RDF should report parser detail.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": malformed_patch,
+                }
+            ],
+        )
+
+    message = str(exc_info.value)
+    assert "Could not parse staged patch for graph 'map' as turtle" in message
+    assert "at line" in message
+    assert "expected '.'" in message
 
 
 def test_staged_revision_impacts_surface_lore_for_caveat_and_type_changes(
@@ -1627,6 +1675,54 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
 
     assert _mutable_graph_counts(db) == before_counts
     assert db.triple_count(unknown_graph) == 0
+
+
+def test_stored_malformed_staged_patch_conflict_includes_parser_detail(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    malformed_patch = (
+        "@prefix ex: <https://example.test/project#> .\n"
+        "@prefix rc: <https://richcanopy.org/ns/rc#> .\n"
+        "\n"
+        "ex:Messages a rc:Dataset\n"
+        "ex:Other a rc:Dataset ."
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Exercise stored patch parse diagnostics.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    before_counts = _mutable_graph_counts(db)
+    _corrupt_staged_patch_content(
+        db,
+        staged.patches[0].patch_iri,
+        malformed_patch,
+    )
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.can_apply is False
+    assert check.status == "conflict"
+    assert check.blocking_reasons == ["patch_conflict"]
+    assert check.patch_checks[0].conflict is not None
+    assert "Could not parse staged patch" in check.patch_checks[0].conflict
+    assert "at line" in check.patch_checks[0].conflict
+    assert "expected '.'" in check.patch_checks[0].conflict
+
+    with pytest.raises(DoxaBaseError, match="expected '\\.'"):
+        db.apply_staged_revision(staged.revision_iri)
+
+    assert _mutable_graph_counts(db) == before_counts
 
 
 def test_mixed_staged_revision_uses_recorded_patch_sequence_for_apply_check(
