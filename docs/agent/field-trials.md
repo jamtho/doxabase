@@ -346,6 +346,10 @@ few useful gaps:
   restage now skips already-handled stale sources, restages unresolved
   conflicted rows, preserves review order, returns old-to-current mappings and
   bundle summaries, and can write the grouped review export without applying.
+  A deeper restage-chain trial showed direct `restaged_by` remains good
+  provenance but is not enough for action routing; list rows, staged
+  descriptions, export summaries, suggested actions, and batch restage now expose
+  `current_restaged_by` for the latest known successor.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

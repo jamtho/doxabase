@@ -455,8 +455,9 @@ changes. Caveat impact values include the caveat description, impact, and
 severity inline when those facts are known. `restaged_from` is present when the
 staged revision was created by replaying an older stale proposal against current
 graph state. `restaged_by` is present when this staged revision is the stale
-source for a later refreshed proposal. `restage_reason` gives a compact
-"why this was restaged" summary when it can be derived from the recorded
+source for a later refreshed proposal; `current_restaged_by` follows that chain
+to the latest known successor for action routing. `restage_reason` gives a
+compact "why this was restaged" summary when it can be derived from the recorded
 rationale. `applied_by` and `application_status="already_applied"` are present
 when this staged revision already has an applied revision event.
 `export_staged_revision()` writes a Markdown review bundle with the current
@@ -484,8 +485,10 @@ The returned record also includes `revision_summaries`, a machine-readable copy
 of the grouped status rows with current apply status, blockers, validation
 state, alternative/restage links, recommendations, and suggested next actions.
 Stale sources that already have `restaged_by` point suggested actions at the
-refreshed successor instead of another restage. `current_alternative_to` follows
-restage successors while preserving the stored `alternative_to` provenance link.
+current refreshed successor instead of another restage. `current_restaged_by`
+follows deeper restage chains while preserving direct `restaged_by` provenance.
+`current_alternative_to` follows restage successors while preserving the stored
+`alternative_to` provenance link.
 The returned `bundle_summary` counts apply statuses and stale-resolution states,
 lists unresolved stale sources, handled stale sources, ready successors, and a
 deduped `recommended_review_iris` set. It also lists validation-failed revisions
@@ -539,8 +542,8 @@ not already have a `restaged_by` successor, skips already-handled stale sources
 and non-conflicted rows, preserves caller order, and returns old-to-current
 mappings plus the same `revision_summaries` and `bundle_summary` shape used by
 grouped exports. Pass `path` to also write the grouped Markdown bundle over
-stale sources and their refreshed successors. It deliberately does not apply
-anything; applying one successor can make sibling successors stale again.
+stale sources and their current refreshed successors. It deliberately does not
+apply anything; applying one successor can make sibling successors stale again.
 
 `apply_staged_revision()` applies one staged revision after conservative
 graph-state conflict checks and preview validation. It rejects already-applied

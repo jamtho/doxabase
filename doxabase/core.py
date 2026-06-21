@@ -422,6 +422,7 @@ class StagedGraphRevisionExportSummary:
     review_recommendation: str | None
     restaged_from: str | None
     restaged_by: str | None
+    current_restaged_by: str | None
     stale_resolution_state: str | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -461,6 +462,7 @@ class StagedGraphRevisionBatchRestageItem:
     blocking_reasons_before: list[str]
     action: str
     restaged_revision_iri: str | None
+    current_restaged_by: str | None
     current_revision_iri: str
     note: str
 
@@ -597,6 +599,7 @@ class GraphRevisionListItem:
     current_alternative_to: str | None
     restaged_from: str | None
     restaged_by: str | None
+    current_restaged_by: str | None
     stale_resolution_state: str | None
     application_status: str | None
     application_decision: str | None
@@ -638,6 +641,7 @@ class StagedGraphRevisionDescription:
     alternative_to: ResourceSummary | None
     restaged_from: ResourceSummary | None
     restaged_by: ResourceSummary | None
+    current_restaged_by: ResourceSummary | None
     applied_by: ResourceSummary | None
     application_status: str | None
     restage_reason: str | None
@@ -2245,6 +2249,10 @@ class DoxaBase:
                 "rc:restagesRevision",
                 revision_iri,
             )
+            current_restaged_by = self._current_restage_successor_iri(
+                revision_iri,
+                graphs=data_graphs,
+            )
 
             items.append(
                 GraphRevisionListItem(
@@ -2303,6 +2311,7 @@ class DoxaBase:
                     ),
                     restaged_from=restaged_from,
                     restaged_by=restaged_by,
+                    current_restaged_by=current_restaged_by,
                     stale_resolution_state=self._stale_resolution_state(
                         status=application_status,
                         has_patch_payload=bool(patch_iris),
@@ -2534,6 +2543,15 @@ class DoxaBase:
             if restaged_by_iri is not None
             else None
         )
+        current_restaged_by_iri = self._current_restage_successor_iri(
+            revision_iri,
+            graphs=data_graphs,
+        )
+        current_restaged_by = (
+            self._resource_summary(all_lookup_graphs, current_restaged_by_iri)
+            if current_restaged_by_iri is not None
+            else None
+        )
         applied_by_iri = self._first_subject(
             data_graphs,
             "rc:appliesStagedRevision",
@@ -2591,6 +2609,7 @@ class DoxaBase:
             ),
             restaged_from=restaged_from,
             restaged_by=restaged_by,
+            current_restaged_by=current_restaged_by,
             applied_by=applied_by,
             application_status="already_applied" if applied_by is not None else None,
             restage_reason=self._staged_revision_restage_reason(
@@ -8191,6 +8210,11 @@ class DoxaBase:
             restaged_by = (
                 source.restaged_by.iri if source.restaged_by is not None else None
             )
+            current_restaged_by = (
+                source.current_restaged_by.iri
+                if source.current_restaged_by is not None
+                else None
+            )
             stale_resolution_state = self._stale_resolution_state(
                 status=check.status,
                 has_patch_payload=bool(source.patches),
@@ -8202,7 +8226,7 @@ class DoxaBase:
                 restaged_by=restaged_by,
             )
             restaged_revision_iri: str | None = None
-            current_revision_iri = restaged_by or source.iri
+            current_revision_iri = current_restaged_by or source.iri
 
             if check.status == "conflict" and restaged_by is None:
                 restaged = self.restage_staged_revision(
@@ -8212,6 +8236,7 @@ class DoxaBase:
                     validation_scope=validation_scope,
                 )
                 restaged_revision_iri = restaged.revision_iri
+                current_restaged_by = restaged.revision_iri
                 current_revision_iri = restaged.revision_iri
                 restaged_revision_iris.append(restaged.revision_iri)
                 restaged_revision_by_source[source.iri] = restaged.revision_iri
@@ -8251,6 +8276,7 @@ class DoxaBase:
                     blocking_reasons_before=check.blocking_reasons,
                     action=action,
                     restaged_revision_iri=restaged_revision_iri,
+                    current_restaged_by=current_restaged_by,
                     current_revision_iri=current_revision_iri,
                     note=note,
                 )
@@ -8916,6 +8942,11 @@ class DoxaBase:
                 restaged_by=(
                     staged.restaged_by.iri if staged.restaged_by is not None else None
                 ),
+                current_restaged_by=(
+                    staged.current_restaged_by.iri
+                    if staged.current_restaged_by is not None
+                    else None
+                ),
             )
             blocking_reasons = self._staged_apply_check_blocking_reasons(
                 status=status,
@@ -9153,6 +9184,11 @@ class DoxaBase:
             already_applied_by=None,
             restaged_by=(
                 staged.restaged_by.iri if staged.restaged_by is not None else None
+            ),
+            current_restaged_by=(
+                staged.current_restaged_by.iri
+                if staged.current_restaged_by is not None
+                else None
             ),
         )
         blocking_reasons = self._staged_apply_check_blocking_reasons(
@@ -9647,6 +9683,7 @@ class DoxaBase:
         status: str,
         already_applied_by: str | None,
         restaged_by: str | None,
+        current_restaged_by: str | None,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
 
@@ -9717,12 +9754,13 @@ class DoxaBase:
                     ),
                 )
             else:
+                successor_iri = current_restaged_by or restaged_by
                 add_action(
                     "describe_staged_revision",
-                    {"iri": restaged_by},
+                    {"iri": successor_iri},
                     (
-                        "Inspect the refreshed successor instead of restaging this "
-                        "stale source again."
+                        "Inspect the current refreshed successor instead of "
+                        "restaging this stale source again."
                     ),
                 )
         elif status == "validation_failed":
@@ -9921,6 +9959,11 @@ class DoxaBase:
                         if description.restaged_by is not None
                         else None
                     ),
+                    current_restaged_by=(
+                        description.current_restaged_by.iri
+                        if description.current_restaged_by is not None
+                        else None
+                    ),
                     stale_resolution_state=self._stale_resolution_state(
                         status=apply_check.status if apply_check is not None else None,
                         has_patch_payload=bool(description.patches),
@@ -9992,7 +10035,7 @@ class DoxaBase:
                 recommend_mutation(summary.revision_iri)
             elif state == "stale_handled_by_restage":
                 handled_stale.append(summary.revision_iri)
-                recommend(summary.restaged_by)
+                recommend(summary.current_restaged_by or summary.restaged_by)
             elif state == "restaged_successor_ready":
                 ready_successors.append(summary.revision_iri)
                 recommend_mutation(summary.revision_iri)
@@ -12561,6 +12604,19 @@ class DoxaBase:
                 f"{description.restaged_by.label or description.restaged_by.iri} "
                 f"(`{description.restaged_by.iri}`)"
             )
+            if (
+                description.current_restaged_by is not None
+                and description.current_restaged_by.iri != description.restaged_by.iri
+            ):
+                current_label = (
+                    description.current_restaged_by.label
+                    or description.current_restaged_by.iri
+                )
+                metadata_lines.append(
+                    "- Current restaged by: "
+                    f"{current_label} "
+                    f"(`{description.current_restaged_by.iri}`)"
+                )
         if description.restage_reason is not None:
             metadata_lines.append(f"- Restage headline: {description.restage_reason}")
         lines.extend(

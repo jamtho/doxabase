@@ -333,14 +333,17 @@ refreshed revision records `rc:restagesRevision` back to the stale proposal, and
 its generated rationale summarizes the stale apply check, including exact
 snapshot drift triples when available. `describe_staged_revision` also surfaces
 a compact `restage_reason` when it can derive one from that rationale, and
-`restaged_by` on the stale source when a refreshed successor exists.
-Markdown exports surface that same reason as a top `Restage headline`, and
-stale original exports surface the successor as `Restaged by`. Grouped exports
-collect restage reasons in `Restage Context`. Grouped export payloads also
-include per-row `stale_resolution_state`, `current_alternative_to`, and a
-`bundle_summary` so recovery scripts can find unresolved stale proposals,
-already-handled stale sources, ready successors, the current mutation-review
-set, and already-applied inspection set without recomputing those buckets.
+`restaged_by` on the stale source when a refreshed successor exists. If a
+restage chain grows deeper, `current_restaged_by` points to the latest known
+successor while direct `restaged_by` keeps the immediate provenance edge.
+Markdown exports surface that same reason as a top `Restage headline`; stale
+original exports surface `Restaged by` and, when needed, `Current restaged by`.
+Grouped exports collect restage reasons in `Restage Context`. Grouped export
+payloads also include per-row `stale_resolution_state`, `current_alternative_to`,
+`current_restaged_by`, and a `bundle_summary` so recovery scripts can find
+unresolved stale proposals, already-handled stale sources, ready successors, the
+current mutation-review set, and already-applied inspection set without
+recomputing those buckets.
 Grouped Markdown mirrors the important `current_alternative_to` case in
 `Alternative Context` when a stored alternative target has been restaged.
 Restaging is for count or digest drift conflicts; validation failures still need
@@ -349,7 +352,9 @@ diagnostics plus a Markdown review export before staging a repaired candidate.
 Already-applied revisions should be inspected rather than replayed.
 Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying
-one successor can make sibling successors stale.
+one successor can make sibling successors stale. When a requested stale source
+already has a restage chain, batch restage maps it to `current_restaged_by` so
+the review bundle opens the latest known successor.
 
 ## What Gets Recorded
 

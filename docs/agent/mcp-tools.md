@@ -420,8 +420,9 @@ result path, constraint, and messages, optional `judgement_panel`, and `impacts`
 review context. `restaged_from` is present when this staged revision was created
 by replaying an older stale staged proposal against current graph state;
 `restaged_by` is present when this staged revision is the stale source for a
-later refreshed proposal; `restage_reason` gives the compact reason when it can
-be derived from the recorded rationale. `applied_by` and
+later refreshed proposal; `current_restaged_by` follows deeper restage chains to
+the latest known successor; `restage_reason` gives the compact reason when it
+can be derived from the recorded rationale. `applied_by` and
 `application_status="already_applied"` are present after the staged revision is
 applied.
 `judgement_panel` is present for simple single-assertion `map`
@@ -488,9 +489,9 @@ IRIs, checks each current apply state, restages conflicted rows that do not
 already have a `restaged_by` successor, skips already-handled stale sources and
 non-conflicted rows, and returns per-source actions, old-to-current mappings,
 `review_revision_iris`, `revision_summaries`, and `bundle_summary`. Pass `path`
-to write the grouped Markdown bundle over stale sources and refreshed successors.
-It does not apply refreshed revisions; review and apply remain explicit follow-up
-steps.
+to write the grouped Markdown bundle over stale sources and current refreshed
+successors. It does not apply refreshed revisions; review and apply remain
+explicit follow-up steps.
 
 `doxabase.apply_staged_revision`
 
@@ -530,8 +531,10 @@ result. The returned payload includes `revision_summaries` with the same status
 rows as structured data: current apply status, blockers, validation state,
 alternative/restage links, recommendations, and suggested next actions. Stale
 sources that already have `restaged_by` point suggested actions at the refreshed
-successor instead of another restage. `current_alternative_to` follows refreshed
-successors while `alternative_to` preserves provenance. The payload also returns
+current successor instead of another restage. `current_restaged_by` follows
+deeper restage chains while `restaged_by` preserves the direct provenance edge.
+`current_alternative_to` follows refreshed successors while `alternative_to`
+preserves provenance. The payload also returns
 `bundle_summary` with status/state counts, unresolved stale sources, handled
 stale sources, ready successors, validation-failed revisions, deduped
 `recommended_review_iris`, `recommended_mutation_review_iris`, and

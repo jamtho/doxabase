@@ -886,6 +886,7 @@ item.alternative_to
 item.current_alternative_to
 item.restaged_from
 item.restaged_by
+item.current_restaged_by
 item.stale_resolution_state
 item.application_status
 item.application_decision
@@ -958,6 +959,7 @@ description.review_recommendation
 description.alternative_to
 description.restaged_from
 description.restaged_by
+description.current_restaged_by
 description.applied_by
 description.application_status
 description.restage_reason
@@ -1225,6 +1227,7 @@ item.validation_diagnostic_headline
 item.review_recommendation
 item.restaged_from
 item.restaged_by
+item.current_restaged_by
 item.stale_resolution_state
 item.suggested_next_actions
 item.suggested_next_calls
@@ -1232,13 +1235,15 @@ item.suggested_next_calls
 
 Use these rows when a script needs the same grouped current-status information
 shown in the Markdown summary table without making separate apply-check calls.
-`alternative_to`, `current_alternative_to`, `restaged_from`, `restaged_by`, and
-`stale_resolution_state` let recovery scripts keep alternative groups and
-stale/restaged chains together without a second revision list lookup.
+`alternative_to`, `current_alternative_to`, `restaged_from`, `restaged_by`,
+`current_restaged_by`, and `stale_resolution_state` let recovery scripts keep
+alternative groups and stale/restaged chains together without a second revision
+list lookup.
 `alternative_to` preserves the stored provenance target; `current_alternative_to`
 follows restage successors when the alternative target has been refreshed. When a
-stale source already has `restaged_by`, its suggested next actions point at the
-refreshed successor instead of recommending another restage.
+stale source already has `restaged_by`, `current_restaged_by` follows the
+restage chain to the latest known successor, and suggested next actions point at
+that current successor instead of recommending another restage.
 
 `export.bundle_summary` is a `StagedGraphRevisionBundleSummary`:
 
@@ -1289,10 +1294,11 @@ batch.export_record
 Each `batch.items` row reports `source_revision_iri`, `summary`,
 `status_before`, `decision_before`, `stale_resolution_state_before`,
 `blocking_reasons_before`, `action`, `restaged_revision_iri`,
-`current_revision_iri`, and `note`. Current actions are `restaged`,
-`skipped_already_handled`, and `skipped_not_restageable`. If `path` was passed,
-`export_record` is the grouped Markdown export for `review_revision_iris`;
-otherwise it is `None` and the summary fields are computed in memory.
+`current_restaged_by`, `current_revision_iri`, and `note`. Current actions are
+`restaged`, `skipped_already_handled`, and `skipped_not_restageable`. If `path`
+was passed, `export_record` is the grouped Markdown export for
+`review_revision_iris`; otherwise it is `None` and the summary fields are
+computed in memory.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

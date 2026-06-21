@@ -2306,6 +2306,98 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert db.check_staged_revision_apply(restaged_second).status == "ready"
 
 
+def test_restage_chain_routes_to_current_successor(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    original = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#InterveningA",
+        label="Intervening A",
+    )
+    first_successor = db.restage_staged_revision(original.revision_iri)
+    db.record_map_dataset(
+        "https://example.test/project#InterveningB",
+        label="Intervening B",
+    )
+    current_successor = db.restage_staged_revision(first_successor.revision_iri)
+
+    original_description = db.describe_staged_revision(original.revision_iri)
+    assert original_description.restaged_by is not None
+    assert original_description.restaged_by.iri == first_successor.revision_iri
+    assert original_description.current_restaged_by is not None
+    assert (
+        original_description.current_restaged_by.iri
+        == current_successor.revision_iri
+    )
+
+    original_check = db.check_staged_revision_apply(original.revision_iri)
+    assert original_check.status == "conflict"
+    assert original_check.suggested_next_actions[-1].arguments == {
+        "iri": current_successor.revision_iri
+    }
+
+    listing = db.list_graph_revisions(include_apply_checks=True)
+    by_iri = {item.iri: item for item in listing.revisions}
+    assert by_iri[original.revision_iri].restaged_by == first_successor.revision_iri
+    assert (
+        by_iri[original.revision_iri].current_restaged_by
+        == current_successor.revision_iri
+    )
+    assert by_iri[original.revision_iri].suggested_next_actions[-1].arguments == {
+        "iri": current_successor.revision_iri
+    }
+
+    export_path = tmp_path / "original-chain-review.md"
+    export = db.export_staged_revisions(
+        [original.revision_iri],
+        export_path,
+    )
+    assert export.revision_summaries[0].restaged_by == first_successor.revision_iri
+    assert (
+        export.revision_summaries[0].current_restaged_by
+        == current_successor.revision_iri
+    )
+    assert export.bundle_summary.recommended_review_iris == [
+        current_successor.revision_iri
+    ]
+    exported = export_path.read_text(encoding="utf-8")
+    assert "- Restaged by: " in exported
+    assert "- Current restaged by: " in exported
+    assert current_successor.revision_iri in exported
+
+    batch = db.restage_staged_revisions(
+        [original.revision_iri],
+        path=tmp_path / "batch-chain-review.md",
+    )
+    assert batch.items[0].action == "skipped_already_handled"
+    assert batch.items[0].current_restaged_by == current_successor.revision_iri
+    assert batch.current_revision_by_source == {
+        original.revision_iri: current_successor.revision_iri
+    }
+    assert batch.review_revision_iris == [
+        original.revision_iri,
+        current_successor.revision_iri,
+    ]
+    assert batch.bundle_summary.ready_restage_successor_revision_iris == [
+        current_successor.revision_iri
+    ]
+
+
 def test_grouped_export_summarizes_stale_alternative_recovery(
     tmp_path: Path,
 ) -> None:
