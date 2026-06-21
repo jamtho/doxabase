@@ -139,6 +139,123 @@ def test_export_graph_writes_flattened_turtle(tmp_path: Path) -> None:
         db.export_graph(export_path, graphs="map")
 
 
+def test_replace_graph_triples_can_create_same_count_digest_drift(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:Orders a rc:Dataset ;
+            rdfs:label "Orders scratch table" .
+
+        ex:Customers a rc:Dataset ;
+            rdfs:label "Customers scratch table" .
+
+        ex:OrderCustomerLink a rc:Relationship ;
+            rc:sourceDataset ex:Orders .
+        """,
+        graph="map",
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage an Orders review comment",
+        rationale="The staged patch should become stale after unrelated map drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Staged comment." .
+                """,
+            }
+        ],
+    )
+
+    result = db.replace_graph_triples(
+        "map",
+        removals="""
+            @prefix ex: <https://example.test/project#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            ex:Customers rdfs:label "Customers scratch table" .
+        """,
+        additions="""
+            @prefix ex: <https://example.test/project#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            ex:Customers rdfs:label "Customers scratch table, drifted after staging" .
+        """,
+        expected_count=6,
+    )
+
+    assert result.graph == "map"
+    assert result.before_count == 6
+    assert result.after_count == 6
+    assert result.count_delta == 0
+    assert result.same_count is True
+    assert result.digest_changed is True
+    assert result.removal_triples == 1
+    assert result.addition_triples == 1
+    assert result.triples_removed == 1
+    assert result.triples_added == 1
+    assert result.before_digest.startswith("sha256:")
+    assert result.after_digest.startswith("sha256:")
+    assert result.before_digest != result.after_digest
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.status == "conflict"
+    assert check.blocking_reasons == ["target_digest_drift"]
+    assert check.count_drifts == []
+    drift = check.snapshot_drifts[0]
+    assert drift.graph_role == "map"
+    assert drift.snapshot_triple_count == 6
+    assert drift.current_triple_count == 6
+    assert drift.snapshot_content_digest == result.before_digest
+    assert drift.current_content_digest == result.after_digest
+    assert [triple.object for triple in drift.triples_added_since_snapshot] == [
+        "Customers scratch table, drifted after staging"
+    ]
+    assert [triple.object for triple in drift.triples_removed_since_snapshot] == [
+        "Customers scratch table"
+    ]
+
+
+def test_replace_graph_triples_rejects_count_change_before_mutating(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders a rc:Dataset .
+        """,
+        graph="map",
+    )
+    before_digest = db._graph_content_digest("map")
+
+    with pytest.raises(DoxaBaseError, match="would change graph 'map' count"):
+        db.replace_graph_triples(
+            "map",
+            additions="""
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                ex:Customers a rc:Dataset .
+            """,
+        )
+
+    assert db.triple_count("map") == 1
+    assert db._graph_content_digest("map") == before_digest
+    assert db.search("Customers", graph="map").matches == []
+
+
 def test_export_trig_preserves_graph_roles_for_round_trip(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

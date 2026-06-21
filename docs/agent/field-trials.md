@@ -299,8 +299,10 @@ few useful gaps:
   needs to appear early in Markdown review bundles, not only under the later
   `Restaged From` section. A stale-original follow-up showed that the old source
   export also needs an early `Restaged by` pointer when a refreshed sibling
-  already exists. Remaining useful pressure points include a public same-count
-  graph replacement helper for trials.
+  already exists. A same-count replacement-helper trial then showed that public
+  APIs could produce digest drift only through full export, RDFLib editing, and
+  replace-import; `replace_graph_triples` now gives agents a direct guarded
+  helper that returns before/after counts and content digests.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

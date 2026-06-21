@@ -41,6 +41,7 @@ from doxabase.mcp_tools import (
     record_observation_tool,
     record_pattern_tool,
     record_profile_bundle_tool,
+    replace_graph_triples_tool,
     restage_staged_revision_tool,
     search_tool,
     stage_graph_revision_tool,
@@ -85,6 +86,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
+    assert "doxabase.replace_graph_triples" in tool_names
     assert "doxabase.export_staged_revision" in tool_names
     assert "doxabase.export_staged_revisions" in tool_names
     assert "doxabase.export_trig" in tool_names
@@ -223,6 +225,49 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     assert "base_ontology" not in trig_result["graphs"]
     assert trig_result["triples"] == sum(trig_result["graph_counts"].values())
     assert trig_path.exists()
+
+
+def test_replace_graph_triples_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:Customers a rc:Dataset ;
+            rdfs:label "Customers scratch table" .
+        """,
+        graph="map",
+    )
+
+    result = replace_graph_triples_tool(
+        db,
+        graph="map",
+        removals="""
+            @prefix ex: <https://example.test/project#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            ex:Customers rdfs:label "Customers scratch table" .
+        """,
+        additions="""
+            @prefix ex: <https://example.test/project#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            ex:Customers rdfs:label "Customers scratch table, drifted" .
+        """,
+        expected_count=2,
+    )
+
+    assert result["graph"] == "map"
+    assert result["before_count"] == 2
+    assert result["after_count"] == 2
+    assert result["same_count"] is True
+    assert result["digest_changed"] is True
+    assert result["triples_removed"] == 1
+    assert result["triples_added"] == 1
+    assert result["expected_count"] == 2
+    assert result["allow_count_change"] is False
 
 
 def test_record_graph_revision_tool_returns_json_like_payload(tmp_path: Path) -> None:

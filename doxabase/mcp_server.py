@@ -44,6 +44,7 @@ from doxabase.mcp_tools import (
     record_observation_tool,
     record_pattern_tool,
     record_profile_bundle_tool,
+    replace_graph_triples_tool,
     restage_staged_revision_tool,
     search_tool,
     stage_graph_revision_tool,
@@ -56,7 +57,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -861,6 +862,27 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             graphs=graphs,
             format=format,
             overwrite=overwrite,
+        )
+
+    @server.tool(name="doxabase.replace_graph_triples")
+    def replace_graph_triples(
+        graph: str,
+        removals: str | None = None,
+        additions: str | None = None,
+        format: str = "turtle",
+        expected_count: int | None = None,
+        allow_count_change: bool = False,
+    ) -> dict[str, Any]:
+        """Replace caller-authored triples in one graph with count/digest metadata."""
+
+        return replace_graph_triples_tool(
+            db,
+            graph=graph,
+            removals=removals,
+            additions=additions,
+            format=format,
+            expected_count=expected_count,
+            allow_count_change=allow_count_change,
         )
 
     @server.tool(name="doxabase.export_trig")

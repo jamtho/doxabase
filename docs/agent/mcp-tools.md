@@ -527,6 +527,19 @@ Exports one or more graph roles as one flattened RDF graph file. The default is
 the `map` graph in Turtle. Use it for quick single-graph review artifacts. The
 result includes per-graph triple counts.
 
+`doxabase.replace_graph_triples`
+
+Removes caller-authored Turtle triples and inserts caller-authored replacement
+triples in one mutable graph. The default `allow_count_change=false` makes this
+a controlled same-count replacement helper: DoxaBase checks the effective
+mutation first and raises before writing if the graph count would change. The
+result includes before/after counts, before/after content digests, actual
+removed/added triple counts, `same_count`, and `digest_changed`.
+
+Use it for small graph maintenance moves and staged-revision field trials where
+you need a same-count digest drift without exporting, RDFLib-editing, and
+re-importing the whole graph. It is not a semantic merge/rebase tool.
+
 `doxabase.export_trig`
 
 Exports graph roles as a named-graph TriG bundle using graph IRIs such as

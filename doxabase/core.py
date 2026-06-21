@@ -173,6 +173,25 @@ class GraphExportRecord:
 
 
 @dataclass(frozen=True)
+class GraphTripleReplacementRecord:
+    graph: str
+    format: str
+    before_count: int
+    after_count: int
+    count_delta: int
+    before_digest: str
+    after_digest: str
+    digest_changed: bool
+    removal_triples: int
+    addition_triples: int
+    triples_removed: int
+    triples_added: int
+    same_count: bool
+    expected_count: int | None
+    allow_count_change: bool
+
+
+@dataclass(frozen=True)
 class GraphRevisionRecord:
     revision_iri: str
     revision_type: str
@@ -13025,6 +13044,86 @@ class DoxaBase:
             )
         return imported
 
+    def replace_graph_triples(
+        self,
+        graph: str,
+        *,
+        removals: str | Path | Graph | None = None,
+        additions: str | Path | Graph | None = None,
+        format: str = "turtle",
+        expected_count: int | None = None,
+        allow_count_change: bool = False,
+        allow_immutable: bool = False,
+    ) -> GraphTripleReplacementRecord:
+        self._ensure_mutable(graph, allow_immutable=allow_immutable)
+        self._ensure_graph(graph)
+        if expected_count is not None and expected_count < 0:
+            raise DoxaBaseError("expected_count must be non-negative")
+
+        removal_graph = self._parse_rdf_payload(
+            removals,
+            format=format,
+            payload_name="removals",
+        )
+        addition_graph = self._parse_rdf_payload(
+            additions,
+            format=format,
+            payload_name="additions",
+        )
+        if len(removal_graph) == 0 and len(addition_graph) == 0:
+            raise DoxaBaseError(
+                "replace_graph_triples requires at least one removal or addition triple"
+            )
+
+        before_rows = set(self._graph_storage_rows(graph))
+        before_count = len(before_rows)
+        before_digest = self._graph_content_digest(graph)
+        if expected_count is not None and before_count != expected_count:
+            raise DoxaBaseError(
+                "replace_graph_triples expected "
+                f"{expected_count} triples before replacement, found {before_count}"
+            )
+
+        removal_rows = set(self._rdf_graph_storage_rows(removal_graph))
+        addition_rows = set(self._rdf_graph_storage_rows(addition_graph))
+        rows_to_remove = before_rows.intersection(removal_rows)
+        rows_after_removal = before_rows.difference(rows_to_remove)
+        rows_to_add = addition_rows.difference(rows_after_removal)
+        predicted_after_rows = rows_after_removal.union(addition_rows)
+        predicted_after_count = len(predicted_after_rows)
+        count_delta = predicted_after_count - before_count
+        if not allow_count_change and count_delta != 0:
+            raise DoxaBaseError(
+                "replace_graph_triples would change graph "
+                f"'{graph}' count from {before_count} to {predicted_after_count}; "
+                "pass allow_count_change=True to permit this"
+            )
+
+        self._apply_graph_triple_replacement(
+            graph,
+            removals=rows_to_remove,
+            additions=rows_to_add,
+        )
+        after_count = self.triple_count(graph)
+        after_digest = self._graph_content_digest(graph)
+        return GraphTripleReplacementRecord(
+            graph=graph,
+            format=format,
+            before_count=before_count,
+            after_count=after_count,
+            count_delta=after_count - before_count,
+            before_digest=before_digest,
+            after_digest=after_digest,
+            digest_changed=before_digest != after_digest,
+            removal_triples=len(removal_rows),
+            addition_triples=len(addition_rows),
+            triples_removed=len(rows_to_remove),
+            triples_added=len(rows_to_add),
+            same_count=before_count == after_count,
+            expected_count=expected_count,
+            allow_count_change=allow_count_change,
+        )
+
     def export_graph(
         self,
         path: str | Path,
@@ -13643,6 +13742,91 @@ class DoxaBase:
         removed = before - self.triple_count(graph)
         self._rebuild_search_index(raise_on_failure=False)
         return removed
+
+    def _parse_rdf_payload(
+        self,
+        source: str | Path | Graph | None,
+        *,
+        format: str,
+        payload_name: str,
+    ) -> Graph:
+        if source is None:
+            return Graph()
+        if isinstance(source, Graph):
+            return self._clone_graph(source)
+        if isinstance(source, str) and not source.strip():
+            return Graph()
+        rdf_graph = Graph()
+        self._bind_prefixes(rdf_graph)
+        path = _existing_path(source)
+        try:
+            if path is not None:
+                rdf_graph.parse(path, format=format)
+            else:
+                rdf_graph.parse(data=str(source), format=format)
+        except Exception as exc:
+            raise DoxaBaseError(
+                f"Could not parse replace_graph_triples {payload_name} as {format}"
+            ) from exc
+        return rdf_graph
+
+    def _rdf_graph_storage_rows(self, rdf_graph: Graph) -> list[GraphStorageRow]:
+        rows: list[GraphStorageRow] = []
+        for subject, predicate, obj in rdf_graph:
+            subject_value, subject_kind = self._term_to_storage(subject)
+            object_value, object_kind, datatype, lang = self._object_to_storage(obj)
+            rows.append(
+                (
+                    subject_value,
+                    subject_kind,
+                    str(predicate),
+                    object_value,
+                    object_kind,
+                    datatype,
+                    lang,
+                )
+            )
+        return rows
+
+    def _apply_graph_triple_replacement(
+        self,
+        graph: str,
+        *,
+        removals: set[GraphStorageRow],
+        additions: set[GraphStorageRow],
+    ) -> None:
+        try:
+            with self._conn:
+                if removals:
+                    self._conn.executemany(
+                        """
+                        DELETE FROM quads
+                        WHERE graph = ?
+                          AND subject = ?
+                          AND subject_kind = ?
+                          AND predicate = ?
+                          AND object = ?
+                          AND object_kind = ?
+                          AND datatype IS ?
+                          AND lang IS ?
+                        """,
+                        [(graph, *row) for row in sorted(removals)],
+                    )
+                if additions:
+                    created_at = _now()
+                    self._conn.executemany(
+                        """
+                        INSERT INTO quads
+                            (graph, subject, subject_kind, predicate, object, object_kind, datatype, lang, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        [(graph, *row, created_at) for row in sorted(additions)],
+                    )
+        except sqlite3.Error as exc:
+            raise DoxaBaseError(
+                f"Could not replace triples in graph '{graph}'"
+            ) from exc
+        self._rebuild_search_index(raise_on_failure=False)
 
     def _clone_graph(self, source: Graph) -> Graph:
         graph = Graph()

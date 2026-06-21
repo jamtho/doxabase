@@ -335,6 +335,11 @@ diagnostics, plus one or more `rc:GraphPatch` resources.
 Each graph snapshot records the graph role, triple count, and `content_digest`
 for the graph state at staging time. Apply checks compare those digests when
 available, so same-count graph changes can still surface as conflicts.
+For scratch trials or controlled graph maintenance that intentionally needs a
+same-count digest drift, use `replace_graph_triples()` /
+`doxabase.replace_graph_triples` with `expected_count` and the default
+`allow_count_change=false`. That avoids staging and applying a throwaway helper
+revision or exporting, RDFLib-editing, and re-importing the whole graph.
 
 Patch entries record:
 

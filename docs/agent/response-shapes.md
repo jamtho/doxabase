@@ -57,6 +57,32 @@ Python API when you are running a local scratch capsule script.
 There is no top-level `graph_counts` field. Derive graph counts from
 `named_graphs[].triple_count`.
 
+`db.replace_graph_triples(...)` returns `GraphTripleReplacementRecord`:
+
+```python
+replacement.graph
+replacement.format
+replacement.before_count
+replacement.after_count
+replacement.count_delta
+replacement.before_digest
+replacement.after_digest
+replacement.digest_changed
+replacement.removal_triples
+replacement.addition_triples
+replacement.triples_removed
+replacement.triples_added
+replacement.same_count
+replacement.expected_count
+replacement.allow_count_change
+```
+
+MCP `replace_graph_triples_tool(...)` returns the same fields as a dictionary.
+`removal_triples` and `addition_triples` count unique triples parsed from the
+caller payloads; `triples_removed` and `triples_added` count the effective graph
+mutation after accounting for current graph state. With the default
+`allow_count_change=False`, count-changing replacements raise before mutating.
+
 `load_example_fixtures_tool(db, replace=True)` returns:
 
 ```python

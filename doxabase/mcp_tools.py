@@ -805,6 +805,26 @@ def export_graph_tool(
     return to_dict(result)
 
 
+def replace_graph_triples_tool(
+    db: DoxaBase,
+    graph: str,
+    removals: str | None = None,
+    additions: str | None = None,
+    format: str = "turtle",
+    expected_count: int | None = None,
+    allow_count_change: bool = False,
+) -> dict[str, Any]:
+    result = db.replace_graph_triples(
+        graph,
+        removals=removals,
+        additions=additions,
+        format=format,
+        expected_count=expected_count,
+        allow_count_change=allow_count_change,
+    )
+    return to_dict(result)
+
+
 def export_trig_tool(
     db: DoxaBase,
     path: str,

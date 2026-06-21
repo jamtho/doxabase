@@ -51,6 +51,41 @@ graphs. Use `graphs="workflow"` for `map`, `observations`, `patterns`, and
 `evidence`; use `graphs="all_with_seeds"` only when you explicitly need shipped
 seed graphs in the bundle.
 
+## Replace Graph Triples
+
+```python
+replacement = db.replace_graph_triples(
+    "map",
+    removals="""
+        @prefix ex: <https://example.test/project#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:Customers rdfs:label "Customers scratch table" .
+    """,
+    additions="""
+        @prefix ex: <https://example.test/project#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:Customers rdfs:label "Customers scratch table, drifted" .
+    """,
+    expected_count=db.triple_count("map"),
+)
+```
+
+`replace_graph_triples()` removes caller-authored Turtle triples and inserts
+caller-authored replacement triples in one mutable graph. It returns before and
+after counts, graph content digests, and actual removed/added triple counts.
+The default `allow_count_change=False` makes it useful for controlled
+same-count replacements: DoxaBase computes the effective mutation first and
+raises before writing if the graph count would change. Pass
+`allow_count_change=True` only when an intentional count-changing edit is the
+right move.
+
+Use this for controlled graph maintenance or staged-revision field trials. It is
+not a semantic merge/rebase helper; staged proposals that become stale still
+need `check_staged_revision_apply()`, review, and usually
+`restage_staged_revision()`.
+
 ## Inspect
 
 ```python
