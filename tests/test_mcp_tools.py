@@ -483,6 +483,18 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
 
     expected_path = (tmp_path / "bundle.md").resolve()
     assert export["path"] == str(expected_path)
+    assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]
+    assert export["revision_summaries"][0]["apply_status"] == "ready"
+    assert export["revision_summaries"][0]["apply_decision"] == "review_then_apply"
+    assert export["revision_summaries"][0]["current_validation"] == (
+        "True (0 result(s))"
+    )
+    assert export["revision_summaries"][0]["staged_validation"] == (
+        "True (0 result(s))"
+    )
+    assert export["revision_summaries"][0]["suggested_next_actions"][-1][
+        "tool_name"
+    ] == "apply_staged_revision"
     assert expected_path.exists()
     assert expected_path.read_text(encoding="utf-8").startswith("# Relative bundle\n")
 

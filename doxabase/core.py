@@ -395,11 +395,40 @@ class StagedGraphRevisionExportRecord:
 
 
 @dataclass(frozen=True)
+class StagedGraphRevisionExportSummary:
+    revision_iri: str
+    summary: str | None
+    revision_stance: str | None
+    revision_stance_label: str | None
+    changed_graphs: list[str]
+    apply_status: str | None
+    apply_decision: str | None
+    apply_can_apply: bool | None
+    apply_summary: str | None
+    apply_blocking_reasons: list[str]
+    apply_validation_conforms: bool | None
+    apply_validation_skipped_reason: str | None
+    apply_validation_result_count: int | None
+    apply_check_error: str | None
+    current_validation: str
+    staged_validation: str
+    staged_validation_conforms: bool | None
+    staged_validation_result_count: int | None
+    validation_diagnostic_headline: str
+    review_recommendation: str | None
+    restaged_from: str | None
+    restaged_by: str | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionsExportRecord:
     path: str
     format: str
     revision_iris: list[str]
     bytes_written: int
+    revision_summaries: list[StagedGraphRevisionExportSummary]
 
 
 @dataclass(frozen=True)
@@ -9429,6 +9458,10 @@ class DoxaBase:
             format=format,
             revision_iris=[description.iri for description in descriptions],
             bytes_written=bytes_written,
+            revision_summaries=self._staged_revisions_export_summaries(
+                descriptions,
+                apply_checks=apply_checks,
+            ),
         )
 
     def _staged_revision_apply_check_for_export(
@@ -9439,6 +9472,93 @@ class DoxaBase:
             return self.check_staged_revision_apply(description.iri), None
         except DoxaBaseError as exc:
             return None, str(exc)
+
+    def _staged_revisions_export_summaries(
+        self,
+        descriptions: list[StagedGraphRevisionDescription],
+        *,
+        apply_checks: list[tuple[StagedRevisionApplyCheck | None, str | None]],
+    ) -> list[StagedGraphRevisionExportSummary]:
+        summaries: list[StagedGraphRevisionExportSummary] = []
+        for description, (apply_check, apply_check_error) in zip(
+            descriptions,
+            apply_checks,
+            strict=True,
+        ):
+            summaries.append(
+                StagedGraphRevisionExportSummary(
+                    revision_iri=description.iri,
+                    summary=description.summary,
+                    revision_stance=description.revision_stance,
+                    revision_stance_label=description.revision_stance_label,
+                    changed_graphs=description.changed_graphs,
+                    apply_status=apply_check.status if apply_check is not None else None,
+                    apply_decision=(
+                        apply_check.decision if apply_check is not None else None
+                    ),
+                    apply_can_apply=(
+                        apply_check.can_apply if apply_check is not None else None
+                    ),
+                    apply_summary=(
+                        apply_check.summary if apply_check is not None else None
+                    ),
+                    apply_blocking_reasons=(
+                        apply_check.blocking_reasons
+                        if apply_check is not None
+                        else []
+                    ),
+                    apply_validation_conforms=(
+                        apply_check.validation_conforms
+                        if apply_check is not None
+                        else None
+                    ),
+                    apply_validation_skipped_reason=(
+                        apply_check.validation_skipped_reason
+                        if apply_check is not None
+                        else None
+                    ),
+                    apply_validation_result_count=(
+                        apply_check.validation_result_count
+                        if apply_check is not None
+                        else None
+                    ),
+                    apply_check_error=apply_check_error,
+                    current_validation=self._staged_apply_check_validation_cell(
+                        apply_check,
+                        apply_check_error=apply_check_error,
+                    ),
+                    staged_validation=self._staged_description_validation_cell(
+                        description
+                    ),
+                    staged_validation_conforms=description.validation_conforms,
+                    staged_validation_result_count=description.validation_result_count,
+                    validation_diagnostic_headline=(
+                        self._validation_diagnostic_headline(description)
+                    ),
+                    review_recommendation=description.review_recommendation,
+                    restaged_from=(
+                        description.restaged_from.iri
+                        if description.restaged_from is not None
+                        else None
+                    ),
+                    restaged_by=(
+                        description.restaged_by.iri
+                        if description.restaged_by is not None
+                        else None
+                    ),
+                    suggested_next_actions=(
+                        apply_check.suggested_next_actions
+                        if apply_check is not None
+                        else []
+                    ),
+                    suggested_next_calls=(
+                        apply_check.suggested_next_calls
+                        if apply_check is not None
+                        else []
+                    ),
+                )
+            )
+        return summaries
 
     def _staged_revision_impacts(
         self,

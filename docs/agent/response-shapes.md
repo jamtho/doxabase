@@ -1170,6 +1170,49 @@ preview result, while `Current validation` is derived from the live apply check
 and can be `skipped: conflicts_present`. Both cells include a result count when
 available, for example `True (0 result(s))`.
 
+`db.export_staged_revisions(...)` returns `StagedGraphRevisionsExportRecord`:
+
+```python
+export.path
+export.format
+export.revision_iris
+export.bytes_written
+export.revision_summaries
+```
+
+Each item in `revision_summaries` is a
+`StagedGraphRevisionExportSummary`:
+
+```python
+item.revision_iri
+item.summary
+item.revision_stance
+item.revision_stance_label
+item.changed_graphs
+item.apply_status
+item.apply_decision
+item.apply_can_apply
+item.apply_summary
+item.apply_blocking_reasons
+item.apply_validation_conforms
+item.apply_validation_skipped_reason
+item.apply_validation_result_count
+item.apply_check_error
+item.current_validation
+item.staged_validation
+item.staged_validation_conforms
+item.staged_validation_result_count
+item.validation_diagnostic_headline
+item.review_recommendation
+item.restaged_from
+item.restaged_by
+item.suggested_next_actions
+item.suggested_next_calls
+```
+
+Use these rows when a script needs the same grouped current-status information
+shown in the Markdown summary table without making separate apply-check calls.
+
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,
 result path, constraint, severity, value, and messages.

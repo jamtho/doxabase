@@ -2067,12 +2067,33 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert "- Reason: " in export_text
 
     grouped_export_path = tmp_path / "restaged-comparison.md"
-    db.export_staged_revisions(
+    grouped_export_record = db.export_staged_revisions(
         [staged.revision_iri, restaged.revision_iri],
         grouped_export_path,
         title="Restaged comparison",
     )
     grouped_export = grouped_export_path.read_text(encoding="utf-8")
+    assert [item.revision_iri for item in grouped_export_record.revision_summaries] == [
+        staged.revision_iri,
+        restaged.revision_iri,
+    ]
+    stale_summary = grouped_export_record.revision_summaries[0]
+    assert stale_summary.apply_status == "conflict"
+    assert stale_summary.apply_decision == "restage_against_current_graph"
+    assert stale_summary.apply_can_apply is False
+    assert stale_summary.apply_blocking_reasons == ["target_count_drift"]
+    assert stale_summary.apply_validation_skipped_reason == "conflicts_present"
+    assert stale_summary.current_validation == "skipped: conflicts_present"
+    assert stale_summary.staged_validation == "True (0 result(s))"
+    assert stale_summary.restaged_by == restaged.revision_iri
+    assert stale_summary.suggested_next_actions[-1].tool_name == (
+        "restage_staged_revision"
+    )
+    restaged_summary = grouped_export_record.revision_summaries[1]
+    assert restaged_summary.apply_status == "ready"
+    assert restaged_summary.apply_decision == "review_then_apply"
+    assert restaged_summary.apply_can_apply is True
+    assert restaged_summary.restaged_from == staged.revision_iri
     assert "## Restage Context" in grouped_export
     assert grouped_export.index("## Restage Context") < grouped_export.index(
         "## Revisions"
@@ -2414,6 +2435,25 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert export.revision_iris == [
         revision.revision_iri for revision in draft.staged_revisions
     ]
+    assert [item.revision_iri for item in export.revision_summaries] == [
+        revision.revision_iri for revision in draft.staged_revisions
+    ]
+    assert [item.apply_status for item in export.revision_summaries] == [
+        "ready",
+        "ready",
+    ]
+    assert [item.apply_decision for item in export.revision_summaries] == [
+        "review_then_apply",
+        "review_then_apply",
+    ]
+    assert [item.current_validation for item in export.revision_summaries] == [
+        "True (0 result(s))",
+        "True (0 result(s))",
+    ]
+    assert export.revision_summaries[1].review_recommendation == "Preferred for now."
+    assert export.revision_summaries[1].suggested_next_actions[-1].tool_name == (
+        "apply_staged_revision"
+    )
     assert export.bytes_written == len(exported.encode("utf-8"))
     assert exported.startswith("# Identity ladder alternatives\n")
     assert "## Review Summary" in exported
