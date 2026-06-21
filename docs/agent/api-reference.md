@@ -561,8 +561,11 @@ unhandled conflicts then report `action="would_restage"` and appear in
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. `skipped_not_restageable` rows may be ready,
 validation-failed, or already applied; inspect `status_before` and
-`decision_before`. The helper deliberately does not apply anything; applying one
-successor can make sibling successors stale again.
+`decision_before`. Each item also carries `restaged_from` when its source is
+itself a refreshed successor. The helper deliberately does not apply anything;
+applying one successor can make sibling successors stale again. In dry-run mode,
+passing `path` still writes the requested review export while leaving graph
+history unmutated.
 
 `apply_staged_revision()` applies one staged revision after conservative
 graph-state conflict checks and preview validation. It rejects already-applied

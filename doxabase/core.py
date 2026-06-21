@@ -461,6 +461,7 @@ class StagedGraphRevisionBatchRestageItem:
     stale_resolution_state_before: str | None
     blocking_reasons_before: list[str]
     action: str
+    restaged_from: str | None
     restaged_revision_iri: str | None
     current_restaged_by: str | None
     current_revision_iri: str
@@ -8605,6 +8606,11 @@ class DoxaBase:
             restaged_by = (
                 source.restaged_by.iri if source.restaged_by is not None else None
             )
+            restaged_from = (
+                source.restaged_from.iri
+                if source.restaged_from is not None
+                else None
+            )
             current_restaged_by = (
                 source.current_restaged_by.iri
                 if source.current_restaged_by is not None
@@ -8613,11 +8619,7 @@ class DoxaBase:
             stale_resolution_state = self._stale_resolution_state(
                 status=check.status,
                 has_patch_payload=bool(source.patches),
-                restaged_from=(
-                    source.restaged_from.iri
-                    if source.restaged_from is not None
-                    else None
-                ),
+                restaged_from=restaged_from,
                 restaged_by=restaged_by,
             )
             restaged_revision_iri: str | None = None
@@ -8679,6 +8681,7 @@ class DoxaBase:
                     stale_resolution_state_before=stale_resolution_state,
                     blocking_reasons_before=check.blocking_reasons,
                     action=action,
+                    restaged_from=restaged_from,
                     restaged_revision_iri=restaged_revision_iri,
                     current_restaged_by=current_restaged_by,
                     current_revision_iri=current_revision_iri,

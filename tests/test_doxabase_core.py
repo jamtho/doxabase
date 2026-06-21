@@ -2571,6 +2571,7 @@ def test_restage_chain_routes_to_current_successor(
         path=tmp_path / "batch-chain-review.md",
     )
     assert batch.items[0].action == "skipped_already_handled"
+    assert batch.items[0].restaged_from is None
     assert batch.items[0].current_restaged_by == current_successor.revision_iri
     assert batch.current_revision_by_source == {
         original.revision_iri: current_successor.revision_iri
@@ -2582,6 +2583,17 @@ def test_restage_chain_routes_to_current_successor(
     assert batch.bundle_summary.ready_restage_successor_revision_iris == [
         current_successor.revision_iri
     ]
+
+    successor_batch = db.restage_staged_revisions(
+        [first_successor.revision_iri],
+        dry_run=True,
+    )
+    assert successor_batch.items[0].action == "skipped_already_handled"
+    assert successor_batch.items[0].restaged_from == original.revision_iri
+    assert (
+        successor_batch.items[0].current_restaged_by
+        == current_successor.revision_iri
+    )
 
 
 def test_grouped_export_summarizes_stale_alternative_recovery(

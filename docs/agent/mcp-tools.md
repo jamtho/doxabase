@@ -502,8 +502,10 @@ in `would_restage_revision_iris`. In dry-run rows that would be restaged,
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. For `skipped_not_restageable`, inspect `status_before` and
 `decision_before` to distinguish ready, validation-failed, and already-applied
-rows. It does not apply refreshed revisions; review and apply remain explicit
-follow-up steps.
+rows. Each item also carries `restaged_from` when its source is itself a
+refreshed successor. It does not apply refreshed revisions; review and apply
+remain explicit follow-up steps. In dry-run mode, passing `path` still writes
+the requested review export while leaving graph history unmutated.
 
 `doxabase.apply_staged_revision`
 
