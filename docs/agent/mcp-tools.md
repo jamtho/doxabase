@@ -71,7 +71,9 @@ Returns compact revision context for one `rc:GraphRevision`: summary,
 rationale, revision type, changed graph roles, included review/export graph
 roles, validation result, export path, graph snapshots with counts and
 `sha256:<hex>` content digests, `applies_staged_revision` for applied events,
-and support links.
+`applied_source` compact source context for applied staged revision events, and
+support links. `applied_source` omits patch content and full diagnostics; call
+`describe_staged_revision` on `applies_staged_revision` when those are needed.
 
 `doxabase.list_graph_revisions`
 

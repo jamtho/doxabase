@@ -422,17 +422,17 @@ shape.
 rationale, changed/included graph roles, graph snapshots with counts and
 `sha256:<hex>` content digests, validation result, structured validation
 diagnostics, export path, `applies_staged_revision` for applied events,
-revision anchors, and supporting
-observation/claim/pattern/evidence links.
+`applied_source` compact source context for applied staged revision events,
+revision anchors, and supporting observation/claim/pattern/evidence links.
 
 `list_graph_revisions()` returns compact history rows for `rc:GraphRevision`
 resources, newest first. Each row includes summary, revision type/stance,
 record kind, created time, changed graphs, validation headline, patch payload
 presence/count, relation links such as `applied_by`, `applies_staged_revision`,
-`alternative_to`, `current_alternative_to`, `restaged_from`, and `restaged_by`,
-plus `stale_resolution_state` and optional staged apply-check status, summary,
-recommended resolution, validation-skipped reason, blockers, drift summaries,
-and suggested actions when `include_apply_checks=True`.
+`alternative_to`, `current_alternative_to`, `restaged_from`, `restaged_by`, and
+`current_restaged_by`, plus `stale_resolution_state` and optional staged
+apply-check status, summary, recommended resolution, validation-skipped reason,
+blockers, drift summaries, and suggested actions when `include_apply_checks=True`.
 `drift_detail="summary"` is the default list mode: snapshot drift rows keep
 counts, digests, drift relevance, overlap arrays, and added/removed exact-change
 counts but omit exact changed-triple arrays. Use `drift_detail="exact"` when you

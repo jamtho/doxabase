@@ -190,17 +190,18 @@ When you need to reconstruct what happened after staged revisions have been
 applied, start with `list_graph_revisions(include_apply_checks=True)`. Applied
 events have `record_kind="applied_event"` and `applies_staged_revision`; staged
 sources expose `applied_by` after application. Inspect the applied event with
-`describe_graph_revision()` for after-state graph snapshots, then inspect the
-staged source with `describe_staged_revision()` for patch intent, review notes,
-support links, and validation diagnostics. For a mixed queue, use
+`describe_graph_revision()` for after-state graph snapshots and the compact
+`applied_source` card. Inspect the staged source with
+`describe_staged_revision()` when you need patch content, full validation
+diagnostics, impacts, or judgement panels. For a mixed queue, use
 `export_staged_revisions()` or `restage_staged_revisions(path=...)` and read
 `bundle_summary` to separate already-applied inspection targets, unresolved
 stale proposals, validation failures, and current mutation-review candidates.
 
 This is still provenance browsing, not durable graph-version browsing. The
-applied event gives counts and content digests; the staged source gives the
-intended patch. There is not yet a one-call before/after triple diff for applied
-events.
+applied event gives counts and content digests; `applied_source` gives compact
+intent context; the staged source gives the full intended patch. There is not
+yet a one-call before/after triple diff for applied events.
 
 ## Limits
 

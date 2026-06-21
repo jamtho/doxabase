@@ -815,6 +815,11 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     description = describe_graph_revision_tool(db, result["applied_revision_iri"])
     assert description["revision_type_label"] == "applied staged revision"
     assert description["applies_staged_revision"] == staged["revision_iri"]
+    assert description["applied_source"]["iri"] == staged["revision_iri"]
+    assert description["applied_source"]["summary"] == "Stage messages table"
+    assert description["applied_source"]["patch_count"] == 1
+    assert description["applied_source"]["patches"][0]["target_graph"] == "map"
+    assert "content" not in description["applied_source"]["patches"][0]
     staged_description = describe_staged_revision_tool(db, staged["revision_iri"])
     assert staged_description["application_status"] == "already_applied"
     assert staged_description["applied_by"]["iri"] == result["applied_revision_iri"]

@@ -551,6 +551,51 @@ class StagedRevisionImpact:
 
 
 @dataclass(frozen=True)
+class AppliedStagedRevisionSourcePatchSummary:
+    operation: str | None
+    operation_label: str | None
+    target_graph: str | None
+    patch_role: str | None
+    patch_role_label: str | None
+    sequence_index: int | None
+    triple_count: int | None
+    before_triple_count: int | None
+    after_triple_count: int | None
+
+
+@dataclass(frozen=True)
+class AppliedStagedRevisionSourceSummary:
+    iri: str
+    summary: str | None
+    revision_type: str | None
+    revision_type_label: str | None
+    revision_stance: str | None
+    revision_stance_label: str | None
+    review_note: str | None
+    review_recommendation: str | None
+    alternative_to: str | None
+    restaged_from: str | None
+    restaged_by: str | None
+    current_restaged_by: str | None
+    restage_reason: str | None
+    created_at: str | None
+    created_by: str | None
+    validation_scope: str | None
+    validation_conforms: bool | None
+    validation_result_count: int | None
+    changed_graphs: list[str]
+    included_graphs: list[str]
+    graph_snapshots: list[GraphSnapshotDescription]
+    patch_count: int
+    patches: list[AppliedStagedRevisionSourcePatchSummary]
+    supporting_observation_count: int
+    supporting_claim_count: int
+    supporting_pattern_count: int
+    evidence_count: int
+    revision_anchor_count: int
+
+
+@dataclass(frozen=True)
 class GraphRevisionDescription:
     iri: str
     graph: str | None
@@ -565,6 +610,7 @@ class GraphRevisionDescription:
     created_by: str | None
     export_path: str | None
     applies_staged_revision: str | None
+    applied_source: AppliedStagedRevisionSourceSummary | None
     validation_scope: str | None
     validation_conforms: bool | None
     validation_result_count: int | None
@@ -2075,6 +2121,11 @@ class DoxaBase:
         included_graphs = self._objects(data_graphs, revision_iri, "rc:includedGraph")
         if not included_graphs:
             included_graphs = [snapshot.graph_role for snapshot in snapshots]
+        applies_staged_revision = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:appliesStagedRevision",
+        )
 
         return GraphRevisionDescription(
             iri=revision_iri,
@@ -2093,10 +2144,13 @@ class DoxaBase:
             created_at=self._first_object(data_graphs, revision_iri, "rc:createdAt"),
             created_by=self._first_object(data_graphs, revision_iri, "rc:createdBy"),
             export_path=self._first_object(data_graphs, revision_iri, "rc:exportPath"),
-            applies_staged_revision=self._first_object(
-                data_graphs,
-                revision_iri,
-                "rc:appliesStagedRevision",
+            applies_staged_revision=applies_staged_revision,
+            applied_source=(
+                self._applied_staged_revision_source_summary(
+                    applies_staged_revision
+                )
+                if applies_staged_revision is not None
+                else None
             ),
             validation_scope=self._first_object(
                 data_graphs,
@@ -2142,6 +2196,69 @@ class DoxaBase:
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
             ),
+        )
+
+    def _applied_staged_revision_source_summary(
+        self,
+        staged_revision_iri: str,
+    ) -> AppliedStagedRevisionSourceSummary:
+        source = self.describe_staged_revision(staged_revision_iri)
+        return AppliedStagedRevisionSourceSummary(
+            iri=source.iri,
+            summary=source.summary,
+            revision_type=source.revision_type,
+            revision_type_label=source.revision_type_label,
+            revision_stance=source.revision_stance,
+            revision_stance_label=source.revision_stance_label,
+            review_note=source.review_note,
+            review_recommendation=source.review_recommendation,
+            alternative_to=(
+                source.alternative_to.iri
+                if source.alternative_to is not None
+                else None
+            ),
+            restaged_from=(
+                source.restaged_from.iri
+                if source.restaged_from is not None
+                else None
+            ),
+            restaged_by=(
+                source.restaged_by.iri if source.restaged_by is not None else None
+            ),
+            current_restaged_by=(
+                source.current_restaged_by.iri
+                if source.current_restaged_by is not None
+                else None
+            ),
+            restage_reason=source.restage_reason,
+            created_at=source.created_at,
+            created_by=source.created_by,
+            validation_scope=source.validation_scope,
+            validation_conforms=source.validation_conforms,
+            validation_result_count=source.validation_result_count,
+            changed_graphs=source.changed_graphs,
+            included_graphs=source.included_graphs,
+            graph_snapshots=source.graph_snapshots,
+            patch_count=len(source.patches),
+            patches=[
+                AppliedStagedRevisionSourcePatchSummary(
+                    operation=patch.operation,
+                    operation_label=patch.operation_label,
+                    target_graph=patch.target_graph,
+                    patch_role=patch.patch_role,
+                    patch_role_label=patch.patch_role_label,
+                    sequence_index=patch.sequence_index,
+                    triple_count=patch.triple_count,
+                    before_triple_count=patch.before_triple_count,
+                    after_triple_count=patch.after_triple_count,
+                )
+                for patch in source.patches
+            ],
+            supporting_observation_count=len(source.supporting_observations),
+            supporting_claim_count=len(source.supporting_claims),
+            supporting_pattern_count=len(source.supporting_patterns),
+            evidence_count=len(source.evidence),
+            revision_anchor_count=len(source.revision_anchors),
         )
 
     def list_graph_revisions(

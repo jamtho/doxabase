@@ -941,6 +941,42 @@ when exact drift is available. Use `drift_detail="exact"` or
 `check_staged_revision_apply()` when the actual changed-triple arrays should be
 included.
 
+`db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
+
+```python
+description.iri
+description.graph
+description.label
+description.summary
+description.revision_type
+description.revision_type_label
+description.rationale
+description.changed_graphs
+description.included_graphs
+description.created_at
+description.created_by
+description.export_path
+description.applies_staged_revision
+description.applied_source
+description.validation_scope
+description.validation_conforms
+description.validation_result_count
+description.validation_results
+description.graph_snapshots
+description.supporting_observations
+description.supporting_claims
+description.supporting_patterns
+description.revision_anchors
+description.evidence
+```
+
+For applied staged revision events, `applied_source` is a compact source card
+with staged summary, stance, review note/recommendation, restage links, staged
+validation headline, graph snapshots, patch counts, patch metadata without
+content, and support-link counts. It is meant for quick history scanning; call
+`describe_staged_revision(description.applies_staged_revision)` for patch
+content, full diagnostics, impacts, or judgement panels.
+
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:
 

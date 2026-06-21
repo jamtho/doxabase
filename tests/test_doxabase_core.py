@@ -1392,6 +1392,17 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied.revision_type == RC + "AppliedStagedRevision"
     assert applied.revision_type_label == "applied staged revision"
     assert applied.applies_staged_revision == staged.revision_iri
+    assert applied.applied_source is not None
+    assert applied.applied_source.iri == staged.revision_iri
+    assert applied.applied_source.summary == "Stage messages table"
+    assert applied.applied_source.revision_stance_label == "candidate revision"
+    assert applied.applied_source.patch_count == 1
+    assert applied.applied_source.patches[0].target_graph == "map"
+    assert applied.applied_source.patches[0].before_triple_count == 0
+    assert applied.applied_source.patches[0].after_triple_count == 3
+    assert applied.applied_source.graph_snapshots[0].graph_role == "map"
+    applied_payload = to_dict(applied)
+    assert "content" not in applied_payload["applied_source"]["patches"][0]
     assert applied.changed_graphs == ["map"]
     assert applied.validation_conforms is True
     assert applied.graph_snapshots[0].graph_role == "map"
@@ -2175,6 +2186,13 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
 
     result = db.apply_staged_revision(restaged.revision_iri)
     assert result.triples_added == 1
+    applied = db.describe_graph_revision(result.applied_revision_iri)
+    assert applied.applied_source is not None
+    assert applied.applied_source.iri == restaged.revision_iri
+    assert applied.applied_source.restaged_from == staged.revision_iri
+    assert applied.applied_source.restage_reason is not None
+    assert "prior status conflict" in applied.applied_source.restage_reason
+    assert applied.applied_source.patch_count == 1
     applied_grouped_export = db.export_staged_revisions(
         [staged.revision_iri, restaged.revision_iri],
         tmp_path / "applied-restaged-comparison.md",

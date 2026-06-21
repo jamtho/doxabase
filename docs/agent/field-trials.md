@@ -350,6 +350,10 @@ few useful gaps:
   provenance but is not enough for action routing; list rows, staged
   descriptions, export summaries, suggested actions, and batch restage now expose
   `current_restaged_by` for the latest known successor.
+  A post-apply history trial showed the documented two-hop recipe worked but
+  repeated detail calls for basic source context. Applied graph-revision
+  descriptions now include compact `applied_source` cards while leaving patch
+  content and full diagnostics on `describe_staged_revision`.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

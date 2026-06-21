@@ -1,5 +1,7 @@
 from doxabase.core import (
     AppliedStagedRevisionRecord,
+    AppliedStagedRevisionSourcePatchSummary,
+    AppliedStagedRevisionSourceSummary,
     AssertionSupportCaveatLink,
     AssertionSupportDescription,
     AssertionPredicateHint,
@@ -88,6 +90,8 @@ from doxabase.core import (
 
 __all__ = [
     "AppliedStagedRevisionRecord",
+    "AppliedStagedRevisionSourcePatchSummary",
+    "AppliedStagedRevisionSourceSummary",
     "AssertionSupportCaveatLink",
     "AssertionSupportDescription",
     "AssertionPredicateHint",
