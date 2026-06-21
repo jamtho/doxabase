@@ -166,8 +166,12 @@ handoff in `describe_dataset`.
 Returns a bounded, route-explained subgraph around one or more seed IRIs. Use
 `profile="dataset_brief"` for table handoff context, `profile="pattern_brief"`
 for pattern support context, and `profile="deep_lore"` when explicit revision
-metadata should come along too. Read `resources[].routes` and `route_counts`
-before raw triples; those fields explain why each resource entered the slice.
+metadata should come along too. Dataset/deep-lore slices include bounded profile
+observations, observed value-frequency nodes, scalar profile metric nodes, and
+profile metric kinds returned through the dataset context. They can also start
+from a profile observation, observed profile metric node, or metric-kind IRI
+used by profile metrics. Read `resources[].routes` and `route_counts` before
+raw triples; those fields explain why each resource entered the slice.
 `reading_order` and `route_legend` provide the static reading protocol and
 meanings for the routes present in the response. Set `include_trig=true` when
 you need importable TriG text, and raise

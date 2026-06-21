@@ -5632,6 +5632,179 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
     assert "https://richcanopy.org/graph/patterns" in graph_iris
 
 
+def test_describe_context_slice_includes_profile_observations_and_metrics(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    column = "https://example.test/project#orders__amount"
+    metric_kind = "https://example.test/project#CompletenessRatio"
+    db.record_map_dataset(dataset, label="Orders", is_table=True, columns=[column])
+    db.record_map_column(
+        column,
+        table_iri=dataset,
+        column_name="amount",
+        physical_type="rc:Decimal",
+    )
+    dataset_profile = db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled for completeness.",
+        evidence_summary="Dataset profile run.",
+        evidence_sources=["test://orders-profile"],
+        row_count=100,
+        value_frequencies=[{"value": "present", "frequency": 98}],
+        profile_metrics=[
+            {"metric": metric_kind, "value": 0.98, "target": dataset},
+        ],
+        update_map_snapshot=False,
+    )
+    column_profile = db.record_column_profile(
+        column,
+        table_iri=dataset,
+        column_name="amount",
+        summary="Amount was profiled for mean value.",
+        evidence_summary="Column profile run.",
+        evidence_sources=["test://amount-profile"],
+        profile_metrics=[{"metric": "rc:MeanValue", "value": 42.5}],
+        update_map_column=False,
+    )
+    dataset_metric_iri = db._objects(
+        ["observations"],
+        dataset_profile.observation.observation_iri,
+        "rc:observedProfileMetric",
+    )[0]
+    value_frequency_iri = db._objects(
+        ["observations"],
+        dataset_profile.observation.observation_iri,
+        "rc:observedValueFrequency",
+    )[0]
+
+    context_slice = db.describe_context_slice(
+        dataset,
+        profile="dataset_brief",
+        max_triples=300,
+    )
+
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert dataset_profile.observation.observation_iri in resources
+    assert column_profile.observation.observation_iri in resources
+    assert dataset_metric_iri in resources
+    assert value_frequency_iri in resources
+    assert metric_kind in resources
+    assert resources[metric_kind].referenced_only is True
+    assert dataset_profile.observation.evidence_iri in resources
+    assert context_slice.route_counts["dataset_profile_observation"] == 1
+    assert context_slice.route_counts["column_profile_observation"] == 1
+    assert context_slice.route_counts["observed_profile_metric"] >= 2
+    assert context_slice.route_counts["observed_value_frequency"] == 1
+    assert context_slice.route_counts["profile_metric_kind"] >= 2
+
+
+def test_describe_context_slice_expands_profile_metric_kind_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    metric_kind = "https://example.test/project#CompletenessRatio"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    profile = db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled for completeness.",
+        evidence_summary="Dataset profile run.",
+        evidence_sources=["test://orders-profile"],
+        profile_metrics=[
+            {"metric": metric_kind, "value": 0.98, "target": dataset},
+        ],
+        update_map_snapshot=False,
+    )
+    metric_iri = db._objects(
+        ["observations"],
+        profile.observation.observation_iri,
+        "rc:observedProfileMetric",
+    )[0]
+
+    context_slice = db.describe_context_slice(
+        metric_kind,
+        profile="dataset_brief",
+        max_triples=200,
+    )
+
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert metric_kind in resources
+    assert resources[metric_kind].referenced_only is True
+    assert metric_iri in resources
+    assert profile.observation.observation_iri in resources
+    assert dataset in resources
+    assert context_slice.dataset_contexts[0].iri == dataset
+    assert context_slice.route_counts["seed_profile_metric_kind"] == 1
+    assert context_slice.route_counts["observed_profile_metric"] >= 1
+    assert context_slice.route_counts["profile_metric_observation"] == 1
+    assert "profile-specific expansion did not apply" not in " ".join(
+        context_slice.warnings
+    )
+
+    metric_context = db.describe_context_slice(
+        metric_iri,
+        profile="dataset_brief",
+        max_triples=200,
+    )
+    metric_resources = {resource.iri: resource for resource in metric_context.resources}
+    assert metric_iri in metric_resources
+    assert profile.observation.observation_iri in metric_resources
+    assert dataset in metric_resources
+    assert metric_context.route_counts["observed_profile_metric"] >= 1
+    assert metric_context.route_counts["profile_metric_observation"] == 1
+
+    observation_context = db.describe_context_slice(
+        profile.observation.observation_iri,
+        profile="dataset_brief",
+        max_triples=200,
+    )
+    observation_resources = {
+        resource.iri: resource for resource in observation_context.resources
+    }
+    assert profile.observation.observation_iri in observation_resources
+    assert metric_iri in observation_resources
+    assert dataset in observation_resources
+    assert observation_context.route_counts["seed_profile_observation"] == 1
+    assert observation_context.route_counts["observed_profile_metric"] >= 1
+
+
+def test_describe_context_slice_caps_broad_profile_metric_kind_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    metric_kind = "rc:MeanValue"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    for index in range(27):
+        db.record_dataset_profile(
+            dataset,
+            summary=f"Orders profile run {index}.",
+            observed_at=f"2026-01-{index + 1:02d}T00:00:00+00:00",
+            evidence_summary=f"Dataset profile run {index}.",
+            evidence_sources=[f"test://orders-profile/{index}"],
+            profile_metrics=[
+                {"metric": metric_kind, "value": index, "target": dataset},
+            ],
+            update_map_snapshot=False,
+        )
+
+    context_slice = db.describe_context_slice(
+        metric_kind,
+        profile="dataset_brief",
+        max_triples=1000,
+    )
+
+    assert context_slice.route_counts["seed_profile_metric_kind"] == 1
+    assert context_slice.route_counts["profile_metric_observation"] == 25
+    assert any(
+        "matched 27 observed profile metric(s); included 25 and omitted 2"
+        in warning
+        for warning in context_slice.warnings
+    )
+
+
 def test_deep_lore_context_slice_reports_absent_lore_layer(
     tmp_path: Path,
 ) -> None:

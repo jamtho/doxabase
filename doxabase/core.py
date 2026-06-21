@@ -3135,16 +3135,73 @@ class DoxaBase:
                     depth=depth + 1,
                 )
 
+        def add_profile_metric(
+            metric_iri: str,
+            source_iri: str | None,
+            depth: int,
+            *,
+            include_parent_observations: bool = True,
+        ) -> None:
+            add_resource(
+                metric_iri,
+                "observed_profile_metric",
+                "observed profile metric",
+                source_iri=source_iri,
+                depth=depth,
+            )
+            for metric_kind_iri in self._objects(
+                all_graphs,
+                metric_iri,
+                "rc:profileMetricKind",
+            ):
+                add_resource(
+                    metric_kind_iri,
+                    "profile_metric_kind",
+                    "profile metric kind",
+                    source_iri=metric_iri,
+                    depth=depth + 1,
+                )
+            for metric_target_iri in self._objects(
+                all_graphs,
+                metric_iri,
+                "rc:profileMetricTarget",
+            ):
+                add_resource(
+                    metric_target_iri,
+                    "profile_metric_target",
+                    "profile metric target",
+                    source_iri=metric_iri,
+                    depth=depth + 1,
+                )
+            if include_parent_observations:
+                for observation_iri in self._subjects(
+                    all_graphs,
+                    "rc:observedProfileMetric",
+                    metric_iri,
+                ):
+                    add_observation(
+                        observation_iri,
+                        metric_iri,
+                        depth + 1,
+                        route="profile_metric_observation",
+                        route_label="profile metric observation",
+                        expand_observed_dataset=True,
+                    )
+
         def add_observation(
             observation_iri: str,
             source_iri: str | None,
             depth: int,
+            *,
+            route: str = "supporting_observation",
+            route_label: str = "supporting observation",
+            expand_observed_dataset: bool = False,
         ) -> None:
             if observation_iri in described_observations:
                 add_resource(
                     observation_iri,
-                    "supporting_observation",
-                    "supporting observation",
+                    route,
+                    route_label,
                     source_iri=source_iri,
                     depth=depth,
                 )
@@ -3152,8 +3209,8 @@ class DoxaBase:
             described_observations.add(observation_iri)
             add_resource(
                 observation_iri,
-                "supporting_observation",
-                "supporting observation",
+                route,
+                route_label,
                 source_iri=source_iri,
                 depth=depth,
             )
@@ -3169,10 +3226,46 @@ class DoxaBase:
                         source_iri=observation_iri,
                         depth=depth + 1,
                     )
+                    if (
+                        expand_observed_dataset
+                        and predicate == "rc:observedAsset"
+                    ):
+                        observed_types = self._types_from_graphs(
+                            all_graphs,
+                            observed_iri,
+                        )
+                        if (
+                            self.expand_iri("rc:Dataset") in observed_types
+                            or self.expand_iri("rc:Table") in observed_types
+                        ):
+                            add_dataset(observed_iri, observation_iri, depth + 2)
             for claim_iri in self._objects(all_graphs, observation_iri, "rc:hasClaim"):
                 add_claim(claim_iri, observation_iri, depth + 1)
             for evidence_iri in self._objects(all_graphs, observation_iri, "rc:evidence"):
                 add_evidence(evidence_iri, observation_iri, depth + 1)
+            for value_frequency_iri in self._objects(
+                all_graphs,
+                observation_iri,
+                "rc:observedValueFrequency",
+            ):
+                add_resource(
+                    value_frequency_iri,
+                    "observed_value_frequency",
+                    "observed value frequency",
+                    source_iri=observation_iri,
+                    depth=depth + 1,
+                )
+            for metric_iri in self._objects(
+                all_graphs,
+                observation_iri,
+                "rc:observedProfileMetric",
+            ):
+                add_profile_metric(
+                    metric_iri,
+                    observation_iri,
+                    depth + 1,
+                    include_parent_observations=False,
+                )
 
         def add_pattern(pattern_iri: str, source_iri: str | None, depth: int) -> None:
             if pattern_iri in described_patterns:
@@ -3333,6 +3426,30 @@ class DoxaBase:
                     "column type",
                     source_iri=column.iri,
                     depth=depth + 2,
+                )
+                for profile_observation in column.profile_observations:
+                    add_observation(
+                        profile_observation.iri,
+                        column.iri,
+                        depth + 2,
+                        route="column_profile_observation",
+                        route_label="column profile observation",
+                    )
+            for profile_observation in dataset.profile_observations:
+                add_observation(
+                    profile_observation.iri,
+                    dataset_iri,
+                    depth + 1,
+                    route="dataset_profile_observation",
+                    route_label="dataset profile observation",
+                )
+            for profile_observation in dataset.unmapped_column_profile_observations:
+                add_observation(
+                    profile_observation.iri,
+                    dataset_iri,
+                    depth + 1,
+                    route="unmapped_column_profile_observation",
+                    route_label="unmapped column profile observation",
                 )
             for layout in dataset.physical_layouts:
                 add_resource(
@@ -3499,8 +3616,15 @@ class DoxaBase:
             for linked_pattern in dataset.linked_patterns:
                 add_pattern(linked_pattern.iri, dataset_iri, depth + 1)
 
+        metric_kind_seed_limit = 25
         for seed in seeds:
-            if not self._subject_exists(seed, all_graphs):
+            seed_is_subject = self._subject_exists(seed, all_graphs)
+            metric_kind_metric_iris = self._subjects(
+                all_graphs,
+                "rc:profileMetricKind",
+                seed,
+            )
+            if not seed_is_subject and not metric_kind_metric_iris:
                 raise DoxaBaseError(f"Seed resource '{seed}' was not found")
             add_resource(seed, "seed", "seed resource", depth=0)
             seed_types = self._types_from_graphs(all_graphs, seed)
@@ -3522,6 +3646,45 @@ class DoxaBase:
                 and self.expand_iri("rc:Claim") in seed_types
             ):
                 add_claim(seed, None, 0)
+            elif (
+                profile in {"dataset_brief", "deep_lore"}
+                and self.expand_iri("rc:ProfileObservation") in seed_types
+            ):
+                add_observation(
+                    seed,
+                    None,
+                    0,
+                    route="seed_profile_observation",
+                    route_label="seed profile observation",
+                    expand_observed_dataset=True,
+                )
+            elif (
+                profile in {"dataset_brief", "deep_lore"}
+                and self.expand_iri("rc:ObservedProfileMetric") in seed_types
+            ):
+                add_profile_metric(seed, None, 0)
+            elif profile in {"dataset_brief", "deep_lore"} and metric_kind_metric_iris:
+                add_resource(
+                    seed,
+                    "seed_profile_metric_kind",
+                    "seed profile metric kind",
+                    depth=0,
+                )
+                selected_metric_iris = metric_kind_metric_iris[:metric_kind_seed_limit]
+                omitted_metric_count = len(metric_kind_metric_iris) - len(
+                    selected_metric_iris
+                )
+                if omitted_metric_count > 0:
+                    warnings.append(
+                        "Metric-kind seed "
+                        f"'{seed}' matched {len(metric_kind_metric_iris)} observed "
+                        "profile metric(s); included "
+                        f"{len(selected_metric_iris)} and omitted "
+                        f"{omitted_metric_count}. Use a narrower dataset, profile, "
+                        "or observed metric seed for a complete handoff."
+                    )
+                for metric_iri in selected_metric_iris:
+                    add_profile_metric(metric_iri, seed, 1)
             else:
                 warnings.append(
                     f"Seed '{seed}' was included directly; profile-specific expansion did not apply."
@@ -3717,8 +3880,18 @@ class DoxaBase:
             "reconsidered_claim": 12,
             "reconsidering_claim": 12,
             "supporting_observation": 13,
-            "evidence": 14,
-            "source_span": 15,
+            "dataset_profile_observation": 13,
+            "column_profile_observation": 13,
+            "unmapped_column_profile_observation": 13,
+            "seed_profile_observation": 13,
+            "profile_metric_observation": 13,
+            "observed_profile_metric": 14,
+            "observed_value_frequency": 14,
+            "profile_metric_kind": 15,
+            "profile_metric_target": 15,
+            "seed_profile_metric_kind": 15,
+            "evidence": 16,
+            "source_span": 17,
         }
         if route in exact:
             return exact[route]
@@ -3749,6 +3922,13 @@ class DoxaBase:
             "reconsidered_claim",
             "reconsidering_claim",
             "supporting_observation",
+            "dataset_profile_observation",
+            "column_profile_observation",
+            "unmapped_column_profile_observation",
+            "seed_profile_observation",
+            "profile_metric_observation",
+            "observed_profile_metric",
+            "observed_value_frequency",
             "evidence",
             "source_span",
         }
@@ -3820,8 +4000,26 @@ class DoxaBase:
             "reconsidered_claim": "An earlier claim named by a reconsideration.",
             "reconsidering_claim": "A later claim that reconsiders the selected claim.",
             "supporting_observation": "An observation supporting a selected pattern or claim.",
+            "dataset_profile_observation": (
+                "A bounded dataset-level profile observation returned by the selected dataset context."
+            ),
+            "column_profile_observation": (
+                "A bounded column-level profile observation returned by the selected dataset context."
+            ),
+            "unmapped_column_profile_observation": (
+                "A bounded profile observation for a column not currently mapped on the selected dataset."
+            ),
+            "seed_profile_observation": "A seed resource expanded as a profile observation.",
+            "profile_metric_observation": (
+                "A profile observation reached from a selected observed profile metric."
+            ),
             "observed_asset": "A dataset or asset named by a selected observation.",
             "observed_column": "A column named by a selected observation.",
+            "observed_profile_metric": "A scalar metric node attached to a selected profile observation.",
+            "observed_value_frequency": "An observed value-frequency node attached to a selected profile observation.",
+            "profile_metric_kind": "The metric-kind IRI used by an observed profile metric.",
+            "profile_metric_target": "The narrower target resource named by an observed profile metric.",
+            "seed_profile_metric_kind": "A seed IRI used as a profile metric kind.",
             "evidence": "Evidence linked to a selected observation, claim, pattern, or revision.",
             "source_span": "A source span attached to selected evidence.",
             "owning_dataset": "The dataset that owns a selected column.",

@@ -245,8 +245,11 @@ candidate; sibling candidates receive an overall-context blocker instead.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
-dataset/table map context and linked lore, `pattern_brief` starts from pattern
-support, and `deep_lore` also includes directly relevant revision metadata.
+dataset/table map context, bounded profile observations/metrics, and linked
+lore, `pattern_brief` starts from pattern support, and `deep_lore` also
+includes directly relevant revision metadata. Dataset/deep-lore slices can also
+start from profile observations, observed profile metric nodes, or metric-kind
+IRIs used by profile metrics.
 Use `resources[].routes`, `route_counts`, `dataset_contexts`, and
 `pattern_contexts` as the reading path before raw `triples`. The response also
 includes `reading_order` and a filtered `route_legend` so cold agents can follow

@@ -9,13 +9,24 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
 
 - `dataset_brief` starts from map datasets/tables. It includes dataset context,
   columns, layout/storage/partition resources, layout verification status terms,
-  caveats, provenance, relationships, related dataset reasons, linked patterns,
-  and pattern support.
+  caveats, provenance, relationships, related dataset reasons, bounded returned
+  profile observations and metrics, linked patterns, and pattern support.
 - `pattern_brief` starts from patterns. It includes pattern targets, map
   implications, supporting claims, observations, evidence, and source spans.
 - `deep_lore` follows the same explicit routes and also pulls in relevant
   revision metadata when history records directly support selected patterns,
   claims, or observations.
+
+Dataset and deep-lore slices also understand profile seeds. A seed
+`rc:ProfileObservation` expands to its observed asset/column, evidence, value
+frequencies, profile metric nodes, and the observed dataset when available. A
+seed `rc:ObservedProfileMetric`, or a metric-kind IRI that is only used as an
+`rc:profileMetricKind` object, expands back to the parent profile observation
+and dataset context. This is a profile handoff route, not proof that the metric
+is durable ontology; define labelled project metric kinds in `ontology` when
+the vocabulary should be shared. Metric-kind seed expansion is capped and emits
+a warning when many observed metrics match; use a dataset, profile observation,
+or observed metric node seed for a narrower complete handoff.
 
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference

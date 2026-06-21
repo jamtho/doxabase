@@ -377,6 +377,15 @@ context.warnings
 labels, meanings, priorities, and counts. `reading_order` is static guidance for
 how to read the returned slice; it is not recomputed as a custom plan for each
 query.
+Dataset/deep-lore slices can include routes such as
+`dataset_profile_observation`, `column_profile_observation`,
+`unmapped_column_profile_observation`, `observed_profile_metric`,
+`observed_value_frequency`, `profile_metric_kind`, and
+`profile_metric_target`. These routes are bounded by the same returned profile
+observations used by `describe_dataset()`. A metric-kind IRI that has no subject
+triples can still appear with `referenced_only=True` when it was reached through
+`rc:profileMetricKind`. Broad metric-kind seeds are capped; read `warnings` for
+omitted observed profile metric counts and use narrower seeds when needed.
 
 Each item in `context.resources` is a `ContextSliceResource`:
 
