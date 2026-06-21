@@ -94,6 +94,9 @@ and `column_defaults` can set repeated column options such as
 `update_map_column=false`. By default, shared evidence means shared evidence
 fields and source strings. Pass `shared_evidence_iri` when all profiles in the
 pass should link to the same `rc:Evidence` resource.
+The helper preflights bundled column payloads and shared evidence summaries
+before writing the dataset profile, so invalid bundle inputs do not leave
+partial profile, evidence, or map state behind.
 `describe_dataset().profile_summary.handoff_note` then gives later agents a
 compact cue that profile lore is observed evidence, while storage/path/layout
 warnings are physical query-planning metadata gaps rather than profile-recording

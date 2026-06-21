@@ -6606,6 +6606,35 @@ def test_record_profile_bundle_rejects_invalid_column_values_without_mutation(
     assert db.search("Shared profiler run", graph="evidence").matches == []
 
 
+def test_record_profile_bundle_rejects_conflicting_shared_evidence_summary(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="conflicting evidence_summary"):
+        db.record_profile_bundle(
+            "https://example.test/project#Orders",
+            dataset_summary="Orders were profiled.",
+            evidence_summary="Dataset-level profiler run summary.",
+            evidence_sources=["test://profile-run"],
+            shared_evidence_iri=shared_evidence,
+            column_profiles=[
+                {
+                    "column_iri": "https://example.test/project#OrdersStatus",
+                    "column_name": "status",
+                    "summary": "Status was profiled.",
+                    "evidence_summary": "Column-level conflicting summary.",
+                }
+            ],
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.search("Orders were profiled", graph="observations").matches == []
+    assert db.search("Dataset-level profiler run", graph="evidence").matches == []
+
+
 @pytest.mark.parametrize(
     ("column_overrides", "match"),
     [
@@ -6679,3 +6708,33 @@ def test_record_observation_rejects_invalid_inputs(tmp_path: Path) -> None:
             observed_column="https://example.test/project#OrdersStatus",
             observed_column_name=" ",
         )
+
+
+def test_record_observation_rejects_conflicting_reused_evidence_summary(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    evidence_iri = "https://example.test/project#ProfileRunEvidence"
+    db.record_observation(
+        "First profile note.",
+        observation_type="profile",
+        observed_asset="https://example.test/project#Orders",
+        evidence_summary="Shared profiler run.",
+        evidence_sources=["test://profile-run"],
+        evidence_iri=evidence_iri,
+    )
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="conflicts with existing summary"):
+        db.record_observation(
+            "Second profile note.",
+            observation_type="profile",
+            observed_asset="https://example.test/project#Orders",
+            evidence_summary="Different profiler run summary.",
+            evidence_sources=["test://profile-run/second"],
+            evidence_iri=evidence_iri,
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.search("Second profile note", graph="observations").matches == []
+    assert db.validate_graph(scope="all").conforms

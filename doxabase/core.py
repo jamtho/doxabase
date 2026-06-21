@@ -5260,6 +5260,11 @@ class DoxaBase:
             if should_write_evidence
             else None
         )
+        if evidence_subject is not None:
+            self._preflight_evidence_summary_reuse(
+                str(evidence_subject),
+                evidence_summary,
+            )
 
         observation_graph = Graph()
         self._bind_prefixes(observation_graph)
@@ -5553,6 +5558,10 @@ class DoxaBase:
         observation_subject = URIRef(observation_iri or self._mint_iri("observation"))
         claim_subject = URIRef(claim_iri or self._mint_iri("claim"))
         evidence_subject = URIRef(evidence_iri or self._mint_iri("evidence"))
+        self._preflight_evidence_summary_reuse(
+            str(evidence_subject),
+            evidence_summary,
+        )
         source_span_subject = (
             URIRef(source_span_iri or self._mint_iri("source-span"))
             if source_path_value is not None
@@ -5879,6 +5888,11 @@ class DoxaBase:
             if evidence_source_values or source_path_value
             else None
         )
+        if evidence_subject is not None:
+            self._preflight_evidence_summary_reuse(
+                str(evidence_subject),
+                evidence_summary,
+            )
         source_span_subject = (
             URIRef(source_span_iri or self._mint_iri("source-span"))
             if source_path_value is not None
@@ -6432,6 +6446,12 @@ class DoxaBase:
             self._preflight_profile_bundle_column(index, column_kwargs)
             prepared_column_profiles.append(column_kwargs)
 
+        self._preflight_profile_bundle_evidence_summaries(
+            shared_evidence_iri=shared_evidence_iri,
+            dataset_evidence_summary=evidence_summary,
+            column_profiles=prepared_column_profiles,
+        )
+
         dataset_profile = self.record_dataset_profile(
             dataset_value,
             summary=dataset_summary,
@@ -6473,6 +6493,51 @@ class DoxaBase:
             dataset_profile=dataset_profile,
             column_profiles=recorded_columns,
         )
+
+    def _preflight_profile_bundle_evidence_summaries(
+        self,
+        *,
+        shared_evidence_iri: str | None,
+        dataset_evidence_summary: str | None,
+        column_profiles: Iterable[Mapping[str, Any]],
+    ) -> None:
+        summaries_by_evidence: dict[str, tuple[str, str]] = {}
+
+        def add_summary(
+            label: str,
+            evidence_iri: Any,
+            evidence_summary: Any,
+        ) -> None:
+            if not isinstance(evidence_iri, str) or not evidence_iri.strip():
+                return
+            if not isinstance(evidence_summary, str) or not evidence_summary.strip():
+                return
+            evidence_value = evidence_iri.strip()
+            existing = summaries_by_evidence.get(evidence_value)
+            if existing is not None and existing[0] != evidence_summary:
+                raise DoxaBaseError(
+                    "record_profile_bundle reuses evidence_iri "
+                    f"{evidence_value!r} with conflicting evidence_summary "
+                    f"values in {existing[1]} and {label}"
+                )
+            summaries_by_evidence[evidence_value] = (evidence_summary, label)
+            self._preflight_evidence_summary_reuse(
+                evidence_value,
+                evidence_summary,
+                field_name=f"{label}.evidence_summary",
+            )
+
+        add_summary(
+            "dataset profile",
+            shared_evidence_iri,
+            dataset_evidence_summary,
+        )
+        for index, column_kwargs in enumerate(column_profiles):
+            add_summary(
+                f"column_profiles[{index}]",
+                column_kwargs.get("evidence_iri"),
+                column_kwargs.get("evidence_summary"),
+            )
 
     def _preflight_profile_bundle_column(
         self,
@@ -6675,6 +6740,11 @@ class DoxaBase:
             if evidence_source_values or source_path_value
             else None
         )
+        if evidence_subject is not None:
+            self._preflight_evidence_summary_reuse(
+                str(evidence_subject),
+                evidence_summary,
+            )
         source_span_subject = (
             URIRef(source_span_iri or self._mint_iri("source-span"))
             if source_path_value is not None
@@ -17601,6 +17671,30 @@ class DoxaBase:
     def _ensure_non_negative(self, name: str, value: int | None) -> None:
         if value is not None and value < 0:
             raise DoxaBaseError(f"{name} must be non-negative")
+
+    def _preflight_evidence_summary_reuse(
+        self,
+        evidence_iri: str,
+        evidence_summary: str | None,
+        *,
+        field_name: str = "evidence_summary",
+    ) -> None:
+        if evidence_summary is None or not evidence_summary.strip():
+            return
+        existing_summaries = self._objects(
+            ["evidence"],
+            evidence_iri,
+            "rc:summary",
+        )
+        conflicting = [
+            summary for summary in existing_summaries if summary != evidence_summary
+        ]
+        if conflicting:
+            raise DoxaBaseError(
+                f"{field_name} conflicts with existing summary for evidence_iri "
+                f"{evidence_iri!r}; omit {field_name}, reuse the existing summary, "
+                "or use a new evidence_iri"
+            )
 
     def _profile_value_frequency_values(
         self,
