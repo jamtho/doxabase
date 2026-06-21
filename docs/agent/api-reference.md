@@ -475,8 +475,11 @@ when a refreshed successor already exists.
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and
 staged-time validation result. Bundles with restaged revisions include a
-`Restage Context` section near the top. Pass `executive_summary` when the
-comparison needs an agent-authored synthesis at the top of the artifact.
+`Restage Context` section near the top. When an alternative's stored target has
+itself been restaged, grouped Markdown also includes `Alternative Context` so
+reviewers can compare against the current successor without reconstructing that
+lineage by hand. Pass `executive_summary` when the comparison needs an
+agent-authored synthesis at the top of the artifact.
 The returned record also includes `revision_summaries`, a machine-readable copy
 of the grouped status rows with current apply status, blockers, validation
 state, alternative/restage links, recommendations, and suggested next actions.

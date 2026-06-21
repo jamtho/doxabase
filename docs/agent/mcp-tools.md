@@ -526,7 +526,9 @@ stale sources, ready successors, validation-failed revisions, deduped
 `recommended_review_iris`, `recommended_mutation_review_iris`, and
 `recommended_applied_inspection_iris`.
 Bundles with restaged revisions include a `Restage Context` section near the
-top. Relative export paths are resolved from the repository root and returned as
+top. When a stored alternative target has a restaged successor, grouped
+Markdown includes `Alternative Context` with the current comparison target.
+Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
 
 ## Import and Validation

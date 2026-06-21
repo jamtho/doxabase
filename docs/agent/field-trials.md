@@ -332,6 +332,10 @@ few useful gaps:
   `applies_staged_revision`; staged descriptions expose `applied_by` and
   `application_status` once applied; grouped bundle summaries split
   `recommended_mutation_review_iris` from `recommended_applied_inspection_iris`.
+  A current-alternative Markdown trial showed that JSON exposed a refreshed
+  comparison target but Markdown-only reviewers had to reconstruct it manually;
+  grouped exports now include `Alternative Context` when a stored alternative
+  target has been restaged.
   A validation-repair trial showed that agents could diagnose a
   `validation_failed` revision but needed a stronger repair branch hint. Failed
   validation checks now suggest exporting diagnostics before staging a repaired

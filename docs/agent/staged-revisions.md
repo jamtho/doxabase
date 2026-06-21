@@ -109,7 +109,9 @@ several alternatives, failed candidates, and repaired candidates should be
 reviewed together; its summary table includes the current apply status and
 decision, plus current and staged-time validation state for each staged
 revision. When the bundle contains restaged revisions, a `Restage Context`
-section appears near the top before the detailed revision bodies.
+section appears near the top before the detailed revision bodies. When an
+alternative points to a stale revision whose successor is also in play, an
+`Alternative Context` section names the current successor to compare against.
 
 A stale export should be read like this:
 
@@ -333,6 +335,8 @@ include per-row `stale_resolution_state`, `current_alternative_to`, and a
 `bundle_summary` so recovery scripts can find unresolved stale proposals,
 already-handled stale sources, ready successors, the current mutation-review
 set, and already-applied inspection set without recomputing those buckets.
+Grouped Markdown mirrors the important `current_alternative_to` case in
+`Alternative Context` when a stored alternative target has been restaged.
 Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and their suggested actions now point agents toward structured
 diagnostics plus a Markdown review export before staging a repaired candidate.

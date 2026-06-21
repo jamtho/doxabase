@@ -9618,17 +9618,18 @@ class DoxaBase:
             self._staged_revision_apply_check_for_export(description)
             for description in descriptions
         ]
-        data = self._staged_revisions_markdown(
-            descriptions,
-            apply_checks=apply_checks,
-            title=title,
-            executive_summary=executive_summary,
-        )
-        bytes_written = self._write_export(path, data, overwrite=overwrite)
         revision_summaries = self._staged_revisions_export_summaries(
             descriptions,
             apply_checks=apply_checks,
         )
+        data = self._staged_revisions_markdown(
+            descriptions,
+            apply_checks=apply_checks,
+            revision_summaries=revision_summaries,
+            title=title,
+            executive_summary=executive_summary,
+        )
+        bytes_written = self._write_export(path, data, overwrite=overwrite)
         return StagedGraphRevisionsExportRecord(
             path=str(path),
             format=format,
@@ -13119,6 +13120,7 @@ class DoxaBase:
         descriptions: list[StagedGraphRevisionDescription],
         *,
         apply_checks: list[tuple[StagedRevisionApplyCheck | None, str | None]],
+        revision_summaries: list[StagedGraphRevisionExportSummary],
         title: str | None,
         executive_summary: str | None,
     ) -> str:
@@ -13206,6 +13208,13 @@ class DoxaBase:
         if restage_context:
             lines.extend(["", "## Restage Context", ""])
             lines.extend(restage_context)
+        alternative_context = self._staged_revisions_alternative_context_markdown(
+            descriptions,
+            revision_summaries,
+        )
+        if alternative_context:
+            lines.extend(["", "## Alternative Context", ""])
+            lines.extend(alternative_context)
         if any(description.review_note for description in descriptions):
             lines.extend(["", "## Review Notes", ""])
             for index, description in enumerate(descriptions, start=1):
@@ -13238,6 +13247,45 @@ class DoxaBase:
                 ]
             )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revisions_alternative_context_markdown(
+        self,
+        descriptions: list[StagedGraphRevisionDescription],
+        revision_summaries: list[StagedGraphRevisionExportSummary],
+    ) -> list[str]:
+        index_by_iri = {
+            description.iri: index
+            for index, description in enumerate(descriptions, start=1)
+        }
+        label_by_iri = {
+            description.iri: description.summary or description.iri
+            for description in descriptions
+        }
+
+        def reference(iri: str) -> str:
+            label = label_by_iri.get(iri)
+            index = index_by_iri.get(iri)
+            if index is None:
+                return f"`{iri}`"
+            return f"Revision {index}: {label} (`{iri}`)"
+
+        lines: list[str] = []
+        for index, summary in enumerate(revision_summaries, start=1):
+            if (
+                summary.alternative_to is None
+                or summary.current_alternative_to is None
+                or summary.current_alternative_to == summary.alternative_to
+            ):
+                continue
+            label = summary.summary or summary.revision_iri
+            lines.append(
+                (
+                    f"{index}. {label}: Stored alternative to "
+                    f"{reference(summary.alternative_to)}; current alternative to "
+                    f"{reference(summary.current_alternative_to)} after restage."
+                )
+            )
+        return lines
 
     def _staged_description_validation_cell(
         self,

@@ -2244,6 +2244,9 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         tmp_path / "stale-alternative-recovery.md",
         title="Stale alternative recovery",
     )
+    exported = (tmp_path / "stale-alternative-recovery.md").read_text(
+        encoding="utf-8"
+    )
     summaries = {item.revision_iri: item for item in export.revision_summaries}
 
     assert summaries[first.revision_iri].stale_resolution_state == (
@@ -2288,6 +2291,16 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         second_restaged.revision_iri,
     ]
     assert export.bundle_summary.recommended_applied_inspection_iris == []
+    assert "## Alternative Context" in exported
+    assert (
+        "Stored alternative to Revision 1: Model order rows as raw events"
+        in exported
+    )
+    assert (
+        "current alternative to Revision 2: Restage stale revision: "
+        "Model order rows as raw events"
+    ) in exported
+    assert exported.index("## Alternative Context") < exported.index("## Revisions")
 
 
 def test_restage_staged_revision_rejects_non_conflicted_revision(

@@ -1176,7 +1176,9 @@ When the live apply check reports semantic risk, the export can include a
 judgement panel is unavailable for a stale proposal.
 Restaged single exports also include a top metadata `Restage headline` before
 the current apply check. Grouped exports include `Restage Context` near the top
-when one or more revisions were refreshed from stale proposals.
+when one or more revisions were refreshed from stale proposals. They include
+`Alternative Context` when a stored alternative target has been restaged and the
+current comparison target is a refreshed successor.
 Stale original exports include a top metadata `Restaged by` line when a
 refreshed successor already exists.
 In grouped exports, `Staged validation` is the staged description's original
