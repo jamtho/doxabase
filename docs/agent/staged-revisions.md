@@ -296,6 +296,9 @@ present, absent, or mixed in the target graph. When stored snapshot rows are
 available, `snapshot_drifts` carries the exact target graph triples added and
 removed since staging, plus a conservative `drift_relevance` hint and any
 patch-subject, patch-predicate, patch-object, or revision-anchor overlaps.
+Revision-list summary rows keep those relevance and overlap fields, plus
+added/removed exact-change counts, while omitting the actual changed-triple
+arrays unless `drift_detail="exact"` is requested.
 Treat `no_patch_subject_overlap` as "probably unrelated but still stale", not
 as permission to apply without review. Predicate and object overlap can be
 broad; anchor overlap means the drift touched a resource the staged revision

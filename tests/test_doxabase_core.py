@@ -1586,6 +1586,10 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "available in snapshot_drifts" in check.count_drifts[0].note
     assert len(check.snapshot_drifts) == 1
     assert check.snapshot_drifts[0].exact_changed_triples_available is True
+    assert check.snapshot_drifts[0].triples_added_since_snapshot_count == len(
+        check.snapshot_drifts[0].triples_added_since_snapshot
+    )
+    assert check.snapshot_drifts[0].triples_removed_since_snapshot_count == 0
     assert check.snapshot_drifts[0].triples_added_since_snapshot
     assert check.snapshot_drifts[0].triples_removed_since_snapshot == []
     assert (
@@ -1723,6 +1727,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert drift.snapshot_content_digest != drift.current_content_digest
     assert drift.exact_changed_triples_available is True
     assert drift.exact_changed_triples_included is True
+    assert drift.triples_added_since_snapshot_count == 1
+    assert drift.triples_removed_since_snapshot_count == 1
     assert drift.drift_relevance == "no_patch_subject_overlap"
     assert drift.patch_overlap_subjects == []
     assert drift.patch_overlap_predicates == []
@@ -1779,6 +1785,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert summary_drift.graph_role == "map"
     assert summary_drift.exact_changed_triples_available is True
     assert summary_drift.exact_changed_triples_included is False
+    assert summary_drift.triples_added_since_snapshot_count == 1
+    assert summary_drift.triples_removed_since_snapshot_count == 1
     assert summary_drift.triples_added_since_snapshot == []
     assert summary_drift.triples_removed_since_snapshot == []
     assert (
@@ -1802,6 +1810,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     exact_drift = exact_listed.application_snapshot_drifts[0]
     assert exact_drift.exact_changed_triples_available is True
     assert exact_drift.exact_changed_triples_included is True
+    assert exact_drift.triples_added_since_snapshot_count == 1
+    assert exact_drift.triples_removed_since_snapshot_count == 1
     assert [triple.object for triple in exact_drift.triples_added_since_snapshot] == [
         "Seed dataset renamed"
     ]

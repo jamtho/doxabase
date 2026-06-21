@@ -303,6 +303,8 @@ class StagedGraphSnapshotDrift:
     current_content_digest: str
     exact_changed_triples_available: bool
     exact_changed_triples_included: bool
+    triples_added_since_snapshot_count: int | None
+    triples_removed_since_snapshot_count: int | None
     drift_relevance: str
     patch_overlap_subjects: list[str]
     patch_overlap_predicates: list[str]
@@ -2399,6 +2401,12 @@ class DoxaBase:
                         drift.exact_changed_triples_available
                     ),
                     exact_changed_triples_included=False,
+                    triples_added_since_snapshot_count=(
+                        drift.triples_added_since_snapshot_count
+                    ),
+                    triples_removed_since_snapshot_count=(
+                        drift.triples_removed_since_snapshot_count
+                    ),
                     drift_relevance=drift.drift_relevance,
                     patch_overlap_subjects=drift.patch_overlap_subjects,
                     patch_overlap_predicates=drift.patch_overlap_predicates,
@@ -9099,6 +9107,16 @@ class DoxaBase:
                     exact_changed_triples_included=(
                         exact_changed_triples_available
                     ),
+                    triples_added_since_snapshot_count=(
+                        len(triples_added_since_snapshot)
+                        if exact_changed_triples_available
+                        else None
+                    ),
+                    triples_removed_since_snapshot_count=(
+                        len(triples_removed_since_snapshot)
+                        if exact_changed_triples_available
+                        else None
+                    ),
                     drift_relevance=drift_relevance,
                     patch_overlap_subjects=patch_overlap_subjects,
                     patch_overlap_predicates=patch_overlap_predicates,
@@ -12630,8 +12648,12 @@ class DoxaBase:
                             ),
                             self._markdown_table_cell(drift.current_content_digest),
                             str(drift.exact_changed_triples_available),
-                            str(len(drift.triples_added_since_snapshot)),
-                            str(len(drift.triples_removed_since_snapshot)),
+                            self._markdown_optional_count(
+                                drift.triples_added_since_snapshot_count
+                            ),
+                            self._markdown_optional_count(
+                                drift.triples_removed_since_snapshot_count
+                            ),
                             self._markdown_table_cell(drift.drift_relevance),
                             self._markdown_table_cell(
                                 ", ".join(drift.patch_overlap_subjects)

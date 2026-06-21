@@ -319,6 +319,12 @@ few useful gaps:
   `stale_resolution_state`, exports include `bundle_summary`, and
   `current_alternative_to` follows refreshed successors while preserving stored
   provenance.
+  A drift-overlap detail trial showed that `drift_detail="summary"` already
+  carries `drift_relevance` plus patch subject/predicate/object and
+  revision-anchor overlaps, so no intermediate `drift_detail="overlap"` mode is
+  needed. Summary rows now also carry added/removed exact-change counts while
+  still omitting the heavy changed-triple arrays unless exact detail is
+  requested.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

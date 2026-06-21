@@ -433,9 +433,10 @@ plus `stale_resolution_state` and optional staged apply-check status, summary,
 recommended resolution, validation-skipped reason, blockers, drift summaries,
 and suggested actions when `include_apply_checks=True`.
 `drift_detail="summary"` is the default list mode: snapshot drift rows keep
-counts and digests but omit exact changed-triple arrays. Use
-`drift_detail="exact"` when you need those arrays in the list response, or call
-`check_staged_revision_apply()` for a focused exact payload.
+counts, digests, drift relevance, overlap arrays, and added/removed exact-change
+counts but omit exact changed-triple arrays. Use `drift_detail="exact"` when you
+need those arrays in the list response, or call `check_staged_revision_apply()`
+for a focused exact payload.
 The drift row shape is the same as the apply-check shape, except list summary
 mode may set `exact_changed_triples_included=False` and leave changed-triple
 arrays empty.

@@ -121,25 +121,29 @@ Read `application_status`, `application_decision`, `application_can_apply`,
 `suggested_next_calls` first. They tell you whether the staged proposal is ready
 for review, already applied, blocked by graph drift, or needs fuller inspection.
 The default list call uses `drift_detail="summary"` so snapshot drift rows carry
-counts and digests without large exact changed-triple arrays. Then use
+counts, digests, drift relevance, overlap arrays, and added/removed exact-change
+counts without large exact changed-triple arrays. Then use
 `describe_staged_revision()`, `check_staged_revision_apply()`,
 `list_graph_revisions(drift_detail="exact")`, or an export helper when you need
-patch details, exact drift triples, validation diagnostics, or a human review
-bundle.
+patch details, the actual exact drift triples, validation diagnostics, or a
+human review bundle.
 
 In summary mode, a snapshot drift row can deliberately say:
 
 ```python
 exact_changed_triples_available=True
 exact_changed_triples_included=False
+triples_added_since_snapshot_count=2
+triples_removed_since_snapshot_count=1
 triples_added_since_snapshot=[]
 triples_removed_since_snapshot=[]
 ```
 
 That means exact changed triples exist, but the list row omitted them for
-scanning. It is not missing evidence; ask for exact detail when you need it.
-Snapshot drift rows can also include `drift_relevance`,
-`patch_overlap_subjects`, `patch_overlap_predicates`, `patch_overlap_objects`,
+scanning. The scalar counts still show omitted drift volume. It is not missing
+evidence; ask for exact detail when you need it. Snapshot drift rows can also
+include `drift_relevance`, `patch_overlap_subjects`,
+`patch_overlap_predicates`, `patch_overlap_objects`,
 and `revision_anchor_overlap`. Treat these as triage hints:
 `no_patch_subject_overlap` says exact drift did not touch the staged patch
 subjects, while predicate/object overlap may still reflect broad schema

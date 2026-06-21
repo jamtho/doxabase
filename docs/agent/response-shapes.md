@@ -934,8 +934,11 @@ decide whether `describe_staged_revision` is available. Use
 `list_graph_revisions` to discover reviewable or applied history before calling
 `describe_graph_revision` or `describe_staged_revision` on a specific IRI.
 `drift_detail="summary"` is the default and omits exact changed-triple arrays
-from list-row snapshot drift entries; use `drift_detail="exact"` or
-`check_staged_revision_apply()` when those arrays should be included.
+from list-row snapshot drift entries. Summary rows still include
+`drift_relevance`, all overlap arrays, and added/removed exact-change counts
+when exact drift is available. Use `drift_detail="exact"` or
+`check_staged_revision_apply()` when the actual changed-triple arrays should be
+included.
 
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:
@@ -1124,6 +1127,8 @@ snapshot rows exist, exact target graph additions and removals are available in
 triple count, current triple count, staged snapshot digest, current graph digest,
 whether exact changed triples are available, whether they are included in this
 response,
+`triples_added_since_snapshot_count`,
+`triples_removed_since_snapshot_count`,
 `drift_relevance`, `patch_overlap_subjects`, `patch_overlap_predicates`,
 `patch_overlap_objects`, `revision_anchor_overlap`,
 `triples_added_since_snapshot`, and `triples_removed_since_snapshot`.
@@ -1140,7 +1145,9 @@ time, even when triple counts still match. Older revisions can report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
 Revision-list summary mode may report `exact_changed_triples_available=True`
 and `exact_changed_triples_included=False`; that means exact triples exist but
-were intentionally omitted from the list response.
+were intentionally omitted from the list response. The added/removed count
+fields still report how many exact triples were omitted when those counts are
+known.
 Each changed-triple item carries exact raw RDF fields (`subject`, `subject_kind`,
 `predicate`, `object`, `object_kind`, `datatype`, `lang`) plus scan-friendly
 fields (`subject_curie`, `subject_display`, `predicate_curie`,
