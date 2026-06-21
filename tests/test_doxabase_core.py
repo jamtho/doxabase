@@ -6187,6 +6187,69 @@ def test_profile_summary_surfaces_run_candidates_in_mixed_profile_history(
     assert run_candidate.shared_by_all_returned_profiles is False
 
 
+def test_profile_run_candidates_are_count_ranked_and_ignore_singletons(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence_a = "https://example.test/project#EvidenceA"
+    evidence_b = "https://example.test/project#EvidenceB"
+    evidence_c = "https://example.test/project#EvidenceC"
+    evidence_singleton = "https://example.test/project#EvidenceSingleton"
+    status_column = "https://example.test/project#OrdersStatus"
+    amount_column = "https://example.test/project#OrdersAmount"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(status_column, column_name="status", table_iri=dataset)
+    db.record_map_column(amount_column, column_name="amount", table_iri=dataset)
+    for index in range(3):
+        db.record_observation(
+            summary=f"A-backed profile {index}",
+            observation_type="profile",
+            observed_asset=dataset,
+            evidence_summary="Profile pass A.",
+            evidence_iri=evidence_a,
+        )
+    for index in range(2):
+        db.record_observation(
+            summary=f"B-backed profile {index}",
+            observation_type="profile",
+            observed_asset=dataset,
+            observed_column=status_column,
+            evidence_summary="Profile pass B.",
+            evidence_iri=evidence_b,
+        )
+        db.record_observation(
+            summary=f"C-backed profile {index}",
+            observation_type="profile",
+            observed_asset=dataset,
+            observed_column=amount_column,
+            evidence_summary="Profile pass C.",
+            evidence_iri=evidence_c,
+        )
+    db.record_observation(
+        summary="One-off singleton profile",
+        observation_type="profile",
+        observed_asset=dataset,
+        evidence_summary="One-off profile.",
+        evidence_iri=evidence_singleton,
+    )
+
+    candidates = db.describe_dataset(dataset).profile_summary.profile_run_candidates
+
+    assert [
+        (candidate.evidence_iri, candidate.returned_profile_count)
+        for candidate in candidates
+    ] == [
+        (evidence_a, 3),
+        (evidence_b, 2),
+        (evidence_c, 2),
+    ]
+    assert all(
+        not candidate.shared_by_all_returned_profiles for candidate in candidates
+    )
+
+
 def test_record_profile_bundle_rejects_unknown_column_fields(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
