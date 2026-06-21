@@ -1473,10 +1473,12 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.snapshot_drifts[0].triples_removed_since_snapshot == []
     assert (
         check.snapshot_drifts[0].drift_relevance
-        == "no_patch_subject_overlap"
+        == "patch_object_overlap"
     )
     assert check.snapshot_drifts[0].patch_overlap_subjects == []
     assert str(RDF.type) in check.snapshot_drifts[0].patch_overlap_predicates
+    assert check.snapshot_drifts[0].patch_overlap_objects == [RC + "Dataset"]
+    assert check.snapshot_drifts[0].revision_anchor_overlap == []
     assert "does not touch staged patch subjects" in (
         check.snapshot_drifts[0].note
     )
@@ -1607,6 +1609,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert drift.drift_relevance == "no_patch_subject_overlap"
     assert drift.patch_overlap_subjects == []
     assert drift.patch_overlap_predicates == []
+    assert drift.patch_overlap_objects == []
+    assert drift.revision_anchor_overlap == []
     assert [triple.object for triple in drift.triples_added_since_snapshot] == [
         "Seed dataset renamed"
     ]
@@ -1634,7 +1638,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
         "| Graph | Snapshot stored count | Current count | "
         "Snapshot digest | Current digest | Exact changed triples | "
         "Added since snapshot | Removed since snapshot | Drift relevance | "
-        "Patch subject overlap | Patch predicate overlap | Note |"
+        "Patch subject overlap | Patch predicate overlap | Patch object overlap | "
+        "Revision anchor overlap | Note |"
     ) in export_text
     assert "| map | 2 | 2 |" in export_text
     assert "| True | 1 | 1 |" in export_text
@@ -1663,6 +1668,8 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
         summary_drift.drift_relevance
         == "no_patch_subject_overlap"
     )
+    assert summary_drift.patch_overlap_objects == []
+    assert summary_drift.revision_anchor_overlap == []
     assert "omitted from this revision list row" in summary_drift.note
     assert "are included" not in summary_drift.note
 
@@ -1681,6 +1688,90 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert [triple.object for triple in exact_drift.triples_added_since_snapshot] == [
         "Seed dataset renamed"
     ]
+
+
+def test_apply_check_reports_object_and_anchor_snapshot_drift_overlap(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:OperationalIdentifier a rdfs:Class ;
+            rdfs:label "Operational identifier" ;
+            rdfs:comment "Identifier assignments are operational." .
+        """,
+        graph="ontology",
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage provisional radio identity class",
+        rationale=(
+            "The staged class uses OperationalIdentifier as a superclass and "
+            "anchor, so same-count drift on that term should be visible."
+        ),
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:ProvisionalRadioIdentity a rdfs:Class ;
+                        rdfs:subClassOf ex:OperationalIdentifier .
+                """,
+            }
+        ],
+        revision_anchors=["https://example.test/project#OperationalIdentifier"],
+    )
+    same_count_drift = db.stage_graph_revision(
+        summary="Refresh operational identifier comment",
+        rationale="Replace one ontology comment without changing graph count.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:OperationalIdentifier
+                        rdfs:comment "Identifier assignments are operational, not durable identity proof." .
+                """,
+            }
+        ],
+        removals=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:OperationalIdentifier
+                        rdfs:comment "Identifier assignments are operational." .
+                """,
+            }
+        ],
+    )
+    db.apply_staged_revision(same_count_drift.revision_iri)
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.blocking_reasons == ["target_digest_drift"]
+    assert check.count_drifts == []
+    drift = check.snapshot_drifts[0]
+    assert drift.snapshot_triple_count == drift.current_triple_count
+    assert drift.drift_relevance == "patch_object_and_anchor_overlap"
+    assert drift.patch_overlap_subjects == []
+    assert drift.patch_overlap_predicates == []
+    assert drift.patch_overlap_objects == [
+        "https://example.test/project#OperationalIdentifier"
+    ]
+    assert drift.revision_anchor_overlap == [
+        "https://example.test/project#OperationalIdentifier"
+    ]
+    assert "patch objects and revision anchors" in drift.note
 
 
 def test_apply_check_resolution_mentions_count_and_digest_drift(
@@ -1827,6 +1918,9 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     restaged_description = db.describe_staged_revision(restaged.revision_iri)
     assert restaged_description.restaged_from is not None
     assert restaged_description.restaged_from.iri == staged.revision_iri
+    assert restaged_description.restage_reason is not None
+    assert "prior status conflict" in restaged_description.restage_reason
+    assert "blockers target_count_drift" in restaged_description.restage_reason
     assert restaged_description.review_note == (
         "Original note should travel with the refreshed proposal."
     )
@@ -1836,6 +1930,9 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert "Added since snapshot:" in (restaged_description.rationale or "")
     assert "OtherDataset" in (restaged_description.rationale or "")
     assert "Original staged rationale:" in (restaged_description.rationale or "")
+    export_path = tmp_path / "restaged-review.md"
+    db.export_staged_revision(restaged.revision_iri, export_path)
+    assert "- Reason: " in export_path.read_text(encoding="utf-8")
 
     fresh_check = db.check_staged_revision_apply(restaged.revision_iri)
     assert fresh_check.can_apply is True

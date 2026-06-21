@@ -49,10 +49,12 @@ helper in the current API.
 When running a trial through Codex sub-agents, keep the harness explicit:
 
 - require a final thread report and a backup report file under `/tmp`;
-- give a tight timeout and a small, concrete task before broad exploration;
+- give the agent a concrete task and artifact contract before broad
+  exploration;
 - close completed or failed sub-agents so they do not occupy agent slots;
-- if a sub-agent appears silent, interrupt once and ask for immediate status
-  before closing it;
+- let long-running sub-agents finish unless there is evidence of looping,
+  repeated command failure, or a real blocker. Silence can be genuine reasoning
+  time on subtle graph-workflow trials;
 - treat a missing final or backup report as a trial failure even if a scratch
   capsule exists; inspect the capsule for partial work, but record that the
   agent did not complete the handoff loop.
@@ -87,7 +89,9 @@ Use `DoxaBase.create(path, overwrite=True)` for the capsule inside that run
 directory.
 
 Do not modify the main project capsule. Do not commit trial artifacts unless the
-user explicitly wants them preserved in git.
+user explicitly wants them preserved in git, or they contain a distilled lesson
+that future agents can usefully learn from. Prefer tracked summaries in docs
+over raw scratch capsules, generated SQLite files, or routine run logs.
 
 Avoid secrets by default:
 
@@ -194,6 +198,12 @@ Look for these signals:
 Good trials create a loop: run the agent, absorb the product signal, improve the
 tool, and run another bounded trial.
 
+For ongoing workflow-improvement work, prefer several trials over speculation.
+After a useful trial, implement the sensible smallest justified fix, update
+tests and docs, run focused and full verification, commit the coherent change,
+and continue. Small fixes are preferred, but a larger change is appropriate when
+that is the practical way out of a pathological state.
+
 ## Product Signals From Recent Trials
 
 The June 2026 cold-start, wrong-hunch, and AIS generalisation trials surfaced a
@@ -278,6 +288,16 @@ few useful gaps:
   and analysis warnings now carry a `domain` field so agents can read severity
   in the right lane. A retest confirmed the new affordances and also showed
   that plain resource-field names should error with a concrete CURIE/IRI hint.
+- Staged-revision trial loops in the rebuilt yolo container confirmed that
+  patient sub-agent runs can surface real product signal. One account-segment
+  trial showed that restaged revisions needed a compact `restage_reason` in
+  `describe_staged_revision` and Markdown exports. A same-count ontology drift
+  trial then showed that drift relevance also needed patch-object and
+  revision-anchor overlap fields, because a changed superclass/anchor can be
+  semantically relevant even when staged patch subjects are untouched. Remaining
+  useful pressure points include a public same-count graph replacement helper
+  for trials and a short "why stale" headline near the current apply-check
+  section of restaged exports.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

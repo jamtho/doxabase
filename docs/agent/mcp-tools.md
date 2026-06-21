@@ -416,7 +416,9 @@ anchors, review note/recommendation, patch payloads, before/after count
 previews, validation status, structured SHACL diagnostics such as focus node,
 result path, constraint, and messages, optional `judgement_panel`, and `impacts`
 review context. `restaged_from` is present when this staged revision was created
-by replaying an older stale staged proposal against current graph state.
+by replaying an older stale staged proposal against current graph state;
+`restage_reason` gives the compact reason when it can be derived from the
+recorded rationale.
 `judgement_panel` is present for simple single-assertion `map`
 changes that still replay cleanly; it is absent for complex or stale staged
 revisions. Impact
@@ -448,10 +450,12 @@ target graph. `snapshot_drifts` records staged/current `sha256:<hex>` digest
 mismatches, including same-count graph changes. For revisions staged with the
 current runtime, it also includes exact triples added to and removed from the
 target graph since the stored snapshot. It also includes `drift_relevance`,
-`patch_overlap_subjects`, and `patch_overlap_predicates` so agents can separate
-"no staged patch subject changed" from stronger overlaps. Predicate overlap can
-be broad, so it is a review hint rather than an apply decision. Older revisions
-may report
+`patch_overlap_subjects`, `patch_overlap_predicates`, `patch_overlap_objects`,
+and `revision_anchor_overlap` so agents can separate "no staged patch subject
+changed" from stronger overlaps. Predicate and object overlap can be broad, so
+they are review hints rather than apply decisions. Anchor overlap means exact
+drift touched a resource the staged revision named as review context. Older
+revisions may report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
 Suggested actions are ordered review-first, so inspect/export suggestions
 come before mutation calls such as apply or restage. Use it before

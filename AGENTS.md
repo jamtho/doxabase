@@ -26,6 +26,33 @@ something, or generally heading in a direction that may not serve the project.
 Avoid turning this guide into a rigid checklist. The point is to help humans and
 agents think together with less friction.
 
+## Autonomous Trial Loop
+
+When the user has asked for ongoing DoxaBase workflow improvement, work
+autonomously in a trial/improvement loop:
+
+1. Run field trials, usually with sub-agents, and prefer several trials over
+   purely theoretical analysis.
+2. Let long-running sub-agents finish unless there is evidence of looping,
+   repeated command failure, or a real blocker. Quiet model time can be useful
+   reasoning time.
+3. After each useful trial, implement the sensible smallest justified fix. Small
+   is preferred, but make a larger move when that is the practical way out of a
+   pathological state.
+4. Update tests and agent docs with the behavior or lesson the trial revealed.
+5. Run focused checks first, then full `uv run pytest`,
+   `uv run python tools/validate_rdf.py`, and `git diff --check`.
+6. Commit coherent verified changes on a `codex/...` branch when the work is
+   ready, with a rationale-focused commit message.
+7. Preserve only trial artifacts that future agents can usefully learn from.
+   Raw scratch capsules and routine run logs should stay local; distilled trial
+   lessons belong in tracked docs when they change how agents should work.
+
+Pause and report before broad storage migrations, public API breaks, surprising
+container data exposure, or large semantic direction changes. Read-only data
+available in the container is generally usable, but do not print anything marked
+as secret or obviously credential-like.
+
 ## Start Here
 
 Read these first when arriving cold:

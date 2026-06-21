@@ -416,7 +416,8 @@ documentation from a subject that also has semantic
 changes. Caveat impact values include the caveat description, impact, and
 severity inline when those facts are known. `restaged_from` is present when the
 staged revision was created by replaying an older stale proposal against current
-graph state.
+graph state. `restage_reason` gives a compact "why this was restaged" summary
+when it can be derived from the recorded rationale.
 `export_staged_revision()` writes a Markdown review bundle with the current
 apply-check status, diagnostics, and impact review before patch payloads. Stale
 exports include conflict status, count or digest drift, validation-skipped reason, and
@@ -450,8 +451,11 @@ graph. `snapshot_drifts` gives staged/current `sha256:<hex>` digest mismatches,
 including same-count graph changes. For new revisions, `snapshot_drifts` also
 includes exact triples added to and removed from the target graph since the
 stored snapshot, a `drift_relevance` hint, and any patch-subject or
-patch-predicate overlaps. `no_patch_subject_overlap` is useful triage context,
-not semantic approval to apply. Older revisions may report
+patch-predicate, patch-object, or revision-anchor overlaps.
+`no_patch_subject_overlap` is useful triage context, not semantic approval to
+apply. Predicate and object overlap can be broad; anchor overlap means exact
+drift touched a resource the staged proposal named as review context. Older
+revisions may report
 `exact_changed_triples_available=False` if no snapshot rows were stored.
 Suggested actions are ordered review-first; mutation calls come after
 inspection/export suggestions.

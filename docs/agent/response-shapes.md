@@ -925,6 +925,7 @@ description.review_note
 description.review_recommendation
 description.alternative_to
 description.restaged_from
+description.restage_reason
 description.changed_graphs
 description.included_graphs
 description.created_at
@@ -962,7 +963,9 @@ not as semantic proof that a graph change is safe.
 `description.alternative_to` means this staged revision competes with or refines
 another revision. `description.restaged_from` means this staged revision replayed
 an older stale proposal against current graph state; it is provenance for a
-graph-state drift repair, not a competing framing.
+graph-state drift repair, not a competing framing. `description.restage_reason`
+is a compact human-readable summary of why the restage happened when that can be
+derived from the recorded rationale.
 
 `description.judgement_panel` is present for simple single-assertion `map`
 staged changes that still replay cleanly against current graph state. It has
@@ -1090,15 +1093,18 @@ triple count, current triple count, staged snapshot digest, current graph digest
 whether exact changed triples are available, whether they are included in this
 response,
 `drift_relevance`, `patch_overlap_subjects`, `patch_overlap_predicates`,
+`patch_overlap_objects`, `revision_anchor_overlap`,
 `triples_added_since_snapshot`, and `triples_removed_since_snapshot`.
 `drift_relevance` is a conservative hint, not an auto-merge decision. Current
 values include `no_patch_subject_overlap`, `patch_subject_overlap`,
-`patch_subject_and_predicate_overlap`, `unknown_no_exact_diff`, and
-`unknown_no_patch_terms`. Predicate overlap is reported separately because broad
-predicates such as `rdf:type` or project identity predicates can overlap even
-when exact drift is on different subjects. A digest mismatch means the target
-graph state is not identical to the state at staging time, even when triple
-counts still match. Older revisions can report
+`patch_subject_and_predicate_overlap`, `patch_object_overlap`,
+`patch_object_and_anchor_overlap`, `revision_anchor_overlap`,
+`unknown_no_exact_diff`, and `unknown_no_patch_terms`. Predicate and object
+overlap can be broad, for example `rdf:type` or `rc:Dataset`, so read them as
+review hints. Anchor overlap means drift touched one of the staged revision's
+review anchors even if the staged patch subjects were untouched. A digest
+mismatch means the target graph state is not identical to the state at staging
+time, even when triple counts still match. Older revisions can report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
 Revision-list summary mode may report `exact_changed_triples_available=True`
 and `exact_changed_triples_included=False`; that means exact triples exist but

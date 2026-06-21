@@ -287,6 +287,8 @@ class StagedGraphSnapshotDrift:
     drift_relevance: str
     patch_overlap_subjects: list[str]
     patch_overlap_predicates: list[str]
+    patch_overlap_objects: list[str]
+    revision_anchor_overlap: list[str]
     triples_added_since_snapshot: list[GraphTripleDescription]
     triples_removed_since_snapshot: list[GraphTripleDescription]
     note: str
@@ -387,6 +389,14 @@ class _StagedRevisionApplicationPreview:
     check: StagedRevisionApplyCheck
     parsed_patches: list[tuple[StagedGraphPatchDescription, Graph]]
     preview_graphs: dict[str, Graph]
+
+
+@dataclass(frozen=True)
+class _StagedRevisionDriftTerms:
+    patch_subjects: set[str]
+    patch_predicates: set[str]
+    patch_objects: set[str]
+    revision_anchors: set[str]
 
 
 @dataclass(frozen=True)
@@ -525,6 +535,7 @@ class StagedGraphRevisionDescription:
     review_recommendation: str | None
     alternative_to: ResourceSummary | None
     restaged_from: ResourceSummary | None
+    restage_reason: str | None
     changed_graphs: list[str]
     included_graphs: list[str]
     created_at: str | None
@@ -2243,6 +2254,8 @@ class DoxaBase:
                     drift_relevance=drift.drift_relevance,
                     patch_overlap_subjects=drift.patch_overlap_subjects,
                     patch_overlap_predicates=drift.patch_overlap_predicates,
+                    patch_overlap_objects=drift.patch_overlap_objects,
+                    revision_anchor_overlap=drift.revision_anchor_overlap,
                     triples_added_since_snapshot=[],
                     triples_removed_since_snapshot=[],
                     note=note,
@@ -2308,6 +2321,16 @@ class DoxaBase:
             "rc:restagesRevision",
         )
         all_lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        restaged_from = (
+            self._resource_summary(all_lookup_graphs, restaged_from_iri)
+            if restaged_from_iri is not None
+            else None
+        )
+        rationale = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:revisionRationale",
+        )
         snapshots = self._graph_revision_snapshots(revision_iri, data_graphs)
         included_graphs = self._objects(data_graphs, revision_iri, "rc:includedGraph")
         if not included_graphs:
@@ -2336,7 +2359,7 @@ class DoxaBase:
             ),
             revision_stance=revision_stance,
             revision_stance_label=self._label_for_resource(revision_stance),
-            rationale=self._first_object(data_graphs, revision_iri, "rc:revisionRationale"),
+            rationale=rationale,
             review_note=self._first_object(data_graphs, revision_iri, "rc:reviewNote"),
             review_recommendation=self._first_object(
                 data_graphs,
@@ -2348,10 +2371,10 @@ class DoxaBase:
                 if alternative_to_iri is not None
                 else None
             ),
-            restaged_from=(
-                self._resource_summary(all_lookup_graphs, restaged_from_iri)
-                if restaged_from_iri is not None
-                else None
+            restaged_from=restaged_from,
+            restage_reason=self._staged_revision_restage_reason(
+                restaged_from=restaged_from,
+                rationale=rationale,
             ),
             changed_graphs=self._objects(data_graphs, revision_iri, "rc:changedGraph"),
             included_graphs=included_graphs,
@@ -2408,6 +2431,58 @@ class DoxaBase:
         if judgement_panel is not None:
             description = replace(description, judgement_panel=judgement_panel)
         return description
+
+    def _staged_revision_restage_reason(
+        self,
+        *,
+        restaged_from: ResourceSummary | None,
+        rationale: str | None,
+    ) -> str | None:
+        if restaged_from is None:
+            return None
+        source_label = restaged_from.label or restaged_from.iri
+        fallback = f"Restaged from {source_label}; see rationale for details."
+        if not rationale:
+            return fallback
+
+        lines = [line.strip() for line in rationale.splitlines()]
+        status = self._restage_rationale_field(lines, "- status:")
+        decision = self._restage_rationale_field(lines, "- decision:")
+        blockers = self._restage_rationale_field(lines, "- blocking reasons:")
+        summary = self._restage_rationale_field(lines, "- summary:")
+
+        if not any([status, decision, blockers, summary]):
+            first_line = next((line for line in lines if line), None)
+            if first_line:
+                return self._compact_restage_reason(first_line)
+            return fallback
+
+        parts = [f"Restaged from {source_label}"]
+        if status:
+            parts.append(f"after prior status {status}")
+        if decision:
+            parts.append(f"decision {decision}")
+        if blockers and blockers != "(none)":
+            parts.append(f"blockers {blockers}")
+        reason = "; ".join(parts) + "."
+        if summary:
+            reason = f"{reason} {summary}"
+        return self._compact_restage_reason(reason)
+
+    @staticmethod
+    def _restage_rationale_field(lines: Iterable[str], prefix: str) -> str | None:
+        for line in lines:
+            if line.startswith(prefix):
+                value = line[len(prefix) :].strip()
+                return value or None
+        return None
+
+    @staticmethod
+    def _compact_restage_reason(reason: str, *, limit: int = 420) -> str:
+        compact = " ".join(reason.split())
+        if len(compact) <= limit:
+            return compact
+        return compact[: limit - 3].rstrip() + "..."
 
     def describe_pattern(
         self,
@@ -8838,6 +8913,8 @@ class DoxaBase:
                 drift_relevance,
                 patch_overlap_subjects,
                 patch_overlap_predicates,
+                patch_overlap_objects,
+                revision_anchor_overlap,
                 relevance_note,
             ) = self._staged_snapshot_drift_relevance(
                 exact_changed_triples_available=exact_changed_triples_available,
@@ -8860,6 +8937,8 @@ class DoxaBase:
                     drift_relevance=drift_relevance,
                     patch_overlap_subjects=patch_overlap_subjects,
                     patch_overlap_predicates=patch_overlap_predicates,
+                    patch_overlap_objects=patch_overlap_objects,
+                    revision_anchor_overlap=revision_anchor_overlap,
                     triples_added_since_snapshot=triples_added_since_snapshot,
                     triples_removed_since_snapshot=triples_removed_since_snapshot,
                     note=note,
@@ -8870,8 +8949,9 @@ class DoxaBase:
     def _staged_revision_patch_terms_by_graph(
         self,
         staged: StagedGraphRevisionDescription,
-    ) -> dict[str, tuple[set[str], set[str]]]:
-        terms_by_graph: dict[str, tuple[set[str], set[str]]] = {}
+    ) -> dict[str, _StagedRevisionDriftTerms]:
+        terms_by_graph: dict[str, _StagedRevisionDriftTerms] = {}
+        revision_anchors = {anchor.iri for anchor in staged.revision_anchors}
         for patch in staged.patches:
             if patch.target_graph is None:
                 continue
@@ -8881,12 +8961,17 @@ class DoxaBase:
                 continue
             graph_terms = terms_by_graph.setdefault(
                 patch.target_graph,
-                (set(), set()),
+                _StagedRevisionDriftTerms(
+                    patch_subjects=set(),
+                    patch_predicates=set(),
+                    patch_objects=set(),
+                    revision_anchors=set(revision_anchors),
+                ),
             )
-            patch_subjects, patch_predicates = graph_terms
-            for subject, predicate, _object in patch_graph:
-                patch_subjects.add(str(subject))
-                patch_predicates.add(str(predicate))
+            for subject, predicate, object_node in patch_graph:
+                graph_terms.patch_subjects.add(str(subject))
+                graph_terms.patch_predicates.add(str(predicate))
+                graph_terms.patch_objects.add(str(object_node))
         return terms_by_graph
 
     def _staged_snapshot_drift_relevance(
@@ -8895,11 +8980,13 @@ class DoxaBase:
         exact_changed_triples_available: bool,
         triples_added_since_snapshot: list[GraphTripleDescription],
         triples_removed_since_snapshot: list[GraphTripleDescription],
-        patch_terms: tuple[set[str], set[str]] | None,
-    ) -> tuple[str, list[str], list[str], str]:
+        patch_terms: _StagedRevisionDriftTerms | None,
+    ) -> tuple[str, list[str], list[str], list[str], list[str], str]:
         if not exact_changed_triples_available:
             return (
                 "unknown_no_exact_diff",
+                [],
+                [],
                 [],
                 [],
                 "Drift relevance to the staged patch cannot be classified "
@@ -8910,24 +8997,31 @@ class DoxaBase:
                 "unknown_no_patch_terms",
                 [],
                 [],
+                [],
+                [],
                 "Drift relevance to the staged patch cannot be classified "
                 "because patch terms were unavailable.",
             )
 
-        patch_subjects, patch_predicates = patch_terms
         changed_triples = [
             *triples_added_since_snapshot,
             *triples_removed_since_snapshot,
         ]
         changed_subjects = {triple.subject for triple in changed_triples}
         changed_predicates = {triple.predicate for triple in changed_triples}
-        subject_overlap = sorted(patch_subjects & changed_subjects)
-        predicate_overlap = sorted(patch_predicates & changed_predicates)
+        changed_objects = {triple.object for triple in changed_triples}
+        changed_terms = changed_subjects | changed_predicates | changed_objects
+        subject_overlap = sorted(patch_terms.patch_subjects & changed_subjects)
+        predicate_overlap = sorted(patch_terms.patch_predicates & changed_predicates)
+        object_overlap = sorted(patch_terms.patch_objects & changed_terms)
+        anchor_overlap = sorted(patch_terms.revision_anchors & changed_terms)
         if subject_overlap and predicate_overlap:
             return (
                 "patch_subject_and_predicate_overlap",
                 subject_overlap,
                 predicate_overlap,
+                object_overlap,
+                anchor_overlap,
                 "Exact drift overlaps the staged patch subjects and predicates; "
                 "review carefully before restaging.",
             )
@@ -8936,13 +9030,50 @@ class DoxaBase:
                 "patch_subject_overlap",
                 subject_overlap,
                 predicate_overlap,
+                object_overlap,
+                anchor_overlap,
                 "Exact drift overlaps the staged patch subjects; review "
                 "carefully before restaging.",
+            )
+        if object_overlap and anchor_overlap:
+            return (
+                "patch_object_and_anchor_overlap",
+                [],
+                predicate_overlap,
+                object_overlap,
+                anchor_overlap,
+                "Exact drift does not touch staged patch subjects, but it does "
+                "touch staged patch objects and revision anchors; review "
+                "semantic relevance before restaging.",
+            )
+        if object_overlap:
+            return (
+                "patch_object_overlap",
+                [],
+                predicate_overlap,
+                object_overlap,
+                anchor_overlap,
+                "Exact drift does not touch staged patch subjects, but it does "
+                "touch objects used by the staged patch; review semantic "
+                "relevance before restaging.",
+            )
+        if anchor_overlap:
+            return (
+                "revision_anchor_overlap",
+                [],
+                predicate_overlap,
+                object_overlap,
+                anchor_overlap,
+                "Exact drift does not touch staged patch subjects, but it does "
+                "touch revision anchors; review semantic relevance before "
+                "restaging.",
             )
         return (
             "no_patch_subject_overlap",
             [],
             predicate_overlap,
+            [],
+            [],
             "Exact drift does not touch staged patch subjects. Predicate "
             "overlap is reported separately and may reflect broad schema "
             "activity; DoxaBase still blocks apply until the proposal is "
@@ -11868,6 +11999,8 @@ class DoxaBase:
                     ),
                 ]
             )
+            if description.restage_reason is not None:
+                lines.append(f"- Reason: {description.restage_reason}")
         if description.revision_anchors:
             lines.extend(["", "## Revision Anchors", ""])
             for anchor in description.revision_anchors:
@@ -12117,9 +12250,10 @@ class DoxaBase:
                         "Snapshot digest | Current digest | Exact changed triples | "
                         "Added since snapshot | Removed since snapshot | "
                         "Drift relevance | Patch subject overlap | "
-                        "Patch predicate overlap | Note |"
+                        "Patch predicate overlap | Patch object overlap | "
+                        "Revision anchor overlap | Note |"
                     ),
-                    "|---|---:|---:|---|---|---|---:|---:|---|---|---|---|",
+                    "|---|---:|---:|---|---|---|---:|---:|---|---|---|---|---|---|",
                 ]
             )
             for drift in check.snapshot_drifts:
@@ -12144,6 +12278,14 @@ class DoxaBase:
                             ),
                             self._markdown_table_cell(
                                 ", ".join(drift.patch_overlap_predicates)
+                                or "(none)"
+                            ),
+                            self._markdown_table_cell(
+                                ", ".join(drift.patch_overlap_objects)
+                                or "(none)"
+                            ),
+                            self._markdown_table_cell(
+                                ", ".join(drift.revision_anchor_overlap)
                                 or "(none)"
                             ),
                             self._markdown_table_cell(drift.note),
