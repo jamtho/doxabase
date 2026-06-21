@@ -523,6 +523,7 @@ profile_summary.mapped_profiled_column_count
 profile_summary.evidence_iris
 profile_summary.evidence_profile_counts
 profile_summary.shared_evidence_iris
+profile_summary.profile_run_candidates
 profile_summary.handoff_note
 ```
 
@@ -534,8 +535,12 @@ how many returned profile observations link to each evidence IRI.
 profile observation in the bounded response; it can be empty when older or
 unrelated returned profiles are mixed with a newer shared-evidence bundle. In
 that mixed-history case, use `evidence_profile_counts` to spot evidence IRIs
-that support several profiles from the same run. `handoff_note` is a compact
-reading cue for profile-only handoffs: profile lore is observed evidence, while
+that support several profiles from the same run. `profile_run_candidates`
+contains the count-ranked evidence IRIs that support more than one returned
+profile; each candidate has `evidence_iri`, `returned_profile_count`, and
+`shared_by_all_returned_profiles`. It is a bounded response convenience, not a
+separate persisted profile-run node. `handoff_note` is a compact reading cue for
+profile-only handoffs: profile lore is observed evidence, while
 storage/path/layout warnings remain physical query-planning metadata gaps.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility

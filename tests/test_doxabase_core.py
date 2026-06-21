@@ -6065,6 +6065,20 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         shared_evidence: 3,
     }
     assert description.profile_summary.shared_evidence_iris == [shared_evidence]
+    assert [
+        candidate.evidence_iri
+        for candidate in description.profile_summary.profile_run_candidates
+    ] == [shared_evidence]
+    assert (
+        description.profile_summary.profile_run_candidates[0].returned_profile_count
+        == 3
+    )
+    assert (
+        description.profile_summary.profile_run_candidates[
+            0
+        ].shared_by_all_returned_profiles
+        is True
+    )
     assert "3 profile observation(s)" in description.profile_summary.handoff_note
     assert "one profiler run" in description.profile_summary.handoff_note
     assert len(description.profile_observations) == 1
@@ -6096,6 +6110,69 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
 
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text
+
+
+def test_profile_summary_surfaces_run_candidates_in_mixed_profile_history(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    older_evidence = "https://example.test/project#OlderProfileEvidence"
+    newer_evidence = "https://example.test/project#NewerProfileRunEvidence"
+
+    db.record_dataset_profile(
+        dataset,
+        summary="Older dataset-only profile result.",
+        evidence_summary="Older one-off profiling pass.",
+        evidence_sources=["test://orders-profile-old"],
+        evidence_iri=older_evidence,
+        row_count=80,
+        map_label="Orders",
+        is_table=True,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Newer profile bundle over dataset and columns.",
+        evidence_summary="Newer shared profiling pass.",
+        evidence_sources=["test://orders-profile-new"],
+        shared_evidence_iri=newer_evidence,
+        sample_size=100,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table profiling query.",
+        row_count=100,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": "https://example.test/project#OrdersStatus",
+                "column_name": "status",
+                "summary": "Status values were profiled.",
+                "distinct_count": 3,
+            },
+            {
+                "column_iri": "https://example.test/project#OrdersAmount",
+                "column_name": "amount",
+                "summary": "Amount values were profiled.",
+                "null_count": 0,
+            },
+        ],
+    )
+
+    description = db.describe_dataset(dataset)
+
+    assert description.profile_summary.returned_profile_count == 4
+    assert description.profile_summary.evidence_profile_counts == {
+        newer_evidence: 3,
+        older_evidence: 1,
+    }
+    assert description.profile_summary.shared_evidence_iris == []
+    assert [
+        candidate.evidence_iri
+        for candidate in description.profile_summary.profile_run_candidates
+    ] == [newer_evidence]
+    run_candidate = description.profile_summary.profile_run_candidates[0]
+    assert run_candidate.returned_profile_count == 3
+    assert run_candidate.shared_by_all_returned_profiles is False
 
 
 def test_record_profile_bundle_rejects_unknown_column_fields(tmp_path: Path) -> None:

@@ -114,6 +114,9 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 - Staged patch blocked by count drift or digest drift but still semantically
   useful: use `restage_staged_revision`, then check and review the refreshed
   proposal.
+- Several stale staged patches: use `restage_staged_revisions(dry_run=True)`
+  first to classify the batch without creating successors, then run the real
+  batch restage for rows you still want to refresh.
 - Unknown staged/applied/history record: use `list_graph_revisions`, then
   inspect a specific result with `describe_graph_revision` or
   `describe_staged_revision`.
@@ -135,10 +138,10 @@ For Codex sub-agent field trials, prefer the repo virtualenv directly:
 ./.venv/bin/python
 ```
 
-When running a scratch script from `/tmp`, set:
+When running a scratch script from `/tmp` or `.codex-runs/...`, set:
 
 ```bash
-PYTHONPATH=/home/james/github.com/jamtho/doxybase
+PYTHONPATH=/work/doxybase
 ```
 
 In Python, use `DoxaBase.create(path, overwrite=True)` to create or replace a

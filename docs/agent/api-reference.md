@@ -195,6 +195,9 @@ caveats and is intentionally separate from direct `caveats`.
 bounded dataset description, split across dataset-level, mapped-column, and
 unmapped-column profile lore. It also rolls up profile evidence IRIs and lists
 `shared_evidence_iris` that appear on every returned profile observation.
+`profile_summary.profile_run_candidates` lists evidence IRIs that support more
+than one returned profile, sorted by returned profile count, so mixed profile
+history can still reveal likely profiler runs.
 `profile_summary.handoff_note` gives a short reading cue for profile-only
 handoffs: profile lore is observed evidence, while storage/path/layout warnings
 remain physical query-planning metadata gaps.
@@ -281,6 +284,7 @@ observation has evidence, the same evidence is linked to the pattern.
 `profile_summary.shared_evidence_iris` means an evidence IRI appears on every
 returned profile observation in the bounded `describe_dataset()` response. When
 older profile history is mixed with a newer shared-evidence bundle, inspect
+`profile_summary.profile_run_candidates` or
 `profile_summary.evidence_profile_counts` to see which evidence IRIs support
 several profiles from one profiler run.
 If a capsule only contains profile lore, `describe_dataset()` may still report
@@ -308,8 +312,8 @@ Use `column_defaults` for repeated column options, for example
 observation-only. Each `column_profiles[]` item accepts the same fields as
 `record_column_profile()` and must include `column_iri`, `column_name`, and
 `summary`. After recording a bundle, `describe_dataset().profile_summary` lists
-shared evidence IRIs and includes a handoff note that can help a later agent
-recognise one profiler run without walking every observation.
+shared evidence IRIs, profile run candidates, and a handoff note that can help a
+later agent recognise one profiler run without walking every observation.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as

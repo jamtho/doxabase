@@ -110,6 +110,9 @@ The `profile_summary` field gives quick counts of the profile observations
 returned in this bounded response, including dataset-level, mapped-column, and
 unmapped-column profile counts. It also rolls up profile evidence IRIs and
 lists `shared_evidence_iris` that appear on every returned profile observation.
+When mixed profile history means no evidence is shared by all returned profiles,
+`profile_run_candidates` lists evidence IRIs that support more than one returned
+profile, sorted by returned profile count.
 Its `handoff_note` is a compact reading cue for profile-only handoffs: profile
 lore is observed evidence, while storage/path/layout warnings remain physical
 query-planning metadata gaps.
@@ -233,8 +236,9 @@ Use `column_defaults` for repeated column options such as
 `{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
 fields as `record_column_profile` and must include `column_iri`, `column_name`,
 and `summary`. After recording a bundle, `describe_dataset().profile_summary`
-lists shared evidence IRIs and includes a handoff note that can help a later
-agent recognise one profiler run without walking every observation.
+lists shared evidence IRIs, profile run candidates, and a handoff note that can
+help a later agent recognise one profiler run without walking every
+observation.
 
 `doxabase.record_column_profile`
 

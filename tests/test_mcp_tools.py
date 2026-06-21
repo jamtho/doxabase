@@ -1612,6 +1612,13 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         shared_evidence: 2,
     }
     assert dataset["profile_summary"]["shared_evidence_iris"] == [shared_evidence]
+    assert dataset["profile_summary"]["profile_run_candidates"] == [
+        {
+            "evidence_iri": shared_evidence,
+            "returned_profile_count": 2,
+            "shared_by_all_returned_profiles": True,
+        }
+    ]
     profile = dataset["unmapped_column_profile_observations"][0]
     assert profile["observed_column_name"] == "status"
     assert profile["observed_column"]["column_name"] == "status"

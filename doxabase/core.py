@@ -1024,6 +1024,13 @@ class RelationshipDescription:
 
 
 @dataclass(frozen=True)
+class ProfileRunCandidate:
+    evidence_iri: str
+    returned_profile_count: int
+    shared_by_all_returned_profiles: bool
+
+
+@dataclass(frozen=True)
 class ProfileSummary:
     returned_dataset_profile_count: int
     returned_mapped_column_profile_count: int
@@ -1033,6 +1040,7 @@ class ProfileSummary:
     evidence_iris: list[str]
     evidence_profile_counts: dict[str, int]
     shared_evidence_iris: list[str]
+    profile_run_candidates: list[ProfileRunCandidate]
     handoff_note: str
 
 
@@ -4927,6 +4935,25 @@ class DoxaBase:
             if returned_profile_count > 0
             and evidence_profile_counts[evidence_iri] == returned_profile_count
         ]
+        profile_run_candidates = [
+            ProfileRunCandidate(
+                evidence_iri=evidence_iri,
+                returned_profile_count=evidence_profile_counts[evidence_iri],
+                shared_by_all_returned_profiles=(
+                    returned_profile_count > 0
+                    and evidence_profile_counts[evidence_iri]
+                    == returned_profile_count
+                ),
+            )
+            for evidence_iri in evidence_iris
+            if evidence_profile_counts[evidence_iri] > 1
+        ]
+        profile_run_candidates.sort(
+            key=lambda candidate: (
+                -candidate.returned_profile_count,
+                candidate.evidence_iri,
+            )
+        )
         return ProfileSummary(
             returned_dataset_profile_count=dataset_profile_count,
             returned_mapped_column_profile_count=mapped_column_profile_count,
@@ -4936,6 +4963,7 @@ class DoxaBase:
             evidence_iris=evidence_iris,
             evidence_profile_counts=evidence_profile_counts,
             shared_evidence_iris=shared_evidence_iris,
+            profile_run_candidates=profile_run_candidates,
             handoff_note=self._profile_handoff_note(
                 returned_profile_count=returned_profile_count,
                 unmapped_column_profile_count=unmapped_column_profile_count,
