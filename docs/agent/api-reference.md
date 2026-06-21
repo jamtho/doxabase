@@ -475,9 +475,10 @@ staged-time validation result. Bundles with restaged revisions include a
 comparison needs an agent-authored synthesis at the top of the artifact.
 The returned record also includes `revision_summaries`, a machine-readable copy
 of the grouped status rows with current apply status, blockers, validation
-state, restage links, recommendations, and suggested next actions. Relative
-export paths are resolved from the repository root and returned as normalized
-absolute paths.
+state, alternative/restage links, recommendations, and suggested next actions.
+Stale sources that already have `restaged_by` point suggested actions at the
+refreshed successor instead of another restage. Relative export paths are
+resolved from the repository root and returned as normalized absolute paths.
 
 `check_staged_revision_apply()` previews whether one staged revision can be
 applied without mutating graph state. It reports already-applied state,

@@ -308,6 +308,11 @@ few useful gaps:
   rebuild the same status table with separate apply-check calls; grouped export
   records now include `revision_summaries` with current apply status, blockers,
   validation state, restage links, recommendations, and suggested next actions.
+  A follow-up all-stale recovery trial confirmed those rows were enough to find
+  the unresolved stale proposal, but preserving alternative grouping still
+  required a separate revision-list call and stale originals with successors
+  still suggested another restage; summaries now carry `alternative_to`, and
+  suggested actions point at `restaged_by` successors when they already exist.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

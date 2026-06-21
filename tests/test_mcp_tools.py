@@ -484,6 +484,7 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     expected_path = (tmp_path / "bundle.md").resolve()
     assert export["path"] == str(expected_path)
     assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]
+    assert export["revision_summaries"][0]["alternative_to"] is None
     assert export["revision_summaries"][0]["apply_status"] == "ready"
     assert export["revision_summaries"][0]["apply_decision"] == "review_then_apply"
     assert export["revision_summaries"][0]["current_validation"] == (

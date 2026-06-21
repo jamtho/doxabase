@@ -1188,6 +1188,7 @@ item.revision_iri
 item.summary
 item.revision_stance
 item.revision_stance_label
+item.alternative_to
 item.changed_graphs
 item.apply_status
 item.apply_decision
@@ -1212,6 +1213,11 @@ item.suggested_next_calls
 
 Use these rows when a script needs the same grouped current-status information
 shown in the Markdown summary table without making separate apply-check calls.
+`alternative_to`, `restaged_from`, and `restaged_by` let recovery scripts keep
+alternative groups and stale/restaged chains together without a second revision
+list lookup. When a stale source already has `restaged_by`, its suggested next
+actions point at the refreshed successor instead of recommending another
+restage.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

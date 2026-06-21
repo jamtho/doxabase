@@ -513,10 +513,11 @@ provisional verdict. The summary table includes each staged revision's current
 apply status, decision, current validation state, and staged-time validation
 result. The returned payload includes `revision_summaries` with the same status
 rows as structured data: current apply status, blockers, validation state,
-restage links, recommendations, and suggested next actions. Bundles with
-restaged revisions include a `Restage Context` section near the top. Relative
-export paths are resolved from the repository root and returned as normalized
-absolute paths.
+alternative/restage links, recommendations, and suggested next actions. Stale
+sources that already have `restaged_by` point suggested actions at the refreshed
+successor instead of another restage. Bundles with restaged revisions include a
+`Restage Context` section near the top. Relative export paths are resolved from
+the repository root and returned as normalized absolute paths.
 
 ## Import and Validation
 

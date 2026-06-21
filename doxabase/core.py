@@ -400,6 +400,7 @@ class StagedGraphRevisionExportSummary:
     summary: str | None
     revision_stance: str | None
     revision_stance_label: str | None
+    alternative_to: str | None
     changed_graphs: list[str]
     apply_status: str | None
     apply_decision: str | None
@@ -8595,6 +8596,9 @@ class DoxaBase:
                 staged.iri,
                 status=status,
                 already_applied_by=existing_applied[0],
+                restaged_by=(
+                    staged.restaged_by.iri if staged.restaged_by is not None else None
+                ),
             )
             blocking_reasons = self._staged_apply_check_blocking_reasons(
                 status=status,
@@ -8830,6 +8834,9 @@ class DoxaBase:
             staged.iri,
             status=status,
             already_applied_by=None,
+            restaged_by=(
+                staged.restaged_by.iri if staged.restaged_by is not None else None
+            ),
         )
         blocking_reasons = self._staged_apply_check_blocking_reasons(
             status=status,
@@ -9312,6 +9319,7 @@ class DoxaBase:
         *,
         status: str,
         already_applied_by: str | None,
+        restaged_by: str | None,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
 
@@ -9372,14 +9380,24 @@ class DoxaBase:
                 {"iri": staged_revision_iri, "path": "/tmp/staged-revision-conflict.md"},
                 "Write a review bundle that captures the stale staged proposal.",
             )
-            add_action(
-                "restage_staged_revision",
-                {"iri": staged_revision_iri},
-                (
-                    "Create a refreshed staged revision against current graph "
-                    "counts if review confirms the patch intent is still desired."
-                ),
-            )
+            if restaged_by is None:
+                add_action(
+                    "restage_staged_revision",
+                    {"iri": staged_revision_iri},
+                    (
+                        "Create a refreshed staged revision against current graph "
+                        "counts if review confirms the patch intent is still desired."
+                    ),
+                )
+            else:
+                add_action(
+                    "describe_staged_revision",
+                    {"iri": restaged_by},
+                    (
+                        "Inspect the refreshed successor instead of restaging this "
+                        "stale source again."
+                    ),
+                )
         elif status == "validation_failed":
             add_action(
                 "describe_staged_revision",
@@ -9491,6 +9509,11 @@ class DoxaBase:
                     summary=description.summary,
                     revision_stance=description.revision_stance,
                     revision_stance_label=description.revision_stance_label,
+                    alternative_to=(
+                        description.alternative_to.iri
+                        if description.alternative_to is not None
+                        else None
+                    ),
                     changed_graphs=description.changed_graphs,
                     apply_status=apply_check.status if apply_check is not None else None,
                     apply_decision=(

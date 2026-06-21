@@ -2087,8 +2087,11 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert stale_summary.staged_validation == "True (0 result(s))"
     assert stale_summary.restaged_by == restaged.revision_iri
     assert stale_summary.suggested_next_actions[-1].tool_name == (
-        "restage_staged_revision"
+        "describe_staged_revision"
     )
+    assert stale_summary.suggested_next_actions[-1].arguments == {
+        "iri": restaged.revision_iri
+    }
     restaged_summary = grouped_export_record.revision_summaries[1]
     assert restaged_summary.apply_status == "ready"
     assert restaged_summary.apply_decision == "review_then_apply"
@@ -2107,6 +2110,13 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
 
     stale_check_after = db.check_staged_revision_apply(staged.revision_iri)
     assert stale_check_after.status == "conflict"
+    assert not any(
+        action.tool_name == "restage_staged_revision"
+        for action in stale_check_after.suggested_next_actions
+    )
+    assert stale_check_after.suggested_next_actions[-1].arguments == {
+        "iri": restaged.revision_iri
+    }
 
     result = db.apply_staged_revision(restaged.revision_iri)
     assert result.triples_added == 1
@@ -2242,8 +2252,11 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert stale_item.application_validation_skipped_reason == "conflicts_present"
     assert stale_item.application_blocking_reasons == ["target_count_drift"]
     assert stale_item.application_count_drifts[0].target_graph == "map"
-    assert stale_item.suggested_next_actions[-1].tool_name == "restage_staged_revision"
     assert stale_item.restaged_by == restaged.revision_iri
+    assert stale_item.suggested_next_actions[-1].tool_name == "describe_staged_revision"
+    assert stale_item.suggested_next_actions[-1].arguments == {
+        "iri": restaged.revision_iri
+    }
     assert drift_by_iri[restaged.revision_iri].restaged_from == stale.revision_iri
 
 
@@ -2437,6 +2450,10 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     ]
     assert [item.revision_iri for item in export.revision_summaries] == [
         revision.revision_iri for revision in draft.staged_revisions
+    ]
+    assert [item.alternative_to for item in export.revision_summaries] == [
+        None,
+        draft.staged_revisions[0].revision_iri,
     ]
     assert [item.apply_status for item in export.revision_summaries] == [
         "ready",
