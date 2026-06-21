@@ -452,6 +452,37 @@ class StagedGraphRevisionsExportRecord:
 
 
 @dataclass(frozen=True)
+class StagedGraphRevisionBatchRestageItem:
+    source_revision_iri: str
+    summary: str | None
+    status_before: str
+    decision_before: str
+    stale_resolution_state_before: str | None
+    blocking_reasons_before: list[str]
+    action: str
+    restaged_revision_iri: str | None
+    current_revision_iri: str
+    note: str
+
+
+@dataclass(frozen=True)
+class StagedGraphRevisionBatchRestageRecord:
+    requested_revision_iris: list[str]
+    processed_revision_iris: list[str]
+    restaged_revision_iris: list[str]
+    skipped_revision_iris: list[str]
+    already_handled_revision_iris: list[str]
+    not_restageable_revision_iris: list[str]
+    restaged_revision_by_source: dict[str, str]
+    current_revision_by_source: dict[str, str]
+    review_revision_iris: list[str]
+    items: list[StagedGraphRevisionBatchRestageItem]
+    revision_summaries: list[StagedGraphRevisionExportSummary]
+    bundle_summary: StagedGraphRevisionBundleSummary
+    export_record: StagedGraphRevisionsExportRecord | None
+
+
+@dataclass(frozen=True)
 class _StagedRevisionApplicationPreview:
     staged: StagedGraphRevisionDescription
     check: StagedRevisionApplyCheck
@@ -8111,6 +8142,163 @@ class DoxaBase:
         )
         extra_triples = self._insert_graph("history", metadata)
         return replace(staged, triples=staged.triples + extra_triples)
+
+    def restage_staged_revisions(
+        self,
+        revision_iris: Iterable[str] | str,
+        *,
+        path: str | Path | None = None,
+        title: str | None = None,
+        executive_summary: str | None = None,
+        format: TypingLiteral["markdown"] = "markdown",
+        overwrite: bool = False,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+    ) -> StagedGraphRevisionBatchRestageRecord:
+        requested_revision_iris = self._string_values(
+            "revision_iris",
+            revision_iris,
+            required=True,
+        )
+        processed_revision_iris = list(dict.fromkeys(requested_revision_iris))
+        restaged_revision_iris: list[str] = []
+        skipped_revision_iris: list[str] = []
+        already_handled_revision_iris: list[str] = []
+        not_restageable_revision_iris: list[str] = []
+        restaged_revision_by_source: dict[str, str] = {}
+        current_revision_by_source: dict[str, str] = {}
+        review_revision_iris: list[str] = []
+        items: list[StagedGraphRevisionBatchRestageItem] = []
+
+        def add_review_revision(iri: str | None) -> None:
+            if iri is not None and iri not in review_revision_iris:
+                review_revision_iris.append(iri)
+
+        for source_iri in processed_revision_iris:
+            source = self.describe_staged_revision(source_iri)
+            check = self.check_staged_revision_apply(
+                source.iri,
+                validation_scope=validation_scope,
+            )
+            restaged_by = (
+                source.restaged_by.iri if source.restaged_by is not None else None
+            )
+            stale_resolution_state = self._stale_resolution_state(
+                status=check.status,
+                has_patch_payload=bool(source.patches),
+                restaged_from=(
+                    source.restaged_from.iri
+                    if source.restaged_from is not None
+                    else None
+                ),
+                restaged_by=restaged_by,
+            )
+            restaged_revision_iri: str | None = None
+            current_revision_iri = restaged_by or source.iri
+
+            if check.status == "conflict" and restaged_by is None:
+                restaged = self.restage_staged_revision(
+                    source.iri,
+                    created_at=created_at,
+                    created_by=created_by,
+                    validation_scope=validation_scope,
+                )
+                restaged_revision_iri = restaged.revision_iri
+                current_revision_iri = restaged.revision_iri
+                restaged_revision_iris.append(restaged.revision_iri)
+                restaged_revision_by_source[source.iri] = restaged.revision_iri
+                action = "restaged"
+                note = (
+                    "Created a refreshed staged revision against current graph "
+                    "state; review it before applying."
+                )
+            elif check.status == "conflict" and restaged_by is not None:
+                skipped_revision_iris.append(source.iri)
+                already_handled_revision_iris.append(source.iri)
+                action = "skipped_already_handled"
+                note = (
+                    "Skipped because this stale source already points to a "
+                    "refreshed restaged_by successor."
+                )
+            else:
+                skipped_revision_iris.append(source.iri)
+                not_restageable_revision_iris.append(source.iri)
+                action = "skipped_not_restageable"
+                note = (
+                    "Skipped because the current apply status is "
+                    f"'{check.status}', not 'conflict'."
+                )
+
+            current_revision_by_source[source.iri] = current_revision_iri
+            add_review_revision(source.iri)
+            if current_revision_iri != source.iri:
+                add_review_revision(current_revision_iri)
+            items.append(
+                StagedGraphRevisionBatchRestageItem(
+                    source_revision_iri=source.iri,
+                    summary=source.summary,
+                    status_before=check.status,
+                    decision_before=check.decision,
+                    stale_resolution_state_before=stale_resolution_state,
+                    blocking_reasons_before=check.blocking_reasons,
+                    action=action,
+                    restaged_revision_iri=restaged_revision_iri,
+                    current_revision_iri=current_revision_iri,
+                    note=note,
+                )
+            )
+
+        export_record: StagedGraphRevisionsExportRecord | None = None
+        if path is not None:
+            export_record = self.export_staged_revisions(
+                review_revision_iris,
+                path,
+                title=title,
+                executive_summary=executive_summary,
+                format=format,
+                overwrite=overwrite,
+            )
+            revision_summaries = export_record.revision_summaries
+            bundle_summary = export_record.bundle_summary
+        else:
+            review_descriptions = [
+                self.describe_staged_revision(iri) for iri in review_revision_iris
+            ]
+            review_apply_checks = [
+                self._staged_revision_apply_check_for_export(description)
+                for description in review_descriptions
+            ]
+            revision_summaries = self._staged_revisions_export_summaries(
+                review_descriptions,
+                apply_checks=review_apply_checks,
+            )
+            bundle_summary = self._staged_revisions_bundle_summary(
+                revision_summaries
+            )
+
+        return StagedGraphRevisionBatchRestageRecord(
+            requested_revision_iris=requested_revision_iris,
+            processed_revision_iris=processed_revision_iris,
+            restaged_revision_iris=restaged_revision_iris,
+            skipped_revision_iris=skipped_revision_iris,
+            already_handled_revision_iris=already_handled_revision_iris,
+            not_restageable_revision_iris=not_restageable_revision_iris,
+            restaged_revision_by_source=restaged_revision_by_source,
+            current_revision_by_source=current_revision_by_source,
+            review_revision_iris=review_revision_iris,
+            items=items,
+            revision_summaries=revision_summaries,
+            bundle_summary=bundle_summary,
+            export_record=export_record,
+        )
 
     def _restage_rationale(
         self,

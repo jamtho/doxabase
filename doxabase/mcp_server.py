@@ -46,6 +46,7 @@ from doxabase.mcp_tools import (
     record_profile_bundle_tool,
     replace_graph_triples_tool,
     restage_staged_revision_tool,
+    restage_staged_revisions_tool,
     search_tool,
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
@@ -57,7 +58,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -1008,6 +1009,33 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             iri=iri,
             summary=summary,
             rationale=rationale,
+            created_at=created_at,
+            created_by=created_by,
+            validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.restage_staged_revisions")
+    def restage_staged_revisions(
+        revision_iris: list[str],
+        path: str | None = None,
+        title: str | None = None,
+        executive_summary: str | None = None,
+        format: str = "markdown",
+        overwrite: bool = False,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        validation_scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Restage several conflicted staged revisions and optionally export review."""
+
+        return restage_staged_revisions_tool(
+            db,
+            revision_iris=revision_iris,
+            path=path,
+            title=title,
+            executive_summary=executive_summary,
+            format=format,
+            overwrite=overwrite,
             created_at=created_at,
             created_by=created_by,
             validation_scope=validation_scope,

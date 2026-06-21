@@ -43,6 +43,7 @@ from doxabase.mcp_tools import (
     record_profile_bundle_tool,
     replace_graph_triples_tool,
     restage_staged_revision_tool,
+    restage_staged_revisions_tool,
     search_tool,
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
@@ -93,6 +94,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_graph_revision" in tool_names
     assert "doxabase.stage_graph_revision" in tool_names
     assert "doxabase.restage_staged_revision" in tool_names
+    assert "doxabase.restage_staged_revisions" in tool_names
     assert "doxabase.stage_map_assertion_change" in tool_names
     assert "doxabase.stage_systematisation" in tool_names
     assert "doxabase.stage_pattern_promotion" in tool_names
@@ -452,6 +454,84 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         db,
         iri=restaged["revision_iri"],
     )["status"] == "ready"
+
+
+def test_restage_staged_revisions_tool_exports_grouped_review(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mcp_tools, "ROOT", tmp_path)
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    second = stage_graph_revision_tool(
+        db,
+        summary="Stage threads table",
+        rationale="Threads should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Threads a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+    already_restaged = restage_staged_revision_tool(
+        db,
+        iri=first["revision_iri"],
+    )
+
+    result = restage_staged_revisions_tool(
+        db,
+        revision_iris=[first["revision_iri"], second["revision_iri"]],
+        path="nested/../batch-review.md",
+        title="Batch review",
+    )
+
+    expected_path = (tmp_path / "batch-review.md").resolve()
+    restaged_second = result["restaged_revision_iris"][0]
+    assert result["export_record"]["path"] == str(expected_path)
+    assert result["items"][0]["action"] == "skipped_already_handled"
+    assert result["items"][1]["action"] == "restaged"
+    assert result["current_revision_by_source"] == {
+        first["revision_iri"]: already_restaged["revision_iri"],
+        second["revision_iri"]: restaged_second,
+    }
+    assert result["review_revision_iris"] == [
+        first["revision_iri"],
+        already_restaged["revision_iri"],
+        second["revision_iri"],
+        restaged_second,
+    ]
+    assert result["bundle_summary"]["unresolved_stale_revision_iris"] == []
+    assert result["bundle_summary"]["ready_restage_successor_revision_iris"] == [
+        already_restaged["revision_iri"],
+        restaged_second,
+    ]
+    assert expected_path.exists()
+    assert "## Restage Context" in expected_path.read_text(encoding="utf-8")
 
 
 def test_export_staged_revisions_tool_resolves_relative_paths(

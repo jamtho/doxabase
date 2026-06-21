@@ -184,6 +184,24 @@ a bold idea.
 Use `describe_staged_revision()` to inspect the proposal and
 `export_staged_revision()` to write a Markdown review bundle.
 
+## Post-Apply Recovery
+
+When you need to reconstruct what happened after staged revisions have been
+applied, start with `list_graph_revisions(include_apply_checks=True)`. Applied
+events have `record_kind="applied_event"` and `applies_staged_revision`; staged
+sources expose `applied_by` after application. Inspect the applied event with
+`describe_graph_revision()` for after-state graph snapshots, then inspect the
+staged source with `describe_staged_revision()` for patch intent, review notes,
+support links, and validation diagnostics. For a mixed queue, use
+`export_staged_revisions()` or `restage_staged_revisions(path=...)` and read
+`bundle_summary` to separate already-applied inspection targets, unresolved
+stale proposals, validation failures, and current mutation-review candidates.
+
+This is still provenance browsing, not durable graph-version browsing. The
+applied event gives counts and content digests; the staged source gives the
+intended patch. There is not yet a one-call before/after triple diff for applied
+events.
+
 ## Limits
 
 DoxaBase can apply staged patch proposals with conservative graph-state conflict

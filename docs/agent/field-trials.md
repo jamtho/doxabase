@@ -341,8 +341,11 @@ few useful gaps:
   validation checks now suggest exporting diagnostics before staging a repaired
   or alternative candidate, and grouped bundle summaries list
   `validation_failed_revision_iris` directly.
-  A larger 10-successor recovery trial confirmed batch restage/export remains
-  desirable for big runs but not necessary yet.
+  A larger 10-successor recovery trial showed that one-by-one restage plus
+  export required too much glue while batch apply was still too broad. Batch
+  restage now skips already-handled stale sources, restages unresolved
+  conflicted rows, preserves review order, returns old-to-current mappings and
+  bundle summaries, and can write the grouped review export without applying.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

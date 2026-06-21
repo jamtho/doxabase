@@ -533,6 +533,15 @@ available, before repeating the original rationale. Use it for count or digest
 drift conflicts; it does not merge semantic conflicts, repair invalid RDF
 proposals, or apply the refreshed revision.
 
+`restage_staged_revisions()` is the batch recovery helper for larger stale sets.
+It checks each requested staged revision, restages conflicted revisions that do
+not already have a `restaged_by` successor, skips already-handled stale sources
+and non-conflicted rows, preserves caller order, and returns old-to-current
+mappings plus the same `revision_summaries` and `bundle_summary` shape used by
+grouped exports. Pass `path` to also write the grouped Markdown bundle over
+stale sources and their refreshed successors. It deliberately does not apply
+anything; applying one successor can make sibling successors stale again.
+
 `apply_staged_revision()` applies one staged revision after conservative
 graph-state conflict checks and preview validation. It rejects already-applied
 staged revisions, rejects target graph count or digest drift from the patch

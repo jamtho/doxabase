@@ -1267,6 +1267,33 @@ still need restage, repair, or apply decisions. Use
 `recommended_applied_inspection_iris` for already-applied staged revisions that
 are useful to inspect but should not be applied again.
 
+`db.restage_staged_revisions(...)` returns
+`StagedGraphRevisionBatchRestageRecord`:
+
+```python
+batch.requested_revision_iris
+batch.processed_revision_iris
+batch.restaged_revision_iris
+batch.skipped_revision_iris
+batch.already_handled_revision_iris
+batch.not_restageable_revision_iris
+batch.restaged_revision_by_source
+batch.current_revision_by_source
+batch.review_revision_iris
+batch.items
+batch.revision_summaries
+batch.bundle_summary
+batch.export_record
+```
+
+Each `batch.items` row reports `source_revision_iri`, `summary`,
+`status_before`, `decision_before`, `stale_resolution_state_before`,
+`blocking_reasons_before`, `action`, `restaged_revision_iri`,
+`current_revision_iri`, and `note`. Current actions are `restaged`,
+`skipped_already_handled`, and `skipped_not_restageable`. If `path` was passed,
+`export_record` is the grouped Markdown export for `review_revision_iris`;
+otherwise it is `None` and the summary fields are computed in memory.
+
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,
 result path, constraint, severity, value, and messages.

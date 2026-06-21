@@ -950,6 +950,33 @@ def restage_staged_revision_tool(
     return to_dict(result)
 
 
+def restage_staged_revisions_tool(
+    db: DoxaBase,
+    revision_iris: list[str],
+    path: str | None = None,
+    title: str | None = None,
+    executive_summary: str | None = None,
+    format: str = "markdown",
+    overwrite: bool = False,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    validation_scope: str | None = None,
+) -> dict[str, Any]:
+    resolved_path = _resolve_path(path) if path is not None else None
+    result = db.restage_staged_revisions(
+        revision_iris=revision_iris,
+        path=resolved_path,
+        title=title,
+        executive_summary=executive_summary,
+        format=format,  # type: ignore[arg-type]
+        overwrite=overwrite,
+        created_at=created_at,
+        created_by=created_by,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return to_dict(result)
+
+
 def stage_map_assertion_change_tool(
     db: DoxaBase,
     subject: str,

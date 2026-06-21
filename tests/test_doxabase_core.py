@@ -2191,6 +2191,121 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     )
 
 
+def test_batch_restage_preserves_order_and_exports_review_bundle(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first = db.stage_graph_revision(
+        summary="Stage order events table",
+        rationale="Keep the raw order event framing available for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderEvents a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    second = db.stage_graph_revision(
+        summary="Stage order lifecycle table",
+        rationale="Keep the lifecycle framing available for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderLifecycle a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftDataset",
+        label="Drift dataset",
+    )
+    already_restaged = db.restage_staged_revision(first.revision_iri)
+    ready = db.stage_graph_revision(
+        summary="Stage current shipment table",
+        rationale="This proposal was staged after the drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:CurrentShipments a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    export_path = tmp_path / "batch-restage-review.md"
+    batch = db.restage_staged_revisions(
+        [first.revision_iri, second.revision_iri, ready.revision_iri],
+        path=export_path,
+        title="Batch restage review",
+    )
+    restaged_second = batch.restaged_revision_iris[0]
+
+    assert [item.action for item in batch.items] == [
+        "skipped_already_handled",
+        "restaged",
+        "skipped_not_restageable",
+    ]
+    assert batch.restaged_revision_by_source == {
+        second.revision_iri: restaged_second
+    }
+    assert batch.current_revision_by_source == {
+        first.revision_iri: already_restaged.revision_iri,
+        second.revision_iri: restaged_second,
+        ready.revision_iri: ready.revision_iri,
+    }
+    assert batch.skipped_revision_iris == [first.revision_iri, ready.revision_iri]
+    assert batch.already_handled_revision_iris == [first.revision_iri]
+    assert batch.not_restageable_revision_iris == [ready.revision_iri]
+    assert batch.review_revision_iris == [
+        first.revision_iri,
+        already_restaged.revision_iri,
+        second.revision_iri,
+        restaged_second,
+        ready.revision_iri,
+    ]
+    assert batch.export_record is not None
+    assert batch.export_record.path == str(export_path)
+    assert batch.export_record.revision_iris == batch.review_revision_iris
+    assert batch.bundle_summary.apply_status_counts == {
+        "conflict": 2,
+        "ready": 3,
+    }
+    assert batch.bundle_summary.stale_resolution_state_counts == {
+        "stale_handled_by_restage": 2,
+        "restaged_successor_ready": 2,
+        "ready": 1,
+    }
+    assert batch.bundle_summary.unresolved_stale_revision_iris == []
+    assert batch.bundle_summary.ready_restage_successor_revision_iris == [
+        already_restaged.revision_iri,
+        restaged_second,
+    ]
+    assert batch.bundle_summary.recommended_mutation_review_iris == [
+        already_restaged.revision_iri,
+        restaged_second,
+        ready.revision_iri,
+    ]
+    exported = export_path.read_text(encoding="utf-8")
+    assert exported.startswith("# Batch restage review\n")
+    assert "## Restage Context" in exported
+    assert "Stage order lifecycle table" in exported
+    assert db.check_staged_revision_apply(restaged_second).status == "ready"
+
+
 def test_grouped_export_summarizes_stale_alternative_recovery(
     tmp_path: Path,
 ) -> None:

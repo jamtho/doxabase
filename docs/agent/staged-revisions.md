@@ -136,6 +136,12 @@ A stale export should be read like this:
 - restage_staged_revision(...)
 ```
 
+For larger stale sets, use `doxabase.restage_staged_revisions(...)` instead of
+looping manually. It restages conflicted rows that do not already have a
+successor, skips already-handled or non-conflicted rows, preserves caller order,
+returns source-to-current mappings, and can write the grouped review bundle when
+you pass `path`.
+
 In grouped exports, `Staged validation` is the validation result from when the
 proposal was created. `Current validation` comes from the live apply check and
 may say `skipped: conflicts_present` when count or digest drift prevents a
@@ -341,6 +347,9 @@ Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and their suggested actions now point agents toward structured
 diagnostics plus a Markdown review export before staging a repaired candidate.
 Already-applied revisions should be inspected rather than replayed.
+Batch restage is also review-first: it prepares refreshed staged revisions and a
+bundle summary, but applying remains an explicit separate step because applying
+one successor can make sibling successors stale.
 
 ## What Gets Recorded
 
