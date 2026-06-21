@@ -1134,6 +1134,13 @@ def test_describe_query_context_tool_returns_planning_projection(
     assert "layout_verification_status" in result
     assert "layout_verification_note" in result
     assert "broadcasts/{year}/ais-{date}.parquet" in result["path_templates"]
+    assert result["query_target_candidates"][0]["candidate_path"] == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
+    assert result["query_target_candidates"][0]["composition"] == "storage_root_joined"
+    assert result["query_target_candidates"][0]["template_source"] == "partition_scheme"
+    assert result["query_target_candidates"][0]["requires_endpoint_profile"] is True
+    assert result["query_target_candidates"][0]["review_required"] is True
     assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
     assert any(
         issue["code"] == "layout_needs_verification"

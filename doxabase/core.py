@@ -838,6 +838,26 @@ class QueryPlanningIssue:
 
 
 @dataclass(frozen=True)
+class QueryTargetCandidate:
+    template: str
+    template_source: str
+    source_resource: ResourceSummary
+    storage_access: ResourceSummary | None
+    storage_protocol: ResourceSummary | None
+    storage_root: str | None
+    endpoint_profile: str | None
+    bucket_name: str | None
+    key_prefix: str | None
+    candidate_path: str | None
+    composition: str
+    requires_endpoint_profile: bool
+    credential_reference: str | None
+    path_style_access: bool | None
+    review_required: bool
+    review_reasons: list[QueryPlanningIssue]
+
+
+@dataclass(frozen=True)
 class QueryPlanningContext:
     dataset: ResourceSummary
     readiness: str
@@ -850,6 +870,7 @@ class QueryPlanningContext:
     layout_verification_note: str | None
     columns: list[ColumnDescription]
     path_templates: list[str]
+    query_target_candidates: list[QueryTargetCandidate]
     physical_layouts: list[PhysicalLayoutDescription]
     storage_accesses: list[StorageAccessDescription]
     partition_schemes: list[PartitionDescription]
@@ -4221,6 +4242,7 @@ class DoxaBase:
         graph: str | None = "map",
     ) -> QueryPlanningContext:
         dataset = self.describe_dataset(iri, graph=graph)
+        data_graphs = self._expand_graphs([graph] if graph else None)
         dataset_summary = ResourceSummary(
             iri=dataset.iri,
             label=dataset.label or self._local_name(dataset.iri),
@@ -4229,6 +4251,7 @@ class DoxaBase:
         issues = dataset.operational_warnings
         analysis_warnings = self._query_analysis_warnings(dataset)
         readiness = self._query_planning_readiness(issues)
+        direct_path_templates = self._objects(data_graphs, dataset.iri, "rc:pathTemplate")
         return QueryPlanningContext(
             dataset=dataset_summary,
             readiness=readiness,
@@ -4256,12 +4279,235 @@ class DoxaBase:
             layout_verification_note=dataset.layout_verification_note,
             columns=dataset.columns,
             path_templates=dataset.path_templates,
+            query_target_candidates=self._query_target_candidates(
+                dataset,
+                dataset_summary=dataset_summary,
+                direct_path_templates=direct_path_templates,
+                issues=issues,
+            ),
             physical_layouts=dataset.physical_layouts,
             storage_accesses=dataset.storage_accesses,
             partition_schemes=dataset.partition_schemes,
             caveats=dataset.caveats,
             upstream_caveats=dataset.upstream_caveats,
         )
+
+    def _query_target_candidates(
+        self,
+        dataset: DatasetDescription,
+        *,
+        dataset_summary: ResourceSummary,
+        direct_path_templates: list[str],
+        issues: list[QueryPlanningIssue],
+    ) -> list[QueryTargetCandidate]:
+        template_sources: list[tuple[str, str, ResourceSummary]] = []
+        seen_sources: set[tuple[str, str, str]] = set()
+
+        def add_template_source(
+            template: str | None,
+            template_source: str,
+            source_resource: ResourceSummary,
+        ) -> None:
+            if template is None:
+                return
+            key = (template, template_source, source_resource.iri)
+            if key in seen_sources:
+                return
+            seen_sources.add(key)
+            template_sources.append((template, template_source, source_resource))
+
+        for template in direct_path_templates:
+            add_template_source(template, "dataset", dataset_summary)
+        for partition in dataset.partition_schemes:
+            add_template_source(
+                partition.path_template,
+                "partition_scheme",
+                self._summary_from_description(partition),
+            )
+
+        candidates: list[QueryTargetCandidate] = []
+        seen_candidates: set[tuple[str, str, str, str | None]] = set()
+
+        def add_candidate(
+            template: str,
+            template_source: str,
+            source_resource: ResourceSummary,
+            storage_access: StorageAccessDescription | None,
+        ) -> None:
+            access_resource = (
+                self._summary_from_description(storage_access)
+                if storage_access is not None
+                else None
+            )
+            key = (
+                template,
+                template_source,
+                source_resource.iri,
+                access_resource.iri if access_resource is not None else None,
+            )
+            if key in seen_candidates:
+                return
+            seen_candidates.add(key)
+            candidate_path, composition = self._query_candidate_path(
+                template,
+                storage_access,
+            )
+            review_reasons = self._query_target_review_reasons(
+                dataset,
+                issues,
+                source_resource=source_resource,
+                storage_access=access_resource,
+            )
+            candidates.append(
+                QueryTargetCandidate(
+                    template=template,
+                    template_source=template_source,
+                    source_resource=source_resource,
+                    storage_access=access_resource,
+                    storage_protocol=(
+                        storage_access.storage_protocol
+                        if storage_access is not None
+                        else None
+                    ),
+                    storage_root=(
+                        storage_access.storage_root if storage_access is not None else None
+                    ),
+                    endpoint_profile=(
+                        storage_access.endpoint_profile
+                        if storage_access is not None
+                        else None
+                    ),
+                    bucket_name=(
+                        storage_access.bucket_name if storage_access is not None else None
+                    ),
+                    key_prefix=(
+                        storage_access.key_prefix if storage_access is not None else None
+                    ),
+                    candidate_path=candidate_path,
+                    composition=composition,
+                    requires_endpoint_profile=(
+                        bool(storage_access.endpoint_profile)
+                        if storage_access is not None
+                        else False
+                    ),
+                    credential_reference=(
+                        storage_access.credential_reference
+                        if storage_access is not None
+                        else None
+                    ),
+                    path_style_access=(
+                        storage_access.path_style_access
+                        if storage_access is not None
+                        else None
+                    ),
+                    review_required=any(
+                        reason.severity in {"error", "warning"}
+                        for reason in review_reasons
+                    ),
+                    review_reasons=review_reasons,
+                )
+            )
+
+        for template, template_source, source_resource in template_sources:
+            if dataset.storage_accesses:
+                for storage_access in dataset.storage_accesses:
+                    add_candidate(template, template_source, source_resource, storage_access)
+            else:
+                add_candidate(template, template_source, source_resource, None)
+        for storage_access in dataset.storage_accesses:
+            access_resource = self._summary_from_description(storage_access)
+            for template in storage_access.path_templates:
+                add_candidate(template, "storage_access", access_resource, storage_access)
+
+        return candidates
+
+    def _query_candidate_path(
+        self,
+        template: str,
+        storage_access: StorageAccessDescription | None,
+    ) -> tuple[str | None, str]:
+        template = template.strip()
+        if not template:
+            return None, "unresolved"
+        if self._is_complete_path_template(template):
+            return template, "template_as_returned"
+        if storage_access is None:
+            return template, "template_as_returned"
+
+        storage_root = (storage_access.storage_root or "").strip()
+        if storage_root:
+            if self._template_starts_with_root(template, storage_root):
+                return template, "template_as_returned"
+            return self._join_path_template(storage_root, template), "storage_root_joined"
+
+        bucket_name = (storage_access.bucket_name or "").strip().strip("/")
+        if bucket_name and self._is_s3_storage(storage_access.storage_protocol):
+            parts = [bucket_name]
+            key_prefix = (storage_access.key_prefix or "").strip().strip("/")
+            if key_prefix:
+                parts.append(key_prefix)
+            parts.append(template.strip("/"))
+            return f"s3://{'/'.join(parts)}", "bucket_prefix_joined"
+
+        key_prefix = (storage_access.key_prefix or "").strip()
+        if key_prefix:
+            return self._join_path_template(key_prefix, template), "key_prefix_joined"
+
+        return template, "template_as_returned"
+
+    def _query_target_review_reasons(
+        self,
+        dataset: DatasetDescription,
+        issues: list[QueryPlanningIssue],
+        *,
+        source_resource: ResourceSummary,
+        storage_access: ResourceSummary | None,
+    ) -> list[QueryPlanningIssue]:
+        related_iris = {dataset.iri, source_resource.iri}
+        if storage_access is not None:
+            related_iris.add(storage_access.iri)
+        related_iris.update(layout.iri for layout in dataset.physical_layouts)
+        related_iris.update(partition.iri for partition in dataset.partition_schemes)
+
+        review_reasons: list[QueryPlanningIssue] = []
+        seen: set[tuple[str, str | None]] = set()
+        for issue in issues:
+            resource_iri = issue.resource.iri if issue.resource is not None else None
+            if resource_iri is not None and resource_iri not in related_iris:
+                continue
+            key = (issue.code, resource_iri)
+            if key in seen:
+                continue
+            seen.add(key)
+            review_reasons.append(issue)
+        return review_reasons
+
+    def _is_complete_path_template(self, template: str) -> bool:
+        return bool(re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", template)) or template.startswith(
+            "/"
+        )
+
+    def _template_starts_with_root(self, template: str, storage_root: str) -> bool:
+        normalized_template = template.strip("/")
+        normalized_root = storage_root.strip("/")
+        if not normalized_root:
+            return False
+        return (
+            normalized_template == normalized_root
+            or normalized_template.startswith(f"{normalized_root}/")
+        )
+
+    def _join_path_template(self, root: str, template: str) -> str:
+        cleaned_root = root.rstrip("/")
+        cleaned_template = template.lstrip("/")
+        if not cleaned_root:
+            return f"/{cleaned_template}"
+        return f"{cleaned_root}/{cleaned_template}"
+
+    def _is_s3_storage(self, storage_protocol: ResourceSummary | None) -> bool:
+        if storage_protocol is None:
+            return False
+        return storage_protocol.iri == self.expand_iri("rc:S3CompatibleStorage")
 
     def _query_planning_issues(
         self,

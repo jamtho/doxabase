@@ -704,6 +704,7 @@ query.layout_verification_status
 query.layout_verification_note
 query.columns
 query.path_templates
+query.query_target_candidates
 query.physical_layouts
 query.storage_accesses
 query.partition_schemes
@@ -727,6 +728,17 @@ metadata exists but no explicit verification status has been recorded.
 `query.analysis_warnings` returns caveat-shaped interpretation warnings that
 matter after a query can be planned, such as deduplication, mixed payload
 coercion, or JSON parsing caveats. These warnings do not change `readiness`.
+
+`query.query_target_candidates` contains derived path/template planning cards
+for callers that need a safer handoff than raw `path_templates` plus
+`storage_accesses`. Each card preserves the template provenance
+(`dataset`, `partition_scheme`, or `storage_access`), the relevant storage
+access metadata, a best-effort `candidate_path`, a `composition` value such as
+`template_as_returned`, `storage_root_joined`, `bucket_prefix_joined`,
+`key_prefix_joined`, or `unresolved`, and `review_reasons` copied from physical
+query-planning issues that apply to the candidate. These cards do not resolve
+credentials, endpoint profiles, or executable SQL.
+
 Each issue or analysis warning has:
 
 ```python

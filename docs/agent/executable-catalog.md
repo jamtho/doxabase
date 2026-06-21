@@ -70,18 +70,23 @@ agent runtime decides how profile X resolves.
 2. Call `doxabase.describe_query_context` when you want a compact physical
    planning projection with readiness and an `issues` list for missing, risky,
    or informational physical metadata.
-3. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
-   `storage_accesses` together.
-4. Check `layout_verification_status` and `layout_verification_note` on the
+3. Start from `query_target_candidates` when you need actionable path/template
+   cards. They preserve whether a template came from the dataset, a partition
+   scheme, or storage access, and they compose best-effort paths without
+   resolving endpoint profiles or credentials.
+4. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
+   `storage_accesses` together when you need the raw graph facts behind a
+   candidate.
+5. Check `layout_verification_status` and `layout_verification_note` on the
    dataset and on relevant layout, partition, and storage resources. When a
    status is not recorded for otherwise usable path/layout metadata,
    `describe_query_context().issues` reports an informational
    `verification_status_not_recorded` issue.
-5. Combine storage root or bucket/prefix facts with the dataset path template
+6. Combine storage root or bucket/prefix facts with the dataset path template
    only when the verification status and notes make that reasonable.
-6. Check `analysis_warnings` and caveats before trusting aggregations or
+7. Check `analysis_warnings` and caveats before trusting aggregations or
    interpretations.
-7. If a query is run, record the result or failure with
+8. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
 Tiny direct Python scratch example:

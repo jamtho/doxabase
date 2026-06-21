@@ -3775,6 +3775,20 @@ def test_describe_query_context_reports_planning_metadata_and_issues(
     assert context.dataset.label == "AIS Daily Broadcast Positions"
     assert context.readiness == "needs_review"
     assert context.path_templates == ["broadcasts/{year}/ais-{date}.parquet"]
+    assert len(context.query_target_candidates) == 1
+    target = context.query_target_candidates[0]
+    assert target.template == "broadcasts/{year}/ais-{date}.parquet"
+    assert target.template_source == "partition_scheme"
+    assert target.storage_root == "s3://ais-noaa/"
+    assert target.bucket_name == "ais-noaa"
+    assert target.candidate_path == "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    assert target.composition == "storage_root_joined"
+    assert target.endpoint_profile == "local-minio"
+    assert target.requires_endpoint_profile is True
+    assert target.credential_reference == "profile:ais-readonly"
+    assert target.path_style_access is True
+    assert target.review_required is True
+    assert any(reason.code == "layout_needs_verification" for reason in target.review_reasons)
     assert context.storage_accesses[0].endpoint_profile == "local-minio"
     assert context.storage_accesses[0].credential_reference == "profile:ais-readonly"
     assert {column.column_name for column in context.columns} >= {
@@ -3829,6 +3843,26 @@ def test_describe_query_context_separates_analysis_caveats(
     assert "Analysis warnings are separate caveats" in context.readiness_note
     assert context.layout_verification_status is None
     assert context.layout_verification_note is None
+    dataset_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.template_source == "dataset"
+    )
+    assert dataset_target.template == "data/parquet/clob/prices/dt={date}/hour={hour}.parquet"
+    assert dataset_target.storage_root == "data/parquet"
+    assert dataset_target.candidate_path == (
+        "data/parquet/clob/prices/dt={date}/hour={hour}.parquet"
+    )
+    assert dataset_target.composition == "template_as_returned"
+    assert dataset_target.review_required is False
+    assert {reason.severity for reason in dataset_target.review_reasons} == {"info"}
+    partition_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.template_source == "partition_scheme"
+    )
+    assert partition_target.template == "data/parquet/{stream}/dt={date}/hour={hour}.parquet"
+    assert partition_target.composition == "template_as_returned"
     assert all(issue.severity == "info" for issue in context.issues)
     assert any(
         issue.code == "verification_status_not_recorded"
