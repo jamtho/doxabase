@@ -83,7 +83,10 @@ agent runtime decides how profile X resolves.
    `describe_query_context().issues` reports an informational
    `verification_status_not_recorded` issue.
 6. Combine storage root or bucket/prefix facts with the dataset path template
-   only when the verification status and notes make that reasonable.
+   only when the verification status and notes make that reasonable. Complete
+   templates such as `s3://...` should still match the declared storage protocol
+   and any recorded bucket/prefix; if they do not, query target candidates are
+   orientation-only.
 7. Check `analysis_warnings` and caveats before trusting aggregations or
    interpretations.
 8. If a query is run, record the result or failure with

@@ -240,8 +240,12 @@ references. Candidate `review_reasons` can include overall-context blockers
 from sibling metadata as well as protocol/location warnings, for example
 S3-compatible access without endpoint/credential/region cues, non-S3 access
 with bucket/prefix metadata, or a storage root that does not match the declared
-protocol. Partition-specific blockers stay attached to their own partition
-candidate; sibling candidates receive an overall-context blocker instead.
+protocol. Complete path templates are checked too: an `s3://...` template under
+HTTP/local access, an S3 template whose bucket/prefix conflicts with recorded
+access metadata, or a relative template that repeats the recorded key prefix
+will demote the candidate to review-only. Partition-specific blockers stay
+attached to their own partition candidate; sibling candidates receive an
+overall-context blocker instead.
 `candidate_path_status` separates path usability from composition: `ready`
 means a usable planning input, `orientation_only` means the candidate path is a
 review clue, and `unresolved` means executable location metadata is incomplete.

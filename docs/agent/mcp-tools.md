@@ -325,7 +325,10 @@ datasets. Use IRIs or CURIEs for resource-valued controls such as
 `datasets`. For S3-compatible storage, include enough non-secret runtime
 orientation such as `endpoint_profile`, `credential_reference`, or `region`.
 For non-S3 protocols, prefer protocol-appropriate roots, URLs, or connection
-references rather than S3-shaped `bucket_name`/`key_prefix` alone. A relative
+references rather than S3-shaped `bucket_name`/`key_prefix` alone. Complete
+path templates are checked against the protocol and bucket/prefix metadata, and
+relative templates that already include the recorded key prefix are treated as
+review-only because path composition would duplicate that prefix. A relative
 dataset path template does not make an otherwise rootless storage access ready
 for query planning; record the storage access location as well.
 

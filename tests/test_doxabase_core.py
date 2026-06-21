@@ -4737,6 +4737,179 @@ def test_describe_query_context_warns_on_unresolved_s3_access(
     )
 
 
+def test_describe_query_context_warns_on_complete_s3_template_without_runtime_resolution(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        path_templates=["s3://orders-bucket/warehouse/orders/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert any(
+        issue.code == "s3_access_resolution_unrecorded"
+        and issue.resource is not None
+        and issue.resource.iri == storage.iri
+        for issue in context.issues
+    )
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == "s3://orders-bucket/warehouse/orders/*.parquet"
+    assert target.composition == "template_as_returned"
+    assert target.candidate_path_status == "orientation_only"
+    assert target.review_required is True
+    assert any(
+        reason.code == "s3_access_resolution_unrecorded"
+        for reason in target.review_reasons
+    )
+
+
+def test_describe_query_context_warns_on_complete_template_protocol_mismatch(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Snapshots"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#snapshots_https_storage",
+        label="Snapshots HTTPS access",
+        storage_protocol="rc:HTTPSStorage",
+        path_templates=["s3://public-bucket/snapshots/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#snapshots_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Snapshots",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == "s3://public-bucket/snapshots/*.parquet"
+    assert target.candidate_path_status == "orientation_only"
+    assert target.review_required is True
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "path template" in reason.message
+        for reason in target.review_reasons
+    )
+
+
+def test_describe_query_context_warns_on_s3_template_bucket_prefix_conflict(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="orders-a",
+        key_prefix="warehouse",
+        path_templates=["s3://orders-b/raw/orders/*.parquet"],
+        credential_reference="profile:orders-readonly",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == "s3://orders-b/raw/orders/*.parquet"
+    assert target.candidate_path_status == "orientation_only"
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "bucket_name" in reason.message
+        and "key_prefix" in reason.message
+        for reason in target.review_reasons
+    )
+
+
+def test_describe_query_context_warns_on_key_prefix_repeated_in_template(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="lake",
+        key_prefix="warehouse",
+        path_templates=["warehouse/orders/dt={date}.parquet"],
+        credential_reference="profile:orders-readonly",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == (
+        "s3://lake/warehouse/warehouse/orders/dt={date}.parquet"
+    )
+    assert target.candidate_path_status == "orientation_only"
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "repeat recorded key_prefix" in reason.message
+        for reason in target.review_reasons
+    )
+
+
 def test_query_target_candidates_scope_partition_blockers(
     tmp_path: Path,
 ) -> None:

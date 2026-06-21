@@ -4460,10 +4460,19 @@ class DoxaBase:
             label=dataset.label or self._local_name(dataset.iri),
             description=dataset.description,
         )
-        issues = dataset.operational_warnings
+        direct_path_templates = self._objects(data_graphs, dataset.iri, "rc:pathTemplate")
+        issues = self._sort_query_planning_issues(
+            [
+                *dataset.operational_warnings,
+                *self._query_target_candidate_metadata_issues(
+                    dataset,
+                    dataset_summary=dataset_summary,
+                    direct_path_templates=direct_path_templates,
+                ),
+            ]
+        )
         analysis_warnings = self._query_analysis_warnings(dataset)
         readiness = self._query_planning_readiness(issues)
-        direct_path_templates = self._objects(data_graphs, dataset.iri, "rc:pathTemplate")
         return QueryPlanningContext(
             dataset=dataset_summary,
             readiness=readiness,
@@ -4639,6 +4648,57 @@ class DoxaBase:
 
         return candidates
 
+    def _query_target_candidate_metadata_issues(
+        self,
+        dataset: DatasetDescription,
+        *,
+        dataset_summary: ResourceSummary,
+        direct_path_templates: list[str],
+    ) -> list[QueryPlanningIssue]:
+        if not dataset.storage_accesses:
+            return []
+
+        template_sources: list[tuple[str, ResourceSummary]] = [
+            (template, dataset_summary) for template in direct_path_templates
+        ]
+        template_sources.extend(
+            (
+                partition.path_template,
+                self._summary_from_description(partition),
+            )
+            for partition in dataset.partition_schemes
+            if partition.path_template is not None
+        )
+
+        issues: list[QueryPlanningIssue] = []
+        for storage_access in dataset.storage_accesses:
+            access_resource = self._summary_from_description(storage_access)
+            for template, source_resource in template_sources:
+                mismatch_reasons = (
+                    self._candidate_storage_location_mismatch_reasons(
+                        storage_access,
+                        template,
+                    )
+                )
+                if not mismatch_reasons:
+                    continue
+                source_label = source_resource.label or source_resource.iri
+                issues.append(
+                    QueryPlanningIssue(
+                        code="storage_protocol_location_mismatch",
+                        severity="warning",
+                        message=(
+                            "Storage access metadata conflicts with path "
+                            f"template from {source_label}: "
+                            + "; ".join(mismatch_reasons)
+                            + ". Record protocol-appropriate storage metadata "
+                            "or simplify the template before executable use."
+                        ),
+                        resource=access_resource,
+                    )
+                )
+        return issues
+
     def _query_candidate_path_status(
         self,
         candidate_path: str | None,
@@ -4793,11 +4853,116 @@ class DoxaBase:
             return None
         return match.group(1).lower()
 
+    def _path_template_scheme(self, template: str | None) -> str | None:
+        if template is None:
+            return None
+        match = re.match(r"^([A-Za-z][A-Za-z0-9+.-]*)://", template.strip())
+        if match is None:
+            return None
+        return match.group(1).lower()
+
+    def _is_s3_scheme(self, scheme: str | None) -> bool:
+        return scheme in {"s3", "s3a", "s3n"}
+
+    def _s3_template_location(
+        self,
+        template: str,
+    ) -> tuple[str, str] | None:
+        match = re.match(
+            r"^(?:s3|s3a|s3n)://([^/]+)(?:/(.*))?$",
+            template.strip(),
+            flags=re.IGNORECASE,
+        )
+        if match is None:
+            return None
+        return match.group(1), (match.group(2) or "").strip("/")
+
     def _looks_like_absolute_local_path(self, storage_root: str | None) -> bool:
         if storage_root is None:
             return False
         text = storage_root.strip()
         return text.startswith("/") or bool(re.match(r"^[A-Za-z]:[\\/]", text))
+
+    def _s3_access_resolution_unrecorded(
+        self,
+        access: StorageAccessDescription,
+    ) -> bool:
+        if not self._is_s3_storage(access.storage_protocol):
+            return False
+        if access.endpoint_profile or access.credential_reference or access.region:
+            return False
+        if access.bucket_name or access.key_prefix:
+            return True
+        if self._is_s3_scheme(self._storage_root_scheme(access.storage_root)):
+            return True
+        return any(
+            self._is_s3_scheme(self._path_template_scheme(template))
+            for template in access.path_templates
+        )
+
+    def _candidate_storage_location_mismatch_reasons(
+        self,
+        access: StorageAccessDescription,
+        template: str,
+    ) -> list[str]:
+        reasons: list[str] = []
+        scheme = self._path_template_scheme(template)
+        if access.storage_protocol is not None:
+            if self._is_s3_storage(access.storage_protocol):
+                if self._looks_like_absolute_local_path(template):
+                    reasons.append("path template looks like a local filesystem path")
+                elif scheme is not None and not self._is_s3_scheme(scheme):
+                    reasons.append(
+                        f"path template scheme '{scheme}' does not look like S3"
+                    )
+            elif self._is_https_storage(access.storage_protocol):
+                if scheme not in {None, "http", "https"} or (
+                    scheme is None and self._looks_like_absolute_local_path(template)
+                ):
+                    reasons.append("path template does not look like an HTTP(S) URL")
+            elif self._is_local_filesystem_storage(access.storage_protocol):
+                if scheme in {"s3", "s3a", "s3n", "http", "https"}:
+                    reasons.append(
+                        "path template looks remote for local filesystem access"
+                    )
+
+        s3_location = self._s3_template_location(template)
+        if s3_location is not None:
+            template_bucket, template_key = s3_location
+            bucket_name = (access.bucket_name or "").strip().strip("/")
+            if bucket_name and template_bucket != bucket_name:
+                reasons.append(
+                    "complete S3 path template bucket does not match recorded "
+                    f"bucket_name '{bucket_name}'"
+                )
+            key_prefix = (access.key_prefix or "").strip().strip("/")
+            if (
+                key_prefix
+                and template_key
+                and template_key != key_prefix
+                and not template_key.startswith(f"{key_prefix}/")
+            ):
+                reasons.append(
+                    "complete S3 path template key does not start with recorded "
+                    f"key_prefix '{key_prefix}'"
+                )
+
+        key_prefix = (access.key_prefix or "").strip().strip("/")
+        normalized_template = template.strip().strip("/")
+        if (
+            key_prefix
+            and scheme is None
+            and not self._looks_like_absolute_local_path(template)
+            and (
+                normalized_template == key_prefix
+                or normalized_template.startswith(f"{key_prefix}/")
+            )
+        ):
+            reasons.append(
+                f"path template appears to repeat recorded key_prefix '{key_prefix}'"
+            )
+
+        return reasons
 
     def _storage_protocol_location_mismatch_reasons(
         self,
@@ -4824,6 +4989,13 @@ class DoxaBase:
         elif self._is_local_filesystem_storage(access.storage_protocol):
             if scheme in {"s3", "s3a", "s3n", "http", "https"}:
                 reasons.append("storage_root looks remote for local filesystem access")
+        for template in access.path_templates:
+            reasons.extend(
+                self._candidate_storage_location_mismatch_reasons(
+                    access,
+                    template,
+                )
+            )
         return reasons
 
     def _query_planning_issues(
@@ -4890,20 +5062,13 @@ class DoxaBase:
                     "Storage access does not include a root, bucket, prefix, or path template.",
                     access_resource,
                 )
-            if self._is_s3_storage(access.storage_protocol) and (
-                access.bucket_name or access.key_prefix
-            ):
-                if not (
-                    access.endpoint_profile
-                    or access.credential_reference
-                    or access.region
-                ):
-                    add_issue(
-                        "s3_access_resolution_unrecorded",
-                        "warning",
-                        "S3-compatible access records bucket/prefix metadata but no endpoint profile, credential reference, or region.",
-                        access_resource,
-                    )
+            if self._s3_access_resolution_unrecorded(access):
+                add_issue(
+                    "s3_access_resolution_unrecorded",
+                    "warning",
+                    "S3-compatible access records S3 location metadata but no endpoint profile, credential reference, or region.",
+                    access_resource,
+                )
             location_mismatch_reasons = (
                 self._storage_protocol_location_mismatch_reasons(access)
             )
@@ -4969,13 +5134,33 @@ class DoxaBase:
                 include_missing_status=partition.path_template is not None,
             )
 
+        return self._sort_query_planning_issues(issues)
+
+    def _sort_query_planning_issues(
+        self,
+        issues: Iterable[QueryPlanningIssue],
+    ) -> list[QueryPlanningIssue]:
+        deduped: list[QueryPlanningIssue] = []
+        seen: set[tuple[str, str, str, str | None]] = set()
+        for issue in issues:
+            key = (
+                issue.code,
+                issue.severity,
+                issue.message,
+                issue.resource.iri if issue.resource is not None else None,
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(issue)
         severity_rank = {"error": 0, "warning": 1, "info": 2}
         return sorted(
-            issues,
+            deduped,
             key=lambda issue: (
                 severity_rank.get(issue.severity, 3),
                 issue.code,
                 issue.resource.iri if issue.resource is not None else "",
+                issue.message,
             ),
         )
 

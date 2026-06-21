@@ -774,6 +774,10 @@ may include `query_context_has_other_blockers` even when its own storage access
 looks clean. Protocol/location warnings such as
 `s3_access_resolution_unrecorded` and `storage_protocol_location_mismatch` mean
 the candidate path is only an orientation aid until storage access is clarified.
+Complete path templates such as `s3://...` are checked against the declared
+storage protocol and any recorded bucket/prefix; relative templates that repeat
+the recorded key prefix are also review-only because the composed path would
+duplicate that prefix.
 Partition-specific blockers are candidate-local only for the partition that
 owns them; sibling partition candidates should carry
 `query_context_has_other_blockers` instead of the sibling's direct
