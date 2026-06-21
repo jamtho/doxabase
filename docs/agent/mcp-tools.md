@@ -23,8 +23,8 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 
 Lists entities by RDF type, graph role, optional text filter, limit, and offset. Start with `type="rc:Table"` and `graph="map"`.
 For type-aware retrieval, use types such as `rc:Pattern`, `rc:Claim`,
-`rc:Evidence`, or `rc:SourceSpan`; the text filter searches literal facts
-attached to each resource, not only labels.
+`rc:Evidence`, or `rc:SourceSpan`; the text filter searches literal and
+URI-valued facts attached to each resource, not only labels.
 
 `doxabase.describe_resource`
 
@@ -91,7 +91,11 @@ call `check_staged_revision_apply` when you need the actual changed triples.
 
 `doxabase.search`
 
-Lexically searches literal RDF claims and returns matched resources with graph, IRI, label, types, predicate, matched text, and snippet. Use it to rediscover caveats, observations, evidence, labels, path templates, source notes, and column names.
+Lexically searches literal RDF claims and URI-valued graph terms, returning
+matched resources with graph, IRI, label, types, predicate, matched text, and
+snippet. Use it to rediscover caveats, observations, evidence, labels, path
+templates, source notes, column names, and exact project vocabulary tokens such
+as custom profile metric kinds.
 
 `doxabase.describe_dataset`
 

@@ -1677,7 +1677,7 @@ class DoxaBase:
                         FROM quads ql
                         WHERE ql.graph = q.graph
                           AND ql.subject = q.subject
-                          AND ql.object_kind = 'literal'
+                          AND ql.object_kind IN ('literal', 'uri')
                           AND lower(ql.object) LIKE ?
                     )
                 )
@@ -15254,7 +15254,7 @@ class DoxaBase:
                 (rowid, graph, subject, subject_kind, predicate, text)
             SELECT rowid, graph, subject, subject_kind, predicate, object
             FROM quads
-            WHERE object_kind = 'literal'
+            WHERE object_kind IN ('literal', 'uri')
             """
         )
         self._conn.commit()

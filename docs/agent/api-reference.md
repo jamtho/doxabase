@@ -628,10 +628,11 @@ inputs: an untyped string object such as `"12"` or `"true"` can match stored
 typed integer or boolean literals while the returned triple still reports the
 actual datatype.
 
-`search()` lexically searches literal RDF claims and returns matched resources,
-their graph role, RDF types, matched predicate, matched text, and snippet. Use
-it to rediscover labels, caveats, source descriptions, path templates,
-observations, and evidence before deciding what to trust or inspect next.
+`search()` lexically searches literal RDF claims and URI-valued graph terms,
+then returns matched resources, their graph role, RDF types, matched predicate,
+matched text, and snippet. Use it to rediscover labels, caveats, source
+descriptions, path templates, observations, evidence, and exact project
+vocabulary tokens before deciding what to trust or inspect next.
 
 ## Validate
 

@@ -129,6 +129,10 @@ match.snippet
 ```
 
 Use `match.iri` for the matched resource. There is no `match.subject` field.
+Search text can come from a literal object or a URI-valued graph term. URI
+matches are useful for exact project vocabulary tokens such as custom profile
+metric kinds; add labels or descriptions in the ontology when agents need
+natural-language discovery.
 
 ## Assertion Support
 

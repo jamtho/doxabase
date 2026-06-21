@@ -5500,6 +5500,47 @@ def test_search_finds_recorded_observation_and_evidence(tmp_path: Path) -> None:
     assert evidence.matches[0].graph == "evidence"
 
 
+def test_search_finds_uri_object_terms_for_profile_metric_kinds(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    metric_kind = "https://example.test/project#CompletenessRatio"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders completeness profile",
+        profile_metrics=[
+            {"metric": metric_kind, "value": 0.98, "target": dataset},
+        ],
+        update_map_snapshot=False,
+    )
+
+    results = db.search("CompletenessRatio", graph="observations")
+    match = next(
+        result
+        for result in results.matches
+        if result.predicate == RC + "profileMetricKind"
+    )
+    assert match.text == metric_kind
+    assert match.types == [RC + "ObservedProfileMetric"]
+
+    entities = db.list_entities(
+        type="rc:ObservedProfileMetric",
+        graph="observations",
+        text="CompletenessRatio",
+    ).entities
+    assert [entity.iri for entity in entities] == [match.iri]
+
+    described = db.describe_dataset(dataset)
+    described_metric_iris = {
+        metric.iri
+        for profile in described.profile_observations
+        for metric in profile.profile_metrics
+    }
+    assert match.iri in described_metric_iris
+
+
 def test_scratch_capsule_observation_write_recovers_search_index(
     tmp_path: Path,
 ) -> None:
