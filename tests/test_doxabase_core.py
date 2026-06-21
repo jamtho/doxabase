@@ -1391,6 +1391,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     applied = db.describe_graph_revision(result.applied_revision_iri)
     assert applied.revision_type == RC + "AppliedStagedRevision"
     assert applied.revision_type_label == "applied staged revision"
+    assert applied.applies_staged_revision == staged.revision_iri
     assert applied.changed_graphs == ["map"]
     assert applied.validation_conforms is True
     assert applied.graph_snapshots[0].graph_role == "map"
@@ -1423,6 +1424,24 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_check.suggested_next_actions[0].tool_name == (
         "describe_graph_revision"
     )
+    applied_description = db.describe_staged_revision(staged.revision_iri)
+    assert applied_description.application_status == "already_applied"
+    assert applied_description.applied_by is not None
+    assert applied_description.applied_by.iri == result.applied_revision_iri
+    applied_export = db.export_staged_revisions(
+        [staged.revision_iri],
+        tmp_path / "applied-staged-review.md",
+    )
+    assert applied_export.revision_summaries[0].stale_resolution_state == (
+        "already_applied"
+    )
+    assert applied_export.bundle_summary.recommended_review_iris == [
+        staged.revision_iri
+    ]
+    assert applied_export.bundle_summary.recommended_mutation_review_iris == []
+    assert applied_export.bundle_summary.recommended_applied_inspection_iris == [
+        staged.revision_iri
+    ]
 
 
 def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
@@ -2127,6 +2146,12 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert grouped_export_record.bundle_summary.recommended_review_iris == [
         restaged.revision_iri
     ]
+    assert grouped_export_record.bundle_summary.recommended_mutation_review_iris == [
+        restaged.revision_iri
+    ]
+    assert (
+        grouped_export_record.bundle_summary.recommended_applied_inspection_iris == []
+    )
     assert "## Restage Context" in grouped_export
     assert grouped_export.index("## Restage Context") < grouped_export.index(
         "## Revisions"
@@ -2150,6 +2175,17 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
 
     result = db.apply_staged_revision(restaged.revision_iri)
     assert result.triples_added == 1
+    applied_grouped_export = db.export_staged_revisions(
+        [staged.revision_iri, restaged.revision_iri],
+        tmp_path / "applied-restaged-comparison.md",
+    )
+    assert applied_grouped_export.revision_summaries[1].stale_resolution_state == (
+        "restaged_successor_already_applied"
+    )
+    assert applied_grouped_export.bundle_summary.recommended_mutation_review_iris == []
+    assert applied_grouped_export.bundle_summary.recommended_applied_inspection_iris == [
+        restaged.revision_iri
+    ]
     assert db.describe_dataset("https://example.test/project#Messages").iri == (
         "https://example.test/project#Messages"
     )
@@ -2247,6 +2283,11 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         first_restaged.revision_iri,
         second_restaged.revision_iri,
     ]
+    assert export.bundle_summary.recommended_mutation_review_iris == [
+        first_restaged.revision_iri,
+        second_restaged.revision_iri,
+    ]
+    assert export.bundle_summary.recommended_applied_inspection_iris == []
 
 
 def test_restage_staged_revision_rejects_non_conflicted_revision(

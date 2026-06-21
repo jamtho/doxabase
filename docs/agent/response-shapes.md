@@ -958,6 +958,8 @@ description.review_recommendation
 description.alternative_to
 description.restaged_from
 description.restaged_by
+description.applied_by
+description.application_status
 description.restage_reason
 description.changed_graphs
 description.included_graphs
@@ -998,9 +1000,11 @@ another revision. `description.restaged_from` means this staged revision replaye
 an older stale proposal against current graph state; it is provenance for a
 graph-state drift repair, not a competing framing. `description.restaged_by`
 points to a refreshed successor when the described revision is the stale source
-for a later restage. `description.restage_reason` is a compact human-readable
-summary of why the restage happened when that can be derived from the recorded
-rationale.
+for a later restage. `description.applied_by` points to the applied revision
+event when this staged revision has already been applied; in that case
+`description.application_status` is `already_applied`. `description.restage_reason`
+is a compact human-readable summary of why the restage happened when that can be
+derived from the recorded rationale.
 
 `description.judgement_panel` is present for simple single-assertion `map`
 staged changes that still replay cleanly against current graph state. It has
@@ -1244,6 +1248,8 @@ bundle.unresolved_stale_revision_iris
 bundle.stale_handled_by_restage_revision_iris
 bundle.ready_restage_successor_revision_iris
 bundle.recommended_review_iris
+bundle.recommended_mutation_review_iris
+bundle.recommended_applied_inspection_iris
 ```
 
 Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
@@ -1251,7 +1257,10 @@ still need restaging. `stale_handled_by_restage` means the source is stale but
 already points to a refreshed successor. `restaged_successor_ready` marks a
 ready refreshed proposal. The bundle's `recommended_review_iris` de-duplicates
 the current review set in bundle order, replacing handled stale sources with
-their successors.
+their successors. Use `recommended_mutation_review_iris` when you only want
+staged revisions that may still need restage, repair, or apply decisions. Use
+`recommended_applied_inspection_iris` for already-applied staged revisions that
+are useful to inspect but should not be applied again.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

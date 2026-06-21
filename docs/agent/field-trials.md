@@ -325,6 +325,15 @@ few useful gaps:
   needed. Summary rows now also carry added/removed exact-change counts while
   still omitting the heavy changed-triple arrays unless exact detail is
   requested.
+  A post-apply lineage trial showed that list rows stayed clear after recovered
+  successors were applied, but detail views needed the same links and grouped
+  recommendations needed to distinguish mutation review from applied-event
+  inspection. Applied graph-revision descriptions now expose
+  `applies_staged_revision`; staged descriptions expose `applied_by` and
+  `application_status` once applied; grouped bundle summaries split
+  `recommended_mutation_review_iris` from `recommended_applied_inspection_iris`.
+  A larger 10-successor recovery trial confirmed batch restage/export remains
+  desirable for big runs but not necessary yet.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

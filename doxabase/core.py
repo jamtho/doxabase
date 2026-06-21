@@ -436,6 +436,8 @@ class StagedGraphRevisionBundleSummary:
     stale_handled_by_restage_revision_iris: list[str]
     ready_restage_successor_revision_iris: list[str]
     recommended_review_iris: list[str]
+    recommended_mutation_review_iris: list[str]
+    recommended_applied_inspection_iris: list[str]
 
 
 @dataclass(frozen=True)
@@ -528,6 +530,7 @@ class GraphRevisionDescription:
     created_at: str | None
     created_by: str | None
     export_path: str | None
+    applies_staged_revision: str | None
     validation_scope: str | None
     validation_conforms: bool | None
     validation_result_count: int | None
@@ -603,6 +606,8 @@ class StagedGraphRevisionDescription:
     alternative_to: ResourceSummary | None
     restaged_from: ResourceSummary | None
     restaged_by: ResourceSummary | None
+    applied_by: ResourceSummary | None
+    application_status: str | None
     restage_reason: str | None
     changed_graphs: list[str]
     included_graphs: list[str]
@@ -2052,6 +2057,11 @@ class DoxaBase:
             created_at=self._first_object(data_graphs, revision_iri, "rc:createdAt"),
             created_by=self._first_object(data_graphs, revision_iri, "rc:createdBy"),
             export_path=self._first_object(data_graphs, revision_iri, "rc:exportPath"),
+            applies_staged_revision=self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:appliesStagedRevision",
+            ),
             validation_scope=self._first_object(
                 data_graphs,
                 revision_iri,
@@ -2492,6 +2502,16 @@ class DoxaBase:
             if restaged_by_iri is not None
             else None
         )
+        applied_by_iri = self._first_subject(
+            data_graphs,
+            "rc:appliesStagedRevision",
+            revision_iri,
+        )
+        applied_by = (
+            self._resource_summary(all_lookup_graphs, applied_by_iri)
+            if applied_by_iri is not None
+            else None
+        )
         rationale = self._first_object(
             data_graphs,
             revision_iri,
@@ -2539,6 +2559,8 @@ class DoxaBase:
             ),
             restaged_from=restaged_from,
             restaged_by=restaged_by,
+            applied_by=applied_by,
+            application_status="already_applied" if applied_by is not None else None,
             restage_reason=self._staged_revision_restage_reason(
                 restaged_from=restaged_from,
                 rationale=rationale,
@@ -9732,6 +9754,8 @@ class DoxaBase:
         handled_stale: list[str] = []
         ready_successors: list[str] = []
         recommended_review: list[str] = []
+        recommended_mutation_review: list[str] = []
+        recommended_applied_inspection: list[str] = []
 
         def increment(counts: dict[str, int], key: str | None) -> None:
             if key is None:
@@ -9742,6 +9766,16 @@ class DoxaBase:
             if iri is not None and iri not in recommended_review:
                 recommended_review.append(iri)
 
+        def recommend_mutation(iri: str | None) -> None:
+            recommend(iri)
+            if iri is not None and iri not in recommended_mutation_review:
+                recommended_mutation_review.append(iri)
+
+        def recommend_applied_inspection(iri: str | None) -> None:
+            recommend(iri)
+            if iri is not None and iri not in recommended_applied_inspection:
+                recommended_applied_inspection.append(iri)
+
         for summary in summaries:
             increment(apply_status_counts, summary.apply_status)
             state = summary.stale_resolution_state
@@ -9749,13 +9783,13 @@ class DoxaBase:
 
             if state == "stale_unresolved":
                 unresolved_stale.append(summary.revision_iri)
-                recommend(summary.revision_iri)
+                recommend_mutation(summary.revision_iri)
             elif state == "stale_handled_by_restage":
                 handled_stale.append(summary.revision_iri)
                 recommend(summary.restaged_by)
             elif state == "restaged_successor_ready":
                 ready_successors.append(summary.revision_iri)
-                recommend(summary.revision_iri)
+                recommend_mutation(summary.revision_iri)
             elif state in {
                 "ready",
                 "validation_failed",
@@ -9763,9 +9797,11 @@ class DoxaBase:
                 "not_available",
                 "restaged_successor_not_ready",
             }:
-                recommend(summary.revision_iri)
+                recommend_mutation(summary.revision_iri)
             elif state == "restaged_successor_already_applied":
-                recommend(summary.revision_iri)
+                recommend_applied_inspection(summary.revision_iri)
+            elif state == "already_applied":
+                recommend_applied_inspection(summary.revision_iri)
 
         return StagedGraphRevisionBundleSummary(
             total_revisions=len(summaries),
@@ -9775,6 +9811,8 @@ class DoxaBase:
             stale_handled_by_restage_revision_iris=handled_stale,
             ready_restage_successor_revision_iris=ready_successors,
             recommended_review_iris=recommended_review,
+            recommended_mutation_review_iris=recommended_mutation_review,
+            recommended_applied_inspection_iris=recommended_applied_inspection,
         )
 
     def _staged_revision_impacts(

@@ -70,7 +70,8 @@ assuming the map lacks the concept.
 Returns compact revision context for one `rc:GraphRevision`: summary,
 rationale, revision type, changed graph roles, included review/export graph
 roles, validation result, export path, graph snapshots with counts and
-`sha256:<hex>` content digests, and support links.
+`sha256:<hex>` content digests, `applies_staged_revision` for applied events,
+and support links.
 
 `doxabase.list_graph_revisions`
 
@@ -420,7 +421,9 @@ review context. `restaged_from` is present when this staged revision was created
 by replaying an older stale staged proposal against current graph state;
 `restaged_by` is present when this staged revision is the stale source for a
 later refreshed proposal; `restage_reason` gives the compact reason when it can
-be derived from the recorded rationale.
+be derived from the recorded rationale. `applied_by` and
+`application_status="already_applied"` are present after the staged revision is
+applied.
 `judgement_panel` is present for simple single-assertion `map`
 changes that still replay cleanly; it is absent for complex or stale staged
 revisions. Impact
@@ -519,9 +522,10 @@ sources that already have `restaged_by` point suggested actions at the refreshed
 successor instead of another restage. `current_alternative_to` follows refreshed
 successors while `alternative_to` preserves provenance. The payload also returns
 `bundle_summary` with status/state counts, unresolved stale sources, handled
-stale sources, ready successors, and deduped `recommended_review_iris`. Bundles
-with restaged revisions include a `Restage Context` section near the top.
-Relative export paths are resolved from the repository root and returned as
+stale sources, ready successors, deduped `recommended_review_iris`,
+`recommended_mutation_review_iris`, and `recommended_applied_inspection_iris`.
+Bundles with restaged revisions include a `Restage Context` section near the
+top. Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
 
 ## Import and Validation

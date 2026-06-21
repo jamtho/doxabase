@@ -421,7 +421,8 @@ shape.
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, changed/included graph roles, graph snapshots with counts and
 `sha256:<hex>` content digests, validation result, structured validation
-diagnostics, export path, revision anchors, and supporting
+diagnostics, export path, `applies_staged_revision` for applied events,
+revision anchors, and supporting
 observation/claim/pattern/evidence links.
 
 `list_graph_revisions()` returns compact history rows for `rc:GraphRevision`
@@ -456,7 +457,8 @@ staged revision was created by replaying an older stale proposal against current
 graph state. `restaged_by` is present when this staged revision is the stale
 source for a later refreshed proposal. `restage_reason` gives a compact
 "why this was restaged" summary when it can be derived from the recorded
-rationale.
+rationale. `applied_by` and `application_status="already_applied"` are present
+when this staged revision already has an applied revision event.
 `export_staged_revision()` writes a Markdown review bundle with the current
 apply-check status, diagnostics, and impact review before patch payloads. Stale
 exports include conflict status, count or digest drift, validation-skipped reason, and
@@ -483,8 +485,12 @@ refreshed successor instead of another restage. `current_alternative_to` follows
 restage successors while preserving the stored `alternative_to` provenance link.
 The returned `bundle_summary` counts apply statuses and stale-resolution states,
 lists unresolved stale sources, handled stale sources, ready successors, and a
-deduped `recommended_review_iris` set. Relative export paths are resolved from
-the repository root and returned as normalized absolute paths.
+deduped `recommended_review_iris` set. It also splits that set into
+`recommended_mutation_review_iris` for proposals that may still need restage,
+repair, or apply decisions and `recommended_applied_inspection_iris` for already
+applied staged revisions that are useful context but not mutation targets.
+Relative export paths are resolved from the repository root and returned as
+normalized absolute paths.
 
 `check_staged_revision_apply()` previews whether one staged revision can be
 applied without mutating graph state. It reports already-applied state,

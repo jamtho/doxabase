@@ -491,6 +491,10 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["bundle_summary"]["recommended_review_iris"] == [
         staged["revision_iri"]
     ]
+    assert export["bundle_summary"]["recommended_mutation_review_iris"] == [
+        staged["revision_iri"]
+    ]
+    assert export["bundle_summary"]["recommended_applied_inspection_iris"] == []
     assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]
     assert export["revision_summaries"][0]["alternative_to"] is None
     assert export["revision_summaries"][0]["current_alternative_to"] is None
@@ -729,6 +733,10 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["validation_conforms"] is True
     description = describe_graph_revision_tool(db, result["applied_revision_iri"])
     assert description["revision_type_label"] == "applied staged revision"
+    assert description["applies_staged_revision"] == staged["revision_iri"]
+    staged_description = describe_staged_revision_tool(db, staged["revision_iri"])
+    assert staged_description["application_status"] == "already_applied"
+    assert staged_description["applied_by"]["iri"] == result["applied_revision_iri"]
     assert describe_dataset_tool(
         db,
         "https://example.test/project#Messages",

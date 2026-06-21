@@ -273,6 +273,10 @@ conservative:
 - it records an `rc:AppliedStagedRevision` history event linked back with
   `rc:appliesStagedRevision`.
 
+After application, `describe_graph_revision()` on the applied event exposes
+`applies_staged_revision`, and `describe_staged_revision()` on the staged source
+exposes `applied_by` plus `application_status="already_applied"`.
+
 Use `doxabase.check_staged_revision_apply` first when you want a read-only
 answer. It reports whether the staged revision has already been applied, whether
 any patch target graph has drifted from its recorded `beforeTripleCount` or
@@ -327,8 +331,8 @@ stale original exports surface the successor as `Restaged by`. Grouped exports
 collect restage reasons in `Restage Context`. Grouped export payloads also
 include per-row `stale_resolution_state`, `current_alternative_to`, and a
 `bundle_summary` so recovery scripts can find unresolved stale proposals,
-already-handled stale sources, ready successors, and the current recommended
-review set without recomputing those buckets.
+already-handled stale sources, ready successors, the current mutation-review
+set, and already-applied inspection set without recomputing those buckets.
 Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and already-applied revisions should be inspected rather than
 replayed.
