@@ -749,6 +749,27 @@ credentials, endpoint profiles, or executable SQL. `review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
 requires review before executable use.
 
+Each query target candidate has:
+
+```python
+candidate.template
+candidate.template_source
+candidate.source_resource
+candidate.storage_access
+candidate.storage_protocol
+candidate.storage_root
+candidate.endpoint_profile
+candidate.bucket_name
+candidate.key_prefix
+candidate.candidate_path
+candidate.composition
+candidate.requires_endpoint_profile
+candidate.credential_reference
+candidate.path_style_access
+candidate.review_required
+candidate.review_reasons
+```
+
 Each issue or analysis warning has:
 
 ```python
@@ -998,6 +1019,53 @@ validation headline, graph snapshots, patch counts, patch metadata without
 content, and support-link counts. It is meant for quick history scanning; call
 `describe_staged_revision(description.applies_staged_revision)` for patch
 content, full diagnostics, impacts, or judgement panels.
+
+`applied_source` has:
+
+```python
+applied_source.iri
+applied_source.summary
+applied_source.revision_type
+applied_source.revision_type_label
+applied_source.revision_stance
+applied_source.revision_stance_label
+applied_source.review_note
+applied_source.review_recommendation
+applied_source.alternative_to
+applied_source.restaged_from
+applied_source.restaged_by
+applied_source.current_restaged_by
+applied_source.restage_reason
+applied_source.created_at
+applied_source.created_by
+applied_source.validation_scope
+applied_source.validation_conforms
+applied_source.validation_result_count
+applied_source.changed_graphs
+applied_source.included_graphs
+applied_source.graph_snapshots
+applied_source.patch_count
+applied_source.patches
+applied_source.supporting_observation_count
+applied_source.supporting_claim_count
+applied_source.supporting_pattern_count
+applied_source.evidence_count
+applied_source.revision_anchor_count
+```
+
+Each `applied_source.patches[]` item has:
+
+```python
+patch.operation
+patch.operation_label
+patch.target_graph
+patch.patch_role
+patch.patch_role_label
+patch.sequence_index
+patch.triple_count
+patch.before_triple_count
+patch.after_triple_count
+```
 
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:

@@ -151,11 +151,11 @@ Returns a compact read-only projection for query planning around one dataset:
 dataset summary, physical-metadata readiness, `readiness_note`, an `issues`
 list for missing, risky, or informational physical metadata, `analysis_warnings`
 for caveats that matter after a query can be planned, planning notes, columns,
-path templates, physical layouts, storage access descriptions, partition
-schemes, dataset/layout verification status and note, and caveats. Use it
-before drafting DuckDB/S3/local-file queries when you need the physical metadata
-and warnings without the full relationship/pattern handoff in
-`describe_dataset`.
+path templates, derived `query_target_candidates`, physical layouts, storage
+access descriptions, partition schemes, dataset/layout verification status and
+note, and caveats. Use it before drafting DuckDB/S3/local-file queries when you
+need the physical metadata and warnings without the full relationship/pattern
+handoff in `describe_dataset`.
 
 `doxabase.describe_context_slice`
 
