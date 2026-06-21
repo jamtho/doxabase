@@ -350,6 +350,17 @@ few useful gaps:
   provenance but is not enough for action routing; list rows, staged
   descriptions, export summaries, suggested actions, and batch restage now expose
   `current_restaged_by` for the latest known successor.
+  A mixed batch-restage retest found that ready, already-applied,
+  validation-failed, and stored-patch-conflict rows all shared
+  `skipped_not_restageable`, leaving recovery scripts to infer why each row was
+  skipped. Batch restage now keeps that action for compatibility while adding
+  per-row `not_restageable_reason` and grouped
+  `not_restageable_revision_iris_by_reason` values for triage.
+  A successor-chain trial then showed the single restage helper could mint
+  parallel successors from the same stale source, hiding one successor from
+  ordinary `restaged_by` routing and inviting no-op apply noise later. The
+  helper now refuses to restage a source that already has a refreshed successor;
+  agents should inspect or restage `current_restaged_by` instead.
   A post-apply history trial showed the documented two-hop recipe worked but
   repeated detail calls for basic source context. Applied graph-revision
   descriptions now include compact `applied_source` cards while leaving patch

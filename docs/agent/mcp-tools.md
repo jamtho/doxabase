@@ -504,7 +504,9 @@ support links, anchors, stance, review notes, and patch payloads. Its generated
 rationale summarizes the stale apply-check drift evidence, including exact
 snapshot drift triples when available. It does not merge semantic conflicts,
 repair SHACL failures, or apply the result; review the new staged revision and
-run `check_staged_revision_apply` again.
+run `check_staged_revision_apply` again. If the stale source already has a
+`restaged_by` / `current_restaged_by` successor, this helper refuses to create a
+parallel successor; inspect or restage the current successor instead.
 
 `doxabase.restage_staged_revisions`
 

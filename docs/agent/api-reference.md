@@ -569,7 +569,9 @@ notes, and review recommendations. The generated rationale summarizes the stale
 apply check, including count drift and exact snapshot drift triples when
 available, before repeating the original rationale. Use it for count or digest
 drift conflicts; it does not merge semantic conflicts, repair invalid RDF
-proposals, or apply the refreshed revision.
+proposals, or apply the refreshed revision. It refuses to create a parallel
+successor when the stale source already has `restaged_by` /
+`current_restaged_by`; inspect or restage the current successor instead.
 
 `restage_staged_revisions()` is the batch recovery helper for larger stale sets.
 It checks each requested staged revision, restages conflicted revisions that do
@@ -583,12 +585,15 @@ unhandled conflicts then report `action="would_restage"` and appear in
 `would_restage_revision_iris`. In dry-run rows that would be restaged,
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. `skipped_not_restageable` rows may be ready,
-validation-failed, or already applied; inspect `status_before` and
-`decision_before`. Each item also carries `restaged_from` when its source is
-itself a refreshed successor. The helper deliberately does not apply anything;
-applying one successor can make sibling successors stale again. In dry-run mode,
-passing `path` still writes the requested review export while leaving graph
-history unmutated.
+validation-failed, already applied, or blocked by a stored patch conflict; each
+such row carries `not_restageable_reason`, and the batch-level
+`not_restageable_revision_iris_by_reason` groups skipped source IRIs by the same
+compact values. Inspect `status_before` and `decision_before` when deciding
+whether a row needs apply, repair, or replacement. Each item also carries
+`restaged_from` when its source is itself a refreshed successor. The helper
+deliberately does not apply anything; applying one successor can make sibling
+successors stale again. In dry-run mode, passing `path` still writes the
+requested review export while leaving graph history unmutated.
 
 `apply_staged_revision()` applies one staged revision after conservative
 graph-state conflict checks and preview validation. It rejects already-applied

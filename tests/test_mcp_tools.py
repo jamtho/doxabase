@@ -4,7 +4,7 @@ import pytest
 from rdflib.namespace import XSD
 
 import doxabase.mcp_tools as mcp_tools
-from doxabase import DoxaBase, to_dict
+from doxabase import DoxaBase, DoxaBaseError, to_dict
 from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
@@ -444,6 +444,8 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
 
     assert restaged["revision_iri"] != staged["revision_iri"]
     assert restaged["patches"][0]["before_triple_count"] == db.triple_count("map")
+    with pytest.raises(DoxaBaseError, match=restaged["revision_iri"]):
+        restage_staged_revision_tool(db, iri=staged["revision_iri"])
     stale_description = describe_staged_revision_tool(db, staged["revision_iri"])
     assert stale_description["restaged_by"]["iri"] == restaged["revision_iri"]
     description = describe_staged_revision_tool(db, restaged["revision_iri"])

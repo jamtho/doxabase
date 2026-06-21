@@ -345,7 +345,9 @@ snapshot drift triples when available. `describe_staged_revision` also surfaces
 a compact `restage_reason` when it can derive one from that rationale, and
 `restaged_by` on the stale source when a refreshed successor exists. If a
 restage chain grows deeper, `current_restaged_by` points to the latest known
-successor while direct `restaged_by` keeps the immediate provenance edge.
+successor while direct `restaged_by` keeps the immediate provenance edge. The
+single-restage helper refuses to create a parallel successor for a stale source
+that already has one; inspect or restage `current_restaged_by` instead.
 Markdown exports surface that same reason as a top `Restage headline`; stale
 original exports surface `Restaged by` and, when needed, `Current restaged by`.
 Grouped exports collect restage reasons in `Restage Context`. Grouped export
@@ -364,9 +366,12 @@ Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying
 one successor can make sibling successors stale. When a requested stale source
 already has a restage chain, batch restage maps it to `current_restaged_by` so
-the review bundle opens the latest known successor. Use `dry_run=true` when an
-autonomous loop wants to inspect which rows would be refreshed before taking the
-mutation.
+the review bundle opens the latest known successor. Rows skipped as
+`skipped_not_restageable` carry `not_restageable_reason`, and the batch-level
+`not_restageable_revision_iris_by_reason` groups ready, already-applied,
+validation-failed, and `patch_conflict` skips for quick triage. Use
+`dry_run=true` when an autonomous loop wants to inspect which rows would be
+refreshed before taking the mutation.
 
 ## What Gets Recorded
 

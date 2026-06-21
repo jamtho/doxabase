@@ -8970,6 +8970,13 @@ class DoxaBase:
         | None = None,
     ) -> StagedGraphRevisionRecord:
         source = self.describe_staged_revision(iri)
+        existing_successor = source.current_restaged_by or source.restaged_by
+        if existing_successor is not None:
+            raise DoxaBaseError(
+                "restage_staged_revision cannot restage a source that already "
+                "has a refreshed restaged successor; inspect or restage the "
+                f"current successor '{existing_successor.iri}' instead."
+            )
         check = self.check_staged_revision_apply(
             source.iri,
             validation_scope=validation_scope,
