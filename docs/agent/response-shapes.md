@@ -762,6 +762,10 @@ may include `query_context_has_other_blockers` even when its own storage access
 looks clean. Protocol/location warnings such as
 `s3_access_resolution_unrecorded` and `storage_protocol_location_mismatch` mean
 the candidate path is only an orientation aid until storage access is clarified.
+Partition-specific blockers are candidate-local only for the partition that
+owns them; sibling partition candidates should carry
+`query_context_has_other_blockers` instead of the sibling's direct
+contradiction.
 
 Each query target candidate has:
 

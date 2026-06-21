@@ -238,8 +238,10 @@ preserve template provenance and compose best-effort paths from storage roots or
 bucket/prefix facts without resolving endpoint profiles or credential
 references. Candidate `review_reasons` can include overall-context blockers
 from sibling metadata as well as protocol/location warnings, for example
-S3-compatible access without endpoint/credential/region cues or HTTPS/database
-access that only has S3-shaped bucket/prefix metadata.
+S3-compatible access without endpoint/credential/region cues, non-S3 access
+with bucket/prefix metadata, or a storage root that does not match the declared
+protocol. Partition-specific blockers stay attached to their own partition
+candidate; sibling candidates receive an overall-context blocker instead.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

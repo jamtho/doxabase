@@ -320,8 +320,10 @@ datasets. Use IRIs or CURIEs for resource-valued controls such as
 `storage_protocol`, `access_mode`, `layout_verification_status`, and
 `datasets`. For S3-compatible storage, include enough non-secret runtime
 orientation such as `endpoint_profile`, `credential_reference`, or `region`.
-For HTTPS or database storage, prefer protocol-appropriate roots, URLs, or
-connection references rather than S3-shaped `bucket_name`/`key_prefix` alone.
+For non-S3 protocols, prefer protocol-appropriate roots, URLs, or connection
+references rather than S3-shaped `bucket_name`/`key_prefix` alone. A relative
+dataset path template does not make an otherwise rootless storage access ready
+for query planning; record the storage access location as well.
 
 `doxabase.record_map_physical_layout`
 

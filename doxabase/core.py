@@ -4478,7 +4478,6 @@ class DoxaBase:
         if storage_access is not None:
             related_iris.add(storage_access.iri)
         related_iris.update(layout.iri for layout in dataset.physical_layouts)
-        related_iris.update(partition.iri for partition in dataset.partition_schemes)
 
         review_reasons: list[QueryPlanningIssue] = []
         seen: set[tuple[str, str | None]] = set()
@@ -4556,6 +4555,55 @@ class DoxaBase:
             return False
         return storage_protocol.iri == self.expand_iri("rc:DatabaseStorage")
 
+    def _is_local_filesystem_storage(
+        self,
+        storage_protocol: ResourceSummary | None,
+    ) -> bool:
+        if storage_protocol is None:
+            return False
+        return storage_protocol.iri == self.expand_iri("rc:LocalFilesystemStorage")
+
+    def _storage_root_scheme(self, storage_root: str | None) -> str | None:
+        if storage_root is None:
+            return None
+        match = re.match(r"^([A-Za-z][A-Za-z0-9+.-]*):", storage_root.strip())
+        if match is None:
+            return None
+        return match.group(1).lower()
+
+    def _looks_like_absolute_local_path(self, storage_root: str | None) -> bool:
+        if storage_root is None:
+            return False
+        text = storage_root.strip()
+        return text.startswith("/") or bool(re.match(r"^[A-Za-z]:[\\/]", text))
+
+    def _storage_protocol_location_mismatch_reasons(
+        self,
+        access: StorageAccessDescription,
+    ) -> list[str]:
+        reasons: list[str] = []
+        if access.storage_protocol is None:
+            return reasons
+        if not self._is_s3_storage(access.storage_protocol) and (
+            access.bucket_name or access.key_prefix
+        ):
+            reasons.append("bucket/prefix metadata is recorded for a non-S3 protocol")
+
+        scheme = self._storage_root_scheme(access.storage_root)
+        if self._is_s3_storage(access.storage_protocol):
+            if self._looks_like_absolute_local_path(access.storage_root):
+                reasons.append("storage_root looks like a local filesystem path")
+        elif self._is_https_storage(access.storage_protocol):
+            if scheme in {"s3", "s3a", "s3n", "file"} or (
+                scheme is None
+                and self._looks_like_absolute_local_path(access.storage_root)
+            ):
+                reasons.append("storage_root does not look like an HTTP(S) root")
+        elif self._is_local_filesystem_storage(access.storage_protocol):
+            if scheme in {"s3", "s3a", "s3n", "http", "https"}:
+                reasons.append("storage_root looks remote for local filesystem access")
+        return reasons
+
     def _query_planning_issues(
         self,
         dataset: DatasetDescription,
@@ -4611,7 +4659,6 @@ class DoxaBase:
                     access.bucket_name,
                     access.key_prefix,
                     access.path_templates,
-                    dataset.path_templates,
                 ]
             )
             if not has_location:
@@ -4635,14 +4682,19 @@ class DoxaBase:
                         "S3-compatible access records bucket/prefix metadata but no endpoint profile, credential reference, or region.",
                         access_resource,
                     )
-            if (
-                self._is_https_storage(access.storage_protocol)
-                or self._is_database_storage(access.storage_protocol)
-            ) and (access.bucket_name or access.key_prefix):
+            location_mismatch_reasons = (
+                self._storage_protocol_location_mismatch_reasons(access)
+            )
+            if location_mismatch_reasons:
                 add_issue(
                     "storage_protocol_location_mismatch",
                     "warning",
-                    "Storage access uses S3-shaped bucket/prefix metadata with a non-S3 protocol; record a protocol-appropriate storage root, URL, or connection reference before executable use.",
+                    (
+                        "Storage access metadata conflicts with its protocol: "
+                        + "; ".join(location_mismatch_reasons)
+                        + ". Record a protocol-appropriate storage root, URL, "
+                        "or connection reference before executable use."
+                    ),
                     access_resource,
                 )
             self._add_layout_status_issue(

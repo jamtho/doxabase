@@ -4500,6 +4500,149 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     )
 
 
+def test_describe_query_context_warns_on_non_s3_bucket_prefix(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        bucket_name="ignored-bucket",
+        key_prefix="local-shaped-prefix",
+        path_templates=["events/dt={date}.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == "local-shaped-prefix/events/dt={date}.parquet"
+    assert target.review_required is True
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "bucket/prefix" in reason.message
+        for reason in target.review_reasons
+    )
+
+
+@pytest.mark.parametrize(
+    ("protocol", "storage_root", "expected_path"),
+    [
+        (
+            "rc:S3CompatibleStorage",
+            "/lake/not-s3",
+            "/lake/not-s3/events/dt={date}.parquet",
+        ),
+        (
+            "rc:HTTPSStorage",
+            "s3://public-bucket/not-https",
+            "s3://public-bucket/not-https/events/dt={date}.parquet",
+        ),
+    ],
+)
+def test_describe_query_context_warns_on_storage_root_protocol_mismatch(
+    tmp_path: Path,
+    protocol: str,
+    storage_root: str,
+    expected_path: str,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_storage",
+        label="Events access",
+        storage_protocol=protocol,
+        storage_root=storage_root,
+        path_templates=["events/dt={date}.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == expected_path
+    assert target.review_required is True
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "storage_root" in reason.message
+        for reason in target.review_reasons
+    )
+
+
+def test_describe_query_context_requires_storage_access_owned_location(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        path_templates=["relative/dt={date}.parquet"],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "insufficient_metadata"
+    assert any(
+        issue.code == "missing_storage_location"
+        and issue.resource is not None
+        and issue.resource.iri == storage.iri
+        for issue in context.issues
+    )
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == "relative/dt={date}.parquet"
+    assert target.review_required is True
+    assert any(
+        reason.code == "missing_storage_location"
+        for reason in target.review_reasons
+    )
+
+
 def test_describe_query_context_warns_on_unresolved_s3_access(
     tmp_path: Path,
 ) -> None:
@@ -4537,6 +4680,74 @@ def test_describe_query_context_warns_on_unresolved_s3_access(
     assert any(
         reason.code == "s3_access_resolution_unrecorded"
         for reason in target.review_reasons
+    )
+
+
+def test_query_target_candidates_scope_partition_blockers(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    verified_partition = db.record_map_partition_scheme(
+        "https://example.test/project#events_verified_partition",
+        label="Verified event partition",
+        path_template="events/good/dt={date}.parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    contradicted_partition = db.record_map_partition_scheme(
+        "https://example.test/project#events_stale_partition",
+        label="Stale event partition",
+        path_template="events/stale/dt={date}.parquet",
+        layout_verification_status="rc:ContradictedLayout",
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "blocked_by_contradiction"
+    verified_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.source_resource.iri == verified_partition.iri
+    )
+    assert any(
+        reason.code == "query_context_has_other_blockers"
+        for reason in verified_target.review_reasons
+    )
+    assert not any(
+        reason.code == "contradicted_layout"
+        for reason in verified_target.review_reasons
+    )
+
+    contradicted_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.source_resource.iri == contradicted_partition.iri
+    )
+    assert any(
+        reason.code == "contradicted_layout"
+        for reason in contradicted_target.review_reasons
     )
 
 
