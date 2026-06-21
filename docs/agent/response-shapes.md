@@ -753,6 +753,11 @@ query-planning issues that apply to the candidate. These cards do not resolve
 credentials, endpoint profiles, or executable SQL. `review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
 requires review before executable use.
+If the overall query context is blocked by other dataset metadata, a candidate
+may include `query_context_has_other_blockers` even when its own storage access
+looks clean. Protocol/location warnings such as
+`s3_access_resolution_unrecorded` and `storage_protocol_location_mismatch` mean
+the candidate path is only an orientation aid until storage access is clarified.
 
 Each query target candidate has:
 
@@ -1247,10 +1252,14 @@ review the staged revision before the next mutation. For `ready` checks that
 means review before applying; for `conflict` checks it means review before
 restaging or rewriting the stale proposal. `blocking_reasons` uses compact
 values such as `target_count_drift`,
-`target_digest_drift`, `validation_failed`, or `already_applied`. When
+`target_digest_drift`, `patch_conflict`, `validation_failed`, or
+`already_applied`. When
 `validation_conforms is None`, read `validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
 `already_applied`.
+For `patch_conflict`, inspect `patch_checks[].conflict` before mutating; it
+means the stored patch cannot currently be replayed, not merely that the target
+graph count or digest drifted.
 `count_drifts` gives patch-level count drift context: target graph, expected
 before count, current count, delta, and whether exact changed triples are
 available. It also reports `patch_operation`, `patch_triples_checked`,

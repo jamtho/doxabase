@@ -4482,15 +4482,41 @@ class DoxaBase:
 
         review_reasons: list[QueryPlanningIssue] = []
         seen: set[tuple[str, str | None]] = set()
+        excluded_blockers: list[QueryPlanningIssue] = []
         for issue in issues:
             resource_iri = issue.resource.iri if issue.resource is not None else None
             if resource_iri is not None and resource_iri not in related_iris:
+                if issue.severity in {"error", "warning"}:
+                    excluded_blockers.append(issue)
                 continue
             key = (issue.code, resource_iri)
             if key in seen:
                 continue
             seen.add(key)
             review_reasons.append(issue)
+        if excluded_blockers:
+            severity = (
+                "error"
+                if any(issue.severity == "error" for issue in excluded_blockers)
+                else "warning"
+            )
+            review_reasons.append(
+                QueryPlanningIssue(
+                    code="query_context_has_other_blockers",
+                    severity=severity,
+                    message=(
+                        "Overall query context has "
+                        f"{len(excluded_blockers)} blocking/review issue(s) "
+                        "on other dataset metadata; inspect context.issues "
+                        "before executing this candidate."
+                    ),
+                    resource=ResourceSummary(
+                        iri=dataset.iri,
+                        label=dataset.label or self._local_name(dataset.iri),
+                        description=dataset.description,
+                    ),
+                )
+            )
         return review_reasons
 
     def _is_complete_path_template(self, template: str) -> bool:
@@ -4519,6 +4545,16 @@ class DoxaBase:
         if storage_protocol is None:
             return False
         return storage_protocol.iri == self.expand_iri("rc:S3CompatibleStorage")
+
+    def _is_https_storage(self, storage_protocol: ResourceSummary | None) -> bool:
+        if storage_protocol is None:
+            return False
+        return storage_protocol.iri == self.expand_iri("rc:HTTPSStorage")
+
+    def _is_database_storage(self, storage_protocol: ResourceSummary | None) -> bool:
+        if storage_protocol is None:
+            return False
+        return storage_protocol.iri == self.expand_iri("rc:DatabaseStorage")
 
     def _query_planning_issues(
         self,
@@ -4583,6 +4619,30 @@ class DoxaBase:
                     "missing_storage_location",
                     "error",
                     "Storage access does not include a root, bucket, prefix, or path template.",
+                    access_resource,
+                )
+            if self._is_s3_storage(access.storage_protocol) and (
+                access.bucket_name or access.key_prefix
+            ):
+                if not (
+                    access.endpoint_profile
+                    or access.credential_reference
+                    or access.region
+                ):
+                    add_issue(
+                        "s3_access_resolution_unrecorded",
+                        "warning",
+                        "S3-compatible access records bucket/prefix metadata but no endpoint profile, credential reference, or region.",
+                        access_resource,
+                    )
+            if (
+                self._is_https_storage(access.storage_protocol)
+                or self._is_database_storage(access.storage_protocol)
+            ) and (access.bucket_name or access.key_prefix):
+                add_issue(
+                    "storage_protocol_location_mismatch",
+                    "warning",
+                    "Storage access uses S3-shaped bucket/prefix metadata with a non-S3 protocol; record a protocol-appropriate storage root, URL, or connection reference before executable use.",
                     access_resource,
                 )
             self._add_layout_status_issue(

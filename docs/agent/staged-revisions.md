@@ -304,6 +304,12 @@ Use `blocking_reasons` and `recommended_resolution` to distinguish count drift,
 digest drift, validation failure, and already-applied state. When
 `validation_conforms` is `None`, `validation_skipped_reason` explains why
 validation did not run.
+If `blocking_reasons` contains `patch_conflict`, the stored patch itself could
+not be replayed. Inspect `patch_checks[].conflict` and export the staged
+revision before mutating. Common causes are malformed stored patch Turtle or a
+stored target graph that is not exactly one concrete mutable graph role.
+Ordinary restaging is for count/digest drift and may not repair these cases, so
+stage a repaired or alternative candidate when the graph intent is still useful.
 `count_drifts` gives expected/current graph counts and deltas for count drift.
 It can also say whether the staged patch triples themselves are currently
 present, absent, or mixed in the target graph. When stored snapshot rows are

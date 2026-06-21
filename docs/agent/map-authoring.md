@@ -33,6 +33,9 @@ links are different: arguments such as `record_map_caveat(targets=[...])`,
 prune older incoming links. To narrow those links, update the owning dataset or
 table helper where applicable, stage a reviewed assertion change, or use
 `replace_graph_triples()` for exact graph maintenance.
+For scalar helper-owned literal fields, omitting a parameter preserves existing
+values, while passing an explicit empty string includes that predicate in the
+replacement set and clears it.
 
 For `record_map_dataset`, omit `is_table` on partial updates when you want to
 preserve the current dataset/table typing. Pass `is_table=True` or

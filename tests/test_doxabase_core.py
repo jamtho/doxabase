@@ -4392,6 +4392,154 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     assert target.review_reasons == []
 
 
+def test_query_target_candidates_surface_global_blockers(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    local_storage = db.record_map_storage_access(
+        "https://example.test/project#orders_local_storage",
+        label="Orders local access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    stale_storage = db.record_map_storage_access(
+        "https://example.test/project#orders_stale_s3_storage",
+        label="Orders stale S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="old-orders",
+        key_prefix="orders",
+        credential_reference="profile:old-orders",
+        layout_verification_status="rc:ContradictedLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=["orders/dt={date}.parquet"],
+        storage_accesses=[local_storage.iri, stale_storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "blocked_by_contradiction"
+    local_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.storage_access is not None
+        and target.storage_access.iri == local_storage.iri
+    )
+    assert local_target.review_required is True
+    assert any(
+        reason.code == "query_context_has_other_blockers"
+        and reason.severity == "error"
+        for reason in local_target.review_reasons
+    )
+    stale_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.storage_access is not None
+        and target.storage_access.iri == stale_storage.iri
+    )
+    assert any(
+        reason.code == "contradicted_layout"
+        for reason in stale_target.review_reasons
+    )
+
+
+def test_describe_query_context_warns_on_protocol_location_mismatch(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Snapshots"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#snapshots_https_storage",
+        label="Snapshots HTTPS access",
+        storage_protocol="rc:HTTPSStorage",
+        bucket_name="public",
+        key_prefix="snapshots",
+        path_templates=["dt={date}.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#snapshots_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Snapshots",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert any(
+        issue.code == "storage_protocol_location_mismatch"
+        and issue.resource is not None
+        and issue.resource.iri == storage.iri
+        for issue in context.issues
+    )
+    target = context.query_target_candidates[0]
+    assert target.review_required is True
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        for reason in target.review_reasons
+    )
+
+
+def test_describe_query_context_warns_on_unresolved_s3_access(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_s3_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="orders",
+        key_prefix="warehouse",
+        path_templates=["dt={date}.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == "s3://orders/warehouse/dt={date}.parquet"
+    assert target.review_required is True
+    assert any(
+        reason.code == "s3_access_resolution_unrecorded"
+        for reason in target.review_reasons
+    )
+
+
 def test_describe_query_context_separates_analysis_caveats(
     tmp_path: Path,
 ) -> None:

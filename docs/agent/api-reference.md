@@ -236,7 +236,10 @@ has enough non-secret physical context for a query attempt, then review caveats
 before trusting aggregations or interpretations. `query_target_candidates`
 preserve template provenance and compose best-effort paths from storage roots or
 bucket/prefix facts without resolving endpoint profiles or credential
-references.
+references. Candidate `review_reasons` can include overall-context blockers
+from sibling metadata as well as protocol/location warnings, for example
+S3-compatible access without endpoint/credential/region cues or HTTPS/database
+access that only has S3-shaped bucket/prefix metadata.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
@@ -368,7 +371,9 @@ resource being recorded, but incoming convenience links such as
 and `record_map_column(table_iri=...)` add links and do not prune old incoming
 links. To narrow links, update the owning dataset/table helper when possible,
 stage a reviewed assertion change, or use `replace_graph_triples()` for exact
-maintenance.
+maintenance. For scalar helper-owned literal fields, omitting a parameter
+preserves existing values, while passing an explicit empty string includes that
+predicate in the replacement set and clears it.
 `record_map_relationship()` supports foreign keys, shared
 identifiers, derivations, and aggregations; for aggregations, pass
 `group_by_columns` plus `aggregated_columns` mappings with `target_column`,

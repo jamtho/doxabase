@@ -314,7 +314,10 @@ Use prose for the caveat description, and use IRIs or CURIEs for `severity` and
 Records or updates non-secret storage access metadata and can link it to
 datasets. Use IRIs or CURIEs for resource-valued controls such as
 `storage_protocol`, `access_mode`, `layout_verification_status`, and
-`datasets`.
+`datasets`. For S3-compatible storage, include enough non-secret runtime
+orientation such as `endpoint_profile`, `credential_reference`, or `region`.
+For HTTPS or database storage, prefer protocol-appropriate roots, URLs, or
+connection references rather than S3-shaped `bucket_name`/`key_prefix` alone.
 
 `doxabase.record_map_physical_layout`
 
