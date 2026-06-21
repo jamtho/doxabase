@@ -33,6 +33,24 @@ def _mutable_graph_counts(db: DoxaBase) -> dict[str, int]:
     return {graph: db.triple_count(graph) for graph in MUTABLE_GRAPHS}
 
 
+def _corrupt_staged_patch_target_graph(
+    db: DoxaBase,
+    patch_iri: str,
+    target_graph: str,
+) -> None:
+    db._conn.execute(
+        """
+        UPDATE quads
+        SET object = ?
+        WHERE graph = 'history'
+          AND subject = ?
+          AND predicate = ?
+        """,
+        (target_graph, patch_iri, RC + "targetGraph"),
+    )
+    db._conn.commit()
+
+
 def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     overview = db.graph_overview()
@@ -1558,6 +1576,57 @@ def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
     assert db.triple_count("map") == 0
     with pytest.raises(DoxaBaseError, match="Messages"):
         db.describe_dataset("https://example.test/project#Messages")
+
+
+def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Exercise stored target graph validation.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    assert db.check_staged_revision_apply(staged.revision_iri).status == "ready"
+    before_counts = _mutable_graph_counts(db)
+    unknown_graph = "not_a_graph_role"
+    assert db.triple_count(unknown_graph) == 0
+
+    _corrupt_staged_patch_target_graph(
+        db,
+        staged.patches[0].patch_iri,
+        unknown_graph,
+    )
+
+    description = db.describe_staged_revision(staged.revision_iri)
+    assert description.patches[0].target_graph == unknown_graph
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.can_apply is False
+    assert check.status == "conflict"
+    assert check.blocking_reasons == ["patch_conflict"]
+    assert check.validation_conforms is None
+    assert check.validation_skipped_reason == "conflicts_present"
+    assert check.patch_checks[0].target_graph == unknown_graph
+    assert check.patch_checks[0].can_apply is False
+    assert check.patch_checks[0].conflict is not None
+    assert "targets unknown graph role" in check.patch_checks[0].conflict
+    assert "targets unknown graph role" in check.conflicts[0]
+
+    with pytest.raises(DoxaBaseError, match="targets unknown graph role"):
+        db.apply_staged_revision(staged.revision_iri)
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.triple_count(unknown_graph) == 0
 
 
 def test_mixed_staged_revision_uses_recorded_patch_sequence_for_apply_check(
@@ -6375,6 +6444,56 @@ def test_record_profile_bundle_rejects_invalid_column_values_without_mutation(
                     ],
                 }
             ],
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.search("Orders were profiled", graph="observations").matches == []
+    assert db.search("Shared profiler run", graph="evidence").matches == []
+
+
+@pytest.mark.parametrize(
+    ("column_overrides", "match"),
+    [
+        (
+            {"profile_metrics": [{"metric": "rc:MeanValue", "value": []}]},
+            "profile_metrics\\[0\\]\\.value",
+        ),
+        ({"physical_type": "plain physical type"}, "physical_type"),
+        ({"value_type": "plain value type"}, "value_type"),
+        ({"table_iri": "plain table name"}, "table_iri"),
+        ({"pattern_summary": "Status looks categorical."}, "provided together"),
+        (
+            {
+                "pattern_summary": "Status looks categorical.",
+                "pattern_text": "Status has a small observed domain.",
+                "pattern_rationale": "The profiler saw only a few statuses.",
+                "pattern_map_implications": ["plain implication"],
+            },
+            "pattern_map_implications",
+        ),
+    ],
+)
+def test_record_profile_bundle_preflights_column_validation_without_mutation(
+    tmp_path: Path,
+    column_overrides: dict[str, object],
+    match: str,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+    column_profile = {
+        "column_iri": "https://example.test/project#OrdersStatus",
+        "column_name": "status",
+        "summary": "Status was profiled.",
+        **column_overrides,
+    }
+
+    with pytest.raises(DoxaBaseError, match=match):
+        db.record_profile_bundle(
+            "https://example.test/project#Orders",
+            dataset_summary="Orders were profiled.",
+            evidence_summary="Shared profiler run.",
+            evidence_sources=["test://profile-run"],
+            column_profiles=[column_profile],
         )
 
     assert _mutable_graph_counts(db) == before_counts

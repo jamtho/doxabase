@@ -8581,11 +8581,7 @@ class DoxaBase:
         additions: list[dict[str, str]] = []
         removals: list[dict[str, str]] = []
         for patch in source.patches:
-            target_graph = self._required_staged_patch_field(
-                patch,
-                "target_graph",
-                patch.target_graph,
-            )
+            target_graph = self._required_staged_patch_target_graph(patch)
             operation = self._required_staged_patch_field(
                 patch,
                 "operation",
@@ -9334,11 +9330,7 @@ class DoxaBase:
         triples_added = 0
         triples_removed = 0
         for patch, patch_graph in preview.parsed_patches:
-            target_graph = self._required_staged_patch_field(
-                patch,
-                "target_graph",
-                patch.target_graph,
-            )
+            target_graph = self._required_staged_patch_target_graph(patch)
             operation = self._required_staged_patch_field(
                 patch,
                 "operation",
@@ -9546,17 +9538,12 @@ class DoxaBase:
             conflict: str | None = None
             patch_graph: Graph | None = None
             try:
-                target_graph = self._required_staged_patch_field(
-                    patch,
-                    "target_graph",
-                    patch.target_graph,
-                )
+                target_graph = self._required_staged_patch_target_graph(patch)
                 operation = self._required_staged_patch_field(
                     patch,
                     "operation",
                     patch.operation,
                 )
-                self._ensure_mutable(target_graph)
                 current_preview = preview_graphs.setdefault(
                     target_graph,
                     self.to_graph([target_graph]),
@@ -9912,11 +9899,12 @@ class DoxaBase:
             if patch.target_graph is None:
                 continue
             try:
+                target_graph = self._required_staged_patch_target_graph(patch)
                 patch_graph = self._parse_staged_patch_description(patch)
             except DoxaBaseError:
                 continue
             graph_terms = terms_by_graph.setdefault(
-                patch.target_graph,
+                target_graph,
                 _StagedRevisionDriftTerms(
                     patch_subjects=set(),
                     patch_predicates=set(),
@@ -10654,11 +10642,11 @@ class DoxaBase:
         ] = {}
 
         for patch in patches:
-            target_graph = patch.target_graph
             operation = patch.operation
-            if target_graph is None or operation is None:
+            if operation is None:
                 continue
             try:
+                target_graph = self._required_staged_patch_target_graph(patch)
                 patch_graph = self._parse_staged_patch_description(patch)
             except DoxaBaseError:
                 continue
@@ -12958,6 +12946,30 @@ class DoxaBase:
             raise DoxaBaseError(f"Staged patch '{patch.iri}' content has no triples")
         return patch_graph
 
+    def _required_staged_patch_target_graph(
+        self,
+        patch: StagedGraphPatchDescription,
+    ) -> str:
+        target_graph = self._required_staged_patch_field(
+            patch,
+            "target_graph",
+            patch.target_graph,
+        )
+        try:
+            graph_names = self._graph_names_for_export([target_graph])
+        except DoxaBaseError as exc:
+            raise DoxaBaseError(
+                f"Staged patch '{patch.iri}' targets unknown graph role "
+                f"'{target_graph}'"
+            ) from exc
+        if len(graph_names) != 1 or graph_names[0] != target_graph:
+            raise DoxaBaseError(
+                f"Staged patch '{patch.iri}' must target exactly one concrete "
+                f"graph role, not '{target_graph}'"
+            )
+        self._ensure_mutable(target_graph)
+        return target_graph
+
     def _required_staged_patch_field(
         self,
         patch: StagedGraphPatchDescription,
@@ -13652,14 +13664,13 @@ class DoxaBase:
         removal_operation = self.expand_iri("rc:RemovalPatch")
         preview_graphs: dict[str, Graph] = {}
         for patch in description.patches:
-            target_graph = patch.target_graph
             operation = patch.operation
-            if target_graph is None or operation is None:
+            if operation is None:
                 return False
             if operation not in {addition_operation, removal_operation}:
                 return False
             try:
-                self._ensure_mutable(target_graph)
+                target_graph = self._required_staged_patch_target_graph(patch)
                 current_preview = preview_graphs.setdefault(
                     target_graph,
                     self.to_graph([target_graph]),
