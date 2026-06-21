@@ -31,6 +31,9 @@ or observed metric node seed for a narrower complete handoff.
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference
 between a lore handoff and an opaque RDF neighborhood.
+`route_counts` count route occurrences rather than unique resources, so one
+resource can legitimately contribute to multiple route totals when it was useful
+for more than one reason.
 
 Useful fields:
 

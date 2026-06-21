@@ -1205,6 +1205,9 @@ def test_describe_query_context_tool_returns_planning_projection(
         "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
     )
     assert result["query_target_candidates"][0]["composition"] == "storage_root_joined"
+    assert result["query_target_candidates"][0]["candidate_path_status"] == (
+        "orientation_only"
+    )
     assert result["query_target_candidates"][0]["template_source"] == "partition_scheme"
     assert result["query_target_candidates"][0]["requires_endpoint_profile"] is True
     assert result["query_target_candidates"][0]["review_required"] is True
@@ -1389,6 +1392,45 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         and resource["primary_route"]["route"] == "seed"
         and any(route["route"] == "seed" for route in resource["routes"])
         for resource in result["resources"]
+    )
+
+
+def test_describe_context_slice_tool_preserves_profile_routes(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    metric_kind = "https://example.test/project#CompletenessRatio"
+    record_map_dataset_tool(db, dataset, label="Orders", is_table=True)
+    profile = record_dataset_profile_tool(
+        db,
+        dataset_iri=dataset,
+        summary="Orders were profiled for completeness.",
+        evidence_summary="Dataset profile run.",
+        evidence_sources=["test://orders-profile"],
+        profile_metrics=[
+            {"metric": metric_kind, "value": 0.98, "target": dataset},
+        ],
+        update_map_snapshot=False,
+    )
+
+    result = describe_context_slice_tool(
+        db,
+        seed_iris=[metric_kind],
+        profile="dataset_brief",
+        max_triples=200,
+    )
+
+    resource_iris = {resource["iri"] for resource in result["resources"]}
+    assert metric_kind in resource_iris
+    assert profile["observation"]["observation_iri"] in resource_iris
+    assert dataset in resource_iris
+    assert result["dataset_contexts"][0]["iri"] == dataset
+    assert result["route_counts"]["seed_profile_metric_kind"] == 1
+    assert result["route_counts"]["profile_metric_observation"] == 1
+    legend = {row["route"]: row for row in result["route_legend"]}
+    assert legend["profile_metric_observation"]["meaning"].startswith(
+        "A profile observation reached from a selected observed profile metric"
     )
 
 

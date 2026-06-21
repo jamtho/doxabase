@@ -242,6 +242,9 @@ S3-compatible access without endpoint/credential/region cues, non-S3 access
 with bucket/prefix metadata, or a storage root that does not match the declared
 protocol. Partition-specific blockers stay attached to their own partition
 candidate; sibling candidates receive an overall-context blocker instead.
+`candidate_path_status` separates path usability from composition: `ready`
+means a usable planning input, `orientation_only` means the candidate path is a
+review clue, and `unresolved` means executable location metadata is incomplete.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

@@ -376,7 +376,8 @@ context.warnings
 `route_counts` is keyed by route id. `route_legend` explains those ids with
 labels, meanings, priorities, and counts. `reading_order` is static guidance for
 how to read the returned slice; it is not recomputed as a custom plan for each
-query.
+query. Route counts are route occurrences, not unique resource counts; a
+resource reached through two useful routes contributes to both route counts.
 Dataset/deep-lore slices can include routes such as
 `dataset_profile_observation`, `column_profile_observation`,
 `unmapped_column_profile_observation`, `observed_profile_metric`,
@@ -386,6 +387,8 @@ observations used by `describe_dataset()`. A metric-kind IRI that has no subject
 triples can still appear with `referenced_only=True` when it was reached through
 `rc:profileMetricKind`. Broad metric-kind seeds are capped; read `warnings` for
 omitted observed profile metric counts and use narrower seeds when needed.
+Profile and metric seeds may include bounded same-dataset profile context
+beyond the exact seed while avoiding unrelated dataset leakage.
 
 Each item in `context.resources` is a `ContextSliceResource`:
 
@@ -790,12 +793,18 @@ candidate.bucket_name
 candidate.key_prefix
 candidate.candidate_path
 candidate.composition
+candidate.candidate_path_status
 candidate.requires_endpoint_profile
 candidate.credential_reference
 candidate.path_style_access
 candidate.review_required
 candidate.review_reasons
 ```
+
+`candidate_path_status` is `ready` when the path is suitable as a planning
+input after normal review, `orientation_only` when warnings/errors make it a
+handoff clue rather than executable guidance, and `unresolved` when the graph
+lacks enough storage-location metadata for an executable path.
 
 Each issue or analysis warning has:
 

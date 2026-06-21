@@ -853,6 +853,7 @@ class QueryTargetCandidate:
     key_prefix: str | None
     candidate_path: str | None
     composition: str
+    candidate_path_status: str
     requires_endpoint_profile: bool
     credential_reference: str | None
     path_style_access: bool | None
@@ -4567,6 +4568,10 @@ class DoxaBase:
                 source_resource=source_resource,
                 storage_access=access_resource,
             )
+            review_required = any(
+                reason.severity in {"error", "warning"}
+                for reason in review_reasons
+            )
             candidates.append(
                 QueryTargetCandidate(
                     template=template,
@@ -4594,6 +4599,11 @@ class DoxaBase:
                     ),
                     candidate_path=candidate_path,
                     composition=composition,
+                    candidate_path_status=self._query_candidate_path_status(
+                        candidate_path,
+                        review_required=review_required,
+                        review_reasons=review_reasons,
+                    ),
                     requires_endpoint_profile=(
                         bool(storage_access.endpoint_profile)
                         if storage_access is not None
@@ -4609,10 +4619,7 @@ class DoxaBase:
                         if storage_access is not None
                         else None
                     ),
-                    review_required=any(
-                        reason.severity in {"error", "warning"}
-                        for reason in review_reasons
-                    ),
+                    review_required=review_required,
                     review_reasons=review_reasons,
                 )
             )
@@ -4629,6 +4636,21 @@ class DoxaBase:
                 add_candidate(template, "storage_access", access_resource, storage_access)
 
         return candidates
+
+    def _query_candidate_path_status(
+        self,
+        candidate_path: str | None,
+        *,
+        review_required: bool,
+        review_reasons: list[QueryPlanningIssue],
+    ) -> str:
+        if candidate_path is None or any(
+            reason.code == "missing_storage_location" for reason in review_reasons
+        ):
+            return "unresolved"
+        if review_required:
+            return "orientation_only"
+        return "ready"
 
     def _query_candidate_path(
         self,

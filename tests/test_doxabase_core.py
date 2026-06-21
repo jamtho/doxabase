@@ -4407,6 +4407,7 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     assert target.storage_access.iri == storage.iri
     assert target.candidate_path == "s3://example-bucket/warehouse/orders/dt={date}.parquet"
     assert target.composition == "bucket_prefix_joined"
+    assert target.candidate_path_status == "ready"
     assert target.credential_reference == "profile:orders-readonly"
     assert target.review_required is False
     assert target.review_reasons == []
@@ -4514,6 +4515,7 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     )
     target = context.query_target_candidates[0]
     assert target.review_required is True
+    assert target.candidate_path_status == "orientation_only"
     assert any(
         reason.code == "storage_protocol_location_mismatch"
         for reason in target.review_reasons
@@ -4553,6 +4555,7 @@ def test_describe_query_context_warns_on_non_s3_bucket_prefix(
     assert context.readiness == "needs_review"
     target = context.query_target_candidates[0]
     assert target.candidate_path == "local-shaped-prefix/events/dt={date}.parquet"
+    assert target.candidate_path_status == "orientation_only"
     assert target.review_required is True
     assert any(
         reason.code == "storage_protocol_location_mismatch"
@@ -4611,6 +4614,7 @@ def test_describe_query_context_warns_on_storage_root_protocol_mismatch(
     assert context.readiness == "needs_review"
     target = context.query_target_candidates[0]
     assert target.candidate_path == expected_path
+    assert target.candidate_path_status == "orientation_only"
     assert target.review_required is True
     assert any(
         reason.code == "storage_protocol_location_mismatch"
@@ -4656,6 +4660,7 @@ def test_describe_query_context_requires_storage_access_owned_location(
     )
     target = context.query_target_candidates[0]
     assert target.candidate_path == "relative/dt={date}.parquet"
+    assert target.candidate_path_status == "unresolved"
     assert target.review_required is True
     assert any(
         reason.code == "missing_storage_location"
