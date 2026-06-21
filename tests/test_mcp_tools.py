@@ -4,7 +4,7 @@ import pytest
 from rdflib.namespace import XSD
 
 import doxabase.mcp_tools as mcp_tools
-from doxabase import DoxaBase
+from doxabase import DoxaBase, to_dict
 from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
@@ -1155,6 +1155,23 @@ def test_describe_query_context_tool_returns_planning_projection(
         for issue in result["issues"]
     )
     assert "non-secret planning metadata" in result["planning_notes"][0]
+
+
+def test_describe_query_context_tool_matches_python_target_candidates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+    tables = list_entities_tool(db, type="rc:Table", graph="map")
+
+    for table in tables["entities"]:
+        iri = table["iri"]
+        python_payload = to_dict(db.describe_query_context(iri=iri))
+        tool_payload = describe_query_context_tool(db, iri=iri)
+
+        assert tool_payload["query_target_candidates"] == python_payload[
+            "query_target_candidates"
+        ]
 
 
 def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> None:

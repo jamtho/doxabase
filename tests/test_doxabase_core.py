@@ -3827,6 +3827,86 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert {issue.domain for issue in context.issues} == {"query_planning"}
 
 
+def test_describe_query_context_summarizes_fixture_target_candidates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+    db.import_trig(POLYMARKET_FIXTURE)
+
+    tables = db.list_entities(type="rc:Table", graph="map", limit=20).entities
+    assert len(tables) == 7
+    seen_sources: set[str] = set()
+
+    for table in tables:
+        context = db.describe_query_context(table.iri)
+
+        assert context.query_target_candidates
+        for target in context.query_target_candidates:
+            seen_sources.add(target.template_source)
+            assert target.template_source in {
+                "dataset",
+                "partition_scheme",
+                "storage_access",
+            }
+            assert target.source_resource.iri
+            assert target.storage_access is not None
+            assert target.candidate_path is not None
+            assert "data/parquet/data/parquet" not in target.candidate_path
+            assert "s3://ais-noaa/ais-noaa" not in target.candidate_path
+            assert target.review_required is any(
+                reason.severity in {"error", "warning"}
+                for reason in target.review_reasons
+            )
+
+    assert {"dataset", "partition_scheme"} <= seen_sources
+
+
+def test_describe_query_context_reports_storage_access_owned_target_candidate(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        label="Orders S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="example-bucket",
+        key_prefix="warehouse",
+        path_templates=["orders/dt={date}.parquet"],
+        credential_reference="profile:orders-readonly",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "ready_for_query_planning"
+    assert len(context.query_target_candidates) == 1
+    target = context.query_target_candidates[0]
+    assert target.template_source == "storage_access"
+    assert target.source_resource.iri == storage.iri
+    assert target.storage_access is not None
+    assert target.storage_access.iri == storage.iri
+    assert target.candidate_path == "s3://example-bucket/warehouse/orders/dt={date}.parquet"
+    assert target.composition == "bucket_prefix_joined"
+    assert target.credential_reference == "profile:orders-readonly"
+    assert target.review_required is False
+    assert target.review_reasons == []
+
+
 def test_describe_query_context_separates_analysis_caveats(
     tmp_path: Path,
 ) -> None:

@@ -278,6 +278,11 @@ source spans when recorded. `update_map_snapshot`
 defaults to true, so pass `false` when a row count is only a scratch sample or
 tentative measurement. When the helper creates a pattern and the profile
 observation has evidence, the same evidence is linked to the pattern.
+`profile_summary.shared_evidence_iris` means an evidence IRI appears on every
+returned profile observation in the bounded `describe_dataset()` response. When
+older profile history is mixed with a newer shared-evidence bundle, inspect
+`profile_summary.evidence_profile_counts` to see which evidence IRIs support
+several profiles from one profiler run.
 If a capsule only contains profile lore, `describe_dataset()` may still report
 missing storage/path/layout warnings; treat those as query-planning gaps, not
 profile validation failures. Check `profile_summary.handoff_note` when deciding

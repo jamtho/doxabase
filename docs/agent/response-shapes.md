@@ -531,8 +531,11 @@ observations beyond the returned limit. `evidence_iris` lists unique evidence
 IRIs linked from returned profile observations. `evidence_profile_counts` counts
 how many returned profile observations link to each evidence IRI.
 `shared_evidence_iris` lists evidence IRIs that are linked from every returned
-profile observation in the bounded response. `handoff_note` is a compact reading
-cue for profile-only handoffs: profile lore is observed evidence, while
+profile observation in the bounded response; it can be empty when older or
+unrelated returned profiles are mixed with a newer shared-evidence bundle. In
+that mixed-history case, use `evidence_profile_counts` to spot evidence IRIs
+that support several profiles from the same run. `handoff_note` is a compact
+reading cue for profile-only handoffs: profile lore is observed evidence, while
 storage/path/layout warnings remain physical query-planning metadata gaps.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
@@ -737,7 +740,9 @@ access metadata, a best-effort `candidate_path`, a `composition` value such as
 `template_as_returned`, `storage_root_joined`, `bucket_prefix_joined`,
 `key_prefix_joined`, or `unresolved`, and `review_reasons` copied from physical
 query-planning issues that apply to the candidate. These cards do not resolve
-credentials, endpoint profiles, or executable SQL.
+credentials, endpoint profiles, or executable SQL. `review_reasons` may include
+info-only notes; use `review_required` to tell whether any warning or error
+requires review before executable use.
 
 Each issue or analysis warning has:
 
