@@ -428,9 +428,10 @@ observation/claim/pattern/evidence links.
 resources, newest first. Each row includes summary, revision type/stance,
 record kind, created time, changed graphs, validation headline, patch payload
 presence/count, relation links such as `applied_by`, `applies_staged_revision`,
-`alternative_to`, `restaged_from`, and `restaged_by`, plus optional staged
-apply-check status, summary, recommended resolution, validation-skipped reason,
-blockers, drift summaries, and suggested actions when `include_apply_checks=True`.
+`alternative_to`, `current_alternative_to`, `restaged_from`, and `restaged_by`,
+plus `stale_resolution_state` and optional staged apply-check status, summary,
+recommended resolution, validation-skipped reason, blockers, drift summaries,
+and suggested actions when `include_apply_checks=True`.
 `drift_detail="summary"` is the default list mode: snapshot drift rows keep
 counts and digests but omit exact changed-triple arrays. Use
 `drift_detail="exact"` when you need those arrays in the list response, or call
@@ -477,8 +478,12 @@ The returned record also includes `revision_summaries`, a machine-readable copy
 of the grouped status rows with current apply status, blockers, validation
 state, alternative/restage links, recommendations, and suggested next actions.
 Stale sources that already have `restaged_by` point suggested actions at the
-refreshed successor instead of another restage. Relative export paths are
-resolved from the repository root and returned as normalized absolute paths.
+refreshed successor instead of another restage. `current_alternative_to` follows
+restage successors while preserving the stored `alternative_to` provenance link.
+The returned `bundle_summary` counts apply statuses and stale-resolution states,
+lists unresolved stale sources, handled stale sources, ready successors, and a
+deduped `recommended_review_iris` set. Relative export paths are resolved from
+the repository root and returned as normalized absolute paths.
 
 `check_staged_revision_apply()` previews whether one staged revision can be
 applied without mutating graph state. It reports already-applied state,

@@ -883,8 +883,10 @@ item.patch_count
 item.applied_by
 item.applies_staged_revision
 item.alternative_to
+item.current_alternative_to
 item.restaged_from
 item.restaged_by
+item.stale_resolution_state
 item.application_status
 item.application_decision
 item.application_can_apply
@@ -918,6 +920,7 @@ item.application_summary
 item.application_recommended_resolution
 item.application_validation_skipped_reason
 item.application_blocking_reasons
+item.stale_resolution_state
 item.suggested_next_calls
 ```
 
@@ -1178,6 +1181,7 @@ export.format
 export.revision_iris
 export.bytes_written
 export.revision_summaries
+export.bundle_summary
 ```
 
 Each item in `revision_summaries` is a
@@ -1189,6 +1193,7 @@ item.summary
 item.revision_stance
 item.revision_stance_label
 item.alternative_to
+item.current_alternative_to
 item.changed_graphs
 item.apply_status
 item.apply_decision
@@ -1207,17 +1212,39 @@ item.validation_diagnostic_headline
 item.review_recommendation
 item.restaged_from
 item.restaged_by
+item.stale_resolution_state
 item.suggested_next_actions
 item.suggested_next_calls
 ```
 
 Use these rows when a script needs the same grouped current-status information
 shown in the Markdown summary table without making separate apply-check calls.
-`alternative_to`, `restaged_from`, and `restaged_by` let recovery scripts keep
-alternative groups and stale/restaged chains together without a second revision
-list lookup. When a stale source already has `restaged_by`, its suggested next
-actions point at the refreshed successor instead of recommending another
-restage.
+`alternative_to`, `current_alternative_to`, `restaged_from`, `restaged_by`, and
+`stale_resolution_state` let recovery scripts keep alternative groups and
+stale/restaged chains together without a second revision list lookup.
+`alternative_to` preserves the stored provenance target; `current_alternative_to`
+follows restage successors when the alternative target has been refreshed. When a
+stale source already has `restaged_by`, its suggested next actions point at the
+refreshed successor instead of recommending another restage.
+
+`export.bundle_summary` is a `StagedGraphRevisionBundleSummary`:
+
+```python
+bundle.total_revisions
+bundle.apply_status_counts
+bundle.stale_resolution_state_counts
+bundle.unresolved_stale_revision_iris
+bundle.stale_handled_by_restage_revision_iris
+bundle.ready_restage_successor_revision_iris
+bundle.recommended_review_iris
+```
+
+Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
+still need restaging. `stale_handled_by_restage` means the source is stale but
+already points to a refreshed successor. `restaged_successor_ready` marks a
+ready refreshed proposal. The bundle's `recommended_review_iris` de-duplicates
+the current review set in bundle order, replacing handled stale sources with
+their successors.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

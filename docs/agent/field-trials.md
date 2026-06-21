@@ -313,6 +313,12 @@ few useful gaps:
   required a separate revision-list call and stale originals with successors
   still suggested another restage; summaries now carry `alternative_to`, and
   suggested actions point at `restaged_by` successors when they already exist.
+  Retests on several stale proposals showed that agents could recover from the
+  grouped rows but still hand-counted unresolved stale sources, handled stale
+  sources, and ready successors; list/export rows now include
+  `stale_resolution_state`, exports include `bundle_summary`, and
+  `current_alternative_to` follows refreshed successors while preserving stored
+  provenance.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

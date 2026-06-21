@@ -401,6 +401,7 @@ class StagedGraphRevisionExportSummary:
     revision_stance: str | None
     revision_stance_label: str | None
     alternative_to: str | None
+    current_alternative_to: str | None
     changed_graphs: list[str]
     apply_status: str | None
     apply_decision: str | None
@@ -419,8 +420,20 @@ class StagedGraphRevisionExportSummary:
     review_recommendation: str | None
     restaged_from: str | None
     restaged_by: str | None
+    stale_resolution_state: str | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
+class StagedGraphRevisionBundleSummary:
+    total_revisions: int
+    apply_status_counts: dict[str, int]
+    stale_resolution_state_counts: dict[str, int]
+    unresolved_stale_revision_iris: list[str]
+    stale_handled_by_restage_revision_iris: list[str]
+    ready_restage_successor_revision_iris: list[str]
+    recommended_review_iris: list[str]
 
 
 @dataclass(frozen=True)
@@ -430,6 +443,7 @@ class StagedGraphRevisionsExportRecord:
     revision_iris: list[str]
     bytes_written: int
     revision_summaries: list[StagedGraphRevisionExportSummary]
+    bundle_summary: StagedGraphRevisionBundleSummary
 
 
 @dataclass(frozen=True)
@@ -543,8 +557,10 @@ class GraphRevisionListItem:
     applied_by: str | None
     applies_staged_revision: str | None
     alternative_to: str | None
+    current_alternative_to: str | None
     restaged_from: str | None
     restaged_by: str | None
+    stale_resolution_state: str | None
     application_status: str | None
     application_decision: str | None
     application_can_apply: bool | None
@@ -2170,6 +2186,22 @@ class DoxaBase:
             if application_status is None and applies_staged_revision is not None:
                 application_status = "applied_event"
 
+            alternative_to = self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:alternativeTo",
+            )
+            restaged_from = self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:restagesRevision",
+            )
+            restaged_by = self._first_subject(
+                data_graphs,
+                "rc:restagesRevision",
+                revision_iri,
+            )
+
             items.append(
                 GraphRevisionListItem(
                     iri=revision_iri,
@@ -2220,20 +2252,18 @@ class DoxaBase:
                         revision_iri,
                     ),
                     applies_staged_revision=applies_staged_revision,
-                    alternative_to=self._first_object(
-                        data_graphs,
-                        revision_iri,
-                        "rc:alternativeTo",
+                    alternative_to=alternative_to,
+                    current_alternative_to=self._current_alternative_to_iri(
+                        alternative_to,
+                        graphs=data_graphs,
                     ),
-                    restaged_from=self._first_object(
-                        data_graphs,
-                        revision_iri,
-                        "rc:restagesRevision",
-                    ),
-                    restaged_by=self._first_subject(
-                        data_graphs,
-                        "rc:restagesRevision",
-                        revision_iri,
+                    restaged_from=restaged_from,
+                    restaged_by=restaged_by,
+                    stale_resolution_state=self._stale_resolution_state(
+                        status=application_status,
+                        has_patch_payload=bool(patch_iris),
+                        restaged_from=restaged_from,
+                        restaged_by=restaged_by,
                     ),
                     application_status=application_status,
                     application_decision=application_decision,
@@ -2273,6 +2303,74 @@ class DoxaBase:
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
         )
+
+    def _current_alternative_to_iri(
+        self,
+        alternative_to: str | None,
+        *,
+        graphs: list[str] | None = None,
+    ) -> str | None:
+        if alternative_to is None:
+            return None
+        successor = self._current_restage_successor_iri(
+            alternative_to,
+            graphs=graphs,
+        )
+        return successor or alternative_to
+
+    def _current_restage_successor_iri(
+        self,
+        iri: str,
+        *,
+        graphs: list[str] | None = None,
+    ) -> str | None:
+        lookup_graphs = graphs or self._expand_graphs(["history"])
+        seen = {iri}
+        current_iri = iri
+        latest_successor: str | None = None
+        while True:
+            successor = self._first_subject(
+                lookup_graphs,
+                "rc:restagesRevision",
+                current_iri,
+            )
+            if successor is None or successor in seen:
+                return latest_successor
+            latest_successor = successor
+            current_iri = successor
+            seen.add(successor)
+
+    def _stale_resolution_state(
+        self,
+        *,
+        status: str | None,
+        has_patch_payload: bool,
+        restaged_from: str | None,
+        restaged_by: str | None,
+    ) -> str | None:
+        if not has_patch_payload:
+            return None
+        if status == "conflict":
+            return (
+                "stale_handled_by_restage"
+                if restaged_by is not None
+                else "stale_unresolved"
+            )
+        if restaged_from is not None:
+            if status == "ready":
+                return "restaged_successor_ready"
+            if status == "already_applied":
+                return "restaged_successor_already_applied"
+            return "restaged_successor_not_ready"
+        if status in {
+            "ready",
+            "already_applied",
+            "validation_failed",
+            "not_ready",
+            "not_available",
+        }:
+            return status
+        return None
 
     def _summary_snapshot_drifts(
         self,
@@ -9471,15 +9569,17 @@ class DoxaBase:
             executive_summary=executive_summary,
         )
         bytes_written = self._write_export(path, data, overwrite=overwrite)
+        revision_summaries = self._staged_revisions_export_summaries(
+            descriptions,
+            apply_checks=apply_checks,
+        )
         return StagedGraphRevisionsExportRecord(
             path=str(path),
             format=format,
             revision_iris=[description.iri for description in descriptions],
             bytes_written=bytes_written,
-            revision_summaries=self._staged_revisions_export_summaries(
-                descriptions,
-                apply_checks=apply_checks,
-            ),
+            revision_summaries=revision_summaries,
+            bundle_summary=self._staged_revisions_bundle_summary(revision_summaries),
         )
 
     def _staged_revision_apply_check_for_export(
@@ -9513,6 +9613,13 @@ class DoxaBase:
                         description.alternative_to.iri
                         if description.alternative_to is not None
                         else None
+                    ),
+                    current_alternative_to=self._current_alternative_to_iri(
+                        (
+                            description.alternative_to.iri
+                            if description.alternative_to is not None
+                            else None
+                        )
                     ),
                     changed_graphs=description.changed_graphs,
                     apply_status=apply_check.status if apply_check is not None else None,
@@ -9569,6 +9676,20 @@ class DoxaBase:
                         if description.restaged_by is not None
                         else None
                     ),
+                    stale_resolution_state=self._stale_resolution_state(
+                        status=apply_check.status if apply_check is not None else None,
+                        has_patch_payload=bool(description.patches),
+                        restaged_from=(
+                            description.restaged_from.iri
+                            if description.restaged_from is not None
+                            else None
+                        ),
+                        restaged_by=(
+                            description.restaged_by.iri
+                            if description.restaged_by is not None
+                            else None
+                        ),
+                    ),
                     suggested_next_actions=(
                         apply_check.suggested_next_actions
                         if apply_check is not None
@@ -9582,6 +9703,61 @@ class DoxaBase:
                 )
             )
         return summaries
+
+    def _staged_revisions_bundle_summary(
+        self,
+        summaries: list[StagedGraphRevisionExportSummary],
+    ) -> StagedGraphRevisionBundleSummary:
+        apply_status_counts: dict[str, int] = {}
+        state_counts: dict[str, int] = {}
+        unresolved_stale: list[str] = []
+        handled_stale: list[str] = []
+        ready_successors: list[str] = []
+        recommended_review: list[str] = []
+
+        def increment(counts: dict[str, int], key: str | None) -> None:
+            if key is None:
+                return
+            counts[key] = counts.get(key, 0) + 1
+
+        def recommend(iri: str | None) -> None:
+            if iri is not None and iri not in recommended_review:
+                recommended_review.append(iri)
+
+        for summary in summaries:
+            increment(apply_status_counts, summary.apply_status)
+            state = summary.stale_resolution_state
+            increment(state_counts, state)
+
+            if state == "stale_unresolved":
+                unresolved_stale.append(summary.revision_iri)
+                recommend(summary.revision_iri)
+            elif state == "stale_handled_by_restage":
+                handled_stale.append(summary.revision_iri)
+                recommend(summary.restaged_by)
+            elif state == "restaged_successor_ready":
+                ready_successors.append(summary.revision_iri)
+                recommend(summary.revision_iri)
+            elif state in {
+                "ready",
+                "validation_failed",
+                "not_ready",
+                "not_available",
+                "restaged_successor_not_ready",
+            }:
+                recommend(summary.revision_iri)
+            elif state == "restaged_successor_already_applied":
+                recommend(summary.revision_iri)
+
+        return StagedGraphRevisionBundleSummary(
+            total_revisions=len(summaries),
+            apply_status_counts=apply_status_counts,
+            stale_resolution_state_counts=state_counts,
+            unresolved_stale_revision_iris=unresolved_stale,
+            stale_handled_by_restage_revision_iris=handled_stale,
+            ready_restage_successor_revision_iris=ready_successors,
+            recommended_review_iris=recommended_review,
+        )
 
     def _staged_revision_impacts(
         self,

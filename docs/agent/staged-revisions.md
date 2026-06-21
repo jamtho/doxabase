@@ -321,7 +321,11 @@ a compact `restage_reason` when it can derive one from that rationale, and
 `restaged_by` on the stale source when a refreshed successor exists.
 Markdown exports surface that same reason as a top `Restage headline`, and
 stale original exports surface the successor as `Restaged by`. Grouped exports
-collect restage reasons in `Restage Context`.
+collect restage reasons in `Restage Context`. Grouped export payloads also
+include per-row `stale_resolution_state`, `current_alternative_to`, and a
+`bundle_summary` so recovery scripts can find unresolved stale proposals,
+already-handled stale sources, ready successors, and the current recommended
+review set without recomputing those buckets.
 Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and already-applied revisions should be inspected rather than
 replayed.

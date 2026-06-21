@@ -2085,6 +2085,7 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert stale_summary.apply_validation_skipped_reason == "conflicts_present"
     assert stale_summary.current_validation == "skipped: conflicts_present"
     assert stale_summary.staged_validation == "True (0 result(s))"
+    assert stale_summary.stale_resolution_state == "stale_handled_by_restage"
     assert stale_summary.restaged_by == restaged.revision_iri
     assert stale_summary.suggested_next_actions[-1].tool_name == (
         "describe_staged_revision"
@@ -2097,6 +2098,25 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert restaged_summary.apply_decision == "review_then_apply"
     assert restaged_summary.apply_can_apply is True
     assert restaged_summary.restaged_from == staged.revision_iri
+    assert restaged_summary.stale_resolution_state == "restaged_successor_ready"
+    assert grouped_export_record.bundle_summary.apply_status_counts == {
+        "conflict": 1,
+        "ready": 1,
+    }
+    assert grouped_export_record.bundle_summary.stale_resolution_state_counts == {
+        "stale_handled_by_restage": 1,
+        "restaged_successor_ready": 1,
+    }
+    assert grouped_export_record.bundle_summary.unresolved_stale_revision_iris == []
+    assert grouped_export_record.bundle_summary.stale_handled_by_restage_revision_iris == [
+        staged.revision_iri
+    ]
+    assert grouped_export_record.bundle_summary.ready_restage_successor_revision_iris == [
+        restaged.revision_iri
+    ]
+    assert grouped_export_record.bundle_summary.recommended_review_iris == [
+        restaged.revision_iri
+    ]
     assert "## Restage Context" in grouped_export
     assert grouped_export.index("## Restage Context") < grouped_export.index(
         "## Revisions"
@@ -2123,6 +2143,100 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert db.describe_dataset("https://example.test/project#Messages").iri == (
         "https://example.test/project#Messages"
     )
+
+
+def test_grouped_export_summarizes_stale_alternative_recovery(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first = db.stage_graph_revision(
+        summary="Model order rows as raw events",
+        rationale="Keep the raw event framing available for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderEvents a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    second = db.stage_graph_revision(
+        summary="Model order rows as lifecycle entities",
+        rationale="Keep the lifecycle entity framing available for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderLifecycles a rc:Dataset .
+                """,
+            }
+        ],
+        alternative_to=first.revision_iri,
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftDataset",
+        label="Drift dataset",
+    )
+
+    first_restaged = db.restage_staged_revision(first.revision_iri)
+    second_restaged = db.restage_staged_revision(second.revision_iri)
+
+    export = db.export_staged_revisions(
+        [
+            first.revision_iri,
+            first_restaged.revision_iri,
+            second.revision_iri,
+            second_restaged.revision_iri,
+        ],
+        tmp_path / "stale-alternative-recovery.md",
+        title="Stale alternative recovery",
+    )
+    summaries = {item.revision_iri: item for item in export.revision_summaries}
+
+    assert summaries[first.revision_iri].stale_resolution_state == (
+        "stale_handled_by_restage"
+    )
+    assert summaries[second.revision_iri].stale_resolution_state == (
+        "stale_handled_by_restage"
+    )
+    assert summaries[first_restaged.revision_iri].stale_resolution_state == (
+        "restaged_successor_ready"
+    )
+    assert summaries[second_restaged.revision_iri].stale_resolution_state == (
+        "restaged_successor_ready"
+    )
+    assert summaries[second_restaged.revision_iri].alternative_to == first.revision_iri
+    assert summaries[second_restaged.revision_iri].current_alternative_to == (
+        first_restaged.revision_iri
+    )
+    assert export.bundle_summary.apply_status_counts == {
+        "conflict": 2,
+        "ready": 2,
+    }
+    assert export.bundle_summary.stale_resolution_state_counts == {
+        "stale_handled_by_restage": 2,
+        "restaged_successor_ready": 2,
+    }
+    assert export.bundle_summary.unresolved_stale_revision_iris == []
+    assert export.bundle_summary.stale_handled_by_restage_revision_iris == [
+        first.revision_iri,
+        second.revision_iri,
+    ]
+    assert export.bundle_summary.ready_restage_successor_revision_iris == [
+        first_restaged.revision_iri,
+        second_restaged.revision_iri,
+    ]
+    assert export.bundle_summary.recommended_review_iris == [
+        first_restaged.revision_iri,
+        second_restaged.revision_iri,
+    ]
 
 
 def test_restage_staged_revision_rejects_non_conflicted_revision(
@@ -2184,6 +2298,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert staged_listing.revisions[0].patch_count == 1
     assert staged_listing.revisions[0].application_status == "ready"
     assert staged_listing.revisions[0].application_can_apply is True
+    assert staged_listing.revisions[0].stale_resolution_state == "ready"
     assert staged_listing.revisions[0].application_summary is not None
     assert staged_listing.revisions[0].application_summary.startswith("Ready to apply")
     assert staged_listing.revisions[0].application_recommended_resolution is not None
@@ -2200,6 +2315,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     by_iri = {item.iri: item for item in listing.revisions}
     assert by_iri[staged.revision_iri].applied_by == applied.applied_revision_iri
     assert by_iri[staged.revision_iri].application_status == "already_applied"
+    assert by_iri[staged.revision_iri].stale_resolution_state == "already_applied"
     assert by_iri[staged.revision_iri].application_summary == (
         f"Already applied by {applied.applied_revision_iri}."
     )
@@ -2213,6 +2329,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert by_iri[applied.applied_revision_iri].has_patch_payload is False
     assert by_iri[applied.applied_revision_iri].patch_count == 0
     assert by_iri[applied.applied_revision_iri].application_status == "applied_event"
+    assert by_iri[applied.applied_revision_iri].stale_resolution_state is None
     assert listing.revisions[0].iri == applied.applied_revision_iri
 
     stale = db.stage_graph_revision(
@@ -2253,11 +2370,16 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert stale_item.application_blocking_reasons == ["target_count_drift"]
     assert stale_item.application_count_drifts[0].target_graph == "map"
     assert stale_item.restaged_by == restaged.revision_iri
+    assert stale_item.stale_resolution_state == "stale_handled_by_restage"
     assert stale_item.suggested_next_actions[-1].tool_name == "describe_staged_revision"
     assert stale_item.suggested_next_actions[-1].arguments == {
         "iri": restaged.revision_iri
     }
     assert drift_by_iri[restaged.revision_iri].restaged_from == stale.revision_iri
+    assert (
+        drift_by_iri[restaged.revision_iri].stale_resolution_state
+        == "restaged_successor_ready"
+    )
 
 
 def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
@@ -2452,6 +2574,10 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         revision.revision_iri for revision in draft.staged_revisions
     ]
     assert [item.alternative_to for item in export.revision_summaries] == [
+        None,
+        draft.staged_revisions[0].revision_iri,
+    ]
+    assert [item.current_alternative_to for item in export.revision_summaries] == [
         None,
         draft.staged_revisions[0].revision_iri,
     ]
