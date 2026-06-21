@@ -1930,6 +1930,16 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert "Added since snapshot:" in (restaged_description.rationale or "")
     assert "OtherDataset" in (restaged_description.rationale or "")
     assert "Original staged rationale:" in (restaged_description.rationale or "")
+    stale_description = db.describe_staged_revision(staged.revision_iri)
+    assert stale_description.restaged_by is not None
+    assert stale_description.restaged_by.iri == restaged.revision_iri
+    stale_export_path = tmp_path / "stale-original-review.md"
+    db.export_staged_revision(staged.revision_iri, stale_export_path)
+    stale_export_text = stale_export_path.read_text(encoding="utf-8")
+    assert "- Restaged by: " in stale_export_text
+    assert stale_export_text.index("- Restaged by: ") < stale_export_text.index(
+        "## Current Apply Check"
+    )
     export_path = tmp_path / "restaged-review.md"
     db.export_staged_revision(restaged.revision_iri, export_path)
     export_text = export_path.read_text(encoding="utf-8")

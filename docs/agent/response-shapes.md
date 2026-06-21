@@ -925,6 +925,7 @@ description.review_note
 description.review_recommendation
 description.alternative_to
 description.restaged_from
+description.restaged_by
 description.restage_reason
 description.changed_graphs
 description.included_graphs
@@ -963,9 +964,11 @@ not as semantic proof that a graph change is safe.
 `description.alternative_to` means this staged revision competes with or refines
 another revision. `description.restaged_from` means this staged revision replayed
 an older stale proposal against current graph state; it is provenance for a
-graph-state drift repair, not a competing framing. `description.restage_reason`
-is a compact human-readable summary of why the restage happened when that can be
-derived from the recorded rationale.
+graph-state drift repair, not a competing framing. `description.restaged_by`
+points to a refreshed successor when the described revision is the stale source
+for a later restage. `description.restage_reason` is a compact human-readable
+summary of why the restage happened when that can be derived from the recorded
+rationale.
 
 `description.judgement_panel` is present for simple single-assertion `map`
 staged changes that still replay cleanly against current graph state. It has
@@ -1134,6 +1137,8 @@ judgement panel is unavailable for a stale proposal.
 Restaged single exports also include a top metadata `Restage headline` before
 the current apply check. Grouped exports include `Restage Context` near the top
 when one or more revisions were refreshed from stale proposals.
+Stale original exports include a top metadata `Restaged by` line when a
+refreshed successor already exists.
 In grouped exports, `Staged validation` is the staged description's original
 preview result, while `Current validation` is derived from the live apply check
 and can be `skipped: conflicts_present`. Both cells include a result count when

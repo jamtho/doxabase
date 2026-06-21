@@ -101,7 +101,9 @@ can still include a `Semantic Review Warning` reconstructed from the live apply
 check even when the judgement panel is unavailable. `can_apply=True` means replay
 and validation readiness, not semantic approval. Restaged single exports include
 a top metadata `Restage headline` before the current apply check, so reviewers
-can see why the stale proposal was refreshed before reading patch payloads. Use
+can see why the stale proposal was refreshed before reading patch payloads.
+Stale original exports include a top metadata `Restaged by` line when a
+refreshed successor already exists. Use
 `doxabase.export_staged_revisions` when
 several alternatives, failed candidates, and repaired candidates should be
 reviewed together; its summary table includes the current apply status and
@@ -315,9 +317,11 @@ graph snapshots, then review and check the new revision before applying. The
 refreshed revision records `rc:restagesRevision` back to the stale proposal, and
 its generated rationale summarizes the stale apply check, including exact
 snapshot drift triples when available. `describe_staged_revision` also surfaces
-a compact `restage_reason` when it can derive one from that rationale.
+a compact `restage_reason` when it can derive one from that rationale, and
+`restaged_by` on the stale source when a refreshed successor exists.
 Markdown exports surface that same reason as a top `Restage headline`, and
-grouped exports collect restage reasons in `Restage Context`.
+stale original exports surface the successor as `Restaged by`. Grouped exports
+collect restage reasons in `Restage Context`.
 Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and already-applied revisions should be inspected rather than
 replayed.
@@ -350,6 +354,7 @@ Use `restaged_from` / `rc:restagesRevision` when a staged revision is the same
 patch intent replayed against a newer graph state. This is different from
 `alternative_to`: alternatives compete as different framings, while restaging
 keeps the older stale proposal as provenance for the refreshed proposal.
+`restaged_by` is the reverse relation on the stale source revision.
 `restage_reason` is the quick review headline and appears early in Markdown
 exports; read the full rationale when the drift evidence matters.
 

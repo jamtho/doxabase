@@ -297,9 +297,10 @@ few useful gaps:
   semantically relevant even when staged patch subjects are untouched. A
   follow-up export-readability trial showed that the compact restage reason also
   needs to appear early in Markdown review bundles, not only under the later
-  `Restaged From` section. Remaining useful pressure points include a public
-  same-count graph replacement helper for trials and stale-original exports that
-  can point to an already-created restaged sibling.
+  `Restaged From` section. A stale-original follow-up showed that the old source
+  export also needs an early `Restaged by` pointer when a refreshed sibling
+  already exists. Remaining useful pressure points include a public same-count
+  graph replacement helper for trials.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or

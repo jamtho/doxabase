@@ -416,8 +416,10 @@ documentation from a subject that also has semantic
 changes. Caveat impact values include the caveat description, impact, and
 severity inline when those facts are known. `restaged_from` is present when the
 staged revision was created by replaying an older stale proposal against current
-graph state. `restage_reason` gives a compact "why this was restaged" summary
-when it can be derived from the recorded rationale.
+graph state. `restaged_by` is present when this staged revision is the stale
+source for a later refreshed proposal. `restage_reason` gives a compact
+"why this was restaged" summary when it can be derived from the recorded
+rationale.
 `export_staged_revision()` writes a Markdown review bundle with the current
 apply-check status, diagnostics, and impact review before patch payloads. Stale
 exports include conflict status, count or digest drift, validation-skipped reason, and
@@ -428,7 +430,8 @@ simple single-assertion `map` changes that still replay cleanly, it reconstructs
 a `Judgement Panel` section so the export carries values, value-type context,
 rationale, caveats, routes, and safety notes from the JSON review surface.
 Restaged exports include a top metadata `Restage headline` before the current
-apply check.
+apply check. Stale original exports include a top metadata `Restaged by` line
+when a refreshed successor already exists.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and

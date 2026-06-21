@@ -417,8 +417,9 @@ previews, validation status, structured SHACL diagnostics such as focus node,
 result path, constraint, and messages, optional `judgement_panel`, and `impacts`
 review context. `restaged_from` is present when this staged revision was created
 by replaying an older stale staged proposal against current graph state;
-`restage_reason` gives the compact reason when it can be derived from the
-recorded rationale.
+`restaged_by` is present when this staged revision is the stale source for a
+later refreshed proposal; `restage_reason` gives the compact reason when it can
+be derived from the recorded rationale.
 `judgement_panel` is present for simple single-assertion `map`
 changes that still replay cleanly; it is absent for complex or stale staged
 revisions. Impact
@@ -498,8 +499,9 @@ single-assertion `map` changes that still replay cleanly, the export includes a
 `Judgement Panel` section with values, value-type context, rationale, caveats,
 routes, and safety notes. Stale single-assertion exports may lack the judgement
 panel but still warn from stored review context. Restaged exports include a
-top metadata `Restage headline` before the apply check. This is for human/agent
-review.
+top metadata `Restage headline` before the apply check; stale original exports
+include a top `Restaged by` line when a refreshed successor already exists.
+This is for human/agent review.
 
 `doxabase.export_staged_revisions`
 

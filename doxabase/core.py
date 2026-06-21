@@ -535,6 +535,7 @@ class StagedGraphRevisionDescription:
     review_recommendation: str | None
     alternative_to: ResourceSummary | None
     restaged_from: ResourceSummary | None
+    restaged_by: ResourceSummary | None
     restage_reason: str | None
     changed_graphs: list[str]
     included_graphs: list[str]
@@ -2326,6 +2327,16 @@ class DoxaBase:
             if restaged_from_iri is not None
             else None
         )
+        restaged_by_iri = self._first_subject(
+            data_graphs,
+            "rc:restagesRevision",
+            revision_iri,
+        )
+        restaged_by = (
+            self._resource_summary(all_lookup_graphs, restaged_by_iri)
+            if restaged_by_iri is not None
+            else None
+        )
         rationale = self._first_object(
             data_graphs,
             revision_iri,
@@ -2372,6 +2383,7 @@ class DoxaBase:
                 else None
             ),
             restaged_from=restaged_from,
+            restaged_by=restaged_by,
             restage_reason=self._staged_revision_restage_reason(
                 restaged_from=restaged_from,
                 rationale=rationale,
@@ -11940,6 +11952,12 @@ class DoxaBase:
                 f"results={description.validation_result_count}"
             ),
         ]
+        if description.restaged_by is not None:
+            metadata_lines.append(
+                "- Restaged by: "
+                f"{description.restaged_by.label or description.restaged_by.iri} "
+                f"(`{description.restaged_by.iri}`)"
+            )
         if description.restage_reason is not None:
             metadata_lines.append(f"- Restage headline: {description.restage_reason}")
         lines.extend(

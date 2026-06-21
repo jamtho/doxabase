@@ -394,6 +394,8 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
 
     assert restaged["revision_iri"] != staged["revision_iri"]
     assert restaged["patches"][0]["before_triple_count"] == db.triple_count("map")
+    stale_description = describe_staged_revision_tool(db, staged["revision_iri"])
+    assert stale_description["restaged_by"]["iri"] == restaged["revision_iri"]
     description = describe_staged_revision_tool(db, restaged["revision_iri"])
     assert description["restaged_from"]["iri"] == staged["revision_iri"]
     assert "prior status conflict" in description["restage_reason"]
