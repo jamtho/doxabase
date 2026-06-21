@@ -8509,7 +8509,7 @@ class DoxaBase:
                     f"Cannot restage unsupported patch operation '{operation}'"
                 )
 
-        source_summary = source.summary or source.iri
+        source_summary = self._restage_source_summary(source.summary) or source.iri
         restage_summary = (
             summary.strip()
             if summary is not None and summary.strip()
@@ -8555,6 +8555,15 @@ class DoxaBase:
         )
         extra_triples = self._insert_graph("history", metadata)
         return replace(staged, triples=staged.triples + extra_triples)
+
+    def _restage_source_summary(self, summary: str | None) -> str | None:
+        if summary is None:
+            return None
+        restage_prefix = "Restage stale revision:"
+        normalized = summary.strip()
+        while normalized.startswith(restage_prefix):
+            normalized = normalized[len(restage_prefix) :].strip()
+        return normalized or summary.strip()
 
     def restage_staged_revisions(
         self,

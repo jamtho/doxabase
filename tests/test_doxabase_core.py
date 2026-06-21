@@ -2521,6 +2521,15 @@ def test_restage_chain_routes_to_current_successor(
         label="Intervening B",
     )
     current_successor = db.restage_staged_revision(first_successor.revision_iri)
+    current_successor_description = db.describe_staged_revision(
+        current_successor.revision_iri
+    )
+    assert current_successor_description.summary == (
+        "Restage stale revision: Stage messages table"
+    )
+    assert "Restage stale revision: Restage stale revision" not in (
+        current_successor_description.summary or ""
+    )
 
     original_description = db.describe_staged_revision(original.revision_iri)
     assert original_description.restaged_by is not None
