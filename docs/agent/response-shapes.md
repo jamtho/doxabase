@@ -540,6 +540,14 @@ profile_summary.returned_dataset_profile_count
 profile_summary.returned_mapped_column_profile_count
 profile_summary.returned_unmapped_column_profile_count
 profile_summary.returned_profile_count
+profile_summary.total_dataset_profile_count
+profile_summary.total_mapped_column_profile_count
+profile_summary.total_unmapped_column_profile_count
+profile_summary.total_profile_count
+profile_summary.omitted_dataset_profile_count
+profile_summary.omitted_mapped_column_profile_count
+profile_summary.omitted_unmapped_column_profile_count
+profile_summary.omitted_profile_count
 profile_summary.mapped_profiled_column_count
 profile_summary.evidence_iris
 profile_summary.evidence_profile_counts
@@ -548,10 +556,11 @@ profile_summary.profile_run_candidates
 profile_summary.handoff_note
 ```
 
-These are response counts, not a promise that the capsule has no older profile
-observations beyond the returned limit. `evidence_iris` lists unique evidence
-IRIs linked from returned profile observations. `evidence_profile_counts` counts
-how many returned profile observations link to each evidence IRI.
+Returned counts describe the bounded response; total and omitted counts tell
+you whether additional profile observations exist beyond that returned slice.
+`evidence_iris` lists unique evidence IRIs linked from returned profile
+observations. `evidence_profile_counts` counts how many returned profile
+observations link to each evidence IRI.
 `shared_evidence_iris` lists evidence IRIs that are linked from every returned
 profile observation in the bounded response; it can be empty when older or
 unrelated returned profiles are mixed with a newer shared-evidence bundle. In

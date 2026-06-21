@@ -114,6 +114,8 @@ The `profile_summary` field gives quick counts of the profile observations
 returned in this bounded response, including dataset-level, mapped-column, and
 unmapped-column profile counts. It also rolls up profile evidence IRIs and
 lists `shared_evidence_iris` that appear on every returned profile observation.
+Read total and omitted profile counts before assuming returned profiles are the
+whole profile history for the dataset.
 When mixed profile history means no evidence is shared by all returned profiles,
 `profile_run_candidates` lists evidence IRIs that support more than one returned
 profile, sorted by returned profile count.

@@ -48,7 +48,9 @@ Useful fields:
   inspecting raw triples.
 - `route_counts`: how many resources were included through each route.
 - `dataset_contexts` and `pattern_contexts`: structured summaries for the main
-  domain objects in the slice.
+  domain objects in the slice. Dataset profile lists remain bounded; check
+  profile summary total and omitted counts before assuming no older profile
+  observations exist.
 - `warnings`: notes about how to read the slice. In `deep_lore`, a warning may
   explicitly say that no claims, patterns, reconsiderations, evidence, or
   revision history were found beyond ordinary map context.

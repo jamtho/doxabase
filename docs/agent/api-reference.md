@@ -194,7 +194,9 @@ caveats and is intentionally separate from direct `caveats`.
 `profile_summary` gives quick counts of the profile observations returned in the
 bounded dataset description, split across dataset-level, mapped-column, and
 unmapped-column profile lore. It also rolls up profile evidence IRIs and lists
-`shared_evidence_iris` that appear on every returned profile observation.
+`shared_evidence_iris` that appear on every returned profile observation. Total
+and omitted profile counts make the response bound explicit when older or
+additional profile observations are not included in the returned lists.
 `profile_summary.profile_run_candidates` lists evidence IRIs that support more
 than one returned profile, sorted by returned profile count, so mixed profile
 history can still reveal likely profiler runs.

@@ -7239,6 +7239,53 @@ def test_describe_dataset_surfaces_unmapped_column_profile_observations(
     assert validation.conforms, validation.report_text
 
 
+def test_profile_summary_reports_bounded_profile_omissions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    db.record_map_dataset(table, label="Orders", is_table=True)
+
+    for index in range(7):
+        db.record_column_profile(
+            f"https://example.test/project#OrdersProfiledColumn{index}",
+            column_name=f"profiled_{index}",
+            table_iri=table,
+            summary=f"Profiled Orders column {index}.",
+            evidence_summary=f"Synthetic profile output {index}.",
+            evidence_sources=[f"test://orders-profile-{index}"],
+            sample_size=25,
+            sample_scope="Sampled Orders rows.",
+            sample_method="Synthetic profile query.",
+            null_count=0,
+            distinct_count=3,
+            update_map_column=False,
+        )
+
+    description = db.describe_dataset(table)
+
+    assert len(description.unmapped_column_profile_observations) == 5
+    assert description.profile_summary.returned_dataset_profile_count == 0
+    assert description.profile_summary.returned_mapped_column_profile_count == 0
+    assert description.profile_summary.returned_unmapped_column_profile_count == 5
+    assert description.profile_summary.returned_profile_count == 5
+    assert description.profile_summary.total_dataset_profile_count == 0
+    assert description.profile_summary.total_mapped_column_profile_count == 0
+    assert description.profile_summary.total_unmapped_column_profile_count == 7
+    assert description.profile_summary.total_profile_count == 7
+    assert description.profile_summary.omitted_dataset_profile_count == 0
+    assert description.profile_summary.omitted_mapped_column_profile_count == 0
+    assert description.profile_summary.omitted_unmapped_column_profile_count == 2
+    assert description.profile_summary.omitted_profile_count == 2
+    assert "2 additional profile observation(s)" in (
+        description.profile_summary.handoff_note
+    )
+
+    context_slice = db.describe_context_slice([table], profile="deep_lore")
+
+    assert context_slice.dataset_contexts[0].profile_summary.omitted_profile_count == 2
+
+
 def test_record_profile_bundle_writes_dataset_and_column_profiles(
     tmp_path: Path,
 ) -> None:

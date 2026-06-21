@@ -1044,6 +1044,14 @@ class ProfileSummary:
     returned_mapped_column_profile_count: int
     returned_unmapped_column_profile_count: int
     returned_profile_count: int
+    total_dataset_profile_count: int
+    total_mapped_column_profile_count: int
+    total_unmapped_column_profile_count: int
+    total_profile_count: int
+    omitted_dataset_profile_count: int
+    omitted_mapped_column_profile_count: int
+    omitted_unmapped_column_profile_count: int
+    omitted_profile_count: int
     mapped_profiled_column_count: int
     evidence_iris: list[str]
     evidence_profile_counts: dict[str, int]
@@ -4366,6 +4374,24 @@ class DoxaBase:
                 mapped_column_iris=column_iris,
             )
         )
+        total_dataset_profile_count = self._profile_observation_count_for_target(
+            target_iri=dataset_iri,
+            target_predicate="rc:observedAsset",
+            exclude_observed_column=True,
+        )
+        total_mapped_column_profile_count = sum(
+            self._profile_observation_count_for_target(
+                target_iri=column_iri,
+                target_predicate="rc:observedColumn",
+            )
+            for column_iri in column_iris
+        )
+        total_unmapped_column_profile_count = (
+            self._unmapped_column_profile_observation_count_for_dataset(
+                dataset_iri,
+                mapped_column_iris=column_iris,
+            )
+        )
 
         description = DatasetDescription(
             iri=dataset_iri,
@@ -4411,6 +4437,13 @@ class DoxaBase:
                 profile_observations,
                 columns,
                 unmapped_column_profile_observations,
+                total_dataset_profile_count=total_dataset_profile_count,
+                total_mapped_column_profile_count=(
+                    total_mapped_column_profile_count
+                ),
+                total_unmapped_column_profile_count=(
+                    total_unmapped_column_profile_count
+                ),
             ),
             profile_observations=profile_observations,
             unmapped_column_profile_observations=unmapped_column_profile_observations,
@@ -5363,10 +5396,36 @@ class DoxaBase:
         exclude_observed_column: bool = False,
         limit: int | None = 5,
     ) -> list[ProfileObservationSummary]:
-        observation_graphs = ["observations"]
         lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        observation_iris = self._profile_observation_iris_for_target(
+            target_iri=target_iri,
+            target_predicate=target_predicate,
+            exclude_observed_column=exclude_observed_column,
+        )
+        summaries = [
+            self._profile_observation_summary(observation_iri, lookup_graphs)
+            for observation_iri in observation_iris
+        ]
+        summaries.sort(
+            key=lambda item: (
+                item.observed_at or "",
+                item.summary or "",
+                item.iri,
+            ),
+            reverse=True,
+        )
+        return summaries if limit is None else summaries[:limit]
+
+    def _profile_observation_iris_for_target(
+        self,
+        *,
+        target_iri: str,
+        target_predicate: str,
+        exclude_observed_column: bool = False,
+    ) -> list[str]:
+        observation_graphs = ["observations"]
         profile_type = self.expand_iri("rc:ProfileObservation")
-        observation_iris = [
+        return [
             observation_iri
             for observation_iri in self._subjects(
                 observation_graphs,
@@ -5385,19 +5444,21 @@ class DoxaBase:
                 is None
             )
         ]
-        summaries = [
-            self._profile_observation_summary(observation_iri, lookup_graphs)
-            for observation_iri in observation_iris
-        ]
-        summaries.sort(
-            key=lambda item: (
-                item.observed_at or "",
-                item.summary or "",
-                item.iri,
-            ),
-            reverse=True,
+
+    def _profile_observation_count_for_target(
+        self,
+        *,
+        target_iri: str,
+        target_predicate: str,
+        exclude_observed_column: bool = False,
+    ) -> int:
+        return len(
+            self._profile_observation_iris_for_target(
+                target_iri=target_iri,
+                target_predicate=target_predicate,
+                exclude_observed_column=exclude_observed_column,
+            )
         )
-        return summaries if limit is None else summaries[:limit]
 
     def _unmapped_column_profile_observations_for_dataset(
         self,
@@ -5419,11 +5480,40 @@ class DoxaBase:
             and profile.observed_column.iri not in mapped_columns
         ][:limit]
 
+    def _unmapped_column_profile_observation_count_for_dataset(
+        self,
+        dataset_iri: str,
+        *,
+        mapped_column_iris: Iterable[str],
+    ) -> int:
+        mapped_columns = set(mapped_column_iris)
+        observation_graphs = ["observations"]
+        return sum(
+            1
+            for observation_iri in self._profile_observation_iris_for_target(
+                target_iri=dataset_iri,
+                target_predicate="rc:observedAsset",
+            )
+            if (
+                observed_column := self._first_object(
+                    observation_graphs,
+                    observation_iri,
+                    "rc:observedColumn",
+                )
+            )
+            is not None
+            and observed_column not in mapped_columns
+        )
+
     def _profile_summary(
         self,
         dataset_profiles: list[ProfileObservationSummary],
         columns: list[ColumnDescription],
         unmapped_column_profiles: list[ProfileObservationSummary],
+        *,
+        total_dataset_profile_count: int,
+        total_mapped_column_profile_count: int,
+        total_unmapped_column_profile_count: int,
     ) -> ProfileSummary:
         mapped_column_profile_count = sum(
             len(column.profile_observations) for column in columns
@@ -5456,6 +5546,24 @@ class DoxaBase:
             + mapped_column_profile_count
             + unmapped_column_profile_count
         )
+        total_profile_count = (
+            total_dataset_profile_count
+            + total_mapped_column_profile_count
+            + total_unmapped_column_profile_count
+        )
+        omitted_dataset_profile_count = max(
+            total_dataset_profile_count - dataset_profile_count,
+            0,
+        )
+        omitted_mapped_column_profile_count = max(
+            total_mapped_column_profile_count - mapped_column_profile_count,
+            0,
+        )
+        omitted_unmapped_column_profile_count = max(
+            total_unmapped_column_profile_count - unmapped_column_profile_count,
+            0,
+        )
+        omitted_profile_count = max(total_profile_count - returned_profile_count, 0)
         shared_evidence_iris = [
             evidence_iri
             for evidence_iri in evidence_iris
@@ -5486,6 +5594,18 @@ class DoxaBase:
             returned_mapped_column_profile_count=mapped_column_profile_count,
             returned_unmapped_column_profile_count=unmapped_column_profile_count,
             returned_profile_count=returned_profile_count,
+            total_dataset_profile_count=total_dataset_profile_count,
+            total_mapped_column_profile_count=total_mapped_column_profile_count,
+            total_unmapped_column_profile_count=(
+                total_unmapped_column_profile_count
+            ),
+            total_profile_count=total_profile_count,
+            omitted_dataset_profile_count=omitted_dataset_profile_count,
+            omitted_mapped_column_profile_count=omitted_mapped_column_profile_count,
+            omitted_unmapped_column_profile_count=(
+                omitted_unmapped_column_profile_count
+            ),
+            omitted_profile_count=omitted_profile_count,
             mapped_profiled_column_count=mapped_profiled_column_count,
             evidence_iris=evidence_iris,
             evidence_profile_counts=evidence_profile_counts,
@@ -5495,6 +5615,7 @@ class DoxaBase:
                 returned_profile_count=returned_profile_count,
                 unmapped_column_profile_count=unmapped_column_profile_count,
                 shared_evidence_count=len(shared_evidence_iris),
+                omitted_profile_count=omitted_profile_count,
             ),
         )
 
@@ -5504,6 +5625,7 @@ class DoxaBase:
         returned_profile_count: int,
         unmapped_column_profile_count: int,
         shared_evidence_count: int,
+        omitted_profile_count: int,
     ) -> str:
         if returned_profile_count == 0:
             return (
@@ -5526,6 +5648,11 @@ class DoxaBase:
             note += (
                 " At least one evidence resource is shared by every returned "
                 "profile observation, which usually indicates one profiler run."
+            )
+        if omitted_profile_count:
+            note += (
+                f" {omitted_profile_count} additional profile observation(s) "
+                "exist beyond this bounded response."
             )
         return note
 
