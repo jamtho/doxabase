@@ -1958,7 +1958,7 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.snapshot_drifts[0].triples_removed_since_snapshot == []
     assert (
         check.snapshot_drifts[0].drift_relevance
-        == "patch_object_overlap"
+        == "broad_patch_object_overlap"
     )
     assert check.snapshot_drifts[0].patch_overlap_subjects == []
     assert str(RDF.type) in check.snapshot_drifts[0].patch_overlap_predicates
@@ -1967,6 +1967,7 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "does not touch staged patch subjects" in (
         check.snapshot_drifts[0].note
     )
+    assert "weak relevance hint" in check.snapshot_drifts[0].note
 
     export_path = tmp_path / "stale-staged-review.md"
     db.export_staged_revision(staged.revision_iri, export_path)

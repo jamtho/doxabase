@@ -340,8 +340,9 @@ added/removed exact-change counts, while omitting the actual changed-triple
 arrays unless `drift_detail="exact"` is requested.
 Treat `no_patch_subject_overlap` as "probably unrelated but still stale", not
 as permission to apply without review. Predicate and object overlap can be
-broad; anchor overlap means the drift touched a resource the staged revision
-named as review context. Older revisions can still report
+broad; `broad_patch_object_overlap` is the weak object-overlap label for shared
+class/type vocabulary such as `rc:Dataset`. Anchor overlap means the drift
+touched a resource the staged revision named as review context. Older revisions can still report
 `exact_changed_triples_available=False` if they were recorded before snapshot
 row storage existed. `snapshot_drifts` also gives staged/current graph content
 digests and stored graph counts for digest drift, including same-count graph
@@ -447,7 +448,10 @@ When validation fails, staged revisions preserve structured SHACL diagnostics in
 `validation_results`. Read these before guessing from patch text. Each result
 can include focus node, result path, source constraint component, severity,
 value, and one or more messages. Markdown staged-revision exports include the
-same diagnostics before the patch payloads.
+same diagnostics before the patch payloads. In API and MCP JSON, these
+diagnostics are always exposed as `validation_results`; prose that says
+"diagnostics" and Markdown sections titled `Validation Results` refer to the
+same SHACL result records.
 
 ## Repair Loop Example
 

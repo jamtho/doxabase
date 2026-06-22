@@ -10917,6 +10917,18 @@ class DoxaBase:
                 "semantic relevance before restaging.",
             )
         if object_overlap:
+            if self._is_broad_snapshot_drift_object_overlap(object_overlap):
+                return (
+                    "broad_patch_object_overlap",
+                    [],
+                    predicate_overlap,
+                    object_overlap,
+                    anchor_overlap,
+                    "Exact drift does not touch staged patch subjects, and its "
+                    "only staged patch object overlap is broad vocabulary such as "
+                    "a shared class/type term; treat this as a weak relevance "
+                    "hint and review semantic relevance before restaging.",
+                )
             return (
                 "patch_object_overlap",
                 [],
@@ -10949,6 +10961,28 @@ class DoxaBase:
             "activity; DoxaBase still blocks apply until the proposal is "
             "reviewed and restaged.",
         )
+
+    def _is_broad_snapshot_drift_object_overlap(
+        self,
+        object_overlap: list[str],
+    ) -> bool:
+        return bool(object_overlap) and all(
+            self._is_broad_snapshot_drift_object_term(term)
+            for term in object_overlap
+        )
+
+    def _is_broad_snapshot_drift_object_term(self, term: str) -> bool:
+        return term in {
+            str(RDF.type),
+            str(RDFS.Class),
+            PREFIXES["owl"] + "Class",
+            PREFIXES["rdf"] + "Property",
+            PREFIXES["rc"] + "Dataset",
+            PREFIXES["rc"] + "Field",
+            PREFIXES["rc"] + "PhysicalLayout",
+            PREFIXES["rc"] + "StorageAccess",
+            PREFIXES["rc"] + "Pattern",
+        }
 
     def _staged_apply_check_status(
         self,

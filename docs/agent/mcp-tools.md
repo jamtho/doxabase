@@ -495,9 +495,10 @@ target graph since the stored snapshot. It also includes `drift_relevance`,
 `patch_overlap_subjects`, `patch_overlap_predicates`, `patch_overlap_objects`,
 and `revision_anchor_overlap` so agents can separate "no staged patch subject
 changed" from stronger overlaps. Predicate and object overlap can be broad, so
-they are review hints rather than apply decisions. Anchor overlap means exact
-drift touched a resource the staged revision named as review context. Older
-revisions may report
+they are review hints rather than apply decisions.
+`broad_patch_object_overlap` is the weak object-overlap label for shared
+class/type vocabulary such as `rc:Dataset`. Anchor overlap means exact drift
+touched a resource the staged revision named as review context. Older revisions may report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
 Suggested actions are ordered review-first, so inspect/export suggestions
 come before mutation calls such as apply or restage. Use it before

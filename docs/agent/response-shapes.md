@@ -1337,11 +1337,13 @@ response,
 `drift_relevance` is a conservative hint, not an auto-merge decision. Current
 values include `no_patch_subject_overlap`, `patch_subject_overlap`,
 `patch_subject_and_predicate_overlap`, `patch_object_overlap`,
-`patch_object_and_anchor_overlap`, `revision_anchor_overlap`,
-`unknown_no_exact_diff`, and `unknown_no_patch_terms`. Predicate and object
-overlap can be broad, for example `rdf:type` or `rc:Dataset`, so read them as
-review hints. Anchor overlap means drift touched one of the staged revision's
-review anchors even if the staged patch subjects were untouched. A digest
+`broad_patch_object_overlap`, `patch_object_and_anchor_overlap`,
+`revision_anchor_overlap`, `unknown_no_exact_diff`, and
+`unknown_no_patch_terms`. Predicate and object overlap can be broad, for example
+`rdf:type` or `rc:Dataset`; `broad_patch_object_overlap` marks the weak case
+where the only patch-object overlap is broad vocabulary such as shared
+class/type terms. Anchor overlap means drift touched one of the staged
+revision's review anchors even if the staged patch subjects were untouched. A digest
 mismatch means the target graph state is not identical to the state at staging
 time, even when triple counts still match. Older revisions can report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
@@ -1544,4 +1546,7 @@ the requested review export even though no refreshed successor is created.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,
-result path, constraint, severity, value, and messages.
+result path, constraint, severity, value, and messages. In API and MCP JSON,
+these diagnostics are always exposed as `validation_results`; prose that says
+"diagnostics" and Markdown sections titled `Validation Results` refer to the
+same SHACL result records.
