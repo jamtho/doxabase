@@ -978,8 +978,23 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         for triple in exact_diff["graph_diffs"][0]["triples_added"]
     } == {"https://example.test/project#Messages"}
     staged_description = describe_staged_revision_tool(db, staged["revision_iri"])
+    assert staged_description["current_apply_check"] is None
     assert staged_description["application_status"] == "already_applied"
     assert staged_description["applied_by"]["iri"] == result["applied_revision_iri"]
+    staged_description_with_check = describe_staged_revision_tool(
+        db,
+        staged["revision_iri"],
+        include_current_apply_check=True,
+    )
+    assert staged_description_with_check["current_apply_check"]["status"] == (
+        "already_applied"
+    )
+    assert staged_description_with_check["current_apply_check"]["decision"] == (
+        "inspect_applied_revision"
+    )
+    assert staged_description_with_check["current_apply_check"][
+        "already_applied_by"
+    ] == result["applied_revision_iri"]
     assert describe_dataset_tool(
         db,
         "https://example.test/project#Messages",

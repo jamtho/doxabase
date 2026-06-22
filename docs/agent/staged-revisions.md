@@ -87,6 +87,11 @@ layout/path changes. Treat impacts as a spotlight, not a judge. They exist to
 show linked observations, claims,
 patterns, evidence, and revisions that may explain why a map assertion or caveat
 was there. They do not make the proposal invalid by themselves.
+Pass `include_current_apply_check=True` when reviewing one staged revision cold
+and you want its live `ready`, `conflict`, `validation_failed`, `noop`, or
+`already_applied` branch beside the patch payload. The embedded summary omits
+full patch checks and validation result payloads; call
+`check_staged_revision_apply` for those diagnostics.
 
 Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
 proposal. The export includes a live `Current Apply Check` section generated at

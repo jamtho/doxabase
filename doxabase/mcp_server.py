@@ -242,10 +242,16 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     def describe_staged_revision(
         iri: str,
         graph: str | None = "history",
+        include_current_apply_check: bool = False,
     ) -> dict[str, Any]:
         """Return staged revision metadata and patch payloads for review."""
 
-        return describe_staged_revision_tool(db, iri=iri, graph=graph)
+        return describe_staged_revision_tool(
+            db,
+            iri=iri,
+            graph=graph,
+            include_current_apply_check=include_current_apply_check,
+        )
 
     @server.tool(name="doxabase.check_staged_revision_apply")
     def check_staged_revision_apply(

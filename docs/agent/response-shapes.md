@@ -1267,6 +1267,7 @@ description.supporting_claims
 description.supporting_patterns
 description.revision_anchors
 description.evidence
+description.current_apply_check
 description.judgement_panel
 ```
 
@@ -1301,6 +1302,43 @@ event when this staged revision has already been applied; in that case
 `description.application_status` is `already_applied`. `description.restage_reason`
 is a compact human-readable summary of why the restage happened when that can be
 derived from the recorded rationale.
+
+`description.current_apply_check` is `None` by default. Pass
+`include_current_apply_check=True` to `describe_staged_revision()` when a
+single-revision review needs the live apply branch beside the patch payload.
+The nested `StagedRevisionApplySummary` is compact:
+
+```python
+current.staged_revision_iri
+current.status
+current.decision
+current.can_apply
+current.summary
+current.review_recommended
+current.semantic_risk_level
+current.semantic_risk_reasons
+current.blocking_reasons
+current.recommended_resolution
+current.already_applied_by
+current.changed_graphs
+current.validation_scope
+current.validation_conforms
+current.validation_skipped_reason
+current.validation_result_count
+current.patches_checked
+current.triples_to_add
+current.triples_to_remove
+current.count_drifts
+current.snapshot_drifts
+current.suggested_next_actions
+current.suggested_next_calls
+current.error
+```
+
+`current.snapshot_drifts` uses summary drift rows: counts, digests, relevance,
+and overlap arrays are present, but exact changed-triple arrays are omitted.
+Call `check_staged_revision_apply()` when you need full `patch_checks`,
+`conflicts`, `validation_results`, or exact snapshot drift triples.
 
 `description.judgement_panel` is present for simple single-assertion `map`
 staged changes that still replay cleanly against current graph state. It has

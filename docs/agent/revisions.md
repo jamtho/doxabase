@@ -210,7 +210,9 @@ A cold recovery script usually follows this order:
    `applies_staged_revision` link.
 4. Call `describe_staged_revision(description.applies_staged_revision)` for the
    original patch content, before-state snapshots, validation details, support,
-   and judgement context.
+   and judgement context. Use `include_current_apply_check=True` when you also
+   want the source revision's live already-applied/stale/ready branch in the
+   same response.
 5. Follow `applied_by` on staged descriptions when starting from the source
    proposal rather than from the applied event.
 

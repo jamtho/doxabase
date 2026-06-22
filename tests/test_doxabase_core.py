@@ -1575,6 +1575,22 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert check.suggested_next_actions[0].arguments == {"iri": staged.revision_iri}
     assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
     assert check.suggested_next_actions[-1].tool_name == "apply_staged_revision"
+    ready_description = db.describe_staged_revision(staged.revision_iri)
+    assert ready_description.current_apply_check is None
+    ready_description_with_check = db.describe_staged_revision(
+        staged.revision_iri,
+        include_current_apply_check=True,
+    )
+    assert ready_description_with_check.current_apply_check is not None
+    ready_summary = ready_description_with_check.current_apply_check
+    assert ready_summary.status == "ready"
+    assert ready_summary.decision == "review_then_apply"
+    assert ready_summary.can_apply is True
+    assert ready_summary.validation_conforms is True
+    assert ready_summary.patches_checked == 1
+    assert ready_summary.triples_to_add == 3
+    assert ready_summary.triples_to_remove == 0
+    assert ready_summary.error is None
 
     result = db.apply_staged_revision(staged.revision_iri)
 
@@ -1681,6 +1697,16 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_description.application_status == "already_applied"
     assert applied_description.applied_by is not None
     assert applied_description.applied_by.iri == result.applied_revision_iri
+    applied_description_with_check = db.describe_staged_revision(
+        staged.revision_iri,
+        include_current_apply_check=True,
+    )
+    assert applied_description_with_check.current_apply_check is not None
+    applied_summary = applied_description_with_check.current_apply_check
+    assert applied_summary.status == "already_applied"
+    assert applied_summary.decision == "inspect_applied_revision"
+    assert applied_summary.already_applied_by == result.applied_revision_iri
+    assert applied_summary.validation_skipped_reason == "already_applied"
     applied_export = db.export_staged_revisions(
         [staged.revision_iri],
         tmp_path / "applied-staged-review.md",
@@ -2025,6 +2051,20 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
         check.snapshot_drifts[0].note
     )
     assert "weak relevance hint" in check.snapshot_drifts[0].note
+    stale_description = db.describe_staged_revision(
+        staged.revision_iri,
+        include_current_apply_check=True,
+    )
+    assert stale_description.current_apply_check is not None
+    stale_summary = stale_description.current_apply_check
+    assert stale_summary.status == "conflict"
+    assert stale_summary.decision == "restage_against_current_graph"
+    assert stale_summary.blocking_reasons == ["target_count_drift"]
+    assert stale_summary.validation_skipped_reason == "conflicts_present"
+    assert stale_summary.count_drifts[0].target_graph == "map"
+    assert stale_summary.snapshot_drifts[0].exact_changed_triples_available is True
+    assert stale_summary.snapshot_drifts[0].exact_changed_triples_included is False
+    assert stale_summary.snapshot_drifts[0].triples_added_since_snapshot == []
 
     export_path = tmp_path / "stale-staged-review.md"
     db.export_staged_revision(staged.revision_iri, export_path)
@@ -3642,6 +3682,20 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     ]
     assert "stage a repaired" in check.suggested_next_actions[0].reason
     assert "validation-failed" in check.suggested_next_actions[1].arguments["path"]
+    description = db.describe_staged_revision(
+        staged.revision_iri,
+        include_current_apply_check=True,
+    )
+    assert description.current_apply_check is not None
+    validation_summary = description.current_apply_check
+    assert validation_summary.status == "validation_failed"
+    assert validation_summary.decision == "inspect_validation_results"
+    assert validation_summary.validation_conforms is False
+    assert validation_summary.validation_result_count == check.validation_result_count
+    assert validation_summary.suggested_next_actions[0].tool_name == (
+        "describe_staged_revision"
+    )
+    assert validation_summary.error is None
 
     export = db.export_staged_revisions(
         [staged.revision_iri],

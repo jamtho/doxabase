@@ -381,6 +381,34 @@ class StagedRevisionApplyCheck:
 
 
 @dataclass(frozen=True)
+class StagedRevisionApplySummary:
+    staged_revision_iri: str
+    status: str
+    decision: str | None
+    can_apply: bool | None
+    summary: str | None
+    review_recommended: bool | None
+    semantic_risk_level: str | None
+    semantic_risk_reasons: list[str]
+    blocking_reasons: list[str]
+    recommended_resolution: str | None
+    already_applied_by: str | None
+    changed_graphs: list[str]
+    validation_scope: str | None
+    validation_conforms: bool | None
+    validation_skipped_reason: str | None
+    validation_result_count: int | None
+    patches_checked: int | None
+    triples_to_add: int | None
+    triples_to_remove: int | None
+    count_drifts: list[StagedGraphCountDrift]
+    snapshot_drifts: list[StagedGraphSnapshotDrift]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    error: str | None
+
+
+@dataclass(frozen=True)
 class SystematisationFramingRecord:
     label: str
     rationale: str | None
@@ -757,6 +785,7 @@ class StagedGraphRevisionDescription:
     supporting_patterns: list[ResourceSummary]
     revision_anchors: list[ResourceSummary]
     evidence: list[ResourceSummary]
+    current_apply_check: StagedRevisionApplySummary | None = None
     judgement_panel: MapAssertionJudgementPanel | None = None
 
 
@@ -2873,6 +2902,7 @@ class DoxaBase:
         iri: str,
         *,
         graph: str | None = "history",
+        include_current_apply_check: bool = False,
     ) -> StagedGraphRevisionDescription:
         revision_iri = self.expand_iri(iri)
         data_graphs = self._expand_graphs([graph] if graph else None)
@@ -3051,7 +3081,77 @@ class DoxaBase:
         judgement_panel = self._staged_revision_judgement_panel(description)
         if judgement_panel is not None:
             description = replace(description, judgement_panel=judgement_panel)
+        if include_current_apply_check:
+            description = replace(
+                description,
+                current_apply_check=self._staged_revision_apply_summary(
+                    description,
+                ),
+            )
         return description
+
+    def _staged_revision_apply_summary(
+        self,
+        staged: StagedGraphRevisionDescription,
+    ) -> StagedRevisionApplySummary:
+        try:
+            check = self._preview_staged_revision_application(
+                staged.iri,
+                staged=staged,
+            ).check
+        except DoxaBaseError as exc:
+            return StagedRevisionApplySummary(
+                staged_revision_iri=staged.iri,
+                status="not_available",
+                decision="inspect_staged_revision",
+                can_apply=None,
+                summary=None,
+                review_recommended=None,
+                semantic_risk_level=None,
+                semantic_risk_reasons=[],
+                blocking_reasons=[],
+                recommended_resolution=None,
+                already_applied_by=None,
+                changed_graphs=staged.changed_graphs,
+                validation_scope=staged.validation_scope,
+                validation_conforms=None,
+                validation_skipped_reason=None,
+                validation_result_count=None,
+                patches_checked=None,
+                triples_to_add=None,
+                triples_to_remove=None,
+                count_drifts=[],
+                snapshot_drifts=[],
+                suggested_next_actions=[],
+                suggested_next_calls=[],
+                error=str(exc),
+            )
+        return StagedRevisionApplySummary(
+            staged_revision_iri=check.staged_revision_iri,
+            status=check.status,
+            decision=check.decision,
+            can_apply=check.can_apply,
+            summary=check.summary,
+            review_recommended=check.review_recommended,
+            semantic_risk_level=check.semantic_risk_level,
+            semantic_risk_reasons=check.semantic_risk_reasons,
+            blocking_reasons=check.blocking_reasons,
+            recommended_resolution=check.recommended_resolution,
+            already_applied_by=check.already_applied_by,
+            changed_graphs=check.changed_graphs,
+            validation_scope=check.validation_scope,
+            validation_conforms=check.validation_conforms,
+            validation_skipped_reason=check.validation_skipped_reason,
+            validation_result_count=check.validation_result_count,
+            patches_checked=check.patches_checked,
+            triples_to_add=check.triples_to_add,
+            triples_to_remove=check.triples_to_remove,
+            count_drifts=check.count_drifts,
+            snapshot_drifts=self._summary_snapshot_drifts(check.snapshot_drifts),
+            suggested_next_actions=check.suggested_next_actions,
+            suggested_next_calls=check.suggested_next_calls,
+            error=None,
+        )
 
     def _staged_revision_restage_reason(
         self,
@@ -10713,8 +10813,9 @@ class DoxaBase:
             "all",
         ]
         | None = None,
+        staged: StagedGraphRevisionDescription | None = None,
     ) -> _StagedRevisionApplicationPreview:
-        staged = self.describe_staged_revision(iri)
+        staged = staged or self.describe_staged_revision(iri)
         changed_graphs = list(
             dict.fromkeys(
                 patch.target_graph for patch in staged.patches if patch.target_graph

@@ -136,8 +136,15 @@ def describe_staged_revision_tool(
     db: DoxaBase,
     iri: str,
     graph: str | None = "history",
+    include_current_apply_check: bool = False,
 ) -> dict[str, Any]:
-    return to_dict(db.describe_staged_revision(iri=iri, graph=graph))
+    return to_dict(
+        db.describe_staged_revision(
+            iri=iri,
+            graph=graph,
+            include_current_apply_check=include_current_apply_check,
+        )
+    )
 
 
 def check_staged_revision_apply_tool(
