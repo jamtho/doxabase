@@ -218,8 +218,13 @@ Do not call `check_staged_revision_apply()` after application expecting an exact
 before/after diff. It reports `status="already_applied"` and points you toward
 inspection; it does not replay the patch or return drift arrays for the applied
 event.
-Call `describe_applied_revision_diff(applied_iri)` when you need the exact
-stored snapshot diff for an applied staged revision.
+Call `describe_applied_revision_diff(applied_iri)` when you need stored
+before/after snapshot counts and digests for an applied staged revision. Pass
+`include_triples=True` when you also need exact changed-triple arrays; the
+default response omits those arrays to keep MCP payloads small.
+Read the per-graph `triples_added_count` and `triples_removed_count`, not only
+the before/after graph counts. A replacement can keep the same triple count
+while still adding and removing exact triples.
 
 This is still provenance browsing, not durable graph-version browsing. The
 applied event gives counts and content digests; `applied_source` gives compact

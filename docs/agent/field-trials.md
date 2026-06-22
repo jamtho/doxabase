@@ -410,7 +410,9 @@ few useful gaps:
   post-apply history trial confirmed the two-hop recovery path from applied
   event to staged source, and showed enough private snapshot-row support for a
   narrow public `describe_applied_revision_diff` helper rather than broader
-  durable graph-version browsing.
+  durable graph-version browsing. A follow-up size probe showed that exact
+  applied-diff arrays can become large quickly, so the helper returns counts by
+  default and requires `include_triples=True` for capped changed-triple arrays.
 - A staged-drift readability trial showed that `patch_object_overlap` can sound
   stronger than it is when the only object overlap is broad vocabulary such as
   `rc:Dataset`. Apply checks now use `broad_patch_object_overlap` for that weak

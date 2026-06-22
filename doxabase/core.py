@@ -329,8 +329,12 @@ class AppliedRevisionGraphSnapshotDiff:
     before_content_digest: str | None
     after_content_digest: str | None
     exact_changed_triples_available: bool
+    exact_changed_triples_included: bool
     triples_added_count: int | None
     triples_removed_count: int | None
+    triples_added_truncated: bool
+    triples_removed_truncated: bool
+    max_triples: int
     triples_added: list[GraphTripleDescription]
     triples_removed: list[GraphTripleDescription]
     note: str
@@ -341,6 +345,8 @@ class AppliedRevisionDiffDescription:
     applied_revision_iri: str
     staged_revision_iri: str
     changed_graphs: list[str]
+    include_triples: bool
+    max_triples: int
     graph_diffs: list[AppliedRevisionGraphSnapshotDiff]
 
 
@@ -2312,7 +2318,11 @@ class DoxaBase:
         iri: str,
         *,
         graph: str | None = "history",
+        include_triples: bool = False,
+        max_triples: int = 500,
     ) -> AppliedRevisionDiffDescription:
+        if max_triples < 1:
+            raise DoxaBaseError("max_triples must be at least 1")
         applied = self.describe_graph_revision(iri, graph=graph)
         staged_revision_iri = applied.applies_staged_revision
         if staged_revision_iri is None:
@@ -2334,6 +2344,8 @@ class DoxaBase:
             applied_revision_iri=applied.iri,
             staged_revision_iri=staged_revision_iri,
             changed_graphs=graph_roles,
+            include_triples=include_triples,
+            max_triples=max_triples,
             graph_diffs=[
                 self._applied_revision_graph_snapshot_diff(
                     graph_role=graph_role,
@@ -2341,6 +2353,8 @@ class DoxaBase:
                     after_revision_iri=applied.iri,
                     before_snapshot=before_snapshots.get(graph_role),
                     after_snapshot=after_snapshots.get(graph_role),
+                    include_triples=include_triples,
+                    max_triples=max_triples,
                 )
                 for graph_role in graph_roles
             ],
@@ -2354,6 +2368,8 @@ class DoxaBase:
         after_revision_iri: str,
         before_snapshot: GraphSnapshotDescription | None,
         after_snapshot: GraphSnapshotDescription | None,
+        include_triples: bool,
+        max_triples: int,
     ) -> AppliedRevisionGraphSnapshotDiff:
         exact_available = self._graph_snapshot_storage_exists(
             before_revision_iri,
@@ -2361,6 +2377,11 @@ class DoxaBase:
         ) and self._graph_snapshot_storage_exists(after_revision_iri, graph_role)
         triples_added: list[GraphTripleDescription] = []
         triples_removed: list[GraphTripleDescription] = []
+        triples_added_count: int | None = None
+        triples_removed_count: int | None = None
+        triples_added_truncated = False
+        triples_removed_truncated = False
+        exact_included = False
         if exact_available:
             before_rows = set(
                 self._graph_snapshot_storage_rows(before_revision_iri, graph_role)
@@ -2370,16 +2391,38 @@ class DoxaBase:
             )
             added_rows = self._sort_graph_storage_rows(after_rows - before_rows)
             removed_rows = self._sort_graph_storage_rows(before_rows - after_rows)
-            triples_added = [
-                self._graph_triple_description(row) for row in added_rows
-            ]
-            triples_removed = [
-                self._graph_triple_description(row) for row in removed_rows
-            ]
-            note = (
-                "Exact before/after snapshot triples are included from stored "
-                "revision snapshot rows."
-            )
+            triples_added_count = len(added_rows)
+            triples_removed_count = len(removed_rows)
+            if include_triples:
+                exact_included = True
+                triples_added_truncated = triples_added_count > max_triples
+                triples_removed_truncated = triples_removed_count > max_triples
+                triples_added = [
+                    self._graph_triple_description(row)
+                    for row in added_rows[:max_triples]
+                ]
+                triples_removed = [
+                    self._graph_triple_description(row)
+                    for row in removed_rows[:max_triples]
+                ]
+                if triples_added_truncated or triples_removed_truncated:
+                    note = (
+                        "Exact before/after snapshot triples are available and "
+                        "included up to max_triples per added/removed array."
+                    )
+                else:
+                    note = (
+                        "Exact before/after snapshot triples are included from "
+                        "stored revision snapshot rows."
+                    )
+            else:
+                triples_added_truncated = triples_added_count > 0
+                triples_removed_truncated = triples_removed_count > 0
+                note = (
+                    "Exact before/after snapshot triples are available but "
+                    "omitted; call describe_applied_revision_diff(..., "
+                    "include_triples=True) to include arrays."
+                )
         else:
             note = (
                 "Exact before/after snapshot triples are unavailable because "
@@ -2403,8 +2446,12 @@ class DoxaBase:
                 after_snapshot.content_digest if after_snapshot is not None else None
             ),
             exact_changed_triples_available=exact_available,
-            triples_added_count=len(triples_added) if exact_available else None,
-            triples_removed_count=len(triples_removed) if exact_available else None,
+            exact_changed_triples_included=exact_included,
+            triples_added_count=triples_added_count,
+            triples_removed_count=triples_removed_count,
+            triples_added_truncated=triples_added_truncated,
+            triples_removed_truncated=triples_removed_truncated,
+            max_triples=max_triples,
             triples_added=triples_added,
             triples_removed=triples_removed,
             note=note,

@@ -107,8 +107,8 @@ Implemented:
 - `apply_staged_revision()` for applying one staged revision after conservative
   graph-state conflict checks and preview validation, while recording an applied
   revision event in history.
-- `describe_applied_revision_diff()` for exact stored before/after snapshot
-  diffs on applied staged revision events.
+- `describe_applied_revision_diff()` for stored before/after snapshot diffs on
+  applied staged revision events, with exact triple arrays opt-in.
 - `restage_staged_revision()` for refreshing a stale staged proposal against
   current graph state while preserving a link to the older proposal.
 - Row-level staged graph snapshot storage for exact count/digest drift reporting
@@ -244,7 +244,7 @@ Useful first tool calls for an agent:
 26. `doxabase.restage_staged_revision` when count or digest drift made a
     still-useful staged proposal stale
 27. `doxabase.describe_applied_revision_diff` when an applied staged revision
-    needs exact stored before/after snapshot triples
+    needs stored before/after snapshot diff counts or opt-in exact triples
 28. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
 29. `doxabase.record_map_dataset` and related map helpers for current-best facts

@@ -1623,12 +1623,32 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert map_diff.before_content_digest is not None
     assert map_diff.after_content_digest == applied.graph_snapshots[0].content_digest
     assert map_diff.exact_changed_triples_available is True
+    assert map_diff.exact_changed_triples_included is False
     assert map_diff.triples_added_count == 3
     assert map_diff.triples_removed_count == 0
-    assert {triple.subject for triple in map_diff.triples_added} == {
+    assert map_diff.triples_added_truncated is True
+    assert map_diff.triples_removed_truncated is False
+    assert map_diff.max_triples == 500
+    assert map_diff.triples_added == []
+    assert map_diff.triples_removed == []
+    exact_diff = db.describe_applied_revision_diff(
+        result.applied_revision_iri,
+        include_triples=True,
+    )
+    exact_map_diff = exact_diff.graph_diffs[0]
+    assert exact_diff.include_triples is True
+    assert exact_map_diff.exact_changed_triples_included is True
+    assert exact_map_diff.triples_added_truncated is False
+    assert {triple.subject for triple in exact_map_diff.triples_added} == {
         "https://example.test/project#Messages"
     }
-    assert map_diff.triples_removed == []
+    assert exact_map_diff.triples_removed == []
+    with pytest.raises(DoxaBaseError, match="max_triples must be at least 1"):
+        db.describe_applied_revision_diff(
+            result.applied_revision_iri,
+            include_triples=True,
+            max_triples=0,
+        )
     with pytest.raises(DoxaBaseError, match="not an applied staged revision"):
         db.describe_applied_revision_diff(staged.revision_iri)
     context = db.describe_resource(result.applied_revision_iri, graph="history")
@@ -1708,11 +1728,18 @@ def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
     assert result.changed_graphs == ["map"]
     assert result.triples_added == 0
     assert result.triples_removed == 3
-    diff = db.describe_applied_revision_diff(result.applied_revision_iri)
+    diff = db.describe_applied_revision_diff(
+        result.applied_revision_iri,
+        include_triples=True,
+        max_triples=2,
+    )
     assert diff.changed_graphs == ["map"]
     assert diff.graph_diffs[0].triples_added == []
     assert diff.graph_diffs[0].triples_added_count == 0
     assert diff.graph_diffs[0].triples_removed_count == 3
+    assert diff.graph_diffs[0].exact_changed_triples_included is True
+    assert diff.graph_diffs[0].triples_removed_truncated is True
+    assert len(diff.graph_diffs[0].triples_removed) == 2
     assert {triple.subject for triple in diff.graph_diffs[0].triples_removed} == {
         "https://example.test/project#Messages"
     }

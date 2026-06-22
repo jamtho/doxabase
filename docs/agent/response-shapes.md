@@ -1185,13 +1185,15 @@ patch.before_triple_count
 patch.after_triple_count
 ```
 
-`db.describe_applied_revision_diff(applied_revision_iri)` returns
-`AppliedRevisionDiffDescription`:
+`db.describe_applied_revision_diff(applied_revision_iri, include_triples=False,
+max_triples=500)` returns `AppliedRevisionDiffDescription`:
 
 ```python
 diff.applied_revision_iri
 diff.staged_revision_iri
 diff.changed_graphs
+diff.include_triples
+diff.max_triples
 diff.graph_diffs
 ```
 
@@ -1207,8 +1209,12 @@ graph_diff.after_triple_count
 graph_diff.before_content_digest
 graph_diff.after_content_digest
 graph_diff.exact_changed_triples_available
+graph_diff.exact_changed_triples_included
 graph_diff.triples_added_count
 graph_diff.triples_removed_count
+graph_diff.triples_added_truncated
+graph_diff.triples_removed_truncated
+graph_diff.max_triples
 graph_diff.triples_added
 graph_diff.triples_removed
 graph_diff.note
@@ -1216,9 +1222,12 @@ graph_diff.note
 
 This helper only works for applied staged revision events. It compares the
 staged source's stored before-snapshot rows with the applied event's stored
-after-snapshot rows for changed graphs. Use it for exact applied-event
-before/after triples; use `describe_staged_revision()` when you need original
-patch payloads, validation diagnostics, impacts, or judgement context.
+after-snapshot rows for changed graphs. The default response keeps exact
+added/removed counts but omits changed-triple arrays. Pass
+`include_triples=True` when an agent needs raw triples; `max_triples` caps each
+added/removed array and truncation flags say whether arrays were shortened.
+Use `describe_staged_revision()` when you need original patch payloads,
+validation diagnostics, impacts, or judgement context.
 
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:

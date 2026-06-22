@@ -536,13 +536,15 @@ read-only check.
 
 `doxabase.describe_applied_revision_diff`
 
-Returns exact stored before/after snapshot diffs for an applied staged revision.
-Pass the applied revision event IRI, not the staged source IRI. The response
-links `applied_revision_iri` to `staged_revision_iri`, lists changed graphs, and
-returns one `graph_diffs[]` row per graph with before/after counts and digests,
-`triples_added`, `triples_removed`, and their counts when snapshot rows are
-available. Use this after `describe_graph_revision()` when an agent needs the
-actual triples changed by an applied staged revision; use
+Returns stored before/after snapshot diffs for an applied staged revision. Pass
+the applied revision event IRI, not the staged source IRI. The response links
+`applied_revision_iri` to `staged_revision_iri`, lists changed graphs, and
+returns one `graph_diffs[]` row per graph with before/after counts, digests, and
+exact added/removed counts when snapshot rows are available. Changed-triple
+arrays are omitted by default; pass `include_triples=true` to include them, with
+`max_triples` capping each added/removed array. Use this after
+`describe_graph_revision()` when an agent needs the actual triples changed by an
+applied staged revision; use
 `describe_staged_revision()` for patch payloads, validation diagnostics,
 impacts, and judgement context.
 

@@ -613,11 +613,14 @@ Suggested actions are ordered review-first; mutation calls come after
 inspection/export suggestions.
 `can_apply=True` means replay and validation readiness, not semantic approval.
 
-`describe_applied_revision_diff(applied_revision_iri)` returns the exact stored
-snapshot diff for an applied staged revision. It compares the staged source's
-before snapshots with the applied event's after snapshots for changed graphs and
-returns added/removed triples when snapshot rows are available. It is a narrow
-applied-event inspection helper, not general historical graph browsing.
+`describe_applied_revision_diff(applied_revision_iri, include_triples=False,
+max_triples=500)` returns the stored snapshot diff for an applied staged
+revision. It compares the staged source's before snapshots with the applied
+event's after snapshots for changed graphs and returns exact added/removed
+counts when snapshot rows are available. Changed-triple arrays are omitted by
+default; pass `include_triples=True` to include them, capped by `max_triples`.
+It is a narrow applied-event inspection helper, not general historical graph
+browsing.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted
 staged revision's existing patch payloads, recomputing before/after counts and

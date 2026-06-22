@@ -961,10 +961,21 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert diff["graph_diffs"][0]["before_triple_count"] == 0
     assert diff["graph_diffs"][0]["after_triple_count"] == 3
     assert diff["graph_diffs"][0]["exact_changed_triples_available"] is True
+    assert diff["graph_diffs"][0]["exact_changed_triples_included"] is False
     assert diff["graph_diffs"][0]["triples_added_count"] == 3
     assert diff["graph_diffs"][0]["triples_removed_count"] == 0
+    assert diff["graph_diffs"][0]["triples_added_truncated"] is True
+    assert diff["graph_diffs"][0]["triples_added"] == []
+    exact_diff = describe_applied_revision_diff_tool(
+        db,
+        result["applied_revision_iri"],
+        include_triples=True,
+    )
+    assert exact_diff["include_triples"] is True
+    assert exact_diff["graph_diffs"][0]["exact_changed_triples_included"] is True
     assert {
-        triple["subject"] for triple in diff["graph_diffs"][0]["triples_added"]
+        triple["subject"]
+        for triple in exact_diff["graph_diffs"][0]["triples_added"]
     } == {"https://example.test/project#Messages"}
     staged_description = describe_staged_revision_tool(db, staged["revision_iri"])
     assert staged_description["application_status"] == "already_applied"

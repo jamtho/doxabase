@@ -204,10 +204,18 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     def describe_applied_revision_diff(
         iri: str,
         graph: str | None = "history",
+        include_triples: bool = False,
+        max_triples: int = 500,
     ) -> dict[str, Any]:
-        """Return exact stored snapshot diffs for an applied staged revision."""
+        """Return stored snapshot diffs for an applied staged revision."""
 
-        return describe_applied_revision_diff_tool(db, iri=iri, graph=graph)
+        return describe_applied_revision_diff_tool(
+            db,
+            iri=iri,
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=max_triples,
+        )
 
     @server.tool(name="doxabase.list_graph_revisions")
     def list_graph_revisions(

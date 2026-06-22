@@ -98,8 +98,17 @@ def describe_applied_revision_diff_tool(
     db: DoxaBase,
     iri: str,
     graph: str | None = "history",
+    include_triples: bool = False,
+    max_triples: int = 500,
 ) -> dict[str, Any]:
-    return to_dict(db.describe_applied_revision_diff(iri=iri, graph=graph))
+    return to_dict(
+        db.describe_applied_revision_diff(
+            iri=iri,
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=max_triples,
+        )
+    )
 
 
 def list_graph_revisions_tool(
