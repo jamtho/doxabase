@@ -534,6 +534,18 @@ come before mutation calls such as apply or restage. Use it before
 `doxabase.apply_staged_revision` when an agent or human wants an explicit
 read-only check.
 
+`doxabase.describe_applied_revision_diff`
+
+Returns exact stored before/after snapshot diffs for an applied staged revision.
+Pass the applied revision event IRI, not the staged source IRI. The response
+links `applied_revision_iri` to `staged_revision_iri`, lists changed graphs, and
+returns one `graph_diffs[]` row per graph with before/after counts and digests,
+`triples_added`, `triples_removed`, and their counts when snapshot rows are
+available. Use this after `describe_graph_revision()` when an agent needs the
+actual triples changed by an applied staged revision; use
+`describe_staged_revision()` for patch payloads, validation diagnostics,
+impacts, and judgement context.
+
 `doxabase.restage_staged_revision`
 
 Creates a fresh staged revision from a conflicted staged revision's patch

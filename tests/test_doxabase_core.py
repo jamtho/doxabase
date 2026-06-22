@@ -1609,6 +1609,28 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied.graph_snapshots[0].triple_count == 3
     assert applied.graph_snapshots[0].content_digest is not None
     assert applied.graph_snapshots[0].content_digest.startswith("sha256:")
+    diff = db.describe_applied_revision_diff(result.applied_revision_iri)
+    assert diff.applied_revision_iri == result.applied_revision_iri
+    assert diff.staged_revision_iri == staged.revision_iri
+    assert diff.changed_graphs == ["map"]
+    assert len(diff.graph_diffs) == 1
+    map_diff = diff.graph_diffs[0]
+    assert map_diff.graph_role == "map"
+    assert map_diff.before_revision_iri == staged.revision_iri
+    assert map_diff.after_revision_iri == result.applied_revision_iri
+    assert map_diff.before_triple_count == 0
+    assert map_diff.after_triple_count == 3
+    assert map_diff.before_content_digest is not None
+    assert map_diff.after_content_digest == applied.graph_snapshots[0].content_digest
+    assert map_diff.exact_changed_triples_available is True
+    assert map_diff.triples_added_count == 3
+    assert map_diff.triples_removed_count == 0
+    assert {triple.subject for triple in map_diff.triples_added} == {
+        "https://example.test/project#Messages"
+    }
+    assert map_diff.triples_removed == []
+    with pytest.raises(DoxaBaseError, match="not an applied staged revision"):
+        db.describe_applied_revision_diff(staged.revision_iri)
     context = db.describe_resource(result.applied_revision_iri, graph="history")
     assert any(
         triple.predicate == RC + "appliesStagedRevision"
@@ -1686,6 +1708,14 @@ def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
     assert result.changed_graphs == ["map"]
     assert result.triples_added == 0
     assert result.triples_removed == 3
+    diff = db.describe_applied_revision_diff(result.applied_revision_iri)
+    assert diff.changed_graphs == ["map"]
+    assert diff.graph_diffs[0].triples_added == []
+    assert diff.graph_diffs[0].triples_added_count == 0
+    assert diff.graph_diffs[0].triples_removed_count == 3
+    assert {triple.subject for triple in diff.graph_diffs[0].triples_removed} == {
+        "https://example.test/project#Messages"
+    }
     assert db.triple_count("map") == 0
     with pytest.raises(DoxaBaseError, match="Messages"):
         db.describe_dataset("https://example.test/project#Messages")

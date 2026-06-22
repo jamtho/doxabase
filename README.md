@@ -107,6 +107,8 @@ Implemented:
 - `apply_staged_revision()` for applying one staged revision after conservative
   graph-state conflict checks and preview validation, while recording an applied
   revision event in history.
+- `describe_applied_revision_diff()` for exact stored before/after snapshot
+  diffs on applied staged revision events.
 - `restage_staged_revision()` for refreshing a stale staged proposal against
   current graph state while preserving a link to the older proposal.
 - Row-level staged graph snapshot storage for exact count/digest drift reporting
@@ -241,14 +243,16 @@ Useful first tool calls for an agent:
     into durable graph state
 26. `doxabase.restage_staged_revision` when count or digest drift made a
     still-useful staged proposal stale
-27. `doxabase.apply_staged_revision` when a staged proposal should become
+27. `doxabase.describe_applied_revision_diff` when an applied staged revision
+    needs exact stored before/after snapshot triples
+28. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-28. `doxabase.record_map_dataset` and related map helpers for current-best facts
-29. `doxabase.validate_graph` with `scope="all"`
-30. `doxabase.export_trig` when you need a named-graph project review bundle
-31. `doxabase.record_graph_revision` when the bundle/change rationale should be
+29. `doxabase.record_map_dataset` and related map helpers for current-best facts
+30. `doxabase.validate_graph` with `scope="all"`
+31. `doxabase.export_trig` when you need a named-graph project review bundle
+32. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-32. `doxabase.describe_graph_revision` when reviewing a history record
+33. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -291,6 +295,7 @@ Current MCP tools:
 - `doxabase.stage_pattern_promotion`
 - `doxabase.check_staged_revision_apply`
 - `doxabase.restage_staged_revision`
+- `doxabase.describe_applied_revision_diff`
 - `doxabase.apply_staged_revision`
 - `doxabase.load_example_fixtures`
 - `doxabase.validate_graph`

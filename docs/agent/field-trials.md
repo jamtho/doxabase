@@ -408,9 +408,9 @@ few useful gaps:
   parameter names, and a reminder that list/export relation fields are IRI
   strings while detailed staged descriptions use resource summaries. A separate
   post-apply history trial confirmed the two-hop recovery path from applied
-  event to staged source, while surfacing a larger future product question:
-  whether applied events should expose a public one-call before/after snapshot
-  diff.
+  event to staged source, and showed enough private snapshot-row support for a
+  narrow public `describe_applied_revision_diff` helper rather than broader
+  durable graph-version browsing.
 - A staged-drift readability trial showed that `patch_object_overlap` can sound
   stronger than it is when the only object overlap is broad vocabulary such as
   `rc:Dataset`. Apply checks now use `broad_patch_object_overlap` for that weak

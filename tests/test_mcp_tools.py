@@ -9,6 +9,7 @@ from doxabase.mcp_server import build_server
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
     check_staged_revision_apply_tool,
+    describe_applied_revision_diff_tool,
     describe_assertion_support_tool,
     describe_context_slice_tool,
     describe_dataset_tool,
@@ -69,6 +70,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
+    assert "doxabase.describe_applied_revision_diff" in tool_names
     assert "doxabase.list_graph_revisions" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
     assert "doxabase.check_staged_revision_apply" in tool_names
@@ -951,6 +953,19 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert description["applied_source"]["patch_count"] == 1
     assert description["applied_source"]["patches"][0]["target_graph"] == "map"
     assert "content" not in description["applied_source"]["patches"][0]
+    diff = describe_applied_revision_diff_tool(db, result["applied_revision_iri"])
+    assert diff["applied_revision_iri"] == result["applied_revision_iri"]
+    assert diff["staged_revision_iri"] == staged["revision_iri"]
+    assert diff["changed_graphs"] == ["map"]
+    assert diff["graph_diffs"][0]["graph_role"] == "map"
+    assert diff["graph_diffs"][0]["before_triple_count"] == 0
+    assert diff["graph_diffs"][0]["after_triple_count"] == 3
+    assert diff["graph_diffs"][0]["exact_changed_triples_available"] is True
+    assert diff["graph_diffs"][0]["triples_added_count"] == 3
+    assert diff["graph_diffs"][0]["triples_removed_count"] == 0
+    assert {
+        triple["subject"] for triple in diff["graph_diffs"][0]["triples_added"]
+    } == {"https://example.test/project#Messages"}
     staged_description = describe_staged_revision_tool(db, staged["revision_iri"])
     assert staged_description["application_status"] == "already_applied"
     assert staged_description["applied_by"]["iri"] == result["applied_revision_iri"]

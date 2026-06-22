@@ -320,6 +320,31 @@ class StagedGraphSnapshotDrift:
 
 
 @dataclass(frozen=True)
+class AppliedRevisionGraphSnapshotDiff:
+    graph_role: str
+    before_revision_iri: str
+    after_revision_iri: str
+    before_triple_count: int | None
+    after_triple_count: int | None
+    before_content_digest: str | None
+    after_content_digest: str | None
+    exact_changed_triples_available: bool
+    triples_added_count: int | None
+    triples_removed_count: int | None
+    triples_added: list[GraphTripleDescription]
+    triples_removed: list[GraphTripleDescription]
+    note: str
+
+
+@dataclass(frozen=True)
+class AppliedRevisionDiffDescription:
+    applied_revision_iri: str
+    staged_revision_iri: str
+    changed_graphs: list[str]
+    graph_diffs: list[AppliedRevisionGraphSnapshotDiff]
+
+
+@dataclass(frozen=True)
 class StagedRevisionApplyCheck:
     staged_revision_iri: str
     can_apply: bool
@@ -2280,6 +2305,109 @@ class DoxaBase:
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
             ),
+        )
+
+    def describe_applied_revision_diff(
+        self,
+        iri: str,
+        *,
+        graph: str | None = "history",
+    ) -> AppliedRevisionDiffDescription:
+        applied = self.describe_graph_revision(iri, graph=graph)
+        staged_revision_iri = applied.applies_staged_revision
+        if staged_revision_iri is None:
+            raise DoxaBaseError(
+                f"Graph revision '{iri}' is not an applied staged revision"
+            )
+        staged = self.describe_staged_revision(staged_revision_iri, graph=graph)
+        before_snapshots = {
+            snapshot.graph_role: snapshot for snapshot in staged.graph_snapshots
+        }
+        after_snapshots = {
+            snapshot.graph_role: snapshot for snapshot in applied.graph_snapshots
+        }
+        graph_roles = list(dict.fromkeys(applied.changed_graphs))
+        if not graph_roles:
+            graph_roles = sorted(set(before_snapshots) | set(after_snapshots))
+
+        return AppliedRevisionDiffDescription(
+            applied_revision_iri=applied.iri,
+            staged_revision_iri=staged_revision_iri,
+            changed_graphs=graph_roles,
+            graph_diffs=[
+                self._applied_revision_graph_snapshot_diff(
+                    graph_role=graph_role,
+                    before_revision_iri=staged_revision_iri,
+                    after_revision_iri=applied.iri,
+                    before_snapshot=before_snapshots.get(graph_role),
+                    after_snapshot=after_snapshots.get(graph_role),
+                )
+                for graph_role in graph_roles
+            ],
+        )
+
+    def _applied_revision_graph_snapshot_diff(
+        self,
+        *,
+        graph_role: str,
+        before_revision_iri: str,
+        after_revision_iri: str,
+        before_snapshot: GraphSnapshotDescription | None,
+        after_snapshot: GraphSnapshotDescription | None,
+    ) -> AppliedRevisionGraphSnapshotDiff:
+        exact_available = self._graph_snapshot_storage_exists(
+            before_revision_iri,
+            graph_role,
+        ) and self._graph_snapshot_storage_exists(after_revision_iri, graph_role)
+        triples_added: list[GraphTripleDescription] = []
+        triples_removed: list[GraphTripleDescription] = []
+        if exact_available:
+            before_rows = set(
+                self._graph_snapshot_storage_rows(before_revision_iri, graph_role)
+            )
+            after_rows = set(
+                self._graph_snapshot_storage_rows(after_revision_iri, graph_role)
+            )
+            added_rows = self._sort_graph_storage_rows(after_rows - before_rows)
+            removed_rows = self._sort_graph_storage_rows(before_rows - after_rows)
+            triples_added = [
+                self._graph_triple_description(row) for row in added_rows
+            ]
+            triples_removed = [
+                self._graph_triple_description(row) for row in removed_rows
+            ]
+            note = (
+                "Exact before/after snapshot triples are included from stored "
+                "revision snapshot rows."
+            )
+        else:
+            note = (
+                "Exact before/after snapshot triples are unavailable because "
+                "one or both revision snapshots lack stored rows."
+            )
+
+        return AppliedRevisionGraphSnapshotDiff(
+            graph_role=graph_role,
+            before_revision_iri=before_revision_iri,
+            after_revision_iri=after_revision_iri,
+            before_triple_count=(
+                before_snapshot.triple_count if before_snapshot is not None else None
+            ),
+            after_triple_count=(
+                after_snapshot.triple_count if after_snapshot is not None else None
+            ),
+            before_content_digest=(
+                before_snapshot.content_digest if before_snapshot is not None else None
+            ),
+            after_content_digest=(
+                after_snapshot.content_digest if after_snapshot is not None else None
+            ),
+            exact_changed_triples_available=exact_available,
+            triples_added_count=len(triples_added) if exact_available else None,
+            triples_removed_count=len(triples_removed) if exact_available else None,
+            triples_added=triples_added,
+            triples_removed=triples_removed,
+            note=note,
         )
 
     def _applied_staged_revision_source_summary(

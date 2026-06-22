@@ -216,6 +216,7 @@ Current MCP tools:
 - `doxabase.stage_pattern_promotion`
 - `doxabase.check_staged_revision_apply`
 - `doxabase.restage_staged_revision`
+- `doxabase.describe_applied_revision_diff`
 - `doxabase.apply_staged_revision`
 - `doxabase.export_staged_revision`
 - `doxabase.export_staged_revisions`
@@ -316,7 +317,8 @@ Expected state at the time of writing:
   or proof-of-closure mechanism.
 - Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.
 - The MCP interface exposes inspection, context slicing, staged revision
-  apply/review, helper-backed graph writing, validation, and revision metadata.
+  apply/review, applied staged-revision snapshot diffs, helper-backed graph
+  writing, validation, and revision metadata.
 - The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and storage layout are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
 

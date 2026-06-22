@@ -613,6 +613,12 @@ Suggested actions are ordered review-first; mutation calls come after
 inspection/export suggestions.
 `can_apply=True` means replay and validation readiness, not semantic approval.
 
+`describe_applied_revision_diff(applied_revision_iri)` returns the exact stored
+snapshot diff for an applied staged revision. It compares the staged source's
+before snapshots with the applied event's after snapshots for changed graphs and
+returns added/removed triples when snapshot rows are available. It is a narrow
+applied-event inspection helper, not general historical graph browsing.
+
 `restage_staged_revision()` creates a fresh staged revision from a conflicted
 staged revision's existing patch payloads, recomputing before/after counts and
 validation against the current graph state. It records `rc:restagesRevision`

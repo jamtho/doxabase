@@ -1,4 +1,6 @@
 from doxabase.core import (
+    AppliedRevisionDiffDescription,
+    AppliedRevisionGraphSnapshotDiff,
     AppliedStagedRevisionRecord,
     AppliedStagedRevisionSourcePatchSummary,
     AppliedStagedRevisionSourceSummary,
@@ -92,6 +94,8 @@ from doxabase.core import (
 )
 
 __all__ = [
+    "AppliedRevisionDiffDescription",
+    "AppliedRevisionGraphSnapshotDiff",
     "AppliedStagedRevisionRecord",
     "AppliedStagedRevisionSourcePatchSummary",
     "AppliedStagedRevisionSourceSummary",

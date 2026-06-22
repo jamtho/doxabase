@@ -218,11 +218,15 @@ Do not call `check_staged_revision_apply()` after application expecting an exact
 before/after diff. It reports `status="already_applied"` and points you toward
 inspection; it does not replay the patch or return drift arrays for the applied
 event.
+Call `describe_applied_revision_diff(applied_iri)` when you need the exact
+stored snapshot diff for an applied staged revision.
 
 This is still provenance browsing, not durable graph-version browsing. The
 applied event gives counts and content digests; `applied_source` gives compact
-intent context; the staged source gives the full intended patch. There is not
-yet a one-call before/after triple diff for applied events.
+intent context; the staged source gives the full intended patch. The diff helper
+compares the staged source's before snapshots with the applied event's after
+snapshots for changed graphs. It does not browse arbitrary historical graph
+versions.
 
 ## Limits
 

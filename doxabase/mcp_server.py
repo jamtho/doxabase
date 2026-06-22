@@ -10,6 +10,7 @@ from doxabase import DoxaBase
 from doxabase.mcp_tools import (
     apply_staged_revision_tool,
     check_staged_revision_apply_tool,
+    describe_applied_revision_diff_tool,
     describe_assertion_support_tool,
     describe_dataset_tool,
     describe_context_slice_tool,
@@ -198,6 +199,15 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return compact revision metadata, snapshots, and support links."""
 
         return describe_graph_revision_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.describe_applied_revision_diff")
+    def describe_applied_revision_diff(
+        iri: str,
+        graph: str | None = "history",
+    ) -> dict[str, Any]:
+        """Return exact stored snapshot diffs for an applied staged revision."""
+
+        return describe_applied_revision_diff_tool(db, iri=iri, graph=graph)
 
     @server.tool(name="doxabase.list_graph_revisions")
     def list_graph_revisions(

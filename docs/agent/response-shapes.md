@@ -1049,6 +1049,19 @@ the revision has staged patch payloads, except applied revision events report
 class such as `staged_patch`, `applied_event`, `export_record`, `import_record`,
 or `history_record`.
 
+A minimal staged/applied scan looks like:
+
+```python
+revisions = db.list_graph_revisions(include_apply_checks=True)
+for item in revisions.revisions:
+    print(item.record_kind, item.application_status, item.iri)
+```
+
+For staged rows, expect `record_kind == "staged_patch"` and an apply-check
+status such as `ready`, `conflict`, `noop`, `validation_failed`, or
+`already_applied`. For applied staged revision events, expect
+`record_kind == "applied_event"` and `application_status == "applied_event"`.
+
 First-read triage fields:
 
 ```python
@@ -1171,6 +1184,41 @@ patch.triple_count
 patch.before_triple_count
 patch.after_triple_count
 ```
+
+`db.describe_applied_revision_diff(applied_revision_iri)` returns
+`AppliedRevisionDiffDescription`:
+
+```python
+diff.applied_revision_iri
+diff.staged_revision_iri
+diff.changed_graphs
+diff.graph_diffs
+```
+
+Each `diff.graph_diffs[]` row is an
+`AppliedRevisionGraphSnapshotDiff`:
+
+```python
+graph_diff.graph_role
+graph_diff.before_revision_iri
+graph_diff.after_revision_iri
+graph_diff.before_triple_count
+graph_diff.after_triple_count
+graph_diff.before_content_digest
+graph_diff.after_content_digest
+graph_diff.exact_changed_triples_available
+graph_diff.triples_added_count
+graph_diff.triples_removed_count
+graph_diff.triples_added
+graph_diff.triples_removed
+graph_diff.note
+```
+
+This helper only works for applied staged revision events. It compares the
+staged source's stored before-snapshot rows with the applied event's stored
+after-snapshot rows for changed graphs. Use it for exact applied-event
+before/after triples; use `describe_staged_revision()` when you need original
+patch payloads, validation diagnostics, impacts, or judgement context.
 
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:
@@ -1380,6 +1428,24 @@ available. It also reports `patch_operation`, `patch_triples_checked`,
 runtime, DoxaBase can inspect the staged patch triples themselves; when stored
 snapshot rows exist, exact target graph additions and removals are available in
 `snapshot_drifts`.
+Each `count_drifts[]` row uses these exact field names:
+
+```python
+drift.patch_iri
+drift.target_graph
+drift.expected_before_triple_count
+drift.current_triple_count
+drift.delta
+drift.exact_changed_triples_available
+drift.patch_operation
+drift.patch_operation_label
+drift.patch_triples_checked
+drift.patch_triples_currently_present
+drift.patch_triples_currently_absent
+drift.patch_triple_status
+drift.note
+```
+
 `snapshot_drifts` reports graph-level digest mismatches: graph role, snapshot
 triple count, current triple count, staged snapshot digest, current graph digest,
 whether exact changed triples are available, whether they are included in this
