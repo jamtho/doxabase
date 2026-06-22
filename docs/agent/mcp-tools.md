@@ -135,11 +135,14 @@ Check `layout_verification_status` and `layout_verification_note` before using
 `path_templates` for executable query planning. Child `physical_layouts`,
 `storage_accesses`, and `partition_schemes` may carry their own verification
 status/notes when the uncertainty belongs to one part of the physical metadata.
-The `operational_warnings` field mirrors the physical-metadata
-`QueryPlanningIssue` objects returned as `describe_query_context.issues`; scan
-it when a full dataset handoff should still surface query-planning hazards such
-as unverified layouts. These warnings carry `domain="query_planning"` so their
-severity is not confused with profile recording or graph validation status.
+The `operational_warnings` field carries dataset-owned physical-metadata
+`QueryPlanningIssue` objects that also appear in `describe_query_context.issues`;
+scan it when a full dataset handoff should still surface query-planning hazards
+such as unverified layouts. Candidate-derived issues such as path/template
+composition warnings are only guaranteed in `describe_query_context.issues` and
+`query_target_candidates[].review_reasons`. These warnings carry
+`domain="query_planning"` so their severity is not confused with profile
+recording or graph validation status.
 Info-level issues such as
 `verification_status_not_recorded` make missing verification status visible
 without changing query-planning readiness. Query-context `analysis_warnings`
@@ -181,8 +184,12 @@ for caveats that matter after a query can be planned, planning notes, columns,
 path templates, derived `query_target_candidates`, physical layouts, storage
 access descriptions, partition schemes, dataset/layout verification status and
 note, and caveats. Use it before drafting DuckDB/S3/local-file queries when you
-need the physical metadata and warnings without the full relationship/pattern
-handoff in `describe_dataset`.
+need to decide whether graph metadata is executable or only useful for
+orientation, especially when you need physical metadata and warnings without the
+full relationship/pattern handoff in `describe_dataset`. Candidate
+`review_required` includes whole-context blockers; `direct_review_required`
+ignores sibling blockers and is the faster way to spot which target candidates
+have their own storage/path/layout problem.
 
 `doxabase.describe_context_slice`
 

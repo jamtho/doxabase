@@ -239,9 +239,11 @@ few useful gaps:
   generic shared values such as `rc:Varchar`.
 - A deeper AIS takeover trial showed that `describe_dataset` needs to surface
   query-planning hazards even when callers do not switch to
-  `describe_query_context`. Use `operational_warnings` for those issues, and
-  inspect `predicate_hints` on assertion-support misses when a guessed predicate
-  such as `rc:hasPartitionScheme` is absent but a nearby shape like
+  `describe_query_context`. Use `operational_warnings` for dataset-owned
+  physical metadata issues, but switch to `describe_query_context` for
+  candidate-derived path/composition issues and direct candidate review
+  reasons. Inspect `predicate_hints` on assertion-support misses when a guessed
+  predicate such as `rc:hasPartitionScheme` is absent but a nearby shape like
   `rc:partitionedBy` is present. A follow-up regression confirmed this route
   works and suggested adding `predicate_curie` plus sharper absence-note wording
   so agents can see the likely predicate shape without mentally compacting full

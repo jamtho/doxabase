@@ -1320,6 +1320,14 @@ def test_describe_query_context_tool_returns_planning_projection(
     assert result["query_target_candidates"][0]["template_source"] == "partition_scheme"
     assert result["query_target_candidates"][0]["requires_endpoint_profile"] is True
     assert result["query_target_candidates"][0]["review_required"] is True
+    assert result["query_target_candidates"][0]["direct_review_required"] is True
+    assert {
+        reason["code"]
+        for reason in result["query_target_candidates"][0]["direct_review_reasons"]
+    } == {
+        "layout_needs_verification",
+        "verification_status_not_recorded",
+    }
     assert result["storage_accesses"][0]["endpoint_profile"] == "local-minio"
     assert any(
         issue["code"] == "layout_needs_verification"
@@ -1517,7 +1525,11 @@ def test_describe_query_context_tool_demotes_directory_root_only_target(
     assert target["template_source"] == "storage_access_location"
     assert target["location_kind"] == "directory"
     assert target["candidate_path_status"] == "orientation_only"
+    assert target["direct_review_required"] is True
     assert target["review_reasons"][0]["code"] == (
+        "storage_location_kind_needs_path_template"
+    )
+    assert target["direct_review_reasons"][0]["code"] == (
         "storage_location_kind_needs_path_template"
     )
 
@@ -1565,6 +1577,8 @@ def test_describe_query_context_tool_keeps_directory_root_with_template_ready(
     assert target["candidate_path"] == f"{storage_root}/orders/*.parquet"
     assert target["candidate_path_status"] == "ready"
     assert target["review_reasons"] == []
+    assert target["direct_review_required"] is False
+    assert target["direct_review_reasons"] == []
 
 
 def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> None:

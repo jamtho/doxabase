@@ -831,7 +831,12 @@ for callers that need a safer handoff than raw `path_templates` plus
 query-planning issues that apply to the candidate. These cards do not resolve
 credentials, endpoint profiles, or executable SQL. `review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
-requires review before executable use.
+requires review before executable use. `direct_review_reasons` excludes the
+synthetic `query_context_has_other_blockers` warning, so use
+`direct_review_required` to distinguish a candidate with its own blocker from a
+candidate that only needs review because sibling metadata blocks the overall
+context. Like `review_reasons`, `direct_review_reasons` can include info-only
+notes that do not make `direct_review_required` true.
 If the overall query context is blocked by other dataset metadata, a candidate
 may include `query_context_has_other_blockers` even when its own storage access
 looks clean. Protocol/location warnings such as
@@ -873,6 +878,8 @@ candidate.credential_reference
 candidate.path_style_access
 candidate.review_required
 candidate.review_reasons
+candidate.direct_review_required
+candidate.direct_review_reasons
 ```
 
 `candidate_path_status` is `ready` when the path is suitable as a planning

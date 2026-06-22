@@ -4942,6 +4942,8 @@ def test_query_target_candidates_surface_global_blockers(
         and target.storage_access.iri == local_storage.iri
     )
     assert local_target.review_required is True
+    assert local_target.direct_review_required is False
+    assert local_target.direct_review_reasons == []
     assert any(
         reason.code == "query_context_has_other_blockers"
         and reason.severity == "error"
@@ -4956,6 +4958,11 @@ def test_query_target_candidates_surface_global_blockers(
     assert any(
         reason.code == "contradicted_layout"
         for reason in stale_target.review_reasons
+    )
+    assert stale_target.direct_review_required is True
+    assert any(
+        reason.code == "contradicted_layout"
+        for reason in stale_target.direct_review_reasons
     )
 
 
@@ -5460,7 +5467,11 @@ def test_describe_query_context_demotes_non_object_root_only_location(
     assert target.candidate_path == storage_root
     assert target.candidate_path_status == "orientation_only"
     assert target.review_required is True
+    assert target.direct_review_required is True
     assert [reason.code for reason in target.review_reasons] == [
+        "storage_location_kind_needs_path_template"
+    ]
+    assert [reason.code for reason in target.direct_review_reasons] == [
         "storage_location_kind_needs_path_template"
     ]
 
@@ -5529,6 +5540,8 @@ def test_query_target_storage_owned_template_warnings_do_not_bleed_to_siblings(
     assert clean_target.candidate_path_status == "ready"
     assert clean_target.review_required is False
     assert clean_target.review_reasons == []
+    assert clean_target.direct_review_required is False
+    assert clean_target.direct_review_reasons == []
 
     bad_target = next(
         target
@@ -5597,10 +5610,11 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
         if target.template == "s3://wrong-bucket/raw/fleet/*.parquet"
     )
     assert wrong_bucket.candidate_path_status == "orientation_only"
+    assert wrong_bucket.direct_review_required is True
     assert any(
         reason.code == "storage_protocol_location_mismatch"
         and "bucket_name" in reason.message
-        for reason in wrong_bucket.review_reasons
+        for reason in wrong_bucket.direct_review_reasons
     )
     repeated_prefix = next(
         target
@@ -5608,10 +5622,11 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
         if target.template == "warehouse/fleet/repeated/dt={date}.parquet"
     )
     assert repeated_prefix.candidate_path_status == "orientation_only"
+    assert repeated_prefix.direct_review_required is True
     assert any(
         reason.code == "storage_protocol_location_mismatch"
         and "repeat recorded key_prefix" in reason.message
-        for reason in repeated_prefix.review_reasons
+        for reason in repeated_prefix.direct_review_reasons
     )
 
 
@@ -5668,10 +5683,11 @@ def test_query_target_candidate_template_warnings_do_not_bleed_to_siblings(
     assert dataset_target.candidate_path == "s3://remote-bucket/events/bad/*.parquet"
     assert dataset_target.candidate_path_status == "orientation_only"
     assert dataset_target.review_required is True
+    assert dataset_target.direct_review_required is True
     assert any(
         reason.code == "storage_protocol_location_mismatch"
         and "path template from Events" in reason.message
-        for reason in dataset_target.review_reasons
+        for reason in dataset_target.direct_review_reasons
     )
 
     partition_target = next(
@@ -5683,6 +5699,8 @@ def test_query_target_candidate_template_warnings_do_not_bleed_to_siblings(
     assert partition_target.candidate_path_status == "ready"
     assert partition_target.review_required is False
     assert partition_target.review_reasons == []
+    assert partition_target.direct_review_required is False
+    assert partition_target.direct_review_reasons == []
 
 
 def test_query_target_candidates_scope_partition_blockers(
@@ -5737,6 +5755,8 @@ def test_query_target_candidates_scope_partition_blockers(
         reason.code == "query_context_has_other_blockers"
         for reason in verified_target.review_reasons
     )
+    assert verified_target.direct_review_required is False
+    assert verified_target.direct_review_reasons == []
     assert not any(
         reason.code == "contradicted_layout"
         for reason in verified_target.review_reasons
@@ -5750,6 +5770,11 @@ def test_query_target_candidates_scope_partition_blockers(
     assert any(
         reason.code == "contradicted_layout"
         for reason in contradicted_target.review_reasons
+    )
+    assert contradicted_target.direct_review_required is True
+    assert any(
+        reason.code == "contradicted_layout"
+        for reason in contradicted_target.direct_review_reasons
     )
 
 

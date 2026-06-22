@@ -937,6 +937,8 @@ class QueryTargetCandidate:
     path_style_access: bool | None
     review_required: bool
     review_reasons: list[QueryPlanningIssue]
+    direct_review_required: bool
+    direct_review_reasons: list[QueryPlanningIssue]
 
 
 @dataclass(frozen=True)
@@ -5176,6 +5178,13 @@ class DoxaBase:
                 reason.severity in {"error", "warning"}
                 for reason in review_reasons
             )
+            direct_review_reasons = self._query_target_direct_review_reasons(
+                review_reasons
+            )
+            direct_review_required = any(
+                reason.severity in {"error", "warning"}
+                for reason in direct_review_reasons
+            )
             candidates.append(
                 QueryTargetCandidate(
                     template=template,
@@ -5232,6 +5241,8 @@ class DoxaBase:
                     ),
                     review_required=review_required,
                     review_reasons=review_reasons,
+                    direct_review_required=direct_review_required,
+                    direct_review_reasons=direct_review_reasons,
                 )
             )
 
@@ -5255,6 +5266,16 @@ class DoxaBase:
                     )
 
         return candidates
+
+    def _query_target_direct_review_reasons(
+        self,
+        review_reasons: list[QueryPlanningIssue],
+    ) -> list[QueryPlanningIssue]:
+        return [
+            reason
+            for reason in review_reasons
+            if reason.code != "query_context_has_other_blockers"
+        ]
 
     def _query_candidate_metadata_issue(
         self,

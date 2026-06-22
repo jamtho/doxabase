@@ -212,12 +212,15 @@ Check `layout_verification_status` and `layout_verification_note` before using
 `path_templates` for executable query planning. Child physical layout, storage,
 and partition descriptions may carry their own verification fields when the
 uncertainty belongs to one part of the path/layout model.
-`operational_warnings` carries the same `QueryPlanningIssue` objects returned
-as `describe_query_context().issues`, so a full dataset handoff can still flag
-unverified layouts, missing storage access, or missing physical layout before an
-agent writes query plans. These warnings carry `domain="query_planning"` so
-their severity is not confused with profile recording or graph validation
-status. Query-context `analysis_warnings` carry `domain="analysis"`.
+`operational_warnings` carries dataset-owned `QueryPlanningIssue` objects that
+also appear in `describe_query_context().issues`, so a full dataset handoff can
+still flag unverified layouts, missing storage access, or missing physical
+layout before an agent writes query plans. Candidate-derived issues such as
+path composition warnings are only guaranteed in `describe_query_context().issues`
+and `query_target_candidates[].review_reasons`. These warnings carry
+`domain="query_planning"` so their severity is not confused with profile
+recording or graph validation status. Query-context `analysis_warnings` carry
+`domain="analysis"`.
 `linked_pattern_reasons` explains whether a pattern matched through a direct
 target, map implication, supporting claim, or supporting observation. Each
 reason uses `iri` for the pattern IRI and also exposes the same value as
@@ -256,6 +259,10 @@ connection location kinds are review-only until a path template narrows the
 dataset location. Partition-specific blockers stay attached to their own
 partition candidate; sibling candidates receive an overall-context blocker
 instead.
+Use `direct_review_required` and `direct_review_reasons` when selecting a first
+candidate to inspect: they exclude `query_context_has_other_blockers`, so a
+candidate with no direct warning/error can still be distinguished from the stale
+or malformed sibling that blocks the overall context.
 `candidate_path_status` separates path usability from composition: `ready`
 means a usable planning input, `orientation_only` means the candidate path is a
 review clue, and `unresolved` means executable location metadata is incomplete.
