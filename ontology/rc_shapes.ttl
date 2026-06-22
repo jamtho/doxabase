@@ -477,6 +477,17 @@ rc:StorageAccessShape a sh:NodeShape ;
         sh:message "storageRoot must be a string if declared." ;
     ] ;
     sh:property [
+        sh:path rc:locationKind ;
+        sh:maxCount 1 ;
+        sh:in (
+            "object"
+            "directory"
+            "prefix"
+            "connection"
+        ) ;
+        sh:message "locationKind must be object, directory, prefix, or connection if declared." ;
+    ] ;
+    sh:property [
         sh:path rc:endpointProfile ;
         sh:maxCount 1 ;
         sh:datatype xsd:string ;

@@ -26,6 +26,9 @@ are safe to share with project collaborators:
   S3-compatible object storage, HTTPS, or database-backed.
 - `rc:storageRoot`, `rc:bucketName`, `rc:keyPrefix`, and `rc:pathTemplate`
   describe where data lives.
+- `rc:locationKind` says whether a root names an exact object/location,
+  directory, prefix, or connection. Root-only query targets are executable
+  candidates only when this is `object`; broader roots need path templates.
 - `rc:endpointProfile` names a locally resolved endpoint profile, such as
   `local-minio`.
 - `rc:pathStyleAccess` records an S3-compatible access quirk that query engines
@@ -76,8 +79,9 @@ agent runtime decides how profile X resolves.
    best-effort paths without resolving endpoint profiles or credentials.
    `template_source="storage_access_location"` means no path template was
    recorded, but the storage root itself is the candidate location; treat it as
-   executable only when the root is known to name the dataset object/location
-   rather than a directory or prefix that still needs a template.
+   executable only when `location_kind="object"` confirms the root names the
+   dataset object/location rather than a directory, prefix, or connection that
+   still needs a template.
 4. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
    `storage_accesses` together when you need the raw graph facts behind a
    candidate.

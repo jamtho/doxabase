@@ -423,9 +423,13 @@ few useful gaps:
 - Query/context smoke trials found two handoff traps. A storage access whose
   `storage_root` is itself the dataset location now surfaces a
   `storage_access_location` query target candidate instead of only reporting a
-  missing path template. Context slices also now warn with a concrete rerun
-  profile when a seed type does not match the chosen profile, for example an
-  `rc:Pattern` seed sent through `dataset_brief`.
+  missing path template. A follow-up storage trial showed that root-only
+  candidates are too ambiguous without a storage-location kind: record
+  `location_kind="object"` only for exact dataset objects/locations, and expect
+  directory, prefix, connection, or unspecified roots to remain review-only
+  until a path template narrows them. Context slices also now warn with a
+  concrete rerun profile when a seed type does not match the chosen profile,
+  for example an `rc:Pattern` seed sent through `dataset_brief`.
 - A context-slice/profile-seed trial showed that a directly seeded old profile
   observation can be outside a dataset context's bounded recent profile lists,
   even though the resource and evidence are present in the slice. Context slices

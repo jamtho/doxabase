@@ -111,7 +111,11 @@ evidence, its `profile_observation_iris` list points at the returned profile
 observations that make up that candidate run. If the dataset profile lists are
 bounded or omitted counts are non-zero, call
 `describe_profile_run(dataset_iri, shared_evidence_iri)` to retrieve all profile
-observations linked to that run evidence.
+observations linked to that run evidence. Check the returned
+`dataset_profile_observations`, `mapped_column_profile_observations`, and
+`unmapped_column_profile_observations` lists, together with their
+returned/total/omitted counts, before deciding a profile-run handoff is
+complete.
 
 The bundle's `pattern_summary`/`pattern_text` arguments create a pattern
 supported by the dataset profile observation only. When the synthesis should

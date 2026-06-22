@@ -163,10 +163,14 @@ at a shared profiler-run evidence resource, especially when the bounded
 `describe_dataset` response has omitted profile observations. The result
 includes the dataset and evidence summaries, returned/total/omitted counts,
 `profile_observation_iris`, and profile rows split into dataset-level,
-mapped-column, and unmapped-column observations. `limit=None` returns the full
-matching run; pass a positive `limit` only when a client intentionally wants a
-capped payload. The run is inferred from profile observations linked to the
-requested evidence IRI, not from a separate persisted profile-run node.
+mapped-column, and unmapped-column observations. The three list fields are
+`dataset_profile_observations`, `mapped_column_profile_observations`, and
+`unmapped_column_profile_observations`; use their returned/total/omitted counts
+when checking whether a handoff contains the whole profiler pass. `limit=None`
+returns the full matching run; pass a positive `limit` only when a client
+intentionally wants a capped payload. The run is inferred from profile
+observations linked to the requested evidence IRI, not from a separate
+persisted profile-run node.
 
 `doxabase.describe_query_context`
 
@@ -364,7 +368,11 @@ path templates are checked against the protocol and bucket/prefix metadata, and
 relative templates that already include the recorded key prefix are treated as
 review-only because path composition would duplicate that prefix. A relative
 dataset path template does not make an otherwise rootless storage access ready
-for query planning; record the storage access location as well.
+for query planning; record the storage access location as well. When the storage
+root itself is the only candidate dataset location, set `location_kind="object"`
+only if that root names the dataset object/location exactly. Use
+`location_kind="directory"`, `"prefix"`, or `"connection"` for broader roots and
+add a path template before executable use.
 
 `doxabase.record_map_physical_layout`
 

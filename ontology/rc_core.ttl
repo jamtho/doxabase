@@ -604,6 +604,11 @@ rc:storageRoot a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "A non-secret root URI, root path, or logical storage root for the asset." .
 
+rc:locationKind a rdf:Property ;
+    rdfs:domain rc:StorageAccess ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Whether the storage location names an object, directory, prefix, or connection." .
+
 rc:endpointProfile a rdf:Property ;
     rdfs:domain rc:StorageAccess ;
     rdfs:range xsd:string ;

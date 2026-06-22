@@ -250,9 +250,12 @@ with bucket/prefix metadata, or a storage root that does not match the declared
 protocol. Complete path templates are checked too: an `s3://...` template under
 HTTP/local access, an S3 template whose bucket/prefix conflicts with recorded
 access metadata, or a relative template that repeats the recorded key prefix
-will demote the candidate to review-only. Partition-specific blockers stay
-attached to their own partition candidate; sibling candidates receive an
-overall-context blocker instead.
+will demote the candidate to review-only. A root-only storage-access candidate
+is ready only when `location_kind == "object"`; absent, directory, prefix, or
+connection location kinds are review-only until a path template narrows the
+dataset location. Partition-specific blockers stay attached to their own
+partition candidate; sibling candidates receive an overall-context blocker
+instead.
 `candidate_path_status` separates path usability from composition: `ready`
 means a usable planning input, `orientation_only` means the candidate path is a
 review clue, and `unresolved` means executable location metadata is incomplete.
@@ -406,7 +409,10 @@ observations or patterns are ready to become operating context for future
 agents. On partial dataset updates, omit `is_table` to preserve existing
 dataset/table typing. Use physical-layout and partition helpers when path or
 layout verification belongs to one part of the executable catalog rather than
-to the whole dataset. Resource-valued fields across these helpers expect
+to the whole dataset. For storage access, set `location_kind="object"` only when
+`storage_root` names the dataset object/location exactly; use `directory`,
+`prefix`, or `connection` for broader roots and add path templates for
+executable query planning. Resource-valued fields across these helpers expect
 IRIs/CURIEs, not prose: use terms such as `rc:EventRow`, `rc:Parquet`, or
 project IRIs for datasets, columns, caveats, and relationship endpoints. Put
 ordinary explanation in descriptions, notes, observations, or patterns.

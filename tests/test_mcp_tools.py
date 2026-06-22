@@ -1418,6 +1418,7 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
         iri="https://example.test/project#local_orders_storage",
         label="Local orders storage",
         storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
         storage_root=local_root,
         layout_verification_status="rc:VerifiedByListingLayout",
     )
@@ -1437,6 +1438,7 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
         iri="https://example.test/project#s3_orders_storage",
         label="S3 orders storage",
         storage_protocol="rc:S3CompatibleStorage",
+        location_kind="object",
         storage_root=s3_root,
         endpoint_profile="orders-prod",
         layout_verification_status="rc:VerifiedByListingLayout",
@@ -1459,6 +1461,7 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     local_target = local_result["query_target_candidates"][0]
     assert local_target["template_source"] == "storage_access_location"
     assert local_target["composition"] == "storage_root_as_candidate"
+    assert local_target["location_kind"] == "object"
     assert local_target["candidate_path"] == local_root
     assert local_target["candidate_path_status"] == "ready"
 
@@ -1467,11 +1470,101 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     s3_target = s3_result["query_target_candidates"][0]
     assert s3_target["template_source"] == "storage_access_location"
     assert s3_target["composition"] == "storage_root_as_candidate"
+    assert s3_target["location_kind"] == "object"
     assert s3_target["candidate_path"] == s3_root
     assert s3_target["bucket_name"] is None
     assert s3_target["key_prefix"] is None
     assert s3_target["requires_endpoint_profile"] is True
     assert s3_target["review_reasons"] == []
+
+
+def test_describe_query_context_tool_demotes_directory_root_only_target(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    dataset = "https://example.test/project#LocalOrders"
+    storage_root = str(tmp_path / "orders")
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#local_orders_storage",
+        label="Local orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=storage_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Local orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["readiness"] == "needs_review"
+    assert result["storage_accesses"][0]["location_kind"] == "directory"
+    target = result["query_target_candidates"][0]
+    assert target["template_source"] == "storage_access_location"
+    assert target["location_kind"] == "directory"
+    assert target["candidate_path_status"] == "orientation_only"
+    assert target["review_reasons"][0]["code"] == (
+        "storage_location_kind_needs_path_template"
+    )
+
+
+def test_describe_query_context_tool_keeps_directory_root_with_template_ready(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    dataset = "https://example.test/project#LocalOrders"
+    storage_root = str(tmp_path / "lake")
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#local_orders_storage",
+        label="Local orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=storage_root,
+        path_templates=["orders/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Local orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["readiness"] == "ready_for_query_planning"
+    assert result["storage_accesses"][0]["location_kind"] == "directory"
+    target = result["query_target_candidates"][0]
+    assert target["template_source"] == "storage_access"
+    assert target["location_kind"] == "directory"
+    assert target["composition"] == "storage_root_joined"
+    assert target["candidate_path"] == f"{storage_root}/orders/*.parquet"
+    assert target["candidate_path_status"] == "ready"
+    assert target["review_reasons"] == []
 
 
 def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> None:

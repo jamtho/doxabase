@@ -274,9 +274,9 @@ without relying entirely on out-of-band notes.
 
 `rc:StorageAccess` resources hang off data assets through
 `rc:hasStorageAccess`. They may describe protocol, storage root, bucket/prefix,
-endpoint profile, path-style S3 requirements, credential references, and access
-mode. Secrets do not belong in the graph; credential and endpoint fields are
-names that local runtime configuration resolves.
+location kind, endpoint profile, path-style S3 requirements, credential
+references, and access mode. Secrets do not belong in the graph; credential and
+endpoint fields are names that local runtime configuration resolves.
 
 Physical layout resources can also record `rc:compressionCodec`. Query planning
 should combine storage access, path templates, partition schemes, physical

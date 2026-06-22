@@ -77,6 +77,7 @@ db.record_map_storage_access(
     label="local parquet access",
     storage_protocol="rc:LocalFilesystemStorage",
     access_mode="rc:ReadOnlyAccess",
+    location_kind="directory",
     storage_root="/home/james/github.com/jamtho/enron-emails",
     path_templates=["data/parquet/*.parquet"],
     datasets=[table],

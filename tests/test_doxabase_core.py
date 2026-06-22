@@ -74,9 +74,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1159
+    assert graphs["base_ontology"].triple_count == 1163
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1181
+    assert graphs["base_shapes"].triple_count == 1194
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -5374,6 +5374,7 @@ def test_describe_query_context_surfaces_storage_root_only_location(
         "https://example.test/project#orders_local_storage",
         label="Orders local storage",
         storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
         storage_root=storage_root,
         layout_verification_status="rc:VerifiedByListingLayout",
     )
@@ -5403,11 +5404,80 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     assert target.source_resource.iri == storage.iri
     assert target.storage_access is not None
     assert target.storage_access.iri == storage.iri
+    assert target.location_kind == "object"
     assert target.candidate_path == storage_root
     assert target.composition == "storage_root_as_candidate"
     assert target.candidate_path_status == "ready"
     assert target.review_required is False
     assert target.review_reasons == []
+    assert context.storage_accesses[0].location_kind == "object"
+
+
+@pytest.mark.parametrize("location_kind", [None, "directory", "prefix", "connection"])
+def test_describe_query_context_demotes_non_object_root_only_location(
+    tmp_path: Path,
+    location_kind: str | None,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage_root = str(tmp_path / "orders")
+    storage_kwargs = {
+        "label": "Orders local storage",
+        "storage_protocol": "rc:LocalFilesystemStorage",
+        "storage_root": storage_root,
+        "layout_verification_status": "rc:VerifiedByListingLayout",
+    }
+    if location_kind is not None:
+        storage_kwargs["location_kind"] = location_kind
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_local_storage",
+        **storage_kwargs,
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert {issue.code for issue in context.issues} == {
+        "storage_location_kind_needs_path_template"
+    }
+    assert context.storage_accesses[0].location_kind == location_kind
+    target = context.query_target_candidates[0]
+    assert target.template_source == "storage_access_location"
+    assert target.location_kind == location_kind
+    assert target.candidate_path == storage_root
+    assert target.candidate_path_status == "orientation_only"
+    assert target.review_required is True
+    assert [reason.code for reason in target.review_reasons] == [
+        "storage_location_kind_needs_path_template"
+    ]
+
+
+def test_record_map_storage_access_rejects_unknown_location_kind(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="location_kind must be one of",
+    ):
+        db.record_map_storage_access(
+            "https://example.test/project#orders_local_storage",
+            location_kind="folder-ish",
+        )
 
 
 def test_query_target_storage_owned_template_warnings_do_not_bleed_to_siblings(

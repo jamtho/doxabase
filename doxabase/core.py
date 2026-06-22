@@ -881,6 +881,7 @@ class StorageAccessDescription:
     description: str | None
     storage_protocol: ResourceSummary | None
     access_mode: ResourceSummary | None
+    location_kind: str | None
     storage_root: str | None
     endpoint_profile: str | None
     bucket_name: str | None
@@ -923,6 +924,7 @@ class QueryTargetCandidate:
     source_resource: ResourceSummary
     storage_access: ResourceSummary | None
     storage_protocol: ResourceSummary | None
+    location_kind: str | None
     storage_root: str | None
     endpoint_profile: str | None
     bucket_name: str | None
@@ -5150,6 +5152,26 @@ class DoxaBase:
                     for reason in review_reasons
                 ):
                     review_reasons.append(candidate_metadata_issue)
+            if (
+                storage_access is not None
+                and template_source == "storage_access_location"
+            ):
+                location_issue = self._query_storage_access_location_kind_issue(
+                    storage_access
+                )
+                if location_issue is not None and not any(
+                    reason.code == location_issue.code
+                    and (
+                        reason.resource.iri if reason.resource is not None else None
+                    )
+                    == (
+                        location_issue.resource.iri
+                        if location_issue.resource is not None
+                        else None
+                    )
+                    for reason in review_reasons
+                ):
+                    review_reasons.append(location_issue)
             review_required = any(
                 reason.severity in {"error", "warning"}
                 for reason in review_reasons
@@ -5165,8 +5187,15 @@ class DoxaBase:
                         if storage_access is not None
                         else None
                     ),
+                    location_kind=(
+                        storage_access.location_kind
+                        if storage_access is not None
+                        else None
+                    ),
                     storage_root=(
-                        storage_access.storage_root if storage_access is not None else None
+                        storage_access.storage_root
+                        if storage_access is not None
+                        else None
                     ),
                     endpoint_profile=(
                         storage_access.endpoint_profile
@@ -5295,7 +5324,41 @@ class DoxaBase:
                 )
                 if issue is not None:
                     issues.append(issue)
+            if not template_sources and not storage_access.path_templates:
+                issue = self._query_storage_access_location_kind_issue(storage_access)
+                if issue is not None:
+                    issues.append(issue)
         return issues
+
+    def _query_storage_access_location_kind_issue(
+        self,
+        storage_access: StorageAccessDescription,
+    ) -> QueryPlanningIssue | None:
+        if not storage_access.storage_root:
+            return None
+        if storage_access.location_kind == "object":
+            return None
+        access_resource = self._summary_from_description(storage_access)
+        if storage_access.location_kind is None:
+            message = (
+                "Storage root is the only candidate location, but location_kind "
+                "is not recorded. Record location_kind='object' when the root "
+                "names the dataset object/location exactly, or add a path "
+                "template for directory, prefix, or connection roots."
+            )
+        else:
+            message = (
+                "Storage root is the only candidate location, but location_kind "
+                f"is recorded as '{storage_access.location_kind}'. Add a path "
+                "template before executable use, or record location_kind='object' "
+                "when this root names the dataset object/location exactly."
+            )
+        return QueryPlanningIssue(
+            code="storage_location_kind_needs_path_template",
+            severity="warning",
+            message=message,
+            resource=access_resource,
+        )
 
     def _query_candidate_path_status(
         self,
@@ -8596,6 +8659,7 @@ class DoxaBase:
         description: str | None = None,
         storage_protocol: str | None = None,
         access_mode: str | None = None,
+        location_kind: str | None = None,
         storage_root: str | None = None,
         endpoint_profile: str | None = None,
         bucket_name: str | None = None,
@@ -8611,6 +8675,7 @@ class DoxaBase:
         access_iri = self._required_iri("iri", iri)
         path_template_values = self._string_values("path_templates", path_templates)
         dataset_values = self._string_values("datasets", datasets)
+        location_kind_value = self._storage_location_kind(location_kind)
         storage_protocol_ref = (
             self._resource_ref("storage_protocol", storage_protocol)
             if storage_protocol is not None
@@ -8653,6 +8718,7 @@ class DoxaBase:
                 )
             )
         for predicate, value in (
+            ("rc:locationKind", location_kind_value),
             ("rc:storageRoot", storage_root),
             ("rc:endpointProfile", endpoint_profile),
             ("rc:bucketName", bucket_name),
@@ -8701,6 +8767,8 @@ class DoxaBase:
             predicates.append(self.expand_iri("rc:storageProtocol"))
         if access_mode is not None:
             predicates.append(self.expand_iri("rc:accessMode"))
+        if location_kind is not None:
+            predicates.append(self.expand_iri("rc:locationKind"))
         if storage_root is not None:
             predicates.append(self.expand_iri("rc:storageRoot"))
         if endpoint_profile is not None:
@@ -12261,6 +12329,10 @@ class DoxaBase:
             self.expand_iri("rc:pathTemplate"): (
                 "changed_layout_or_path",
                 "path template",
+            ),
+            self.expand_iri("rc:locationKind"): (
+                "changed_layout_or_path",
+                "storage location kind",
             ),
             self.expand_iri("rc:layoutVerificationStatus"): (
                 "changed_layout_or_path",
@@ -17389,8 +17461,17 @@ class DoxaBase:
                 if access_mode is not None
                 else None
             ),
+            location_kind=self._first_object(
+                data_graphs,
+                access_iri,
+                "rc:locationKind",
+            ),
             storage_root=self._first_object(data_graphs, access_iri, "rc:storageRoot"),
-            endpoint_profile=self._first_object(data_graphs, access_iri, "rc:endpointProfile"),
+            endpoint_profile=self._first_object(
+                data_graphs,
+                access_iri,
+                "rc:endpointProfile",
+            ),
             bucket_name=self._first_object(data_graphs, access_iri, "rc:bucketName"),
             key_prefix=self._first_object(data_graphs, access_iri, "rc:keyPrefix"),
             region=self._first_object(data_graphs, access_iri, "rc:region"),
@@ -19287,6 +19368,19 @@ class DoxaBase:
         if not cleaned:
             raise DoxaBaseError(f"{name} must not be empty")
         return self.expand_iri(cleaned)
+
+    def _storage_location_kind(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+        kind = value.strip().lower()
+        if not kind:
+            return None
+        allowed = {"object", "directory", "prefix", "connection"}
+        if kind not in allowed:
+            raise DoxaBaseError(
+                "location_kind must be one of: object, directory, prefix, connection"
+            )
+        return kind
 
     def _claim_reconsideration_relation(
         self,

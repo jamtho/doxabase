@@ -832,9 +832,10 @@ the recorded key prefix are also review-only because the composed path would
 duplicate that prefix.
 When `template_source == "storage_access_location"`, no path template was
 recorded and the storage root itself is the candidate location. Treat that as
-executable only when the root is known to name the dataset object/location; if it
-is merely a directory, bucket, or prefix, add a path template before running a
-query.
+executable only when `candidate.location_kind == "object"` and the root is known
+to name the dataset object/location. If `location_kind` is absent or is
+`directory`, `prefix`, or `connection`, the candidate is review-only and needs a
+path template before running a query.
 Partition-specific blockers are candidate-local only for the partition that
 owns them; sibling partition candidates should carry
 `query_context_has_other_blockers` instead of the sibling's direct
@@ -848,6 +849,7 @@ candidate.template_source
 candidate.source_resource
 candidate.storage_access
 candidate.storage_protocol
+candidate.location_kind
 candidate.storage_root
 candidate.endpoint_profile
 candidate.bucket_name
