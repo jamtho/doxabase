@@ -1487,8 +1487,10 @@ batch.export_record
 
 Each `batch.items` row reports `source_revision_iri`, `summary`,
 `status_before`, `decision_before`, `stale_resolution_state_before`,
-`blocking_reasons_before`, `action`, `not_restageable_reason`,
-`restaged_revision_iri`,
+`blocking_reasons_before`, `status_after`, `decision_after`,
+`stale_resolution_state_after`, `blocking_reasons_after`,
+`triples_to_add_after`, `triples_to_remove_after`, `action`,
+`not_restageable_reason`, `restaged_revision_iri`,
 `restaged_from`, `current_restaged_by`, `current_revision_iri`, and `note`.
 `restaged_from` is present when the source item is itself a refreshed successor
 of an older stale proposal. Current actions are
@@ -1496,8 +1498,14 @@ of an older stale proposal. Current actions are
 `skipped_not_restageable`. `would_restage` only appears when `dry_run=True`; in
 that case no successor is created, `restaged_revision_iris` stays empty, and
 `would_restage_revision_iris` lists the stale source revisions that a real run
-would refresh. For those would-restage rows, `current_revision_by_source` still
-points at the stale source because no current successor exists yet.
+would refresh. `restaged_revision_iris` is a creation list, not an apply queue;
+created successors can still be `validation_failed`, `noop`, or otherwise not
+ready. For those would-restage rows, `current_revision_by_source` still points
+at the stale source because no current successor exists yet. For all rows, the
+`*_after` fields describe the apply check for `current_revision_iri` after the
+batch decision. In real restage rows that is the new successor; in already
+handled rows it is the latest known successor; in dry-run would-restage rows it
+is still the stale source.
 `skipped_not_restageable` includes ready, validation-failed, already-applied,
 and `patch_conflict` rows; read `status_before`, `decision_before`, and
 `blocking_reasons_before` before deciding whether the row needs apply, repair,

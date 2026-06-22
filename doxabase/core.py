@@ -464,6 +464,12 @@ class StagedGraphRevisionBatchRestageItem:
     decision_before: str
     stale_resolution_state_before: str | None
     blocking_reasons_before: list[str]
+    status_after: str
+    decision_after: str
+    stale_resolution_state_after: str | None
+    blocking_reasons_after: list[str]
+    triples_to_add_after: int
+    triples_to_remove_after: int
     action: str
     not_restageable_reason: str | None
     restaged_from: str | None
@@ -9579,6 +9585,32 @@ class DoxaBase:
             add_review_revision(source.iri)
             if current_revision_iri != source.iri:
                 add_review_revision(current_revision_iri)
+                current_description = self.describe_staged_revision(
+                    current_revision_iri
+                )
+                current_check = self.check_staged_revision_apply(
+                    current_revision_iri,
+                    validation_scope=validation_scope,
+                )
+            else:
+                current_description = source
+                current_check = check
+            current_restaged_from = (
+                current_description.restaged_from.iri
+                if current_description.restaged_from is not None
+                else None
+            )
+            current_direct_restaged_by = (
+                current_description.restaged_by.iri
+                if current_description.restaged_by is not None
+                else None
+            )
+            stale_resolution_state_after = self._stale_resolution_state(
+                status=current_check.status,
+                has_patch_payload=bool(current_description.patches),
+                restaged_from=current_restaged_from,
+                restaged_by=current_direct_restaged_by,
+            )
             items.append(
                 StagedGraphRevisionBatchRestageItem(
                     source_revision_iri=source.iri,
@@ -9587,6 +9619,12 @@ class DoxaBase:
                     decision_before=check.decision,
                     stale_resolution_state_before=stale_resolution_state,
                     blocking_reasons_before=check.blocking_reasons,
+                    status_after=current_check.status,
+                    decision_after=current_check.decision,
+                    stale_resolution_state_after=stale_resolution_state_after,
+                    blocking_reasons_after=current_check.blocking_reasons,
+                    triples_to_add_after=current_check.triples_to_add,
+                    triples_to_remove_after=current_check.triples_to_remove,
                     action=action,
                     not_restageable_reason=not_restageable_reason,
                     restaged_from=restaged_from,
@@ -11456,10 +11494,16 @@ class DoxaBase:
             if iri is not None and iri not in recommended_applied_inspection:
                 recommended_applied_inspection.append(iri)
 
+        def track_validation_failed(iri: str | None) -> None:
+            if iri is not None and iri not in validation_failed:
+                validation_failed.append(iri)
+
         for summary in summaries:
             increment(apply_status_counts, summary.apply_status)
             state = summary.stale_resolution_state
             increment(state_counts, state)
+            if summary.apply_status == "validation_failed":
+                track_validation_failed(summary.revision_iri)
 
             if state == "stale_unresolved":
                 unresolved_stale.append(summary.revision_iri)
@@ -11471,7 +11515,7 @@ class DoxaBase:
                 ready_successors.append(summary.revision_iri)
                 recommend_mutation(summary.revision_iri)
             elif state == "validation_failed":
-                validation_failed.append(summary.revision_iri)
+                track_validation_failed(summary.revision_iri)
                 recommend_mutation(summary.revision_iri)
             elif state in {"noop", "restaged_successor_noop"}:
                 recommend(summary.revision_iri)

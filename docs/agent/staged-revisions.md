@@ -142,7 +142,12 @@ successor, skips already-handled or non-conflicted rows, preserves caller order,
 returns source-to-current mappings, and can write the grouped review bundle when
 you pass `path`. Use `dry_run=true` first when you want the same per-source
 classification without creating refreshed successors; unhandled conflicts report
-`action="would_restage"`.
+`action="would_restage"`. Treat `restaged_revision_iris` as a list of successors
+created during that run, not as an apply queue. Each item's `status_after`,
+`decision_after`, `stale_resolution_state_after`, and `blocking_reasons_after`
+describe `current_revision_iri` after the batch decision; use
+`bundle_summary.ready_restage_successor_revision_iris` plus a final
+`check_staged_revision_apply()` before applying anything.
 
 In grouped exports, `Staged validation` is the validation result from when the
 proposal was created. `Current validation` comes from the live apply check and
@@ -360,9 +365,9 @@ original exports surface `Restaged by` and, when needed, `Current restaged by`.
 Grouped exports collect restage reasons in `Restage Context`. Grouped export
 payloads also include per-row `stale_resolution_state`, `current_alternative_to`,
 `current_restaged_by`, and a `bundle_summary` so recovery scripts can find
-unresolved stale proposals, already-handled stale sources, ready successors, the
-current mutation-review set, and already-applied inspection set without
-recomputing those buckets.
+unresolved stale proposals, already-handled stale sources, ready successors,
+validation-failed rows, the current mutation-review set, and already-applied
+inspection set without recomputing those buckets.
 Grouped Markdown mirrors the important `current_alternative_to` case in
 `Alternative Context` when a stored alternative target has been restaged.
 Restaging is for count or digest drift conflicts; validation failures still need

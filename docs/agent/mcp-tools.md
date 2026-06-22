@@ -536,8 +536,13 @@ IRIs for triage. In dry-run rows that would be restaged,
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. For `skipped_not_restageable`, inspect `status_before` and
 `decision_before` to distinguish ready, validation-failed, and already-applied
-rows. Each item also carries `restaged_from` when its source is itself a
-refreshed successor. It does not apply refreshed revisions; review and apply
+rows. Each item also carries `status_after`, `decision_after`,
+`stale_resolution_state_after`, `blocking_reasons_after`, and effective triple
+deltas for `current_revision_iri` after the batch decision. Treat
+`restaged_revision_iris` as a creation list, not an apply queue; use
+`bundle_summary.ready_restage_successor_revision_iris` plus a final apply check
+for candidates to apply. Each item also carries `restaged_from` when its source
+is itself a refreshed successor. It does not apply refreshed revisions; review and apply
 remain explicit follow-up steps. In dry-run mode, passing `path` still writes
 the requested review export while leaving graph history unmutated.
 
@@ -584,7 +589,8 @@ deeper restage chains while `restaged_by` preserves the direct provenance edge.
 `current_alternative_to` follows refreshed successors while `alternative_to`
 preserves provenance. The payload also returns
 `bundle_summary` with status/state counts, unresolved stale sources, handled
-stale sources, ready successors, validation-failed revisions, deduped
+stale sources, ready successors, all validation-failed revisions by current
+apply status, deduped
 `recommended_review_iris`, `recommended_mutation_review_iris`, and
 `recommended_applied_inspection_iris`.
 Bundles with restaged revisions include a `Restage Context` section near the

@@ -2753,6 +2753,12 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert batch.not_restageable_revision_iris_by_reason == {
         "ready": [ready.revision_iri],
     }
+    assert batch.items[1].status_after == "ready"
+    assert batch.items[1].decision_after == "review_then_apply"
+    assert batch.items[1].stale_resolution_state_after == "restaged_successor_ready"
+    assert batch.items[1].blocking_reasons_after == []
+    assert batch.items[1].triples_to_add_after > 0
+    assert batch.items[1].triples_to_remove_after == 0
     assert batch.items[2].not_restageable_reason == "ready"
     assert batch.review_revision_iris == [
         first.revision_iri,
@@ -2966,6 +2972,60 @@ def test_batch_restage_dry_run_reports_plan_without_creating_successors(
     )
     assert db.list_graph_revisions().count == total_revision_count_before
     assert db.triple_count("history") == history_triples_before
+
+
+def test_batch_restage_items_report_validation_failed_successor_status(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    stale = db.stage_graph_revision(
+        summary="Stage invalid value type",
+        rationale="Exercise restaged successor status for invalid proposals.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:BadValueType a rc:ValueType ;
+                        rc:requiredPhysicalType "VARCHAR" .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:OntologyDrift a rdfs:Class .
+        """,
+        graph="ontology",
+    )
+
+    batch = db.restage_staged_revisions([stale.revision_iri])
+
+    successor_iri = batch.restaged_revision_iris[0]
+    item = batch.items[0]
+    assert item.action == "restaged"
+    assert item.restaged_revision_iri == successor_iri
+    assert item.current_revision_iri == successor_iri
+    assert item.status_before == "conflict"
+    assert item.status_after == "validation_failed"
+    assert item.decision_after == "inspect_validation_results"
+    assert item.stale_resolution_state_after == "restaged_successor_not_ready"
+    assert item.blocking_reasons_after == ["validation_failed"]
+    assert item.triples_to_add_after > 0
+    assert item.triples_to_remove_after == 0
+    assert batch.bundle_summary.apply_status_counts == {
+        "conflict": 1,
+        "validation_failed": 1,
+    }
+    assert batch.bundle_summary.ready_restage_successor_revision_iris == []
+    assert batch.bundle_summary.validation_failed_revision_iris == [successor_iri]
+    assert batch.bundle_summary.recommended_mutation_review_iris == [successor_iri]
 
 
 def test_restage_chain_routes_to_current_successor(
