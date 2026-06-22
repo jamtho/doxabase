@@ -3039,6 +3039,61 @@ def test_batch_restage_items_report_validation_failed_successor_status(
     assert batch.bundle_summary.recommended_mutation_review_iris == [successor_iri]
 
 
+def test_batch_restage_marks_stale_current_successor_as_unresolved(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    original = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#InterveningA",
+        label="Intervening A",
+    )
+    successor = db.restage_staged_revision(original.revision_iri)
+    db.record_map_dataset(
+        "https://example.test/project#InterveningB",
+        label="Intervening B",
+    )
+
+    batch = db.restage_staged_revisions([original.revision_iri])
+
+    item = batch.items[0]
+    assert item.action == "skipped_already_handled"
+    assert item.current_revision_iri == successor.revision_iri
+    assert item.status_after == "conflict"
+    assert item.stale_resolution_state_after == (
+        "restaged_successor_stale_unresolved"
+    )
+    assert "current successor is itself stale" in item.note
+    assert batch.bundle_summary.stale_resolution_state_counts == {
+        "stale_handled_by_restage": 1,
+        "restaged_successor_stale_unresolved": 1,
+    }
+    assert batch.bundle_summary.unresolved_stale_revision_iris == [
+        successor.revision_iri
+    ]
+    assert batch.bundle_summary.stale_handled_by_restage_revision_iris == [
+        original.revision_iri
+    ]
+    assert batch.bundle_summary.ready_restage_successor_revision_iris == []
+    assert batch.bundle_summary.recommended_mutation_review_iris == [
+        successor.revision_iri
+    ]
+
+
 def test_restage_chain_routes_to_current_successor(
     tmp_path: Path,
 ) -> None:

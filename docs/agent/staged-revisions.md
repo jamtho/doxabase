@@ -147,7 +147,10 @@ created during that run, not as an apply queue. Each item's `status_after`,
 `decision_after`, `stale_resolution_state_after`, and `blocking_reasons_after`
 describe `current_revision_iri` after the batch decision; use
 `bundle_summary.ready_restage_successor_revision_iris` plus a final
-`check_staged_revision_apply()` before applying anything.
+`check_staged_revision_apply()` before applying anything. If a skipped
+already-handled row reports
+`stale_resolution_state_after="restaged_successor_stale_unresolved"`, the
+current successor is stale too; inspect or restage `current_revision_iri`.
 
 In grouped exports, `Staged validation` is the validation result from when the
 proposal was created. `Current validation` comes from the live apply check and

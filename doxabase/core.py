@@ -2576,6 +2576,8 @@ class DoxaBase:
         if not has_patch_payload:
             return None
         if status == "conflict":
+            if restaged_from is not None and restaged_by is None:
+                return "restaged_successor_stale_unresolved"
             return (
                 "stale_handled_by_restage"
                 if restaged_by is not None
@@ -9635,6 +9637,16 @@ class DoxaBase:
                 restaged_from=current_restaged_from,
                 restaged_by=current_direct_restaged_by,
             )
+            if (
+                action == "skipped_already_handled"
+                and stale_resolution_state_after
+                == "restaged_successor_stale_unresolved"
+            ):
+                note = (
+                    note
+                    + " The current successor is itself stale; inspect or "
+                    "restage current_revision_iri before applying anything."
+                )
             items.append(
                 StagedGraphRevisionBatchRestageItem(
                     source_revision_iri=source.iri,
@@ -11545,7 +11557,7 @@ class DoxaBase:
             if summary.apply_status == "validation_failed":
                 track_validation_failed(summary.revision_iri)
 
-            if state == "stale_unresolved":
+            if state in {"stale_unresolved", "restaged_successor_stale_unresolved"}:
                 unresolved_stale.append(summary.revision_iri)
                 recommend_mutation(summary.revision_iri)
             elif state == "stale_handled_by_restage":

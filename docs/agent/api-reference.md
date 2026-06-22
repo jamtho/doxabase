@@ -609,7 +609,10 @@ after the batch decision. `restaged_revision_iris` is only a list of created
 successors, not an apply queue; created successors may still be
 validation-failed, no-op, or otherwise not ready. Use
 `bundle_summary.ready_restage_successor_revision_iris` plus a final
-`check_staged_revision_apply()` before applying. Each item also carries
+`check_staged_revision_apply()` before applying. If an already-handled row has
+`stale_resolution_state_after="restaged_successor_stale_unresolved"`, its
+current successor is stale too; inspect or restage `current_revision_iri`.
+Each item also carries
 `restaged_from` when its source is itself a refreshed successor. The helper
 deliberately does not apply anything; applying one successor can make sibling
 successors stale again. In dry-run mode, passing `path` still writes the

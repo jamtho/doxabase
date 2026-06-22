@@ -1461,7 +1461,9 @@ Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
 still need restaging. `stale_handled_by_restage` means the source is stale but
 already points to a refreshed successor. `restaged_successor_ready` marks a
 ready refreshed proposal. `restaged_successor_noop` marks a refreshed proposal
-whose replay validates but has no effective graph delta. The bundle's
+whose replay validates but has no effective graph delta.
+`restaged_successor_stale_unresolved` marks a refreshed successor that has
+itself become stale again and needs restaging or replacement. The bundle's
 `recommended_review_iris` de-duplicates the current review set in bundle order,
 replacing handled stale sources with their successors.
 `validation_failed_revision_iris` lists rows whose patch counts
@@ -1514,6 +1516,9 @@ at the stale source because no current successor exists yet. For all rows, the
 batch decision. In real restage rows that is the new successor; in already
 handled rows it is the latest known successor; in dry-run would-restage rows it
 is still the stale source.
+`stale_resolution_state_after == "restaged_successor_stale_unresolved"` means a
+skipped already-handled source points to a current successor that is itself
+stale; inspect or restage `current_revision_iri` before applying anything.
 `skipped_not_restageable` includes ready, validation-failed, already-applied,
 and `patch_conflict` rows; read `status_before`, `decision_before`, and
 `blocking_reasons_before` before deciding whether the row needs apply, repair,

@@ -544,8 +544,11 @@ rows. Each item also carries `status_after`, `decision_after`,
 deltas for `current_revision_iri` after the batch decision. Treat
 `restaged_revision_iris` as a creation list, not an apply queue; use
 `bundle_summary.ready_restage_successor_revision_iris` plus a final apply check
-for candidates to apply. Each item also carries `restaged_from` when its source
-is itself a refreshed successor. It does not apply refreshed revisions; review and apply
+for candidates to apply. If an already-handled row has
+`stale_resolution_state_after="restaged_successor_stale_unresolved"`, its
+current successor is stale too; inspect or restage `current_revision_iri`.
+Each item also carries `restaged_from` when its source is itself a refreshed
+successor. It does not apply refreshed revisions; review and apply
 remain explicit follow-up steps. In dry-run mode, passing `path` still writes
 the requested review export while leaving graph history unmutated.
 
