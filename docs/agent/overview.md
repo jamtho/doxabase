@@ -25,6 +25,8 @@ Current implementation status:
 - `list_graph_revisions()` for discovering staged, applied, and history records.
 - `describe_graph_revision()` for compact review of history records.
 - `describe_dataset()` for bounded table schema, row semantics, relationship, caveat, provenance, and linked-pattern context.
+- `describe_profile_run()` for the profile observations on one dataset linked
+  to one shared profile-run evidence resource.
 - `describe_query_context()` for compact non-secret query-planning context,
   physical-metadata readiness, info/warning/error issues, and separate
   analytical caveat warnings.

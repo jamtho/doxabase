@@ -7525,6 +7525,53 @@ def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Pat
     assert validation.conforms, validation.report_text
 
 
+def test_record_observation_rejects_unknown_rc_profile_metric_kind(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="unknown rc: profile metric kind"):
+        db.record_observation(
+            summary="Profile used a mistyped rc metric kind.",
+            observation_type="profile",
+            observed_asset="https://example.test/project#Orders",
+            profile_metrics=[{"metric": "rc:MinValue", "value": 1}],
+        )
+
+
+def test_record_observation_accepts_project_profile_metric_kind_iri(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    metric_kind = "https://example.test/project#CompletenessRatio"
+
+    result = db.record_observation(
+        summary="Profile used a project-specific metric kind.",
+        observation_type="profile",
+        observed_asset="https://example.test/project#Orders",
+        profile_metrics=[
+            {
+                "metric_kind": metric_kind,
+                "value": "0.98",
+                "datatype": "xsd:decimal",
+            }
+        ],
+    )
+
+    observations = db.to_graph(["observations"])
+    metric_iri = next(
+        observations.objects(
+            URIRef(result.observation_iri),
+            URIRef(RC + "observedProfileMetric"),
+        )
+    )
+    assert (
+        metric_iri,
+        URIRef(RC + "profileMetricKind"),
+        URIRef(metric_kind),
+    ) in observations
+
+
 def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     tmp_path: Path,
 ) -> None:
@@ -7925,6 +7972,15 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         candidate.evidence_iri
         for candidate in description.profile_summary.profile_run_candidates
     ] == [shared_evidence]
+    assert set(
+        description.profile_summary.profile_run_candidates[0].profile_observation_iris
+    ) == {
+        result.dataset_profile.observation.observation_iri,
+        *(
+            column_profile.observation.observation_iri
+            for column_profile in result.column_profiles
+        ),
+    }
     assert (
         description.profile_summary.profile_run_candidates[0].returned_profile_count
         == 3
@@ -7986,7 +8042,7 @@ def test_profile_summary_surfaces_run_candidates_in_mixed_profile_history(
         map_label="Orders",
         is_table=True,
     )
-    db.record_profile_bundle(
+    bundle = db.record_profile_bundle(
         dataset,
         dataset_summary="Newer profile bundle over dataset and columns.",
         evidence_summary="Newer shared profiling pass.",
@@ -8028,6 +8084,13 @@ def test_profile_summary_surfaces_run_candidates_in_mixed_profile_history(
     ] == [newer_evidence]
     run_candidate = description.profile_summary.profile_run_candidates[0]
     assert run_candidate.returned_profile_count == 3
+    assert set(run_candidate.profile_observation_iris) == {
+        bundle.dataset_profile.observation.observation_iri,
+        *(
+            column_profile.observation.observation_iri
+            for column_profile in bundle.column_profiles
+        ),
+    }
     assert run_candidate.shared_by_all_returned_profiles is False
 
 
@@ -8092,6 +8155,116 @@ def test_profile_run_candidates_are_count_ranked_and_ignore_singletons(
     assert all(
         not candidate.shared_by_all_returned_profiles for candidate in candidates
     )
+    assert all(candidate.profile_observation_iris for candidate in candidates)
+
+
+def test_describe_profile_run_returns_wide_shared_evidence_run(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WideOrders"
+    shared_evidence = "https://example.test/project#WideOrdersProfileRunEvidence"
+
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Wide Orders dataset was profiled with many columns.",
+        evidence_summary="Wide profile pass.",
+        evidence_sources=["test://wide-orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        row_count=100,
+        map_label="Wide Orders",
+        is_table=True,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": f"https://example.test/project#WideOrdersColumn{index}",
+                "column_name": f"column_{index}",
+                "summary": f"Wide Orders column {index} was profiled.",
+                "distinct_count": index + 1,
+            }
+            for index in range(8)
+        ],
+    )
+
+    bounded = db.describe_dataset(dataset)
+    assert bounded.profile_summary.returned_profile_count == 6
+    assert bounded.profile_summary.total_profile_count == 9
+    assert bounded.profile_summary.omitted_profile_count == 3
+    assert (
+        bounded.profile_summary.profile_run_candidates[0].returned_profile_count
+        == 6
+    )
+
+    profile_run = db.describe_profile_run(dataset, shared_evidence)
+
+    assert profile_run.evidence_iri == shared_evidence
+    assert profile_run.returned_dataset_profile_count == 1
+    assert profile_run.returned_mapped_column_profile_count == 0
+    assert profile_run.returned_unmapped_column_profile_count == 8
+    assert profile_run.returned_profile_count == 9
+    assert profile_run.total_profile_count == 9
+    assert profile_run.omitted_profile_count == 0
+    assert set(profile_run.profile_observation_iris) == {
+        bundle.dataset_profile.observation.observation_iri,
+        *(
+            column_profile.observation.observation_iri
+            for column_profile in bundle.column_profiles
+        ),
+    }
+    assert "no separate persisted profile-run node" in profile_run.retrieval_note
+
+    capped = db.describe_profile_run(dataset, shared_evidence, limit=3)
+
+    assert capped.returned_profile_count == 3
+    assert capped.total_profile_count == 9
+    assert capped.omitted_profile_count == 6
+    assert len(capped.profile_observation_iris) == 3
+
+
+def test_describe_profile_run_works_for_observation_only_dataset(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#ObservationOnlyOrders"
+    shared_evidence = "https://example.test/project#ObservationOnlyProfileRunEvidence"
+
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Observation-only Orders profile.",
+        evidence_summary="Observation-only profile pass.",
+        evidence_sources=["test://observation-only-profile"],
+        shared_evidence_iri=shared_evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": "https://example.test/project#ObservationOnlyStatus",
+                "column_name": "status",
+                "summary": "Observation-only status profile.",
+            }
+        ],
+    )
+
+    with pytest.raises(DoxaBaseError, match="was not found"):
+        db.describe_dataset(dataset)
+
+    profile_run = db.describe_profile_run(dataset, shared_evidence)
+
+    assert profile_run.dataset.iri == dataset
+    assert profile_run.returned_dataset_profile_count == 1
+    assert profile_run.returned_unmapped_column_profile_count == 1
+    assert profile_run.returned_profile_count == 2
+
+
+def test_describe_profile_run_rejects_invalid_limit(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError, match="limit must be a positive integer"):
+        db.describe_profile_run(
+            "https://example.test/project#Orders",
+            "https://example.test/project#ProfileEvidence",
+            limit=0,
+        )
 
 
 def test_record_profile_bundle_rejects_unknown_column_fields(tmp_path: Path) -> None:

@@ -199,7 +199,12 @@ and omitted profile counts make the response bound explicit when older or
 additional profile observations are not included in the returned lists.
 `profile_summary.profile_run_candidates` lists evidence IRIs that support more
 than one returned profile, sorted by returned profile count, so mixed profile
-history can still reveal likely profiler runs.
+history can still reveal likely profiler runs. Each candidate includes
+`profile_observation_iris`, the returned profile observations linked to that
+evidence IRI, so agents can seed a context slice or inspect the grouped run
+directly.
+Use `describe_profile_run(dataset_iri, evidence_iri)` when the candidate points
+at a run that may be wider than the bounded `describe_dataset()` profile lists.
 `profile_summary.handoff_note` gives a short reading cue for profile-only
 handoffs: profile lore is observed evidence, while storage/path/layout warnings
 remain physical query-planning metadata gaps.
@@ -252,6 +257,18 @@ overall-context blocker instead.
 means a usable planning input, `orientation_only` means the candidate path is a
 review clue, and `unresolved` means executable location metadata is incomplete.
 
+`describe_profile_run(dataset_iri, evidence_iri, limit=None)` returns profile
+observations for one dataset linked to one evidence resource. It does not create
+or require a persisted run node; membership is inferred from the dataset's
+profile observations that link to the requested evidence IRI. The response
+includes dataset and evidence summaries, returned/total/omitted counts,
+`profile_observation_iris`, `dataset_profile_observations`,
+`mapped_column_profile_observations`, `unmapped_column_profile_observations`,
+and a `retrieval_note`. The default `limit=None` is intended to retrieve the
+whole run even when `describe_dataset()` is bounded; pass a positive `limit`
+only when a capped payload is useful. It also works for observation-only profile
+runs where no map dataset exists yet.
+
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
 dataset/table map context, bounded profile observations/metrics, and linked
@@ -290,10 +307,13 @@ value-frequency counts, plus scalar `profile_metrics` such as observed minimum
 or mean values. Use `sample_scope` for the bounded population or slice profiled
 and `sample_method` for how the profile was produced. Pass metrics as
 `profile_metrics=[{"metric": "rc:MinimumValue", "value": ...}]`, using project
-metric-kind IRIs when the base metric kinds do not fit. These scalar metrics are
-observed profile evidence, not constraints, shapes, allowed values, or durable
-map semantics by themselves. Define project metric kinds in the project ontology
-once they become stable shared vocabulary. A metric item may include `target`
+metric-kind IRIs when the base metric kinds do not fit. Use
+`list_entities(type="rc:ProfileMetricKind", graph="base_ontology")` to discover
+the built-in base kinds. These scalar metrics are observed profile evidence,
+not constraints, shapes, allowed values, or durable map semantics by themselves.
+DoxaBase rejects unknown `rc:` metric kinds to catch typos; use a full project
+IRI for durable project-specific metric kinds and define it in the project
+ontology once it becomes stable shared vocabulary. A metric item may include `target`
 when the scalar is specifically about a resource narrower than the profile
 observation as a whole. Profile evidence entries include source strings and
 source spans when recorded. `update_map_snapshot`
@@ -305,7 +325,10 @@ returned profile observation in the bounded `describe_dataset()` response. When
 older profile history is mixed with a newer shared-evidence bundle, inspect
 `profile_summary.profile_run_candidates` or
 `profile_summary.evidence_profile_counts` to see which evidence IRIs support
-several profiles from one profiler run.
+several profiles from one profiler run; use the candidate's
+`profile_observation_iris` to inspect the grouped returned observations, or call
+`describe_profile_run()` for full retrieval when the bounded response omits
+profiles.
 If a capsule only contains profile lore, `describe_dataset()` may still report
 missing storage/path/layout warnings; treat those as query-planning gaps, not
 profile validation failures. Check `profile_summary.handoff_note` when deciding
@@ -333,6 +356,12 @@ observation-only. Each `column_profiles[]` item accepts the same fields as
 `summary`. After recording a bundle, `describe_dataset().profile_summary` lists
 shared evidence IRIs, profile run candidates, and a handoff note that can help a
 later agent recognise one profiler run without walking every observation.
+`describe_profile_run(dataset_iri, shared_evidence_iri)` retrieves that run
+directly. Bundle-created patterns support the dataset profile observation only;
+for a synthesis over dataset and column profiles together, collect
+`bundle.dataset_profile.observation.observation_iri` and each
+`bundle.column_profiles[].observation.observation_iri`, then call
+`record_pattern(..., supporting_observations=[...], evidence_iri=shared_evidence_iri)`.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as

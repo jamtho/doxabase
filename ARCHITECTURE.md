@@ -94,6 +94,7 @@ DoxaBase.graph_overview(limit=100)
 DoxaBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
 DoxaBase.search(query, graph=None, limit=20, offset=0)
 DoxaBase.describe_dataset(iri, graph="map")
+DoxaBase.describe_profile_run(dataset_iri, evidence_iri, graph="map", limit=None)
 DoxaBase.describe_query_context(iri, graph="map")
 DoxaBase.describe_context_slice(seed_iris, profile="dataset_brief", ...)
 DoxaBase.record_observation(summary, ..., value_frequencies=None, profile_metrics=None)
@@ -190,6 +191,7 @@ Current MCP tools:
 - `doxabase.list_graph_revisions`
 - `doxabase.describe_staged_revision`
 - `doxabase.describe_dataset`
+- `doxabase.describe_profile_run`
 - `doxabase.describe_query_context`
 - `doxabase.describe_context_slice`
 - `doxabase.record_observation`

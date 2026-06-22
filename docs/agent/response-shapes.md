@@ -574,11 +574,46 @@ unrelated returned profiles are mixed with a newer shared-evidence bundle. In
 that mixed-history case, use `evidence_profile_counts` to spot evidence IRIs
 that support several profiles from the same run. `profile_run_candidates`
 contains the count-ranked evidence IRIs that support more than one returned
-profile; each candidate has `evidence_iri`, `returned_profile_count`, and
-`shared_by_all_returned_profiles`. It is a bounded response convenience, not a
-separate persisted profile-run node. `handoff_note` is a compact reading cue for
-profile-only handoffs: profile lore is observed evidence, while
-storage/path/layout warnings remain physical query-planning metadata gaps.
+profile; each candidate has `evidence_iri`, `returned_profile_count`,
+`profile_observation_iris`, and `shared_by_all_returned_profiles`. Use
+`profile_observation_iris` to seed `describe_context_slice` or inspect the
+returned observations that make up the candidate run. It is a bounded response
+convenience, not a separate persisted profile-run node. `handoff_note` is a
+compact reading cue for profile-only handoffs: profile lore is observed
+evidence, while storage/path/layout warnings remain physical query-planning
+metadata gaps.
+
+`db.describe_profile_run(dataset_iri, evidence_iri, limit=None)` returns a
+`ProfileRunDescription`:
+
+```python
+profile_run.dataset
+profile_run.evidence
+profile_run.evidence_iri
+profile_run.returned_dataset_profile_count
+profile_run.returned_mapped_column_profile_count
+profile_run.returned_unmapped_column_profile_count
+profile_run.returned_profile_count
+profile_run.total_dataset_profile_count
+profile_run.total_mapped_column_profile_count
+profile_run.total_unmapped_column_profile_count
+profile_run.total_profile_count
+profile_run.omitted_dataset_profile_count
+profile_run.omitted_mapped_column_profile_count
+profile_run.omitted_unmapped_column_profile_count
+profile_run.omitted_profile_count
+profile_run.profile_observation_iris
+profile_run.dataset_profile_observations
+profile_run.mapped_column_profile_observations
+profile_run.unmapped_column_profile_observations
+profile_run.retrieval_note
+```
+
+Use `describe_profile_run` when a `profile_run_candidates[]` entry identifies
+a shared-evidence run that may be wider than the bounded `describe_dataset`
+profile lists. With `limit=None`, returned and total counts should match unless
+the run has no observations for that dataset. A positive `limit` caps returned
+profiles and leaves omitted counts non-zero.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:
@@ -877,8 +912,10 @@ pattern.evidence_triples
 `pattern.evidence_triples` is the number of new evidence triples written during
 that call. It may be `0` when the pattern links to evidence that already exists,
 for example profile evidence created by `record_dataset_profile` or
-`record_column_profile`. Use `describe_pattern(pattern_iri)` when you need the
-evidence surface available to readers.
+`record_column_profile`. Pass `evidence_iri` when the pattern should reuse an
+existing evidence resource, such as shared profile-run evidence. Use
+`describe_pattern(pattern_iri)` when you need the evidence surface available to
+readers.
 
 `db.describe_pattern(pattern_iri)` returns a `PatternDescription`:
 

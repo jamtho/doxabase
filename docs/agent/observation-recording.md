@@ -46,11 +46,17 @@ buckets, and `profile_metrics`, a list of
 `{"metric": "rc:MinimumValue", "value": ...}` objects. Use base metric kinds
 such as `rc:MinimumValue`, `rc:MaximumValue`, `rc:MeanValue`,
 `rc:MedianValue`, and `rc:StandardDeviationValue` when they fit; use project
-metric-kind IRIs for more specific profiler output. Counts and frequencies must
-be non-negative. A profile metric may also include `target` when the scalar is
-specifically about a resource narrower than the profile as a whole, for example
-a column measured during a dataset-level profile. Treat these as observed
-sample/profile facts, not declared allowed values or constraints.
+metric-kind IRIs for more specific profiler output. Before recording, use
+`list_entities(type="rc:ProfileMetricKind", graph="base_ontology")` when you
+need the current built-in list. Unknown `rc:` metric kinds are rejected so typos
+such as `rc:MinValue` do not become ad hoc RDF. For project-specific metrics,
+prefer full IRIs unless the project has explicitly configured a prefix, and
+define reusable terms in the project ontology when they become durable
+vocabulary. Counts and frequencies must be non-negative. A profile metric may
+also include `target` when the scalar is specifically about a resource narrower
+than the profile as a whole, for example a column measured during a
+dataset-level profile. Treat these as observed sample/profile facts, not
+declared allowed values or constraints.
 Column profile helpers also record the supplied source-level name as
 `observed_column_name`, so observation-only columns can be read without parsing
 their IRIs.
@@ -62,13 +68,13 @@ resource it measured:
 ```python
 profile_metrics=[
     {
-        "metric": "proj:CompletenessRatio",
+        "metric": "https://example.test/project#CompletenessRatio",
         "value": "0.9167",
         "datatype": "xsd:decimal",
     },
     {
-        "metric": "proj:MeanCharacterLength",
-        "target": "proj:customer_name",
+        "metric": "https://example.test/project#MeanCharacterLength",
+        "target": "https://example.test/project#customer_name",
         "value": "14.25",
         "datatype": "xsd:decimal",
     },
@@ -100,7 +106,63 @@ partial profile, evidence, or map state behind.
 `describe_dataset().profile_summary.handoff_note` then gives later agents a
 compact cue that profile lore is observed evidence, while storage/path/layout
 warnings are physical query-planning metadata gaps rather than profile-recording
-failures.
+failures. When `profile_summary.profile_run_candidates` names shared run
+evidence, its `profile_observation_iris` list points at the returned profile
+observations that make up that candidate run. If the dataset profile lists are
+bounded or omitted counts are non-zero, call
+`describe_profile_run(dataset_iri, shared_evidence_iri)` to retrieve all profile
+observations linked to that run evidence.
+
+The bundle's `pattern_summary`/`pattern_text` arguments create a pattern
+supported by the dataset profile observation only. When the synthesis should
+cover the dataset profile and all column profiles, record the bundle first,
+then collect the returned observation IRIs and call `record_pattern` with the
+same shared evidence:
+
+```python
+bundle = db.record_profile_bundle(
+    "https://example.test/project#orders",
+    dataset_summary="Orders were profiled in one full-table pass.",
+    evidence_summary="DuckDB profile query over the local Orders table.",
+    evidence_sources=["scratch://orders-profile.sql"],
+    sample_size=1000,
+    sample_scope="All rows in the local Orders table.",
+    sample_method="DuckDB aggregate profile query.",
+    row_count=1000,
+    map_label="Orders",
+    is_table=True,
+    shared_evidence_iri="https://example.test/project#OrdersProfileRunEvidence",
+    column_defaults={"update_map_column": False},
+    column_profiles=[
+        {
+            "column_iri": "https://example.test/project#orders__status",
+            "column_name": "status",
+            "summary": "Status values were profiled.",
+            "distinct_count": 3,
+        },
+        {
+            "column_iri": "https://example.test/project#orders__amount",
+            "column_name": "amount",
+            "summary": "Amount values were profiled.",
+            "profile_metrics": [{"metric": "rc:MeanValue", "value": "42.5"}],
+        },
+    ],
+)
+
+run = db.describe_profile_run(
+    bundle.dataset_iri,
+    bundle.shared_evidence_iri,
+)
+
+db.record_pattern(
+    summary="Orders profile pass links dataset and column measurements.",
+    pattern_text="The row count, status distinct count, and amount mean came from one profiling pass.",
+    rationale="Every supporting profile observation links to the same shared run evidence.",
+    pattern_targets=[bundle.dataset_iri],
+    supporting_observations=run.profile_observation_iris,
+    evidence_iri=bundle.shared_evidence_iri,
+)
+```
 
 Be explicit about the map update booleans. `record_dataset_profile` defaults
 `update_map_snapshot=true` and can write `rc:rowCountSnapshot` when `row_count`

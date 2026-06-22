@@ -1045,6 +1045,7 @@ class RelationshipDescription:
 class ProfileRunCandidate:
     evidence_iri: str
     returned_profile_count: int
+    profile_observation_iris: list[str]
     shared_by_all_returned_profiles: bool
 
 
@@ -1068,6 +1069,30 @@ class ProfileSummary:
     shared_evidence_iris: list[str]
     profile_run_candidates: list[ProfileRunCandidate]
     handoff_note: str
+
+
+@dataclass(frozen=True)
+class ProfileRunDescription:
+    dataset: ResourceSummary
+    evidence: EvidenceDescription
+    evidence_iri: str
+    returned_dataset_profile_count: int
+    returned_mapped_column_profile_count: int
+    returned_unmapped_column_profile_count: int
+    returned_profile_count: int
+    total_dataset_profile_count: int
+    total_mapped_column_profile_count: int
+    total_unmapped_column_profile_count: int
+    total_profile_count: int
+    omitted_dataset_profile_count: int
+    omitted_mapped_column_profile_count: int
+    omitted_unmapped_column_profile_count: int
+    omitted_profile_count: int
+    profile_observation_iris: list[str]
+    dataset_profile_observations: list[ProfileObservationSummary]
+    mapped_column_profile_observations: list[ProfileObservationSummary]
+    unmapped_column_profile_observations: list[ProfileObservationSummary]
+    retrieval_note: str
 
 
 @dataclass(frozen=True)
@@ -4572,6 +4597,123 @@ class DoxaBase:
             operational_warnings=self._query_planning_issues(description),
         )
 
+    def describe_profile_run(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+        *,
+        graph: str | None = "map",
+        limit: int | None = None,
+    ) -> ProfileRunDescription:
+        if limit is not None and limit < 1:
+            raise DoxaBaseError("limit must be a positive integer or None")
+        dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        evidence_value = self._required_iri("evidence_iri", evidence_iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(data_graphs)
+        evidence_graphs = ["evidence"]
+        column_iris = self._objects(data_graphs, dataset_value, "rc:hasColumn")
+
+        dataset_profiles = self._profiles_with_evidence(
+            self._profile_observations_for_target(
+                target_iri=dataset_value,
+                target_predicate="rc:observedAsset",
+                exclude_observed_column=True,
+                limit=None,
+            ),
+            evidence_value,
+        )
+        mapped_column_profiles = self._profiles_with_evidence(
+            [
+                profile
+                for column_iri in column_iris
+                for profile in self._profile_observations_for_target(
+                    target_iri=column_iri,
+                    target_predicate="rc:observedColumn",
+                    limit=None,
+                )
+            ],
+            evidence_value,
+        )
+        unmapped_column_profiles = self._profiles_with_evidence(
+            self._unmapped_column_profile_observations_for_dataset(
+                dataset_value,
+                mapped_column_iris=column_iris,
+                limit=None,
+            ),
+            evidence_value,
+        )
+
+        categorized_profiles = [
+            *[("dataset", profile) for profile in dataset_profiles],
+            *[("mapped", profile) for profile in mapped_column_profiles],
+            *[("unmapped", profile) for profile in unmapped_column_profiles],
+        ]
+        categorized_profiles.sort(
+            key=lambda item: self._profile_observation_sort_key(item[1]),
+            reverse=True,
+        )
+        returned_profiles = (
+            categorized_profiles[:limit] if limit is not None else categorized_profiles
+        )
+        returned_dataset_profiles = [
+            profile for category, profile in returned_profiles if category == "dataset"
+        ]
+        returned_mapped_column_profiles = [
+            profile for category, profile in returned_profiles if category == "mapped"
+        ]
+        returned_unmapped_column_profiles = [
+            profile for category, profile in returned_profiles if category == "unmapped"
+        ]
+        total_dataset_profile_count = len(dataset_profiles)
+        total_mapped_column_profile_count = len(mapped_column_profiles)
+        total_unmapped_column_profile_count = len(unmapped_column_profiles)
+        total_profile_count = len(categorized_profiles)
+        returned_profile_count = len(returned_profiles)
+        omitted_dataset_profile_count = (
+            total_dataset_profile_count - len(returned_dataset_profiles)
+        )
+        omitted_mapped_column_profile_count = (
+            total_mapped_column_profile_count - len(returned_mapped_column_profiles)
+        )
+        omitted_unmapped_column_profile_count = (
+            total_unmapped_column_profile_count - len(returned_unmapped_column_profiles)
+        )
+        omitted_profile_count = total_profile_count - returned_profile_count
+
+        return ProfileRunDescription(
+            dataset=self._resource_summary(lookup_graphs, dataset_value),
+            evidence=self._describe_evidence(
+                evidence_value,
+                evidence_graphs,
+                lookup_graphs,
+            ),
+            evidence_iri=evidence_value,
+            returned_dataset_profile_count=len(returned_dataset_profiles),
+            returned_mapped_column_profile_count=len(returned_mapped_column_profiles),
+            returned_unmapped_column_profile_count=len(
+                returned_unmapped_column_profiles
+            ),
+            returned_profile_count=returned_profile_count,
+            total_dataset_profile_count=total_dataset_profile_count,
+            total_mapped_column_profile_count=total_mapped_column_profile_count,
+            total_unmapped_column_profile_count=total_unmapped_column_profile_count,
+            total_profile_count=total_profile_count,
+            omitted_dataset_profile_count=omitted_dataset_profile_count,
+            omitted_mapped_column_profile_count=omitted_mapped_column_profile_count,
+            omitted_unmapped_column_profile_count=omitted_unmapped_column_profile_count,
+            omitted_profile_count=omitted_profile_count,
+            profile_observation_iris=[profile.iri for _, profile in returned_profiles],
+            dataset_profile_observations=returned_dataset_profiles,
+            mapped_column_profile_observations=returned_mapped_column_profiles,
+            unmapped_column_profile_observations=returned_unmapped_column_profiles,
+            retrieval_note=(
+                "Profile run membership is inferred from returned profile "
+                "observations for this dataset that link to the requested evidence "
+                "IRI; no separate persisted profile-run node is implied."
+            ),
+        )
+
     def describe_query_context(
         self,
         iri: str,
@@ -5554,14 +5696,20 @@ class DoxaBase:
             for observation_iri in observation_iris
         ]
         summaries.sort(
-            key=lambda item: (
-                item.observed_at or "",
-                item.summary or "",
-                item.iri,
-            ),
+            key=self._profile_observation_sort_key,
             reverse=True,
         )
         return summaries if limit is None else summaries[:limit]
+
+    def _profile_observation_sort_key(
+        self,
+        profile: ProfileObservationSummary,
+    ) -> tuple[str, str, str]:
+        return (
+            profile.observed_at or "",
+            profile.summary or "",
+            profile.iri,
+        )
 
     def _profile_observation_iris_for_target(
         self,
@@ -5612,7 +5760,7 @@ class DoxaBase:
         dataset_iri: str,
         *,
         mapped_column_iris: Iterable[str],
-        limit: int = 5,
+        limit: int | None = 5,
     ) -> list[ProfileObservationSummary]:
         mapped_columns = set(mapped_column_iris)
         profile_observations = self._profile_observations_for_target(
@@ -5626,6 +5774,17 @@ class DoxaBase:
             if profile.observed_column is not None
             and profile.observed_column.iri not in mapped_columns
         ][:limit]
+
+    def _profiles_with_evidence(
+        self,
+        profiles: Iterable[ProfileObservationSummary],
+        evidence_iri: str,
+    ) -> list[ProfileObservationSummary]:
+        return [
+            profile
+            for profile in profiles
+            if any(evidence.iri == evidence_iri for evidence in profile.evidence)
+        ]
 
     def _unmapped_column_profile_observation_count_for_dataset(
         self,
@@ -5680,13 +5839,16 @@ class DoxaBase:
             ),
         ]
         evidence_profile_counts: dict[str, int] = {}
+        evidence_profile_iris: dict[str, list[str]] = {}
         for profile in returned_profiles:
             for evidence_iri in {
                 evidence.iri for evidence in profile.evidence if evidence.iri
             }:
-                evidence_profile_counts[evidence_iri] = (
-                    evidence_profile_counts.get(evidence_iri, 0) + 1
-                )
+                evidence_profile_iris.setdefault(evidence_iri, []).append(profile.iri)
+        evidence_profile_counts = {
+            evidence_iri: len(profile_iris)
+            for evidence_iri, profile_iris in evidence_profile_iris.items()
+        }
         evidence_iris = sorted(evidence_profile_counts)
         returned_profile_count = (
             dataset_profile_count
@@ -5721,6 +5883,7 @@ class DoxaBase:
             ProfileRunCandidate(
                 evidence_iri=evidence_iri,
                 returned_profile_count=evidence_profile_counts[evidence_iri],
+                profile_observation_iris=evidence_profile_iris[evidence_iri],
                 shared_by_all_returned_profiles=(
                     returned_profile_count > 0
                     and evidence_profile_counts[evidence_iri]
@@ -18984,6 +19147,10 @@ class DoxaBase:
             metric_iri = str(
                 self._resource_ref(f"profile_metrics[{index}].metric", metric)
             )
+            self._ensure_known_rc_profile_metric_kind(
+                f"profile_metrics[{index}].metric",
+                metric_iri,
+            )
             datatype_iri = (
                 str(
                     self._resource_ref(
@@ -19014,6 +19181,34 @@ class DoxaBase:
                 )
             )
         return values
+
+    def _ensure_known_rc_profile_metric_kind(
+        self,
+        field_name: str,
+        metric_iri: str,
+    ) -> None:
+        rc_namespace = PREFIXES["rc"]
+        if not metric_iri.startswith(rc_namespace):
+            return
+        profile_metric_kind = self.expand_iri("rc:ProfileMetricKind")
+        if profile_metric_kind in self._types_from_graphs(
+            self._expand_graphs(["ontology"]),
+            metric_iri,
+        ):
+            return
+        base_metric_kinds = [
+            self._compact_iri(metric_kind) or metric_kind
+            for metric_kind in self._subjects(
+                ["base_ontology"],
+                str(RDF.type),
+                profile_metric_kind,
+            )
+        ]
+        raise DoxaBaseError(
+            f"{field_name} uses unknown rc: profile metric kind "
+            f"{metric_iri!r}. Use one of {', '.join(base_metric_kinds)} or a "
+            "project-specific full IRI."
+        )
 
     def _string_values(
         self,

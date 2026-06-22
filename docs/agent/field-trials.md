@@ -278,7 +278,8 @@ few useful gaps:
   make the retrieval check easier than inferring success from nested profiles.
   A tighter verification suggested rolling up returned profile evidence IRIs in
   `profile_summary` so shared-evidence handoffs can be checked without walking
-  every nested profile.
+  every nested profile; later candidates also expose grouped
+  `profile_observation_iris` so a receiving agent can inspect the run directly.
 - A profile-only handoff trial confirmed that `profile_summary.handoff_note`
   helps fresh agents separate successful profile recording from expected
   missing physical query-planning metadata. The same trial exposed that unmapped
@@ -428,6 +429,20 @@ few useful gaps:
   equal. Quad insertion now uses explicit RDF-style existence checks, response
   reads de-duplicate repeated objects, and the profile docs show `target=None`
   versus a narrower metric target.
+- A wide profile-run retrieval trial showed that `describe_dataset()` can
+  identify a shared-evidence run while omitting some profile observations from
+  its bounded profile lists. Use `describe_profile_run` with the dataset IRI and
+  shared evidence IRI when a receiver needs the whole run. The same docs-guided
+  trial showed that bundle-created patterns support only the dataset profile
+  observation; for a synthesis over dataset and column profiles together, call
+  `record_pattern` after the bundle with all returned profile observation IRIs
+  and the shared `evidence_iri`.
+- A profile metric-kind ergonomics trial showed that unknown `rc:` metric kinds
+  such as `rc:MinValue` could previously validate as arbitrary IRIs. Recording
+  now rejects undefined `rc:` profile metric kinds while still allowing full
+  project-specific metric IRIs; agents should use
+  `list_entities(type="rc:ProfileMetricKind", graph="base_ontology")` before
+  choosing a base kind.
 - A deeper mini-handoff trial on the Polymarket fixture recorded four claim
   observations plus one synthesis pattern around snapshot/event grain,
   condition-ID versus CLOB-token-ID join lanes, embedded JSON/string payloads,

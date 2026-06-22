@@ -12,6 +12,7 @@ from doxabase.mcp_tools import (
     describe_assertion_support_tool,
     describe_context_slice_tool,
     describe_dataset_tool,
+    describe_profile_run_tool,
     describe_graph_revision_tool,
     describe_pattern_tool,
     describe_query_context_tool,
@@ -63,6 +64,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.graph_overview" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
+    assert "doxabase.describe_profile_run" in tool_names
     assert "doxabase.describe_query_context" in tool_names
     assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
@@ -1891,9 +1893,41 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         {
             "evidence_iri": shared_evidence,
             "returned_profile_count": 2,
+            "profile_observation_iris": [
+                result["dataset_profile"]["observation"]["observation_iri"],
+                result["column_profiles"][0]["observation"]["observation_iri"],
+            ],
             "shared_by_all_returned_profiles": True,
         }
     ]
+    profile_run = describe_profile_run_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+    assert profile_run["returned_profile_count"] == 2
+    assert profile_run["total_profile_count"] == 2
+    assert profile_run["omitted_profile_count"] == 0
+    assert set(profile_run["profile_observation_iris"]) == {
+        result["dataset_profile"]["observation"]["observation_iri"],
+        result["column_profiles"][0]["observation"]["observation_iri"],
+    }
+    pattern = record_pattern_tool(
+        db,
+        summary="Orders profile bundle supports a cross-profile synthesis.",
+        pattern_text=(
+            "The dataset profile and status column profile came from the same "
+            "sampled Orders profiling pass."
+        ),
+        rationale="Both returned profile observations link to the same run evidence.",
+        pattern_targets=[table, status_column],
+        supporting_observations=profile_run["profile_observation_iris"],
+        evidence_iri=shared_evidence,
+    )
+    assert pattern["evidence_iri"] == shared_evidence
+    assert describe_pattern_tool(db, pattern["pattern_iri"])["evidence"][0]["iri"] == (
+        shared_evidence
+    )
     profile = dataset["unmapped_column_profile_observations"][0]
     assert profile["observed_column_name"] == "status"
     assert profile["observed_column"]["column_name"] == "status"

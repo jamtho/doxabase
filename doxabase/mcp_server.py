@@ -15,6 +15,7 @@ from doxabase.mcp_tools import (
     describe_context_slice_tool,
     describe_graph_revision_tool,
     describe_pattern_tool,
+    describe_profile_run_tool,
     describe_query_context_tool,
     describe_resource_tool,
     describe_staged_revision_tool,
@@ -57,7 +58,7 @@ from doxabase.mcp_tools import (
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
-Use graph_overview, search, list_entities, describe_dataset, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
+Use graph_overview, search, list_entities, describe_dataset, describe_profile_run, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
 Current V1 tools support inspection, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
@@ -107,6 +108,23 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return bounded schema, layout, storage access, caveat, and provenance context."""
 
         return describe_dataset_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.describe_profile_run")
+    def describe_profile_run(
+        dataset_iri: str,
+        evidence_iri: str,
+        graph: str | None = "map",
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        """Return profile observations for one dataset linked to one evidence resource."""
+
+        return describe_profile_run_tool(
+            db,
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            graph=graph,
+            limit=limit,
+        )
 
     @server.tool(name="doxabase.describe_query_context")
     def describe_query_context(
@@ -342,6 +360,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         pattern_status: str | None = "rc:Tentative",
         pattern_stability: str | None = "rc:EmergingPattern",
         map_implications: list[str] | None = None,
+        evidence_iri: str | None = None,
     ) -> dict[str, Any]:
         """Record a synthesis pattern linking observations or evidence to map targets."""
 
@@ -366,6 +385,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             map_implications=map_implications,
+            evidence_iri=evidence_iri,
         )
 
     @server.tool(name="doxabase.record_dataset_profile")

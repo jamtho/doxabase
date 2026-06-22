@@ -119,7 +119,10 @@ Read total and omitted profile counts before assuming returned profiles are the
 whole profile history for the dataset.
 When mixed profile history means no evidence is shared by all returned profiles,
 `profile_run_candidates` lists evidence IRIs that support more than one returned
-profile, sorted by returned profile count.
+profile, sorted by returned profile count. Each candidate includes
+`profile_observation_iris`, the returned profile observations linked to that
+evidence IRI, so a handoff can seed `describe_context_slice` or inspect the run
+without reconstructing membership from nested profile lists.
 Its `handoff_note` is a compact reading cue for profile-only handoffs: profile
 lore is observed evidence, while storage/path/layout warnings remain physical
 query-planning metadata gaps.
@@ -151,6 +154,19 @@ unfolded route matches. Direct and map-implication groups are usually the
 strongest local relevance signals, while claim/observation-supported groups
 explain the surrounding lore. Call `doxabase.describe_pattern` before using a
 pattern as a decision rule.
+
+`doxabase.describe_profile_run`
+
+Returns the profile observations for one dataset that link to one evidence IRI.
+Use it after `describe_dataset().profile_summary.profile_run_candidates` points
+at a shared profiler-run evidence resource, especially when the bounded
+`describe_dataset` response has omitted profile observations. The result
+includes the dataset and evidence summaries, returned/total/omitted counts,
+`profile_observation_iris`, and profile rows split into dataset-level,
+mapped-column, and unmapped-column observations. `limit=None` returns the full
+matching run; pass a positive `limit` only when a client intentionally wants a
+capped payload. The run is inferred from profile observations linked to the
+requested evidence IRI, not from a separate persisted profile-run node.
 
 `doxabase.describe_query_context`
 
@@ -214,9 +230,12 @@ Use `sample_scope` for the population or slice covered by the profile, and
 Use `profile_metrics=[{"metric": "rc:MinimumValue", "value": ...}]` for
 observed min/max/mean/median-style profiler output. These scalar metrics are
 observed profile evidence, not constraints, shapes, allowed values, or durable
-map semantics by themselves. Use project-specific metric kind IRIs for profiler
-outputs that do not fit the base `rc:` metric kinds; define those terms in the
-project ontology once they become durable vocabulary. A metric item may include
+map semantics by themselves. Use `list_entities(type="rc:ProfileMetricKind",
+graph="base_ontology")` to list built-in metric kinds before recording. Use
+full project-specific metric kind IRIs for profiler outputs that do not fit the
+base `rc:` metric kinds; define those terms in the project ontology once they
+become durable vocabulary. DoxaBase rejects unknown `rc:` metric kinds so typos
+such as `rc:MinValue` do not become ad hoc RDF. A metric item may include
 `target` when the scalar is specifically about a resource narrower than the
 profile observation as a whole. Profile evidence entries include source strings
 and source spans when recorded.
@@ -249,9 +268,17 @@ Use `column_defaults` for repeated column options such as
 `{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
 fields as `record_column_profile` and must include `column_iri`, `column_name`,
 and `summary`. After recording a bundle, `describe_dataset().profile_summary`
-lists shared evidence IRIs, profile run candidates, and a handoff note that can
-help a later agent recognise one profiler run without walking every
-observation.
+lists shared evidence IRIs, profile run candidates, grouped profile observation
+IRIs, and a handoff note that can help a later agent recognise one profiler run
+without walking every observation.
+Use `describe_profile_run(dataset_iri, shared_evidence_iri)` when the full run
+may be wider than the bounded dataset profile lists. If the bundle's
+`pattern_summary`/`pattern_text` arguments are supplied, the helper-created
+pattern is supported by the dataset profile observation only. For a synthesis
+over the dataset and column profiles together, call `record_pattern` after the
+bundle using the dataset profile observation IRI plus every
+`column_profiles[].observation.observation_iri`, and pass the shared
+`evidence_iri` to reuse the profile-run evidence.
 
 `doxabase.record_column_profile`
 
@@ -288,7 +315,9 @@ more structured than a note but do not require hand-authored TriG.
 Records one `rc:Pattern` in the `patterns` graph and optionally linked
 `rc:Evidence` / `rc:SourceSpan` resources in the `evidence` graph. Use this when
 several observations, claims, or sources belong together and suggest a more
-durable pattern or map implication.
+durable pattern or map implication. Pass `evidence_iri` when the pattern should
+reuse an existing evidence resource, such as shared profile-run evidence from
+`record_profile_bundle`.
 
 `doxabase.record_claim_reconsideration`
 

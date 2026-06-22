@@ -152,6 +152,23 @@ def describe_dataset_tool(
     return to_dict(db.describe_dataset(iri=iri, graph=graph))
 
 
+def describe_profile_run_tool(
+    db: DoxaBase,
+    dataset_iri: str,
+    evidence_iri: str,
+    graph: str | None = "map",
+    limit: int | None = None,
+) -> dict[str, Any]:
+    return to_dict(
+        db.describe_profile_run(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            graph=graph,
+            limit=limit,
+        )
+    )
+
+
 def describe_query_context_tool(
     db: DoxaBase,
     iri: str,
@@ -284,6 +301,7 @@ def record_pattern_tool(
     pattern_status: str | None = "rc:Tentative",
     pattern_stability: str | None = "rc:EmergingPattern",
     map_implications: list[str] | None = None,
+    evidence_iri: str | None = None,
 ) -> dict[str, Any]:
     result = db.record_pattern(
         summary=summary,
@@ -305,6 +323,7 @@ def record_pattern_tool(
         pattern_status=pattern_status,
         pattern_stability=pattern_stability,
         map_implications=map_implications,
+        evidence_iri=evidence_iri,
     )
     return to_dict(result)
 
