@@ -1327,6 +1327,7 @@ class AssertionPredicateHint:
 
 @dataclass(frozen=True)
 class SuggestedNextAction:
+    action_label: str
     tool_name: str
     mcp_tool_name: str
     arguments: dict[str, Any]
@@ -11157,9 +11158,12 @@ class DoxaBase:
             tool_name: str,
             arguments: dict[str, Any],
             reason: str,
+            action_label: str | None = None,
         ) -> None:
             actions.append(
                 SuggestedNextAction(
+                    action_label=action_label
+                    or self._suggested_action_label(tool_name),
                     tool_name=tool_name,
                     mcp_tool_name=f"doxabase.{tool_name}",
                     arguments=arguments,
@@ -11176,11 +11180,13 @@ class DoxaBase:
                     "Review patches, validation, impacts, support, and any "
                     "judgement panel before deciding to apply."
                 ),
+                action_label="Review staged revision",
             )
             add_action(
                 "export_staged_revision",
                 {"iri": staged_revision_iri, "path": "/tmp/staged-revision-review.md"},
                 "Write a Markdown review bundle before applying if review is needed.",
+                action_label="Export review bundle",
             )
             add_action(
                 "apply_staged_revision",
@@ -11189,6 +11195,7 @@ class DoxaBase:
                     "Apply this staged revision after review confirms the "
                     "proposal is still desired."
                 ),
+                action_label="Apply after review",
             )
         elif status == "noop":
             add_action(
@@ -11198,17 +11205,20 @@ class DoxaBase:
                     "Inspect the staged revision and current graph state; replay "
                     "validates but would not change graph triples."
                 ),
+                action_label="Inspect no-op revision",
             )
             add_action(
                 "export_staged_revision",
                 {"iri": staged_revision_iri, "path": "/tmp/staged-revision-noop.md"},
                 "Write a Markdown review bundle before deciding whether to replace it.",
+                action_label="Export no-op bundle",
             )
         elif status == "already_applied" and already_applied_by is not None:
             add_action(
                 "describe_graph_revision",
                 {"iri": already_applied_by},
                 "Inspect the applied revision event instead of applying again.",
+                action_label="Inspect applied event",
             )
         elif status == "conflict":
             is_restageable_conflict = (
@@ -11223,6 +11233,7 @@ class DoxaBase:
                     "Review the original patch payloads, count previews, impacts, "
                     "and support before deciding how to handle this conflict."
                 ),
+                action_label="Review stale source",
             )
             add_action(
                 "export_staged_revision",
@@ -11235,6 +11246,7 @@ class DoxaBase:
                     ),
                 },
                 "Write a review bundle that captures the blocked staged proposal.",
+                action_label="Export conflict bundle",
             )
             if restaged_by is None and is_restageable_conflict:
                 add_action(
@@ -11244,6 +11256,7 @@ class DoxaBase:
                         "Create a refreshed staged revision against current graph "
                         "counts if review confirms the patch intent is still desired."
                     ),
+                    action_label="Restage stale source",
                 )
             elif restaged_by is not None:
                 successor_iri = current_restaged_by or restaged_by
@@ -11254,6 +11267,7 @@ class DoxaBase:
                         "Inspect the current refreshed successor instead of "
                         "restaging this stale source again."
                     ),
+                    action_label="Inspect current refreshed successor",
                 )
         elif status == "validation_failed":
             add_action(
@@ -11264,6 +11278,7 @@ class DoxaBase:
                     "or alternative candidate while preserving this failed revision "
                     "for comparison."
                 ),
+                action_label="Inspect validation failure",
             )
             add_action(
                 "export_staged_revision",
@@ -11275,12 +11290,14 @@ class DoxaBase:
                     "Write a review bundle with validation diagnostics before "
                     "staging a repaired candidate from validation_results."
                 ),
+                action_label="Export validation bundle",
             )
         else:
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
                 "Inspect staged revision details to understand why apply is not ready.",
+                action_label="Inspect staged revision",
             )
         return actions
 
@@ -13178,6 +13195,21 @@ class DoxaBase:
         )
         return f"{tool_name}({arg_text})"
 
+    def _suggested_action_label(self, tool_name: str) -> str:
+        labels = {
+            "apply_staged_revision": "Apply staged revision",
+            "describe_assertion_support": "Inspect assertion support",
+            "describe_context_slice": "Load context slice",
+            "describe_dataset": "Inspect dataset",
+            "describe_graph_revision": "Inspect graph revision",
+            "describe_resource": "Inspect resource",
+            "describe_staged_revision": "Inspect staged revision",
+            "export_staged_revision": "Export staged revision",
+            "restage_staged_revision": "Restage staged revision",
+            "search": "Search graph",
+        }
+        return labels.get(tool_name, tool_name.replace("_", " ").title())
+
     def _assertion_support_next_actions(
         self,
         subject_iri: str,
@@ -13202,9 +13234,12 @@ class DoxaBase:
             tool_name: str,
             arguments: dict[str, Any],
             reason: str,
+            action_label: str | None = None,
         ) -> None:
             actions.append(
                 SuggestedNextAction(
+                    action_label=action_label
+                    or self._suggested_action_label(tool_name),
                     tool_name=tool_name,
                     mcp_tool_name=f"doxabase.{tool_name}",
                     arguments=arguments,
@@ -14592,15 +14627,19 @@ class DoxaBase:
                     + " |"
                 )
 
-        if check.suggested_next_calls:
+        if check.suggested_next_actions:
             lines.extend(["", "### Suggested Next Calls", ""])
-            for call in check.suggested_next_calls[:5]:
+            for action in check.suggested_next_actions[:5]:
                 note = ""
-                if alternative_to is not None and call.startswith(
-                    "apply_staged_revision("
+                if (
+                    alternative_to is not None
+                    and action.tool_name == "apply_staged_revision"
                 ):
                     note = " (only after comparing alternatives)"
-                lines.append(f"- `{call}`{note}")
+                lines.append(
+                    f"- **{action.action_label}:** `{action.call}`{note}"
+                )
+                lines.append(f"  {action.reason}")
         return lines
 
     def _snapshot_drift_triples_markdown(

@@ -131,9 +131,9 @@ A stale export should be read like this:
 ...
 
 ### Suggested Next Calls
-- describe_staged_revision(...)
-- export_staged_revision(...)
-- restage_staged_revision(...)
+- **Review stale source:** describe_staged_revision(...)
+- **Export conflict bundle:** export_staged_revision(...)
+- **Restage stale source:** restage_staged_revision(...)
 ```
 
 For larger stale sets, use `doxabase.restage_staged_revisions(...)` instead of

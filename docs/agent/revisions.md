@@ -118,8 +118,9 @@ after = db.list_graph_revisions(include_apply_checks=True)
 
 Read `application_status`, `application_decision`, `application_can_apply`,
 `application_summary`, `application_blocking_reasons`, and
-`suggested_next_calls` first. They tell you whether the staged proposal is ready
-for review, already applied, blocked by graph drift, or needs fuller inspection.
+structured `suggested_next_actions` first. Their `action_label`, `arguments`,
+and `reason` tell you whether the staged proposal is ready for review, already
+applied, blocked by graph drift, or needs fuller inspection.
 The default list call uses `drift_detail="summary"` so snapshot drift rows carry
 counts, digests, drift relevance, overlap arrays, and added/removed exact-change
 counts without large exact changed-triple arrays. Then use

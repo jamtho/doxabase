@@ -219,6 +219,7 @@ matter, but it is not automatically a direct caveat on that column.
 `suggested_next_actions` is the machine-readable form of the follow-up route:
 
 ```python
+action.action_label
 action.tool_name
 action.mcp_tool_name
 action.arguments
@@ -226,9 +227,10 @@ action.reason
 action.call
 ```
 
-Use `mcp_tool_name` and `arguments` when driving MCP calls. `tool_name` is the
-local helper-style name, and `suggested_next_calls` contains equivalent display
-strings for humans and older callers.
+Use `mcp_tool_name` and `arguments` when driving MCP calls. `action_label` is a
+compact human label for the action's role in the route. `tool_name` is the local
+helper-style name, and `suggested_next_calls` contains equivalent bare call
+strings for older callers.
 
 `related_route_summaries` groups and ranks `related_routes` by related resource.
 Scan these first when the payload has many routes; use raw routes when you need
@@ -1354,7 +1356,8 @@ fields (`subject_curie`, `subject_display`, `predicate_curie`,
 `predicate_display`, `object_curie`, `object_display`). Use the raw fields for
 precise graph work and the display fields for human review.
 `suggested_next_actions` uses the same structured action shape as assertion
-support: tool name, MCP tool name, arguments, reason, and display call string.
+support: action label, tool name, MCP tool name, arguments, reason, and display
+call string.
 For staged apply checks, actions are ordered review-first; mutating actions such
 as `apply_staged_revision` and `restage_staged_revision` come after inspection
 or export suggestions.

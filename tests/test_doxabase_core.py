@@ -1014,6 +1014,9 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert column_support.suggested_next_actions[0].tool_name == (
         "describe_context_slice"
     )
+    assert column_support.suggested_next_actions[0].action_label == (
+        "Load context slice"
+    )
     assert column_support.suggested_next_actions[0].mcp_tool_name == (
         "doxabase.describe_context_slice"
     )
@@ -1565,6 +1568,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert check.patch_checks[0].current_triple_count == 0
     assert check.patch_checks[0].preview_triple_count == 3
     assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
+    assert check.suggested_next_actions[0].action_label == "Review staged revision"
     assert check.suggested_next_actions[0].mcp_tool_name == (
         "doxabase.describe_staged_revision"
     )
@@ -1986,12 +1990,16 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert f"| 0 | {db.triple_count('map')} |" in export_text
     assert "all_patch_triples_absent" in export_text
     assert "### Suggested Next Calls" in export_text
+    assert "**Restage stale source:**" in export_text
+    assert "Create a refreshed staged revision" in export_text
     assert "restage_staged_revision" in export_text
     assert "expected 0 triples before patch" in check.conflicts[0]
     assert check.patch_checks[0].can_apply is False
     assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
+    assert check.suggested_next_actions[0].action_label == "Review stale source"
     assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
     assert check.suggested_next_actions[-1].tool_name == "restage_staged_revision"
+    assert check.suggested_next_actions[-1].action_label == "Restage stale source"
 
     with pytest.raises(DoxaBaseError, match="Staged revision cannot be applied"):
         db.apply_staged_revision(staged.revision_iri)
@@ -2459,6 +2467,9 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert stale_summary.restaged_by == restaged.revision_iri
     assert stale_summary.suggested_next_actions[-1].tool_name == (
         "describe_staged_revision"
+    )
+    assert stale_summary.suggested_next_actions[-1].action_label == (
+        "Inspect current refreshed successor"
     )
     assert stale_summary.suggested_next_actions[-1].arguments == {
         "iri": restaged.revision_iri
@@ -3081,6 +3092,9 @@ def test_restage_chain_routes_to_current_successor(
     assert original_check.suggested_next_actions[-1].arguments == {
         "iri": current_successor.revision_iri
     }
+    assert original_check.suggested_next_actions[-1].action_label == (
+        "Inspect current refreshed successor"
+    )
 
     listing = db.list_graph_revisions(include_apply_checks=True)
     by_iri = {item.iri: item for item in listing.revisions}
@@ -3109,6 +3123,8 @@ def test_restage_chain_routes_to_current_successor(
     exported = export_path.read_text(encoding="utf-8")
     assert "- Restaged by: " in exported
     assert "- Current restaged by: " in exported
+    assert "**Inspect current refreshed successor:**" in exported
+    assert "**Review stale source:**" in exported
     assert current_successor.revision_iri in exported
 
     batch = db.restage_staged_revisions(

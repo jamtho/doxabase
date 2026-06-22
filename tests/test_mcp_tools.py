@@ -532,8 +532,14 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
         already_restaged["revision_iri"],
         restaged_second,
     ]
+    stale_summary = result["revision_summaries"][0]
+    assert stale_summary["suggested_next_actions"][-1]["action_label"] == (
+        "Inspect current refreshed successor"
+    )
     assert expected_path.exists()
-    assert "## Restage Context" in expected_path.read_text(encoding="utf-8")
+    export_text = expected_path.read_text(encoding="utf-8")
+    assert "## Restage Context" in export_text
+    assert "**Inspect current refreshed successor:**" in export_text
 
 
 def test_restage_staged_revisions_tool_can_dry_run(

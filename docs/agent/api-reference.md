@@ -642,7 +642,8 @@ context triples, the retrieval boundary, absence notes, and suggested next
 calls. `nearby_caveat_links` explains the scope of each caveat, for example
 whether it is directly attached to the assertion target or came via the owning
 dataset. `suggested_next_actions` is the structured form to drive tools;
-`suggested_next_calls` is the display/back-compat string form. It also returns
+`action_label` names each action's role, and `suggested_next_calls` is the
+bare-call back-compat string form. It also returns
 `related_route_summaries` and `related_routes`, which explain why each related
 lore item entered the payload. Scan summaries first when there are many rows;
 use raw routes when you need exact links. Use it when the question is "why is
