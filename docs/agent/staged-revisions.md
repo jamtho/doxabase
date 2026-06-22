@@ -382,12 +382,16 @@ diagnostics plus a Markdown review export before staging a repaired candidate.
 Already-applied revisions should be inspected rather than replayed.
 Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying
-one successor can make sibling successors stale. Grouped bundle summaries put
-that sequencing hazard in `warnings` and
-`post_apply_recheck_revision_iris`; re-run `check_staged_revision_apply` or
-`export_staged_revisions` after each apply. When a requested stale source
-already has a restage chain, batch restage maps it to `current_restaged_by` so
-the review bundle opens the latest known successor. The summary also keeps
+one staged revision can make sibling ready/no-op revisions on the same changed
+graph stale. Grouped bundle summaries put that sequencing hazard in `warnings`
+and `post_apply_recheck_revision_iris`; re-run
+`check_staged_revision_apply` or `export_staged_revisions` after each apply.
+Grouped Markdown also includes a `Review Queues` section that mirrors the
+apply/restage, repair, applied-inspection, and post-apply recheck buckets from
+`bundle_summary`.
+When a requested stale source already has a restage chain, batch restage maps it
+to `current_restaged_by` so the review bundle opens the latest known successor.
+The summary also keeps
 `recommended_apply_or_restage_review_iris` separate from
 `recommended_repair_review_iris` while preserving
 `recommended_mutation_review_iris` as the broad compatibility review queue.

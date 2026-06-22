@@ -1486,10 +1486,10 @@ decisions. Use `recommended_apply_or_restage_review_iris` for rows that need
 apply/reapply or restage judgement, and `recommended_repair_review_iris` for
 validation-failed or patch-conflict rows that need a repaired proposal.
 `warnings` calls out bundle-level sequencing hazards, and
-`post_apply_recheck_revision_iris` lists grouped restaged successors whose old
-readiness should be discarded after any successful apply. This includes
-multi-successor reviews where applying one ready restaged successor can make
-sibling ready or no-op successors stale. Use
+`post_apply_recheck_revision_iris` lists grouped ready/no-op staged revisions
+sharing a changed graph whose old readiness should be discarded after any
+successful apply. This includes mixed reviews where applying one ready revision
+can make sibling ready or no-op revisions stale. Use
 `recommended_applied_inspection_iris` for already-applied staged revisions that
 are useful to inspect but should not be applied again.
 

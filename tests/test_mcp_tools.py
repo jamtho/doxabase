@@ -549,6 +549,9 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert expected_path.exists()
     export_text = expected_path.read_text(encoding="utf-8")
     assert "## Bundle Warnings" in export_text
+    assert "## Review Queues" in export_text
+    assert "- Apply/restage review: " in export_text
+    assert "- Post-apply recheck: " in export_text
     assert "## Restage Context" in export_text
     assert "**Inspect current refreshed successor:**" in export_text
 
@@ -1351,6 +1354,79 @@ def test_describe_query_context_tool_warns_on_complete_s3_template_without_resol
     )
 
 
+def test_describe_query_context_tool_surfaces_root_only_targets(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    local_dataset = "https://example.test/project#LocalOrders"
+    local_root = str(tmp_path / "orders.parquet")
+    local_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#local_orders_storage",
+        label="Local orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=local_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=local_dataset,
+        label="Local orders",
+        is_table=True,
+        storage_accesses=[local_storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    s3_dataset = "https://example.test/project#S3Orders"
+    s3_root = "s3://orders-lake/exports/orders.parquet"
+    s3_storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#s3_orders_storage",
+        label="S3 orders storage",
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root=s3_root,
+        endpoint_profile="orders-prod",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=s3_dataset,
+        label="S3 orders",
+        is_table=True,
+        storage_accesses=[s3_storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    local_result = describe_query_context_tool(db, iri=local_dataset)
+    s3_result = describe_query_context_tool(db, iri=s3_dataset)
+
+    assert local_result["readiness"] == "ready_for_query_planning"
+    assert local_result["path_templates"] == []
+    local_target = local_result["query_target_candidates"][0]
+    assert local_target["template_source"] == "storage_access_location"
+    assert local_target["composition"] == "storage_root_as_candidate"
+    assert local_target["candidate_path"] == local_root
+    assert local_target["candidate_path_status"] == "ready"
+
+    assert s3_result["readiness"] == "ready_for_query_planning"
+    assert s3_result["path_templates"] == []
+    s3_target = s3_result["query_target_candidates"][0]
+    assert s3_target["template_source"] == "storage_access_location"
+    assert s3_target["composition"] == "storage_root_as_candidate"
+    assert s3_target["candidate_path"] == s3_root
+    assert s3_target["bucket_name"] is None
+    assert s3_target["key_prefix"] is None
+    assert s3_target["requires_endpoint_profile"] is True
+    assert s3_target["review_reasons"] == []
+
+
 def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)
@@ -1512,6 +1588,28 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         "Seed is an rc:Pattern; rerun with profile='pattern_brief' or 'deep_lore'."
         in warning
         for warning in mismatch["warnings"]
+    )
+    claim = record_claim_observation_tool(
+        db,
+        summary="Market snapshots are hourly state.",
+        claim_text="Market snapshots are hourly state.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=[seed_iri],
+        evidence_summary="Context-slice wrapper claim evidence.",
+        source_path="tests/test_mcp_tools.py",
+        source_kind="rc:DocumentationSource",
+    )
+    claim_mismatch = describe_context_slice_tool(
+        db,
+        seed_iris=[claim["claim_iri"]],
+        profile="dataset_brief",
+        max_triples=120,
+    )
+    assert claim_mismatch["route_counts"] == {"seed": 1}
+    assert any(
+        "Seed is an rc:Claim; rerun with profile='pattern_brief' or 'deep_lore'."
+        in warning
+        for warning in claim_mismatch["warnings"]
     )
 
 

@@ -390,13 +390,15 @@ few useful gaps:
   between "review stale source" and "inspect current refreshed successor";
   suggested actions now carry `action_label`, and Markdown renders those labels
   while keeping `suggested_next_calls` as back-compatible call strings.
-- A temp-capsule apply trial confirmed that ready restaged successors are not an
-  unordered apply queue: applying one map successor can stale sibling ready or
-  no-op successors. Grouped bundle summaries now carry `warnings` for that
-  sequencing hazard plus `post_apply_recheck_revision_iris` for scripts, and
-  split the broad mutation-review queue into
+- A temp-capsule apply trial confirmed that ready staged revisions are not an
+  unordered apply queue: applying one map revision can stale sibling ready or
+  no-op revisions, including ordinary ready proposals as well as restaged
+  successors. Grouped bundle summaries now carry `warnings` for that sequencing
+  hazard plus `post_apply_recheck_revision_iris` for scripts, and split the
+  broad mutation-review queue into
   `recommended_apply_or_restage_review_iris` and
-  `recommended_repair_review_iris`.
+  `recommended_repair_review_iris`. Grouped Markdown now mirrors those buckets
+  in `Review Queues` for human reviewers.
 - A staged-drift readability trial showed that `patch_object_overlap` can sound
   stronger than it is when the only object overlap is broad vocabulary such as
   `rc:Dataset`. Apply checks now use `broad_patch_object_overlap` for that weak

@@ -2819,6 +2819,7 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert batch.bundle_summary.post_apply_recheck_revision_iris == [
         already_restaged.revision_iri,
         restaged_second,
+        ready.revision_iri,
     ]
     assert len(batch.bundle_summary.warnings) == 1
     assert batch.bundle_summary.recommended_mutation_review_iris == [
@@ -2835,9 +2836,19 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     exported = export_path.read_text(encoding="utf-8")
     assert exported.startswith("# Batch restage review\n")
     assert "## Bundle Warnings" in exported
+    assert "## Review Queues" in exported
+    assert "- Apply/restage review: " in exported
+    assert "- Repair review: (none)" in exported
+    assert "- Post-apply recheck: " in exported
     assert "## Restage Context" in exported
+    assert exported.index("## Review Queues") < exported.index("## Restage Context")
     assert "Stage order lifecycle table" in exported
     assert db.check_staged_revision_apply(restaged_second).status == "ready"
+
+    db.apply_staged_revision(already_restaged.revision_iri)
+    ready_after_apply = db.check_staged_revision_apply(ready.revision_iri)
+    assert ready_after_apply.status == "conflict"
+    assert "target_count_drift" in ready_after_apply.blocking_reasons
 
 
 def test_batch_restage_dry_run_reports_plan_without_creating_successors(
@@ -3368,6 +3379,8 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert export.bundle_summary.recommended_applied_inspection_iris == []
     assert "## Bundle Warnings" in exported
     assert exported.index("## Bundle Warnings") < exported.index("## Restage Context")
+    assert "## Review Queues" in exported
+    assert exported.index("## Review Queues") < exported.index("## Restage Context")
     assert "## Alternative Context" in exported
     assert (
         "Stored alternative to Revision 1: Model order rows as raw events"

@@ -11749,20 +11749,30 @@ class DoxaBase:
         self,
         summaries: list[StagedGraphRevisionExportSummary],
     ) -> list[str]:
-        successor_review_targets = [
-            summary.revision_iri
+        candidates = [
+            summary
             for summary in summaries
-            if summary.stale_resolution_state
-            in {"restaged_successor_ready", "restaged_successor_noop"}
+            if summary.apply_status in {"ready", "noop"} and summary.changed_graphs
         ]
-        has_ready_apply_target = any(
-            summary.stale_resolution_state == "restaged_successor_ready"
-            and summary.apply_decision == "review_then_apply"
-            for summary in summaries
-        )
-        if not has_ready_apply_target or len(successor_review_targets) <= 1:
+        graphs_needing_recheck: set[str] = set()
+        for graph in {graph for summary in candidates for graph in summary.changed_graphs}:
+            graph_candidates = [
+                summary for summary in candidates if graph in summary.changed_graphs
+            ]
+            if len(graph_candidates) <= 1:
+                continue
+            if any(
+                summary.apply_decision == "review_then_apply"
+                for summary in graph_candidates
+            ):
+                graphs_needing_recheck.add(graph)
+        if not graphs_needing_recheck:
             return []
-        return successor_review_targets
+        return [
+            summary.revision_iri
+            for summary in candidates
+            if any(graph in graphs_needing_recheck for graph in summary.changed_graphs)
+        ]
 
     def _staged_revisions_bundle_warnings(
         self,
@@ -11772,9 +11782,10 @@ class DoxaBase:
             return []
         return [
             (
-                "Restaged successors are sequential review targets: applying one "
-                "ready successor can change graph state and make sibling ready or "
-                "no-op successors stale. Re-run check_staged_revision_apply or "
+                "Ready/no-op staged revisions sharing a changed graph are "
+                "sequential review targets: applying one ready revision can "
+                "change graph state and make sibling ready or no-op revisions "
+                "stale. Re-run check_staged_revision_apply or "
                 "export_staged_revisions after each apply."
             )
         ]
@@ -15241,6 +15252,10 @@ class DoxaBase:
         if bundle_summary.warnings:
             lines.extend(["", "## Bundle Warnings", ""])
             lines.extend(f"- {warning}" for warning in bundle_summary.warnings)
+        review_queues = self._staged_revisions_review_queues_markdown(bundle_summary)
+        if review_queues:
+            lines.extend(["", "## Review Queues", ""])
+            lines.extend(review_queues)
         restage_context = []
         for index, description in enumerate(descriptions, start=1):
             if description.restage_reason is not None:
@@ -15297,8 +15312,39 @@ class DoxaBase:
                     ).strip(),
                     "",
                 ]
-            )
+        )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revisions_review_queues_markdown(
+        self,
+        bundle_summary: StagedGraphRevisionBundleSummary,
+    ) -> list[str]:
+        queues = [
+            (
+                "Apply/restage review",
+                bundle_summary.recommended_apply_or_restage_review_iris,
+            ),
+            ("Repair review", bundle_summary.recommended_repair_review_iris),
+            (
+                "Applied inspection",
+                bundle_summary.recommended_applied_inspection_iris,
+            ),
+            (
+                "Post-apply recheck",
+                bundle_summary.post_apply_recheck_revision_iris,
+            ),
+        ]
+        if not any(iris for _, iris in queues):
+            return []
+        return [
+            f"- {label}: {self._markdown_iri_list(iris)}"
+            for label, iris in queues
+        ]
+
+    def _markdown_iri_list(self, iris: list[str]) -> str:
+        if not iris:
+            return "(none)"
+        return ", ".join(f"`{iri}`" for iri in iris)
 
     def _staged_revisions_alternative_context_markdown(
         self,

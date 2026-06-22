@@ -544,8 +544,11 @@ and `recommended_repair_review_iris` for validation-failed or patch-conflict
 repair work. `recommended_applied_inspection_iris` covers already applied
 staged revisions that are useful context but not mutation targets.
 `bundle_summary.warnings` calls out sequencing hazards, including grouped
-successor reviews that should be re-checked after each apply, and
-`post_apply_recheck_revision_iris` gives scripts the affected successors.
+ready/no-op reviews on the same changed graph that should be re-checked after
+each apply, and `post_apply_recheck_revision_iris` gives scripts the affected
+revision IRIs.
+Grouped Markdown exports include a `Review Queues` section mirroring the
+apply/restage, repair, applied-inspection, and post-apply recheck buckets.
 Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
 
