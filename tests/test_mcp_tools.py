@@ -995,6 +995,10 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert staged_description_with_check["current_apply_check"][
         "already_applied_by"
     ] == result["applied_revision_iri"]
+    forbidden_summary_keys = {"patch_checks", "conflicts", "validation_results"}
+    assert forbidden_summary_keys.isdisjoint(
+        staged_description_with_check["current_apply_check"]
+    )
     assert describe_dataset_tool(
         db,
         "https://example.test/project#Messages",

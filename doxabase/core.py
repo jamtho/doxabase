@@ -2845,7 +2845,7 @@ class DoxaBase:
                 note = (
                     "The graph content digest changed since this revision was "
                     "staged. Exact changed triples are available but omitted "
-                    "from this revision list row; call "
+                    "from this summary response; call "
                     "check_staged_revision_apply() or "
                     "list_graph_revisions(drift_detail='exact') for them."
                 )

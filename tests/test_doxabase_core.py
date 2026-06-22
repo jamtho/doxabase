@@ -2262,7 +2262,7 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     )
     assert summary_drift.patch_overlap_objects == []
     assert summary_drift.revision_anchor_overlap == []
-    assert "omitted from this revision list row" in summary_drift.note
+    assert "omitted from this summary response" in summary_drift.note
     assert "are included" not in summary_drift.note
 
     exact_listing = db.list_graph_revisions(
