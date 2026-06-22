@@ -5172,6 +5172,141 @@ def test_describe_query_context_warns_on_key_prefix_repeated_in_template(
     )
 
 
+def test_query_target_storage_owned_template_warnings_do_not_bleed_to_siblings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Feeds"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#feeds_https_storage",
+        label="Feeds HTTPS access",
+        storage_protocol="rc:HTTPSStorage",
+        storage_root="https://cdn.example.test/lake",
+        path_templates=[
+            "feeds/clean/date={date}.parquet",
+            "s3://wrong-bucket/feeds/*.parquet",
+        ],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#feeds_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Feeds",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert any(
+        issue.code == "storage_protocol_location_mismatch"
+        and "path template from Feeds HTTPS access" in issue.message
+        for issue in context.issues
+    )
+    clean_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.template == "feeds/clean/date={date}.parquet"
+    )
+    assert clean_target.candidate_path == (
+        "https://cdn.example.test/lake/feeds/clean/date={date}.parquet"
+    )
+    assert clean_target.candidate_path_status == "ready"
+    assert clean_target.review_required is False
+    assert clean_target.review_reasons == []
+
+    bad_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.template == "s3://wrong-bucket/feeds/*.parquet"
+    )
+    assert bad_target.candidate_path_status == "orientation_only"
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "path template from Feeds HTTPS access" in reason.message
+        for reason in bad_target.review_reasons
+    )
+
+
+def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Fleet"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#fleet_s3_storage",
+        label="Fleet S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="fleet-lake",
+        key_prefix="warehouse",
+        path_templates=[
+            "fleet/storage-ok/dt={date}.parquet",
+            "s3://wrong-bucket/raw/fleet/*.parquet",
+            "warehouse/fleet/repeated/dt={date}.parquet",
+        ],
+        credential_reference="profile:fleet-readonly",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#fleet_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Fleet",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    clean_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.template == "fleet/storage-ok/dt={date}.parquet"
+    )
+    assert clean_target.candidate_path == (
+        "s3://fleet-lake/warehouse/fleet/storage-ok/dt={date}.parquet"
+    )
+    assert clean_target.candidate_path_status == "ready"
+    assert clean_target.review_required is False
+    assert clean_target.review_reasons == []
+
+    wrong_bucket = next(
+        target
+        for target in context.query_target_candidates
+        if target.template == "s3://wrong-bucket/raw/fleet/*.parquet"
+    )
+    assert wrong_bucket.candidate_path_status == "orientation_only"
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "bucket_name" in reason.message
+        for reason in wrong_bucket.review_reasons
+    )
+    repeated_prefix = next(
+        target
+        for target in context.query_target_candidates
+        if target.template == "warehouse/fleet/repeated/dt={date}.parquet"
+    )
+    assert repeated_prefix.candidate_path_status == "orientation_only"
+    assert any(
+        reason.code == "storage_protocol_location_mismatch"
+        and "repeat recorded key_prefix" in reason.message
+        for reason in repeated_prefix.review_reasons
+    )
+
+
 def test_query_target_candidate_template_warnings_do_not_bleed_to_siblings(
     tmp_path: Path,
 ) -> None:
@@ -6289,6 +6424,11 @@ def test_context_slice_structures_seed_profile_outside_bounded_dataset_profiles(
         evidence.iri
         for evidence in context_slice.seed_profile_observations[0].evidence
     ] == [old_profile.observation.evidence_iri]
+    assert any("warnings" in step for step in context_slice.reading_order)
+    assert any(
+        "seed_profile_observations" in step
+        for step in context_slice.reading_order
+    )
     assert context_slice.route_counts["seed_profile_observation"] == 1
     resources = {resource.iri: resource for resource in context_slice.resources}
     assert old_profile.observation.observation_iri in resources

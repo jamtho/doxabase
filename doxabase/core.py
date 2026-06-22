@@ -3991,7 +3991,11 @@ class DoxaBase:
     def _context_slice_reading_order(self) -> list[str]:
         return [
             "Start with seeds to confirm the requested entry points.",
-            "Read dataset_contexts and pattern_contexts for compact domain context.",
+            "Check warnings for caps, broad seeds, or missing lore before relying on the slice.",
+            (
+                "Read dataset_contexts, pattern_contexts, and "
+                "seed_profile_observations for compact structured context."
+            ),
             "Scan route_counts and route_legend to understand why resources were included.",
             "Read resources in order, using primary_route before secondary routes.",
             "Inspect triples or trig only when exact RDF statements or graph roles matter.",
@@ -4798,6 +4802,15 @@ class DoxaBase:
                 )
                 if issue is not None:
                     issues.append(issue)
+            access_resource = self._summary_from_description(storage_access)
+            for template in storage_access.path_templates:
+                issue = self._query_candidate_metadata_issue(
+                    template=template,
+                    source_resource=access_resource,
+                    storage_access=storage_access,
+                )
+                if issue is not None:
+                    issues.append(issue)
         return issues
 
     def _query_candidate_path_status(
@@ -5100,13 +5113,6 @@ class DoxaBase:
         elif self._is_local_filesystem_storage(access.storage_protocol):
             if scheme in {"s3", "s3a", "s3n", "http", "https"}:
                 reasons.append("storage_root looks remote for local filesystem access")
-        for template in access.path_templates:
-            reasons.extend(
-                self._candidate_storage_location_mismatch_reasons(
-                    access,
-                    template,
-                )
-            )
         return reasons
 
     def _query_planning_issues(

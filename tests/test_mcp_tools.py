@@ -1516,6 +1516,19 @@ def test_describe_context_slice_tool_preserves_profile_routes(
     assert profile["observation"]["observation_iri"] in resource_iris
     assert dataset in resource_iris
     assert result["dataset_contexts"][0]["iri"] == dataset
+    assert [
+        profile_summary["iri"]
+        for profile_summary in result["seed_profile_observations"]
+    ] == [profile["observation"]["observation_iri"]]
+    seed_profile = result["seed_profile_observations"][0]
+    assert seed_profile["profile_metrics"][0]["iri"]
+    assert seed_profile["profile_metrics"][0]["metric"]["iri"] == metric_kind
+    assert seed_profile["profile_metrics"][0]["target"]["iri"] == dataset
+    assert seed_profile["profile_metrics"][0]["value"] == "0.98"
+    assert seed_profile["profile_metrics"][0]["value_datatype"].startswith(
+        "http://www.w3.org/2001/XMLSchema#"
+    )
+    assert seed_profile["profile_metrics"][0]["value_lang"] is None
     assert result["route_counts"]["seed_profile_metric_kind"] == 1
     assert result["route_counts"]["profile_metric_observation"] == 1
     legend = {row["route"]: row for row in result["route_legend"]}

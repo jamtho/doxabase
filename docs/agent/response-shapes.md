@@ -394,8 +394,8 @@ Profile and metric seeds may include bounded same-dataset profile context
 beyond the exact seed while avoiding unrelated dataset leakage.
 `seed_profile_observations` gives structured `ProfileObservationSummary` rows
 for explicit profile-observation seeds and profile observations reached from
-profile-metric seeds, even when those rows are older than the bounded
-`dataset_contexts[].profile_observations` slice.
+observed-profile-metric or metric-kind seeds, even when those rows are older
+than the bounded `dataset_contexts[].profile_observations` slice.
 
 Each item in `context.resources` is a `ContextSliceResource`:
 

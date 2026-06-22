@@ -28,8 +28,8 @@ the vocabulary should be shared. Metric-kind seed expansion is capped and emits
 a warning when many observed metrics match; use a dataset, profile observation,
 or observed metric node seed for a narrower complete handoff.
 The `seed_profile_observations` field preserves structured profile summaries
-selected by profile-observation or profile-metric seeds even when those rows are
-older than the bounded dataset profile lists.
+selected by profile-observation, observed-profile-metric, or metric-kind seeds
+even when those rows are older than the bounded dataset profile lists.
 
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference
@@ -41,7 +41,8 @@ for more than one reason.
 Useful fields:
 
 - `reading_order`: a short static protocol for reading a slice: seeds,
-  structured contexts, routes, resources, then raw RDF when needed.
+  warnings, structured contexts including `seed_profile_observations`, routes,
+  resources, then raw RDF when needed.
 - `resources`: selected resources with labels, descriptions, types, graphs, and
   route reasons. `primary_route` is the highest-priority inclusion reason;
   `referenced_only=true` means the resource was selected as an object/reference
@@ -55,8 +56,8 @@ Useful fields:
   profile summary total and omitted counts before assuming no older profile
   observations exist.
 - `seed_profile_observations`: structured profile rows selected by
-  profile-observation or profile-metric seeds, independent of the bounded
-  dataset profile lists.
+  profile-observation, observed-profile-metric, or metric-kind seeds,
+  independent of the bounded dataset profile lists.
 - `warnings`: notes about how to read the slice. In `deep_lore`, a warning may
   explicitly say that no claims, patterns, reconsiderations, evidence, or
   revision history were found beyond ordinary map context.

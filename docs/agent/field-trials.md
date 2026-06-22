@@ -372,10 +372,11 @@ few useful gaps:
   content and full diagnostics on `describe_staged_revision`.
 - A post-rebuild trial wave found several places where structurally correct
   payloads were still easy for agents to misread. Query target metadata warnings
-  for one dataset-level complete template could bleed onto a clean sibling
-  partition candidate sharing the same storage access; candidate review reasons
-  now scope template/storage mismatches to the exact candidate while the overall
-  context still remains conservative. Batch restage trials showed
+  for one dataset-level complete template, or for one storage-owned path
+  template, could bleed onto clean sibling candidates sharing the same storage
+  access; candidate review reasons now scope template/storage mismatches to the
+  exact candidate while the overall context still remains conservative. Batch
+  restage trials showed
   `action="restaged"` is only a creation event, not an apply-ready signal:
   restaged successors may be ready, validation-failed, no-op, or stale again.
   Batch items now include `status_after`, `decision_after`,
