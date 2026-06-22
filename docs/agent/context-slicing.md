@@ -60,7 +60,10 @@ Useful fields:
   independent of the bounded dataset profile lists.
 - `warnings`: notes about how to read the slice. In `deep_lore`, a warning may
   explicitly say that no claims, patterns, reconsiderations, evidence, or
-  revision history were found beyond ordinary map context.
+  revision history were found beyond ordinary map context. When a seed type does
+  not match the selected profile, the warning names the seed type and the profile
+  to retry, for example rerunning an `rc:Pattern` seed with `pattern_brief` or
+  `deep_lore`.
 - `triples`: selected RDF triples, preserving graph roles.
 - `trig`: optional TriG text when `include_trig=true`.
 - `resource_count`, `candidate_triple_count`, `returned_triple_count`, and

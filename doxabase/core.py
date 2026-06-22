@@ -3740,7 +3740,12 @@ class DoxaBase:
                     add_profile_metric(metric_iri, seed, 1)
             else:
                 warnings.append(
-                    f"Seed '{seed}' was included directly; profile-specific expansion did not apply."
+                    self._context_slice_profile_mismatch_warning(
+                        seed,
+                        profile=profile,
+                        seed_types=seed_types,
+                        metric_kind_metric_iris=metric_kind_metric_iris,
+                    )
                 )
 
         if profile == "deep_lore":
@@ -3803,6 +3808,45 @@ class DoxaBase:
             pattern_contexts=list(pattern_contexts.values()),
             warnings=warnings,
         )
+
+    def _context_slice_profile_mismatch_warning(
+        self,
+        seed: str,
+        *,
+        profile: str,
+        seed_types: set[str],
+        metric_kind_metric_iris: list[str],
+    ) -> str:
+        base = (
+            f"Seed '{seed}' was included directly; profile-specific expansion "
+            "did not apply."
+        )
+        dataset_profiles = "profile='dataset_brief' or 'deep_lore'"
+        pattern_profiles = "profile='pattern_brief' or 'deep_lore'"
+        if self.expand_iri("rc:Pattern") in seed_types:
+            return f"{base} Seed is an rc:Pattern; rerun with {pattern_profiles}."
+        if self.expand_iri("rc:Claim") in seed_types:
+            return f"{base} Seed is an rc:Claim; rerun with {pattern_profiles}."
+        if self.expand_iri("rc:Dataset") in seed_types:
+            return f"{base} Seed is an rc:Dataset; rerun with {dataset_profiles}."
+        if self.expand_iri("rc:Table") in seed_types:
+            return f"{base} Seed is an rc:Table; rerun with {dataset_profiles}."
+        if self.expand_iri("rc:ProfileObservation") in seed_types:
+            return (
+                f"{base} Seed is an rc:ProfileObservation; rerun with "
+                f"{dataset_profiles}."
+            )
+        if self.expand_iri("rc:ObservedProfileMetric") in seed_types:
+            return (
+                f"{base} Seed is an rc:ObservedProfileMetric; rerun with "
+                f"{dataset_profiles}."
+            )
+        if metric_kind_metric_iris:
+            return (
+                f"{base} Seed is used as an rc:profileMetricKind; rerun with "
+                f"{dataset_profiles}."
+            )
+        return base
 
     def _add_revision_context_for_slice(
         self,
@@ -4649,17 +4693,28 @@ class DoxaBase:
             if key in seen_candidates:
                 return
             seen_candidates.add(key)
-            candidate_path, composition = self._query_candidate_path(
-                template,
-                storage_access,
-            )
+            if template_source == "storage_access_location":
+                candidate_path = template.strip() or None
+                composition = (
+                    "storage_root_as_candidate"
+                    if candidate_path is not None
+                    else "unresolved"
+                )
+            else:
+                candidate_path, composition = self._query_candidate_path(
+                    template,
+                    storage_access,
+                )
             review_reasons = self._query_target_review_reasons(
                 dataset,
                 issues,
                 source_resource=source_resource,
                 storage_access=access_resource,
             )
-            if storage_access is not None:
+            if (
+                storage_access is not None
+                and template_source != "storage_access_location"
+            ):
                 candidate_metadata_issue = self._query_candidate_metadata_issue(
                     template=template,
                     source_resource=source_resource,
@@ -4744,6 +4799,14 @@ class DoxaBase:
             access_resource = self._summary_from_description(storage_access)
             for template in storage_access.path_templates:
                 add_candidate(template, "storage_access", access_resource, storage_access)
+            if not template_sources and not storage_access.path_templates:
+                if storage_access.storage_root is not None:
+                    add_candidate(
+                        storage_access.storage_root,
+                        "storage_access_location",
+                        access_resource,
+                        storage_access,
+                    )
 
         return candidates
 
@@ -5145,7 +5208,10 @@ class DoxaBase:
             label=dataset.label or self._local_name(dataset.iri),
             description=dataset.description,
         )
-        if not dataset.path_templates:
+        has_storage_root_location = any(
+            access.storage_root for access in dataset.storage_accesses
+        )
+        if not dataset.path_templates and not has_storage_root_location:
             add_issue(
                 "missing_path_template",
                 "error",

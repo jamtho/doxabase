@@ -72,8 +72,12 @@ agent runtime decides how profile X resolves.
    or informational physical metadata.
 3. Start from `query_target_candidates` when you need actionable path/template
    cards. They preserve whether a template came from the dataset, a partition
-   scheme, or storage access, and they compose best-effort paths without
-   resolving endpoint profiles or credentials.
+   scheme, storage access, or a storage-root-only location, and they compose
+   best-effort paths without resolving endpoint profiles or credentials.
+   `template_source="storage_access_location"` means no path template was
+   recorded, but the storage root itself is the candidate location; treat it as
+   executable only when the root is known to name the dataset object/location
+   rather than a directory or prefix that still needs a template.
 4. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
    `storage_accesses` together when you need the raw graph facts behind a
    candidate.

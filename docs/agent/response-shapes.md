@@ -777,9 +777,10 @@ coercion, or JSON parsing caveats. These warnings do not change `readiness`.
 `query.query_target_candidates` contains derived path/template planning cards
 for callers that need a safer handoff than raw `path_templates` plus
 `storage_accesses`. Each card preserves the template provenance
-(`dataset`, `partition_scheme`, or `storage_access`), the relevant storage
-access metadata, a best-effort `candidate_path`, a `composition` value such as
-`template_as_returned`, `storage_root_joined`, `bucket_prefix_joined`,
+(`dataset`, `partition_scheme`, `storage_access`, or
+`storage_access_location`), the relevant storage access metadata, a best-effort
+`candidate_path`, a `composition` value such as `template_as_returned`,
+`storage_root_joined`, `storage_root_as_candidate`, `bucket_prefix_joined`,
 `key_prefix_joined`, or `unresolved`, and `review_reasons` copied from physical
 query-planning issues that apply to the candidate. These cards do not resolve
 credentials, endpoint profiles, or executable SQL. `review_reasons` may include
@@ -794,6 +795,11 @@ Complete path templates such as `s3://...` are checked against the declared
 storage protocol and any recorded bucket/prefix; relative templates that repeat
 the recorded key prefix are also review-only because the composed path would
 duplicate that prefix.
+When `template_source == "storage_access_location"`, no path template was
+recorded and the storage root itself is the candidate location. Treat that as
+executable only when the root is known to name the dataset object/location; if it
+is merely a directory, bucket, or prefix, add a path template before running a
+query.
 Partition-specific blockers are candidate-local only for the partition that
 owns them; sibling partition candidates should carry
 `query_context_has_other_blockers` instead of the sibling's direct

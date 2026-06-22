@@ -5240,6 +5240,52 @@ def test_describe_query_context_warns_on_key_prefix_repeated_in_template(
     )
 
 
+def test_describe_query_context_surfaces_storage_root_only_location(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage_root = str(tmp_path / "orders.parquet")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_local_storage",
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=storage_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "ready_for_query_planning"
+    assert "missing_path_template" not in {issue.code for issue in context.issues}
+    assert context.path_templates == []
+    assert len(context.query_target_candidates) == 1
+    target = context.query_target_candidates[0]
+    assert target.template == storage_root
+    assert target.template_source == "storage_access_location"
+    assert target.source_resource.iri == storage.iri
+    assert target.storage_access is not None
+    assert target.storage_access.iri == storage.iri
+    assert target.candidate_path == storage_root
+    assert target.composition == "storage_root_as_candidate"
+    assert target.candidate_path_status == "ready"
+    assert target.review_required is False
+    assert target.review_reasons == []
+
+
 def test_query_target_storage_owned_template_warnings_do_not_bleed_to_siblings(
     tmp_path: Path,
 ) -> None:
@@ -6372,6 +6418,43 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
     graph_iris = {str(graph.identifier) for graph in dataset.graphs() if len(graph)}
     assert "https://richcanopy.org/graph/map" in graph_iris
     assert "https://richcanopy.org/graph/patterns" in graph_iris
+
+
+def test_describe_context_slice_warns_when_seed_profile_mismatches(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+    db.record_map_dataset(dataset, label="Messages", is_table=True)
+    pattern = db.record_pattern(
+        summary="Messages have stable document identifiers.",
+        pattern_text="Use document identifiers when joining message exports.",
+        rationale="Exercise profile mismatch guidance for pattern seeds.",
+        pattern_targets=[dataset],
+        source_path="tests/test_doxabase_core.py",
+        source_kind="rc:DocumentationSource",
+    )
+
+    dataset_slice = db.describe_context_slice(
+        pattern.pattern_iri,
+        profile="dataset_brief",
+    )
+
+    assert dataset_slice.pattern_contexts == []
+    assert any(
+        "Seed is an rc:Pattern; rerun with profile='pattern_brief' or 'deep_lore'."
+        in warning
+        for warning in dataset_slice.warnings
+    )
+
+    pattern_slice = db.describe_context_slice(
+        pattern.pattern_iri,
+        profile="pattern_brief",
+    )
+    assert [context.iri for context in pattern_slice.pattern_contexts] == [
+        pattern.pattern_iri
+    ]
+    assert pattern_slice.warnings == []
 
 
 def test_describe_context_slice_includes_profile_observations_and_metrics(

@@ -1449,7 +1449,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)
     seed_iri = "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots"
-    record_pattern_tool(
+    pattern = record_pattern_tool(
         db,
         summary="Market snapshots carry hourly Gamma market state.",
         pattern_text="Treat market snapshots as hourly Gamma state around condition IDs.",
@@ -1499,6 +1499,19 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         and resource["primary_route"]["route"] == "seed"
         and any(route["route"] == "seed" for route in resource["routes"])
         for resource in result["resources"]
+    )
+
+    mismatch = describe_context_slice_tool(
+        db,
+        seed_iris=[pattern["pattern_iri"]],
+        profile="dataset_brief",
+        max_triples=120,
+    )
+    assert mismatch["pattern_contexts"] == []
+    assert any(
+        "Seed is an rc:Pattern; rerun with profile='pattern_brief' or 'deep_lore'."
+        in warning
+        for warning in mismatch["warnings"]
     )
 
 
