@@ -73,31 +73,34 @@ agent runtime decides how profile X resolves.
 2. Call `doxabase.describe_query_context` when you want a compact physical
    planning projection with readiness and an `issues` list for missing, risky,
    or informational physical metadata.
-3. Start from `query_target_candidates` when you need actionable path/template
-   cards. They preserve whether a template came from the dataset, a partition
-   scheme, storage access, or a storage-root-only location, and they compose
-   best-effort paths without resolving endpoint profiles or credentials.
+3. Read `query_target_decision` first. Its zero-based `candidate_index` points
+   at the candidate to inspect first, while `status` tells whether that target is
+   ready, blocked only by sibling context, directly review-only, or absent.
+4. Use `query_target_candidates` as supporting path/template cards. They preserve
+   whether a template came from the dataset, a partition scheme, storage access,
+   or a storage-root-only location, and they compose best-effort paths without
+   resolving endpoint profiles or credentials.
    `template_source="storage_access_location"` means no path template was
    recorded, but the storage root itself is the candidate location; treat it as
    executable only when `location_kind="object"` confirms the root names the
    dataset object/location rather than a directory, prefix, or connection that
    still needs a template.
-4. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
+5. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
    `storage_accesses` together when you need the raw graph facts behind a
    candidate.
-5. Check `layout_verification_status` and `layout_verification_note` on the
+6. Check `layout_verification_status` and `layout_verification_note` on the
    dataset and on relevant layout, partition, and storage resources. When a
    status is not recorded for otherwise usable path/layout metadata,
    `describe_query_context().issues` reports an informational
    `verification_status_not_recorded` issue.
-6. Combine storage root or bucket/prefix facts with the dataset path template
+7. Combine storage root or bucket/prefix facts with the dataset path template
    only when the verification status and notes make that reasonable. Complete
    templates such as `s3://...` should still match the declared storage protocol
    and any recorded bucket/prefix; if they do not, query target candidates are
    orientation-only.
-7. Check `analysis_warnings` and caveats before trusting aggregations or
+8. Check `analysis_warnings` and caveats before trusting aggregations or
    interpretations.
-8. If a query is run, record the result or failure with
+9. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
 Tiny direct Python scratch example:

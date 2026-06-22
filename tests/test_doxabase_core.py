@@ -4813,6 +4813,12 @@ def test_describe_query_context_reports_missing_planning_metadata(
     }
     assert [issue.severity for issue in context.issues[:2]] == ["error", "error"]
     assert {issue.domain for issue in context.issues} == {"query_planning"}
+    assert context.query_target_decision.status == "no_candidate"
+    assert context.query_target_decision.candidate_index is None
+    assert context.query_target_decision.candidate_path is None
+    assert context.query_target_decision.candidate_path_status is None
+    assert context.query_target_decision.direct_review_required is None
+    assert context.query_target_decision.reason_codes == []
 
 
 def test_describe_query_context_summarizes_fixture_target_candidates(
@@ -4894,6 +4900,12 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     assert target.credential_reference == "profile:orders-readonly"
     assert target.review_required is False
     assert target.review_reasons == []
+    assert context.query_target_decision.status == "ready"
+    assert context.query_target_decision.candidate_index == 0
+    assert context.query_target_decision.candidate_path == target.candidate_path
+    assert context.query_target_decision.candidate_path_status == "ready"
+    assert context.query_target_decision.direct_review_required is False
+    assert context.query_target_decision.reason_codes == []
 
 
 def test_query_target_candidates_surface_global_blockers(
@@ -4902,14 +4914,14 @@ def test_query_target_candidates_surface_global_blockers(
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     dataset = "https://example.test/project#Orders"
     local_storage = db.record_map_storage_access(
-        "https://example.test/project#orders_local_storage",
+        "https://example.test/project#orders_z_local_storage",
         label="Orders local access",
         storage_protocol="rc:LocalFilesystemStorage",
         storage_root="/warehouse",
         layout_verification_status="rc:VerifiedByListingLayout",
     )
     stale_storage = db.record_map_storage_access(
-        "https://example.test/project#orders_stale_s3_storage",
+        "https://example.test/project#orders_a_stale_s3_storage",
         label="Orders stale S3 access",
         storage_protocol="rc:S3CompatibleStorage",
         bucket_name="old-orders",
@@ -4935,6 +4947,12 @@ def test_query_target_candidates_surface_global_blockers(
     context = db.describe_query_context(dataset)
 
     assert context.readiness == "blocked_by_contradiction"
+    local_index = next(
+        index
+        for index, target in enumerate(context.query_target_candidates)
+        if target.storage_access is not None
+        and target.storage_access.iri == local_storage.iri
+    )
     local_target = next(
         target
         for target in context.query_target_candidates
@@ -4949,12 +4967,19 @@ def test_query_target_candidates_surface_global_blockers(
         and reason.severity == "error"
         for reason in local_target.review_reasons
     )
+    stale_index = next(
+        index
+        for index, target in enumerate(context.query_target_candidates)
+        if target.storage_access is not None
+        and target.storage_access.iri == stale_storage.iri
+    )
     stale_target = next(
         target
         for target in context.query_target_candidates
         if target.storage_access is not None
         and target.storage_access.iri == stale_storage.iri
     )
+    assert stale_index < local_index
     assert any(
         reason.code == "contradicted_layout"
         for reason in stale_target.review_reasons
@@ -4964,6 +4989,14 @@ def test_query_target_candidates_surface_global_blockers(
         reason.code == "contradicted_layout"
         for reason in stale_target.direct_review_reasons
     )
+    assert context.query_target_decision.status == "context_blocked"
+    assert context.query_target_decision.candidate_index == local_index
+    assert context.query_target_decision.candidate_path == local_target.candidate_path
+    assert context.query_target_decision.candidate_path_status == "orientation_only"
+    assert context.query_target_decision.direct_review_required is False
+    assert context.query_target_decision.reason_codes == [
+        "query_context_has_other_blockers"
+    ]
 
 
 def test_describe_query_context_warns_on_protocol_location_mismatch(
@@ -5472,6 +5505,14 @@ def test_describe_query_context_demotes_non_object_root_only_location(
         "storage_location_kind_needs_path_template"
     ]
     assert [reason.code for reason in target.direct_review_reasons] == [
+        "storage_location_kind_needs_path_template"
+    ]
+    assert context.query_target_decision.status == "candidate_needs_review"
+    assert context.query_target_decision.candidate_index == 0
+    assert context.query_target_decision.candidate_path == storage_root
+    assert context.query_target_decision.candidate_path_status == "orientation_only"
+    assert context.query_target_decision.direct_review_required is True
+    assert context.query_target_decision.reason_codes == [
         "storage_location_kind_needs_path_template"
     ]
 

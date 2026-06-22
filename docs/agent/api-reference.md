@@ -239,11 +239,15 @@ for one dataset. It includes the dataset summary, physical-metadata readiness,
 a `readiness_note`, an `issues` list for missing, risky, or informational
 physical metadata, `analysis_warnings` for caveats that matter after a query
 can be planned, planning notes, columns, path templates, physical layouts,
-derived `query_target_candidates`, dataset/layout verification status and note,
-storage access descriptions, partition schemes, and direct/upstream caveats. It
-does not generate SQL or resolve credentials; use it to decide whether the graph
-has enough non-secret physical context for a query attempt, then review caveats
-before trusting aggregations or interpretations. `query_target_candidates`
+derived `query_target_decision` and `query_target_candidates`, dataset/layout
+verification status and note, storage access descriptions, partition schemes,
+and direct/upstream caveats. It does not generate SQL or resolve credentials;
+use it to decide whether the graph has enough non-secret physical context for a
+query attempt, then review caveats before trusting aggregations or
+interpretations. Read `query_target_decision` first: its `candidate_index` is a
+zero-based pointer into the candidate list, and its `status` tells whether that
+candidate is ready, blocked only by sibling context, directly review-only, or
+absent. `query_target_candidates`
 preserve template provenance and compose best-effort paths from storage roots or
 bucket/prefix facts without resolving endpoint profiles or credential
 references. Candidate `review_reasons` can include overall-context blockers
@@ -262,7 +266,9 @@ instead.
 Use `direct_review_required` and `direct_review_reasons` when selecting a first
 candidate to inspect: they exclude `query_context_has_other_blockers`, so a
 candidate with no direct warning/error can still be distinguished from the stale
-or malformed sibling that blocks the overall context.
+or malformed sibling that blocks the overall context. The top-level
+`query_target_decision` applies that rule for callers; the candidates remain
+supporting cards, not an ordered recommendation contract.
 `candidate_path_status` separates path usability from composition: `ready`
 means a usable planning input, `orientation_only` means the candidate path is a
 review clue, and `unresolved` means executable location metadata is incomplete.

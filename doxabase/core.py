@@ -942,6 +942,17 @@ class QueryTargetCandidate:
 
 
 @dataclass(frozen=True)
+class QueryTargetDecision:
+    status: str
+    summary: str
+    candidate_index: int | None
+    candidate_path: str | None
+    candidate_path_status: str | None
+    direct_review_required: bool | None
+    reason_codes: list[str]
+
+
+@dataclass(frozen=True)
 class QueryPlanningContext:
     dataset: ResourceSummary
     readiness: str
@@ -954,6 +965,7 @@ class QueryPlanningContext:
     layout_verification_note: str | None
     columns: list[ColumnDescription]
     path_templates: list[str]
+    query_target_decision: QueryTargetDecision
     query_target_candidates: list[QueryTargetCandidate]
     physical_layouts: list[PhysicalLayoutDescription]
     storage_accesses: list[StorageAccessDescription]
@@ -5018,6 +5030,12 @@ class DoxaBase:
         )
         analysis_warnings = self._query_analysis_warnings(dataset)
         readiness = self._query_planning_readiness(issues)
+        query_target_candidates = self._query_target_candidates(
+            dataset,
+            dataset_summary=dataset_summary,
+            direct_path_templates=direct_path_templates,
+            issues=issues,
+        )
         return QueryPlanningContext(
             dataset=dataset_summary,
             readiness=readiness,
@@ -5045,12 +5063,8 @@ class DoxaBase:
             layout_verification_note=dataset.layout_verification_note,
             columns=dataset.columns,
             path_templates=dataset.path_templates,
-            query_target_candidates=self._query_target_candidates(
-                dataset,
-                dataset_summary=dataset_summary,
-                direct_path_templates=direct_path_templates,
-                issues=issues,
-            ),
+            query_target_decision=self._query_target_decision(query_target_candidates),
+            query_target_candidates=query_target_candidates,
             physical_layouts=dataset.physical_layouts,
             storage_accesses=dataset.storage_accesses,
             partition_schemes=dataset.partition_schemes,
@@ -5266,6 +5280,170 @@ class DoxaBase:
                     )
 
         return candidates
+
+    def _query_target_decision(
+        self,
+        candidates: list[QueryTargetCandidate],
+    ) -> QueryTargetDecision:
+        if not candidates:
+            return QueryTargetDecision(
+                status="no_candidate",
+                summary=(
+                    "No query target candidate is available; inspect issues and "
+                    "record storage/path metadata before planning a query."
+                ),
+                candidate_index=None,
+                candidate_path=None,
+                candidate_path_status=None,
+                direct_review_required=None,
+                reason_codes=[],
+            )
+
+        indexed_candidates = list(enumerate(candidates))
+        ready_candidate = next(
+            (
+                item
+                for item in indexed_candidates
+                if item[1].candidate_path_status == "ready"
+                and not item[1].review_required
+            ),
+            None,
+        )
+        if ready_candidate is not None:
+            index, candidate = ready_candidate
+            return self._query_target_decision_for_candidate(
+                candidate,
+                index=index,
+                status="ready",
+                summary=(
+                    f"Candidate {index} is ready for query planning; review "
+                    "analysis_warnings and caveats before trusting results."
+                ),
+            )
+
+        context_blocked_candidates = [
+            item
+            for item in indexed_candidates
+            if item[1].review_required and not item[1].direct_review_required
+        ]
+        if context_blocked_candidates:
+            index, candidate = min(
+                context_blocked_candidates,
+                key=self._query_target_candidate_decision_rank,
+            )
+            return self._query_target_decision_for_candidate(
+                candidate,
+                index=index,
+                status="context_blocked",
+                summary=(
+                    f"Candidate {index} has no direct warning or error, but "
+                    "the overall query context has blockers elsewhere; inspect "
+                    "issues before executing it."
+                ),
+            )
+
+        index, candidate = min(
+            indexed_candidates,
+            key=self._query_target_candidate_decision_rank,
+        )
+        return self._query_target_decision_for_candidate(
+            candidate,
+            index=index,
+            status="candidate_needs_review",
+            summary=(
+                f"No candidate is ready; candidate {index} is the first "
+                "review target to inspect before executable query use."
+            ),
+        )
+
+    def _query_target_decision_for_candidate(
+        self,
+        candidate: QueryTargetCandidate,
+        *,
+        index: int,
+        status: str,
+        summary: str,
+    ) -> QueryTargetDecision:
+        return QueryTargetDecision(
+            status=status,
+            summary=summary,
+            candidate_index=index,
+            candidate_path=candidate.candidate_path,
+            candidate_path_status=candidate.candidate_path_status,
+            direct_review_required=candidate.direct_review_required,
+            reason_codes=self._query_target_decision_reason_codes(
+                candidate,
+                status=status,
+            ),
+        )
+
+    def _query_target_candidate_decision_rank(
+        self,
+        item: tuple[int, QueryTargetCandidate],
+    ) -> tuple[int, int, int, int]:
+        index, candidate = item
+        path_status_rank = {
+            "ready": 0,
+            "orientation_only": 1,
+            "unresolved": 2,
+        }.get(candidate.candidate_path_status, 3)
+        blocking_reasons = self._query_target_blocking_reasons(
+            candidate.direct_review_reasons
+        ) or self._query_target_blocking_reasons(candidate.review_reasons)
+        severity_rank = self._query_target_blocking_severity_rank(blocking_reasons)
+        return (path_status_rank, severity_rank, len(blocking_reasons), index)
+
+    def _query_target_decision_reason_codes(
+        self,
+        candidate: QueryTargetCandidate,
+        *,
+        status: str,
+    ) -> list[str]:
+        if status == "context_blocked":
+            reasons = [
+                reason
+                for reason in self._query_target_blocking_reasons(
+                    candidate.review_reasons
+                )
+                if reason.code == "query_context_has_other_blockers"
+            ]
+        elif status == "candidate_needs_review":
+            reasons = self._query_target_blocking_reasons(
+                candidate.direct_review_reasons
+            )
+        else:
+            reasons = self._query_target_blocking_reasons(candidate.review_reasons)
+        if not reasons:
+            reasons = self._query_target_blocking_reasons(candidate.review_reasons)
+
+        codes: list[str] = []
+        seen: set[str] = set()
+        for reason in reasons:
+            if reason.code in seen:
+                continue
+            seen.add(reason.code)
+            codes.append(reason.code)
+        return codes
+
+    def _query_target_blocking_reasons(
+        self,
+        reasons: Iterable[QueryPlanningIssue],
+    ) -> list[QueryPlanningIssue]:
+        return [
+            reason
+            for reason in reasons
+            if reason.severity in {"error", "warning"}
+        ]
+
+    def _query_target_blocking_severity_rank(
+        self,
+        reasons: list[QueryPlanningIssue],
+    ) -> int:
+        if any(reason.severity == "error" for reason in reasons):
+            return 2
+        if any(reason.severity == "warning" for reason in reasons):
+            return 1
+        return 0
 
     def _query_target_direct_review_reasons(
         self,

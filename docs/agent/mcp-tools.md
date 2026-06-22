@@ -181,15 +181,17 @@ Returns a compact read-only projection for query planning around one dataset:
 dataset summary, physical-metadata readiness, `readiness_note`, an `issues`
 list for missing, risky, or informational physical metadata, `analysis_warnings`
 for caveats that matter after a query can be planned, planning notes, columns,
-path templates, derived `query_target_candidates`, physical layouts, storage
-access descriptions, partition schemes, dataset/layout verification status and
-note, and caveats. Use it before drafting DuckDB/S3/local-file queries when you
-need to decide whether graph metadata is executable or only useful for
-orientation, especially when you need physical metadata and warnings without the
-full relationship/pattern handoff in `describe_dataset`. Candidate
+path templates, derived `query_target_decision` and `query_target_candidates`,
+physical layouts, storage access descriptions, partition schemes,
+dataset/layout verification status and note, and caveats. Use it before
+drafting DuckDB/S3/local-file queries when you need to decide whether graph
+metadata is executable or only useful for orientation, especially when you need
+physical metadata and warnings without the full relationship/pattern handoff in
+`describe_dataset`. Read `query_target_decision` first; its zero-based
+`candidate_index` points into `query_target_candidates`. Candidate
 `review_required` includes whole-context blockers; `direct_review_required`
-ignores sibling blockers and is the faster way to spot which target candidates
-have their own storage/path/layout problem.
+ignores sibling blockers and shows which target candidates have their own
+storage/path/layout problem.
 
 `doxabase.describe_context_slice`
 

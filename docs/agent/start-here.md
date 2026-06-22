@@ -132,6 +132,12 @@ uv run pytest
 uv run python tools/validate_rdf.py
 ```
 
+Before a query-planning fixture trial against the active MCP capsule, check
+`graph_overview.key_counts` for storage access counts. If AIS or Polymarket
+tables are present but `storage_accesses` is zero, treat that capsule as stale
+or intentionally reduced; use a fresh scratch fixture load before drawing
+product conclusions about query-target behavior.
+
 For Codex sub-agent field trials, prefer the repo virtualenv directly:
 
 ```bash

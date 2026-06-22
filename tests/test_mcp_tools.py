@@ -1313,6 +1313,18 @@ def test_describe_query_context_tool_returns_planning_projection(
     assert result["query_target_candidates"][0]["candidate_path"] == (
         "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
     )
+    assert result["query_target_decision"]["status"] == "candidate_needs_review"
+    assert result["query_target_decision"]["candidate_index"] == 0
+    assert result["query_target_decision"]["candidate_path"] == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
+    assert result["query_target_decision"]["candidate_path_status"] == (
+        "orientation_only"
+    )
+    assert result["query_target_decision"]["direct_review_required"] is True
+    assert result["query_target_decision"]["reason_codes"] == [
+        "layout_needs_verification"
+    ]
     assert result["query_target_candidates"][0]["composition"] == "storage_root_joined"
     assert result["query_target_candidates"][0]["candidate_path_status"] == (
         "orientation_only"
@@ -1358,6 +1370,9 @@ def test_describe_query_context_tool_matches_python_target_candidates(
 
         assert tool_payload["query_target_candidates"] == python_payload[
             "query_target_candidates"
+        ]
+        assert tool_payload["query_target_decision"] == python_payload[
+            "query_target_decision"
         ]
 
 
@@ -1472,6 +1487,10 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     assert local_target["location_kind"] == "object"
     assert local_target["candidate_path"] == local_root
     assert local_target["candidate_path_status"] == "ready"
+    assert local_result["query_target_decision"]["status"] == "ready"
+    assert local_result["query_target_decision"]["candidate_index"] == 0
+    assert local_result["query_target_decision"]["candidate_path"] == local_root
+    assert local_result["query_target_decision"]["reason_codes"] == []
 
     assert s3_result["readiness"] == "ready_for_query_planning"
     assert s3_result["path_templates"] == []
@@ -1484,6 +1503,10 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     assert s3_target["key_prefix"] is None
     assert s3_target["requires_endpoint_profile"] is True
     assert s3_target["review_reasons"] == []
+    assert s3_result["query_target_decision"]["status"] == "ready"
+    assert s3_result["query_target_decision"]["candidate_index"] == 0
+    assert s3_result["query_target_decision"]["candidate_path"] == s3_root
+    assert s3_result["query_target_decision"]["reason_codes"] == []
 
 
 def test_describe_query_context_tool_demotes_directory_root_only_target(
@@ -1532,6 +1555,16 @@ def test_describe_query_context_tool_demotes_directory_root_only_target(
     assert target["direct_review_reasons"][0]["code"] == (
         "storage_location_kind_needs_path_template"
     )
+    assert result["query_target_decision"]["status"] == "candidate_needs_review"
+    assert result["query_target_decision"]["candidate_index"] == 0
+    assert result["query_target_decision"]["candidate_path"] == storage_root
+    assert result["query_target_decision"]["candidate_path_status"] == (
+        "orientation_only"
+    )
+    assert result["query_target_decision"]["direct_review_required"] is True
+    assert result["query_target_decision"]["reason_codes"] == [
+        "storage_location_kind_needs_path_template"
+    ]
 
 
 def test_describe_query_context_tool_keeps_directory_root_with_template_ready(
@@ -1579,6 +1612,12 @@ def test_describe_query_context_tool_keeps_directory_root_with_template_ready(
     assert target["review_reasons"] == []
     assert target["direct_review_required"] is False
     assert target["direct_review_reasons"] == []
+    assert result["query_target_decision"]["status"] == "ready"
+    assert result["query_target_decision"]["candidate_index"] == 0
+    assert result["query_target_decision"]["candidate_path"] == (
+        f"{storage_root}/orders/*.parquet"
+    )
+    assert result["query_target_decision"]["reason_codes"] == []
 
 
 def test_describe_dataset_tool_exposes_aggregation_context(tmp_path: Path) -> None:

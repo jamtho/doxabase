@@ -242,7 +242,11 @@ few useful gaps:
   `describe_query_context`. Use `operational_warnings` for dataset-owned
   physical metadata issues, but switch to `describe_query_context` for
   candidate-derived path/composition issues and direct candidate review
-  reasons. Inspect `predicate_hints` on assertion-support misses when a guessed
+  reasons. A follow-up query-planning trial found the active MCP capsule can lag
+  fixture files; if AIS/Polymarket tables are present but `storage_accesses` is
+  zero, mark that run as stale/reduced or reload fixtures into a scratch
+  capsule before drawing product conclusions. Inspect `predicate_hints` on
+  assertion-support misses when a guessed
   predicate such as `rc:hasPartitionScheme` is absent but a nearby shape like
   `rc:partitionedBy` is present. A follow-up regression confirmed this route
   works and suggested adding `predicate_curie` plus sharper absence-note wording

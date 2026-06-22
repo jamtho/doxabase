@@ -795,6 +795,7 @@ query.layout_verification_status
 query.layout_verification_note
 query.columns
 query.path_templates
+query.query_target_decision
 query.query_target_candidates
 query.physical_layouts
 query.storage_accesses
@@ -819,6 +820,27 @@ metadata exists but no explicit verification status has been recorded.
 `query.analysis_warnings` returns caveat-shaped interpretation warnings that
 matter after a query can be planned, such as deduplication, mixed payload
 coercion, or JSON parsing caveats. These warnings do not change `readiness`.
+
+Read `query.query_target_decision` before choosing from
+`query_target_candidates`. It is a derived handoff hint, not a new graph fact.
+`status` is one of `ready`, `context_blocked`, `candidate_needs_review`, or
+`no_candidate`. `candidate_index` is a zero-based index into
+`query_target_candidates` when a candidate was selected. `reason_codes` contains
+the warning/error issue codes behind the decision; inspect the selected
+candidate's full `review_reasons` and `direct_review_reasons` for messages and
+info-only notes.
+
+Each query target decision has:
+
+```python
+decision.status
+decision.summary
+decision.candidate_index
+decision.candidate_path
+decision.candidate_path_status
+decision.direct_review_required
+decision.reason_codes
+```
 
 `query.query_target_candidates` contains derived path/template planning cards
 for callers that need a safer handoff than raw `path_templates` plus
