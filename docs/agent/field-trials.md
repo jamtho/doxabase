@@ -370,6 +370,32 @@ few useful gaps:
   repeated detail calls for basic source context. Applied graph-revision
   descriptions now include compact `applied_source` cards while leaving patch
   content and full diagnostics on `describe_staged_revision`.
+- A post-rebuild trial wave found several places where structurally correct
+  payloads were still easy for agents to misread. Query target metadata warnings
+  for one dataset-level complete template could bleed onto a clean sibling
+  partition candidate sharing the same storage access; candidate review reasons
+  now scope template/storage mismatches to the exact candidate while the overall
+  context still remains conservative. Batch restage trials showed
+  `action="restaged"` is only a creation event, not an apply-ready signal:
+  restaged successors may be ready, validation-failed, no-op, or stale again.
+  Batch items now include `status_after`, `decision_after`,
+  `stale_resolution_state_after`, blockers, and effective triple deltas for
+  `current_revision_iri`, and bundle summaries include validation-failed
+  successors by current apply status. A chain trial then showed that an
+  already-handled source can point to a current successor that is itself stale;
+  this now reports `restaged_successor_stale_unresolved` and routes mutation
+  review to the current successor. Export readability trials also showed that
+  repeated bare `describe_staged_revision(...)` calls hid the difference
+  between "review stale source" and "inspect current refreshed successor";
+  suggested actions now carry `action_label`, and Markdown renders those labels
+  while keeping `suggested_next_calls` as back-compatible call strings.
+- A context-slice/profile-seed trial showed that a directly seeded old profile
+  observation can be outside a dataset context's bounded recent profile lists,
+  even though the resource and evidence are present in the slice. Context slices
+  now expose `seed_profile_observations` for explicit profile-observation seeds
+  and profile observations reached from profile-metric seeds, preserving the
+  exact handoff row without inflating default `describe_dataset()` profile
+  lists or mutating `profile_summary` evidence rollups.
 - A profile-metric-target trial confirmed that optional `target` values let one
   dataset-level profile carry both whole-profile scalar metrics and narrower
   column-targeted metrics without promoting either into map facts or
