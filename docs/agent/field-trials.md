@@ -397,6 +397,19 @@ few useful gaps:
   split the broad mutation-review queue into
   `recommended_apply_or_restage_review_iris` and
   `recommended_repair_review_iris`.
+- A staged-drift readability trial showed that `patch_object_overlap` can sound
+  stronger than it is when the only object overlap is broad vocabulary such as
+  `rc:Dataset`. Apply checks now use `broad_patch_object_overlap` for that weak
+  case while preserving stronger object/anchor overlap labels. A validation
+  wording check found no need to rename API fields or Markdown headings:
+  `validation_results` remains the JSON field, and docs clarify that prose
+  "diagnostics" means those same SHACL result records.
+- Query/context smoke trials found two handoff traps. A storage access whose
+  `storage_root` is itself the dataset location now surfaces a
+  `storage_access_location` query target candidate instead of only reporting a
+  missing path template. Context slices also now warn with a concrete rerun
+  profile when a seed type does not match the chosen profile, for example an
+  `rc:Pattern` seed sent through `dataset_brief`.
 - A context-slice/profile-seed trial showed that a directly seeded old profile
   observation can be outside a dataset context's bounded recent profile lists,
   even though the resource and evidence are present in the slice. Context slices
