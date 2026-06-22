@@ -116,6 +116,14 @@ db.record_map_dataset(
 after = db.list_graph_revisions(include_apply_checks=True)
 ```
 
+When you already know the queue you need, narrow the list instead of scanning a
+mixed history response. For example, use `record_kind="applied_event"` for
+applied staged events, `application_status="ready"` for mechanically ready
+staged proposals, or `stale_resolution_state="stale_unresolved"` for stale
+sources that still need recovery. Filters on `application_status` and
+`stale_resolution_state` automatically compute apply checks for staged patch
+rows.
+
 Read `application_status`, `application_decision`, `application_can_apply`,
 `application_summary`, `application_blocking_reasons`, and
 structured `suggested_next_actions` first. Their `action_label`, `arguments`,

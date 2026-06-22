@@ -85,7 +85,11 @@ knowing which proposals are ready, stale, or already applied. Apply checks are
 only populated for revisions with graph patch payloads. Rows include
 `record_kind`, `has_patch_payload`, `patch_count`, revision relation links,
 selected apply-check blockers/drift summaries, and review-first suggested next
-actions. `drift_detail="summary"` is the default and omits exact changed-triple
+actions. Use `record_kind`, `application_status`, and
+`stale_resolution_state` filters to ask directly for applied events, ready
+staged proposals, unresolved stale sources, or handled stale sources. Status and
+stale-state filters automatically compute apply checks. `drift_detail="summary"`
+is the default and omits exact changed-triple
 arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or
 call `check_staged_revision_apply` when you need the actual changed triples.

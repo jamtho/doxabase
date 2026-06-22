@@ -759,6 +759,9 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["include_apply_checks"] is True
     assert result["drift_detail"] == "summary"
     assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
+    assert result["record_kind"] is None
+    assert result["application_status"] is None
+    assert result["stale_resolution_state"] is None
     assert result["revisions"][0]["iri"] == staged["revision_iri"]
     assert result["revisions"][0]["record_kind"] == "staged_patch"
     assert result["revisions"][0]["has_patch_payload"] is True
@@ -767,6 +770,26 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["revisions"][0]["application_decision"] == "review_then_apply"
     assert result["revisions"][0]["application_can_apply"] is True
     assert result["revisions"][0]["suggested_next_actions"]
+
+    ready_result = list_graph_revisions_tool(
+        db,
+        revision_type="rc:StagedRevision",
+        application_status="ready",
+    )
+
+    assert ready_result["include_apply_checks"] is True
+    assert ready_result["application_status"] == "ready"
+    assert ready_result["count"] == 1
+    assert ready_result["revisions"][0]["iri"] == staged["revision_iri"]
+
+    staged_patch_result = list_graph_revisions_tool(
+        db,
+        record_kind="staged_patch",
+    )
+
+    assert staged_patch_result["record_kind"] == "staged_patch"
+    assert staged_patch_result["count"] == 1
+    assert staged_patch_result["revisions"][0]["iri"] == staged["revision_iri"]
 
 
 def test_stage_map_assertion_change_tool_returns_json_like_payload(

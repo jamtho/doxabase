@@ -223,6 +223,9 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         graph: str | None = "history",
         include_apply_checks: bool = False,
         drift_detail: str = "summary",
+        record_kind: str | None = None,
+        application_status: str | None = None,
+        stale_resolution_state: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> dict[str, Any]:
@@ -234,6 +237,9 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             graph=graph,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
+            record_kind=record_kind,
+            application_status=application_status,
+            stale_resolution_state=stale_resolution_state,
             limit=limit,
             offset=offset,
         )

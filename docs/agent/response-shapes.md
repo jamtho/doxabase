@@ -1047,6 +1047,9 @@ revisions.count
 revisions.limit
 revisions.offset
 revisions.revision_type
+revisions.record_kind
+revisions.application_status
+revisions.stale_resolution_state
 revisions.include_apply_checks
 revisions.drift_detail
 ```

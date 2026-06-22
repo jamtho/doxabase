@@ -3555,6 +3555,9 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     )
     assert staged_listing.count == 1
     assert staged_listing.drift_detail == "summary"
+    assert staged_listing.record_kind is None
+    assert staged_listing.application_status is None
+    assert staged_listing.stale_resolution_state is None
     assert staged_listing.revisions[0].iri == staged.revision_iri
     assert staged_listing.revisions[0].record_kind == "staged_patch"
     assert staged_listing.revisions[0].revision_type == RC + "StagedRevision"
@@ -3645,6 +3648,28 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         drift_by_iri[restaged.revision_iri].stale_resolution_state
         == "restaged_successor_ready"
     )
+
+    ready_listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        application_status="ready",
+    )
+    assert ready_listing.include_apply_checks is True
+    assert ready_listing.application_status == "ready"
+    assert [item.iri for item in ready_listing.revisions] == [restaged.revision_iri]
+
+    handled_listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        stale_resolution_state="stale_handled_by_restage",
+    )
+    assert handled_listing.include_apply_checks is True
+    assert handled_listing.stale_resolution_state == "stale_handled_by_restage"
+    assert [item.iri for item in handled_listing.revisions] == [stale.revision_iri]
+
+    applied_events = db.list_graph_revisions(record_kind="applied_event")
+    assert applied_events.record_kind == "applied_event"
+    assert [item.iri for item in applied_events.revisions] == [
+        applied.applied_revision_iri
+    ]
 
 
 def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:

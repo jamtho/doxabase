@@ -528,6 +528,11 @@ presence/count, relation links such as `applied_by`, `applies_staged_revision`,
 `current_restaged_by`, plus `stale_resolution_state` and optional staged
 apply-check status, summary, recommended resolution, validation-skipped reason,
 blockers, drift summaries, and suggested actions when `include_apply_checks=True`.
+Use `record_kind`, `application_status`, and `stale_resolution_state` filters to
+find rows such as applied events, mechanically ready staged proposals, unresolved
+stale sources, or handled stale sources without hand-filtering the full list.
+Filtering by `application_status` or `stale_resolution_state` automatically
+computes apply checks for patch-backed revisions.
 `drift_detail="summary"` is the default list mode: snapshot drift rows keep
 counts, digests, drift relevance, overlap arrays, and added/removed exact-change
 counts but omit exact changed-triple arrays. Use `drift_detail="exact"` when you

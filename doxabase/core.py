@@ -749,6 +749,9 @@ class GraphRevisionList:
     limit: int
     offset: int
     revision_type: str | None
+    record_kind: str | None
+    application_status: str | None
+    stale_resolution_state: str | None
     include_apply_checks: bool
     drift_detail: str
 
@@ -2576,6 +2579,9 @@ class DoxaBase:
         graph: str | None = "history",
         include_apply_checks: bool = False,
         drift_detail: TypingLiteral["summary", "exact"] = "summary",
+        record_kind: str | None = None,
+        application_status: str | None = None,
+        stale_resolution_state: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> GraphRevisionList:
@@ -2583,6 +2589,13 @@ class DoxaBase:
             raise DoxaBaseError("drift_detail must be 'summary' or 'exact'")
         self._ensure_non_negative("limit", limit)
         self._ensure_non_negative("offset", offset)
+        record_kind_filter = record_kind
+        application_status_filter = application_status
+        stale_resolution_state_filter = stale_resolution_state
+        include_apply_checks = include_apply_checks or (
+            application_status_filter is not None
+            or stale_resolution_state_filter is not None
+        )
         data_graphs = self._expand_graphs([graph] if graph else None)
         ontology_graphs = self._expand_graphs(["ontology"])
         revision_type_filter = (
@@ -2679,14 +2692,37 @@ class DoxaBase:
                 graphs=data_graphs,
             )
 
+            item_record_kind = self._graph_revision_record_kind(
+                item_revision_type,
+                has_patch_payload=bool(patch_iris),
+                applies_staged_revision=applies_staged_revision,
+            )
+            item_stale_resolution_state = self._stale_resolution_state(
+                status=application_status,
+                has_patch_payload=bool(patch_iris),
+                restaged_from=restaged_from,
+                restaged_by=restaged_by,
+            )
+            if (
+                record_kind_filter is not None
+                and item_record_kind != record_kind_filter
+            ):
+                continue
+            if (
+                application_status_filter is not None
+                and application_status != application_status_filter
+            ):
+                continue
+            if (
+                stale_resolution_state_filter is not None
+                and item_stale_resolution_state != stale_resolution_state_filter
+            ):
+                continue
+
             items.append(
                 GraphRevisionListItem(
                     iri=revision_iri,
-                    record_kind=self._graph_revision_record_kind(
-                        item_revision_type,
-                        has_patch_payload=bool(patch_iris),
-                        applies_staged_revision=applies_staged_revision,
-                    ),
+                    record_kind=item_record_kind,
                     summary=self._first_object(data_graphs, revision_iri, "rc:summary"),
                     revision_type=item_revision_type,
                     revision_type_label=(
@@ -2737,12 +2773,7 @@ class DoxaBase:
                     restaged_from=restaged_from,
                     restaged_by=restaged_by,
                     current_restaged_by=current_restaged_by,
-                    stale_resolution_state=self._stale_resolution_state(
-                        status=application_status,
-                        has_patch_payload=bool(patch_iris),
-                        restaged_from=restaged_from,
-                        restaged_by=restaged_by,
-                    ),
+                    stale_resolution_state=item_stale_resolution_state,
                     application_status=application_status,
                     application_decision=application_decision,
                     application_can_apply=application_can_apply,
@@ -2778,6 +2809,9 @@ class DoxaBase:
             limit=limit,
             offset=offset,
             revision_type=revision_type_filter,
+            record_kind=record_kind_filter,
+            application_status=application_status_filter,
+            stale_resolution_state=stale_resolution_state_filter,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
         )
