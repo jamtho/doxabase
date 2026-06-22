@@ -270,7 +270,11 @@ few useful gaps:
   explicit: shared evidence fields are only defaults, while `shared_evidence_iri`
   links the dataset profile and column profiles to one profiler-run evidence
   resource. Query-planning `error` issues in profile-only capsules should be
-  read as missing physical metadata, not failed profile recording.
+  read as missing physical metadata, not failed profile recording. Later
+  synthesis trials showed that the default bundle pattern should remain
+  dataset-profile-only for compatibility, but run-level syntheses are common
+  enough to justify `pattern_support_scope="all_profiles"` when the free-text
+  pattern should be supported by the dataset and every bundled column profile.
 - A follow-up shared-evidence trial confirmed that agents can now record one
   profiler-run evidence resource across dataset, mapped-column, and
   unmapped-column profiles. It also showed that quick returned-profile counts

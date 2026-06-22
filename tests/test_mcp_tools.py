@@ -1986,6 +1986,13 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         map_label="Orders",
         is_table=True,
         shared_evidence_iri=shared_evidence,
+        pattern_summary="Orders profile bundle supports a run-level synthesis.",
+        pattern_text=(
+            "The dataset profile and status column profile came from the same "
+            "sampled Orders profiling pass."
+        ),
+        pattern_rationale="Both returned profile observations link to shared evidence.",
+        pattern_support_scope="all_profiles",
         column_defaults={"update_map_column": False},
         column_profiles=[
             {
@@ -2005,6 +2012,9 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["shared_evidence_iri"] == shared_evidence
     assert result["dataset_profile"]["observation"]["observation_type"] == "profile"
     assert result["dataset_profile"]["map_dataset"]["iri"] == table
+    assert result["dataset_profile"]["pattern"]["pattern_iri"].startswith(
+        "https://richcanopy.org/doxabase/generated/pattern/"
+    )
     assert len(result["column_profiles"]) == 1
     assert result["column_profiles"][0]["column_iri"] == status_column
     assert result["column_profiles"][0]["map_column"] is None
@@ -2050,6 +2060,14 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         result["dataset_profile"]["observation"]["observation_iri"],
         result["column_profiles"][0]["observation"]["observation_iri"],
     }
+    bundle_pattern = describe_pattern_tool(
+        db,
+        result["dataset_profile"]["pattern"]["pattern_iri"],
+    )
+    assert {item["iri"] for item in bundle_pattern["supporting_observations"]} == set(
+        profile_run["profile_observation_iris"]
+    )
+    assert bundle_pattern["evidence"][0]["iri"] == shared_evidence
     pattern = record_pattern_tool(
         db,
         summary="Orders profile bundle supports a cross-profile synthesis.",

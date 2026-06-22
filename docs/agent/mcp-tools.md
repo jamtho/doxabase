@@ -278,11 +278,13 @@ without walking every observation.
 Use `describe_profile_run(dataset_iri, shared_evidence_iri)` when the full run
 may be wider than the bounded dataset profile lists. If the bundle's
 `pattern_summary`/`pattern_text` arguments are supplied, the helper-created
-pattern is supported by the dataset profile observation only. For a synthesis
-over the dataset and column profiles together, call `record_pattern` after the
-bundle using the dataset profile observation IRI plus every
-`column_profiles[].observation.observation_iri`, and pass the shared
-`evidence_iri` to reuse the profile-run evidence.
+pattern is supported by the dataset profile observation only by default. Set
+`pattern_support_scope="all_profiles"` when the helper-created pattern should
+be supported by the dataset profile and every bundled column profile. For a
+synthesis that also needs claims or hand-picked support, call `record_pattern`
+after the bundle using `describe_profile_run(...).profile_observation_iris`
+plus the extra support, and pass the shared `evidence_iri` to reuse the
+profile-run evidence.
 
 `doxabase.record_column_profile`
 

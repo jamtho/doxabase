@@ -360,11 +360,12 @@ observation-only. Each `column_profiles[]` item accepts the same fields as
 shared evidence IRIs, profile run candidates, and a handoff note that can help a
 later agent recognise one profiler run without walking every observation.
 `describe_profile_run(dataset_iri, shared_evidence_iri)` retrieves that run
-directly. Bundle-created patterns support the dataset profile observation only;
-for a synthesis over dataset and column profiles together, collect
-`bundle.dataset_profile.observation.observation_iri` and each
-`bundle.column_profiles[].observation.observation_iri`, then call
-`record_pattern(..., supporting_observations=[...], evidence_iri=shared_evidence_iri)`.
+directly. Bundle-created patterns support the dataset profile observation only
+by default. Set `pattern_support_scope="all_profiles"` when the pattern should
+be supported by the dataset profile plus every bundled column profile. For a
+synthesis that also needs claims or a hand-picked support set, collect
+`describe_profile_run(...).profile_observation_iris` and call
+`record_pattern(..., supporting_observations=[...], supporting_claims=[...], evidence_iri=shared_evidence_iri)`.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as

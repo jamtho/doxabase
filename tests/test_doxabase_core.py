@@ -8205,6 +8205,122 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert validation.conforms, validation.report_text
 
 
+def test_record_profile_bundle_pattern_support_scope_all_profiles(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    amount_column = "https://example.test/project#OrdersAmount"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    result = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled with row count and column sketches.",
+        evidence_summary="Synthetic DuckDB profiling pass.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        row_count=100,
+        map_label="Orders",
+        is_table=True,
+        pattern_summary="Orders profile pass supports a run-level synthesis.",
+        pattern_text=(
+            "The dataset profile and column profiles came from one Orders "
+            "profiling pass."
+        ),
+        pattern_rationale=(
+            "The row count, status distribution, and amount mean all link to "
+            "the same shared run evidence."
+        ),
+        pattern_support_scope="all_profiles",
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Top status values were observed in the profile.",
+                "distinct_count": 3,
+            },
+            {
+                "column_iri": amount_column,
+                "column_name": "amount",
+                "summary": "Order amount was profiled.",
+                "profile_metrics": [{"metric": "rc:MeanValue", "value": 42.5}],
+            },
+        ],
+    )
+
+    assert result.dataset_profile.pattern is not None
+    pattern = db.describe_pattern(result.dataset_profile.pattern.pattern_iri)
+    assert [target.iri for target in pattern.pattern_targets] == [dataset]
+    assert [target.iri for target in pattern.map_implications] == [dataset]
+    assert [evidence.iri for evidence in pattern.evidence] == [shared_evidence]
+    assert {item.iri for item in pattern.supporting_observations} == {
+        result.dataset_profile.observation.observation_iri,
+        *[
+            column_profile.observation.observation_iri
+            for column_profile in result.column_profiles
+        ],
+    }
+
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
+def test_record_profile_bundle_default_pattern_scope_is_dataset_profile(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+
+    result = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled with row count and column sketches.",
+        evidence_summary="Synthetic DuckDB profiling pass.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri="https://example.test/project#OrdersProfileRunEvidence",
+        row_count=100,
+        pattern_summary="Orders dataset profile supports a dataset synthesis.",
+        pattern_text="The dataset profile row count came from the profile pass.",
+        pattern_rationale=(
+            "Default bundle pattern scope preserves the historical dataset-only "
+            "support behavior."
+        ),
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Top status values were observed in the profile.",
+                "distinct_count": 3,
+            }
+        ],
+    )
+
+    assert result.dataset_profile.pattern is not None
+    pattern = db.describe_pattern(result.dataset_profile.pattern.pattern_iri)
+    assert [item.iri for item in pattern.supporting_observations] == [
+        result.dataset_profile.observation.observation_iri
+    ]
+
+
+def test_record_profile_bundle_rejects_unknown_pattern_support_scope(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="pattern_support_scope must be one of",
+    ):
+        db.record_profile_bundle(
+            "https://example.test/project#Orders",
+            dataset_summary="Orders were profiled.",
+            pattern_support_scope="whole_run",
+        )
+
+
 def test_profile_summary_surfaces_run_candidates_in_mixed_profile_history(
     tmp_path: Path,
 ) -> None:

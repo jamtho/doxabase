@@ -464,6 +464,13 @@ The bundle helper does not create a separate RDF bundle node; it is an API
 convenience over the normal profile records. `shared_evidence_iri`, when
 supplied, makes the returned profile observations point at the same evidence
 IRI unless a column item overrides it with its own `evidence_iri`.
+When bundle pattern fields are supplied, the default
+`pattern_support_scope="dataset_profile"` keeps the helper-created pattern
+supported by the dataset profile observation only. Use
+`pattern_support_scope="all_profiles"` for a run-level pattern supported by the
+dataset profile plus every bundled column profile. If the synthesis also needs
+claims or hand-picked observations, call `describe_profile_run(...)` and pass
+`profile_observation_iris` plus the extra support to `record_pattern` manually.
 
 Copyable bundle shape:
 
@@ -480,6 +487,10 @@ bundle = db.record_profile_bundle(
     map_label="Orders",
     is_table=True,
     shared_evidence_iri="https://example.test/project#OrdersProfileRunEvidence",
+    pattern_summary="Orders profile pass links dataset and column measurements.",
+    pattern_text="The row count, status distinct count, and amount nullability came from one profiling pass.",
+    pattern_rationale="Every bundled profile observation links to the same shared run evidence.",
+    pattern_support_scope="all_profiles",
     column_defaults={"update_map_column": False},
     column_profiles=[
         {

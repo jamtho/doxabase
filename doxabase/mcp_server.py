@@ -566,6 +566,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         pattern_status: str | None = "rc:Tentative",
         pattern_stability: str | None = "rc:EmergingPattern",
         pattern_map_implications: list[str] | None = None,
+        pattern_support_scope: str = "dataset_profile",
         shared_evidence_iri: str | None = None,
         column_defaults: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -599,6 +600,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             pattern_map_implications=pattern_map_implications,
+            pattern_support_scope=pattern_support_scope,
             shared_evidence_iri=shared_evidence_iri,
             column_defaults=column_defaults,
         )

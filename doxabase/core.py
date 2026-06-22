@@ -7643,10 +7643,15 @@ class DoxaBase:
         pattern_status: str | None = "rc:Tentative",
         pattern_stability: str | None = "rc:EmergingPattern",
         pattern_map_implications: Iterable[str] | str | None = None,
+        pattern_support_scope: TypingLiteral["dataset_profile", "all_profiles"]
+        | str = "dataset_profile",
         shared_evidence_iri: str | None = None,
         column_defaults: Mapping[str, Any] | None = None,
     ) -> ProfileBundleRecord:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        pattern_support_scope_value = self._profile_bundle_pattern_support_scope(
+            pattern_support_scope
+        )
         allowed_column_keys = {
             "column_iri",
             "column_name",
@@ -7707,11 +7712,12 @@ class DoxaBase:
                 "column_defaults contains unsupported record_column_profile "
                 f"field(s): {', '.join(unknown_defaults)}"
             )
-        if self._profile_pattern_requested(
+        should_record_pattern = self._profile_pattern_requested(
             pattern_summary,
             pattern_text,
             pattern_rationale,
-        ):
+        )
+        if should_record_pattern:
             implication_values = self._string_values(
                 "pattern_map_implications",
                 pattern_map_implications,
@@ -7772,13 +7778,29 @@ class DoxaBase:
             map_label=map_label,
             map_description=map_description,
             is_table=is_table,
-            pattern_summary=pattern_summary,
-            pattern_text=pattern_text,
-            pattern_rationale=pattern_rationale,
+            pattern_summary=(
+                pattern_summary
+                if pattern_support_scope_value == "dataset_profile"
+                else None
+            ),
+            pattern_text=(
+                pattern_text
+                if pattern_support_scope_value == "dataset_profile"
+                else None
+            ),
+            pattern_rationale=(
+                pattern_rationale
+                if pattern_support_scope_value == "dataset_profile"
+                else None
+            ),
             pattern_confidence=pattern_confidence,
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
-            pattern_map_implications=pattern_map_implications,
+            pattern_map_implications=(
+                pattern_map_implications
+                if pattern_support_scope_value == "dataset_profile"
+                else None
+            ),
             evidence_iri=shared_evidence_iri,
         )
 
@@ -7787,6 +7809,34 @@ class DoxaBase:
             recorded_columns.append(
                 self.record_column_profile(**column_kwargs)  # type: ignore[arg-type]
             )
+
+        if should_record_pattern and pattern_support_scope_value == "all_profiles":
+            assert pattern_summary is not None
+            assert pattern_text is not None
+            assert pattern_rationale is not None
+            implication_values = self._string_values(
+                "pattern_map_implications",
+                pattern_map_implications,
+            )
+            pattern = self.record_pattern(
+                summary=pattern_summary,
+                pattern_text=pattern_text,
+                rationale=pattern_rationale,
+                pattern_targets=[dataset_value],
+                supporting_observations=[
+                    dataset_profile.observation.observation_iri,
+                    *(
+                        column_profile.observation.observation_iri
+                        for column_profile in recorded_columns
+                    ),
+                ],
+                evidence_iri=dataset_profile.observation.evidence_iri,
+                confidence=pattern_confidence,
+                pattern_status=pattern_status,
+                pattern_stability=pattern_stability,
+                map_implications=implication_values or [dataset_value],
+            )
+            dataset_profile = replace(dataset_profile, pattern=pattern)
 
         return ProfileBundleRecord(
             dataset_iri=dataset_value,
@@ -7839,6 +7889,16 @@ class DoxaBase:
                 column_kwargs.get("evidence_iri"),
                 column_kwargs.get("evidence_summary"),
             )
+
+    def _profile_bundle_pattern_support_scope(self, value: str | None) -> str:
+        if value is None:
+            return "dataset_profile"
+        scope = value.strip().lower()
+        if scope in {"dataset_profile", "all_profiles"}:
+            return scope
+        raise DoxaBaseError(
+            "pattern_support_scope must be one of: dataset_profile, all_profiles"
+        )
 
     def _preflight_profile_bundle_column(
         self,

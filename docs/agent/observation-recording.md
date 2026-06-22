@@ -118,10 +118,12 @@ returned/total/omitted counts, before deciding a profile-run handoff is
 complete.
 
 The bundle's `pattern_summary`/`pattern_text` arguments create a pattern
-supported by the dataset profile observation only. When the synthesis should
-cover the dataset profile and all column profiles, record the bundle first,
-then collect the returned observation IRIs and call `record_pattern` with the
-same shared evidence:
+supported by the dataset profile observation only by default. Set
+`pattern_support_scope="all_profiles"` when the synthesis should cover the
+dataset profile and every bundled column profile. When the synthesis also needs
+supporting claims or hand-picked observations, record the bundle first, then
+collect the returned observation IRIs and call `record_pattern` with the same
+shared evidence:
 
 ```python
 bundle = db.record_profile_bundle(
@@ -136,6 +138,10 @@ bundle = db.record_profile_bundle(
     map_label="Orders",
     is_table=True,
     shared_evidence_iri="https://example.test/project#OrdersProfileRunEvidence",
+    pattern_summary="Orders profile pass links dataset and column measurements.",
+    pattern_text="The row count, status distinct count, and amount mean came from one profiling pass.",
+    pattern_rationale="Every supporting profile observation links to the same shared run evidence.",
+    pattern_support_scope="all_profiles",
     column_defaults={"update_map_column": False},
     column_profiles=[
         {
@@ -152,21 +158,12 @@ bundle = db.record_profile_bundle(
         },
     ],
 )
-
-run = db.describe_profile_run(
-    bundle.dataset_iri,
-    bundle.shared_evidence_iri,
-)
-
-db.record_pattern(
-    summary="Orders profile pass links dataset and column measurements.",
-    pattern_text="The row count, status distinct count, and amount mean came from one profiling pass.",
-    rationale="Every supporting profile observation links to the same shared run evidence.",
-    pattern_targets=[bundle.dataset_iri],
-    supporting_observations=run.profile_observation_iris,
-    evidence_iri=bundle.shared_evidence_iri,
-)
 ```
+
+If the synthesis also needs a guardrail claim or narrower support set, call
+`describe_profile_run(bundle.dataset_iri, bundle.shared_evidence_iri)` and pass
+`profile_run.profile_observation_iris` plus any claims to `record_pattern`
+manually instead of using `pattern_support_scope`.
 
 Be explicit about the map update booleans. `record_dataset_profile` defaults
 `update_map_snapshot=true` and can write `rc:rowCountSnapshot` when `row_count`
