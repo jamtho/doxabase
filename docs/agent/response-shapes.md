@@ -368,6 +368,7 @@ context.max_triples
 context.truncated
 context.truncation_scope
 context.trig
+context.seed_profile_observations
 context.dataset_contexts
 context.pattern_contexts
 context.warnings
@@ -389,6 +390,10 @@ triples can still appear with `referenced_only=True` when it was reached through
 omitted observed profile metric counts and use narrower seeds when needed.
 Profile and metric seeds may include bounded same-dataset profile context
 beyond the exact seed while avoiding unrelated dataset leakage.
+`seed_profile_observations` gives structured `ProfileObservationSummary` rows
+for explicit profile-observation seeds and profile observations reached from
+profile-metric seeds, even when those rows are older than the bounded
+`dataset_contexts[].profile_observations` slice.
 
 Each item in `context.resources` is a `ContextSliceResource`:
 

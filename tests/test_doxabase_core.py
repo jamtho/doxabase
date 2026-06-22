@@ -6168,6 +6168,62 @@ def test_describe_context_slice_includes_profile_observations_and_metrics(
     assert context_slice.route_counts["profile_metric_kind"] >= 2
 
 
+def test_context_slice_structures_seed_profile_outside_bounded_dataset_profiles(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    old_profile = db.record_dataset_profile(
+        dataset,
+        summary="Old one-off profile run.",
+        observed_at="2026-01-01T00:00:00Z",
+        evidence_summary="Old profile evidence.",
+        evidence_sources=["test://orders-old-profile"],
+        evidence_iri="https://example.test/project#OldProfileEvidence",
+        row_count=10,
+        update_map_snapshot=False,
+    )
+    for index in range(6):
+        db.record_dataset_profile(
+            dataset,
+            summary=f"Newer profile run {index}.",
+            observed_at=f"2026-02-{index + 1:02d}T00:00:00Z",
+            evidence_summary=f"Newer profile evidence {index}.",
+            evidence_sources=[f"test://orders-new-profile-{index}"],
+            row_count=100 + index,
+            update_map_snapshot=False,
+        )
+
+    context_slice = db.describe_context_slice(
+        old_profile.observation.observation_iri,
+        profile="dataset_brief",
+        max_triples=300,
+    )
+
+    dataset_context = context_slice.dataset_contexts[0]
+    returned_profile_iris = {
+        profile.iri for profile in dataset_context.profile_observations
+    }
+    assert old_profile.observation.observation_iri not in returned_profile_iris
+    assert dataset_context.profile_summary.omitted_dataset_profile_count == 2
+    assert old_profile.observation.evidence_iri not in (
+        dataset_context.profile_summary.evidence_iris
+    )
+
+    assert [
+        profile.iri for profile in context_slice.seed_profile_observations
+    ] == [old_profile.observation.observation_iri]
+    assert [
+        evidence.iri
+        for evidence in context_slice.seed_profile_observations[0].evidence
+    ] == [old_profile.observation.evidence_iri]
+    assert context_slice.route_counts["seed_profile_observation"] == 1
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert old_profile.observation.observation_iri in resources
+    assert old_profile.observation.evidence_iri in resources
+
+
 def test_describe_context_slice_expands_profile_metric_kind_seed(
     tmp_path: Path,
 ) -> None:

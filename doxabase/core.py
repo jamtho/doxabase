@@ -1505,6 +1505,7 @@ class ContextSlice:
     truncated: bool
     truncation_scope: str
     trig: str | None
+    seed_profile_observations: list[ProfileObservationSummary]
     dataset_contexts: list[DatasetDescription]
     pattern_contexts: list[PatternDescription]
     warnings: list[str]
@@ -2997,6 +2998,7 @@ class DoxaBase:
         resources: dict[str, list[ContextSliceRoute]] = {}
         dataset_contexts: dict[str, DatasetDescription] = {}
         pattern_contexts: dict[str, PatternDescription] = {}
+        seed_profile_observations: dict[str, ProfileObservationSummary] = {}
         described_datasets: set[str] = set()
         described_patterns: set[str] = set()
         described_claims: set[str] = set()
@@ -3221,6 +3223,10 @@ class DoxaBase:
             route_label: str = "supporting observation",
             expand_observed_dataset: bool = False,
         ) -> None:
+            should_track_seed_profile = route in {
+                "seed_profile_observation",
+                "profile_metric_observation",
+            }
             if observation_iri in described_observations:
                 add_resource(
                     observation_iri,
@@ -3229,6 +3235,14 @@ class DoxaBase:
                     source_iri=source_iri,
                     depth=depth,
                 )
+                if should_track_seed_profile:
+                    seed_profile_observations.setdefault(
+                        observation_iri,
+                        self._profile_observation_summary(
+                            observation_iri,
+                            all_lookup_graphs,
+                        ),
+                    )
                 return
             described_observations.add(observation_iri)
             add_resource(
@@ -3238,6 +3252,14 @@ class DoxaBase:
                 source_iri=source_iri,
                 depth=depth,
             )
+            if should_track_seed_profile:
+                seed_profile_observations.setdefault(
+                    observation_iri,
+                    self._profile_observation_summary(
+                        observation_iri,
+                        all_lookup_graphs,
+                    ),
+                )
             for predicate, route, label in (
                 ("rc:observedAsset", "observed_asset", "observed asset"),
                 ("rc:observedColumn", "observed_column", "observed column"),
@@ -3769,6 +3791,7 @@ class DoxaBase:
             truncated=truncated,
             truncation_scope="triples_only",
             trig=trig,
+            seed_profile_observations=list(seed_profile_observations.values()),
             dataset_contexts=list(dataset_contexts.values()),
             pattern_contexts=list(pattern_contexts.values()),
             warnings=warnings,

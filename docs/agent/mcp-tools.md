@@ -172,7 +172,9 @@ metadata should come along too. Dataset/deep-lore slices include bounded profile
 observations, observed value-frequency nodes, scalar profile metric nodes, and
 profile metric kinds returned through the dataset context. They can also start
 from a profile observation, observed profile metric node, or metric-kind IRI
-used by profile metrics. Read `resources[].routes` and `route_counts` before
+used by profile metrics. `seed_profile_observations` preserves structured
+profile summaries selected by those profile/metric seeds even when the same row
+is older than the bounded dataset profile list. Read `resources[].routes` and `route_counts` before
 raw triples; those fields explain why each resource entered the slice.
 `reading_order` and `route_legend` provide the static reading protocol and
 meanings for the routes present in the response. Set `include_trig=true` when
