@@ -400,6 +400,17 @@ few useful gaps:
   `recommended_apply_or_restage_review_iris` and
   `recommended_repair_review_iris`. Grouped Markdown now mirrors those buckets
   in `Review Queues` for human reviewers.
+- A second post-rebuild staged-revision wave confirmed that the recovery
+  mechanics work, including same-count digest drift, stale alternatives,
+  dry-run batch restage, successor routing, and post-apply sibling staleness.
+  The remaining friction was mostly operational: agents needed one concrete
+  grouped review recipe, a scratch-capsule Python example with exact helper
+  parameter names, and a reminder that list/export relation fields are IRI
+  strings while detailed staged descriptions use resource summaries. A separate
+  post-apply history trial confirmed the two-hop recovery path from applied
+  event to staged source, while surfacing a larger future product question:
+  whether applied events should expose a public one-call before/after snapshot
+  diff.
 - A staged-drift readability trial showed that `patch_object_overlap` can sound
   stronger than it is when the only object overlap is broad vocabulary such as
   `rc:Dataset`. Apply checks now use `broad_patch_object_overlap` for that weak

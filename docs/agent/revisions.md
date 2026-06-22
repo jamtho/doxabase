@@ -201,6 +201,24 @@ diagnostics, impacts, or judgement panels. For a mixed queue, use
 `bundle_summary` to separate already-applied inspection targets, unresolved
 stale proposals, validation failures, and current mutation-review candidates.
 
+A cold recovery script usually follows this order:
+
+1. Call `list_graph_revisions(include_apply_checks=True, drift_detail="exact")`.
+2. Filter rows with `record_kind == "applied_event"`.
+3. Call `describe_graph_revision(applied_iri)` for the applied event's
+   after-state `graph_snapshots`, compact `applied_source`, and
+   `applies_staged_revision` link.
+4. Call `describe_staged_revision(description.applies_staged_revision)` for the
+   original patch content, before-state snapshots, validation details, support,
+   and judgement context.
+5. Follow `applied_by` on staged descriptions when starting from the source
+   proposal rather than from the applied event.
+
+Do not call `check_staged_revision_apply()` after application expecting an exact
+before/after diff. It reports `status="already_applied"` and points you toward
+inspection; it does not replay the patch or return drift arrays for the applied
+event.
+
 This is still provenance browsing, not durable graph-version browsing. The
 applied event gives counts and content digests; `applied_source` gives compact
 intent context; the staged source gives the full intended patch. There is not

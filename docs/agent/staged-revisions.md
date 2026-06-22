@@ -154,6 +154,108 @@ already-handled row reports
 `stale_resolution_state_after="restaged_successor_stale_unresolved"`, the
 current successor is stale too; inspect or restage `current_revision_iri`.
 
+### Grouped Review Recipe
+
+Use this shape when several staged revisions touch the same graph and some of
+them may be stale:
+
+| Check result | Usual next move |
+| --- | --- |
+| `ready` | Review/export, apply at most one, then regenerate checks before siblings. |
+| `target_count_drift` or `target_digest_drift` | Review/export the conflict, then restage against current graph state. |
+| `patch_conflict` | Inspect patch diagnostics or export; stage a repaired or alternative proposal. |
+| `validation_failed` | Inspect `validation_results`; stage a repaired or alternative proposal. |
+| `noop` | Inspect/export; do not apply unless the no-op is exactly the intended durable event. |
+| `already_applied` | Inspect the applied event and staged source; do not replay it. |
+
+For scratch trials that need a disposable capsule path, use the Python helpers.
+The MCP server tools operate on the configured server capsule; a local
+`DoxaBase.create(...)` gives a trial its own temporary store.
+
+```python
+from doxabase import DoxaBase
+from doxabase.mcp_tools import (
+    apply_staged_revision_tool,
+    check_staged_revision_apply_tool,
+    record_map_dataset_tool,
+    restage_staged_revisions_tool,
+    stage_graph_revision_tool,
+)
+
+db = DoxaBase.create("/tmp/doxabase-staged-recovery.sqlite", overwrite=True)
+record_map_dataset_tool(
+    db,
+    iri="https://example.test/project#Seed",
+    label="Seed",
+    is_table=True,
+)
+
+first = stage_graph_revision_tool(
+    db,
+    summary="Add orders table",
+    rationale="Candidate map addition for recovery workflow testing.",
+    additions=[
+        {
+            "graph": "map",
+            "format": "turtle",
+            "content": """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:Orders a rc:Dataset, rc:Table ;
+                    rdfs:label "Orders" .
+            """,
+        }
+    ],
+)
+second = stage_graph_revision_tool(
+    db,
+    summary="Add order lifecycle table",
+    rationale="Sibling candidate that must be rechecked after any apply.",
+    additions=[
+        {
+            "graph": "map",
+            "format": "turtle",
+            "content": """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:OrderLifecycle a rc:Dataset, rc:Table ;
+                    rdfs:label "Order lifecycle" .
+            """,
+        }
+    ],
+)
+
+# Create unrelated drift so the staged rows need review/restage.
+record_map_dataset_tool(
+    db,
+    iri="https://example.test/project#DriftDataset",
+    label="Drift dataset",
+)
+
+sources = [first["revision_iri"], second["revision_iri"]]
+dry = restage_staged_revisions_tool(db, revision_iris=sources, dry_run=True)
+assert dry["would_restage_revision_iris"] == sources
+
+batch = restage_staged_revisions_tool(
+    db,
+    revision_iris=sources,
+    path="/tmp/doxabase-staged-recovery-review.md",
+    overwrite=True,
+)
+
+first_current = batch["current_revision_by_source"][first["revision_iri"]]
+check_staged_revision_apply_tool(db, iri=first_current)
+apply_staged_revision_tool(db, iri=first_current)
+
+# Applying one successor can make the sibling successor stale.
+second_current = batch["current_revision_by_source"][second["revision_iri"]]
+check_staged_revision_apply_tool(db, iri=second_current)
+```
+
 In grouped exports, `Staged validation` is the validation result from when the
 proposal was created. `Current validation` comes from the live apply check and
 may say `skipped: conflicts_present` when count or digest drift prevents a

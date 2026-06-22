@@ -1083,6 +1083,11 @@ when exact drift is available. Use `drift_detail="exact"` or
 `check_staged_revision_apply()` when the actual changed-triple arrays should be
 included.
 
+In list rows, relation fields such as `applied_by`,
+`applies_staged_revision`, `alternative_to`, `current_alternative_to`,
+`restaged_from`, `restaged_by`, and `current_restaged_by` are nullable IRI
+strings. They are not nested resource objects.
+
 `db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
 
 ```python
@@ -1118,6 +1123,7 @@ validation headline, graph snapshots, patch counts, patch metadata without
 content, and support-link counts. It is meant for quick history scanning; call
 `describe_staged_revision(description.applies_staged_revision)` for patch
 content, full diagnostics, impacts, or judgement panels.
+The `applied_source` relation fields are also nullable IRI strings.
 
 `applied_source` has:
 
@@ -1208,6 +1214,12 @@ description.judgement_panel
 ```
 
 Use `revision_stance`, not `stance`.
+
+On `StagedGraphRevisionDescription`, relation fields such as
+`alternative_to`, `restaged_from`, `restaged_by`, `current_restaged_by`, and
+`applied_by` are `ResourceSummary` objects when present. This differs from
+revision list rows and grouped export summaries, where the same relation names
+are IRI strings for script-friendly routing.
 
 Each `description.graph_snapshots[]` item has:
 
@@ -1481,6 +1493,8 @@ shown in the Markdown summary table without making separate apply-check calls.
 `current_restaged_by`, and `stale_resolution_state` let recovery scripts keep
 alternative groups and stale/restaged chains together without a second revision
 list lookup.
+The relation fields in `revision_summaries` are nullable IRI strings, not
+`ResourceSummary` objects.
 `alternative_to` preserves the stored provenance target; `current_alternative_to`
 follows restage successors when the alternative target has been refreshed. When a
 stale source already has `restaged_by`, `current_restaged_by` follows the
