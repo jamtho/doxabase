@@ -434,8 +434,11 @@ Records a staged graph revision in `history` without applying it. Pass
 kind of systematisation move being made. The helper parses patch RDF, previews
 graph counts, runs SHACL validation over `validation_scope`, and returns patch
 metadata plus structured validation diagnostics when validation reports
-results. `revision_anchors` can name graph resources the staged proposal is
-about without treating them as evidence or support.
+results. The returned staged revision record includes the `summary`,
+`rationale`, `review_note`, and `review_recommendation` that were recorded, so
+scratch logs do not need an immediate describe call for the proposal headline.
+`revision_anchors` can name graph resources the staged proposal is about without
+treating them as evidence or support.
 
 `doxabase.stage_map_assertion_change`
 

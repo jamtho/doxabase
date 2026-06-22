@@ -357,6 +357,10 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     )
     assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
     assert result["revision_stance"] == "https://richcanopy.org/ns/rc#ExploratoryHunch"
+    assert result["summary"] == "Try messages table framing"
+    assert result["rationale"].startswith("Exploratory hunch")
+    assert result["review_note"] is None
+    assert result["review_recommendation"] is None
     assert result["changed_graphs"] == ["map"]
     assert result["validation_conforms"] is True
     assert result["validation_result_count"] == 0
@@ -809,6 +813,23 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     )
     assert len(result["additions"]) == 1
     assert len(result["removals"]) == 1
+    assert result["staged_revision"]["summary"] == (
+        "Replace map assertion: price physicalType DOUBLE"
+    )
+    assert result["staged_revision"]["rationale"].startswith(
+        "Exercise a tempting but unsafe type change"
+    )
+    assert (
+        "Staged map assertion change kind: replace."
+        in result["staged_revision"]["review_note"]
+    )
+    assert (
+        "Current same-subject/predicate value(s): VARCHAR"
+        in result["staged_revision"]["review_note"]
+    )
+    assert result["staged_revision"]["review_recommendation"].startswith(
+        "Review assertion support"
+    )
     assert result["staged_revision"]["changed_graphs"] == ["map"]
     assert result["staged_revision"]["validation_conforms"] is True
     assert db.triple_count("map") == before_map_count
@@ -1072,6 +1093,24 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["anchors"] == [observation.observation_iri]
     assert len(result["framings"]) == 2
     assert len(result["staged_revisions"]) == 2
+    assert result["staged_revisions"][0]["summary"] == (
+        "Explore identity-ladder modelling: Pattern first"
+    )
+    assert result["staged_revisions"][0]["review_note"] == (
+        "The pattern framing keeps the idea tentative."
+    )
+    assert result["staged_revisions"][0]["review_recommendation"] == (
+        "Preferred until the map vocabulary settles."
+    )
+    assert result["staged_revisions"][1]["summary"] == (
+        "Explore identity-ladder modelling: Map candidate"
+    )
+    assert result["staged_revisions"][1]["review_note"] == (
+        "This is reviewable but slightly too early."
+    )
+    assert result["staged_revisions"][1]["review_recommendation"] == (
+        "Keep as a concrete alternative."
+    )
     assert result["framings"][0]["target_graphs"] == ["ontology", "patterns"]
     assert result["framings"][1]["target_graphs"] == ["ontology", "map"]
     assert result["framings"][0]["validation_conforms"] is True

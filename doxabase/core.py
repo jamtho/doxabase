@@ -233,6 +233,10 @@ class StagedGraphRevisionRecord:
     revision_iri: str
     revision_type: str
     revision_stance: str
+    summary: str
+    rationale: str
+    review_note: str | None
+    review_recommendation: str | None
     graph: str
     triples: int
     changed_graphs: list[str]
@@ -10173,6 +10177,10 @@ class DoxaBase:
             revision_iri=revision_subject,
             revision_type=revision_record.revision_type,
             revision_stance=stance_iri,
+            summary=summary,
+            rationale=rationale,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
             graph="history",
             triples=revision_record.triples + extra_triples,
             changed_graphs=changed_graph_values,

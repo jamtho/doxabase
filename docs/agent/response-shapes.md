@@ -1025,6 +1025,10 @@ Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:
 revision.revision_iri
 revision.revision_type
 revision.revision_stance
+revision.summary
+revision.rationale
+revision.review_note
+revision.review_recommendation
 revision.graph
 revision.triples
 revision.changed_graphs

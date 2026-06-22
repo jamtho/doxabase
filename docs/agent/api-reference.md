@@ -467,6 +467,9 @@ and records ordered `rc:GraphPatch` entries for later review. Each patch has an
 preview order. When validation reports results, the staged revision stores
 linked `sh:ValidationResult` diagnostics with focus node, result path,
 constraint, severity, value, and messages where pySHACL provides them.
+The immediate staged record also returns its `summary`, `rationale`,
+`review_note`, and `review_recommendation` so scratch logs and wrapper payloads
+do not need a second describe call just to show the proposal headline.
 
 `stage_map_assertion_change()` stages a reviewable add/remove/replace for one
 `map` assertion. Pass `subject`, `predicate`, optional `object`, a `rationale`,

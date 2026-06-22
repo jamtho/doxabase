@@ -549,6 +549,13 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
 
     assert staged.revision_type == RC + "StagedRevision"
     assert staged.revision_stance == RC + "ExploratoryHunch"
+    assert staged.summary == "Try messages table framing"
+    assert staged.rationale == (
+        "Exploratory hunch: treating messages as the map anchor should make "
+        "later join reasoning easier."
+    )
+    assert staged.review_note is None
+    assert staged.review_recommendation is None
     assert staged.changed_graphs == ["map"]
     assert staged.validation_conforms is True
     assert staged.validation_result_count == 0
@@ -3813,6 +3820,22 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         "https://example.test/project#Messages",
     ]
     assert len(draft.staged_revisions) == 2
+    assert draft.staged_revisions[0].summary == (
+        "Explore identity-ladder modelling: Project vocabulary term"
+    )
+    assert draft.staged_revisions[0].review_note == (
+        "This names the concept directly, but it may be premature."
+    )
+    assert draft.staged_revisions[0].review_recommendation == (
+        "Keep as an alternative while more cases accumulate."
+    )
+    assert draft.staged_revisions[1].summary == (
+        "Explore identity-ladder modelling: Pattern first"
+    )
+    assert draft.staged_revisions[1].review_note == (
+        "This keeps the bold hunch alive without forcing the map."
+    )
+    assert draft.staged_revisions[1].review_recommendation == "Preferred for now."
     assert len(draft.framings) == 2
     assert draft.framings[0].target_graphs == ["ontology"]
     assert draft.framings[1].target_graphs == ["patterns"]
