@@ -146,8 +146,10 @@ classification without creating refreshed successors; unhandled conflicts report
 created during that run, not as an apply queue. Each item's `status_after`,
 `decision_after`, `stale_resolution_state_after`, and `blocking_reasons_after`
 describe `current_revision_iri` after the batch decision; use
-`bundle_summary.ready_restage_successor_revision_iris` plus a final
-`check_staged_revision_apply()` before applying anything. If a skipped
+`bundle_summary.ready_restage_successor_revision_iris` plus
+`check_staged_revision_apply()` before each apply. After any successful apply,
+discard old grouped readiness and re-check or regenerate the bundle before
+touching remaining candidates. If a skipped
 already-handled row reports
 `stale_resolution_state_after="restaged_successor_stale_unresolved"`, the
 current successor is stale too; inspect or restage `current_revision_iri`.
@@ -379,9 +381,16 @@ diagnostics plus a Markdown review export before staging a repaired candidate.
 Already-applied revisions should be inspected rather than replayed.
 Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying
-one successor can make sibling successors stale. When a requested stale source
+one successor can make sibling successors stale. Grouped bundle summaries put
+that sequencing hazard in `warnings` and
+`post_apply_recheck_revision_iris`; re-run `check_staged_revision_apply` or
+`export_staged_revisions` after each apply. When a requested stale source
 already has a restage chain, batch restage maps it to `current_restaged_by` so
-the review bundle opens the latest known successor. Rows skipped as
+the review bundle opens the latest known successor. The summary also keeps
+`recommended_apply_or_restage_review_iris` separate from
+`recommended_repair_review_iris` while preserving
+`recommended_mutation_review_iris` as the broad compatibility review queue.
+Rows skipped as
 `skipped_not_restageable` carry `not_restageable_reason`, and the batch-level
 `not_restageable_revision_iris_by_reason` groups ready, already-applied,
 validation-failed, and `patch_conflict` skips for quick triage. Use

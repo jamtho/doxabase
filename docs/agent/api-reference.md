@@ -535,11 +535,17 @@ follows deeper restage chains while preserving direct `restaged_by` provenance.
 The returned `bundle_summary` counts apply statuses and stale-resolution states,
 lists unresolved stale sources, handled stale sources, ready successors, and a
 deduped `recommended_review_iris` set. It also lists validation-failed revisions
-whose patches replay but whose preview validation does not conform, then splits
-the review set into `recommended_mutation_review_iris` for proposals that may
-still need restage, repair, or apply decisions and
-`recommended_applied_inspection_iris` for already applied staged revisions that
-are useful context but not mutation targets.
+whose patches replay but whose preview validation does not conform.
+`recommended_mutation_review_iris` is the broad compatibility queue for
+proposals that may still need restage, repair, apply, or manual mutation
+decisions. Narrower mutation routes split that set into
+`recommended_apply_or_restage_review_iris` for apply/restage decisions,
+and `recommended_repair_review_iris` for validation-failed or patch-conflict
+repair work. `recommended_applied_inspection_iris` covers already applied
+staged revisions that are useful context but not mutation targets.
+`bundle_summary.warnings` calls out sequencing hazards, including grouped
+successor reviews that should be re-checked after each apply, and
+`post_apply_recheck_revision_iris` gives scripts the affected successors.
 Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
 

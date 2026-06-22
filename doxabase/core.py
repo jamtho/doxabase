@@ -440,9 +440,13 @@ class StagedGraphRevisionBundleSummary:
     unresolved_stale_revision_iris: list[str]
     stale_handled_by_restage_revision_iris: list[str]
     ready_restage_successor_revision_iris: list[str]
+    post_apply_recheck_revision_iris: list[str]
+    warnings: list[str]
     validation_failed_revision_iris: list[str]
     recommended_review_iris: list[str]
     recommended_mutation_review_iris: list[str]
+    recommended_apply_or_restage_review_iris: list[str]
+    recommended_repair_review_iris: list[str]
     recommended_applied_inspection_iris: list[str]
 
 
@@ -11375,10 +11379,12 @@ class DoxaBase:
             descriptions,
             apply_checks=apply_checks,
         )
+        bundle_summary = self._staged_revisions_bundle_summary(revision_summaries)
         data = self._staged_revisions_markdown(
             descriptions,
             apply_checks=apply_checks,
             revision_summaries=revision_summaries,
+            bundle_summary=bundle_summary,
             title=title,
             executive_summary=executive_summary,
         )
@@ -11389,7 +11395,7 @@ class DoxaBase:
             revision_iris=[description.iri for description in descriptions],
             bytes_written=bytes_written,
             revision_summaries=revision_summaries,
-            bundle_summary=self._staged_revisions_bundle_summary(revision_summaries),
+            bundle_summary=bundle_summary,
         )
 
     def _staged_revision_apply_check_for_export(
@@ -11531,6 +11537,8 @@ class DoxaBase:
         validation_failed: list[str] = []
         recommended_review: list[str] = []
         recommended_mutation_review: list[str] = []
+        recommended_apply_or_restage_review: list[str] = []
+        recommended_repair_review: list[str] = []
         recommended_applied_inspection: list[str] = []
 
         def increment(counts: dict[str, int], key: str | None) -> None:
@@ -11546,6 +11554,32 @@ class DoxaBase:
             recommend(iri)
             if iri is not None and iri not in recommended_mutation_review:
                 recommended_mutation_review.append(iri)
+
+        def recommend_mutation_by_decision(
+            summary: StagedGraphRevisionExportSummary,
+        ) -> None:
+            if summary.apply_decision in {
+                "review_then_apply",
+                "restage_against_current_graph",
+            }:
+                recommend_apply_or_restage(summary.revision_iri)
+            elif summary.apply_decision in {
+                "inspect_validation_results",
+                "inspect_patch_conflict",
+            }:
+                recommend_repair(summary.revision_iri)
+            else:
+                recommend_mutation(summary.revision_iri)
+
+        def recommend_apply_or_restage(iri: str | None) -> None:
+            recommend_mutation(iri)
+            if iri is not None and iri not in recommended_apply_or_restage_review:
+                recommended_apply_or_restage_review.append(iri)
+
+        def recommend_repair(iri: str | None) -> None:
+            recommend_mutation(iri)
+            if iri is not None and iri not in recommended_repair_review:
+                recommended_repair_review.append(iri)
 
         def recommend_applied_inspection(iri: str | None) -> None:
             recommend(iri)
@@ -11565,16 +11599,16 @@ class DoxaBase:
 
             if state in {"stale_unresolved", "restaged_successor_stale_unresolved"}:
                 unresolved_stale.append(summary.revision_iri)
-                recommend_mutation(summary.revision_iri)
+                recommend_mutation_by_decision(summary)
             elif state == "stale_handled_by_restage":
                 handled_stale.append(summary.revision_iri)
                 recommend(summary.current_restaged_by or summary.restaged_by)
             elif state == "restaged_successor_ready":
                 ready_successors.append(summary.revision_iri)
-                recommend_mutation(summary.revision_iri)
+                recommend_mutation_by_decision(summary)
             elif state == "validation_failed":
                 track_validation_failed(summary.revision_iri)
-                recommend_mutation(summary.revision_iri)
+                recommend_mutation_by_decision(summary)
             elif state in {"noop", "restaged_successor_noop"}:
                 recommend(summary.revision_iri)
             elif state in {
@@ -11583,12 +11617,15 @@ class DoxaBase:
                 "not_available",
                 "restaged_successor_not_ready",
             }:
-                recommend_mutation(summary.revision_iri)
+                recommend_mutation_by_decision(summary)
             elif state == "restaged_successor_already_applied":
                 recommend_applied_inspection(summary.revision_iri)
             elif state == "already_applied":
                 recommend_applied_inspection(summary.revision_iri)
 
+        post_apply_recheck = self._staged_revisions_post_apply_recheck_revision_iris(
+            summaries
+        )
         return StagedGraphRevisionBundleSummary(
             total_revisions=len(summaries),
             apply_status_counts=apply_status_counts,
@@ -11596,11 +11633,51 @@ class DoxaBase:
             unresolved_stale_revision_iris=unresolved_stale,
             stale_handled_by_restage_revision_iris=handled_stale,
             ready_restage_successor_revision_iris=ready_successors,
+            post_apply_recheck_revision_iris=post_apply_recheck,
+            warnings=self._staged_revisions_bundle_warnings(post_apply_recheck),
             validation_failed_revision_iris=validation_failed,
             recommended_review_iris=recommended_review,
             recommended_mutation_review_iris=recommended_mutation_review,
+            recommended_apply_or_restage_review_iris=(
+                recommended_apply_or_restage_review
+            ),
+            recommended_repair_review_iris=recommended_repair_review,
             recommended_applied_inspection_iris=recommended_applied_inspection,
         )
+
+    def _staged_revisions_post_apply_recheck_revision_iris(
+        self,
+        summaries: list[StagedGraphRevisionExportSummary],
+    ) -> list[str]:
+        successor_review_targets = [
+            summary.revision_iri
+            for summary in summaries
+            if summary.stale_resolution_state
+            in {"restaged_successor_ready", "restaged_successor_noop"}
+        ]
+        has_ready_apply_target = any(
+            summary.stale_resolution_state == "restaged_successor_ready"
+            and summary.apply_decision == "review_then_apply"
+            for summary in summaries
+        )
+        if not has_ready_apply_target or len(successor_review_targets) <= 1:
+            return []
+        return successor_review_targets
+
+    def _staged_revisions_bundle_warnings(
+        self,
+        post_apply_recheck_revision_iris: list[str],
+    ) -> list[str]:
+        if not post_apply_recheck_revision_iris:
+            return []
+        return [
+            (
+                "Restaged successors are sequential review targets: applying one "
+                "ready successor can change graph state and make sibling ready or "
+                "no-op successors stale. Re-run check_staged_revision_apply or "
+                "export_staged_revisions after each apply."
+            )
+        ]
 
     def _staged_revision_impacts(
         self,
@@ -14992,6 +15069,7 @@ class DoxaBase:
         *,
         apply_checks: list[tuple[StagedRevisionApplyCheck | None, str | None]],
         revision_summaries: list[StagedGraphRevisionExportSummary],
+        bundle_summary: StagedGraphRevisionBundleSummary,
         title: str | None,
         executive_summary: str | None,
     ) -> str:
@@ -15060,6 +15138,9 @@ class DoxaBase:
                 )
                 + " |"
             )
+        if bundle_summary.warnings:
+            lines.extend(["", "## Bundle Warnings", ""])
+            lines.extend(f"- {warning}" for warning in bundle_summary.warnings)
         restage_context = []
         for index, description in enumerate(descriptions, start=1):
             if description.restage_reason is not None:

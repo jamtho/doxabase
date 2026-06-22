@@ -1649,7 +1649,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_export.bundle_summary.recommended_review_iris == [
         staged.revision_iri
     ]
+    assert applied_export.bundle_summary.post_apply_recheck_revision_iris == []
     assert applied_export.bundle_summary.recommended_mutation_review_iris == []
+    assert applied_export.bundle_summary.recommended_apply_or_restage_review_iris == []
+    assert applied_export.bundle_summary.recommended_repair_review_iris == []
     assert applied_export.bundle_summary.recommended_applied_inspection_iris == [
         staged.revision_iri
     ]
@@ -1753,6 +1756,13 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
     assert batch.items[0].action == "skipped_not_restageable"
     assert batch.items[0].not_restageable_reason == "patch_conflict"
     assert batch.items[0].decision_before == "inspect_patch_conflict"
+    assert batch.bundle_summary.recommended_mutation_review_iris == [
+        staged.revision_iri
+    ]
+    assert batch.bundle_summary.recommended_apply_or_restage_review_iris == []
+    assert batch.bundle_summary.recommended_repair_review_iris == [
+        staged.revision_iri
+    ]
 
     assert _mutable_graph_counts(db) == before_counts
     assert db.triple_count(unknown_graph) == 0
@@ -2495,12 +2505,19 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert grouped_export_record.bundle_summary.ready_restage_successor_revision_iris == [
         restaged.revision_iri
     ]
+    assert grouped_export_record.bundle_summary.post_apply_recheck_revision_iris == []
+    assert grouped_export_record.bundle_summary.warnings == []
     assert grouped_export_record.bundle_summary.recommended_review_iris == [
         restaged.revision_iri
     ]
     assert grouped_export_record.bundle_summary.recommended_mutation_review_iris == [
         restaged.revision_iri
     ]
+    assert (
+        grouped_export_record.bundle_summary.recommended_apply_or_restage_review_iris
+        == [restaged.revision_iri]
+    )
+    assert grouped_export_record.bundle_summary.recommended_repair_review_iris == []
     assert (
         grouped_export_record.bundle_summary.recommended_applied_inspection_iris == []
     )
@@ -2613,7 +2630,10 @@ def test_restaged_revision_with_realized_addition_reports_noop(
     restaged_summary = export.revision_summaries[1]
     assert restaged_summary.apply_status == "noop"
     assert restaged_summary.stale_resolution_state == "restaged_successor_noop"
+    assert export.bundle_summary.post_apply_recheck_revision_iris == []
     assert export.bundle_summary.recommended_mutation_review_iris == []
+    assert export.bundle_summary.recommended_apply_or_restage_review_iris == []
+    assert export.bundle_summary.recommended_repair_review_iris == []
     exported_text = (tmp_path / "noop-restage-review.md").read_text(
         encoding="utf-8"
     )
@@ -2795,13 +2815,25 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
         already_restaged.revision_iri,
         restaged_second,
     ]
+    assert batch.bundle_summary.post_apply_recheck_revision_iris == [
+        already_restaged.revision_iri,
+        restaged_second,
+    ]
+    assert len(batch.bundle_summary.warnings) == 1
     assert batch.bundle_summary.recommended_mutation_review_iris == [
         already_restaged.revision_iri,
         restaged_second,
         ready.revision_iri,
     ]
+    assert batch.bundle_summary.recommended_apply_or_restage_review_iris == [
+        already_restaged.revision_iri,
+        restaged_second,
+        ready.revision_iri,
+    ]
+    assert batch.bundle_summary.recommended_repair_review_iris == []
     exported = export_path.read_text(encoding="utf-8")
     assert exported.startswith("# Batch restage review\n")
+    assert "## Bundle Warnings" in exported
     assert "## Restage Context" in exported
     assert "Stage order lifecycle table" in exported
     assert db.check_staged_revision_apply(restaged_second).status == "ready"
@@ -3035,8 +3067,11 @@ def test_batch_restage_items_report_validation_failed_successor_status(
         "validation_failed": 1,
     }
     assert batch.bundle_summary.ready_restage_successor_revision_iris == []
+    assert batch.bundle_summary.post_apply_recheck_revision_iris == []
     assert batch.bundle_summary.validation_failed_revision_iris == [successor_iri]
     assert batch.bundle_summary.recommended_mutation_review_iris == [successor_iri]
+    assert batch.bundle_summary.recommended_apply_or_restage_review_iris == []
+    assert batch.bundle_summary.recommended_repair_review_iris == [successor_iri]
 
 
 def test_batch_restage_marks_stale_current_successor_as_unresolved(
@@ -3089,9 +3124,14 @@ def test_batch_restage_marks_stale_current_successor_as_unresolved(
         original.revision_iri
     ]
     assert batch.bundle_summary.ready_restage_successor_revision_iris == []
+    assert batch.bundle_summary.post_apply_recheck_revision_iris == []
     assert batch.bundle_summary.recommended_mutation_review_iris == [
         successor.revision_iri
     ]
+    assert batch.bundle_summary.recommended_apply_or_restage_review_iris == [
+        successor.revision_iri
+    ]
+    assert batch.bundle_summary.recommended_repair_review_iris == []
 
 
 def test_restage_chain_routes_to_current_successor(
@@ -3199,6 +3239,8 @@ def test_restage_chain_routes_to_current_successor(
     assert batch.bundle_summary.ready_restage_successor_revision_iris == [
         current_successor.revision_iri
     ]
+    assert batch.bundle_summary.post_apply_recheck_revision_iris == []
+    assert batch.bundle_summary.warnings == []
 
     successor_batch = db.restage_staged_revisions(
         [first_successor.revision_iri],
@@ -3303,6 +3345,12 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         first_restaged.revision_iri,
         second_restaged.revision_iri,
     ]
+    assert export.bundle_summary.post_apply_recheck_revision_iris == [
+        first_restaged.revision_iri,
+        second_restaged.revision_iri,
+    ]
+    assert len(export.bundle_summary.warnings) == 1
+    assert "Re-run check_staged_revision_apply" in export.bundle_summary.warnings[0]
     assert export.bundle_summary.recommended_review_iris == [
         first_restaged.revision_iri,
         second_restaged.revision_iri,
@@ -3311,7 +3359,14 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         first_restaged.revision_iri,
         second_restaged.revision_iri,
     ]
+    assert export.bundle_summary.recommended_apply_or_restage_review_iris == [
+        first_restaged.revision_iri,
+        second_restaged.revision_iri,
+    ]
+    assert export.bundle_summary.recommended_repair_review_iris == []
     assert export.bundle_summary.recommended_applied_inspection_iris == []
+    assert "## Bundle Warnings" in exported
+    assert exported.index("## Bundle Warnings") < exported.index("## Restage Context")
     assert "## Alternative Context" in exported
     assert (
         "Stored alternative to Revision 1: Model order rows as raw events"
@@ -3322,6 +3377,13 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         "Model order rows as raw events"
     ) in exported
     assert exported.index("## Alternative Context") < exported.index("## Revisions")
+
+    db.apply_staged_revision(first_restaged.revision_iri)
+    second_check_after_apply = db.check_staged_revision_apply(
+        second_restaged.revision_iri
+    )
+    assert second_check_after_apply.status == "conflict"
+    assert "target_count_drift" in second_check_after_apply.blocking_reasons
 
 
 def test_restage_staged_revision_rejects_non_conflicted_revision(
@@ -3517,7 +3579,12 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     assert export.bundle_summary.validation_failed_revision_iris == [
         staged.revision_iri
     ]
+    assert export.bundle_summary.post_apply_recheck_revision_iris == []
     assert export.bundle_summary.recommended_mutation_review_iris == [
+        staged.revision_iri
+    ]
+    assert export.bundle_summary.recommended_apply_or_restage_review_iris == []
+    assert export.bundle_summary.recommended_repair_review_iris == [
         staged.revision_iri
     ]
     assert export.bundle_summary.recommended_applied_inspection_iris == []

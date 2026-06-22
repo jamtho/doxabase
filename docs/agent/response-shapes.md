@@ -1451,9 +1451,13 @@ bundle.stale_resolution_state_counts
 bundle.unresolved_stale_revision_iris
 bundle.stale_handled_by_restage_revision_iris
 bundle.ready_restage_successor_revision_iris
+bundle.post_apply_recheck_revision_iris
+bundle.warnings
 bundle.validation_failed_revision_iris
 bundle.recommended_review_iris
 bundle.recommended_mutation_review_iris
+bundle.recommended_apply_or_restage_review_iris
+bundle.recommended_repair_review_iris
 bundle.recommended_applied_inspection_iris
 ```
 
@@ -1467,9 +1471,17 @@ itself become stale again and needs restaging or replacement. The bundle's
 `recommended_review_iris` de-duplicates the current review set in bundle order,
 replacing handled stale sources with their successors.
 `validation_failed_revision_iris` lists rows whose patch counts
-replay but whose preview validation does not conform. Use
-`recommended_mutation_review_iris` when you only want staged revisions that may
-still need restage, repair, or apply decisions. Use
+replay but whose preview validation does not conform.
+`recommended_mutation_review_iris` is the broad compatibility review queue for
+staged revisions that may still need restage, repair, apply, or manual mutation
+decisions. Use `recommended_apply_or_restage_review_iris` for rows that need
+apply/reapply or restage judgement, and `recommended_repair_review_iris` for
+validation-failed or patch-conflict rows that need a repaired proposal.
+`warnings` calls out bundle-level sequencing hazards, and
+`post_apply_recheck_revision_iris` lists grouped restaged successors whose old
+readiness should be discarded after any successful apply. This includes
+multi-successor reviews where applying one ready restaged successor can make
+sibling ready or no-op successors stale. Use
 `recommended_applied_inspection_iris` for already-applied staged revisions that
 are useful to inspect but should not be applied again.
 

@@ -532,12 +532,23 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
         already_restaged["revision_iri"],
         restaged_second,
     ]
+    assert result["bundle_summary"]["post_apply_recheck_revision_iris"] == [
+        already_restaged["revision_iri"],
+        restaged_second,
+    ]
+    assert len(result["bundle_summary"]["warnings"]) == 1
+    assert result["bundle_summary"]["recommended_apply_or_restage_review_iris"] == [
+        already_restaged["revision_iri"],
+        restaged_second,
+    ]
+    assert result["bundle_summary"]["recommended_repair_review_iris"] == []
     stale_summary = result["revision_summaries"][0]
     assert stale_summary["suggested_next_actions"][-1]["action_label"] == (
         "Inspect current refreshed successor"
     )
     assert expected_path.exists()
     export_text = expected_path.read_text(encoding="utf-8")
+    assert "## Bundle Warnings" in export_text
     assert "## Restage Context" in export_text
     assert "**Inspect current refreshed successor:**" in export_text
 
@@ -673,12 +684,18 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["path"] == str(expected_path)
     assert export["bundle_summary"]["apply_status_counts"] == {"ready": 1}
     assert export["bundle_summary"]["stale_resolution_state_counts"] == {"ready": 1}
+    assert export["bundle_summary"]["post_apply_recheck_revision_iris"] == []
     assert export["bundle_summary"]["recommended_review_iris"] == [
         staged["revision_iri"]
     ]
     assert export["bundle_summary"]["recommended_mutation_review_iris"] == [
         staged["revision_iri"]
     ]
+    assert export["bundle_summary"]["recommended_apply_or_restage_review_iris"] == [
+        staged["revision_iri"]
+    ]
+    assert export["bundle_summary"]["recommended_repair_review_iris"] == []
+    assert export["bundle_summary"]["warnings"] == []
     assert export["bundle_summary"]["validation_failed_revision_iris"] == []
     assert export["bundle_summary"]["recommended_applied_inspection_iris"] == []
     assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]

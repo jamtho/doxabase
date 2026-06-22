@@ -597,8 +597,15 @@ preserves provenance. The payload also returns
 `bundle_summary` with status/state counts, unresolved stale sources, handled
 stale sources, ready successors, all validation-failed revisions by current
 apply status, deduped
-`recommended_review_iris`, `recommended_mutation_review_iris`, and
-`recommended_applied_inspection_iris`.
+`recommended_review_iris`, `recommended_mutation_review_iris`,
+`recommended_apply_or_restage_review_iris`, `recommended_repair_review_iris`,
+and `recommended_applied_inspection_iris`. `bundle_summary.warnings` calls out
+bundle-level sequencing hazards such as multi-successor reviews that should be
+re-checked after each apply; `post_apply_recheck_revision_iris` is the
+machine-readable affected-successor list. Treat
+`recommended_mutation_review_iris` as a broad compatibility queue and prefer the
+narrower apply/restage, repair, or applied-inspection fields when routing
+automation.
 Bundles with restaged revisions include a `Restage Context` section near the
 top. When a stored alternative target has a restaged successor, grouped
 Markdown includes `Alternative Context` with the current comparison target.
