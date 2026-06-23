@@ -1490,6 +1490,18 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     )
     assert result["scan"]["candidate_path_status"] == "orientation_only"
     assert result["required_bindings"] == ["year", "date"]
+    assert [binding["name"] for binding in result["binding_requirements"]] == [
+        "year",
+        "date",
+    ]
+    assert result["binding_requirements"][0]["source"] == (
+        "path_template_placeholder"
+    )
+    assert result["binding_requirements"][0]["source_text"] == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
+    assert result["binding_requirements"][0]["required"] is True
+    assert result["binding_requirements"][0]["derivation_status"] == "not_inferred"
     assert result["storage_environment"]["endpoint_profile"] == "local-minio"
     assert result["storage_environment"]["credential_reference"] == (
         "profile:ais-readonly"
@@ -1499,6 +1511,13 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
         "s3_region=local",
     ]
     assert result["review_gate"]["executable_without_review"] is False
+    assert result["review_gate"]["blocking_reason_codes"] == [
+        "layout_needs_verification"
+    ]
+    assert result["review_gate"]["all_issue_codes"] == [
+        "layout_needs_verification",
+        "verification_status_not_recorded",
+    ]
     assert result["review_gate"]["reason_codes"] == ["layout_needs_verification"]
     assert any(
         issue["code"] == "layout_needs_verification" for issue in result["issues"]

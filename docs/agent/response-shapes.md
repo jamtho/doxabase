@@ -941,6 +941,7 @@ plan.source_context
 plan.selected_candidate
 plan.scan
 plan.required_bindings
+plan.binding_requirements
 plan.binding_note
 plan.storage_environment
 plan.review_gate
@@ -957,13 +958,18 @@ execution. `plan.selected_candidate` is the candidate named by
 `query_target_decision.candidate_index`. `plan.scan` gives a best-effort scan
 function such as `read_parquet`, a URI/path template, file format, compression,
 and the selected candidate path status. `plan.required_bindings` is parsed from
-`{placeholders}` in the selected path; DoxaBase does not infer binding types or
-derivations. `plan.storage_environment` carries non-secret storage hints such as
-bucket, endpoint profile, credential reference, path-style access, and
-DuckDB-shaped settings inferred directly from graph metadata. `plan.review_gate`
-keeps the query-target decision status, reason codes, and
-`executable_without_review`; treat the plan as review-required whenever that
-field is false.
+`{placeholders}` in the selected path and remains as a compact compatibility
+list. Prefer `plan.binding_requirements` for handoff work: each row has `name`,
+`source`, `source_text`, `required`, `derivation_status`, and
+`derivation_note`, and currently reports `derivation_status="not_inferred"` for
+path-template placeholders. DoxaBase does not infer binding types,
+dependencies, or runtime values. `plan.storage_environment` carries non-secret
+storage hints such as bucket, endpoint profile, credential reference, path-style
+access, and DuckDB-shaped settings inferred directly from graph metadata.
+`plan.review_gate` keeps the query-target decision status,
+`blocking_reason_codes`, `all_issue_codes`, the legacy alias `reason_codes`,
+and `executable_without_review`; treat the plan as review-required whenever
+that field is false.
 
 Each caveat in `dataset.caveats` has:
 

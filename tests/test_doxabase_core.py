@@ -4929,6 +4929,17 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     assert plan.scan.compression == "zstd"
     assert plan.scan.candidate_path_status == "orientation_only"
     assert plan.required_bindings == ["year", "date"]
+    assert [binding.name for binding in plan.binding_requirements] == [
+        "year",
+        "date",
+    ]
+    assert plan.binding_requirements[0].source == "path_template_placeholder"
+    assert plan.binding_requirements[0].source_text == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
+    assert plan.binding_requirements[0].required is True
+    assert plan.binding_requirements[0].derivation_status == "not_inferred"
+    assert "has not inferred" in plan.binding_requirements[0].derivation_note
     assert plan.storage_environment.bucket_name == "ais-noaa"
     assert plan.storage_environment.endpoint_profile == "local-minio"
     assert plan.storage_environment.credential_reference == "profile:ais-readonly"
@@ -4940,6 +4951,11 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     ]
     assert plan.review_gate.executable_without_review is False
     assert plan.review_gate.status == "candidate_needs_review"
+    assert plan.review_gate.blocking_reason_codes == ["layout_needs_verification"]
+    assert plan.review_gate.all_issue_codes == [
+        "layout_needs_verification",
+        "verification_status_not_recorded",
+    ]
     assert plan.review_gate.reason_codes == ["layout_needs_verification"]
     assert any(issue.code == "layout_needs_verification" for issue in plan.issues)
     assert plan.caveats

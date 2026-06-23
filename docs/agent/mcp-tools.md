@@ -208,9 +208,13 @@ Returns a non-executed, review-gated physical plan draft over
 `describe_query_context`. It currently supports `engine="duckdb"` and selects
 the candidate named by `query_target_decision.candidate_index`. The payload
 includes the selected candidate, scan hint such as `read_parquet`, URI/path
-template, parsed `required_bindings`, non-secret storage environment hints,
-copied issues and analysis warnings, caveats, and a `review_gate`. It does not
-resolve endpoint profiles, credentials, object existence, or execute SQL.
+template, parsed `required_bindings`, structured `binding_requirements`,
+non-secret storage environment hints, copied issues and analysis warnings,
+caveats, and a `review_gate`. Binding rows preserve the source text and say
+when DoxaBase has not inferred derivation or runtime values. `review_gate`
+includes `blocking_reason_codes`, `all_issue_codes`, and the legacy
+`reason_codes` alias for blocking reasons. It does not resolve endpoint
+profiles, credentials, object existence, or execute SQL.
 
 `doxabase.describe_context_slice`
 

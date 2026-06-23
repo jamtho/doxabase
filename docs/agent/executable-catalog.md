@@ -101,9 +101,11 @@ agent runtime decides how profile X resolves.
 8. Check `analysis_warnings` and caveats before trusting aggregations or
    interpretations.
 9. Use `doxabase.draft_query_plan` when you want a non-executed DuckDB-oriented
-   handoff object from the selected query target, required bindings, storage
-   hints, review gate, issues, and caveats. It does not resolve credentials,
-   endpoint profiles, object existence, or execute SQL.
+   handoff object from the selected query target, structured binding
+   requirements, storage hints, review gate, issues, and caveats. Binding rows
+   tell you when DoxaBase has not inferred derivations or runtime values. It
+   does not resolve credentials, endpoint profiles, object existence, or execute
+   SQL.
 10. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
@@ -133,6 +135,7 @@ print(
             "issues": payload["issues"],
             "analysis_warnings": payload["analysis_warnings"],
             "draft_scan": plan_payload["scan"],
+            "binding_requirements": plan_payload["binding_requirements"],
             "review_gate": plan_payload["review_gate"],
         },
         indent=2,

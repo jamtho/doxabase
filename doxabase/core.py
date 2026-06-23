@@ -1023,6 +1023,16 @@ class DraftQueryPlanScan:
 
 
 @dataclass(frozen=True)
+class DraftQueryPlanBinding:
+    name: str
+    source: str
+    source_text: str | None
+    required: bool
+    derivation_status: str
+    derivation_note: str
+
+
+@dataclass(frozen=True)
 class DraftQueryPlanStorageEnvironment:
     storage_protocol: ResourceSummary | None
     storage_root: str | None
@@ -1045,6 +1055,8 @@ class DraftQueryPlanReviewGate:
     status: str
     direct_review_required: bool | None
     candidate_path_status: str | None
+    blocking_reason_codes: list[str]
+    all_issue_codes: list[str]
     reason_codes: list[str]
     review_note: str
 
@@ -1059,6 +1071,7 @@ class DraftQueryPlan:
     selected_candidate: QueryTargetCandidate | None
     scan: DraftQueryPlanScan
     required_bindings: list[str]
+    binding_requirements: list[DraftQueryPlanBinding]
     binding_note: str
     storage_environment: DraftQueryPlanStorageEnvironment
     review_gate: DraftQueryPlanReviewGate
@@ -5261,6 +5274,9 @@ class DoxaBase:
             context,
             selected_candidate,
         )
+        binding_requirements = self._draft_query_plan_binding_requirements(
+            selected_candidate
+        )
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
@@ -5282,9 +5298,8 @@ class DoxaBase:
                 physical_layouts=context.physical_layouts,
                 engine=engine_value,
             ),
-            required_bindings=self._draft_query_plan_required_bindings(
-                selected_candidate,
-            ),
+            required_bindings=[binding.name for binding in binding_requirements],
+            binding_requirements=binding_requirements,
             binding_note=(
                 "Bindings are placeholder names parsed from the selected path "
                 "template. DoxaBase does not infer binding types, derivations, "
@@ -5381,14 +5396,35 @@ class DoxaBase:
             return "read_csv_auto"
         return None
 
-    @staticmethod
-    def _draft_query_plan_required_bindings(
+    def _draft_query_plan_binding_requirements(
+        self,
         selected_candidate: QueryTargetCandidate | None,
-    ) -> list[str]:
+    ) -> list[DraftQueryPlanBinding]:
         if selected_candidate is None:
             return []
-        template = selected_candidate.candidate_path or selected_candidate.template
-        return list(dict.fromkeys(re.findall(r"{([^{}]+)}", template)))
+        template = self._draft_query_plan_binding_source_text(selected_candidate)
+        names = list(dict.fromkeys(re.findall(r"{([^{}]+)}", template or "")))
+        return [
+            DraftQueryPlanBinding(
+                name=name,
+                source="path_template_placeholder",
+                source_text=template,
+                required=True,
+                derivation_status="not_inferred",
+                derivation_note=(
+                    "Supply this value explicitly or derive it in the runtime "
+                    "query layer after review; DoxaBase has not inferred a "
+                    "type, dependency, or default value for this placeholder."
+                ),
+            )
+            for name in names
+        ]
+
+    @staticmethod
+    def _draft_query_plan_binding_source_text(
+        selected_candidate: QueryTargetCandidate,
+    ) -> str | None:
+        return selected_candidate.candidate_path or selected_candidate.template
 
     def _draft_query_plan_storage_environment(
         self,
@@ -5464,8 +5500,8 @@ class DoxaBase:
             ),
         )
 
-    @staticmethod
     def _draft_query_plan_review_gate(
+        self,
         context: QueryPlanningContext,
         selected_candidate: QueryTargetCandidate | None,
     ) -> DraftQueryPlanReviewGate:
@@ -5481,6 +5517,8 @@ class DoxaBase:
             status=decision.status,
             direct_review_required=decision.direct_review_required,
             candidate_path_status=decision.candidate_path_status,
+            blocking_reason_codes=decision.reason_codes,
+            all_issue_codes=self._query_issue_codes(context.issues),
             reason_codes=decision.reason_codes,
             review_note=(
                 "This helper drafts a non-executed plan. Review selected "
@@ -5490,6 +5528,19 @@ class DoxaBase:
                 else "No query target candidate is available."
             ),
         )
+
+    @staticmethod
+    def _query_issue_codes(
+        issues: Iterable[QueryPlanningIssue],
+    ) -> list[str]:
+        codes: list[str] = []
+        seen: set[str] = set()
+        for issue in issues:
+            if issue.code in seen:
+                continue
+            seen.add(issue.code)
+            codes.append(issue.code)
+        return codes
 
     def _query_target_candidates(
         self,

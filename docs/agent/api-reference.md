@@ -277,11 +277,15 @@ review clue, and `unresolved` means executable location metadata is incomplete.
 over `describe_query_context()`. It currently supports `engine="duckdb"` and
 selects the candidate identified by `query_target_decision.candidate_index`.
 The response includes a scan hint such as `read_parquet`, the candidate
-URI/path template, parsed placeholder names in `required_bindings`, non-secret
-storage environment hints, copied issues and analysis warnings, caveats, and a
-`review_gate`. It does not resolve endpoint profiles, credentials, object
-existence, or run SQL; use it as a handoff object before deciding whether an
-execution attempt is safe.
+URI/path template, parsed placeholder names in `required_bindings`, structured
+`binding_requirements` rows for handoff work, non-secret storage environment
+hints, copied issues and analysis warnings, caveats, and a `review_gate`.
+Binding rows identify the placeholder source text and explicitly report when
+DoxaBase has not inferred derivation or runtime values. `review_gate` separates
+`blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`
+as a legacy alias for blocking reasons. It does not resolve endpoint profiles,
+credentials, object existence, or run SQL; use it as a handoff object before
+deciding whether an execution attempt is safe.
 
 `describe_profile_run(dataset_iri, evidence_iri, limit=None)` returns profile
 observations for one dataset linked to one evidence resource. It does not create
