@@ -7708,6 +7708,16 @@ def test_record_claim_reconsideration_links_claim_lifecycle(
     assert context_slice.route_counts["incoming_claim_reconsideration"] == 1
     assert context_slice.route_counts["reconsidering_claim"] == 1
 
+    pattern_context_slice = db.describe_context_slice(
+        [pattern.pattern_iri],
+        profile="pattern_brief",
+    )
+    assert pattern_context_slice.route_counts["incoming_claim_reconsideration"] == 1
+    assert pattern_context_slice.route_counts["reconsidering_claim"] == 1
+    assert [context.iri for context in pattern_context_slice.pattern_contexts] == [
+        pattern.pattern_iri
+    ]
+
 
 def test_record_pattern_links_observations_claims_evidence_and_targets(
     tmp_path: Path,

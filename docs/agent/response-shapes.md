@@ -584,6 +584,10 @@ dataset.linked_patterns
 dataset.linked_pattern_reasons
 ```
 
+Resource-valued dataset fields such as `row_semantics`, `entity_key`, and
+`schema_stability` return resource summaries or IRIs. Use `dataset.description`,
+layout notes, caveats, observations, claims, or patterns for explanatory prose.
+
 `dataset.profile_summary` is a quick count of the profile lore returned in this
 bounded `describe_dataset` response:
 
@@ -1066,6 +1070,9 @@ description.map_implications
 ```
 
 Use `pattern_targets`, not `targets`.
+`description.map_implications` contains resource summaries for map resources or
+assertion nodes the pattern may affect; it is not a prose summary field. Use
+`description.pattern_text` and `description.rationale` for explanation.
 
 `description.supporting_claims` contains `ClaimDescription` items:
 

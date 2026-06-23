@@ -370,7 +370,9 @@ Records one `rc:Pattern` in the `patterns` graph and optionally linked
 several observations, claims, or sources belong together and suggest a more
 durable pattern or map implication. Pass `evidence_iri` when the pattern should
 reuse an existing evidence resource, such as shared profile-run evidence from
-`record_profile_bundle`.
+`record_profile_bundle`. `map_implications` is a list of resource references:
+pass IRIs or CURIEs for map resources or assertion nodes the pattern may affect.
+Put explanatory prose in `pattern_text`, `rationale`, observations, or claims.
 
 `doxabase.record_claim_reconsideration`
 
