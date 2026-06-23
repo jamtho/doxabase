@@ -1050,6 +1050,7 @@ revisions.revision_type
 revisions.record_kind
 revisions.application_status
 revisions.stale_resolution_state
+revisions.current_staged_work_only
 revisions.include_apply_checks
 revisions.drift_detail
 ```
@@ -1059,6 +1060,7 @@ Each item in `revisions.revisions` has:
 ```python
 item.iri
 item.record_kind
+item.is_current_staged_work
 item.summary
 item.revision_type
 item.revision_type_label
@@ -1091,6 +1093,13 @@ item.application_snapshot_drifts
 item.suggested_next_actions
 item.suggested_next_calls
 ```
+
+`is_current_staged_work` is true for patch-backed staged revisions that have not
+already been applied and have not been superseded by a refreshed successor. Use
+`current_staged_work_only=True` when a list should show the live mutation-review
+queue instead of handled stale sources or applied history. The filter also
+computes apply checks, so the returned rows include current application status
+and suggested actions.
 
 `application_*` fields are only populated when `include_apply_checks=True` and
 the revision has staged patch payloads, except applied revision events report

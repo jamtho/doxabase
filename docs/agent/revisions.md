@@ -123,6 +123,11 @@ staged proposals, or `stale_resolution_state="stale_unresolved"` for stale
 sources that still need recovery. Filters on `application_status` and
 `stale_resolution_state` automatically compute apply checks for staged patch
 rows.
+Use `current_staged_work_only=True` when you want the live mutation-review queue
+without stale originals that already have restaged successors or staged sources
+that already have applied events. The excluded rows remain useful history; they
+just are not current work. This filter also computes apply checks, so the queue
+includes live `application_status`, blocker, and suggested-action fields.
 
 Read `application_status`, `application_decision`, `application_can_apply`,
 `application_summary`, `application_blocking_reasons`, and

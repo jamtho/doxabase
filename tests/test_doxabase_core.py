@@ -3560,8 +3560,10 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert staged_listing.record_kind is None
     assert staged_listing.application_status is None
     assert staged_listing.stale_resolution_state is None
+    assert staged_listing.current_staged_work_only is False
     assert staged_listing.revisions[0].iri == staged.revision_iri
     assert staged_listing.revisions[0].record_kind == "staged_patch"
+    assert staged_listing.revisions[0].is_current_staged_work is True
     assert staged_listing.revisions[0].revision_type == RC + "StagedRevision"
     assert staged_listing.revisions[0].revision_type_label == "staged revision"
     assert staged_listing.revisions[0].has_patch_payload is True
@@ -3586,6 +3588,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert by_iri[staged.revision_iri].applied_by == applied.applied_revision_iri
     assert by_iri[staged.revision_iri].application_status == "already_applied"
     assert by_iri[staged.revision_iri].stale_resolution_state == "already_applied"
+    assert by_iri[staged.revision_iri].is_current_staged_work is False
     assert by_iri[staged.revision_iri].application_summary == (
         f"Already applied by {applied.applied_revision_iri}."
     )
@@ -3600,6 +3603,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert by_iri[applied.applied_revision_iri].patch_count == 0
     assert by_iri[applied.applied_revision_iri].application_status == "applied_event"
     assert by_iri[applied.applied_revision_iri].stale_resolution_state is None
+    assert by_iri[applied.applied_revision_iri].is_current_staged_work is False
     assert listing.revisions[0].iri == applied.applied_revision_iri
 
     stale = db.stage_graph_revision(
@@ -3641,6 +3645,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert stale_item.application_count_drifts[0].target_graph == "map"
     assert stale_item.restaged_by == restaged.revision_iri
     assert stale_item.stale_resolution_state == "stale_handled_by_restage"
+    assert stale_item.is_current_staged_work is False
     assert stale_item.suggested_next_actions[-1].tool_name == "describe_staged_revision"
     assert stale_item.suggested_next_actions[-1].arguments == {
         "iri": restaged.revision_iri
@@ -3650,13 +3655,26 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         drift_by_iri[restaged.revision_iri].stale_resolution_state
         == "restaged_successor_ready"
     )
+    assert drift_by_iri[restaged.revision_iri].is_current_staged_work is True
+
+    current_work_listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        current_staged_work_only=True,
+    )
+    assert current_work_listing.current_staged_work_only is True
+    assert current_work_listing.include_apply_checks is True
+    assert [item.iri for item in current_work_listing.revisions] == [
+        restaged.revision_iri
+    ]
 
     ready_listing = db.list_graph_revisions(
         revision_type="rc:StagedRevision",
         application_status="ready",
+        current_staged_work_only=True,
     )
     assert ready_listing.include_apply_checks is True
     assert ready_listing.application_status == "ready"
+    assert ready_listing.current_staged_work_only is True
     assert [item.iri for item in ready_listing.revisions] == [restaged.revision_iri]
 
     handled_listing = db.list_graph_revisions(

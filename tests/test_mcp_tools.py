@@ -762,8 +762,10 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["record_kind"] is None
     assert result["application_status"] is None
     assert result["stale_resolution_state"] is None
+    assert result["current_staged_work_only"] is False
     assert result["revisions"][0]["iri"] == staged["revision_iri"]
     assert result["revisions"][0]["record_kind"] == "staged_patch"
+    assert result["revisions"][0]["is_current_staged_work"] is True
     assert result["revisions"][0]["has_patch_payload"] is True
     assert result["revisions"][0]["patch_count"] == 1
     assert result["revisions"][0]["application_status"] == "ready"
@@ -785,9 +787,12 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     staged_patch_result = list_graph_revisions_tool(
         db,
         record_kind="staged_patch",
+        current_staged_work_only=True,
     )
 
     assert staged_patch_result["record_kind"] == "staged_patch"
+    assert staged_patch_result["current_staged_work_only"] is True
+    assert staged_patch_result["include_apply_checks"] is True
     assert staged_patch_result["count"] == 1
     assert staged_patch_result["revisions"][0]["iri"] == staged["revision_iri"]
 

@@ -120,6 +120,7 @@ def list_graph_revisions_tool(
     record_kind: str | None = None,
     application_status: str | None = None,
     stale_resolution_state: str | None = None,
+    current_staged_work_only: bool = False,
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
@@ -132,6 +133,7 @@ def list_graph_revisions_tool(
             record_kind=record_kind,
             application_status=application_status,
             stale_resolution_state=stale_resolution_state,
+            current_staged_work_only=current_staged_work_only,
             limit=limit,
             offset=offset,
         )

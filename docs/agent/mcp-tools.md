@@ -87,9 +87,12 @@ only populated for revisions with graph patch payloads. Rows include
 selected apply-check blockers/drift summaries, and review-first suggested next
 actions. Use `record_kind`, `application_status`, and
 `stale_resolution_state` filters to ask directly for applied events, ready
-staged proposals, unresolved stale sources, or handled stale sources. Status and
-stale-state filters automatically compute apply checks. `drift_detail="summary"`
-is the default and omits exact changed-triple
+staged proposals, unresolved stale sources, or handled stale sources. Rows also
+include `is_current_staged_work`; pass `current_staged_work_only=True` for the
+live staged work queue, excluding applied sources and stale rows already handled
+by restage. Status, stale-state, and current-work filters automatically compute
+apply checks.
+`drift_detail="summary"` is the default and omits exact changed-triple
 arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or
 call `check_staged_revision_apply` when you need the actual changed triples.

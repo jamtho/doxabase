@@ -710,6 +710,7 @@ class GraphRevisionDescription:
 class GraphRevisionListItem:
     iri: str
     record_kind: str
+    is_current_staged_work: bool
     summary: str | None
     revision_type: str | None
     revision_type_label: str | None
@@ -753,6 +754,7 @@ class GraphRevisionList:
     record_kind: str | None
     application_status: str | None
     stale_resolution_state: str | None
+    current_staged_work_only: bool
     include_apply_checks: bool
     drift_detail: str
 
@@ -2583,6 +2585,7 @@ class DoxaBase:
         record_kind: str | None = None,
         application_status: str | None = None,
         stale_resolution_state: str | None = None,
+        current_staged_work_only: bool = False,
         limit: int = 50,
         offset: int = 0,
     ) -> GraphRevisionList:
@@ -2596,6 +2599,7 @@ class DoxaBase:
         include_apply_checks = include_apply_checks or (
             application_status_filter is not None
             or stale_resolution_state_filter is not None
+            or current_staged_work_only
         )
         data_graphs = self._expand_graphs([graph] if graph else None)
         ontology_graphs = self._expand_graphs(["ontology"])
@@ -2698,6 +2702,16 @@ class DoxaBase:
                 has_patch_payload=bool(patch_iris),
                 applies_staged_revision=applies_staged_revision,
             )
+            applied_by = self._first_subject(
+                data_graphs,
+                "rc:appliesStagedRevision",
+                revision_iri,
+            )
+            is_current_staged_work = (
+                item_record_kind == "staged_patch"
+                and applied_by is None
+                and current_restaged_by is None
+            )
             item_stale_resolution_state = self._stale_resolution_state(
                 status=application_status,
                 has_patch_payload=bool(patch_iris),
@@ -2719,11 +2733,14 @@ class DoxaBase:
                 and item_stale_resolution_state != stale_resolution_state_filter
             ):
                 continue
+            if current_staged_work_only and not is_current_staged_work:
+                continue
 
             items.append(
                 GraphRevisionListItem(
                     iri=revision_iri,
                     record_kind=item_record_kind,
+                    is_current_staged_work=is_current_staged_work,
                     summary=self._first_object(data_graphs, revision_iri, "rc:summary"),
                     revision_type=item_revision_type,
                     revision_type_label=(
@@ -2760,11 +2777,7 @@ class DoxaBase:
                     ),
                     has_patch_payload=bool(patch_iris),
                     patch_count=len(patch_iris),
-                    applied_by=self._first_subject(
-                        data_graphs,
-                        "rc:appliesStagedRevision",
-                        revision_iri,
-                    ),
+                    applied_by=applied_by,
                     applies_staged_revision=applies_staged_revision,
                     alternative_to=alternative_to,
                     current_alternative_to=self._current_alternative_to_iri(
@@ -2813,6 +2826,7 @@ class DoxaBase:
             record_kind=record_kind_filter,
             application_status=application_status_filter,
             stale_resolution_state=stale_resolution_state_filter,
+            current_staged_work_only=current_staged_work_only,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
         )
