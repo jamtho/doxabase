@@ -90,8 +90,10 @@ actions. Use `record_kind`, `application_status`, and
 staged proposals, unresolved stale sources, or handled stale sources. Rows also
 include `is_current_staged_work`; pass `current_staged_work_only=True` for the
 live staged work queue, excluding applied sources and stale rows already handled
-by restage. Status, stale-state, and current-work filters automatically compute
-apply checks.
+by restage. Non-current rows include `not_current_staged_work_reason`, such as
+`already_applied_source`, `superseded_by_restage`, or `applied_event_record`.
+Status, stale-state, and current-work filters automatically compute apply
+checks.
 `drift_detail="summary"` is the default and omits exact changed-triple
 arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or

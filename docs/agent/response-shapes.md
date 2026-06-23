@@ -1061,6 +1061,7 @@ Each item in `revisions.revisions` has:
 item.iri
 item.record_kind
 item.is_current_staged_work
+item.not_current_staged_work_reason
 item.summary
 item.revision_type
 item.revision_type_label
@@ -1100,6 +1101,10 @@ already been applied and have not been superseded by a refreshed successor. Use
 queue instead of handled stale sources or applied history. The filter also
 computes apply checks, so the returned rows include current application status
 and suggested actions.
+When `is_current_staged_work` is false,
+`not_current_staged_work_reason` explains why. Current reason values include
+`already_applied_source`, `superseded_by_restage`, `applied_event_record`,
+`export_record`, `import_record`, and `history_record`.
 
 `application_*` fields are only populated when `include_apply_checks=True` and
 the revision has staged patch payloads, except applied revision events report

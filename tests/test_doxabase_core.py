@@ -3575,6 +3575,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert staged_listing.revisions[0].iri == staged.revision_iri
     assert staged_listing.revisions[0].record_kind == "staged_patch"
     assert staged_listing.revisions[0].is_current_staged_work is True
+    assert staged_listing.revisions[0].not_current_staged_work_reason is None
     assert staged_listing.revisions[0].revision_type == RC + "StagedRevision"
     assert staged_listing.revisions[0].revision_type_label == "staged revision"
     assert staged_listing.revisions[0].has_patch_payload is True
@@ -3600,6 +3601,10 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert by_iri[staged.revision_iri].application_status == "already_applied"
     assert by_iri[staged.revision_iri].stale_resolution_state == "already_applied"
     assert by_iri[staged.revision_iri].is_current_staged_work is False
+    assert (
+        by_iri[staged.revision_iri].not_current_staged_work_reason
+        == "already_applied_source"
+    )
     assert by_iri[staged.revision_iri].application_summary == (
         f"Already applied by {applied.applied_revision_iri}."
     )
@@ -3615,6 +3620,10 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert by_iri[applied.applied_revision_iri].application_status == "applied_event"
     assert by_iri[applied.applied_revision_iri].stale_resolution_state is None
     assert by_iri[applied.applied_revision_iri].is_current_staged_work is False
+    assert (
+        by_iri[applied.applied_revision_iri].not_current_staged_work_reason
+        == "applied_event_record"
+    )
     assert listing.revisions[0].iri == applied.applied_revision_iri
 
     stale = db.stage_graph_revision(
@@ -3641,6 +3650,12 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         stale.revision_iri,
         created_at="2026-06-01T10:03:00Z",
     )
+    manual = db.record_graph_revision(
+        summary="Record manual review note",
+        rationale="Exercise current staged work reason for non-staged history.",
+        changed_graphs=["map"],
+        created_at="2026-06-01T10:04:00Z",
+    )
 
     drift_listing = db.list_graph_revisions(include_apply_checks=True)
     assert drift_listing.drift_detail == "summary"
@@ -3657,6 +3672,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert stale_item.restaged_by == restaged.revision_iri
     assert stale_item.stale_resolution_state == "stale_handled_by_restage"
     assert stale_item.is_current_staged_work is False
+    assert stale_item.not_current_staged_work_reason == "superseded_by_restage"
     assert stale_item.suggested_next_actions[-1].tool_name == "describe_staged_revision"
     assert stale_item.suggested_next_actions[-1].arguments == {
         "iri": restaged.revision_iri
@@ -3667,6 +3683,15 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         == "restaged_successor_ready"
     )
     assert drift_by_iri[restaged.revision_iri].is_current_staged_work is True
+    assert (
+        drift_by_iri[restaged.revision_iri].not_current_staged_work_reason is None
+    )
+    assert drift_by_iri[manual.revision_iri].record_kind == "history_record"
+    assert drift_by_iri[manual.revision_iri].is_current_staged_work is False
+    assert (
+        drift_by_iri[manual.revision_iri].not_current_staged_work_reason
+        == "history_record"
+    )
 
     current_work_listing = db.list_graph_revisions(
         revision_type="rc:StagedRevision",

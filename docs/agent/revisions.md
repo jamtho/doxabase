@@ -128,6 +128,8 @@ without stale originals that already have restaged successors or staged sources
 that already have applied events. The excluded rows remain useful history; they
 just are not current work. This filter also computes apply checks, so the queue
 includes live `application_status`, blocker, and suggested-action fields.
+When inspecting a mixed history list, use `not_current_staged_work_reason` to see
+why a false `is_current_staged_work` row was excluded from that queue.
 
 Read `application_status`, `application_decision`, `application_can_apply`,
 `application_summary`, `application_blocking_reasons`, and

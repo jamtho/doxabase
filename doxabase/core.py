@@ -721,6 +721,7 @@ class GraphRevisionListItem:
     iri: str
     record_kind: str
     is_current_staged_work: bool
+    not_current_staged_work_reason: str | None
     summary: str | None
     revision_type: str | None
     revision_type_label: str | None
@@ -2722,6 +2723,15 @@ class DoxaBase:
                 and applied_by is None
                 and current_restaged_by is None
             )
+            not_current_staged_work_reason = (
+                self._not_current_staged_work_reason(
+                    record_kind=item_record_kind,
+                    applied_by=applied_by,
+                    current_restaged_by=current_restaged_by,
+                )
+                if not is_current_staged_work
+                else None
+            )
             item_stale_resolution_state = self._stale_resolution_state(
                 status=application_status,
                 has_patch_payload=bool(patch_iris),
@@ -2751,6 +2761,9 @@ class DoxaBase:
                     iri=revision_iri,
                     record_kind=item_record_kind,
                     is_current_staged_work=is_current_staged_work,
+                    not_current_staged_work_reason=(
+                        not_current_staged_work_reason
+                    ),
                     summary=self._first_object(data_graphs, revision_iri, "rc:summary"),
                     revision_type=item_revision_type,
                     revision_type_label=(
@@ -2913,6 +2926,23 @@ class DoxaBase:
         }:
             return status
         return None
+
+    @staticmethod
+    def _not_current_staged_work_reason(
+        *,
+        record_kind: str,
+        applied_by: str | None,
+        current_restaged_by: str | None,
+    ) -> str:
+        if record_kind == "staged_patch":
+            if applied_by is not None:
+                return "already_applied_source"
+            if current_restaged_by is not None:
+                return "superseded_by_restage"
+            return "not_current_staged_patch"
+        if record_kind == "applied_event":
+            return "applied_event_record"
+        return record_kind
 
     def _summary_snapshot_drifts(
         self,

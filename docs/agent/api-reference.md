@@ -534,7 +534,10 @@ stale sources, or handled stale sources without hand-filtering the full list.
 Each row also includes `is_current_staged_work`; pass
 `current_staged_work_only=True` to keep only staged patch rows that still need
 review, repair, restage, or application, excluding handled stale originals and
-already-applied sources.
+already-applied sources. When a row is not current staged work,
+`not_current_staged_work_reason` explains whether it is an applied source,
+superseded by restage, an applied event, or another history/export/import
+record.
 Filtering by `application_status` or `stale_resolution_state` automatically
 computes apply checks for patch-backed revisions, as does
 `current_staged_work_only=True`.
