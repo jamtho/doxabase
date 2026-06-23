@@ -1604,6 +1604,11 @@ For `patch_conflict`, inspect `patch_checks[].conflict` before mutating; it
 means the stored patch cannot currently be replayed, not merely that the target
 graph count or digest drifted. Suggested actions for `patch_conflict` omit
 `restage_staged_revision`.
+For `validation_failed`, inspect `validation_results` before staging a repair.
+If the failure appears after restaging overlapping single-assertion proposals,
+do not restage the same patch again; use a removal+addition patch or
+`stage_map_assertion_change` replacement to make the intended replacement
+explicit.
 `triples_to_add` and `triples_to_remove` are effective graph deltas for the
 current preview, not raw patch payload sizes. Each `patch_checks[]` row carries
 `effective_triples_to_add`, `effective_triples_to_remove`,

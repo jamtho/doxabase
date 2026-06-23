@@ -158,6 +158,12 @@ touching remaining candidates. If a skipped
 already-handled row reports
 `stale_resolution_state_after="restaged_successor_stale_unresolved"`, the
 current successor is stale too; inspect or restage `current_revision_iri`.
+If a current or freshly restaged successor reports
+`status_after="validation_failed"`, do not restage the same patch again hoping
+for semantic repair. Inspect `validation_results`, then stage a repaired or
+alternative candidate. For overlapping single-assertion cases, the repair is
+usually a removal+addition patch or a `stage_map_assertion_change` replacement
+that explicitly replaces the now-current assertion.
 
 ### Grouped Review Recipe
 
@@ -169,7 +175,7 @@ them may be stale:
 | `ready` | Review/export, apply at most one, then regenerate checks before siblings. |
 | `target_count_drift` or `target_digest_drift` | Review/export the conflict, then restage against current graph state. |
 | `patch_conflict` | Inspect patch diagnostics or export; stage a repaired or alternative proposal. |
-| `validation_failed` | Inspect `validation_results`; stage a repaired or alternative proposal. |
+| `validation_failed` | Inspect `validation_results`; stage a repaired or alternative proposal. For overlapping single assertions, prefer removal+addition or `stage_map_assertion_change` replacement over another restage. |
 | `noop` | Inspect/export; do not apply unless the no-op is exactly the intended durable event. |
 | `already_applied` | Inspect the applied event and staged source; do not replay it. |
 

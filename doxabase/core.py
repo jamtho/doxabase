@@ -10962,6 +10962,15 @@ class DoxaBase:
                     + " The current successor is itself stale; inspect or "
                     "restage current_revision_iri before applying anything."
                 )
+            if current_check.status == "validation_failed":
+                note = (
+                    note
+                    + " The current revision fails validation; inspect "
+                    "validation_results and stage a repaired or alternative "
+                    "candidate. For overlapping single-assertion failures, use "
+                    "a removal+addition patch or stage_map_assertion_change "
+                    "replacement instead of restaging the same patch again."
+                )
             items.append(
                 StagedGraphRevisionBatchRestageItem(
                     source_revision_iri=source.iri,
@@ -12580,7 +12589,10 @@ class DoxaBase:
         if status == "validation_failed":
             return (
                 "Inspect validation_results and stage a repaired or alternative "
-                "candidate."
+                "candidate. If validation failed after restaging an overlapping "
+                "single assertion, repair with a removal+addition patch or "
+                "stage_map_assertion_change replacement instead of restaging the "
+                "same patch again."
             )
         return "Inspect staged revision details before taking action."
 
@@ -12718,7 +12730,9 @@ class DoxaBase:
                 (
                     "Inspect structured validation_results, then stage a repaired "
                     "or alternative candidate while preserving this failed revision "
-                    "for comparison."
+                    "for comparison. For overlapping single-assertion failures, "
+                    "repair with removal+addition or stage_map_assertion_change "
+                    "replacement instead of restaging the same patch again."
                 ),
                 action_label="Inspect validation failure",
             )

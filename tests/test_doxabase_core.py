@@ -3182,6 +3182,15 @@ def test_batch_restage_items_report_validation_failed_successor_status(
     assert item.blocking_reasons_after == ["validation_failed"]
     assert item.triples_to_add_after > 0
     assert item.triples_to_remove_after == 0
+    assert "current revision fails validation" in item.note
+    assert "stage a repaired or alternative candidate" in item.note
+    assert "stage_map_assertion_change replacement" in item.note
+    successor_check = db.check_staged_revision_apply(successor_iri)
+    assert successor_check.recommended_resolution is not None
+    assert "removal+addition" in successor_check.recommended_resolution
+    assert "stage_map_assertion_change replacement" in (
+        successor_check.recommended_resolution
+    )
     assert batch.bundle_summary.apply_status_counts == {
         "conflict": 1,
         "validation_failed": 1,
