@@ -2275,6 +2275,23 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["column_profiles"][0]["map_column"] is None
     assert result["dataset_profile"]["observation"]["evidence_iri"] == shared_evidence
     assert result["column_profiles"][0]["observation"]["evidence_iri"] == shared_evidence
+    assert result["handoff_entrypoints"]["dataset_iri"] == table
+    assert result["handoff_entrypoints"]["shared_evidence_iri"] == shared_evidence
+    assert result["handoff_entrypoints"]["dataset_describe_available"] is True
+    assert result["handoff_entrypoints"]["profile_run_available"] is True
+    assert result["handoff_entrypoints"]["profile_observation_iris"] == [
+        result["dataset_profile"]["observation"]["observation_iri"],
+        result["column_profiles"][0]["observation"]["observation_iri"],
+    ]
+    assert result["handoff_entrypoints"]["suggested_next_calls"][:2] == [
+        f"describe_dataset('{table}')",
+        f"describe_profile_run('{table}', '{shared_evidence}')",
+    ]
+    assert result["handoff_entrypoints"]["suggested_next_calls"][-1] == (
+        "describe_context_slice("
+        f"{result['handoff_entrypoints']['profile_observation_iris']!r}, "
+        "profile='dataset_brief')"
+    )
 
     dataset = describe_dataset_tool(db, table)
 

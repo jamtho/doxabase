@@ -376,10 +376,21 @@ context.pattern_contexts
 context.warnings
 ```
 
-`route_counts` is keyed by route id. `route_legend` explains those ids with
-labels, meanings, priorities, and counts. `reading_order` is static guidance for
-how to read the returned slice; it is not recomputed as a custom plan for each
-query. Route counts are route occurrences, not unique resource counts; a
+`route_counts` is keyed by route id. `route_legend` is a list of rows, not a
+dict; callers can build a dict keyed by `route` if that is more convenient.
+Each `route_legend[]` item has:
+
+```python
+legend.route
+legend.route_label
+legend.meaning
+legend.priority
+legend.count
+```
+
+`reading_order` is static guidance for how to read the returned slice; it is not
+recomputed as a custom plan for each query. Route counts are route occurrences,
+not unique resource counts; a
 resource reached through two useful routes contributes to both route counts.
 Dataset/deep-lore slices can include routes such as
 `dataset_profile_observation`, `column_profile_observation`,
@@ -456,6 +467,7 @@ bundle.dataset_iri
 bundle.shared_evidence_iri
 bundle.dataset_profile
 bundle.column_profiles
+bundle.handoff_entrypoints
 ```
 
 `bundle.dataset_profile` has the same shape as `DatasetProfileRecord`, and each
@@ -471,6 +483,28 @@ supported by the dataset profile observation only. Use
 dataset profile plus every bundled column profile. If the synthesis also needs
 claims or hand-picked observations, call `describe_profile_run(...)` and pass
 `profile_observation_iris` plus the extra support to `record_pattern` manually.
+
+`bundle.handoff_entrypoints` is the compact next-agent entrypoint object:
+
+```python
+bundle.handoff_entrypoints.dataset_iri
+bundle.handoff_entrypoints.shared_evidence_iri
+bundle.handoff_entrypoints.dataset_profile_observation_iri
+bundle.handoff_entrypoints.column_profile_observation_iris
+bundle.handoff_entrypoints.profile_observation_iris
+bundle.handoff_entrypoints.map_dataset_recorded
+bundle.handoff_entrypoints.map_column_iris
+bundle.handoff_entrypoints.dataset_describe_available
+bundle.handoff_entrypoints.profile_run_available
+bundle.handoff_entrypoints.suggested_next_calls
+bundle.handoff_entrypoints.handoff_note
+```
+
+When `dataset_describe_available` is false, do not start a handoff by calling
+`describe_dataset`; use `describe_profile_run(dataset_iri, shared_evidence_iri)`
+when `profile_run_available` is true, or seed `describe_context_slice` from
+`profile_observation_iris`. This commonly happens when
+`update_map_snapshot=False` keeps a brand-new dataset observation-only.
 
 Copyable bundle shape:
 

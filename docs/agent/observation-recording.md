@@ -113,8 +113,10 @@ bounded or omitted counts are non-zero, call
 `describe_profile_run(dataset_iri, shared_evidence_iri)` to retrieve all profile
 observations linked to that run evidence. Check the returned
 `dataset_profile_observations`, `mapped_column_profile_observations`, and
-`unmapped_column_profile_observations` lists, together with their
-returned/total/omitted counts, before deciding a profile-run handoff is
+`unmapped_column_profile_observations` lists, together with the top-level
+`returned_dataset_profile_count`, `returned_mapped_column_profile_count`,
+`returned_unmapped_column_profile_count`, `returned_profile_count`, and matching
+`total_*` / `omitted_*` fields, before deciding a profile-run handoff is
 complete.
 
 The bundle's `pattern_summary`/`pattern_text` arguments create a pattern
@@ -171,6 +173,12 @@ is supplied. `record_column_profile` defaults `update_map_column=true` and can
 write map column metadata when map fields are supplied. Set these booleans to
 `false` when the profile result is a scratch sample, a tentative measurement, or
 otherwise not ready to become current-best map context.
+When `update_map_snapshot=false` on a brand-new dataset, `describe_dataset()`
+may not find the dataset until map context is recorded. Use
+`record_profile_bundle(...).handoff_entrypoints`, call
+`describe_profile_run(dataset_iri, shared_evidence_iri)`, or seed
+`describe_context_slice` from profile observation IRIs for observation-only
+handoffs.
 When a column profile uses `update_map_column=false` and the column is not yet a
 map column, `describe_dataset` surfaces it under
 `unmapped_column_profile_observations` rather than `columns[]`. The supplied

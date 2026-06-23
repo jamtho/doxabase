@@ -173,12 +173,16 @@ Returns the profile observations for one dataset that link to one evidence IRI.
 Use it after `describe_dataset().profile_summary.profile_run_candidates` points
 at a shared profiler-run evidence resource, especially when the bounded
 `describe_dataset` response has omitted profile observations. The result
-includes the dataset and evidence summaries, returned/total/omitted counts,
+includes the dataset and evidence summaries, top-level returned/total/omitted
+count fields,
 `profile_observation_iris`, and profile rows split into dataset-level,
 mapped-column, and unmapped-column observations. The three list fields are
 `dataset_profile_observations`, `mapped_column_profile_observations`, and
-`unmapped_column_profile_observations`; use their returned/total/omitted counts
-when checking whether a handoff contains the whole profiler pass. `limit=None`
+`unmapped_column_profile_observations`; use the top-level
+`returned_dataset_profile_count`, `returned_mapped_column_profile_count`,
+`returned_unmapped_column_profile_count`, `returned_profile_count`, and matching
+`total_*` / `omitted_*` fields when checking whether a handoff contains the
+whole profiler pass. `limit=None`
 returns the full matching run; pass a positive `limit` only when a client
 intentionally wants a capped payload. The run is inferred from profile
 observations linked to the requested evidence IRI, not from a separate
@@ -279,8 +283,11 @@ such as `rc:MinValue` do not become ad hoc RDF. A metric item may include
 profile observation as a whole. Profile evidence entries include source strings
 and source spans when recorded.
 `update_map_snapshot` defaults to true; set it to false for scratch or tentative
-row counts that should remain observation-only. If the helper creates a pattern,
-the profile evidence is linked to that pattern as well as the observation.
+row counts that should remain observation-only. If that is a brand-new dataset,
+`describe_dataset()` may not find it until map context is recorded; use
+`describe_profile_run(dataset_iri, evidence_iri)` or profile-observation
+context-slice seeds for handoff retrieval. If the helper creates a pattern, the
+profile evidence is linked to that pattern as well as the observation.
 For a capsule that only records profile lore, `describe_dataset` may still emit
 missing storage/path/layout warnings. Those are query-planning gaps rather than
 profile validation failures. Read `profile_summary.handoff_note` when deciding
@@ -302,7 +309,8 @@ Pass `shared_evidence_iri` when the dataset profile and column profiles should
 all point at one shared profiler-run `rc:Evidence` resource. A column entry can
 still override that with its own `evidence_iri`.
 The returned bundle includes `shared_evidence_iri` at top level for quick
-run-level checks.
+run-level checks and `handoff_entrypoints` with profile observation seeds,
+availability flags, and suggested next calls for the next agent.
 Use `column_defaults` for repeated column options such as
 `{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
 fields as `record_column_profile` and must include `column_iri`, `column_name`,
@@ -311,7 +319,8 @@ lists shared evidence IRIs, profile run candidates, grouped profile observation
 IRIs, and a handoff note that can help a later agent recognise one profiler run
 without walking every observation.
 Use `describe_profile_run(dataset_iri, shared_evidence_iri)` when the full run
-may be wider than the bounded dataset profile lists. If the bundle's
+may be wider than the bounded dataset profile lists or when an observation-only
+brand-new dataset is not yet available through `describe_dataset()`. If the bundle's
 `pattern_summary`/`pattern_text` arguments are supplied, the helper-created
 pattern is supported by the dataset profile observation only by default. Set
 `pattern_support_scope="all_profiles"` when the helper-created pattern should

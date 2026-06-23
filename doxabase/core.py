@@ -1371,11 +1371,27 @@ class ColumnProfileRecord:
 
 
 @dataclass(frozen=True)
+class ProfileBundleHandoffEntryPoints:
+    dataset_iri: str
+    shared_evidence_iri: str | None
+    dataset_profile_observation_iri: str
+    column_profile_observation_iris: list[str]
+    profile_observation_iris: list[str]
+    map_dataset_recorded: bool
+    map_column_iris: list[str]
+    dataset_describe_available: bool
+    profile_run_available: bool
+    suggested_next_calls: list[str]
+    handoff_note: str
+
+
+@dataclass(frozen=True)
 class ProfileBundleRecord:
     dataset_iri: str
     shared_evidence_iri: str | None
     dataset_profile: DatasetProfileRecord
     column_profiles: list[ColumnProfileRecord]
+    handoff_entrypoints: ProfileBundleHandoffEntryPoints
 
 
 @dataclass(frozen=True)
@@ -8594,6 +8610,102 @@ class DoxaBase:
             shared_evidence_iri=shared_evidence_iri,
             dataset_profile=dataset_profile,
             column_profiles=recorded_columns,
+            handoff_entrypoints=self._profile_bundle_handoff_entrypoints(
+                dataset_iri=dataset_value,
+                shared_evidence_iri=shared_evidence_iri,
+                dataset_profile=dataset_profile,
+                column_profiles=recorded_columns,
+            ),
+        )
+
+    def _profile_bundle_handoff_entrypoints(
+        self,
+        *,
+        dataset_iri: str,
+        shared_evidence_iri: str | None,
+        dataset_profile: DatasetProfileRecord,
+        column_profiles: list[ColumnProfileRecord],
+    ) -> ProfileBundleHandoffEntryPoints:
+        dataset_profile_observation_iri = (
+            dataset_profile.observation.observation_iri
+        )
+        column_profile_observation_iris = [
+            column_profile.observation.observation_iri
+            for column_profile in column_profiles
+        ]
+        profile_observation_iris = [
+            dataset_profile_observation_iri,
+            *column_profile_observation_iris,
+        ]
+        profile_run_evidence_iri = (
+            dataset_profile.observation.evidence_iri
+            if shared_evidence_iri is not None
+            else None
+        )
+        dataset_describe_available = self._subject_exists(
+            dataset_iri,
+            self._expand_graphs(["map"]),
+        )
+        profile_run_available = profile_run_evidence_iri is not None
+        suggested_next_calls: list[str] = []
+        if dataset_describe_available:
+            suggested_next_calls.append(f"describe_dataset({dataset_iri!r})")
+        if profile_run_available:
+            suggested_next_calls.append(
+                "describe_profile_run("
+                f"{dataset_iri!r}, {profile_run_evidence_iri!r}"
+                ")"
+            )
+        if dataset_describe_available:
+            suggested_next_calls.append(
+                "describe_context_slice("
+                f"[{dataset_iri!r}], profile='dataset_brief'"
+                ")"
+            )
+        suggested_next_calls.append(
+            "describe_context_slice("
+            f"{profile_observation_iris!r}, profile='dataset_brief'"
+            ")"
+        )
+        if dataset_describe_available and profile_run_available:
+            handoff_note = (
+                "Map dataset context is available; use describe_dataset for the "
+                "bounded dataset view or describe_profile_run for the shared "
+                "evidence run."
+            )
+        elif dataset_describe_available:
+            handoff_note = (
+                "Map dataset context is available, but no shared evidence IRI "
+                "was supplied; use profile_observation_iris for run-level "
+                "handoff."
+            )
+        elif profile_run_available:
+            handoff_note = (
+                "No map dataset subject is currently available; use "
+                "describe_profile_run or seed describe_context_slice from the "
+                "profile observation IRIs."
+            )
+        else:
+            handoff_note = (
+                "No map dataset subject or shared evidence IRI is currently "
+                "available; use profile_observation_iris as the handoff seeds."
+            )
+        return ProfileBundleHandoffEntryPoints(
+            dataset_iri=dataset_iri,
+            shared_evidence_iri=profile_run_evidence_iri,
+            dataset_profile_observation_iri=dataset_profile_observation_iri,
+            column_profile_observation_iris=column_profile_observation_iris,
+            profile_observation_iris=profile_observation_iris,
+            map_dataset_recorded=dataset_profile.map_dataset is not None,
+            map_column_iris=[
+                column_profile.column_iri
+                for column_profile in column_profiles
+                if column_profile.map_column is not None
+            ],
+            dataset_describe_available=dataset_describe_available,
+            profile_run_available=profile_run_available,
+            suggested_next_calls=suggested_next_calls,
+            handoff_note=handoff_note,
         )
 
     def _preflight_profile_bundle_evidence_summaries(

@@ -47,10 +47,10 @@ Useful fields:
   route reasons. `primary_route` is the highest-priority inclusion reason;
   `referenced_only=true` means the resource was selected as an object/reference
   but has no subject triples in the selected graphs.
-- `route_legend`: compact meanings for the route names present in this slice,
-  including their priority and count. Use it with `route_counts` before
-  inspecting raw triples.
-- `route_counts`: how many resources were included through each route.
+- `route_legend`: list of route legend rows for the route names present in this
+  slice, including `route`, `route_label`, `meaning`, `priority`, and `count`.
+  Build a dict keyed by `route` if that is more convenient.
+- `route_counts`: how many route occurrences were included through each route.
 - `dataset_contexts` and `pattern_contexts`: structured summaries for the main
   domain objects in the slice. Dataset profile lists remain bounded; check
   profile summary total and omitted counts before assuming no older profile

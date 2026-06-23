@@ -8475,6 +8475,39 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         column_profile.observation.evidence_iri
         for column_profile in result.column_profiles
     } == {shared_evidence}
+    assert result.handoff_entrypoints.dataset_iri == dataset
+    assert result.handoff_entrypoints.shared_evidence_iri == shared_evidence
+    assert result.handoff_entrypoints.dataset_profile_observation_iri == (
+        result.dataset_profile.observation.observation_iri
+    )
+    profile_observation_iris = [
+        result.dataset_profile.observation.observation_iri,
+        *(
+            column_profile.observation.observation_iri
+            for column_profile in result.column_profiles
+        ),
+    ]
+    assert set(result.handoff_entrypoints.profile_observation_iris) == {
+        result.dataset_profile.observation.observation_iri,
+        *(
+            column_profile.observation.observation_iri
+            for column_profile in result.column_profiles
+        ),
+    }
+    assert result.handoff_entrypoints.map_dataset_recorded is True
+    assert result.handoff_entrypoints.map_column_iris == [amount_column]
+    assert result.handoff_entrypoints.dataset_describe_available is True
+    assert result.handoff_entrypoints.profile_run_available is True
+    assert result.handoff_entrypoints.suggested_next_calls[0] == (
+        f"describe_dataset('{dataset}')"
+    )
+    assert result.handoff_entrypoints.suggested_next_calls[1] == (
+        f"describe_profile_run('{dataset}', '{shared_evidence}')"
+    )
+    assert result.handoff_entrypoints.suggested_next_calls[-1] == (
+        f"describe_context_slice({profile_observation_iris!r}, "
+        "profile='dataset_brief')"
+    )
 
     description = db.describe_dataset(dataset)
 
@@ -8866,7 +8899,7 @@ def test_describe_profile_run_works_for_observation_only_dataset(
     dataset = "https://example.test/project#ObservationOnlyOrders"
     shared_evidence = "https://example.test/project#ObservationOnlyProfileRunEvidence"
 
-    db.record_profile_bundle(
+    bundle = db.record_profile_bundle(
         dataset,
         dataset_summary="Observation-only Orders profile.",
         evidence_summary="Observation-only profile pass.",
@@ -8882,6 +8915,27 @@ def test_describe_profile_run_works_for_observation_only_dataset(
             }
         ],
     )
+
+    assert bundle.handoff_entrypoints.map_dataset_recorded is False
+    assert bundle.handoff_entrypoints.dataset_describe_available is False
+    assert bundle.handoff_entrypoints.profile_run_available is True
+    assert bundle.handoff_entrypoints.profile_observation_iris == [
+        bundle.dataset_profile.observation.observation_iri,
+        bundle.column_profiles[0].observation.observation_iri,
+    ]
+    assert bundle.handoff_entrypoints.suggested_next_calls[0] == (
+        f"describe_profile_run('{dataset}', '{shared_evidence}')"
+    )
+    assert bundle.handoff_entrypoints.suggested_next_calls[-1] == (
+        "describe_context_slice("
+        f"{bundle.handoff_entrypoints.profile_observation_iris!r}, "
+        "profile='dataset_brief')"
+    )
+    assert not any(
+        call.startswith("describe_dataset")
+        for call in bundle.handoff_entrypoints.suggested_next_calls
+    )
+    assert "No map dataset subject" in bundle.handoff_entrypoints.handoff_note
 
     with pytest.raises(DoxaBaseError, match="was not found"):
         db.describe_dataset(dataset)

@@ -294,10 +294,13 @@ deciding whether an execution attempt is safe.
 observations for one dataset linked to one evidence resource. It does not create
 or require a persisted run node; membership is inferred from the dataset's
 profile observations that link to the requested evidence IRI. The response
-includes dataset and evidence summaries, returned/total/omitted counts,
-`profile_observation_iris`, `dataset_profile_observations`,
-`mapped_column_profile_observations`, `unmapped_column_profile_observations`,
-and a `retrieval_note`. The default `limit=None` is intended to retrieve the
+includes dataset and evidence summaries, top-level
+`returned_dataset_profile_count`, `returned_mapped_column_profile_count`,
+`returned_unmapped_column_profile_count`, `returned_profile_count`, matching
+`total_*` / `omitted_*` count fields, `profile_observation_iris`,
+`dataset_profile_observations`, `mapped_column_profile_observations`,
+`unmapped_column_profile_observations`, and a `retrieval_note`. The default
+`limit=None` is intended to retrieve the
 whole run even when `describe_dataset()` is bounded; pass a positive `limit`
 only when a capped payload is useful. It also works for observation-only profile
 runs where no map dataset exists yet.
@@ -351,8 +354,12 @@ when the scalar is specifically about a resource narrower than the profile
 observation as a whole. Profile evidence entries include source strings and
 source spans when recorded. `update_map_snapshot`
 defaults to true, so pass `false` when a row count is only a scratch sample or
-tentative measurement. When the helper creates a pattern and the profile
-observation has evidence, the same evidence is linked to the pattern.
+tentative measurement. On a brand-new dataset that keeps the profile
+observation-only, `describe_dataset()` may not find the dataset until map
+context is recorded; use `describe_profile_run(dataset_iri, evidence_iri)` or
+profile-observation context-slice seeds for handoff retrieval. When the helper
+creates a pattern and the profile observation has evidence, the same evidence is
+linked to the pattern.
 `profile_summary.shared_evidence_iris` means an evidence IRI appears on every
 returned profile observation in the bounded `describe_dataset()` response. When
 older profile history is mixed with a newer shared-evidence bundle, inspect
@@ -381,7 +388,8 @@ Pass `shared_evidence_iri` when the dataset profile and column profiles should
 all link to one shared profiler-run `rc:Evidence` resource. A column item can
 override that by supplying its own `evidence_iri`.
 The returned bundle includes `shared_evidence_iri` at top level for quick
-run-level checks.
+run-level checks and `handoff_entrypoints` with profile observation seeds,
+availability flags, and suggested next calls for the next agent.
 Use `column_defaults` for repeated column options, for example
 `{"update_map_column": false}` when sampled column profiles should stay
 observation-only. Each `column_profiles[]` item accepts the same fields as
@@ -390,10 +398,12 @@ observation-only. Each `column_profiles[]` item accepts the same fields as
 shared evidence IRIs, profile run candidates, and a handoff note that can help a
 later agent recognise one profiler run without walking every observation.
 `describe_profile_run(dataset_iri, shared_evidence_iri)` retrieves that run
-directly. Bundle-created patterns support the dataset profile observation only
-by default. Set `pattern_support_scope="all_profiles"` when the pattern should
-be supported by the dataset profile plus every bundled column profile. For a
-synthesis that also needs claims or a hand-picked support set, collect
+directly, including for observation-only brand-new datasets that are not yet
+available through `describe_dataset()`. Bundle-created patterns support the
+dataset profile observation only by default. Set
+`pattern_support_scope="all_profiles"` when the pattern should be supported by
+the dataset profile plus every bundled column profile. For a synthesis that
+also needs claims or a hand-picked support set, collect
 `describe_profile_run(...).profile_observation_iris` and call
 `record_pattern(..., supporting_observations=[...], supporting_claims=[...], evidence_iri=shared_evidence_iri)`.
 
