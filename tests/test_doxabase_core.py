@@ -1603,6 +1603,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
 
     assert result.staged_revision_iri == staged.revision_iri
     assert result.changed_graphs == ["map"]
+    assert result.post_apply_recheck_revision_iris == []
     assert result.patches_applied == 1
     assert result.triples_added == 3
     assert result.triples_removed == 0
@@ -3496,7 +3497,8 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     ) in exported
     assert exported.index("## Alternative Context") < exported.index("## Revisions")
 
-    db.apply_staged_revision(first_restaged.revision_iri)
+    result = db.apply_staged_revision(first_restaged.revision_iri)
+    assert result.post_apply_recheck_revision_iris == [second_restaged.revision_iri]
     second_check_after_apply = db.check_staged_revision_apply(
         second_restaged.revision_iri
     )

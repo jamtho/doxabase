@@ -446,6 +446,7 @@ class AppliedStagedRevisionRecord:
     graph: str
     triples: int
     changed_graphs: list[str]
+    post_apply_recheck_revision_iris: list[str]
     patches_applied: int
     triples_added: int
     triples_removed: int
@@ -11155,12 +11156,17 @@ class DoxaBase:
             )
         )
         extra_triples = self._insert_graph("history", metadata)
+        post_apply_recheck_revision_iris = self._post_apply_recheck_revision_iris(
+            staged_revision_iri=staged.iri,
+            changed_graphs=changed_graphs,
+        )
         return AppliedStagedRevisionRecord(
             applied_revision_iri=applied_subject,
             staged_revision_iri=staged.iri,
             graph="history",
             triples=revision_record.triples + extra_triples,
             changed_graphs=changed_graphs,
+            post_apply_recheck_revision_iris=post_apply_recheck_revision_iris,
             patches_applied=len(preview.parsed_patches),
             triples_added=triples_added,
             triples_removed=triples_removed,
@@ -11169,6 +11175,69 @@ class DoxaBase:
             validation_result_count=check.validation_result_count or 0,
             validation_results=check.validation_results,
         )
+
+    def _post_apply_recheck_revision_iris(
+        self,
+        *,
+        staged_revision_iri: str,
+        changed_graphs: list[str],
+    ) -> list[str]:
+        if not changed_graphs:
+            return []
+        changed_graph_set = set(changed_graphs)
+        data_graphs = self._expand_graphs(["history"])
+        staged_revision_type = self.expand_iri("rc:StagedRevision")
+        candidate_rows: list[tuple[str, str, str]] = []
+        revision_iris = self._subjects(
+            data_graphs,
+            str(RDF.type),
+            self.expand_iri("rc:GraphRevision"),
+        )
+        for revision_iri in revision_iris:
+            if revision_iri == staged_revision_iri:
+                continue
+            if (
+                self._first_object(data_graphs, revision_iri, "rc:revisionType")
+                != staged_revision_type
+            ):
+                continue
+            if not self._objects(data_graphs, revision_iri, "rc:hasGraphPatch"):
+                continue
+            if (
+                self._first_subject(
+                    data_graphs,
+                    "rc:appliesStagedRevision",
+                    revision_iri,
+                )
+                is not None
+            ):
+                continue
+            if (
+                self._current_restage_successor_iri(
+                    revision_iri,
+                    graphs=data_graphs,
+                )
+                is not None
+            ):
+                continue
+            candidate_changed_graphs = self._objects(
+                data_graphs,
+                revision_iri,
+                "rc:changedGraph",
+            )
+            if not changed_graph_set.intersection(candidate_changed_graphs):
+                continue
+            candidate_rows.append(
+                (
+                    self._first_object(data_graphs, revision_iri, "rc:createdAt")
+                    or "",
+                    self._first_object(data_graphs, revision_iri, "rc:summary")
+                    or "",
+                    revision_iri,
+                )
+            )
+        candidate_rows.sort(reverse=True)
+        return [revision_iri for _, _, revision_iri in candidate_rows]
 
     def _preview_staged_revision_application(
         self,

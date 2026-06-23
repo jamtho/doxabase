@@ -1234,6 +1234,30 @@ patch.before_triple_count
 patch.after_triple_count
 ```
 
+`db.apply_staged_revision(staged_revision_iri)` returns
+`AppliedStagedRevisionRecord`:
+
+```python
+applied.applied_revision_iri
+applied.staged_revision_iri
+applied.graph
+applied.triples
+applied.changed_graphs
+applied.post_apply_recheck_revision_iris
+applied.patches_applied
+applied.triples_added
+applied.triples_removed
+applied.validation_scope
+applied.validation_conforms
+applied.validation_result_count
+applied.validation_results
+```
+
+`post_apply_recheck_revision_iris` lists other current unapplied staged
+revisions that share a changed graph with the applied revision. Re-run
+`check_staged_revision_apply` before acting on those rows; the list is a stale
+queue hint, not an apply recommendation.
+
 `db.describe_applied_revision_diff(applied_revision_iri, include_triples=False,
 max_triples=500)` returns `AppliedRevisionDiffDescription`:
 

@@ -399,6 +399,9 @@ conservative:
 - it applies additions/removals only after those checks pass;
 - it records an `rc:AppliedStagedRevision` history event linked back with
   `rc:appliesStagedRevision`.
+- it returns `post_apply_recheck_revision_iris` for other current staged
+  revisions sharing changed graphs that should be rechecked before any further
+  apply.
 
 After application, `describe_graph_revision()` on the applied event exposes
 `applies_staged_revision`, and `describe_staged_revision()` on the staged source

@@ -982,10 +982,27 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         "apply_staged_revision"
     )
 
+    sibling = stage_graph_revision_tool(
+        db,
+        summary="Stage threads table",
+        rationale="Threads should be rechecked after sibling map applies.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Threads a rc:Dataset .
+                """,
+            }
+        ],
+    )
     result = apply_staged_revision_tool(db, iri=staged["revision_iri"])
 
     assert result["staged_revision_iri"] == staged["revision_iri"]
     assert result["changed_graphs"] == ["map"]
+    assert result["post_apply_recheck_revision_iris"] == [sibling["revision_iri"]]
     assert result["patches_applied"] == 1
     assert result["triples_added"] == 3
     assert result["validation_conforms"] is True
@@ -1047,6 +1064,12 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         db,
         "https://example.test/project#Messages",
     )["label"] == "Messages"
+    sibling_check = check_staged_revision_apply_tool(
+        db,
+        iri=sibling["revision_iri"],
+    )
+    assert sibling_check["status"] == "conflict"
+    assert "target_count_drift" in sibling_check["blocking_reasons"]
 
 
 def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) -> None:

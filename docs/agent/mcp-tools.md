@@ -636,7 +636,10 @@ already-applied staged revisions and rejects target graph count or digest drift
 from the staged `beforeTripleCount` values and graph snapshots. Patch checks
 follow the recorded `rc:patchSequence` order from the original preview. On
 success it records an `rc:AppliedStagedRevision` history event linked to the
-staged revision. It is a first apply path, not a full merge/rebase workflow.
+staged revision. The return payload includes
+`post_apply_recheck_revision_iris` for other current staged revisions sharing
+changed graphs; re-run apply checks on those rows before further mutation. It is
+a first apply path, not a full merge/rebase workflow.
 
 `doxabase.export_staged_revision`
 

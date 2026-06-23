@@ -704,7 +704,9 @@ staged revisions, rejects target graph count or digest drift from the patch
 `beforeTripleCount` values and graph snapshots, and records an
 `rc:AppliedStagedRevision` history event linked to the staged revision. This is
 a conservative first apply path, not a full conflict/rebase or
-graph-version workflow.
+graph-version workflow. The return payload includes
+`post_apply_recheck_revision_iris`, a list of other current staged revisions
+sharing changed graphs that should be rechecked before any further apply.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,
