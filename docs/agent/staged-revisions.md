@@ -441,7 +441,11 @@ is the compact branch hint: `review_then_apply`,
 needs review before the next mutation. On `ready` checks that means review
 before application; on count/digest-drift `conflict` checks that means review
 before restaging; on `patch_conflict` checks that means inspect/export before
-staging a repaired or alternative candidate.
+staging a repaired or alternative candidate. When a ready check has
+`semantic_risk_level` of `attention` or `high`, the apply action is labelled
+`Apply only after semantic review`. Conflict review actions include
+`include_current_apply_check=True` so the next inspection reloads the current
+blocked status.
 Use `blocking_reasons` and `recommended_resolution` to distinguish count drift,
 digest drift, validation failure, and already-applied state. When
 `validation_conforms` is `None`, `validation_skipped_reason` explains why

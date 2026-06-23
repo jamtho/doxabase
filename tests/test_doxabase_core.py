@@ -1319,6 +1319,11 @@ def test_stage_map_assertion_change_packages_support_context(
     assert check.status == "ready"
     assert check.semantic_risk_level == "high"
     assert check.semantic_risk_reasons == panel.semantic_risk_reasons
+    assert check.suggested_next_actions[-1].tool_name == "apply_staged_revision"
+    assert check.suggested_next_actions[-1].action_label == (
+        "Apply only after semantic review"
+    )
+    assert "semantic review" in check.suggested_next_actions[-1].reason
     export_path = tmp_path / "price-change-review.md"
     db.export_staged_revision(staged_change.staged_revision.revision_iri, export_path)
     exported = export_path.read_text()
@@ -1492,6 +1497,9 @@ def test_stale_map_assertion_apply_check_preserves_review_risk(
     )
     assert ready_check.status == "ready"
     assert ready_check.semantic_risk_level == "high"
+    assert ready_check.suggested_next_actions[-1].action_label == (
+        "Apply only after semantic review"
+    )
 
     db.record_map_dataset(
         f"{base}UnrelatedAuditLog",
@@ -2116,6 +2124,10 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.patch_checks[0].can_apply is False
     assert check.suggested_next_actions[0].tool_name == "describe_staged_revision"
     assert check.suggested_next_actions[0].action_label == "Review stale source"
+    assert check.suggested_next_actions[0].arguments == {
+        "iri": staged.revision_iri,
+        "include_current_apply_check": True,
+    }
     assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
     assert check.suggested_next_actions[-1].tool_name == "restage_staged_revision"
     assert check.suggested_next_actions[-1].action_label == "Restage stale source"

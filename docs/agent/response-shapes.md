@@ -1723,7 +1723,10 @@ as `apply_staged_revision` and `restage_staged_revision` come after inspection
 or export suggestions.
 `can_apply=True` means the patch replays and validates mechanically; it is not
 semantic approval. If `semantic_risk_level` is `attention` or `high`, inspect the
-judgement panel, impacts, and supporting lore before applying.
+judgement panel, impacts, and supporting lore before applying; the apply action
+label says `Apply only after semantic review` in that case. Conflict review
+actions include `include_current_apply_check=True` so the next inspection reloads
+the current blocked status.
 
 `export_staged_revision()` and `export_staged_revisions()` embed this live apply
 check into the Markdown artifact at export time. Treat the `Current Apply Check`

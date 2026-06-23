@@ -664,6 +664,10 @@ validation status, semantic risk, and a top-level `can_apply` flag. Read
 `recommended_resolution`, `count_drifts`, `snapshot_drifts`, and
 `suggested_next_actions` to decide whether to review then apply, inspect an
 applied event, review validation diagnostics, or restage after conflicts.
+For `ready` checks with `semantic_risk_level` of `attention` or `high`, the
+apply action is labelled `Apply only after semantic review`. For conflict
+checks, the review action includes `include_current_apply_check=True` so the
+next staged-revision inspection reloads the current blocked status.
 The response includes both `staged_revision_iri` and `revision_iri`; the latter
 is a script-friendly alias for copied payloads.
 `noop` means replay validates but has no effective graph delta; suggested

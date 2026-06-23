@@ -11985,6 +11985,7 @@ class DoxaBase:
             suggested_next_actions = self._staged_apply_check_next_actions(
                 staged.iri,
                 status=status,
+                semantic_risk_level=semantic_risk_level,
                 blocking_reasons=["already_applied"],
                 already_applied_by=existing_applied[0],
                 restaged_by=(
@@ -12252,6 +12253,7 @@ class DoxaBase:
         suggested_next_actions = self._staged_apply_check_next_actions(
             staged.iri,
             status=status,
+            semantic_risk_level=semantic_risk_level,
             blocking_reasons=blocking_reasons,
             already_applied_by=None,
             restaged_by=(
@@ -12839,6 +12841,7 @@ class DoxaBase:
         staged_revision_iri: str,
         *,
         status: str,
+        semantic_risk_level: str = "none",
         blocking_reasons: list[str] | None = None,
         already_applied_by: str | None,
         restaged_by: str | None,
@@ -12880,14 +12883,25 @@ class DoxaBase:
                 "Write a Markdown review bundle before applying if review is needed.",
                 action_label="Export review bundle",
             )
+            apply_reason = (
+                "Apply this staged revision only after semantic review confirms "
+                "the proposal is still desired."
+                if semantic_risk_level in {"attention", "high"}
+                else (
+                    "Apply this staged revision after review confirms the "
+                    "proposal is still desired."
+                )
+            )
+            apply_label = (
+                "Apply only after semantic review"
+                if semantic_risk_level in {"attention", "high"}
+                else "Apply after review"
+            )
             add_action(
                 "apply_staged_revision",
                 {"iri": staged_revision_iri},
-                (
-                    "Apply this staged revision after review confirms the "
-                    "proposal is still desired."
-                ),
-                action_label="Apply after review",
+                apply_reason,
+                action_label=apply_label,
             )
         elif status == "noop":
             add_action(
@@ -12920,7 +12934,7 @@ class DoxaBase:
             )
             add_action(
                 "describe_staged_revision",
-                {"iri": staged_revision_iri},
+                {"iri": staged_revision_iri, "include_current_apply_check": True},
                 (
                     "Review the original patch payloads, count previews, impacts, "
                     "and support before deciding how to handle this conflict."

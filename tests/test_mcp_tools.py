@@ -919,6 +919,12 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     assert check["status"] == "ready"
     assert check["semantic_risk_level"] == "high"
     assert check["semantic_risk_reasons"]
+    assert check["suggested_next_actions"][-1]["tool_name"] == (
+        "apply_staged_revision"
+    )
+    assert check["suggested_next_actions"][-1]["action_label"] == (
+        "Apply only after semantic review"
+    )
 
     ais_result = stage_map_assertion_change_tool(
         db,
