@@ -1737,6 +1737,7 @@ item.apply_status
 item.apply_decision
 item.apply_can_apply
 item.apply_summary
+item.apply_recommended_resolution
 item.apply_blocking_reasons
 item.apply_validation_conforms
 item.apply_validation_skipped_reason
@@ -1758,6 +1759,10 @@ item.suggested_next_calls
 
 Use these rows when a script needs the same grouped current-status information
 shown in the Markdown summary table without making separate apply-check calls.
+`item.review_recommendation` is author-supplied prose stored on the staged
+revision. `item.apply_recommended_resolution` is the live apply-check guidance
+for the row's current status, such as validation repair or restage advice; the
+Markdown summary table uses it when no authored recommendation is present.
 `alternative_to`, `current_alternative_to`, `restaged_from`, `restaged_by`,
 `current_restaged_by`, and `stale_resolution_state` let recovery scripts keep
 alternative groups and stale/restaged chains together without a second revision

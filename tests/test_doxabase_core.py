@@ -3810,6 +3810,14 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
         staged.revision_iri
     ]
     assert export.bundle_summary.recommended_applied_inspection_iris == []
+    assert export.revision_summaries[0].apply_recommended_resolution is not None
+    assert "validation_results" in (
+        export.revision_summaries[0].apply_recommended_resolution
+    )
+    exported = (tmp_path / "validation-failed-review.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Inspect validation_results" in exported
 
     with pytest.raises(DoxaBaseError, match="Applying staged revision would fail"):
         db.apply_staged_revision(staged.revision_iri)

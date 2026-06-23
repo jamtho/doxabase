@@ -486,6 +486,7 @@ class StagedGraphRevisionExportSummary:
     apply_decision: str | None
     apply_can_apply: bool | None
     apply_summary: str | None
+    apply_recommended_resolution: str | None
     apply_blocking_reasons: list[str]
     apply_validation_conforms: bool | None
     apply_validation_skipped_reason: str | None
@@ -12959,6 +12960,11 @@ class DoxaBase:
                     apply_summary=(
                         apply_check.summary if apply_check is not None else None
                     ),
+                    apply_recommended_resolution=(
+                        apply_check.recommended_resolution
+                        if apply_check is not None
+                        else None
+                    ),
                     apply_blocking_reasons=(
                         apply_check.blocking_reasons
                         if apply_check is not None
@@ -16634,6 +16640,9 @@ class DoxaBase:
                 apply_check,
                 apply_check_error=apply_check_error,
             )
+            recommendation = description.review_recommendation or (
+                apply_check.recommended_resolution if apply_check is not None else ""
+            )
             lines.append(
                 "| "
                 + " | ".join(
@@ -16658,9 +16667,7 @@ class DoxaBase:
                         self._markdown_table_cell(
                             self._validation_diagnostic_headline(description)
                         ),
-                        self._markdown_table_cell(
-                            description.review_recommendation or ""
-                        ),
+                        self._markdown_table_cell(recommendation),
                     ]
                 )
                 + " |"
