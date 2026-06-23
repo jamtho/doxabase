@@ -440,12 +440,20 @@ class SystematisationDraftRecord:
 
 
 @dataclass(frozen=True)
+class PostApplyRecheckRevision:
+    iri: str
+    changed_graphs: list[str]
+    shared_changed_graphs: list[str]
+
+
+@dataclass(frozen=True)
 class AppliedStagedRevisionRecord:
     applied_revision_iri: str
     staged_revision_iri: str
     graph: str
     triples: int
     changed_graphs: list[str]
+    post_apply_recheck_revisions: list[PostApplyRecheckRevision]
     post_apply_recheck_revision_iris: list[str]
     patches_applied: int
     triples_added: int
@@ -11170,7 +11178,7 @@ class DoxaBase:
             )
         )
         extra_triples = self._insert_graph("history", metadata)
-        post_apply_recheck_revision_iris = self._post_apply_recheck_revision_iris(
+        post_apply_recheck_revisions = self._post_apply_recheck_revisions(
             staged_revision_iri=staged.iri,
             changed_graphs=changed_graphs,
         )
@@ -11180,7 +11188,10 @@ class DoxaBase:
             graph="history",
             triples=revision_record.triples + extra_triples,
             changed_graphs=changed_graphs,
-            post_apply_recheck_revision_iris=post_apply_recheck_revision_iris,
+            post_apply_recheck_revisions=post_apply_recheck_revisions,
+            post_apply_recheck_revision_iris=[
+                item.iri for item in post_apply_recheck_revisions
+            ],
             patches_applied=len(preview.parsed_patches),
             triples_added=triples_added,
             triples_removed=triples_removed,
@@ -11190,18 +11201,17 @@ class DoxaBase:
             validation_results=check.validation_results,
         )
 
-    def _post_apply_recheck_revision_iris(
+    def _post_apply_recheck_revisions(
         self,
         *,
         staged_revision_iri: str,
         changed_graphs: list[str],
-    ) -> list[str]:
+    ) -> list[PostApplyRecheckRevision]:
         if not changed_graphs:
             return []
-        changed_graph_set = set(changed_graphs)
         data_graphs = self._expand_graphs(["history"])
         staged_revision_type = self.expand_iri("rc:StagedRevision")
-        candidate_rows: list[tuple[str, str, str]] = []
+        candidate_rows: list[tuple[str, str, str, PostApplyRecheckRevision]] = []
         revision_iris = self._subjects(
             data_graphs,
             str(RDF.type),
@@ -11239,7 +11249,10 @@ class DoxaBase:
                 revision_iri,
                 "rc:changedGraph",
             )
-            if not changed_graph_set.intersection(candidate_changed_graphs):
+            shared_changed_graphs = [
+                graph for graph in changed_graphs if graph in candidate_changed_graphs
+            ]
+            if not shared_changed_graphs:
                 continue
             candidate_rows.append(
                 (
@@ -11248,10 +11261,15 @@ class DoxaBase:
                     self._first_object(data_graphs, revision_iri, "rc:summary")
                     or "",
                     revision_iri,
+                    PostApplyRecheckRevision(
+                        iri=revision_iri,
+                        changed_graphs=candidate_changed_graphs,
+                        shared_changed_graphs=shared_changed_graphs,
+                    ),
                 )
             )
-        candidate_rows.sort(reverse=True)
-        return [revision_iri for _, _, revision_iri in candidate_rows]
+        candidate_rows.sort(key=lambda row: row[:3], reverse=True)
+        return [item for _, _, _, item in candidate_rows]
 
     def _preview_staged_revision_application(
         self,

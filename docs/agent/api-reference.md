@@ -612,7 +612,7 @@ staged revisions that are useful context but not mutation targets.
 `bundle_summary.warnings` calls out sequencing hazards, including grouped
 ready/no-op reviews on the same changed graph that should be re-checked after
 each apply, and `post_apply_recheck_revision_iris` gives scripts the affected
-revision IRIs.
+revision IRIs for pre-apply grouped-review hazards.
 Grouped Markdown exports include a `Review Queues` section mirroring the
 apply/restage, repair, applied-inspection, and post-apply recheck buckets.
 Relative export paths are resolved from the repository root and returned as
@@ -711,7 +711,10 @@ staged revisions, rejects target graph count or digest drift from the patch
 a conservative first apply path, not a full conflict/rebase or
 graph-version workflow. The return payload includes
 `post_apply_recheck_revision_iris`, a list of other current staged revisions
-sharing changed graphs that should be rechecked before any further apply.
+sharing changed graphs that should be rechecked before any further apply, and
+`post_apply_recheck_revisions`, compact rows with each sibling's
+`changed_graphs` plus `shared_changed_graphs` explaining why it is in the
+post-apply queue.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,

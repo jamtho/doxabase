@@ -1252,6 +1252,7 @@ applied.staged_revision_iri
 applied.graph
 applied.triples
 applied.changed_graphs
+applied.post_apply_recheck_revisions
 applied.post_apply_recheck_revision_iris
 applied.patches_applied
 applied.triples_added
@@ -1263,9 +1264,18 @@ applied.validation_results
 ```
 
 `post_apply_recheck_revision_iris` lists other current unapplied staged
-revisions that share a changed graph with the applied revision. Re-run
-`check_staged_revision_apply` before acting on those rows; the list is a stale
-queue hint, not an apply recommendation.
+revisions that share a changed graph with the applied revision.
+`post_apply_recheck_revisions` carries the same queue as compact rows:
+
+```python
+item.iri
+item.changed_graphs
+item.shared_changed_graphs
+```
+
+Re-run `check_staged_revision_apply` before acting on those rows; the queue is a
+stale hint, not an apply recommendation. `shared_changed_graphs` explains why
+the row was included after this apply.
 
 `db.describe_applied_revision_diff(applied_revision_iri, include_triples=False,
 max_triples=500)` returns `AppliedRevisionDiffDescription`:

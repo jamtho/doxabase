@@ -398,10 +398,16 @@ conservative:
   state;
 - it applies additions/removals only after those checks pass;
 - it records an `rc:AppliedStagedRevision` history event linked back with
-  `rc:appliesStagedRevision`.
-- it returns `post_apply_recheck_revision_iris` for other current staged
-  revisions sharing changed graphs that should be rechecked before any further
-  apply.
+  `rc:appliesStagedRevision`;
+- it returns `post_apply_recheck_revision_iris` and
+  `post_apply_recheck_revisions` for other current staged revisions sharing
+  changed graphs that should be rechecked before any further apply.
+
+After an apply, treat `post_apply_recheck_revisions` as the affected-sibling
+queue for the mutation that just happened. For each row, inspect
+`shared_changed_graphs`, re-run `check_staged_revision_apply`, export or restage
+conflicts, and discard any grouped readiness from before the apply. The queue is
+a recheck cue, not permission to apply the siblings.
 
 After application, `describe_graph_revision()` on the applied event exposes
 `applies_staged_revision`, and `describe_staged_revision()` on the staged source
@@ -494,8 +500,10 @@ Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying
 one staged revision can make sibling ready/no-op revisions on the same changed
 graph stale. Grouped bundle summaries put that sequencing hazard in `warnings`
-and `post_apply_recheck_revision_iris`; re-run
-`check_staged_revision_apply` or `export_staged_revisions` after each apply.
+and `post_apply_recheck_revision_iris`; that is a pre-apply grouped-review
+hazard list. After the actual mutation, prefer the `post_apply_recheck_revisions`
+returned by `apply_staged_revision`, then re-run `check_staged_revision_apply`
+or `export_staged_revisions` before acting on siblings.
 Grouped Markdown also includes a `Review Queues` section that mirrors the
 apply/restage, repair, applied-inspection, and post-apply recheck buckets from
 `bundle_summary`.

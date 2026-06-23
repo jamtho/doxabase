@@ -1008,6 +1008,13 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["staged_revision_iri"] == staged["revision_iri"]
     assert result["changed_graphs"] == ["map"]
     assert result["post_apply_recheck_revision_iris"] == [sibling["revision_iri"]]
+    assert result["post_apply_recheck_revisions"] == [
+        {
+            "iri": sibling["revision_iri"],
+            "changed_graphs": ["map"],
+            "shared_changed_graphs": ["map"],
+        }
+    ]
     assert result["patches_applied"] == 1
     assert result["triples_added"] == 3
     assert result["validation_conforms"] is True
