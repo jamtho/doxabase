@@ -1017,7 +1017,14 @@ class DraftQueryPlanScan:
     file_format: str | None
     compression: str | None
     candidate_path_status: str | None
+    dataset_verification_status: ResourceSummary | None
+    dataset_verification_note: str | None
     template: str | None
+    template_source: str | None
+    template_source_resource: ResourceSummary | None
+    template_source_verification_status: ResourceSummary | None
+    template_source_verification_note: str | None
+    template_lineage: str | None
     composition: str | None
     non_executed_note: str
 
@@ -5295,6 +5302,9 @@ class DoxaBase:
             selected_candidate=selected_candidate,
             scan=self._draft_query_plan_scan(
                 selected_candidate,
+                dataset_verification_status=context.layout_verification_status,
+                dataset_verification_note=context.layout_verification_note,
+                partition_schemes=context.partition_schemes,
                 physical_layouts=context.physical_layouts,
                 engine=engine_value,
             ),
@@ -5342,6 +5352,9 @@ class DoxaBase:
         self,
         selected_candidate: QueryTargetCandidate | None,
         *,
+        dataset_verification_status: ResourceSummary | None,
+        dataset_verification_note: str | None,
+        partition_schemes: list[PartitionDescription],
         physical_layouts: list[PhysicalLayoutDescription],
         engine: str,
     ) -> DraftQueryPlanScan:
@@ -5350,6 +5363,10 @@ class DoxaBase:
         )
         compression = self._draft_query_plan_resource_label(
             physical_layouts[0].compression_codec if physical_layouts else None
+        )
+        template_status, template_note = self._draft_query_plan_template_verification(
+            selected_candidate,
+            partition_schemes=partition_schemes,
         )
         return DraftQueryPlanScan(
             function=self._draft_query_plan_scan_function(engine, file_format),
@@ -5365,7 +5382,26 @@ class DoxaBase:
                 if selected_candidate is not None
                 else None
             ),
+            dataset_verification_status=dataset_verification_status,
+            dataset_verification_note=dataset_verification_note,
             template=selected_candidate.template if selected_candidate is not None else None,
+            template_source=(
+                selected_candidate.template_source
+                if selected_candidate is not None
+                else None
+            ),
+            template_source_resource=(
+                selected_candidate.source_resource
+                if selected_candidate is not None
+                else None
+            ),
+            template_source_verification_status=template_status,
+            template_source_verification_note=template_note,
+            template_lineage=self._draft_query_plan_template_lineage(
+                selected_candidate,
+                verification_status=template_status,
+                verification_note=template_note,
+            ),
             composition=(
                 selected_candidate.composition if selected_candidate is not None else None
             ),
@@ -5375,6 +5411,47 @@ class DoxaBase:
                 "analysis caveats."
             ),
         )
+
+    def _draft_query_plan_template_verification(
+        self,
+        selected_candidate: QueryTargetCandidate | None,
+        *,
+        partition_schemes: list[PartitionDescription],
+    ) -> tuple[ResourceSummary | None, str | None]:
+        if selected_candidate is None:
+            return None, None
+        if selected_candidate.template_source == "partition_scheme":
+            for partition in partition_schemes:
+                if partition.iri == selected_candidate.source_resource.iri:
+                    return (
+                        partition.layout_verification_status,
+                        partition.layout_verification_note,
+                    )
+        return None, None
+
+    @staticmethod
+    def _draft_query_plan_template_lineage(
+        selected_candidate: QueryTargetCandidate | None,
+        *,
+        verification_status: ResourceSummary | None,
+        verification_note: str | None,
+    ) -> str | None:
+        if selected_candidate is None:
+            return None
+        source_label = (
+            selected_candidate.source_resource.label
+            or selected_candidate.source_resource.iri
+        )
+        lineage = (
+            f"Template comes from {selected_candidate.template_source} "
+            f"{source_label}."
+        )
+        if verification_status is not None:
+            status_label = verification_status.label or verification_status.iri
+            lineage = f"{lineage} Verification status: {status_label}."
+        if verification_note:
+            lineage = f"{lineage} Verification note: {verification_note}"
+        return lineage
 
     @staticmethod
     def _draft_query_plan_resource_label(resource: ResourceSummary | None) -> str | None:

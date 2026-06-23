@@ -957,7 +957,15 @@ it does not resolve endpoint profiles, credentials, object existence, or SQL
 execution. `plan.selected_candidate` is the candidate named by
 `query_target_decision.candidate_index`. `plan.scan` gives a best-effort scan
 function such as `read_parquet`, a URI/path template, file format, compression,
-and the selected candidate path status. `plan.required_bindings` is parsed from
+and the selected candidate path status. It also carries the dataset-level
+`dataset_verification_status` / `dataset_verification_note`, and repeats path
+lineage fields from the selected candidate: `template_source`,
+`template_source_resource`, `template_source_verification_status`,
+`template_source_verification_note`, and `template_lineage`. Read these before
+treating a surprising URI template as the dataset's actual executable location;
+related or aggregate datasets can share a partition template while still being
+review-gated. `plan.required_bindings` is
+parsed from
 `{placeholders}` in the selected path and remains as a compact compatibility
 list. Prefer `plan.binding_requirements` for handoff work: each row has `name`,
 `source`, `source_text`, `required`, `derivation_status`, and

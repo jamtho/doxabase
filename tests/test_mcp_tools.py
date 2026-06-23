@@ -1489,6 +1489,18 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
         "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
     )
     assert result["scan"]["candidate_path_status"] == "orientation_only"
+    assert result["scan"]["dataset_verification_status"] is None
+    assert result["scan"]["dataset_verification_note"] is None
+    assert result["scan"]["template_source"] == "partition_scheme"
+    assert result["scan"]["template_source_resource"]["iri"] == (
+        "https://richcanopy.org/example/manifest/ais#daily_date_partition"
+    )
+    assert result["scan"]["template_source_verification_status"]["iri"] == (
+        "https://richcanopy.org/ns/rc#GeneratedFromManifestLayout"
+    )
+    assert "partition_scheme daily_date_partition" in (
+        result["scan"]["template_lineage"]
+    )
     assert result["required_bindings"] == ["year", "date"]
     assert [binding["name"] for binding in result["binding_requirements"]] == [
         "year",

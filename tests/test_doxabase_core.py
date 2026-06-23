@@ -4937,6 +4937,21 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     assert plan.scan.file_format == "Parquet"
     assert plan.scan.compression == "zstd"
     assert plan.scan.candidate_path_status == "orientation_only"
+    assert plan.scan.template_source == "partition_scheme"
+    assert plan.scan.template_source_resource is not None
+    assert plan.scan.template_source_resource.iri == (
+        "https://richcanopy.org/example/manifest/ais#daily_date_partition"
+    )
+    assert plan.scan.template_source_verification_status is not None
+    assert plan.scan.template_source_verification_status.iri == (
+        RC + "GeneratedFromManifestLayout"
+    )
+    assert plan.scan.template_source_verification_note is not None
+    assert "verify against storage listing" in (
+        plan.scan.template_source_verification_note
+    )
+    assert plan.scan.template_lineage is not None
+    assert "partition_scheme daily_date_partition" in plan.scan.template_lineage
     assert plan.required_bindings == ["year", "date"]
     assert [binding.name for binding in plan.binding_requirements] == [
         "year",
@@ -4969,6 +4984,43 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     assert any(issue.code == "layout_needs_verification" for issue in plan.issues)
     assert plan.caveats
     assert "not executable code" in plan.planning_notes[-1]
+
+
+def test_draft_query_plan_scan_surfaces_inherited_path_lineage(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    plan = db.draft_query_plan(
+        "https://richcanopy.org/example/manifest/ais#DailyIndex"
+    )
+
+    assert plan.dataset.label == "AIS Daily Vessel Index"
+    assert plan.scan.uri_template == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
+    assert plan.scan.template_source == "partition_scheme"
+    assert plan.scan.template_source_resource is not None
+    assert plan.scan.template_source_resource.iri == (
+        "https://richcanopy.org/example/manifest/ais#daily_date_partition"
+    )
+    assert plan.scan.template_lineage is not None
+    assert "daily_date_partition" in plan.scan.template_lineage
+    assert plan.scan.dataset_verification_status is not None
+    assert plan.scan.dataset_verification_status.iri == RC + "UnverifiedLayout"
+    assert plan.scan.dataset_verification_note is not None
+    assert "inherits the broadcast partition template" in (
+        plan.scan.dataset_verification_note
+    )
+    assert "index/{year}/ais-{date}.parquet" in plan.scan.dataset_verification_note
+    assert plan.review_gate.blocking_reason_codes == ["layout_needs_verification"]
+    assert plan.selected_candidate is not None
+    direct_reason_text = " ".join(
+        reason.message for reason in plan.selected_candidate.direct_review_reasons
+    )
+    assert "inherits the broadcast partition template" in direct_reason_text
+    assert "index/{year}/ais-{date}.parquet" in direct_reason_text
 
 
 def test_describe_query_context_reports_missing_planning_metadata(

@@ -213,8 +213,11 @@ non-secret storage environment hints, copied issues and analysis warnings,
 caveats, and a `review_gate`. Binding rows preserve the source text and say
 when DoxaBase has not inferred derivation or runtime values. `review_gate`
 includes `blocking_reason_codes`, `all_issue_codes`, and the legacy
-`reason_codes` alias for blocking reasons. It does not resolve endpoint
-profiles, credentials, object existence, or execute SQL.
+`reason_codes` alias for blocking reasons. The `scan` card includes
+dataset-level verification notes plus template lineage and source verification
+fields, so surprising shared or inherited path templates stay attached to their
+source resource and warning notes. It does not resolve endpoint profiles,
+credentials, object existence, or execute SQL.
 
 `doxabase.describe_context_slice`
 

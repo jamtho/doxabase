@@ -283,7 +283,10 @@ hints, copied issues and analysis warnings, caveats, and a `review_gate`.
 Binding rows identify the placeholder source text and explicitly report when
 DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 `blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`
-as a legacy alias for blocking reasons. It does not resolve endpoint profiles,
+as a legacy alias for blocking reasons. The `scan` card carries dataset-level
+verification status/notes and template lineage/source verification fields so
+agents can see, for example, that an aggregate table's path came from a shared
+partition scheme and is review-gated. It does not resolve endpoint profiles,
 credentials, object existence, or run SQL; use it as a handoff object before
 deciding whether an execution attempt is safe.
 
