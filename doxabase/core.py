@@ -498,6 +498,7 @@ class StagedGraphRevisionExportSummary:
     staged_validation_result_count: int | None
     validation_diagnostic_headline: str
     review_recommendation: str | None
+    summary_recommendation: str
     restaged_from: str | None
     restaged_by: str | None
     current_restaged_by: str | None
@@ -12931,6 +12932,32 @@ class DoxaBase:
             apply_checks,
             strict=True,
         ):
+            restaged_from = (
+                description.restaged_from.iri
+                if description.restaged_from is not None
+                else None
+            )
+            restaged_by = (
+                description.restaged_by.iri
+                if description.restaged_by is not None
+                else None
+            )
+            current_restaged_by = (
+                description.current_restaged_by.iri
+                if description.current_restaged_by is not None
+                else None
+            )
+            stale_resolution_state = self._stale_resolution_state(
+                status=apply_check.status if apply_check is not None else None,
+                has_patch_payload=bool(description.patches),
+                restaged_from=restaged_from,
+                restaged_by=restaged_by,
+            )
+            apply_recommended_resolution = (
+                apply_check.recommended_resolution
+                if apply_check is not None
+                else None
+            )
             summaries.append(
                 StagedGraphRevisionExportSummary(
                     revision_iri=description.iri,
@@ -12960,11 +12987,7 @@ class DoxaBase:
                     apply_summary=(
                         apply_check.summary if apply_check is not None else None
                     ),
-                    apply_recommended_resolution=(
-                        apply_check.recommended_resolution
-                        if apply_check is not None
-                        else None
-                    ),
+                    apply_recommended_resolution=apply_recommended_resolution,
                     apply_blocking_reasons=(
                         apply_check.blocking_reasons
                         if apply_check is not None
@@ -12999,35 +13022,21 @@ class DoxaBase:
                         self._validation_diagnostic_headline(description)
                     ),
                     review_recommendation=description.review_recommendation,
-                    restaged_from=(
-                        description.restaged_from.iri
-                        if description.restaged_from is not None
-                        else None
+                    summary_recommendation=(
+                        self._staged_revisions_effective_recommendation(
+                            review_recommendation=description.review_recommendation,
+                            stale_resolution_state=stale_resolution_state,
+                            restaged_by=restaged_by,
+                            current_restaged_by=current_restaged_by,
+                            apply_recommended_resolution=(
+                                apply_recommended_resolution
+                            ),
+                        )
                     ),
-                    restaged_by=(
-                        description.restaged_by.iri
-                        if description.restaged_by is not None
-                        else None
-                    ),
-                    current_restaged_by=(
-                        description.current_restaged_by.iri
-                        if description.current_restaged_by is not None
-                        else None
-                    ),
-                    stale_resolution_state=self._stale_resolution_state(
-                        status=apply_check.status if apply_check is not None else None,
-                        has_patch_payload=bool(description.patches),
-                        restaged_from=(
-                            description.restaged_from.iri
-                            if description.restaged_from is not None
-                            else None
-                        ),
-                        restaged_by=(
-                            description.restaged_by.iri
-                            if description.restaged_by is not None
-                            else None
-                        ),
-                    ),
+                    restaged_from=restaged_from,
+                    restaged_by=restaged_by,
+                    current_restaged_by=current_restaged_by,
+                    stale_resolution_state=stale_resolution_state,
                     suggested_next_actions=(
                         apply_check.suggested_next_actions
                         if apply_check is not None
@@ -16641,11 +16650,7 @@ class DoxaBase:
                 apply_check,
                 apply_check_error=apply_check_error,
             )
-            recommendation = self._staged_revisions_table_recommendation(
-                summary,
-                description=description,
-                apply_check=apply_check,
-            )
+            recommendation = summary.summary_recommendation
             lines.append(
                 "| "
                 + " | ".join(
@@ -16756,24 +16761,26 @@ class DoxaBase:
         return "\n".join(lines).rstrip() + "\n"
 
     @staticmethod
-    def _staged_revisions_table_recommendation(
-        summary: StagedGraphRevisionExportSummary,
+    def _staged_revisions_effective_recommendation(
         *,
-        description: StagedGraphRevisionDescription,
-        apply_check: StagedRevisionApplyCheck | None,
+        review_recommendation: str | None,
+        stale_resolution_state: str | None,
+        restaged_by: str | None,
+        current_restaged_by: str | None,
+        apply_recommended_resolution: str | None,
     ) -> str:
-        if description.review_recommendation:
-            return description.review_recommendation
-        if summary.stale_resolution_state == "stale_handled_by_restage":
-            successor_iri = summary.current_restaged_by or summary.restaged_by
+        if review_recommendation:
+            return review_recommendation
+        if stale_resolution_state == "stale_handled_by_restage":
+            successor_iri = current_restaged_by or restaged_by
             if successor_iri is not None:
                 return (
                     "Handled by refreshed successor; follow Review Queues or "
                     f"inspect `{successor_iri}`."
                 )
             return "Handled by refreshed successor; follow Review Queues."
-        if apply_check is not None and apply_check.recommended_resolution:
-            return apply_check.recommended_resolution
+        if apply_recommended_resolution:
+            return apply_recommended_resolution
         return ""
 
     def _staged_revisions_review_queues_markdown(

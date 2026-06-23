@@ -613,7 +613,8 @@ agent-authored synthesis at the top of the artifact.
 The returned record also includes `revision_summaries`, a machine-readable copy
 of the grouped status rows with current apply status, blockers, validation
 state, alternative/restage links, authored review recommendations, live
-`apply_recommended_resolution` guidance, and suggested next actions.
+`apply_recommended_resolution` guidance, effective `summary_recommendation`
+text matching the grouped Markdown table, and suggested next actions.
 Stale sources that already have `restaged_by` point suggested actions at the
 current refreshed successor instead of another restage. `current_restaged_by`
 follows deeper restage chains while preserving direct `restaged_by` provenance.

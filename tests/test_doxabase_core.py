@@ -2583,6 +2583,9 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert stale_summary.current_validation == "skipped: conflicts_present"
     assert stale_summary.staged_validation == "True (0 result(s))"
     assert stale_summary.stale_resolution_state == "stale_handled_by_restage"
+    assert stale_summary.apply_recommended_resolution is not None
+    assert "Restage the proposal" in stale_summary.apply_recommended_resolution
+    assert "Handled by refreshed successor" in stale_summary.summary_recommendation
     assert stale_summary.restaged_by == restaged.revision_iri
     assert stale_summary.suggested_next_actions[-1].tool_name == (
         "describe_staged_revision"
@@ -3816,6 +3819,9 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     assert export.bundle_summary.recommended_applied_inspection_iris == []
     assert export.revision_summaries[0].apply_recommended_resolution is not None
     assert "validation_results" in (
+        export.revision_summaries[0].apply_recommended_resolution
+    )
+    assert export.revision_summaries[0].summary_recommendation == (
         export.revision_summaries[0].apply_recommended_resolution
     )
     exported = (tmp_path / "validation-failed-review.md").read_text(

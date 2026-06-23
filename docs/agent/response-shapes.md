@@ -1749,6 +1749,7 @@ item.staged_validation_conforms
 item.staged_validation_result_count
 item.validation_diagnostic_headline
 item.review_recommendation
+item.summary_recommendation
 item.restaged_from
 item.restaged_by
 item.current_restaged_by
@@ -1762,7 +1763,9 @@ shown in the Markdown summary table without making separate apply-check calls.
 `item.review_recommendation` is author-supplied prose stored on the staged
 revision. `item.apply_recommended_resolution` is the live apply-check guidance
 for the row's current status, such as validation repair or restage advice; the
-Markdown summary table uses it when no authored recommendation is present.
+Markdown summary table uses `item.summary_recommendation`, which prefers
+authored review recommendations, redirects handled stale rows to their current
+successor, and otherwise falls back to `item.apply_recommended_resolution`.
 `alternative_to`, `current_alternative_to`, `restaged_from`, `restaged_by`,
 `current_restaged_by`, and `stale_resolution_state` let recovery scripts keep
 alternative groups and stale/restaged chains together without a second revision

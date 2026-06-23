@@ -694,7 +694,8 @@ apply status, decision, current validation state, and staged-time validation
 result. The returned payload includes `revision_summaries` with the same status
 rows as structured data: current apply status, blockers, validation state,
 alternative/restage links, authored review recommendations, live
-`apply_recommended_resolution` guidance, and suggested next actions. Stale
+`apply_recommended_resolution` guidance, effective `summary_recommendation`
+text matching the grouped Markdown table, and suggested next actions. Stale
 sources that already have `restaged_by` point suggested actions at the refreshed
 current successor instead of another restage. `current_restaged_by` follows
 deeper restage chains while `restaged_by` preserves the direct provenance edge.
