@@ -357,9 +357,11 @@ defaults to true, so pass `false` when a row count is only a scratch sample or
 tentative measurement. On a brand-new dataset that keeps the profile
 observation-only, `describe_dataset()` may not find the dataset until map
 context is recorded; use `describe_profile_run(dataset_iri, evidence_iri)` or
-profile-observation context-slice seeds for handoff retrieval. When the helper
-creates a pattern and the profile observation has evidence, the same evidence is
-linked to the pattern.
+profile-observation context-slice seeds for handoff retrieval. When matching
+profile observations exist, the `describe_dataset()` not-found error includes
+this recovery hint and points at `record_map_dataset` for creating map context.
+When the helper creates a pattern and the profile observation has evidence, the
+same evidence is linked to the pattern.
 `profile_summary.shared_evidence_iris` means an evidence IRI appears on every
 returned profile observation in the bounded `describe_dataset()` response. When
 older profile history is mixed with a newer shared-evidence bundle, inspect

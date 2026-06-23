@@ -8937,8 +8937,14 @@ def test_describe_profile_run_works_for_observation_only_dataset(
     )
     assert "No map dataset subject" in bundle.handoff_entrypoints.handoff_note
 
-    with pytest.raises(DoxaBaseError, match="was not found"):
+    with pytest.raises(DoxaBaseError, match="was not found") as exc_info:
         db.describe_dataset(dataset)
+    error_message = str(exc_info.value)
+    assert "profile observation(s) reference this dataset" in error_message
+    assert "describe_profile_run" in error_message
+    assert shared_evidence in error_message
+    assert "seed describe_context_slice" in error_message
+    assert "record_map_dataset" in error_message
 
     profile_run = db.describe_profile_run(dataset, shared_evidence)
 

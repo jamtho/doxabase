@@ -286,8 +286,11 @@ and source spans when recorded.
 row counts that should remain observation-only. If that is a brand-new dataset,
 `describe_dataset()` may not find it until map context is recorded; use
 `describe_profile_run(dataset_iri, evidence_iri)` or profile-observation
-context-slice seeds for handoff retrieval. If the helper creates a pattern, the
-profile evidence is linked to that pattern as well as the observation.
+context-slice seeds for handoff retrieval. When matching profile observations
+exist, the `describe_dataset()` not-found error includes this recovery hint and
+points at `record_map_dataset` for creating map context. If the helper creates a
+pattern, the profile evidence is linked to that pattern as well as the
+observation.
 For a capsule that only records profile lore, `describe_dataset` may still emit
 missing storage/path/layout warnings. Those are query-planning gaps rather than
 profile validation failures. Read `profile_summary.handoff_note` when deciding

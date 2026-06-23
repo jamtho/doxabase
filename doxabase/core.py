@@ -4907,7 +4907,10 @@ class DoxaBase:
         lookup_graphs = self._lookup_graphs(data_graphs)
         if not self._subject_exists(dataset_iri, data_graphs):
             graph_label = graph if graph is not None else "all graphs"
-            raise DoxaBaseError(f"Dataset '{iri}' was not found in {graph_label}")
+            raise DoxaBaseError(
+                f"Dataset '{iri}' was not found in {graph_label}"
+                f"{self._missing_dataset_profile_hint(dataset_iri, iri)}"
+            )
 
         columns = [
             self._describe_column(column_iri, data_graphs, lookup_graphs)
@@ -6814,6 +6817,47 @@ class DoxaBase:
             profile.observed_at or "",
             profile.summary or "",
             profile.iri,
+        )
+
+    def _missing_dataset_profile_hint(
+        self,
+        dataset_iri: str,
+        display_iri: str,
+    ) -> str:
+        profile_observation_iris = self._profile_observation_iris_for_target(
+            target_iri=dataset_iri,
+            target_predicate="rc:observedAsset",
+        )
+        if not profile_observation_iris:
+            return ""
+        evidence_counts: dict[str, int] = {}
+        for observation_iri in profile_observation_iris:
+            for evidence_iri in self._objects(
+                ["observations"],
+                observation_iri,
+                "rc:evidence",
+            ):
+                evidence_counts[evidence_iri] = evidence_counts.get(evidence_iri, 0) + 1
+        hint = (
+            f"; {len(profile_observation_iris)} profile observation(s) reference "
+            "this dataset in the observations graph. "
+        )
+        if evidence_counts:
+            evidence_iri = sorted(
+                evidence_counts,
+                key=lambda item: (-evidence_counts[item], item),
+            )[0]
+            hint += (
+                "For a profile-only handoff, try "
+                f"describe_profile_run({display_iri!r}, {evidence_iri!r}) or "
+            )
+        else:
+            hint += "For a profile-only handoff, "
+        return (
+            hint
+            + "seed describe_context_slice from the profile observation IRIs. "
+            "Record map dataset context with record_map_dataset before using "
+            "describe_dataset."
         )
 
     def _profile_observation_iris_for_target(
