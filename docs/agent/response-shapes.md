@@ -1738,6 +1738,7 @@ item.apply_decision
 item.apply_can_apply
 item.apply_summary
 item.apply_recommended_resolution
+item.apply_recommendation_scope
 item.apply_blocking_reasons
 item.apply_validation_conforms
 item.apply_validation_skipped_reason
@@ -1750,6 +1751,8 @@ item.staged_validation_result_count
 item.validation_diagnostic_headline
 item.review_recommendation
 item.summary_recommendation
+item.summary_recommendation_source
+item.active_recommendation_field
 item.restaged_from
 item.restaged_by
 item.current_restaged_by
@@ -1762,10 +1765,18 @@ Use these rows when a script needs the same grouped current-status information
 shown in the Markdown summary table without making separate apply-check calls.
 `item.review_recommendation` is author-supplied prose stored on the staged
 revision. `item.apply_recommended_resolution` is the live apply-check guidance
-for the row's current status, such as validation repair or restage advice; the
-Markdown summary table uses `item.summary_recommendation`, which prefers
-authored review recommendations, redirects handled stale rows to their current
-successor, and otherwise falls back to `item.apply_recommended_resolution`.
+for the row's current status, such as validation repair or restage advice.
+`item.apply_recommendation_scope` is `current_apply_check` for active row
+guidance and `prior_source_apply_check_context` when a handled stale source
+keeps its old apply-check guidance for provenance. The Markdown summary table
+uses `item.summary_recommendation`, which prefers authored review
+recommendations, redirects handled stale rows to their current successor, and
+otherwise falls back to `item.apply_recommended_resolution`.
+`item.summary_recommendation_source` names that provenance
+(`review_recommendation`, `stale_resolution_redirect`,
+`apply_recommended_resolution`, or `none`). Structured consumers should follow
+`item.active_recommendation_field`, which is `summary_recommendation` for these
+grouped rows, unless they are deliberately inspecting raw apply-check context.
 `alternative_to`, `current_alternative_to`, `restaged_from`, `restaged_by`,
 `current_restaged_by`, and `stale_resolution_state` let recovery scripts keep
 alternative groups and stale/restaged chains together without a second revision

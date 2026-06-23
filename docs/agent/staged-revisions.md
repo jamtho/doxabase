@@ -165,10 +165,12 @@ alternative candidate. For overlapping single-assertion cases, the repair is
 usually a removal+addition patch or a `stage_map_assertion_change` replacement
 that explicitly replaces the now-current assertion.
 Grouped exports keep handled stale rows in the summary for provenance, but their
-table recommendation should be read as informational: follow the Review Queues
-or inspect the refreshed successor before mutating anything. Restage Context
-lines for successors describe prior/source apply-check context, not necessarily
-the successor's current status.
+effective `summary_recommendation` redirects to the refreshed successor.
+Structured consumers should follow `active_recommendation_field`, and treat
+`apply_recommended_resolution` as prior/source context when
+`apply_recommendation_scope="prior_source_apply_check_context"`. Restage
+Context lines for successors describe prior/source apply-check context, not
+necessarily the successor's current status.
 
 ### Grouped Review Recipe
 

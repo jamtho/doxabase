@@ -557,6 +557,15 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     ]
     assert result["bundle_summary"]["recommended_repair_review_iris"] == []
     stale_summary = result["revision_summaries"][0]
+    assert (
+        stale_summary["apply_recommendation_scope"]
+        == "prior_source_apply_check_context"
+    )
+    assert (
+        stale_summary["summary_recommendation_source"]
+        == "stale_resolution_redirect"
+    )
+    assert stale_summary["active_recommendation_field"] == "summary_recommendation"
     assert stale_summary["suggested_next_actions"][-1]["action_label"] == (
         "Inspect current refreshed successor"
     )
@@ -721,6 +730,18 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["revision_summaries"][0]["stale_resolution_state"] == "ready"
     assert export["revision_summaries"][0]["apply_status"] == "ready"
     assert export["revision_summaries"][0]["apply_decision"] == "review_then_apply"
+    assert (
+        export["revision_summaries"][0]["apply_recommendation_scope"]
+        == "current_apply_check"
+    )
+    assert (
+        export["revision_summaries"][0]["summary_recommendation_source"]
+        == "apply_recommended_resolution"
+    )
+    assert (
+        export["revision_summaries"][0]["active_recommendation_field"]
+        == "summary_recommendation"
+    )
     assert export["revision_summaries"][0]["current_validation"] == (
         "True (0 result(s))"
     )

@@ -487,6 +487,7 @@ class StagedGraphRevisionExportSummary:
     apply_can_apply: bool | None
     apply_summary: str | None
     apply_recommended_resolution: str | None
+    apply_recommendation_scope: str | None
     apply_blocking_reasons: list[str]
     apply_validation_conforms: bool | None
     apply_validation_skipped_reason: str | None
@@ -499,6 +500,8 @@ class StagedGraphRevisionExportSummary:
     validation_diagnostic_headline: str
     review_recommendation: str | None
     summary_recommendation: str
+    summary_recommendation_source: str
+    active_recommendation_field: str
     restaged_from: str | None
     restaged_by: str | None
     current_restaged_by: str | None
@@ -12958,6 +12961,22 @@ class DoxaBase:
                 if apply_check is not None
                 else None
             )
+            summary_recommendation = (
+                self._staged_revisions_effective_recommendation(
+                    review_recommendation=description.review_recommendation,
+                    stale_resolution_state=stale_resolution_state,
+                    restaged_by=restaged_by,
+                    current_restaged_by=current_restaged_by,
+                    apply_recommended_resolution=apply_recommended_resolution,
+                )
+            )
+            summary_recommendation_source = (
+                self._staged_revisions_effective_recommendation_source(
+                    review_recommendation=description.review_recommendation,
+                    stale_resolution_state=stale_resolution_state,
+                    apply_recommended_resolution=apply_recommended_resolution,
+                )
+            )
             summaries.append(
                 StagedGraphRevisionExportSummary(
                     revision_iri=description.iri,
@@ -12988,6 +13007,14 @@ class DoxaBase:
                         apply_check.summary if apply_check is not None else None
                     ),
                     apply_recommended_resolution=apply_recommended_resolution,
+                    apply_recommendation_scope=(
+                        self._staged_revisions_apply_recommendation_scope(
+                            stale_resolution_state=stale_resolution_state,
+                            apply_recommended_resolution=(
+                                apply_recommended_resolution
+                            ),
+                        )
+                    ),
                     apply_blocking_reasons=(
                         apply_check.blocking_reasons
                         if apply_check is not None
@@ -13022,17 +13049,9 @@ class DoxaBase:
                         self._validation_diagnostic_headline(description)
                     ),
                     review_recommendation=description.review_recommendation,
-                    summary_recommendation=(
-                        self._staged_revisions_effective_recommendation(
-                            review_recommendation=description.review_recommendation,
-                            stale_resolution_state=stale_resolution_state,
-                            restaged_by=restaged_by,
-                            current_restaged_by=current_restaged_by,
-                            apply_recommended_resolution=(
-                                apply_recommended_resolution
-                            ),
-                        )
-                    ),
+                    summary_recommendation=summary_recommendation,
+                    summary_recommendation_source=summary_recommendation_source,
+                    active_recommendation_field="summary_recommendation",
                     restaged_from=restaged_from,
                     restaged_by=restaged_by,
                     current_restaged_by=current_restaged_by,
@@ -16782,6 +16801,33 @@ class DoxaBase:
         if apply_recommended_resolution:
             return apply_recommended_resolution
         return ""
+
+    @staticmethod
+    def _staged_revisions_effective_recommendation_source(
+        *,
+        review_recommendation: str | None,
+        stale_resolution_state: str | None,
+        apply_recommended_resolution: str | None,
+    ) -> str:
+        if review_recommendation:
+            return "review_recommendation"
+        if stale_resolution_state == "stale_handled_by_restage":
+            return "stale_resolution_redirect"
+        if apply_recommended_resolution:
+            return "apply_recommended_resolution"
+        return "none"
+
+    @staticmethod
+    def _staged_revisions_apply_recommendation_scope(
+        *,
+        stale_resolution_state: str | None,
+        apply_recommended_resolution: str | None,
+    ) -> str | None:
+        if apply_recommended_resolution is None:
+            return None
+        if stale_resolution_state == "stale_handled_by_restage":
+            return "prior_source_apply_check_context"
+        return "current_apply_check"
 
     def _staged_revisions_review_queues_markdown(
         self,
