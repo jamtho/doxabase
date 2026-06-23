@@ -273,6 +273,16 @@ supporting cards, not an ordered recommendation contract.
 means a usable planning input, `orientation_only` means the candidate path is a
 review clue, and `unresolved` means executable location metadata is incomplete.
 
+`draft_query_plan()` returns a non-executed, review-gated physical plan draft
+over `describe_query_context()`. It currently supports `engine="duckdb"` and
+selects the candidate identified by `query_target_decision.candidate_index`.
+The response includes a scan hint such as `read_parquet`, the candidate
+URI/path template, parsed placeholder names in `required_bindings`, non-secret
+storage environment hints, copied issues and analysis warnings, caveats, and a
+`review_gate`. It does not resolve endpoint profiles, credentials, object
+existence, or run SQL; use it as a handoff object before deciding whether an
+execution attempt is safe.
+
 `describe_profile_run(dataset_iri, evidence_iri, limit=None)` returns profile
 observations for one dataset linked to one evidence resource. It does not create
 or require a persisted run node; membership is inferred from the dataset's

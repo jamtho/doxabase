@@ -929,6 +929,42 @@ Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and
 pattern handoff in `describe_dataset`.
 
+`db.draft_query_plan(table_iri, engine="duckdb")` returns a non-executed
+`DraftQueryPlan` over `describe_query_context`:
+
+```python
+plan.helper
+plan.mode
+plan.engine
+plan.dataset
+plan.source_context
+plan.selected_candidate
+plan.scan
+plan.required_bindings
+plan.binding_note
+plan.storage_environment
+plan.review_gate
+plan.issues
+plan.analysis_warnings
+plan.caveats
+plan.upstream_caveats
+plan.planning_notes
+```
+
+The helper currently supports `engine="duckdb"` and drafts review context only:
+it does not resolve endpoint profiles, credentials, object existence, or SQL
+execution. `plan.selected_candidate` is the candidate named by
+`query_target_decision.candidate_index`. `plan.scan` gives a best-effort scan
+function such as `read_parquet`, a URI/path template, file format, compression,
+and the selected candidate path status. `plan.required_bindings` is parsed from
+`{placeholders}` in the selected path; DoxaBase does not infer binding types or
+derivations. `plan.storage_environment` carries non-secret storage hints such as
+bucket, endpoint profile, credential reference, path-style access, and
+DuckDB-shaped settings inferred directly from graph metadata. `plan.review_gate`
+keeps the query-target decision status, reason codes, and
+`executable_without_review`; treat the plan as review-required whenever that
+field is false.
+
 Each caveat in `dataset.caveats` has:
 
 ```python

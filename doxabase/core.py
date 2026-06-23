@@ -996,6 +996,80 @@ class QueryPlanningContext:
 
 
 @dataclass(frozen=True)
+class DraftQueryPlanEngine:
+    name: str
+    source: str
+
+
+@dataclass(frozen=True)
+class DraftQueryPlanSourceContext:
+    api: str
+    readiness: str
+    readiness_note: str
+    query_target_decision: QueryTargetDecision
+    selected_candidate_index: int | None
+
+
+@dataclass(frozen=True)
+class DraftQueryPlanScan:
+    function: str | None
+    uri_template: str | None
+    file_format: str | None
+    compression: str | None
+    candidate_path_status: str | None
+    template: str | None
+    composition: str | None
+    non_executed_note: str
+
+
+@dataclass(frozen=True)
+class DraftQueryPlanStorageEnvironment:
+    storage_protocol: ResourceSummary | None
+    storage_root: str | None
+    bucket_name: str | None
+    key_prefix: str | None
+    region: str | None
+    endpoint_profile: str | None
+    credential_reference: str | None
+    access_mode: ResourceSummary | None
+    path_style_access: bool | None
+    requires_endpoint_profile: bool
+    runtime_resolution_required: bool
+    duckdb_settings_from_context: list[str]
+    runtime_resolution_note: str
+
+
+@dataclass(frozen=True)
+class DraftQueryPlanReviewGate:
+    executable_without_review: bool
+    status: str
+    direct_review_required: bool | None
+    candidate_path_status: str | None
+    reason_codes: list[str]
+    review_note: str
+
+
+@dataclass(frozen=True)
+class DraftQueryPlan:
+    helper: str
+    mode: str
+    engine: DraftQueryPlanEngine
+    dataset: ResourceSummary
+    source_context: DraftQueryPlanSourceContext
+    selected_candidate: QueryTargetCandidate | None
+    scan: DraftQueryPlanScan
+    required_bindings: list[str]
+    binding_note: str
+    storage_environment: DraftQueryPlanStorageEnvironment
+    review_gate: DraftQueryPlanReviewGate
+    issues: list[QueryPlanningIssue]
+    analysis_warnings: list[QueryPlanningIssue]
+    caveats: list[CaveatDescription]
+    upstream_caveats: list[CaveatDescription]
+    planning_notes: list[str]
+
+
+@dataclass(frozen=True)
 class RelatedDatasetDescription:
     iri: str
     label: str | None
@@ -5163,6 +5237,258 @@ class DoxaBase:
             partition_schemes=dataset.partition_schemes,
             caveats=dataset.caveats,
             upstream_caveats=dataset.upstream_caveats,
+        )
+
+    def draft_query_plan(
+        self,
+        iri: str,
+        *,
+        graph: str | None = "map",
+        engine: str = "duckdb",
+    ) -> DraftQueryPlan:
+        engine_value = engine.strip().lower()
+        if engine_value != "duckdb":
+            raise DoxaBaseError("draft_query_plan currently supports engine='duckdb'")
+        context = self.describe_query_context(iri=iri, graph=graph)
+        decision = context.query_target_decision
+        selected_candidate = (
+            context.query_target_candidates[decision.candidate_index]
+            if decision.candidate_index is not None
+            and 0 <= decision.candidate_index < len(context.query_target_candidates)
+            else None
+        )
+        storage_access = self._draft_query_plan_storage_access(
+            context,
+            selected_candidate,
+        )
+        return DraftQueryPlan(
+            helper="draft_query_plan",
+            mode="non_executed_review_draft",
+            engine=DraftQueryPlanEngine(
+                name=engine_value,
+                source="caller_requested_target_engine",
+            ),
+            dataset=context.dataset,
+            source_context=DraftQueryPlanSourceContext(
+                api="DoxaBase.describe_query_context",
+                readiness=context.readiness,
+                readiness_note=context.readiness_note,
+                query_target_decision=decision,
+                selected_candidate_index=decision.candidate_index,
+            ),
+            selected_candidate=selected_candidate,
+            scan=self._draft_query_plan_scan(
+                selected_candidate,
+                physical_layouts=context.physical_layouts,
+                engine=engine_value,
+            ),
+            required_bindings=self._draft_query_plan_required_bindings(
+                selected_candidate,
+            ),
+            binding_note=(
+                "Bindings are placeholder names parsed from the selected path "
+                "template. DoxaBase does not infer binding types, derivations, "
+                "or execution-time values."
+            ),
+            storage_environment=self._draft_query_plan_storage_environment(
+                selected_candidate,
+                storage_access,
+                engine=engine_value,
+            ),
+            review_gate=self._draft_query_plan_review_gate(context, selected_candidate),
+            issues=context.issues,
+            analysis_warnings=context.analysis_warnings,
+            caveats=context.caveats,
+            upstream_caveats=context.upstream_caveats,
+            planning_notes=[
+                *context.planning_notes,
+                (
+                    "This draft is not executable code and does not resolve "
+                    "endpoint profiles, credentials, object existence, or "
+                    "runtime settings."
+                ),
+            ],
+        )
+
+    def _draft_query_plan_storage_access(
+        self,
+        context: QueryPlanningContext,
+        selected_candidate: QueryTargetCandidate | None,
+    ) -> StorageAccessDescription | None:
+        if selected_candidate is None or selected_candidate.storage_access is None:
+            return None
+        storage_iri = selected_candidate.storage_access.iri
+        for storage_access in context.storage_accesses:
+            if storage_access.iri == storage_iri:
+                return storage_access
+        return None
+
+    def _draft_query_plan_scan(
+        self,
+        selected_candidate: QueryTargetCandidate | None,
+        *,
+        physical_layouts: list[PhysicalLayoutDescription],
+        engine: str,
+    ) -> DraftQueryPlanScan:
+        file_format = self._draft_query_plan_resource_label(
+            physical_layouts[0].file_format if physical_layouts else None
+        )
+        compression = self._draft_query_plan_resource_label(
+            physical_layouts[0].compression_codec if physical_layouts else None
+        )
+        return DraftQueryPlanScan(
+            function=self._draft_query_plan_scan_function(engine, file_format),
+            uri_template=(
+                selected_candidate.candidate_path
+                if selected_candidate is not None
+                else None
+            ),
+            file_format=file_format,
+            compression=compression,
+            candidate_path_status=(
+                selected_candidate.candidate_path_status
+                if selected_candidate is not None
+                else None
+            ),
+            template=selected_candidate.template if selected_candidate is not None else None,
+            composition=(
+                selected_candidate.composition if selected_candidate is not None else None
+            ),
+            non_executed_note=(
+                "Review-only draft; do not run without resolving runtime "
+                "configuration and reviewing issues, verification notes, and "
+                "analysis caveats."
+            ),
+        )
+
+    @staticmethod
+    def _draft_query_plan_resource_label(resource: ResourceSummary | None) -> str | None:
+        if resource is None:
+            return None
+        return resource.label or resource.iri
+
+    @staticmethod
+    def _draft_query_plan_scan_function(
+        engine: str,
+        file_format: str | None,
+    ) -> str | None:
+        if engine != "duckdb" or file_format is None:
+            return None
+        normalized = file_format.lower()
+        if "parquet" in normalized:
+            return "read_parquet"
+        if "csv" in normalized:
+            return "read_csv_auto"
+        return None
+
+    @staticmethod
+    def _draft_query_plan_required_bindings(
+        selected_candidate: QueryTargetCandidate | None,
+    ) -> list[str]:
+        if selected_candidate is None:
+            return []
+        template = selected_candidate.candidate_path or selected_candidate.template
+        return list(dict.fromkeys(re.findall(r"{([^{}]+)}", template)))
+
+    def _draft_query_plan_storage_environment(
+        self,
+        selected_candidate: QueryTargetCandidate | None,
+        storage_access: StorageAccessDescription | None,
+        *,
+        engine: str,
+    ) -> DraftQueryPlanStorageEnvironment:
+        duckdb_settings: list[str] = []
+        path_style_access = (
+            selected_candidate.path_style_access
+            if selected_candidate is not None
+            else None
+        )
+        region = storage_access.region if storage_access is not None else None
+        if engine == "duckdb":
+            if path_style_access is not None:
+                duckdb_settings.append(
+                    f"s3_url_style={'path' if path_style_access else 'vhost'}"
+                )
+            if region is not None:
+                duckdb_settings.append(f"s3_region={region}")
+        endpoint_profile = (
+            selected_candidate.endpoint_profile
+            if selected_candidate is not None
+            else None
+        )
+        credential_reference = (
+            selected_candidate.credential_reference
+            if selected_candidate is not None
+            else None
+        )
+        requires_endpoint_profile = (
+            selected_candidate.requires_endpoint_profile
+            if selected_candidate is not None
+            else False
+        )
+        runtime_resolution_required = bool(
+            endpoint_profile or credential_reference or requires_endpoint_profile
+        )
+        return DraftQueryPlanStorageEnvironment(
+            storage_protocol=(
+                selected_candidate.storage_protocol
+                if selected_candidate is not None
+                else None
+            ),
+            storage_root=(
+                selected_candidate.storage_root
+                if selected_candidate is not None
+                else None
+            ),
+            bucket_name=(
+                selected_candidate.bucket_name
+                if selected_candidate is not None
+                else None
+            ),
+            key_prefix=(
+                selected_candidate.key_prefix
+                if selected_candidate is not None
+                else None
+            ),
+            region=region,
+            endpoint_profile=endpoint_profile,
+            credential_reference=credential_reference,
+            access_mode=storage_access.access_mode if storage_access is not None else None,
+            path_style_access=path_style_access,
+            requires_endpoint_profile=requires_endpoint_profile,
+            runtime_resolution_required=runtime_resolution_required,
+            duckdb_settings_from_context=duckdb_settings,
+            runtime_resolution_note=(
+                "Resolve endpoint profiles, credential references, and object "
+                "access in the local runtime before running any query."
+            ),
+        )
+
+    @staticmethod
+    def _draft_query_plan_review_gate(
+        context: QueryPlanningContext,
+        selected_candidate: QueryTargetCandidate | None,
+    ) -> DraftQueryPlanReviewGate:
+        decision = context.query_target_decision
+        executable_without_review = (
+            context.readiness == "ready_for_query_planning"
+            and decision.status == "ready"
+            and decision.candidate_path_status == "ready"
+            and decision.direct_review_required is False
+        )
+        return DraftQueryPlanReviewGate(
+            executable_without_review=executable_without_review,
+            status=decision.status,
+            direct_review_required=decision.direct_review_required,
+            candidate_path_status=decision.candidate_path_status,
+            reason_codes=decision.reason_codes,
+            review_note=(
+                "This helper drafts a non-executed plan. Review selected "
+                "candidate reasons, physical metadata issues, verification "
+                "notes, and analysis warnings before execution."
+                if selected_candidate is not None
+                else "No query target candidate is available."
+            ),
         )
 
     def _query_target_candidates(

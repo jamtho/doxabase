@@ -209,6 +209,15 @@ def describe_query_context_tool(
     return to_dict(db.describe_query_context(iri=iri, graph=graph))
 
 
+def draft_query_plan_tool(
+    db: DoxaBase,
+    iri: str,
+    graph: str | None = "map",
+    engine: str = "duckdb",
+) -> dict[str, Any]:
+    return to_dict(db.draft_query_plan(iri=iri, graph=graph, engine=engine))
+
+
 def describe_context_slice_tool(
     db: DoxaBase,
     seed_iris: list[str],

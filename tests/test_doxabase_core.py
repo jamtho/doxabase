@@ -4900,6 +4900,52 @@ def test_describe_query_context_reports_planning_metadata_and_issues(
     assert "non-secret planning metadata" in context.planning_notes[0]
 
 
+def test_draft_query_plan_returns_review_gated_duckdb_plan(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+
+    plan = db.draft_query_plan(
+        "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    )
+
+    assert plan.helper == "draft_query_plan"
+    assert plan.mode == "non_executed_review_draft"
+    assert plan.engine.name == "duckdb"
+    assert plan.source_context.api == "DoxaBase.describe_query_context"
+    assert plan.source_context.readiness == "needs_review"
+    assert plan.source_context.selected_candidate_index == 0
+    assert plan.source_context.query_target_decision.status == (
+        "candidate_needs_review"
+    )
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template_source == "partition_scheme"
+    assert plan.scan.function == "read_parquet"
+    assert plan.scan.uri_template == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
+    assert plan.scan.file_format == "Parquet"
+    assert plan.scan.compression == "zstd"
+    assert plan.scan.candidate_path_status == "orientation_only"
+    assert plan.required_bindings == ["year", "date"]
+    assert plan.storage_environment.bucket_name == "ais-noaa"
+    assert plan.storage_environment.endpoint_profile == "local-minio"
+    assert plan.storage_environment.credential_reference == "profile:ais-readonly"
+    assert plan.storage_environment.path_style_access is True
+    assert plan.storage_environment.runtime_resolution_required is True
+    assert plan.storage_environment.duckdb_settings_from_context == [
+        "s3_url_style=path",
+        "s3_region=local",
+    ]
+    assert plan.review_gate.executable_without_review is False
+    assert plan.review_gate.status == "candidate_needs_review"
+    assert plan.review_gate.reason_codes == ["layout_needs_verification"]
+    assert any(issue.code == "layout_needs_verification" for issue in plan.issues)
+    assert plan.caveats
+    assert "not executable code" in plan.planning_notes[-1]
+
+
 def test_describe_query_context_reports_missing_planning_metadata(
     tmp_path: Path,
 ) -> None:

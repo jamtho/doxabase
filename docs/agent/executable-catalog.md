@@ -100,7 +100,11 @@ agent runtime decides how profile X resolves.
    orientation-only.
 8. Check `analysis_warnings` and caveats before trusting aggregations or
    interpretations.
-9. If a query is run, record the result or failure with
+9. Use `doxabase.draft_query_plan` when you want a non-executed DuckDB-oriented
+   handoff object from the selected query target, required bindings, storage
+   hints, review gate, issues, and caveats. It does not resolve credentials,
+   endpoint profiles, object existence, or execute SQL.
+10. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
 Tiny direct Python scratch example:
@@ -117,13 +121,19 @@ db.import_trig("examples/manifest-prototype-rc/ais.trig")
 context = db.describe_query_context(
     "https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
 )
+plan = db.draft_query_plan(
+    "https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
+)
 payload = to_dict(context)
+plan_payload = to_dict(plan)
 print(
     json.dumps(
         {
             "readiness": payload["readiness"],
             "issues": payload["issues"],
             "analysis_warnings": payload["analysis_warnings"],
+            "draft_scan": plan_payload["scan"],
+            "review_gate": plan_payload["review_gate"],
         },
         indent=2,
     )
@@ -133,8 +143,10 @@ print(
 ## Current Limits
 
 This is catalog metadata, not a query engine. `describe_query_context` projects
-the relevant graph facts and gaps, but DoxaBase does not yet turn them directly
-into DuckDB SQL, S3 settings, or runtime connection objects.
+the relevant graph facts and gaps, and `draft_query_plan` packages the selected
+candidate into a non-executed review draft. DoxaBase still does not resolve
+runtime credentials, endpoint profile details, object existence, or execute
+queries.
 
 For now, the value is handoff and planning: the next agent can see where the data
 is, how it is physically shaped, what local profile to use, which layout claims

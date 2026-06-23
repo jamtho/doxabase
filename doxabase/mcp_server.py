@@ -20,6 +20,7 @@ from doxabase.mcp_tools import (
     describe_query_context_tool,
     describe_resource_tool,
     describe_staged_revision_tool,
+    draft_query_plan_tool,
     export_graph_tool,
     export_staged_revision_tool,
     export_staged_revisions_tool,
@@ -135,6 +136,16 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return compact non-secret query-planning context for one dataset."""
 
         return describe_query_context_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.draft_query_plan")
+    def draft_query_plan(
+        iri: str,
+        graph: str | None = "map",
+        engine: str = "duckdb",
+    ) -> dict[str, Any]:
+        """Draft a non-executed, review-gated physical query plan."""
+
+        return draft_query_plan_tool(db, iri=iri, graph=graph, engine=engine)
 
     @server.tool(name="doxabase.describe_context_slice")
     def describe_context_slice(

@@ -19,6 +19,7 @@ from doxabase.mcp_tools import (
     describe_query_context_tool,
     describe_resource_tool,
     describe_staged_revision_tool,
+    draft_query_plan_tool,
     export_graph_tool,
     export_staged_revision_tool,
     export_staged_revisions_tool,
@@ -67,6 +68,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_dataset" in tool_names
     assert "doxabase.describe_profile_run" in tool_names
     assert "doxabase.describe_query_context" in tool_names
+    assert "doxabase.draft_query_plan" in tool_names
     assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
@@ -1462,6 +1464,46 @@ def test_describe_query_context_tool_returns_planning_projection(
         for issue in result["issues"]
     )
     assert "non-secret planning metadata" in result["planning_notes"][0]
+
+
+def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+
+    result = draft_query_plan_tool(
+        db,
+        iri="https://richcanopy.org/example/manifest/ais#DailyBroadcasts",
+    )
+
+    assert result["helper"] == "draft_query_plan"
+    assert result["mode"] == "non_executed_review_draft"
+    assert result["engine"] == {
+        "name": "duckdb",
+        "source": "caller_requested_target_engine",
+    }
+    assert result["source_context"]["readiness"] == "needs_review"
+    assert result["source_context"]["selected_candidate_index"] == 0
+    assert result["selected_candidate"]["template_source"] == "partition_scheme"
+    assert result["scan"]["function"] == "read_parquet"
+    assert result["scan"]["uri_template"] == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
+    assert result["scan"]["candidate_path_status"] == "orientation_only"
+    assert result["required_bindings"] == ["year", "date"]
+    assert result["storage_environment"]["endpoint_profile"] == "local-minio"
+    assert result["storage_environment"]["credential_reference"] == (
+        "profile:ais-readonly"
+    )
+    assert result["storage_environment"]["duckdb_settings_from_context"] == [
+        "s3_url_style=path",
+        "s3_region=local",
+    ]
+    assert result["review_gate"]["executable_without_review"] is False
+    assert result["review_gate"]["reason_codes"] == ["layout_needs_verification"]
+    assert any(
+        issue["code"] == "layout_needs_verification" for issue in result["issues"]
+    )
+    assert result["caveats"]
 
 
 def test_describe_query_context_tool_matches_python_target_candidates(
