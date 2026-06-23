@@ -2634,6 +2634,10 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert grouped_export.index("## Restage Context") < grouped_export.index(
         "## Revisions"
     )
+    assert "Handled by refreshed successor; follow Review Queues" in grouped_export
+    assert restaged.revision_iri in grouped_export
+    assert "prior/source apply-check context:" in grouped_export
+    assert "after prior status conflict" in grouped_export
     assert "prior status conflict" in grouped_export
 
     fresh_check = db.check_staged_revision_apply(restaged.revision_iri)

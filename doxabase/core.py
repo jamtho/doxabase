@@ -16630,6 +16630,7 @@ class DoxaBase:
         )
         for index, description in enumerate(descriptions, start=1):
             apply_check, apply_check_error = apply_checks[index - 1]
+            summary = revision_summaries[index - 1]
             apply_status = (
                 apply_check.status
                 if apply_check is not None
@@ -16640,8 +16641,10 @@ class DoxaBase:
                 apply_check,
                 apply_check_error=apply_check_error,
             )
-            recommendation = description.review_recommendation or (
-                apply_check.recommended_resolution if apply_check is not None else ""
+            recommendation = self._staged_revisions_table_recommendation(
+                summary,
+                description=description,
+                apply_check=apply_check,
             )
             lines.append(
                 "| "
@@ -16683,9 +16686,23 @@ class DoxaBase:
         for index, description in enumerate(descriptions, start=1):
             if description.restage_reason is not None:
                 label = description.summary or description.iri
-                restage_context.append(
-                    f"{index}. {label}: {description.restage_reason}"
-                )
+                if description.restaged_from is not None:
+                    source = (
+                        description.restaged_from.label
+                        or description.restaged_from.iri
+                    )
+                    restage_context.append(
+                        (
+                            f"{index}. {label}: Restaged from {source} "
+                            f"(`{description.restaged_from.iri}`); "
+                            "prior/source apply-check context: "
+                            f"{description.restage_reason}"
+                        )
+                    )
+                else:
+                    restage_context.append(
+                        f"{index}. {label}: {description.restage_reason}"
+                    )
             elif description.restaged_from is not None:
                 label = description.summary or description.iri
                 source = description.restaged_from.label or description.restaged_from.iri
@@ -16737,6 +16754,27 @@ class DoxaBase:
                 ]
         )
         return "\n".join(lines).rstrip() + "\n"
+
+    @staticmethod
+    def _staged_revisions_table_recommendation(
+        summary: StagedGraphRevisionExportSummary,
+        *,
+        description: StagedGraphRevisionDescription,
+        apply_check: StagedRevisionApplyCheck | None,
+    ) -> str:
+        if description.review_recommendation:
+            return description.review_recommendation
+        if summary.stale_resolution_state == "stale_handled_by_restage":
+            successor_iri = summary.current_restaged_by or summary.restaged_by
+            if successor_iri is not None:
+                return (
+                    "Handled by refreshed successor; follow Review Queues or "
+                    f"inspect `{successor_iri}`."
+                )
+            return "Handled by refreshed successor; follow Review Queues."
+        if apply_check is not None and apply_check.recommended_resolution:
+            return apply_check.recommended_resolution
+        return ""
 
     def _staged_revisions_review_queues_markdown(
         self,

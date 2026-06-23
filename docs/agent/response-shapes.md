@@ -1804,6 +1804,9 @@ whose replay validates but has no effective graph delta.
 itself become stale again and needs restaging or replacement. The bundle's
 `recommended_review_iris` de-duplicates the current review set in bundle order,
 replacing handled stale sources with their successors.
+Grouped Markdown still keeps handled stale rows in the summary table for
+provenance, but their recommendation points to the refreshed successor or
+Review Queues instead of treating the stale source as an active restage target.
 `validation_failed_revision_iris` lists rows whose patch counts
 replay but whose preview validation does not conform.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for

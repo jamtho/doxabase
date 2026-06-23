@@ -164,6 +164,11 @@ for semantic repair. Inspect `validation_results`, then stage a repaired or
 alternative candidate. For overlapping single-assertion cases, the repair is
 usually a removal+addition patch or a `stage_map_assertion_change` replacement
 that explicitly replaces the now-current assertion.
+Grouped exports keep handled stale rows in the summary for provenance, but their
+table recommendation should be read as informational: follow the Review Queues
+or inspect the refreshed successor before mutating anything. Restage Context
+lines for successors describe prior/source apply-check context, not necessarily
+the successor's current status.
 
 ### Grouped Review Recipe
 
