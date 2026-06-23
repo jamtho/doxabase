@@ -613,6 +613,7 @@ staged revisions that are useful context but not mutation targets.
 ready/no-op reviews on the same changed graph that should be re-checked after
 each apply, and `post_apply_recheck_revision_iris` gives scripts the affected
 revision IRIs for pre-apply grouped-review hazards.
+`sequential_apply_recheck_candidate_iris` is a clearer alias for the same list.
 Grouped Markdown exports include a `Review Queues` section mirroring the
 apply/restage, repair, applied-inspection, and post-apply recheck buckets.
 Relative export paths are resolved from the repository root and returned as
@@ -628,6 +629,8 @@ validation status, semantic risk, and a top-level `can_apply` flag. Read
 `recommended_resolution`, `count_drifts`, `snapshot_drifts`, and
 `suggested_next_actions` to decide whether to review then apply, inspect an
 applied event, review validation diagnostics, or restage after conflicts.
+The response includes both `staged_revision_iri` and `revision_iri`; the latter
+is a script-friendly alias for copied payloads.
 `noop` means replay validates but has no effective graph delta; suggested
 actions point to inspection/export rather than apply. `triples_to_add` and
 `triples_to_remove` are effective deltas for the current preview, and

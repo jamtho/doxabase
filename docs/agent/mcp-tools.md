@@ -536,7 +536,9 @@ count-drift and snapshot-digest conflicts, preview validation diagnostics,
 `status`, `decision`, `summary`, `review_recommended`, `blocking_reasons`,
 `recommended_resolution`, `validation_skipped_reason`, `count_drifts`,
 `snapshot_drifts`, and
-structured `suggested_next_actions`. Read `status`, `decision`, and `summary` first:
+structured `suggested_next_actions`. The response includes both
+`staged_revision_iri` and the alias `revision_iri` for script-friendly payload
+handoffs. Read `status`, `decision`, and `summary` first:
 `ready` means the staged patch replays
 and validates with an effective graph delta, with decision `review_then_apply`;
 `noop` means replay validates but would not change graph triples and uses
@@ -687,8 +689,10 @@ and `recommended_applied_inspection_iris`. `bundle_summary.warnings` calls out
 bundle-level sequencing hazards such as ready/no-op reviews sharing a changed
 graph that should be re-checked after each apply;
 `post_apply_recheck_revision_iris` is the machine-readable affected-revision
-list for pre-apply grouped-review hazards. `apply_staged_revision` returns the
-post-apply affected-sibling queue for the revision that was actually applied.
+list for pre-apply grouped-review hazards.
+`sequential_apply_recheck_candidate_iris` is a clearer alias for the same list.
+`apply_staged_revision` returns the post-apply affected-sibling queue for the
+revision that was actually applied.
 Treat
 `recommended_mutation_review_iris` as a broad compatibility queue and prefer the
 narrower apply/restage, repair, or applied-inspection fields when routing

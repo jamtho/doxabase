@@ -1554,6 +1554,8 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
 
     check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.revision_iri == staged.revision_iri
+    assert check.staged_revision_iri == staged.revision_iri
     assert check.can_apply is True
     assert check.status == "ready"
     assert check.decision == "review_then_apply"
@@ -3464,6 +3466,10 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         second_restaged.revision_iri,
     ]
     assert export.bundle_summary.post_apply_recheck_revision_iris == [
+        first_restaged.revision_iri,
+        second_restaged.revision_iri,
+    ]
+    assert export.bundle_summary.sequential_apply_recheck_candidate_iris == [
         first_restaged.revision_iri,
         second_restaged.revision_iri,
     ]

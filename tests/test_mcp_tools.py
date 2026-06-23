@@ -544,6 +544,10 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
         already_restaged["revision_iri"],
         restaged_second,
     ]
+    assert result["bundle_summary"]["sequential_apply_recheck_candidate_iris"] == [
+        already_restaged["revision_iri"],
+        restaged_second,
+    ]
     assert len(result["bundle_summary"]["warnings"]) == 1
     assert result["bundle_summary"]["recommended_apply_or_restage_review_iris"] == [
         already_restaged["revision_iri"],
@@ -963,6 +967,8 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
 
     check = check_staged_revision_apply_tool(db, iri=staged["revision_iri"])
+    assert check["revision_iri"] == staged["revision_iri"]
+    assert check["staged_revision_iri"] == staged["revision_iri"]
     assert check["can_apply"] is True
     assert check["status"] == "ready"
     assert check["decision"] == "review_then_apply"

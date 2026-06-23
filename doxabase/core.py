@@ -357,6 +357,7 @@ class AppliedRevisionDiffDescription:
 @dataclass(frozen=True)
 class StagedRevisionApplyCheck:
     staged_revision_iri: str
+    revision_iri: str
     can_apply: bool
     status: str
     decision: str
@@ -513,6 +514,7 @@ class StagedGraphRevisionBundleSummary:
     stale_handled_by_restage_revision_iris: list[str]
     ready_restage_successor_revision_iris: list[str]
     post_apply_recheck_revision_iris: list[str]
+    sequential_apply_recheck_candidate_iris: list[str]
     warnings: list[str]
     validation_failed_revision_iris: list[str]
     recommended_review_iris: list[str]
@@ -11346,6 +11348,7 @@ class DoxaBase:
             )
             check = StagedRevisionApplyCheck(
                 staged_revision_iri=staged.iri,
+                revision_iri=staged.iri,
                 can_apply=False,
                 status=status,
                 decision=self._staged_apply_check_decision(
@@ -11608,6 +11611,7 @@ class DoxaBase:
         )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
+            revision_iri=staged.iri,
             can_apply=can_apply,
             status=status,
             decision=self._staged_apply_check_decision(
@@ -12643,6 +12647,7 @@ class DoxaBase:
             stale_handled_by_restage_revision_iris=handled_stale,
             ready_restage_successor_revision_iris=ready_successors,
             post_apply_recheck_revision_iris=post_apply_recheck,
+            sequential_apply_recheck_candidate_iris=post_apply_recheck,
             warnings=self._staged_revisions_bundle_warnings(post_apply_recheck),
             validation_failed_revision_iris=validation_failed,
             recommended_review_iris=recommended_review,

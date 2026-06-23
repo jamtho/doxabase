@@ -1504,6 +1504,7 @@ review spotlight.
 
 ```python
 check.staged_revision_iri
+check.revision_iri
 check.can_apply
 check.status
 check.decision
@@ -1530,6 +1531,9 @@ check.triples_to_remove
 check.suggested_next_actions
 check.suggested_next_calls
 ```
+
+`revision_iri` is an alias of `staged_revision_iri` so copied check payloads
+carry the checked resource under the same name used by list and export rows.
 
 Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `ready`, `noop`, `already_applied`, `conflict`, `validation_failed`, and
@@ -1716,6 +1720,7 @@ bundle.unresolved_stale_revision_iris
 bundle.stale_handled_by_restage_revision_iris
 bundle.ready_restage_successor_revision_iris
 bundle.post_apply_recheck_revision_iris
+bundle.sequential_apply_recheck_candidate_iris
 bundle.warnings
 bundle.validation_failed_revision_iris
 bundle.recommended_review_iris
@@ -1736,6 +1741,10 @@ itself become stale again and needs restaging or replacement. The bundle's
 replacing handled stale sources with their successors.
 `validation_failed_revision_iris` lists rows whose patch counts
 replay but whose preview validation does not conform.
+`sequential_apply_recheck_candidate_iris` is a clearer alias for
+`post_apply_recheck_revision_iris` in grouped export summaries: both name ready
+or no-op candidates that share changed graphs and should be rechecked after any
+one of them is applied.
 `recommended_mutation_review_iris` is the broad compatibility review queue for
 staged revisions that may still need restage, repair, apply, or manual mutation
 decisions. Use `recommended_apply_or_restage_review_iris` for rows that need

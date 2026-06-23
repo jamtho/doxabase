@@ -500,10 +500,12 @@ Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying
 one staged revision can make sibling ready/no-op revisions on the same changed
 graph stale. Grouped bundle summaries put that sequencing hazard in `warnings`
-and `post_apply_recheck_revision_iris`; that is a pre-apply grouped-review
-hazard list. After the actual mutation, prefer the `post_apply_recheck_revisions`
-returned by `apply_staged_revision`, then re-run `check_staged_revision_apply`
-or `export_staged_revisions` before acting on siblings.
+and `sequential_apply_recheck_candidate_iris`; `post_apply_recheck_revision_iris`
+is the same list under its older compatibility name. Both are pre-apply
+grouped-review hazard lists. After the actual mutation, prefer the
+`post_apply_recheck_revisions` returned by `apply_staged_revision`, then re-run
+`check_staged_revision_apply` or `export_staged_revisions` before acting on
+siblings.
 Grouped Markdown also includes a `Review Queues` section that mirrors the
 apply/restage, repair, applied-inspection, and post-apply recheck buckets from
 `bundle_summary`.
