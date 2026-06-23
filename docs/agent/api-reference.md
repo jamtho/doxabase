@@ -610,6 +610,9 @@ if the compact judgement panel is unavailable because the proposal is stale. For
 simple single-assertion `map` changes that still replay cleanly, it reconstructs
 a `Judgement Panel` section so the export carries values, value-type context,
 rationale, caveats, routes, and safety notes from the JSON review surface.
+When the panel cannot be replayed, `stored_review_context` may still summarize
+persisted review/support metadata and exports render it as `Stored Review
+Context`; it is not a replayed panel.
 Restaged exports include a top metadata `Restage headline` before the current
 apply check. Stale original exports include a top metadata `Restaged by` line
 when a refreshed successor already exists.

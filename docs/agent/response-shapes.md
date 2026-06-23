@@ -1450,6 +1450,7 @@ description.revision_anchors
 description.evidence
 description.current_apply_check
 description.judgement_panel
+description.stored_review_context
 ```
 
 Use `revision_stance`, not `stance`.
@@ -1527,6 +1528,27 @@ the same shape as `change.judgement_panel` from
 `stage_map_assertion_change`. It is `None` for complex revisions, stale staged
 patches, already-applied staged revisions, or changes that cannot be reduced to
 one subject/predicate assertion.
+When `judgement_panel` is `None`, `description.stored_review_context` may still
+summarize persisted review/support metadata. It is not a replayed judgement
+panel. Its fields are:
+
+```python
+stored.source_fields
+stored.semantic_risk_level
+stored.semantic_risk_reasons
+stored.review_recommendation
+stored.review_note_signals.has_value_type_context
+stored.review_note_signals.has_current_value_rationale
+stored.review_note_signals.has_caveat_context
+stored.review_note_signals.has_related_routes
+stored.review_note_signals.has_user_review_note
+stored.linked_support_counts.observations
+stored.linked_support_counts.claims
+stored.linked_support_counts.patterns
+stored.linked_support_counts.evidence
+stored.linked_support_counts.revision_anchors
+stored.attention_impacts
+```
 
 Each patch in `description.patches` is a `GraphPatchDescription`:
 
@@ -1736,6 +1758,8 @@ still records the validation result from the time it was created.
 When the live apply check reports semantic risk, the export can include a
 `Semantic Review Warning` before `Current Apply Check` even if the compact
 judgement panel is unavailable for a stale proposal.
+When the panel cannot be replayed but stored review signals exist, the export
+adds `Stored Review Context` from `description.stored_review_context`.
 Restaged single exports also include a top metadata `Restage headline` before
 the current apply check. Grouped exports include `Restage Context` near the top
 when one or more revisions were refreshed from stale proposals. They include

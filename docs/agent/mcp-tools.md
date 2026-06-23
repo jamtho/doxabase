@@ -545,7 +545,10 @@ can be derived from the recorded rationale. `applied_by` and
 applied.
 `judgement_panel` is present for simple single-assertion `map`
 changes that still replay cleanly; it is absent for complex or stale staged
-revisions. Impact
+revisions. When the panel is absent, `stored_review_context` may still summarize
+persisted review/support metadata such as review-note signals, linked support
+counts, semantic risk reasons, and attention impacts. It is not a replayed
+panel. Impact
 entries are deterministic consequence notes, not validation failures. They call
 out changes such as removed caveats, changed physical/value types,
 nullability, row/grain signals, grouping, layout/path assertions, and

@@ -1278,6 +1278,7 @@ def test_stage_map_assertion_change_packages_support_context(
         staged_change.staged_revision.revision_iri
     )
     assert description.judgement_panel is not None
+    assert description.stored_review_context is None
     assert description.judgement_panel.proposed_value is not None
     assert description.judgement_panel.proposed_value.label == "DOUBLE"
     assert description.judgement_panel.value_type_context
@@ -1513,6 +1514,26 @@ def test_stale_map_assertion_apply_check_preserves_review_risk(
         staged_change.staged_revision.revision_iri
     )
     assert stale_description.judgement_panel is None
+    stored_context = stale_description.stored_review_context
+    assert stored_context is not None
+    assert "review_note" in stored_context.source_fields
+    assert "review_recommendation" in stored_context.source_fields
+    assert "supporting_claims" in stored_context.source_fields
+    assert "supporting_patterns" in stored_context.source_fields
+    assert "impacts" in stored_context.source_fields
+    assert stored_context.semantic_risk_level == "high"
+    assert stored_context.review_recommendation == (
+        "Do not apply without domain confirmation of row grain."
+    )
+    assert stored_context.review_note_signals.has_related_routes is True
+    assert stored_context.review_note_signals.has_user_review_note is True
+    assert stored_context.linked_support_counts.claims == 1
+    assert stored_context.linked_support_counts.patterns == 1
+    assert stored_context.linked_support_counts.revision_anchors >= 1
+    assert any(
+        impact.impact_type == "changed_row_key"
+        for impact in stored_context.attention_impacts
+    )
 
     stale_check = db.check_staged_revision_apply(
         staged_change.staged_revision.revision_iri
@@ -1539,6 +1560,9 @@ def test_stale_map_assertion_apply_check_preserves_review_risk(
     )
     assert "reconstructed from stored review context" in exported
     assert "- Semantic risk: high" in exported
+    assert "## Stored Review Context" in exported
+    assert "user/agent review note" in exported
+    assert "changed_row_key" in exported
 
 
 def test_apply_staged_revision_mutates_graph_and_records_history(
@@ -1594,10 +1618,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert check.suggested_next_actions[-1].tool_name == "apply_staged_revision"
     ready_description = db.describe_staged_revision(staged.revision_iri)
     assert ready_description.current_apply_check is None
+    assert ready_description.stored_review_context is None
     ready_description_with_check = db.describe_staged_revision(
         staged.revision_iri,
         include_current_apply_check=True,
     )
+    assert ready_description_with_check.stored_review_context is None
     assert ready_description_with_check.current_apply_check is not None
     ready_summary = ready_description_with_check.current_apply_check
     assert ready_summary.status == "ready"

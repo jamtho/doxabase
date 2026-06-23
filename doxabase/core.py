@@ -649,6 +649,35 @@ class StagedRevisionImpact:
 
 
 @dataclass(frozen=True)
+class StagedRevisionStoredReviewNoteSignals:
+    has_value_type_context: bool
+    has_current_value_rationale: bool
+    has_caveat_context: bool
+    has_related_routes: bool
+    has_user_review_note: bool
+
+
+@dataclass(frozen=True)
+class StagedRevisionStoredReviewSupportCounts:
+    observations: int
+    claims: int
+    patterns: int
+    evidence: int
+    revision_anchors: int
+
+
+@dataclass(frozen=True)
+class StagedRevisionStoredReviewContext:
+    source_fields: list[str]
+    semantic_risk_level: str
+    semantic_risk_reasons: list[str]
+    review_recommendation: str | None
+    review_note_signals: StagedRevisionStoredReviewNoteSignals
+    linked_support_counts: StagedRevisionStoredReviewSupportCounts
+    attention_impacts: list[StagedRevisionImpact]
+
+
+@dataclass(frozen=True)
 class AppliedStagedRevisionSourcePatchSummary:
     operation: str | None
     operation_label: str | None
@@ -813,6 +842,7 @@ class StagedGraphRevisionDescription:
     evidence: list[ResourceSummary]
     current_apply_check: StagedRevisionApplySummary | None = None
     judgement_panel: MapAssertionJudgementPanel | None = None
+    stored_review_context: StagedRevisionStoredReviewContext | None = None
 
 
 @dataclass(frozen=True)
@@ -3305,6 +3335,15 @@ class DoxaBase:
         judgement_panel = self._staged_revision_judgement_panel(description)
         if judgement_panel is not None:
             description = replace(description, judgement_panel=judgement_panel)
+        else:
+            stored_review_context = self._staged_revision_stored_review_context(
+                description
+            )
+            if stored_review_context is not None:
+                description = replace(
+                    description,
+                    stored_review_context=stored_review_context,
+                )
         if include_current_apply_check:
             description = replace(
                 description,
@@ -12367,6 +12406,89 @@ class DoxaBase:
             staged.judgement_panel.semantic_risk_reasons,
         )
 
+    def _staged_revision_stored_review_context(
+        self,
+        staged: StagedGraphRevisionDescription,
+    ) -> StagedRevisionStoredReviewContext | None:
+        if staged.judgement_panel is not None:
+            return None
+        review_note = staged.review_note or ""
+        signals = StagedRevisionStoredReviewNoteSignals(
+            has_value_type_context="Value-type context:" in review_note,
+            has_current_value_rationale=(
+                "Why current value may be intentional:" in review_note
+            ),
+            has_caveat_context="Nearby caveats by scope:" in review_note,
+            has_related_routes="Related route summaries:" in review_note,
+            has_user_review_note="User/agent review note:" in review_note,
+        )
+        support_counts = StagedRevisionStoredReviewSupportCounts(
+            observations=len(staged.supporting_observations),
+            claims=len(staged.supporting_claims),
+            patterns=len(staged.supporting_patterns),
+            evidence=len(staged.evidence),
+            revision_anchors=len(staged.revision_anchors),
+        )
+        attention_impacts = [
+            impact for impact in staged.impacts if impact.severity == "attention"
+        ]
+        semantic_risk_level, semantic_risk_reasons = (
+            self._staged_revision_semantic_risk(staged)
+        )
+        has_review_note_signal = any(
+            [
+                signals.has_value_type_context,
+                signals.has_current_value_rationale,
+                signals.has_caveat_context,
+                signals.has_related_routes,
+                signals.has_user_review_note,
+            ]
+        )
+        has_linked_support = any(
+            [
+                support_counts.observations,
+                support_counts.claims,
+                support_counts.patterns,
+                support_counts.evidence,
+            ]
+        )
+        if (
+            semantic_risk_level == "none"
+            and not has_review_note_signal
+            and not staged.review_recommendation
+            and not has_linked_support
+            and not attention_impacts
+        ):
+            return None
+        source_fields: list[str] = []
+        if staged.review_note:
+            source_fields.append("review_note")
+        if staged.review_recommendation:
+            source_fields.append("review_recommendation")
+        if staged.supporting_observations:
+            source_fields.append("supporting_observations")
+        if staged.supporting_claims:
+            source_fields.append("supporting_claims")
+        if staged.supporting_patterns:
+            source_fields.append("supporting_patterns")
+        if staged.evidence:
+            source_fields.append("evidence")
+        if staged.revision_anchors:
+            source_fields.append("revision_anchors")
+        if staged.impacts:
+            source_fields.append("impacts")
+        if staged.patches:
+            source_fields.append("patches")
+        return StagedRevisionStoredReviewContext(
+            source_fields=source_fields,
+            semantic_risk_level=semantic_risk_level,
+            semantic_risk_reasons=semantic_risk_reasons,
+            review_recommendation=staged.review_recommendation,
+            review_note_signals=signals,
+            linked_support_counts=support_counts,
+            attention_impacts=attention_impacts,
+        )
+
     def _staged_revision_snapshot_drifts(
         self,
         staged: StagedGraphRevisionDescription,
@@ -16000,6 +16122,11 @@ class DoxaBase:
         )
         if semantic_warning:
             semantic_warning.append("")
+        stored_review_context = self._staged_revision_stored_review_context_markdown(
+            description.stored_review_context
+        )
+        if stored_review_context:
+            stored_review_context.append("")
         metadata_lines = [
             f"- Revision: `{description.iri}`",
             (
@@ -16043,6 +16170,7 @@ class DoxaBase:
                 *metadata_lines,
                 "",
                 *semantic_warning,
+                *stored_review_context,
                 *self._staged_apply_check_markdown(
                     apply_check,
                     apply_check_error=apply_check_error,
@@ -16221,6 +16349,57 @@ class DoxaBase:
         if reasons:
             lines.append("- Reasons:")
             lines.extend(f"  - {reason}" for reason in reasons)
+        return lines
+
+    def _staged_revision_stored_review_context_markdown(
+        self,
+        context: StagedRevisionStoredReviewContext | None,
+    ) -> list[str]:
+        if context is None:
+            return []
+        signal_labels = []
+        if context.review_note_signals.has_value_type_context:
+            signal_labels.append("value type context")
+        if context.review_note_signals.has_current_value_rationale:
+            signal_labels.append("current value rationale")
+        if context.review_note_signals.has_caveat_context:
+            signal_labels.append("caveat context")
+        if context.review_note_signals.has_related_routes:
+            signal_labels.append("related routes")
+        if context.review_note_signals.has_user_review_note:
+            signal_labels.append("user/agent review note")
+        counts = context.linked_support_counts
+        lines = [
+            "## Stored Review Context",
+            "",
+            (
+                "- Source: Derived from persisted review/support metadata; "
+                "this is not a replayed judgement panel."
+            ),
+            f"- Semantic risk: {context.semantic_risk_level}",
+            "- Source fields: " + ", ".join(context.source_fields),
+            (
+                "- Review note signals: "
+                + (", ".join(signal_labels) if signal_labels else "none")
+            ),
+            (
+                "- Linked support counts: "
+                f"observations={counts.observations}, claims={counts.claims}, "
+                f"patterns={counts.patterns}, evidence={counts.evidence}, "
+                f"revision_anchors={counts.revision_anchors}"
+            ),
+        ]
+        if context.review_recommendation:
+            lines.append(f"- Review recommendation: {context.review_recommendation}")
+        if context.semantic_risk_reasons:
+            lines.append("- Semantic risk reasons:")
+            lines.extend(f"  - {reason}" for reason in context.semantic_risk_reasons)
+        if context.attention_impacts:
+            lines.append("- Attention impacts:")
+            lines.extend(
+                f"  - {impact.impact_type}: {impact.message}"
+                for impact in context.attention_impacts[:5]
+            )
         return lines
 
     def _staged_apply_check_markdown(

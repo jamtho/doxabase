@@ -899,6 +899,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
         result["staged_revision"]["revision_iri"],
     )
     assert description["judgement_panel"]["proposed_value"]["label"] == "DOUBLE"
+    assert description["stored_review_context"] is None
     assert description["judgement_panel"]["semantic_risk_level"] == "high"
     assert description["supporting_patterns"]
     assert "https://richcanopy.org/ns/rc#Varchar" not in {
@@ -977,6 +978,29 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     assert "| Value type | Required physical type | Current matches |" in ais_export
     assert "No strong related-lore routes surfaced" in ais_export
     assert db.triple_count("map") == before_map_count
+
+    record_map_dataset_tool(
+        db,
+        "https://richcanopy.org/example/manifest/polymarket#scratch_drift",
+        label="Scratch drift",
+        is_table=True,
+    )
+    stale_description = describe_staged_revision_tool(
+        db,
+        result["staged_revision"]["revision_iri"],
+        include_current_apply_check=True,
+    )
+    assert stale_description["judgement_panel"] is None
+    assert stale_description["stored_review_context"]["semantic_risk_level"] == "high"
+    assert stale_description["stored_review_context"]["review_note_signals"][
+        "has_value_type_context"
+    ] is True
+    assert stale_description["stored_review_context"]["linked_support_counts"][
+        "patterns"
+    ] >= 1
+    assert stale_description["stored_review_context"]["attention_impacts"][0][
+        "impact_type"
+    ] == "changed_physical_type"
 
 
 def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) -> None:
