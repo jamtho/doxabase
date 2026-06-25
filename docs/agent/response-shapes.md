@@ -1049,7 +1049,10 @@ that field is false. The blocking codes are self-contained for plan handoff:
 they may include decision reasons, `query_context_has_other_blockers` when the
 selected candidate is clean but sibling metadata blocks the overall context, or
 `scan_function_not_inferred` when DuckDB has no file-scan function for the
-selected storage/layout shape. `executable_without_review=true` means DoxaBase
+selected storage/layout shape. Database-backed storage currently uses this
+generic review-draft shape too; expect `scan.function=None` and
+`scan_function_not_inferred` until a database-query-specific plan mode exists.
+`executable_without_review=true` means DoxaBase
 found no recorded physical-metadata blocker for the selected candidate. It is
 not a runtime credential/object-existence guarantee; still check
 `plan.storage_environment.runtime_resolution_required` before execution.

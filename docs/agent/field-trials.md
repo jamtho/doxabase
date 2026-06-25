@@ -549,6 +549,11 @@ few useful gaps:
   and local/HTTPS plans used an over-broad runtime-resolution note. Draft plans
   now add review-gate codes for sibling blockers and missing scan functions,
   and local non-secret paths get a narrower note.
+- A database/non-file query-plan trial confirmed `scan_function_not_inferred`
+  is the right safety gate for verified database tables and unsupported file
+  formats in the current review-only workflow. Database-backed storage still
+  uses the generic draft-plan shape, but runtime notes now say to verify
+  connection, schema, table, or source access rather than object access.
 - A claim-reconsideration slice trial confirmed lifecycle mechanics and pattern
   routes work, but showed that column-only seeds were too narrow for column
   lore. `describe_context_slice` now treats mapped `rc:Column` seeds as valid

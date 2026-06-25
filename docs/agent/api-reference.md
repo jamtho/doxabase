@@ -298,7 +298,9 @@ DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 as a legacy alias for blocking reasons. It may add handoff-only blockers such
 as `query_context_has_other_blockers` for clean selected candidates with bad
 siblings, or `scan_function_not_inferred` when DuckDB has no file-scan function
-for the selected storage/layout shape. The `scan` card carries dataset-level
+for the selected storage/layout shape. Database-backed storage still uses this
+generic review-draft shape today, so expect `scan.function=None` and review
+gating rather than executable SQL. The `scan` card carries dataset-level
 verification status/notes and template lineage/source verification fields so
 agents can see, for example, that a dataset-owned path was verified by listing
 or that an aggregate table's path came from a shared partition scheme and is

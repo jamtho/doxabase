@@ -5957,6 +5957,10 @@ class DoxaBase:
                 for reason in selected_candidate.review_reasons
             )
         )
+        database_storage = (
+            selected_candidate is not None
+            and self._is_database_storage(selected_candidate.storage_protocol)
+        )
         runtime_resolution_required = bool(
             endpoint_profile
             or credential_reference
@@ -5970,17 +5974,31 @@ class DoxaBase:
                 "query."
             )
         elif runtime_resolution_required:
-            runtime_resolution_note = (
-                "Resolve the recorded endpoint profile or credential reference "
-                "in the local runtime, and verify object access before running "
-                "any query."
-            )
+            if database_storage:
+                runtime_resolution_note = (
+                    "Resolve the recorded database endpoint profile or credential "
+                    "reference in the local runtime, and verify connection, "
+                    "schema, table, or source access before running any query."
+                )
+            else:
+                runtime_resolution_note = (
+                    "Resolve the recorded endpoint profile or credential reference "
+                    "in the local runtime, and verify object access before running "
+                    "any query."
+                )
         else:
-            runtime_resolution_note = (
-                "No endpoint or credential profile is recorded or required by "
-                "the graph; still verify local paths or remote object existence "
-                "before running any query."
-            )
+            if database_storage:
+                runtime_resolution_note = (
+                    "No database endpoint or credential profile is recorded or "
+                    "required by the graph; still verify connection, schema, "
+                    "table, or source access before running any query."
+                )
+            else:
+                runtime_resolution_note = (
+                    "No endpoint or credential profile is recorded or required by "
+                    "the graph; still verify local paths or remote object existence "
+                    "before running any query."
+                )
         return DraftQueryPlanStorageEnvironment(
             storage_protocol=(
                 selected_candidate.storage_protocol

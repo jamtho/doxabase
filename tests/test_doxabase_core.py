@@ -6063,6 +6063,12 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
     plan = db.draft_query_plan(dataset)
 
     assert plan.scan.function is None
+    assert "database endpoint profile" in (
+        plan.storage_environment.runtime_resolution_note
+    )
+    assert "connection, schema, table, or source access" in (
+        plan.storage_environment.runtime_resolution_note
+    )
     assert plan.review_gate.executable_without_review is False
     assert plan.review_gate.blocking_reason_codes == ["scan_function_not_inferred"]
     assert plan.review_gate.reason_codes == ["scan_function_not_inferred"]
