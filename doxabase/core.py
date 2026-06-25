@@ -1409,6 +1409,8 @@ class ProfileBundleHandoffEntryPoints:
     profile_observation_iris: list[str]
     map_dataset_recorded: bool
     map_column_iris: list[str]
+    updated_map_column_iris: list[str]
+    mapped_profiled_column_iris: list[str]
     dataset_describe_available: bool
     profile_run_available: bool
     suggested_next_calls: list[str]
@@ -3574,6 +3576,7 @@ class DoxaBase:
         described_claims: set[str] = set()
         described_observations: set[str] = set()
         described_evidence: set[str] = set()
+        described_revisions: set[str] = set()
         warnings: list[str] = []
 
         def add_resource(
@@ -3704,12 +3707,19 @@ class DoxaBase:
             ):
                 add_observation(observation_iri, claim_iri, depth + 1)
 
-        def add_evidence(evidence_iri: str, source_iri: str | None, depth: int) -> None:
+        def add_evidence(
+            evidence_iri: str,
+            source_iri: str | None,
+            depth: int,
+            *,
+            route: str = "evidence",
+            route_label: str = "evidence",
+        ) -> None:
             if evidence_iri in described_evidence:
                 add_resource(
                     evidence_iri,
-                    "evidence",
-                    "evidence",
+                    route,
+                    route_label,
                     source_iri=source_iri,
                     depth=depth,
                 )
@@ -3717,8 +3727,8 @@ class DoxaBase:
             described_evidence.add(evidence_iri)
             add_resource(
                 evidence_iri,
-                "evidence",
-                "evidence",
+                route,
+                route_label,
                 source_iri=source_iri,
                 depth=depth,
             )
@@ -3930,6 +3940,150 @@ class DoxaBase:
                 add_claim(claim.iri, pattern_iri, depth + 1)
             for evidence in pattern.evidence:
                 add_evidence(evidence.iri, pattern_iri, depth + 1)
+
+        def add_revision(
+            revision_iri: str,
+            source_iri: str | None,
+            depth: int,
+            *,
+            route: str = "seed_revision",
+            route_label: str = "seed revision",
+        ) -> None:
+            if revision_iri in described_revisions:
+                add_resource(
+                    revision_iri,
+                    route,
+                    route_label,
+                    source_iri=source_iri,
+                    depth=depth,
+                )
+                return
+            described_revisions.add(revision_iri)
+            add_resource(
+                revision_iri,
+                route,
+                route_label,
+                source_iri=source_iri,
+                depth=depth,
+            )
+            for evidence_iri in self._objects(all_graphs, revision_iri, "rc:evidence"):
+                add_evidence(
+                    evidence_iri,
+                    revision_iri,
+                    depth + 1,
+                    route="revision_evidence",
+                    route_label="revision evidence",
+                )
+            for pattern_iri in self._objects(
+                all_graphs,
+                revision_iri,
+                "rc:revisionSupportingPattern",
+            ):
+                add_pattern(pattern_iri, revision_iri, depth + 1)
+            for claim_iri in self._objects(
+                all_graphs,
+                revision_iri,
+                "rc:revisionSupportingClaim",
+            ):
+                add_claim(claim_iri, revision_iri, depth + 1)
+            for observation_iri in self._objects(
+                all_graphs,
+                revision_iri,
+                "rc:revisionSupportingObservation",
+            ):
+                add_observation(observation_iri, revision_iri, depth + 1)
+            for anchor_iri in self._objects(
+                all_graphs,
+                revision_iri,
+                "rc:revisionAnchor",
+            ):
+                add_resource(
+                    anchor_iri,
+                    "revision_anchor",
+                    "revision anchor",
+                    source_iri=revision_iri,
+                    depth=depth + 1,
+                )
+                anchor_types = self._types_from_graphs(all_graphs, anchor_iri)
+                if (
+                    self.expand_iri("rc:Dataset") in anchor_types
+                    or self.expand_iri("rc:Table") in anchor_types
+                ):
+                    add_dataset(anchor_iri, revision_iri, depth + 2)
+                elif self.expand_iri("rc:Column") in anchor_types:
+                    add_column(anchor_iri, revision_iri, depth + 2)
+            for staged_iri in self._objects(
+                all_graphs,
+                revision_iri,
+                "rc:appliesStagedRevision",
+            ):
+                add_revision(
+                    staged_iri,
+                    revision_iri,
+                    depth + 1,
+                    route="applies_staged_revision",
+                    route_label="applies staged revision",
+                )
+            for applied_iri in self._subjects(
+                all_graphs,
+                "rc:appliesStagedRevision",
+                revision_iri,
+            ):
+                add_revision(
+                    applied_iri,
+                    revision_iri,
+                    depth + 1,
+                    route="applied_revision",
+                    route_label="applied revision",
+                )
+            for source_revision_iri in self._objects(
+                all_graphs,
+                revision_iri,
+                "rc:restagesRevision",
+            ):
+                add_revision(
+                    source_revision_iri,
+                    revision_iri,
+                    depth + 1,
+                    route="restaged_from_revision",
+                    route_label="restaged from revision",
+                )
+            for successor_revision_iri in self._subjects(
+                all_graphs,
+                "rc:restagesRevision",
+                revision_iri,
+            ):
+                add_revision(
+                    successor_revision_iri,
+                    revision_iri,
+                    depth + 1,
+                    route="restaged_by_revision",
+                    route_label="restaged by revision",
+                )
+            for alternative_iri in self._objects(
+                all_graphs,
+                revision_iri,
+                "rc:alternativeTo",
+            ):
+                add_revision(
+                    alternative_iri,
+                    revision_iri,
+                    depth + 1,
+                    route="alternative_revision",
+                    route_label="alternative revision",
+                )
+            for alternative_iri in self._subjects(
+                all_graphs,
+                "rc:alternativeTo",
+                revision_iri,
+            ):
+                add_revision(
+                    alternative_iri,
+                    revision_iri,
+                    depth + 1,
+                    route="alternative_revision",
+                    route_label="alternative revision",
+                )
 
         def add_owner_dataset_for_column(
             iri: str,
@@ -4316,6 +4470,11 @@ class DoxaBase:
                 and self.expand_iri("rc:ObservedProfileMetric") in seed_types
             ):
                 add_profile_metric(seed, None, 0)
+            elif (
+                profile == "deep_lore"
+                and self.expand_iri("rc:GraphRevision") in seed_types
+            ):
+                add_revision(seed, None, 0)
             elif profile in {"dataset_brief", "deep_lore"} and metric_kind_metric_iris:
                 add_resource(
                     seed,
@@ -4441,6 +4600,11 @@ class DoxaBase:
                 f"{base} Seed is an rc:ObservedProfileMetric; rerun with "
                 f"{dataset_profiles}."
             )
+        if self.expand_iri("rc:GraphRevision") in seed_types:
+            return (
+                f"{base} Seed is an rc:GraphRevision; rerun with "
+                "profile='deep_lore'."
+            )
         if metric_kind_metric_iris:
             return (
                 f"{base} Seed is used as an rc:profileMetricKind; rerun with "
@@ -4565,6 +4729,7 @@ class DoxaBase:
             "seed": 0,
             "seed_dataset": 1,
             "seed_column": 2,
+            "seed_revision": 2,
             "linked_pattern": 2,
             "pattern_target": 3,
             "map_implication": 4,
@@ -4587,6 +4752,12 @@ class DoxaBase:
             "profile_metric_observation": 13,
             "observed_profile_metric": 14,
             "observed_value_frequency": 14,
+            "applied_revision": 14,
+            "applies_staged_revision": 14,
+            "restaged_from_revision": 14,
+            "restaged_by_revision": 14,
+            "alternative_revision": 14,
+            "revision_anchor": 14,
             "profile_metric_kind": 15,
             "profile_metric_target": 15,
             "seed_profile_metric_kind": 15,
@@ -4629,6 +4800,13 @@ class DoxaBase:
             "profile_metric_observation",
             "observed_profile_metric",
             "observed_value_frequency",
+            "seed_revision",
+            "applied_revision",
+            "applies_staged_revision",
+            "restaged_from_revision",
+            "restaged_by_revision",
+            "alternative_revision",
+            "revision_anchor",
             "evidence",
             "source_span",
         }
@@ -4679,6 +4857,7 @@ class DoxaBase:
             "seed": "The resource the caller asked about directly.",
             "seed_dataset": "A seed resource expanded as a dataset or table.",
             "seed_column": "A seed resource expanded as a mapped column.",
+            "seed_revision": "A seed resource expanded as revision-history metadata.",
             "related_column": (
                 "A column reached from a selected column seed or lore route."
             ),
@@ -4728,6 +4907,20 @@ class DoxaBase:
             "profile_metric_kind": "The metric-kind IRI used by an observed profile metric.",
             "profile_metric_target": "The narrower target resource named by an observed profile metric.",
             "seed_profile_metric_kind": "A seed IRI used as a profile metric kind.",
+            "applied_revision": (
+                "An applied revision event that applied a selected staged revision."
+            ),
+            "applies_staged_revision": (
+                "The staged revision applied by a selected applied revision event."
+            ),
+            "restaged_from_revision": (
+                "The earlier staged revision replayed by a selected restaged revision."
+            ),
+            "restaged_by_revision": (
+                "A later staged revision that restages a selected stale revision."
+            ),
+            "alternative_revision": "A revision recorded as an alternative to a selected revision.",
+            "revision_anchor": "A resource named as an anchor for a selected revision.",
             "evidence": "Evidence linked to a selected observation, claim, pattern, or revision.",
             "source_span": "A source span attached to selected evidence.",
             "owning_dataset": "The dataset that owns a selected column.",
@@ -8814,6 +9007,18 @@ class DoxaBase:
         )
         map_dataset_recorded = dataset_profile.map_dataset is not None
         profile_run_available = profile_run_evidence_iri is not None
+        map_graphs = self._expand_graphs(["map"])
+        updated_map_column_iris = [
+            column_profile.column_iri
+            for column_profile in column_profiles
+            if column_profile.map_column is not None
+        ]
+        mapped_profiled_column_iris = [
+            column_profile.column_iri
+            for column_profile in column_profiles
+            if self.expand_iri("rc:Column")
+            in self._types_from_graphs(map_graphs, column_profile.column_iri)
+        ]
         suggested_next_calls: list[str] = []
         if dataset_describe_available:
             suggested_next_calls.append(f"describe_dataset({dataset_iri!r})")
@@ -8880,11 +9085,9 @@ class DoxaBase:
             column_profile_observation_iris=column_profile_observation_iris,
             profile_observation_iris=profile_observation_iris,
             map_dataset_recorded=map_dataset_recorded,
-            map_column_iris=[
-                column_profile.column_iri
-                for column_profile in column_profiles
-                if column_profile.map_column is not None
-            ],
+            map_column_iris=updated_map_column_iris,
+            updated_map_column_iris=updated_map_column_iris,
+            mapped_profiled_column_iris=mapped_profiled_column_iris,
             dataset_describe_available=dataset_describe_available,
             profile_run_available=profile_run_available,
             suggested_next_calls=suggested_next_calls,

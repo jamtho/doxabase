@@ -595,6 +595,26 @@ few useful gaps:
   incomplete sibling stayed useful as a validation diagnostic. After one ready
   alternative is applied, stale sibling live checks should be read alongside
   their original staged validation diagnostics.
+- An MCP/Python parity trial compared query context, draft query plans,
+  deep-lore slices, staged revision checks/descriptions, dry-run restage, and
+  applied diffs across Python and wrapper helpers. All compared payloads were
+  JSON-serializable and exactly equal; use dry-run for parity checks where a
+  real call would mint a successor.
+- A context import/slice trial confirmed RDF project exports preserve enough
+  history metadata for dataset, column, pattern, and claim seeds to recover
+  useful deep-lore routes after import/reopen. It exposed that revision seeds
+  themselves were not deep-lore entry points; `describe_context_slice` now
+  expands `rc:GraphRevision` seeds to support, evidence, anchors, application,
+  restage, and alternative links. The same trial confirmed a current limit:
+  RDF export/import does not preserve SQLite stored snapshot rows for exact
+  stale/apply diffs.
+- A profile-bundle handoff trial confirmed realistic wide profile bundles,
+  shared evidence, run-level patterns, capped `describe_profile_run`, and
+  workflow/default export imports work together. It exposed that
+  `handoff_entrypoints.map_column_iris` sounded like all mapped profiled
+  columns but only listed columns whose map facts were written by the bundle;
+  bundles now also expose `updated_map_column_iris` and
+  `mapped_profiled_column_iris`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

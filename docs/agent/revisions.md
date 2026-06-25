@@ -76,6 +76,12 @@ historical revision records. Use `describe_graph_revision()` when you want a
 compact review of one revision record instead of generic outgoing triples.
 Graph snapshots include both `triple_count` and a `sha256:<hex>` content digest;
 matching counts alone do not prove two revision contexts are identical.
+Exact staged/apply snapshot rows are SQLite-side review state. RDF
+`export_trig()`/`import_trig()` preserves the history graph metadata, but it
+does not currently round-trip those stored snapshot rows, so exact applied-diff
+or stale-drift triples may be unavailable after reopening an imported RDF
+bundle. Keep the source capsule or explicit before/after exports when exact
+diff reconstruction must survive a handoff.
 
 ## Revision List Triage
 

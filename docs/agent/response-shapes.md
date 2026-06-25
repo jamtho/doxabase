@@ -494,6 +494,8 @@ bundle.handoff_entrypoints.column_profile_observation_iris
 bundle.handoff_entrypoints.profile_observation_iris
 bundle.handoff_entrypoints.map_dataset_recorded
 bundle.handoff_entrypoints.map_column_iris
+bundle.handoff_entrypoints.updated_map_column_iris
+bundle.handoff_entrypoints.mapped_profiled_column_iris
 bundle.handoff_entrypoints.dataset_describe_available
 bundle.handoff_entrypoints.profile_run_available
 bundle.handoff_entrypoints.suggested_next_calls
@@ -508,6 +510,11 @@ when `profile_run_available` is true, or seed `describe_context_slice` from
 `map_dataset_recorded` means this bundle call wrote dataset map facts. It can be
 false while `dataset_describe_available` is true when map context already existed
 before a bundle recorded profile observations with `update_map_snapshot=False`.
+`map_column_iris` is the legacy name for column map facts written by this bundle
+call; prefer `updated_map_column_iris` for that meaning. Use
+`mapped_profiled_column_iris` when a receiving agent needs every bundled column
+profile that is mapped after the call, including pre-existing mapped columns
+profiled with `update_map_column=False`.
 
 Copyable bundle shape:
 

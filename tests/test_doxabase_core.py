@@ -7425,6 +7425,103 @@ def test_deep_lore_context_slice_reports_absent_lore_layer(
     ]
 
 
+def test_deep_lore_context_slice_expands_revision_seeds(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#orders"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+    )
+    claim = db.record_claim_observation(
+        summary="Orders need a freshness caveat.",
+        claim_text="Orders include late-arriving events and need freshness caveats.",
+        claim_kind="rc:CaveatClaim",
+        claim_targets=[dataset],
+        evidence_sources=["test://orders-freshness-profile"],
+    )
+    assert claim.evidence_iri is not None
+    pattern = db.record_pattern(
+        summary="Orders freshness should travel with handoffs.",
+        pattern_text="Late-arriving orders make freshness caveats part of the durable map.",
+        rationale="The caveat claim targets the dataset.",
+        pattern_targets=[dataset],
+        supporting_claims=[claim.claim_iri],
+        evidence_iri=claim.evidence_iri,
+    )
+    staged = db.stage_graph_revision(
+        summary="Add orders freshness caveat",
+        rationale="Promote the checked freshness lore into map caveat context.",
+        supporting_claims=[claim.claim_iri],
+        supporting_patterns=[pattern.pattern_iri],
+        revision_anchors=[dataset],
+        evidence=[claim.evidence_iri],
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:orders_freshness_caveat a rc:KnownCaveat ;
+                        rdfs:label "Orders freshness caveat" ;
+                        rc:caveatDescription "Orders include late-arriving events." ;
+                        rc:severity rc:Moderate .
+
+                    <{dataset}> rc:hasKnownCaveat ex:orders_freshness_caveat .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    applied = db.apply_staged_revision(staged.revision_iri)
+
+    staged_slice = db.describe_context_slice(
+        [staged.revision_iri],
+        profile="deep_lore",
+        include_trig=True,
+    )
+
+    assert staged_slice.trig is not None
+    assert not staged_slice.warnings
+    staged_routes = {
+        resource.iri: {route.route for route in resource.routes}
+        for resource in staged_slice.resources
+    }
+    assert "seed_revision" in staged_routes[staged.revision_iri]
+    assert "applied_revision" in staged_routes[applied.applied_revision_iri]
+    assert "revision_anchor" in staged_routes[dataset]
+    assert staged_slice.dataset_contexts[0].iri == dataset
+    assert [context.iri for context in staged_slice.pattern_contexts] == [
+        pattern.pattern_iri
+    ]
+    assert staged_slice.route_counts["seed_revision"] == 1
+    assert staged_slice.route_counts["revision_anchor"] >= 1
+    assert staged_slice.route_counts["linked_pattern"] >= 1
+    assert staged_slice.route_counts["supporting_claim"] >= 1
+    assert staged_slice.route_counts["revision_evidence"] >= 1
+    assert staged_slice.route_counts["applied_revision"] == 1
+
+    applied_slice = db.describe_context_slice(
+        [applied.applied_revision_iri],
+        profile="deep_lore",
+    )
+
+    assert not applied_slice.warnings
+    applied_routes = {
+        resource.iri: {route.route for route in resource.routes}
+        for resource in applied_slice.resources
+    }
+    assert "seed_revision" in applied_routes[applied.applied_revision_iri]
+    assert "applies_staged_revision" in applied_routes[staged.revision_iri]
+    assert "revision_anchor" in applied_routes[dataset]
+    assert applied_slice.route_counts["applies_staged_revision"] == 1
+    assert applied_slice.route_counts["applied_revision"] == 1
+
+
 def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
@@ -8683,6 +8780,14 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     amount_column = "https://example.test/project#OrdersAmount"
     shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
 
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+
     result = db.record_profile_bundle(
         dataset,
         dataset_summary="Orders were profiled with row count and column sketches.",
@@ -8754,6 +8859,11 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     }
     assert result.handoff_entrypoints.map_dataset_recorded is True
     assert result.handoff_entrypoints.map_column_iris == [amount_column]
+    assert result.handoff_entrypoints.updated_map_column_iris == [amount_column]
+    assert result.handoff_entrypoints.mapped_profiled_column_iris == [
+        status_column,
+        amount_column,
+    ]
     assert result.handoff_entrypoints.dataset_describe_available is True
     assert result.handoff_entrypoints.profile_run_available is True
     assert result.handoff_entrypoints.suggested_next_calls[0] == (
@@ -8772,10 +8882,10 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert description.label == "Orders"
     assert description.row_count_snapshot == 100
     assert description.profile_summary.returned_dataset_profile_count == 1
-    assert description.profile_summary.returned_mapped_column_profile_count == 1
-    assert description.profile_summary.returned_unmapped_column_profile_count == 1
+    assert description.profile_summary.returned_mapped_column_profile_count == 2
+    assert description.profile_summary.returned_unmapped_column_profile_count == 0
     assert description.profile_summary.returned_profile_count == 3
-    assert description.profile_summary.mapped_profiled_column_count == 1
+    assert description.profile_summary.mapped_profiled_column_count == 2
     assert description.profile_summary.evidence_iris == [shared_evidence]
     assert description.profile_summary.evidence_profile_counts == {
         shared_evidence: 3,
@@ -8812,26 +8922,34 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert dataset_profile.evidence[0].iri == shared_evidence
     assert dataset_profile.evidence[0].sources == ["test://orders-profile"]
 
-    assert [column.iri for column in description.columns] == [amount_column]
-    amount_profile = description.columns[0].profile_observations[0]
+    assert {column.iri for column in description.columns} == {
+        status_column,
+        amount_column,
+    }
+    amount_description = next(
+        column for column in description.columns if column.iri == amount_column
+    )
+    amount_profile = amount_description.profile_observations[0]
     assert amount_profile.sample_method == "DuckDB full-table profiling query."
     assert amount_profile.null_count == 0
     assert amount_profile.profile_metrics[0].metric.iri == RC + "MeanValue"
-    assert description.columns[0].nullable is False
-    assert description.columns[0].physical_type is not None
-    assert description.columns[0].physical_type.iri == RC + "Decimal"
-
-    unmapped = description.unmapped_column_profile_observations
-    assert len(unmapped) == 1
-    assert unmapped[0].observed_column is not None
-    assert unmapped[0].observed_column.iri == status_column
-    assert unmapped[0].observed_column_name == "status"
-    assert unmapped[0].observed_column.column_name == "status"
-    assert unmapped[0].sample_size == 100
-    assert [(item.value, item.frequency) for item in unmapped[0].value_frequencies] == [
+    assert amount_description.nullable is False
+    assert amount_description.physical_type is not None
+    assert amount_description.physical_type.iri == RC + "Decimal"
+    status_description = next(
+        column for column in description.columns if column.iri == status_column
+    )
+    assert status_description.profile_observations[0].distinct_count == 3
+    assert [
+        (item.value, item.frequency)
+        for item in status_description.profile_observations[0].value_frequencies
+    ] == [
         ("fulfilled", 70),
         ("pending", 20),
     ]
+
+    unmapped = description.unmapped_column_profile_observations
+    assert unmapped == []
 
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text

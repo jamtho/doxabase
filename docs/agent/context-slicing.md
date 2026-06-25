@@ -15,7 +15,8 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
   implications, supporting claims, observations, evidence, and source spans.
 - `deep_lore` follows the same explicit routes and also pulls in relevant
   revision metadata when history records directly support selected patterns,
-  claims, or observations.
+  claims, or observations. It can also start from an `rc:GraphRevision` seed
+  when the revision itself is the handoff entry point.
 
 Dataset and deep-lore slices also understand profile seeds. A seed
 `rc:ProfileObservation` expands to its observed asset/column, evidence, value
@@ -39,6 +40,13 @@ lore without first rediscovering the owning dataset by hand. If a column was
 recorded only in a profile observation with `update_map_column=false`, its IRI
 is an observed object rather than a mapped `rc:Column` subject; seed the profile
 observation IRI instead.
+
+Deep-lore slices also understand revision seeds. A seed `rc:GraphRevision`
+expands to supporting observations, claims, patterns, revision evidence, anchor
+resources, restage/application links, and alternatives when those links are
+recorded in `history`. This is the compact route for reading an applied
+revision event, stale staged source, or restaged successor without first finding
+the dataset or pattern that led to it.
 
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference

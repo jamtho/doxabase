@@ -232,7 +232,9 @@ metadata should come along too. Dataset/deep-lore slices include bounded profile
 observations, observed value-frequency nodes, scalar profile metric nodes, and
 profile metric kinds returned through the dataset context. They can also start
 from a profile observation, observed profile metric node, or metric-kind IRI
-used by profile metrics. `seed_profile_observations` preserves structured
+used by profile metrics. Deep-lore slices can also start from an
+`rc:GraphRevision` seed and expand support, evidence, anchors, application,
+restage, and alternative links. `seed_profile_observations` preserves structured
 profile summaries selected by those profile/metric seeds even when the same row
 is older than the bounded dataset profile list. Read `resources[].routes` and `route_counts` before
 raw triples; those fields explain why each resource entered the slice.
@@ -317,6 +319,10 @@ still override that with its own `evidence_iri`.
 The returned bundle includes `shared_evidence_iri` at top level for quick
 run-level checks and `handoff_entrypoints` with profile observation seeds,
 availability flags, and suggested next calls for the next agent.
+In `handoff_entrypoints`, prefer `updated_map_column_iris` for columns whose map
+facts were written by this bundle call, and `mapped_profiled_column_iris` for
+all bundled column profiles that are mapped after the call. `map_column_iris`
+remains as a legacy alias for `updated_map_column_iris`.
 Use `column_defaults` for repeated column options such as
 `{"update_map_column": false}`. Each `column_profiles[]` item accepts the same
 fields as `record_column_profile` and must include `column_iri`, `column_name`,

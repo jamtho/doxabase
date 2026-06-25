@@ -324,8 +324,10 @@ dataset/table map context, bounded profile observations/metrics, and linked
 lore, `pattern_brief` starts from pattern support, and `deep_lore` also
 includes directly relevant revision metadata. Dataset/deep-lore slices can also
 start from mapped column IRIs, profile observations, observed profile metric
-nodes, or metric-kind IRIs used by profile metrics. Column seeds expand to their
-owning dataset plus directly targeting claims, patterns, observations, and
+nodes, or metric-kind IRIs used by profile metrics. Deep-lore slices can start
+from `rc:GraphRevision` seeds to inspect revision support, evidence, anchors,
+application, restage, and alternative links. Column seeds expand to their owning
+dataset plus directly targeting claims, patterns, observations, and
 reconsideration lore. Profile-only column IRIs recorded with
 `update_map_column=false` are object references rather than mapped column
 subjects; seed their profile observation IRIs when you need that handoff.
@@ -413,6 +415,12 @@ override that by supplying its own `evidence_iri`.
 The returned bundle includes `shared_evidence_iri` at top level for quick
 run-level checks and `handoff_entrypoints` with profile observation seeds,
 availability flags, and suggested next calls for the next agent.
+In `handoff_entrypoints`, `map_column_iris` is a legacy alias for the columns
+whose map facts were written by this bundle call. Prefer
+`updated_map_column_iris` for that meaning, and use
+`mapped_profiled_column_iris` when you need all bundled column profiles that are
+mapped after the call, including pre-existing mapped columns profiled with
+`update_map_column=false`.
 Use `column_defaults` for repeated column options, for example
 `{"update_map_column": false}` when sampled column profiles should stay
 observation-only. Each `column_profiles[]` item accepts the same fields as
