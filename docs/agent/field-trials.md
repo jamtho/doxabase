@@ -636,6 +636,12 @@ few useful gaps:
   queues, suggested actions, and dry-run restage classifications. No code change
   was justified; agents should keep reading compact status/decision/queue fields
   before long row-level recommendation prose.
+- A staged validation-history trial showed that stored staged validation
+  diagnostics are preserved after graph drift, but live replay status can change
+  from `validation_failed` to `conflict`. `list_graph_revisions` now supports
+  `staged_validation_status="failed"` for staged-time validation failures, and
+  grouped export summaries expose `staged_validation_failed_revision_iris`
+  beside the live `validation_failed_revision_iris` queue.
 - An assertion-judgement trial confirmed `stage_map_assertion_change` handles
   physical type, semantic type, row semantics, path template, and caveat
   add/remove/replace cases with useful judgement panels and impact spotlights.

@@ -1177,6 +1177,7 @@ revisions.offset
 revisions.revision_type
 revisions.record_kind
 revisions.application_status
+revisions.staged_validation_status
 revisions.stale_resolution_state
 revisions.current_staged_work_only
 revisions.include_apply_checks
@@ -1200,6 +1201,7 @@ item.changed_graphs
 item.validation_scope
 item.validation_conforms
 item.validation_result_count
+item.staged_validation_status
 item.has_patch_payload
 item.patch_count
 item.applied_by
@@ -1280,6 +1282,13 @@ records, or revision provenance. Use `has_patch_payload` and `patch_count` to
 decide whether `describe_staged_revision` is available. Use
 `list_graph_revisions` to discover reviewable or applied history before calling
 `describe_graph_revision` or `describe_staged_revision` on a specific IRI.
+Stored `validation_conforms` and `validation_result_count` are staged-time
+preview diagnostics. The `application_*` fields are a live apply check against
+the current graph. A row can therefore have stored validation failures while
+the live `application_status` is now `conflict` after graph drift; call
+`describe_staged_revision()` when historical validation diagnostics matter.
+Use `staged_validation_status="failed"` to filter for those stored staged-time
+failures separately from live `application_status="validation_failed"`.
 `drift_detail="summary"` is the default and omits exact changed-triple arrays
 from list-row snapshot drift entries. Summary rows still include
 `drift_relevance`, all overlap arrays, and added/removed exact-change counts
@@ -1907,6 +1916,7 @@ bundle.post_apply_recheck_revision_iris
 bundle.sequential_apply_recheck_candidate_iris
 bundle.warnings
 bundle.validation_failed_revision_iris
+bundle.staged_validation_failed_revision_iris
 bundle.recommended_review_iris
 bundle.recommended_mutation_review_iris
 bundle.recommended_apply_or_restage_review_iris
@@ -1927,7 +1937,10 @@ Grouped Markdown still keeps handled stale rows in the summary table for
 provenance, but their recommendation points to the refreshed successor or
 Review Queues instead of treating the stale source as an active restage target.
 `validation_failed_revision_iris` lists rows whose patch counts
-replay but whose preview validation does not conform.
+replay but whose current preview validation does not conform.
+`staged_validation_failed_revision_iris` lists rows whose stored staged-time
+validation failed, even when later graph drift now makes the current apply
+status a conflict or skips validation.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for
 `post_apply_recheck_revision_iris` in grouped export summaries: both name ready
 or no-op candidates that share changed graphs and should be rechecked after any

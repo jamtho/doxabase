@@ -85,15 +85,19 @@ knowing which proposals are ready, stale, or already applied. Apply checks are
 only populated for revisions with graph patch payloads. Rows include
 `record_kind`, `has_patch_payload`, `patch_count`, revision relation links,
 selected apply-check blockers/drift summaries, and review-first suggested next
-actions. Use `record_kind`, `application_status`, and
-`stale_resolution_state` filters to ask directly for applied events, ready
-staged proposals, unresolved stale sources, or handled stale sources. Rows also
-include `is_current_staged_work`; pass `current_staged_work_only=True` for the
-live staged work queue, excluding applied sources and stale rows already handled
-by restage. Non-current rows include `not_current_staged_work_reason`, such as
+actions. Use `record_kind`, `application_status`,
+`staged_validation_status`, and `stale_resolution_state` filters to ask
+directly for applied events, ready staged proposals, rows with stored staged-time
+validation failures, unresolved stale sources, or handled stale sources. Rows
+also include `is_current_staged_work`; pass `current_staged_work_only=True` for
+the live staged work queue, excluding applied sources and stale rows already
+handled by restage. Non-current rows include `not_current_staged_work_reason`,
+such as
 `already_applied_source`, `superseded_by_restage`, or `applied_event_record`.
 Status, stale-state, and current-work filters automatically compute apply
-checks.
+checks. `staged_validation_status="failed"` filters stored staged-time
+validation, while `application_status="validation_failed"` filters the current
+live replay branch.
 `drift_detail="summary"` is the default and omits exact changed-triple
 arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or

@@ -139,11 +139,50 @@ includes live `application_status`, blocker, and suggested-action fields.
 When inspecting a mixed history list, use `not_current_staged_work_reason` to see
 why a false `is_current_staged_work` row was excluded from that queue.
 
+For a cold staged-work handoff, a good first pass is:
+
+```python
+queue = db.list_graph_revisions(
+    current_staged_work_only=True,
+    include_apply_checks=True,
+    drift_detail="summary",
+)
+for item in queue.revisions:
+    print(
+        item.application_status,
+        item.stale_resolution_state,
+        item.validation_conforms,
+        item.validation_result_count,
+        item.iri,
+    )
+```
+
+Treat that as a triage queue, not an apply queue. It can include ready mutation
+candidates, validation-failed repair work, no-op rows, and stale refreshed
+successors. Use `application_status="ready"` when you want only mechanically
+ready candidates. Use `application_status="validation_failed"` to find rows
+whose current replay still fails SHACL validation. Use
+`staged_validation_status="failed"` to find rows whose stored staged-time
+preview failed validation, even if later graph drift now makes the live
+`application_status` a conflict. Use `stale_resolution_state="stale_unresolved"`
+for stale original proposals with no successor, and
+`stale_resolution_state="restaged_successor_stale_unresolved"` when the active
+refreshed successor is itself stale. The broader
+`current_staged_work_only=True` queue is often the safest starting point because
+it catches all of these active categories together.
+
 Read `application_status`, `application_decision`, `application_can_apply`,
 `application_summary`, `application_blocking_reasons`, and
 structured `suggested_next_actions` first. Their `action_label`, `arguments`,
 and `reason` tell you whether the staged proposal is ready for review, already
 applied, blocked by graph drift, or needs fuller inspection.
+The stored `validation_conforms` and `validation_result_count` fields describe
+the staged-time preview. The `application_status` and related `application_*`
+fields describe a live replay against the current graph. If a staged proposal
+was validation-failed when recorded but later becomes stale, the live status may
+be `conflict`; use `staged_validation_status="failed"` to rediscover it in
+lists, then call `describe_staged_revision()` to inspect the stored validation
+diagnostics as well as the current apply branch.
 The default list call uses `drift_detail="summary"` so snapshot drift rows carry
 counts, digests, drift relevance, overlap arrays, and added/removed exact-change
 counts without large exact changed-triple arrays. Then use

@@ -788,6 +788,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
     assert result["record_kind"] is None
     assert result["application_status"] is None
+    assert result["staged_validation_status"] is None
     assert result["stale_resolution_state"] is None
     assert result["current_staged_work_only"] is False
     assert result["revisions"][0]["iri"] == staged["revision_iri"]
@@ -797,6 +798,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["revisions"][0]["has_patch_payload"] is True
     assert result["revisions"][0]["patch_count"] == 1
     assert result["revisions"][0]["application_status"] == "ready"
+    assert result["revisions"][0]["staged_validation_status"] == "conforms"
     assert result["revisions"][0]["application_decision"] == "review_then_apply"
     assert result["revisions"][0]["application_can_apply"] is True
     assert result["revisions"][0]["suggested_next_actions"]
@@ -823,6 +825,17 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert staged_patch_result["include_apply_checks"] is True
     assert staged_patch_result["count"] == 1
     assert staged_patch_result["revisions"][0]["iri"] == staged["revision_iri"]
+
+    stored_conforms_result = list_graph_revisions_tool(
+        db,
+        revision_type="rc:StagedRevision",
+        staged_validation_status="conforms",
+    )
+
+    assert stored_conforms_result["include_apply_checks"] is False
+    assert stored_conforms_result["staged_validation_status"] == "conforms"
+    assert stored_conforms_result["count"] == 1
+    assert stored_conforms_result["revisions"][0]["iri"] == staged["revision_iri"]
     assert (
         staged_patch_result["revisions"][0]["not_current_staged_work_reason"]
         is None

@@ -599,9 +599,11 @@ presence/count, relation links such as `applied_by`, `applies_staged_revision`,
 `current_restaged_by`, plus `stale_resolution_state` and optional staged
 apply-check status, summary, recommended resolution, validation-skipped reason,
 blockers, drift summaries, and suggested actions when `include_apply_checks=True`.
-Use `record_kind`, `application_status`, and `stale_resolution_state` filters to
-find rows such as applied events, mechanically ready staged proposals, unresolved
-stale sources, or handled stale sources without hand-filtering the full list.
+Use `record_kind`, `application_status`, `staged_validation_status`, and
+`stale_resolution_state` filters to find rows such as applied events,
+mechanically ready staged proposals, rows with stored staged-time validation
+failures, unresolved stale sources, or handled stale sources without
+hand-filtering the full list.
 Each row also includes `is_current_staged_work`; pass
 `current_staged_work_only=True` to keep only staged patch rows that still need
 review, repair, restage, or application, excluding handled stale originals and
@@ -612,6 +614,10 @@ record.
 Filtering by `application_status` or `stale_resolution_state` automatically
 computes apply checks for patch-backed revisions, as does
 `current_staged_work_only=True`.
+`application_status="validation_failed"` means the current replay reached SHACL
+validation and failed. `staged_validation_status="failed"` means the stored
+staged-time validation failed; it still finds rows that later became live
+`conflict` entries after graph drift.
 `drift_detail="summary"` is the default list mode: snapshot drift rows keep
 counts, digests, drift relevance, overlap arrays, and added/removed exact-change
 counts but omit exact changed-triple arrays. Use `drift_detail="exact"` when you

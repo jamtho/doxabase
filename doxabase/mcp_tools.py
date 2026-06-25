@@ -119,6 +119,7 @@ def list_graph_revisions_tool(
     drift_detail: str = "summary",
     record_kind: str | None = None,
     application_status: str | None = None,
+    staged_validation_status: str | None = None,
     stale_resolution_state: str | None = None,
     current_staged_work_only: bool = False,
     limit: int = 50,
@@ -132,6 +133,7 @@ def list_graph_revisions_tool(
             drift_detail=drift_detail,  # type: ignore[arg-type]
             record_kind=record_kind,
             application_status=application_status,
+            staged_validation_status=staged_validation_status,  # type: ignore[arg-type]
             stale_resolution_state=stale_resolution_state,
             current_staged_work_only=current_staged_work_only,
             limit=limit,

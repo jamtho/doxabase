@@ -3669,6 +3669,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert staged_listing.drift_detail == "summary"
     assert staged_listing.record_kind is None
     assert staged_listing.application_status is None
+    assert staged_listing.staged_validation_status is None
     assert staged_listing.stale_resolution_state is None
     assert staged_listing.current_staged_work_only is False
     assert staged_listing.revisions[0].iri == staged.revision_iri
@@ -3680,6 +3681,7 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert staged_listing.revisions[0].has_patch_payload is True
     assert staged_listing.revisions[0].patch_count == 1
     assert staged_listing.revisions[0].application_status == "ready"
+    assert staged_listing.revisions[0].staged_validation_status == "conforms"
     assert staged_listing.revisions[0].application_can_apply is True
     assert staged_listing.revisions[0].stale_resolution_state == "ready"
     assert staged_listing.revisions[0].application_summary is not None
@@ -3812,6 +3814,16 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert ready_listing.current_staged_work_only is True
     assert [item.iri for item in ready_listing.revisions] == [restaged.revision_iri]
 
+    stored_conforms_listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        staged_validation_status="conforms",
+    )
+    assert stored_conforms_listing.include_apply_checks is False
+    assert stored_conforms_listing.staged_validation_status == "conforms"
+    assert restaged.revision_iri in {
+        item.iri for item in stored_conforms_listing.revisions
+    }
+
     handled_listing = db.list_graph_revisions(
         revision_type="rc:StagedRevision",
         stale_resolution_state="stale_handled_by_restage",
@@ -3891,6 +3903,9 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     assert export.bundle_summary.validation_failed_revision_iris == [
         staged.revision_iri
     ]
+    assert export.bundle_summary.staged_validation_failed_revision_iris == [
+        staged.revision_iri
+    ]
     assert export.bundle_summary.post_apply_recheck_revision_iris == []
     assert export.bundle_summary.recommended_mutation_review_iris == [
         staged.revision_iri
@@ -3922,6 +3937,91 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
 
     with pytest.raises(DoxaBaseError, match="Applying staged revision would fail"):
         db.apply_staged_revision(staged.revision_iri)
+
+
+def test_list_graph_revisions_filters_staged_validation_after_live_conflict(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage invalid value type",
+        rationale="Exercise stored validation diagnostics after target drift.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:BadValueType a rc:ValueType ;
+                        rc:requiredPhysicalType "VARCHAR" .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    before_drift = db.list_graph_revisions(
+        application_status="validation_failed",
+        staged_validation_status="failed",
+    )
+
+    assert before_drift.include_apply_checks is True
+    assert before_drift.application_status == "validation_failed"
+    assert before_drift.staged_validation_status == "failed"
+    assert [item.iri for item in before_drift.revisions] == [staged.revision_iri]
+    assert before_drift.revisions[0].staged_validation_status == "failed"
+
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:BenignOntologyTerm a rdfs:Class ;
+            rdfs:label "Benign ontology term" .
+        """,
+        graph="ontology",
+    )
+
+    live_validation_failed = db.list_graph_revisions(
+        application_status="validation_failed",
+    )
+    stored_validation_failed = db.list_graph_revisions(
+        staged_validation_status="failed",
+    )
+    conflicted_stored_validation_failed = db.list_graph_revisions(
+        application_status="conflict",
+        staged_validation_status="failed",
+    )
+
+    assert live_validation_failed.count == 0
+    assert stored_validation_failed.staged_validation_status == "failed"
+    assert [item.iri for item in stored_validation_failed.revisions] == [
+        staged.revision_iri
+    ]
+    stored_row = stored_validation_failed.revisions[0]
+    assert stored_row.application_status is None
+    assert stored_row.validation_conforms is False
+    assert stored_row.validation_result_count == 1
+    assert stored_row.staged_validation_status == "failed"
+    assert conflicted_stored_validation_failed.include_apply_checks is True
+    assert [item.iri for item in conflicted_stored_validation_failed.revisions] == [
+        staged.revision_iri
+    ]
+    conflict_row = conflicted_stored_validation_failed.revisions[0]
+    assert conflict_row.application_status == "conflict"
+    assert conflict_row.stale_resolution_state == "stale_unresolved"
+    assert conflict_row.application_validation_skipped_reason == "conflicts_present"
+
+    export = db.export_staged_revisions(
+        [staged.revision_iri],
+        tmp_path / "validation-after-drift.md",
+    )
+
+    assert export.bundle_summary.validation_failed_revision_iris == []
+    assert export.bundle_summary.staged_validation_failed_revision_iris == [
+        staged.revision_iri
+    ]
 
 
 def test_stage_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> None:

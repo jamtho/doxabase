@@ -522,6 +522,7 @@ class StagedGraphRevisionBundleSummary:
     sequential_apply_recheck_candidate_iris: list[str]
     warnings: list[str]
     validation_failed_revision_iris: list[str]
+    staged_validation_failed_revision_iris: list[str]
     recommended_review_iris: list[str]
     recommended_mutation_review_iris: list[str]
     recommended_apply_or_restage_review_iris: list[str]
@@ -766,6 +767,7 @@ class GraphRevisionListItem:
     validation_scope: str | None
     validation_conforms: bool | None
     validation_result_count: int | None
+    staged_validation_status: str
     has_patch_payload: bool
     patch_count: int
     applied_by: str | None
@@ -798,6 +800,7 @@ class GraphRevisionList:
     revision_type: str | None
     record_kind: str | None
     application_status: str | None
+    staged_validation_status: str | None
     stale_resolution_state: str | None
     current_staged_work_only: bool
     include_apply_checks: bool
@@ -2744,6 +2747,7 @@ class DoxaBase:
         drift_detail: TypingLiteral["summary", "exact"] = "summary",
         record_kind: str | None = None,
         application_status: str | None = None,
+        staged_validation_status: str | None = None,
         stale_resolution_state: str | None = None,
         current_staged_work_only: bool = False,
         limit: int = 50,
@@ -2755,6 +2759,17 @@ class DoxaBase:
         self._ensure_non_negative("offset", offset)
         record_kind_filter = record_kind
         application_status_filter = application_status
+        staged_validation_status_filter = staged_validation_status
+        if staged_validation_status_filter not in {
+            None,
+            "conforms",
+            "failed",
+            "not_recorded",
+        }:
+            raise DoxaBaseError(
+                "staged_validation_status must be 'conforms', 'failed', or "
+                "'not_recorded'"
+            )
         stale_resolution_state_filter = stale_resolution_state
         include_apply_checks = include_apply_checks or (
             application_status_filter is not None
@@ -2897,6 +2912,25 @@ class DoxaBase:
                 and application_status != application_status_filter
             ):
                 continue
+            staged_validation_conforms = self._bool_object(
+                data_graphs,
+                revision_iri,
+                "rc:validationConforms",
+            )
+            staged_validation_result_count = self._int_object(
+                data_graphs,
+                revision_iri,
+                "rc:validationResultCount",
+            )
+            item_staged_validation_status = self._staged_validation_status(
+                conforms=staged_validation_conforms,
+                result_count=staged_validation_result_count,
+            )
+            if (
+                staged_validation_status_filter is not None
+                and item_staged_validation_status != staged_validation_status_filter
+            ):
+                continue
             if (
                 stale_resolution_state_filter is not None
                 and item_stale_resolution_state != stale_resolution_state_filter
@@ -2937,16 +2971,9 @@ class DoxaBase:
                         revision_iri,
                         "rc:validationScope",
                     ),
-                    validation_conforms=self._bool_object(
-                        data_graphs,
-                        revision_iri,
-                        "rc:validationConforms",
-                    ),
-                    validation_result_count=self._int_object(
-                        data_graphs,
-                        revision_iri,
-                        "rc:validationResultCount",
-                    ),
+                    validation_conforms=staged_validation_conforms,
+                    validation_result_count=staged_validation_result_count,
+                    staged_validation_status=item_staged_validation_status,
                     has_patch_payload=bool(patch_iris),
                     patch_count=len(patch_iris),
                     applied_by=applied_by,
@@ -2997,6 +3024,7 @@ class DoxaBase:
             revision_type=revision_type_filter,
             record_kind=record_kind_filter,
             application_status=application_status_filter,
+            staged_validation_status=staged_validation_status_filter,
             stale_resolution_state=stale_resolution_state_filter,
             current_staged_work_only=current_staged_work_only,
             include_apply_checks=include_apply_checks,
@@ -3075,6 +3103,20 @@ class DoxaBase:
         }:
             return status
         return None
+
+    @staticmethod
+    def _staged_validation_status(
+        *,
+        conforms: bool | None,
+        result_count: int | None,
+    ) -> str:
+        if conforms is True:
+            return "conforms"
+        if conforms is False:
+            return "failed"
+        if result_count is not None and result_count > 0:
+            return "failed"
+        return "not_recorded"
 
     @staticmethod
     def _not_current_staged_work_reason(
@@ -13793,6 +13835,7 @@ class DoxaBase:
         handled_stale: list[str] = []
         ready_successors: list[str] = []
         validation_failed: list[str] = []
+        staged_validation_failed: list[str] = []
         recommended_review: list[str] = []
         recommended_mutation_review: list[str] = []
         recommended_apply_or_restage_review: list[str] = []
@@ -13848,12 +13891,18 @@ class DoxaBase:
             if iri is not None and iri not in validation_failed:
                 validation_failed.append(iri)
 
+        def track_staged_validation_failed(iri: str | None) -> None:
+            if iri is not None and iri not in staged_validation_failed:
+                staged_validation_failed.append(iri)
+
         for summary in summaries:
             increment(apply_status_counts, summary.apply_status)
             state = summary.stale_resolution_state
             increment(state_counts, state)
             if summary.apply_status == "validation_failed":
                 track_validation_failed(summary.revision_iri)
+            if summary.staged_validation_conforms is False:
+                track_staged_validation_failed(summary.revision_iri)
 
             if state in {"stale_unresolved", "restaged_successor_stale_unresolved"}:
                 unresolved_stale.append(summary.revision_iri)
@@ -13895,6 +13944,7 @@ class DoxaBase:
             sequential_apply_recheck_candidate_iris=post_apply_recheck,
             warnings=self._staged_revisions_bundle_warnings(post_apply_recheck),
             validation_failed_revision_iris=validation_failed,
+            staged_validation_failed_revision_iris=staged_validation_failed,
             recommended_review_iris=recommended_review,
             recommended_mutation_review_iris=recommended_mutation_review,
             recommended_apply_or_restage_review_iris=(
