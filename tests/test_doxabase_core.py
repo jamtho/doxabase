@@ -1853,6 +1853,47 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert {triple.subject for triple in exact_map_diff.triples_added} == {
         "https://example.test/project#Messages"
     }
+    project_path = tmp_path / "project.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    db.export_trig(project_path, graphs="project")
+    snapshot_export = db.export_revision_snapshots(
+        snapshot_path,
+        revision_iris=[staged.revision_iri, result.applied_revision_iri],
+    )
+    assert snapshot_export.snapshot_count == 2
+    assert snapshot_export.quad_count == 3
+    assert snapshot_export.revision_iris == [
+        result.applied_revision_iri,
+        staged.revision_iri,
+    ]
+
+    round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
+    round_trip.import_trig(project_path)
+    imported_diff_before_snapshots = round_trip.describe_applied_revision_diff(
+        result.applied_revision_iri,
+        include_triples=True,
+    )
+    assert (
+        imported_diff_before_snapshots.graph_diffs[0].exact_changed_triples_available
+        is False
+    )
+
+    snapshot_import = round_trip.import_revision_snapshots(snapshot_path)
+    assert snapshot_import.imported_snapshot_count == 2
+    assert snapshot_import.skipped_snapshot_count == 0
+    assert snapshot_import.imported_quad_count == 3
+    imported_exact_diff = round_trip.describe_applied_revision_diff(
+        result.applied_revision_iri,
+        include_triples=True,
+    )
+    assert imported_exact_diff.graph_diffs[0].exact_changed_triples_available is True
+    assert {
+        triple.subject
+        for triple in imported_exact_diff.graph_diffs[0].triples_added
+    } == {"https://example.test/project#Messages"}
+    skipped_import = round_trip.import_revision_snapshots(snapshot_path)
+    assert skipped_import.imported_snapshot_count == 0
+    assert skipped_import.skipped_snapshot_count == 2
     assert exact_map_diff.triples_removed == []
     with pytest.raises(DoxaBaseError, match="max_triples must be at least 1"):
         db.describe_applied_revision_diff(

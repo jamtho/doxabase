@@ -21,10 +21,12 @@ from doxabase.mcp_tools import (
     describe_staged_revision_tool,
     draft_query_plan_tool,
     export_graph_tool,
+    export_revision_snapshots_tool,
     export_staged_revision_tool,
     export_staged_revisions_tool,
     export_trig_tool,
     graph_overview_tool,
+    import_revision_snapshots_tool,
     list_docs_tool,
     list_entities_tool,
     list_graph_revisions_tool,
@@ -93,6 +95,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
+    assert "doxabase.export_revision_snapshots" in tool_names
+    assert "doxabase.import_revision_snapshots" in tool_names
     assert "doxabase.replace_graph_triples" in tool_names
     assert "doxabase.export_staged_revision" in tool_names
     assert "doxabase.export_staged_revisions" in tool_names
@@ -1230,6 +1234,49 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert {
         triple["subject"]
         for triple in exact_diff["graph_diffs"][0]["triples_added"]
+    } == {"https://example.test/project#Messages"}
+    project_path = tmp_path / "project.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    export_trig_tool(db, path=str(project_path), graphs=["project"])
+    snapshot_export = export_revision_snapshots_tool(
+        db,
+        path=str(snapshot_path),
+        revision_iris=[staged["revision_iri"], result["applied_revision_iri"]],
+    )
+    assert snapshot_export["snapshot_count"] == 2
+    assert snapshot_export["quad_count"] == 3
+
+    round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
+    round_trip.import_trig(project_path)
+    imported_diff_before_snapshots = describe_applied_revision_diff_tool(
+        round_trip,
+        result["applied_revision_iri"],
+        include_triples=True,
+    )
+    assert (
+        imported_diff_before_snapshots["graph_diffs"][0][
+            "exact_changed_triples_available"
+        ]
+        is False
+    )
+    snapshot_import = import_revision_snapshots_tool(
+        round_trip,
+        path=str(snapshot_path),
+    )
+    assert snapshot_import["imported_snapshot_count"] == 2
+    assert snapshot_import["skipped_snapshot_count"] == 0
+    imported_exact_diff = describe_applied_revision_diff_tool(
+        round_trip,
+        result["applied_revision_iri"],
+        include_triples=True,
+    )
+    assert (
+        imported_exact_diff["graph_diffs"][0]["exact_changed_triples_available"]
+        is True
+    )
+    assert {
+        triple["subject"]
+        for triple in imported_exact_diff["graph_diffs"][0]["triples_added"]
     } == {"https://example.test/project#Messages"}
     staged_description = describe_staged_revision_tool(db, staged["revision_iri"])
     assert staged_description["current_apply_check"] is None

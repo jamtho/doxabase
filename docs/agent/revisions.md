@@ -78,12 +78,16 @@ Graph snapshots include both `triple_count` and a `sha256:<hex>` content digest;
 matching counts alone do not prove two revision contexts are identical.
 Exact staged/apply snapshot rows are SQLite-side review state. RDF
 `export_trig()`/`import_trig()` preserves the history graph metadata, but it
-does not currently round-trip those stored snapshot rows, so exact applied-diff
-or stale-drift triples may be unavailable after reopening an imported RDF
-bundle. Keep the source capsule or explicit before/after exports when exact
-diff reconstruction must survive a handoff. For controlled replacements, record
-the exact removed/added assertions in the rationale or preserve before/after
-exports when a downstream agent will only receive an RDF bundle.
+does not include those stored snapshot rows. When exact applied-diff or
+stale-drift triples must survive a capsule handoff, pair the RDF bundle with
+`export_revision_snapshots()` and import it with `import_revision_snapshots()`
+after the RDF import. Keep the source capsule or explicit before/after exports
+when a downstream agent will only receive an RDF bundle. For controlled
+replacements, record the exact removed/added assertions in the rationale or
+preserve before/after exports when no snapshot bundle is available.
+Snapshot bundles can contain historical triples that are no longer present in
+current graphs, so treat them as review artifacts with the same care as graph
+exports.
 
 ## Revision List Triage
 

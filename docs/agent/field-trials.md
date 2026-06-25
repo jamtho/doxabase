@@ -685,9 +685,10 @@ few useful gaps:
   `replace_graph_triples`, revision metadata, default/workflow export
   boundaries, and revision-seed deep-lore expansion. It reinforced the current
   RDF-only handoff boundary: graph snapshot summaries survive default import,
-  but SQLite snapshot rows for exact drift do not; preserve source capsules,
-  before/after exports, or exact assertion text when downstream agents need
-  exact manual replacement diffs.
+  but SQLite snapshot rows for exact drift do not. A later version-browsing
+  trial added `export_revision_snapshots` / `import_revision_snapshots` as the
+  opt-in JSON companion for exact applied-diff or stale-drift triple
+  reconstruction after RDF import.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

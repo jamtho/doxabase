@@ -858,6 +858,33 @@ def import_trig_tool(
     }
 
 
+def export_revision_snapshots_tool(
+    db: DoxaBase,
+    path: str,
+    revision_iris: list[str] | None = None,
+    graph_roles: list[str] | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    resolved_path = _resolve_path(path)
+    result = db.export_revision_snapshots(
+        resolved_path,
+        revision_iris=revision_iris,
+        graph_roles=graph_roles,
+        overwrite=overwrite,
+    )
+    return to_dict(result)
+
+
+def import_revision_snapshots_tool(
+    db: DoxaBase,
+    path: str,
+    replace: bool = False,
+) -> dict[str, Any]:
+    resolved_path = _resolve_path(path)
+    result = db.import_revision_snapshots(resolved_path, replace=replace)
+    return to_dict(result)
+
+
 def export_graph_tool(
     db: DoxaBase,
     path: str,

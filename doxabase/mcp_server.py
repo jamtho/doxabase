@@ -25,8 +25,10 @@ from doxabase.mcp_tools import (
     export_staged_revision_tool,
     export_staged_revisions_tool,
     export_trig_tool,
+    export_revision_snapshots_tool,
     get_doc_tool,
     graph_overview_tool,
+    import_revision_snapshots_tool,
     import_trig_tool,
     list_docs_tool,
     list_entities_tool,
@@ -921,6 +923,15 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
 
         return import_trig_tool(db, path=path, replace=replace)
 
+    @server.tool(name="doxabase.import_revision_snapshots")
+    def import_revision_snapshots(
+        path: str,
+        replace: bool = False,
+    ) -> dict[str, Any]:
+        """Import a JSON bundle of stored revision snapshot rows."""
+
+        return import_revision_snapshots_tool(db, path=path, replace=replace)
+
     @server.tool(name="doxabase.export_graph")
     def export_graph(
         path: str,
@@ -971,6 +982,23 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             db,
             path=path,
             graphs=graphs,
+            overwrite=overwrite,
+        )
+
+    @server.tool(name="doxabase.export_revision_snapshots")
+    def export_revision_snapshots(
+        path: str,
+        revision_iris: list[str] | None = None,
+        graph_roles: list[str] | None = None,
+        overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Export stored revision snapshot rows as a JSON handoff bundle."""
+
+        return export_revision_snapshots_tool(
+            db,
+            path=path,
+            revision_iris=revision_iris,
+            graph_roles=graph_roles,
             overwrite=overwrite,
         )
 

@@ -796,6 +796,14 @@ normalized absolute paths.
 
 Imports a TriG file into graph roles. Fixture graph IRIs such as `https://richcanopy.org/graph/map` map to local role names like `map`.
 
+`doxabase.import_revision_snapshots`
+
+Imports a JSON revision snapshot handoff bundle written by
+`doxabase.export_revision_snapshots`. Use it after an RDF project/history import
+when exact applied-diff or stale-drift triples must be available in the
+receiving capsule. Existing `(revision_iri, graph_role)` snapshot pairs are
+skipped by default; pass `replace=true` to overwrite them.
+
 `doxabase.export_graph`
 
 Exports one or more graph roles as one flattened RDF graph file. The default is
@@ -827,6 +835,16 @@ are `workflow` / `review_bundle` for `map`, `observations`, `patterns`, and
 `evidence`, plus `all_with_seeds` when you explicitly need immutable seed graphs
 included too. All-with-seeds bundles may require special import handling because
 normal capsules protect `base_ontology` and `base_shapes`.
+
+`doxabase.export_revision_snapshots`
+
+Exports stored SQLite-side revision snapshot rows as JSON. This is separate
+from RDF graph export: TriG preserves revision metadata and graph snapshot
+summaries, while this bundle preserves the exact rows used by
+`doxabase.describe_applied_revision_diff(include_triples=true)`. Filter with
+`revision_iris` and `graph_roles` when a handoff only needs one applied diff.
+The bundle may include historical triples that are no longer current graph
+facts.
 
 `doxabase.load_example_fixtures`
 

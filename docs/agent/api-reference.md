@@ -29,11 +29,18 @@ already return JSON-like dictionaries.
 ```python
 db.import_turtle("path/to/file.ttl", graph="map")
 db.import_trig("path/to/file.trig")
+db.import_revision_snapshots("path/to/revision-snapshots.json")
 ```
 
 `import_turtle()` writes all triples to one graph.
 
-`import_trig()` preserves named graph roles and maps `https://richcanopy.org/graph/{role}` to `{role}`.
+`import_trig()` preserves named graph roles and maps
+`https://richcanopy.org/graph/{role}` to `{role}`.
+
+`import_revision_snapshots()` restores an opt-in JSON bundle of SQLite-side
+revision snapshot rows. Use it after an RDF project/history import when exact
+`describe_applied_revision_diff(include_triples=True)` reconstruction must
+survive the handoff. Existing snapshot pairs are skipped unless `replace=True`.
 
 ## Export Data
 
@@ -41,6 +48,7 @@ db.import_trig("path/to/file.trig")
 db.export_graph("/tmp/map.ttl", graphs="map")
 db.export_trig("/tmp/project-review-bundle.trig")
 db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
+db.export_revision_snapshots("/tmp/revision-snapshots.json")
 ```
 
 `export_graph()` writes one flattened RDF graph, usually Turtle.
@@ -55,7 +63,14 @@ TriG serializes only graph blocks that contain triples. Importing into a fresh
 non-empty graphs are imported. Workflow exports intentionally omit project
 `ontology`; use the default project export or an ontology-bearing bundle when
 project-specific metric kinds, value types, classes, or predicates are part of
-the handoff.
+the handoff. RDF exports do not include SQLite-side snapshot rows; pair them
+with `export_revision_snapshots()` when exact applied-diff or stale-drift
+triple reconstruction must survive import.
+
+`export_revision_snapshots()` writes a JSON handoff bundle for stored revision
+snapshot rows. Pass `revision_iris=[staged_iri, applied_iri]` to preserve the
+before/after rows needed by one applied staged revision diff, or omit the filter
+to export all stored snapshot rows in the capsule.
 
 ## Replace Graph Triples
 
@@ -778,7 +793,9 @@ event's after snapshots for changed graphs and returns exact added/removed
 counts when snapshot rows are available. Changed-triple arrays are omitted by
 default; pass `include_triples=True` to include them, capped by `max_triples`.
 It is a narrow applied-event inspection helper, not general historical graph
-browsing.
+browsing. RDF `export_trig()`/`import_trig()` preserves the graph snapshot
+metadata in `history`, but exact snapshot rows require an
+`export_revision_snapshots()` / `import_revision_snapshots()` JSON bundle.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted
 staged revision's existing patch payloads, recomputing before/after counts and

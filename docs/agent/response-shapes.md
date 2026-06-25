@@ -1519,6 +1519,43 @@ added/removed array and truncation flags say whether arrays were shortened.
 Use `describe_staged_revision()` when you need original patch payloads,
 validation diagnostics, impacts, or judgement context.
 
+`db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
+returns `RevisionSnapshotBundleExportRecord`:
+
+```python
+bundle.path
+bundle.format
+bundle.revision_iris
+bundle.graph_roles
+bundle.snapshot_count
+bundle.quad_count
+bundle.bytes_written
+```
+
+The JSON bundle is an opt-in companion to RDF exports. It preserves
+SQLite-side snapshot rows used for exact applied diff and stale drift
+inspection; it is not an RDF graph export. It may include historical triples
+that are no longer present in current graph roles.
+
+`db.import_revision_snapshots(path, replace=False)` returns
+`RevisionSnapshotBundleImportRecord`:
+
+```python
+bundle.path
+bundle.format
+bundle.replace
+bundle.revision_iris
+bundle.graph_roles
+bundle.snapshot_count
+bundle.imported_snapshot_count
+bundle.skipped_snapshot_count
+bundle.quad_count
+bundle.imported_quad_count
+```
+
+Import RDF project/history graphs first, then import the snapshot bundle.
+Existing snapshot pairs are skipped unless `replace=True`.
+
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:
 

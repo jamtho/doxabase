@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import sqlite3
 import warnings
@@ -197,6 +198,31 @@ class GraphRevisionRecord:
     revision_type: str
     graph: str
     triples: int
+
+
+@dataclass(frozen=True)
+class RevisionSnapshotBundleExportRecord:
+    path: str
+    format: str
+    revision_iris: list[str]
+    graph_roles: list[str]
+    snapshot_count: int
+    quad_count: int
+    bytes_written: int
+
+
+@dataclass(frozen=True)
+class RevisionSnapshotBundleImportRecord:
+    path: str
+    format: str
+    replace: bool
+    revision_iris: list[str]
+    graph_roles: list[str]
+    snapshot_count: int
+    imported_snapshot_count: int
+    skipped_snapshot_count: int
+    quad_count: int
+    imported_quad_count: int
 
 
 @dataclass(frozen=True)
@@ -18356,6 +18382,105 @@ class DoxaBase:
             )
         return imported
 
+    def export_revision_snapshots(
+        self,
+        path: str | Path,
+        *,
+        revision_iris: Iterable[str] | str | None = None,
+        graph_roles: Iterable[str] | str | None = None,
+        overwrite: bool = False,
+    ) -> RevisionSnapshotBundleExportRecord:
+        revisions = [
+            self._required_iri("revision_iris", value)
+            for value in self._string_values("revision_iris", revision_iris)
+        ]
+        roles = self._snapshot_bundle_graph_roles(graph_roles)
+        entries = self._graph_snapshot_bundle_entries(
+            revision_iris=revisions or None,
+            graph_roles=roles or None,
+        )
+        revision_values = list(dict.fromkeys(entry["revision_iri"] for entry in entries))
+        graph_role_values = list(dict.fromkeys(entry["graph_role"] for entry in entries))
+        quad_count = sum(len(entry["quads"]) for entry in entries)
+        payload = {
+            "format": "doxabase.revision_snapshot_bundle.v1",
+            "created_at": _now(),
+            "snapshots": entries,
+        }
+        data = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        bytes_written = self._write_export(path, data, overwrite=overwrite)
+        return RevisionSnapshotBundleExportRecord(
+            path=str(path),
+            format=payload["format"],
+            revision_iris=revision_values,
+            graph_roles=graph_role_values,
+            snapshot_count=len(entries),
+            quad_count=quad_count,
+            bytes_written=bytes_written,
+        )
+
+    def import_revision_snapshots(
+        self,
+        source: str | Path,
+        *,
+        replace: bool = False,
+    ) -> RevisionSnapshotBundleImportRecord:
+        path = _existing_path(source)
+        source_label = str(path) if path is not None else "<string>"
+        if path is not None:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        else:
+            payload = json.loads(str(source))
+        if not isinstance(payload, MappingABC):
+            raise DoxaBaseError("Revision snapshot bundle must be a JSON object")
+        format_value = payload.get("format")
+        if format_value != "doxabase.revision_snapshot_bundle.v1":
+            raise DoxaBaseError(
+                "Unsupported revision snapshot bundle format: "
+                f"{format_value!r}"
+            )
+        snapshots = payload.get("snapshots")
+        if not isinstance(snapshots, list):
+            raise DoxaBaseError("Revision snapshot bundle must contain snapshots list")
+
+        normalized_snapshots = [
+            self._normalize_snapshot_bundle_entry(raw_snapshot, index=index)
+            for index, raw_snapshot in enumerate(snapshots, start=1)
+        ]
+
+        imported_snapshot_count = 0
+        skipped_snapshot_count = 0
+        imported_quad_count = 0
+        revision_iris: list[str] = []
+        graph_roles: list[str] = []
+        for snapshot in normalized_snapshots:
+            revision_iri = snapshot["revision_iri"]
+            graph_role = snapshot["graph_role"]
+            revision_iris.append(revision_iri)
+            graph_roles.append(graph_role)
+            if (
+                not replace
+                and self._graph_snapshot_storage_exists(revision_iri, graph_role)
+            ):
+                skipped_snapshot_count += 1
+                continue
+            self._insert_graph_snapshot_bundle_entry(snapshot, replace=replace)
+            imported_snapshot_count += 1
+            imported_quad_count += len(snapshot["quads"])
+        self._conn.commit()
+        return RevisionSnapshotBundleImportRecord(
+            path=source_label,
+            format=format_value,
+            replace=replace,
+            revision_iris=list(dict.fromkeys(revision_iris)),
+            graph_roles=list(dict.fromkeys(graph_roles)),
+            snapshot_count=len(snapshots),
+            imported_snapshot_count=imported_snapshot_count,
+            skipped_snapshot_count=skipped_snapshot_count,
+            quad_count=sum(len(snapshot["quads"]) for snapshot in normalized_snapshots),
+            imported_quad_count=imported_quad_count,
+        )
+
     def replace_graph_triples(
         self,
         graph: str,
@@ -19293,6 +19418,310 @@ class DoxaBase:
             )
             for row in rows
         ]
+
+    def _snapshot_bundle_graph_roles(
+        self,
+        graph_roles: Iterable[str] | str | None,
+    ) -> list[str]:
+        roles = self._string_values("graph_roles", graph_roles)
+        unknown = sorted(set(roles) - self._known_graph_names())
+        if unknown:
+            raise DoxaBaseError(
+                f"Unknown graph role(s) in graph_roles: {', '.join(unknown)}"
+            )
+        return roles
+
+    def _graph_snapshot_bundle_entries(
+        self,
+        *,
+        revision_iris: list[str] | None,
+        graph_roles: list[str] | None,
+    ) -> list[dict[str, Any]]:
+        revision_filter = set(revision_iris or [])
+        graph_filter = set(graph_roles or [])
+        rows = self._conn.execute(
+            """
+            SELECT revision_iri, graph_role, stored_at, triple_count, content_digest
+            FROM graph_snapshot_storage
+            ORDER BY revision_iri, graph_role
+            """
+        ).fetchall()
+        entries: list[dict[str, Any]] = []
+        for row in rows:
+            revision_iri = row["revision_iri"]
+            graph_role = row["graph_role"]
+            if revision_filter and revision_iri not in revision_filter:
+                continue
+            if graph_filter and graph_role not in graph_filter:
+                continue
+            entries.append(
+                {
+                    "revision_iri": revision_iri,
+                    "graph_role": graph_role,
+                    "stored_at": row["stored_at"],
+                    "triple_count": int(row["triple_count"]),
+                    "content_digest": row["content_digest"],
+                    "quads": [
+                        {
+                            "subject": subject,
+                            "subject_kind": subject_kind,
+                            "predicate": predicate,
+                            "object": object_value,
+                            "object_kind": object_kind,
+                            "datatype": datatype,
+                            "lang": lang,
+                        }
+                        for (
+                            subject,
+                            subject_kind,
+                            predicate,
+                            object_value,
+                            object_kind,
+                            datatype,
+                            lang,
+                        ) in self._graph_snapshot_storage_rows(
+                            revision_iri,
+                            graph_role,
+                        )
+                    ],
+                }
+            )
+        return entries
+
+    def _normalize_snapshot_bundle_entry(
+        self,
+        raw_snapshot: Any,
+        *,
+        index: int,
+    ) -> dict[str, Any]:
+        if not isinstance(raw_snapshot, MappingABC):
+            raise DoxaBaseError(f"snapshots[{index}] must be an object")
+        revision_iri = self._required_bundle_string(
+            raw_snapshot,
+            "revision_iri",
+            index=index,
+        )
+        graph_role = self._required_bundle_string(
+            raw_snapshot,
+            "graph_role",
+            index=index,
+        )
+        if graph_role not in self._known_graph_names():
+            raise DoxaBaseError(
+                f"snapshots[{index}].graph_role uses unknown graph role "
+                f"{graph_role!r}"
+            )
+        stored_at = self._required_bundle_string(
+            raw_snapshot,
+            "stored_at",
+            index=index,
+        )
+        content_digest = self._required_bundle_string(
+            raw_snapshot,
+            "content_digest",
+            index=index,
+        )
+        triple_count = self._snapshot_bundle_non_negative_int(
+            raw_snapshot,
+            "triple_count",
+            index=index,
+        )
+        raw_quads = raw_snapshot.get("quads")
+        if not isinstance(raw_quads, list):
+            raise DoxaBaseError(f"snapshots[{index}].quads must be a list")
+        quads: list[dict[str, str | None]] = []
+        for quad_index, raw_quad in enumerate(raw_quads, start=1):
+            if not isinstance(raw_quad, MappingABC):
+                raise DoxaBaseError(
+                    f"snapshots[{index}].quads[{quad_index}] must be an object"
+                )
+            quads.append(
+                {
+                    "subject": self._required_bundle_string(
+                        raw_quad,
+                        "subject",
+                        index=index,
+                        quad_index=quad_index,
+                        strip=False,
+                    ),
+                    "subject_kind": self._required_bundle_string(
+                        raw_quad,
+                        "subject_kind",
+                        index=index,
+                        quad_index=quad_index,
+                        strip=False,
+                    ),
+                    "predicate": self._required_bundle_string(
+                        raw_quad,
+                        "predicate",
+                        index=index,
+                        quad_index=quad_index,
+                        strip=False,
+                    ),
+                    "object": self._required_bundle_string(
+                        raw_quad,
+                        "object",
+                        index=index,
+                        quad_index=quad_index,
+                        allow_empty=True,
+                        strip=False,
+                    ),
+                    "object_kind": self._required_bundle_string(
+                        raw_quad,
+                        "object_kind",
+                        index=index,
+                        quad_index=quad_index,
+                        strip=False,
+                    ),
+                    "datatype": self._optional_bundle_string(
+                        raw_quad,
+                        "datatype",
+                        index=index,
+                        quad_index=quad_index,
+                    ),
+                    "lang": self._optional_bundle_string(
+                        raw_quad,
+                        "lang",
+                        index=index,
+                        quad_index=quad_index,
+                    ),
+                }
+            )
+        if len(quads) != triple_count:
+            raise DoxaBaseError(
+                f"snapshots[{index}] triple_count is {triple_count}, "
+                f"but quads has {len(quads)} row(s)"
+            )
+        return {
+            "revision_iri": revision_iri,
+            "graph_role": graph_role,
+            "stored_at": stored_at,
+            "triple_count": triple_count,
+            "content_digest": content_digest,
+            "quads": quads,
+        }
+
+    @staticmethod
+    def _required_bundle_string(
+        mapping: MappingABC[str, Any],
+        field_name: str,
+        *,
+        index: int,
+        quad_index: int | None = None,
+        allow_empty: bool = False,
+        strip: bool = True,
+    ) -> str:
+        value = mapping.get(field_name)
+        cleaned = value.strip() if isinstance(value, str) and strip else value
+        if not isinstance(value, str) or (not allow_empty and not cleaned):
+            prefix = f"snapshots[{index}]"
+            if quad_index is not None:
+                prefix = f"{prefix}.quads[{quad_index}]"
+            raise DoxaBaseError(f"{prefix}.{field_name} must be a non-empty string")
+        return cleaned
+
+    @staticmethod
+    def _optional_bundle_string(
+        mapping: MappingABC[str, Any],
+        field_name: str,
+        *,
+        index: int,
+        quad_index: int,
+    ) -> str | None:
+        value = mapping.get(field_name)
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise DoxaBaseError(
+                f"snapshots[{index}].quads[{quad_index}].{field_name} "
+                "must be a string or null"
+            )
+        return value
+
+    @staticmethod
+    def _snapshot_bundle_non_negative_int(
+        mapping: MappingABC[str, Any],
+        field_name: str,
+        *,
+        index: int,
+    ) -> int:
+        value = mapping.get(field_name)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise DoxaBaseError(
+                f"snapshots[{index}].{field_name} must be a non-negative integer"
+            )
+        return value
+
+    def _insert_graph_snapshot_bundle_entry(
+        self,
+        snapshot: dict[str, Any],
+        *,
+        replace: bool,
+    ) -> None:
+        revision_iri = snapshot["revision_iri"]
+        graph_role = snapshot["graph_role"]
+        if replace:
+            self._conn.execute(
+                """
+                DELETE FROM graph_snapshot_storage
+                WHERE revision_iri = ? AND graph_role = ?
+                """,
+                (revision_iri, graph_role),
+            )
+        self._conn.execute(
+            """
+            DELETE FROM graph_snapshot_quads
+            WHERE revision_iri = ? AND graph_role = ?
+            """,
+            (revision_iri, graph_role),
+        )
+        self._conn.execute(
+            """
+            INSERT OR REPLACE INTO graph_snapshot_storage
+                (revision_iri, graph_role, stored_at, triple_count, content_digest)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                revision_iri,
+                graph_role,
+                snapshot["stored_at"],
+                snapshot["triple_count"],
+                snapshot["content_digest"],
+            ),
+        )
+        self._conn.executemany(
+            """
+            INSERT OR IGNORE INTO graph_snapshot_quads
+                (
+                    revision_iri,
+                    graph_role,
+                    subject,
+                    subject_kind,
+                    predicate,
+                    object,
+                    object_kind,
+                    datatype,
+                    lang,
+                    created_at
+                )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    revision_iri,
+                    graph_role,
+                    quad["subject"],
+                    quad["subject_kind"],
+                    quad["predicate"],
+                    quad["object"],
+                    quad["object_kind"],
+                    quad["datatype"],
+                    quad["lang"],
+                    snapshot["stored_at"],
+                )
+                for quad in snapshot["quads"]
+            ],
+        )
 
     def _store_graph_snapshot_rows(
         self,
