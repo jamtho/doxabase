@@ -526,6 +526,13 @@ few useful gaps:
   inspection calls. The same trial exposed that draft query plans only carried
   partition-scheme template verification into `plan.scan`; storage-access-owned
   templates now preserve their verification status and note too.
+- A query storage-selection trial confirmed that DoxaBase keeps physical
+  query-planning gaps separate from semantic caveats and flips
+  `storage_environment.runtime_resolution_required` only when the selected
+  candidate needs runtime S3 resolution. It also showed that a selected local
+  candidate can remain `orientation_only` because sibling S3 or stale partition
+  hints block the overall context; read `query_target_decision.status` and
+  `direct_review_required` before concluding the local route itself is bad.
 - A profile-metric vocabulary trial confirmed project-specific metric IRIs work
   before ontology terms exist, while patterns and claims are the best low-commitment
   place to explain awkward metrics. When the metric meaning should become shared

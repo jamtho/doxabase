@@ -948,7 +948,12 @@ candidate.direct_review_reasons
 `candidate_path_status` is `ready` when the path is suitable as a planning
 input after normal review, `orientation_only` when warnings/errors make it a
 handoff clue rather than executable guidance, and `unresolved` when the graph
-lacks enough storage-location metadata for an executable path.
+lacks enough storage-location metadata for an executable path. Read it together
+with `query_target_decision.status` and `candidate.direct_review_required`.
+A candidate can be `orientation_only` because sibling storage or partition hints
+block the overall query context; when `direct_review_required` is false, the
+selected candidate itself may be locally clean even though the context still
+needs review.
 
 Each issue or analysis warning has:
 

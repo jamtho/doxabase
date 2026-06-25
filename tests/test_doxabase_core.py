@@ -1738,6 +1738,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_check.suggested_next_actions[0].tool_name == (
         "describe_graph_revision"
     )
+    assert applied_check.suggested_next_actions[1].tool_name == (
+        "describe_applied_revision_diff"
+    )
+    assert applied_check.suggested_next_actions[1].arguments == {
+        "iri": result.applied_revision_iri
+    }
     applied_description = db.describe_staged_revision(staged.revision_iri)
     assert applied_description.application_status == "already_applied"
     assert applied_description.applied_by is not None
@@ -1766,6 +1772,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_export.bundle_summary.recommended_mutation_review_iris == []
     assert applied_export.bundle_summary.recommended_apply_or_restage_review_iris == []
     assert applied_export.bundle_summary.recommended_repair_review_iris == []
+
+    applied_export_path = tmp_path / "applied-single-review.md"
+    db.export_staged_revision(staged.revision_iri, applied_export_path)
+    applied_export_text = applied_export_path.read_text(encoding="utf-8")
+    assert "**Inspect applied diff:**" in applied_export_text
+    assert "describe_applied_revision_diff" in applied_export_text
     assert applied_export.bundle_summary.recommended_applied_inspection_iris == [
         staged.revision_iri
     ]
@@ -9160,7 +9172,12 @@ def test_record_profile_bundle_rejects_invalid_column_values_without_mutation(
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     before_counts = _mutable_graph_counts(db)
 
-    with pytest.raises(DoxaBaseError, match="value_frequencies\\[0\\]\\.frequency"):
+    with pytest.raises(
+        DoxaBaseError,
+        match=(
+            "column_profiles\\[0\\]\\.value_frequencies\\[0\\]\\.frequency"
+        ),
+    ):
         db.record_profile_bundle(
             "https://example.test/project#Orders",
             dataset_summary="Orders were profiled.",
@@ -9217,7 +9234,11 @@ def test_record_profile_bundle_rejects_conflicting_shared_evidence_summary(
     [
         (
             {"profile_metrics": [{"metric": "rc:MeanValue", "value": []}]},
-            "profile_metrics\\[0\\]\\.value",
+            "column_profiles\\[0\\]\\.profile_metrics\\[0\\]\\.value",
+        ),
+        (
+            {"profile_metrics": [{"metric": "rc:MinValue", "value": 1}]},
+            "column_profiles\\[0\\]\\.profile_metrics\\[0\\]\\.metric",
         ),
         ({"physical_type": "plain physical type"}, "physical_type"),
         ({"value_type": "plain value type"}, "value_type"),

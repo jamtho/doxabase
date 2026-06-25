@@ -272,6 +272,9 @@ supporting cards, not an ordered recommendation contract.
 `candidate_path_status` separates path usability from composition: `ready`
 means a usable planning input, `orientation_only` means the candidate path is a
 review clue, and `unresolved` means executable location metadata is incomplete.
+Pair it with `query_target_decision.status` and `direct_review_required`: a
+locally clean selected candidate may still be `orientation_only` when unrelated
+sibling hints block the overall context.
 
 `draft_query_plan()` returns a non-executed, review-gated physical plan draft
 over `describe_query_context()`. It currently supports `engine="duckdb"` and

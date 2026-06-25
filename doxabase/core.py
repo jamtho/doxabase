@@ -8932,8 +8932,14 @@ class DoxaBase:
                 f"column_profiles[{index}].{name}",
                 column_kwargs.get(name),
             )
-        self._profile_value_frequency_values(column_kwargs.get("value_frequencies"))
-        self._profile_metric_values(column_kwargs.get("profile_metrics"))
+        self._profile_value_frequency_values(
+            column_kwargs.get("value_frequencies"),
+            field_name=f"column_profiles[{index}].value_frequencies",
+        )
+        self._profile_metric_values(
+            column_kwargs.get("profile_metrics"),
+            field_name=f"column_profiles[{index}].profile_metrics",
+        )
 
         evidence_sources = column_kwargs.get("evidence_sources")
         if isinstance(evidence_sources, str):
@@ -13095,6 +13101,15 @@ class DoxaBase:
                 {"iri": already_applied_by},
                 "Inspect the applied revision event instead of applying again.",
                 action_label="Inspect applied event",
+            )
+            add_action(
+                "describe_applied_revision_diff",
+                {"iri": already_applied_by},
+                (
+                    "Inspect stored before/after graph snapshot counts and, when "
+                    "needed, exact changed triples for the applied event."
+                ),
+                action_label="Inspect applied diff",
             )
         elif status == "conflict":
             is_restageable_conflict = (
@@ -20865,24 +20880,21 @@ class DoxaBase:
     def _profile_value_frequency_values(
         self,
         value_frequencies: Iterable[Mapping[str, Any]] | None,
+        *,
+        field_name: str = "value_frequencies",
     ) -> list[tuple[Any, int]]:
         values: list[tuple[Any, int]] = []
         for index, item in enumerate(value_frequencies or []):
+            item_name = f"{field_name}[{index}]"
             if not isinstance(item, MappingABC):
-                raise DoxaBaseError(
-                    f"value_frequencies[{index}] must be an object"
-                )
+                raise DoxaBaseError(f"{item_name} must be an object")
             if "value" not in item:
-                raise DoxaBaseError(
-                    f"value_frequencies[{index}] must include a value"
-                )
+                raise DoxaBaseError(f"{item_name} must include a value")
             frequency = item.get("frequency")
             if not isinstance(frequency, int) or isinstance(frequency, bool):
-                raise DoxaBaseError(
-                    f"value_frequencies[{index}].frequency must be an integer"
-                )
+                raise DoxaBaseError(f"{item_name}.frequency must be an integer")
             self._ensure_non_negative(
-                f"value_frequencies[{index}].frequency",
+                f"{item_name}.frequency",
                 frequency,
             )
             values.append((item["value"], frequency))
@@ -20891,39 +20903,34 @@ class DoxaBase:
     def _profile_metric_values(
         self,
         profile_metrics: Iterable[Mapping[str, Any]] | None,
+        *,
+        field_name: str = "profile_metrics",
     ) -> list[tuple[str, Any, str | None, str | None, str | None]]:
         values: list[tuple[str, Any, str | None, str | None, str | None]] = []
         for index, item in enumerate(profile_metrics or []):
+            item_name = f"{field_name}[{index}]"
             if not isinstance(item, MappingABC):
-                raise DoxaBaseError(f"profile_metrics[{index}] must be an object")
+                raise DoxaBaseError(f"{item_name} must be an object")
             metric = item.get("metric") or item.get("metric_kind")
             if not isinstance(metric, str) or not metric.strip():
                 raise DoxaBaseError(
-                    f"profile_metrics[{index}] must include a metric IRI or CURIE"
+                    f"{item_name} must include a metric IRI or CURIE"
                 )
             if "value" not in item:
-                raise DoxaBaseError(f"profile_metrics[{index}] must include a value")
+                raise DoxaBaseError(f"{item_name} must include a value")
             value = item["value"]
             if value is None or isinstance(value, (list, tuple, dict)):
-                raise DoxaBaseError(
-                    f"profile_metrics[{index}].value must be a scalar value"
-                )
+                raise DoxaBaseError(f"{item_name}.value must be a scalar value")
             datatype = item.get("datatype")
             lang = item.get("lang")
             if datatype is not None and (
                 not isinstance(datatype, str) or not datatype.strip()
             ):
-                raise DoxaBaseError(
-                    f"profile_metrics[{index}].datatype must be an IRI or CURIE"
-                )
+                raise DoxaBaseError(f"{item_name}.datatype must be an IRI or CURIE")
             if lang is not None and (not isinstance(lang, str) or not lang.strip()):
-                raise DoxaBaseError(
-                    f"profile_metrics[{index}].lang must be a non-empty string"
-                )
+                raise DoxaBaseError(f"{item_name}.lang must be a non-empty string")
             if datatype is not None and lang is not None:
-                raise DoxaBaseError(
-                    f"profile_metrics[{index}] cannot set both datatype and lang"
-                )
+                raise DoxaBaseError(f"{item_name} cannot set both datatype and lang")
             target = item.get(
                 "target",
                 item.get("metric_target", item.get("target_iri")),
@@ -20931,20 +20938,16 @@ class DoxaBase:
             if target is not None and (
                 not isinstance(target, str) or not target.strip()
             ):
-                raise DoxaBaseError(
-                    f"profile_metrics[{index}].target must be an IRI or CURIE"
-                )
-            metric_iri = str(
-                self._resource_ref(f"profile_metrics[{index}].metric", metric)
-            )
+                raise DoxaBaseError(f"{item_name}.target must be an IRI or CURIE")
+            metric_iri = str(self._resource_ref(f"{item_name}.metric", metric))
             self._ensure_known_rc_profile_metric_kind(
-                f"profile_metrics[{index}].metric",
+                f"{item_name}.metric",
                 metric_iri,
             )
             datatype_iri = (
                 str(
                     self._resource_ref(
-                        f"profile_metrics[{index}].datatype",
+                        f"{item_name}.datatype",
                         datatype,
                     )
                 )
@@ -20954,7 +20957,7 @@ class DoxaBase:
             target_iri = (
                 str(
                     self._resource_ref(
-                        f"profile_metrics[{index}].target",
+                        f"{item_name}.target",
                         target,
                     )
                 )
