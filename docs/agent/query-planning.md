@@ -9,13 +9,14 @@ For the fuller model, read `executable_catalog`; for exact field shapes, read
 Start with `describe_query_context(dataset_iri)`:
 
 1. `query_target_decision` chooses the candidate. Its `candidate_index` points
-   into `query_target_candidates`, and `status` tells you whether the selected
-   target is ready, directly review-only, blocked by sibling context, or absent.
+   into `query_target_candidates`, and `status` routes the selected target's
+   direct state: ready, review-only, blocked, or absent.
 2. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
-3. `issues` explain broader context blockers, including sibling storage facts
-   that may make the whole context review-required even when the selected
-   candidate is direct-clean.
+3. Always compare `readiness` and `issues` with the selected candidate. Broader
+   context blockers, including sibling storage facts, can make the whole
+   context review-required even when `query_target_decision.status == "ready"`
+   for a direct-clean selected candidate.
 
 Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 
@@ -33,6 +34,9 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 6. `review_gate.ready_for_execution_attempt` is the stricter handoff boolean:
    it is true only when the review gate is clear and runtime resolution is not
    required.
+   `review_gate.blocking_reason_codes` can add
+   `query_context_has_other_blockers` when the selected candidate is clean but
+   the broader query context is not.
 
 ## Common Cases
 

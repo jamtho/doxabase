@@ -551,7 +551,10 @@ is the same list under its older compatibility name. Both are pre-apply
 grouped-review hazard lists. After the actual mutation, prefer the
 `post_apply_recheck_revisions` returned by `apply_staged_revision`, then re-run
 `check_staged_revision_apply` or `export_staged_revisions` before acting on
-siblings. In scripts, the practical loop is: batch restage, review
+siblings. The recheck list can include repair-only rows such as patch conflicts
+or validation failures when they share changed graphs, so route by the fresh
+check/export `next_action_queue` rather than by the recheck list alone. In
+scripts, the practical loop is: batch restage, review
 `ready_restage_successor_revision_iris`, apply at most one ready successor,
 then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the
 next check/export/restage pass.

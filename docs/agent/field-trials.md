@@ -697,6 +697,18 @@ few useful gaps:
   `next_action_queue` as the fast routing surface, and the query-planning trial
   added a `query_planning` doc because fresh agents looked for one before
   discovering the executable-catalog details.
+- A profile/query-context trial confirmed profile metrics, row-count snapshots,
+  shared evidence, and profile-created patterns stay separate from physical
+  query readiness: `describe_query_context` and `draft_query_plan` should keep
+  using storage/layout/partition facts as blockers. The useful next product
+  shape is a review-oriented profile-to-map recommendation surface, not
+  automatic promotion of profile metrics into map facts.
+- A hard staged-conflict trial confirmed mixed removal+addition patches,
+  already-present/absent patch triples, same-count digest drift, alternatives,
+  batch restage, applied diffs, and post-apply rechecks work together. It found
+  that patch conflicts were wrongly routed to `restage_after_review`; compact
+  queues now put `inspect_patch_conflict` and validation failures in
+  `repair_or_replace`, while count/digest drift remains `restage_after_review`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

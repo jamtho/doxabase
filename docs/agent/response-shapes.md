@@ -1473,7 +1473,10 @@ item.shared_changed_graphs
 
 Re-run `check_staged_revision_apply` before acting on those rows; the queue is a
 stale hint, not an apply recommendation. `shared_changed_graphs` explains why
-the row was included after this apply.
+the row was included after this apply. The list may include repair-only rows
+such as patch conflicts or validation failures that share a changed graph; route
+them through the fresh apply check or grouped `next_action_queue`, not by the
+presence of the recheck IRI alone.
 
 `db.describe_applied_revision_diff(applied_revision_iri, include_triples=False,
 max_triples=500)` returns `AppliedRevisionDiffDescription`:

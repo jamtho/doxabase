@@ -13728,10 +13728,22 @@ class DoxaBase:
                 "describe_staged_revision",
                 {"iri": staged_revision_iri, "include_current_apply_check": True},
                 (
-                    "Review the original patch payloads, count previews, impacts, "
-                    "and support before deciding how to handle this conflict."
+                    (
+                        "Review the original patch payloads, count previews, "
+                        "impacts, and support before deciding whether to restage "
+                        "against current graph state."
+                    )
+                    if is_restageable_conflict
+                    else (
+                        "Inspect the stored patch conflict, then stage a repaired "
+                        "or alternative candidate instead of restaging this row."
+                    )
                 ),
-                action_label="Review stale source",
+                action_label=(
+                    "Review stale source"
+                    if is_restageable_conflict
+                    else "Review patch conflict"
+                ),
             )
             add_action(
                 "export_staged_revision",
@@ -13870,18 +13882,6 @@ class DoxaBase:
                 "still desired."
             )
             selected_action = find_action(tool_name="apply_staged_revision")
-        elif (
-            apply_decision == "restage_against_current_graph"
-            or apply_status == "conflict"
-        ):
-            action_type = "restage_after_review"
-            queue = "restage_after_review"
-            label = "Restage after review"
-            reason = (
-                "Review the stale proposal, then restage it against the current "
-                "graph if the patch intent is still desired."
-            )
-            selected_action = find_action(tool_name="restage_staged_revision")
         elif apply_decision in {
             "inspect_validation_results",
             "inspect_patch_conflict",
@@ -13894,6 +13894,18 @@ class DoxaBase:
                 "candidate instead of applying this row."
             )
             selected_action = find_action(tool_name="describe_staged_revision")
+        elif (
+            apply_decision == "restage_against_current_graph"
+            or apply_status == "conflict"
+        ):
+            action_type = "restage_after_review"
+            queue = "restage_after_review"
+            label = "Restage after review"
+            reason = (
+                "Review the stale proposal, then restage it against the current "
+                "graph if the patch intent is still desired."
+            )
+            selected_action = find_action(tool_name="restage_staged_revision")
         elif (
             apply_decision == "inspect_applied_revision"
             or apply_status == "already_applied"

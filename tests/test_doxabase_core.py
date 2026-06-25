@@ -2080,6 +2080,39 @@ def test_import_revision_snapshots_validates_bundle_before_writing(
 
     assert not empty_uri_db._graph_snapshot_storage_exists(valid_revision, "map")
 
+    empty_bnode_db = DoxaBase.create(tmp_path / "empty-bnode.sqlite")
+    with pytest.raises(DoxaBaseError, match="object must be non-empty"):
+        empty_bnode_db.import_revision_snapshots(
+            json.dumps(
+                {
+                    "format": "doxabase.revision_snapshot_bundle.v1",
+                    "snapshots": [
+                        valid_snapshot,
+                        {
+                            "revision_iri": invalid_revision,
+                            "graph_role": "map",
+                            "stored_at": "2026-06-25T00:00:00+00:00",
+                            "triple_count": 1,
+                            "content_digest": "sha256:invalid",
+                            "quads": [
+                                {
+                                    "subject": "https://example.test/project#Thing",
+                                    "subject_kind": "uri",
+                                    "predicate": "https://example.test/project#link",
+                                    "object": "",
+                                    "object_kind": "bnode",
+                                    "datatype": None,
+                                    "lang": None,
+                                }
+                            ],
+                        },
+                    ],
+                }
+            )
+        )
+
+    assert not empty_bnode_db._graph_snapshot_storage_exists(valid_revision, "map")
+
 
 def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -2174,6 +2207,10 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
         "describe_staged_revision",
         "export_staged_revision",
     ]
+    assert [action.action_label for action in check.suggested_next_actions] == [
+        "Review patch conflict",
+        "Export conflict bundle",
+    ]
     assert check.patch_checks[0].target_graph == unknown_graph
     assert check.patch_checks[0].can_apply is False
     assert check.patch_checks[0].conflict is not None
@@ -2201,6 +2238,9 @@ def test_stored_staged_patch_unknown_target_graph_blocks_apply_without_mutation(
     assert batch.bundle_summary.recommended_repair_review_iris == [
         staged.revision_iri
     ]
+    assert batch.bundle_summary.next_action_queue == {
+        "repair_or_replace": [staged.revision_iri],
+    }
 
     assert _mutable_graph_counts(db) == before_counts
     assert db.triple_count(unknown_graph) == 0
