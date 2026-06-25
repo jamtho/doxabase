@@ -514,6 +514,11 @@ few useful gaps:
   appear only as `rc:observedColumn` objects and expand through the matching
   profile observation(s) with `seed_observed_column` and
   `seed_profile_observation` routes.
+- A profile metric semantics trial confirmed the observed-column seed fix and
+  showed that common ratio metrics and awkward integer metrics need a compact
+  authoring recipe. The observation-recording guide now shows decimal ratio
+  metrics with `target`, integer suppressed-bucket metrics, value-frequency
+  evidence, and the `pattern_support_scope` support-vs-target distinction.
 - A staged restage workflow trial confirmed batch dry-run, grouped export,
   successor routing, apply-one-then-recheck, and applied-source inspection work
   as documented. It also exposed that staged patches targeting `history` become

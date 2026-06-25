@@ -81,6 +81,57 @@ profile_metrics=[
 ]
 ```
 
+Common profile metric recipes:
+
+```python
+db.record_column_profile(
+    "https://example.test/project#orders__promo_code",
+    table_iri="https://example.test/project#orders",
+    column_name="promo_code",
+    summary="Promo-code values were profiled from a redacted sample.",
+    evidence_summary="Top-N and aggregate profiler query over Orders.",
+    evidence_sources=["scratch://orders-profile.sql"],
+    sample_size=1000,
+    sample_method="DuckDB aggregate profile plus top-N value-frequency query.",
+    null_count=83,
+    distinct_count=42,
+    value_frequencies=[
+        {"value": "redacted:present", "frequency": 321},
+        {"value": "redacted:blank", "frequency": 83},
+    ],
+    profile_metrics=[
+        {
+            "metric": "https://example.test/project#CompletenessRatio",
+            "value": "0.917",
+            "datatype": "xsd:decimal",
+            "target": "https://example.test/project#orders__promo_code",
+        },
+        {
+            "metric": "https://example.test/project#UniquenessRatio",
+            "value": "0.042",
+            "datatype": "xsd:decimal",
+            "target": "https://example.test/project#orders__promo_code",
+        },
+        {
+            "metric": "https://example.test/project#SuppressedValueBucketCount",
+            "value": 2,
+            "datatype": "xsd:integer",
+            "target": "https://example.test/project#orders__promo_code",
+        },
+    ],
+    update_map_column=False,
+)
+```
+
+Use decimal ratio metrics for bounded proportions such as completeness,
+uniqueness, negative-value rate, or schema-coverage ratio. Use an integer metric
+for counts that are not themselves observed value frequencies, such as
+suppressed bucket count. Use `value_frequencies` for representative buckets or
+top-N values that support the metric interpretation, not as a replacement for
+the scalar metric. Put the exact query, sample boundary, redaction caveat, or
+metric definition in evidence, claims, or a pattern when another agent will need
+to interpret the number.
+
 Use `doxabase.record_dataset_profile` when a dataset-level profile should also
 update the current-best map row-count snapshot or preserve a linked pattern
 synthesis. Use plain `record_observation` when the profile result is only a
@@ -126,6 +177,11 @@ dataset profile and every bundled column profile. When the synthesis also needs
 supporting claims or hand-picked observations, record the bundle first, then
 collect the returned observation IRIs and call `record_pattern` with the same
 shared evidence:
+
+`pattern_support_scope` changes the helper-created pattern's supporting
+observations, not its target. The helper still targets the dataset. Use
+`pattern_map_implications` or a manual `record_pattern` call when the synthesis
+should name narrower map implications or targets.
 
 ```python
 bundle = db.record_profile_bundle(
