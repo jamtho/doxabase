@@ -1150,6 +1150,7 @@ class DraftQueryPlanReviewGate:
 class DraftQueryPlan:
     helper: str
     mode: str
+    handoff_kind: str
     engine: DraftQueryPlanEngine
     dataset: ResourceSummary
     source_context: DraftQueryPlanSourceContext
@@ -1362,6 +1363,49 @@ class ProfileRunDescription:
     mapped_column_profile_observations: list[ProfileObservationSummary]
     unmapped_column_profile_observations: list[ProfileObservationSummary]
     retrieval_note: str
+
+
+@dataclass(frozen=True)
+class ProfileMapUpdateRecommendation:
+    kind: str
+    action: str
+    resource: ResourceSummary
+    predicate: str
+    current_value: Any
+    observed_value: Any
+    observed_count: int | None
+    profile_observation_iri: str
+    evidence_iri: str
+    basis: str
+    confidence: str
+    helper_name: str
+    helper_arguments: dict[str, Any]
+    rationale: str
+
+
+@dataclass(frozen=True)
+class ProfileMetricVocabularyAdvisory:
+    profile_observation_iri: str
+    evidence_iri: str
+    metric: ResourceSummary
+    target: ResourceSummary | None
+    value: str
+    value_datatype: str | None
+    value_lang: str | None
+    recommendation: str
+    rationale: str
+
+
+@dataclass(frozen=True)
+class ProfileMapUpdateDraft:
+    dataset: ResourceSummary
+    evidence: EvidenceDescription
+    evidence_iri: str
+    map_dataset_found: bool
+    profile_observation_iris: list[str]
+    recommendations: list[ProfileMapUpdateRecommendation]
+    metric_advisories: list[ProfileMetricVocabularyAdvisory]
+    review_note: str
 
 
 @dataclass(frozen=True)
@@ -5682,6 +5726,185 @@ class DoxaBase:
             ),
         )
 
+    def draft_profile_map_updates(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+        *,
+        graph: str | None = "map",
+    ) -> ProfileMapUpdateDraft:
+        dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        evidence_value = self._required_iri("evidence_iri", evidence_iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        map_dataset_found = self._subject_exists(dataset_value, data_graphs)
+        dataset_description = (
+            self.describe_dataset(dataset_value, graph=graph)
+            if map_dataset_found
+            else None
+        )
+        profile_run = self.describe_profile_run(
+            dataset_value,
+            evidence_value,
+            graph=graph,
+        )
+        columns_by_iri = (
+            {column.iri: column for column in dataset_description.columns}
+            if dataset_description is not None
+            else {}
+        )
+
+        recommendations: list[ProfileMapUpdateRecommendation] = []
+        for profile in profile_run.dataset_profile_observations:
+            if profile.row_count is None:
+                continue
+            current_row_count = (
+                dataset_description.row_count_snapshot
+                if dataset_description is not None
+                else None
+            )
+            if current_row_count == profile.row_count:
+                continue
+            basis = self._profile_observation_basis(profile)
+            action = (
+                "record_map_value"
+                if current_row_count is None
+                else "replace_map_value"
+            )
+            recommendations.append(
+                ProfileMapUpdateRecommendation(
+                    kind="dataset_row_count_snapshot",
+                    action=action,
+                    resource=profile_run.dataset,
+                    predicate="rc:rowCountSnapshot",
+                    current_value=current_row_count,
+                    observed_value=profile.row_count,
+                    observed_count=profile.row_count,
+                    profile_observation_iri=profile.iri,
+                    evidence_iri=evidence_value,
+                    basis=basis,
+                    confidence="high" if basis == "full_scan" else "medium",
+                    helper_name="record_map_dataset",
+                    helper_arguments={
+                        "iri": dataset_value,
+                        "row_count_snapshot": profile.row_count,
+                    },
+                    rationale=(
+                        "Profile row_count differs from the current map "
+                        "row-count snapshot; review before recording the "
+                        "profile value as current map context."
+                    ),
+                )
+            )
+
+        for profile in profile_run.mapped_column_profile_observations:
+            if profile.null_count is None or profile.observed_column is None:
+                continue
+            column = columns_by_iri.get(profile.observed_column.iri)
+            if column is None:
+                continue
+            observed_nullable = profile.null_count > 0
+            if column.nullable == observed_nullable:
+                continue
+            basis = self._profile_observation_basis(profile)
+            if not observed_nullable and basis != "full_scan":
+                continue
+            column_name = self._profile_map_column_name(column, profile)
+            action = (
+                "record_map_value"
+                if column.nullable is None
+                else "replace_map_value"
+            )
+            recommendations.append(
+                ProfileMapUpdateRecommendation(
+                    kind="column_nullable",
+                    action=action,
+                    resource=profile.observed_column,
+                    predicate="rc:nullable",
+                    current_value=column.nullable,
+                    observed_value=observed_nullable,
+                    observed_count=profile.null_count,
+                    profile_observation_iri=profile.iri,
+                    evidence_iri=evidence_value,
+                    basis=basis,
+                    confidence=(
+                        "high" if basis == "full_scan" else "medium"
+                    ),
+                    helper_name="record_map_column",
+                    helper_arguments={
+                        "iri": column.iri,
+                        "table_iri": dataset_value,
+                        "column_name": column_name,
+                        "nullable": observed_nullable,
+                    },
+                    rationale=(
+                        "Profile null_count implies a different nullable "
+                        "value than the current map column. Sampled zero-null "
+                        "profiles are not promoted; positive null findings and "
+                        "full-scan zero-null findings are review candidates."
+                    ),
+                )
+            )
+
+        for profile in profile_run.unmapped_column_profile_observations:
+            if profile.observed_column is None:
+                continue
+            column_name = self._profile_observed_column_name(profile)
+            if not column_name:
+                continue
+            basis = self._profile_observation_basis(profile)
+            recommendations.append(
+                ProfileMapUpdateRecommendation(
+                    kind="unmapped_profiled_column",
+                    action="add_map_column_shell",
+                    resource=profile.observed_column,
+                    predicate="rc:hasColumn",
+                    current_value=None,
+                    observed_value=column_name,
+                    observed_count=profile.row_count,
+                    profile_observation_iri=profile.iri,
+                    evidence_iri=evidence_value,
+                    basis=basis,
+                    confidence="medium" if basis == "full_scan" else "low",
+                    helper_name="record_map_column",
+                    helper_arguments={
+                        "iri": profile.observed_column.iri,
+                        "table_iri": dataset_value,
+                        "column_name": column_name,
+                    },
+                    rationale=(
+                        "The profile run observed a column that is not mapped "
+                        "as a current column. The draft only proposes a column "
+                        "shell because profile observations do not carry "
+                        "helper-owned physical_type or value_type facts."
+                    ),
+                )
+            )
+
+        all_profiles = [
+            *profile_run.dataset_profile_observations,
+            *profile_run.mapped_column_profile_observations,
+            *profile_run.unmapped_column_profile_observations,
+        ]
+        metric_advisories = self._profile_metric_vocabulary_advisories(
+            all_profiles,
+            evidence_value,
+        )
+        return ProfileMapUpdateDraft(
+            dataset=profile_run.dataset,
+            evidence=profile_run.evidence,
+            evidence_iri=evidence_value,
+            map_dataset_found=map_dataset_found,
+            profile_observation_iris=profile_run.profile_observation_iris,
+            recommendations=recommendations,
+            metric_advisories=metric_advisories,
+            review_note=(
+                "This draft is read-only review context derived from profile "
+                "observations and current map facts. Apply accepted changes "
+                "through map helpers or staged revisions after checking sample "
+                "scope, evidence, caveats, and project modelling intent."
+            ),
+        )
+
     def describe_query_context(
         self,
         iri: str,
@@ -5788,9 +6011,22 @@ class DoxaBase:
             storage_access,
             engine=engine_value,
         )
+        review_gate = self._draft_query_plan_review_gate(
+            context,
+            selected_candidate,
+            scan=scan,
+            storage_environment=storage_environment,
+        )
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
+            handoff_kind=self._draft_query_plan_handoff_kind(
+                selected_candidate,
+                scan=scan,
+                binding_requirements=binding_requirements,
+                storage_environment=storage_environment,
+                review_gate=review_gate,
+            ),
             engine=DraftQueryPlanEngine(
                 name=engine_value,
                 source="caller_requested_target_engine",
@@ -5813,12 +6049,7 @@ class DoxaBase:
                 "or execution-time values."
             ),
             storage_environment=storage_environment,
-            review_gate=self._draft_query_plan_review_gate(
-                context,
-                selected_candidate,
-                scan=scan,
-                storage_environment=storage_environment,
-            ),
+            review_gate=review_gate,
             issues=context.issues,
             analysis_warnings=context.analysis_warnings,
             caveats=context.caveats,
@@ -5832,6 +6063,41 @@ class DoxaBase:
                 ),
             ],
         )
+
+    @staticmethod
+    def _draft_query_plan_handoff_kind(
+        selected_candidate: QueryTargetCandidate | None,
+        *,
+        scan: DraftQueryPlanScan,
+        binding_requirements: list[DraftQueryPlanBinding],
+        storage_environment: DraftQueryPlanStorageEnvironment,
+        review_gate: DraftQueryPlanReviewGate,
+    ) -> str:
+        if selected_candidate is None:
+            return "no_query_target"
+
+        blocking_reason_codes = set(review_gate.blocking_reason_codes)
+        if (
+            "scan_function_not_inferred" in blocking_reason_codes
+            and scan.relation_identifier is not None
+        ):
+            return "database_relation_handoff"
+        if (
+            "query_context_has_other_blockers" in blocking_reason_codes
+            and review_gate.direct_review_required is False
+        ):
+            return "context_review_required"
+        if "s3_access_resolution_unrecorded" in blocking_reason_codes:
+            return "runtime_resolution_required"
+        if not review_gate.executable_without_review:
+            return "metadata_review_required"
+        if storage_environment.runtime_resolution_required:
+            return "runtime_resolution_required"
+        if any(binding.required for binding in binding_requirements):
+            return "binding_values_required"
+        if review_gate.ready_for_execution_attempt:
+            return "execution_attempt_ready"
+        return "metadata_review_required"
 
     def _draft_query_plan_storage_access(
         self,
@@ -7723,6 +7989,91 @@ class DoxaBase:
                 omitted_profile_count=omitted_profile_count,
             ),
         )
+
+    def _profile_observation_basis(self, profile: ProfileObservationSummary) -> str:
+        text = " ".join(
+            value.lower()
+            for value in (profile.sample_method, profile.sample_scope)
+            if value
+        )
+        full_scan_markers = (
+            "full scan",
+            "full-table",
+            "full table",
+            "complete scan",
+            "all rows",
+            "all records",
+            "entire table",
+            "whole table",
+        )
+        if (
+            any(marker in text for marker in full_scan_markers)
+            or (
+                profile.sample_size is not None
+                and profile.row_count is not None
+                and profile.sample_size == profile.row_count
+            )
+        ):
+            return "full_scan"
+        if profile.sample_size is not None or "sample" in text:
+            return "sample"
+        return "unknown"
+
+    def _profile_map_column_name(
+        self,
+        column: ColumnDescription,
+        profile: ProfileObservationSummary,
+    ) -> str:
+        return (
+            column.column_name
+            or profile.observed_column_name
+            or (profile.observed_column.column_name if profile.observed_column else None)
+            or (profile.observed_column.label if profile.observed_column else None)
+            or column.iri.rsplit("#", 1)[-1].rsplit("/", 1)[-1]
+        )
+
+    def _profile_observed_column_name(
+        self,
+        profile: ProfileObservationSummary,
+    ) -> str | None:
+        if profile.observed_column is None:
+            return None
+        return (
+            profile.observed_column_name
+            or profile.observed_column.column_name
+            or profile.observed_column.label
+            or profile.observed_column.iri.rsplit("#", 1)[-1].rsplit("/", 1)[-1]
+        )
+
+    def _profile_metric_vocabulary_advisories(
+        self,
+        profiles: list[ProfileObservationSummary],
+        evidence_iri: str,
+    ) -> list[ProfileMetricVocabularyAdvisory]:
+        advisories: list[ProfileMetricVocabularyAdvisory] = []
+        for profile in profiles:
+            for metric in profile.profile_metrics:
+                if metric.metric.iri.startswith(PREFIXES["rc"]):
+                    continue
+                advisories.append(
+                    ProfileMetricVocabularyAdvisory(
+                        profile_observation_iri=profile.iri,
+                        evidence_iri=evidence_iri,
+                        metric=metric.metric,
+                        target=metric.target,
+                        value=metric.value,
+                        value_datatype=metric.value_datatype,
+                        value_lang=metric.value_lang,
+                        recommendation="review_metric_vocabulary_before_reuse",
+                        rationale=(
+                            "Project-specific profile metric IRIs are valid "
+                            "observation lore, but reusable comparison or map "
+                            "policy should define the metric meaning, unit, and "
+                            "calculation in project ontology or supporting lore."
+                        ),
+                    )
+                )
+        return advisories
 
     def _profile_handoff_note(
         self,

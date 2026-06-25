@@ -111,7 +111,10 @@ agent runtime decides how profile X resolves.
    runtime context before execution. Treat
    `plan.review_gate.ready_for_execution_attempt` as the compact "no recorded
    review or runtime-resolution blocker" signal before considering a local
-   execution attempt.
+   execution attempt. Use `plan.handoff_kind` for first-pass machine routing:
+   it distinguishes review-required drafts, runtime-resolution work, database
+   relation handoffs, URI-template binding work, and execution-attempt-ready
+   local/file/object drafts.
    Read `plan.scan.dataset_verification_note`, `plan.scan.template_lineage`,
    and the scan source verification fields before trusting a path. In the AIS
    fixture, `DailyIndex` currently shares the broadcast partition template and

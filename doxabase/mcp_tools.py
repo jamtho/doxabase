@@ -207,6 +207,21 @@ def describe_profile_run_tool(
     )
 
 
+def draft_profile_map_updates_tool(
+    db: DoxaBase,
+    dataset_iri: str,
+    evidence_iri: str,
+    graph: str | None = "map",
+) -> dict[str, Any]:
+    return to_dict(
+        db.draft_profile_map_updates(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            graph=graph,
+        )
+    )
+
+
 def describe_query_context_tool(
     db: DoxaBase,
     iri: str,

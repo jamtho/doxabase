@@ -164,6 +164,13 @@ MCP doc IDs use underscores, for example `staged_revisions` and
 `query_planning`; their on-disk files usually use hyphens, for example
 `docs/agent/staged-revisions.md` and `docs/agent/query-planning.md`.
 
+Already-running MCP server sessions keep the Python modules and decorated tool
+set they imported at startup. If `doxabase.list_docs` or the available MCP tool
+list lags recent code changes, verify the registry in a fresh local Python
+process or start a fresh MCP session before concluding the repo state is wrong.
+Known doc content is read from disk by `doxabase.get_doc`, so file-content edits
+can appear live even when newly registered docs or tools do not.
+
 Sandboxed sub-agents may not have access to the user's uv cache. Do not rely on
 `uv run` inside a sub-agent trial unless the trial is explicitly testing the
 developer environment. Require a final thread report and, for non-trivial

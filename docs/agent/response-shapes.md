@@ -712,6 +712,49 @@ profile lists. With `limit=None`, returned and total counts should match unless
 the run has no observations for that dataset. A positive `limit` caps returned
 profiles and leaves omitted counts non-zero.
 
+`db.draft_profile_map_updates(dataset_iri, evidence_iri)` returns a
+`ProfileMapUpdateDraft`:
+
+```python
+draft.dataset
+draft.evidence
+draft.evidence_iri
+draft.map_dataset_found
+draft.profile_observation_iris
+draft.recommendations
+draft.metric_advisories
+draft.review_note
+```
+
+Each `draft.recommendations[]` row is read-only review context, not an applied
+or staged change:
+
+```python
+recommendation.kind
+recommendation.action
+recommendation.resource
+recommendation.predicate
+recommendation.current_value
+recommendation.observed_value
+recommendation.observed_count
+recommendation.profile_observation_iri
+recommendation.evidence_iri
+recommendation.basis
+recommendation.confidence
+recommendation.helper_name
+recommendation.helper_arguments
+recommendation.rationale
+```
+
+Current recommendation kinds cover `dataset_row_count_snapshot`,
+`column_nullable`, and `unmapped_profiled_column`. The helper drafts candidates
+from positive-null findings, full-scan zero-null findings, profile row counts,
+and unmapped profiled columns. It intentionally skips sampled zero-null
+promotion because a sample with no nulls does not prove a full-population
+non-null constraint. `metric_advisories[]` rows name project-specific profile
+metric IRIs observed in the run and recommend vocabulary review before reusable
+comparison or map policy.
+
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:
 
@@ -1033,6 +1076,7 @@ pattern handoff in `describe_dataset`.
 ```python
 plan.helper
 plan.mode
+plan.handoff_kind
 plan.engine
 plan.dataset
 plan.source_context
@@ -1052,7 +1096,17 @@ plan.planning_notes
 
 The helper currently supports `engine="duckdb"` and drafts review context only:
 it does not resolve endpoint profiles, credentials, object existence, or SQL
-execution. `plan.selected_candidate` is the candidate named by
+execution. `plan.handoff_kind` is a compact machine-readable route for the
+selected draft. It is one of `no_query_target`, `metadata_review_required`,
+`context_review_required`, `runtime_resolution_required`,
+`database_relation_handoff`, `binding_values_required`, or
+`execution_attempt_ready`. The field is derived from the selected candidate,
+review gate, runtime-resolution state, scan shape, and binding requirements; it
+is a shortcut for routing, not a replacement for reading the underlying fields.
+`binding_values_required` can appear when
+`review_gate.ready_for_execution_attempt` is true but URI-template placeholders
+still need caller-supplied runtime values. `plan.selected_candidate` is the
+candidate named by
 `query_target_decision.candidate_index`. `plan.scan` gives a best-effort scan
 function such as `read_parquet`, a URI/path template for file/object storage,
 file format, compression, and the selected candidate path status. For
@@ -1095,9 +1149,12 @@ sibling metadata blocks the overall context, or `scan_function_not_inferred`
 when DuckDB has no file-scan function for the selected storage/layout shape.
 Database-backed storage currently uses this generic review-draft shape too;
 expect `scan.function=None` and `scan_function_not_inferred` until a
-database-query-specific plan mode exists. `executable_without_review=true`
-means DoxaBase found no recorded physical-metadata blocker for the selected
-candidate. It is not a runtime credential/object-existence guarantee.
+database-query-specific plan mode exists. Those plans use
+`handoff_kind="database_relation_handoff"` when the recorded relation is the
+right thing to pass to a database-aware runtime rather than a file scan.
+`executable_without_review=true` means DoxaBase found no recorded
+physical-metadata blocker for the selected candidate. It is not a runtime
+credential/object-existence guarantee.
 `ready_for_execution_attempt` is the stricter handoff boolean: it is true only
 when the review gate is clear and `runtime_resolution_required` is false.
 

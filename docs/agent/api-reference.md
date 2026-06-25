@@ -311,7 +311,11 @@ URI/path template for file/object storage, database relation fields for
 database-backed storage, parsed placeholder names in `required_bindings`,
 structured `binding_requirements` rows for handoff work, non-secret storage
 environment hints, copied issues and analysis warnings, caveats, and a
-`review_gate`.
+`review_gate`. Top-level `handoff_kind` is a machine-readable route for the
+draft: `no_query_target`, `metadata_review_required`,
+`context_review_required`, `runtime_resolution_required`,
+`database_relation_handoff`, `binding_values_required`, or
+`execution_attempt_ready`.
 Binding rows identify the placeholder source text and explicitly report when
 DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 `blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`
@@ -344,10 +348,20 @@ includes dataset and evidence summaries, top-level
 `total_*` / `omitted_*` count fields, `profile_observation_iris`,
 `dataset_profile_observations`, `mapped_column_profile_observations`,
 `unmapped_column_profile_observations`, and a `retrieval_note`. The default
-`limit=None` is intended to retrieve the
-whole run even when `describe_dataset()` is bounded; pass a positive `limit`
-only when a capped payload is useful. It also works for observation-only profile
-runs where no map dataset exists yet.
+`limit=None` is intended to retrieve the whole run even when
+`describe_dataset()` is bounded; pass a positive `limit` only when a capped
+payload is useful. It also works for observation-only profile runs where no map
+dataset exists yet.
+
+`draft_profile_map_updates(dataset_iri, evidence_iri)` compares one profile run
+with current map facts and returns read-only review recommendations. Use it
+after `describe_profile_run` when profile evidence suggests row-count snapshot
+drift, mapped-column nullability changes, unmapped profiled columns, or
+project-specific metric kinds that need vocabulary review. It returns
+`recommendations` with `helper_name`/`helper_arguments` for accepted map-helper
+updates, `metric_advisories` for project-specific profile metrics, and a
+`review_note`. It does not mutate or stage graph changes, and it skips sampled
+zero-null promotions.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

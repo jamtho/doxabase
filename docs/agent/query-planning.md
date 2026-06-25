@@ -20,18 +20,21 @@ Start with `describe_query_context(dataset_iri)`:
 
 Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 
-1. `scan.uri_template` is for file/object scans.
-2. `scan.relation_identifier` and `scan.connection_reference` are for
+1. `handoff_kind` is the compact machine-readable route. Use it for first-pass
+   client dispatch, then read `review_gate`, `scan`, `binding_requirements`,
+   and `storage_environment` for the details behind that route.
+2. `scan.uri_template` is for file/object scans.
+3. `scan.relation_identifier` and `scan.connection_reference` are for
    database-backed storage handoffs; do not treat the candidate path as a file
    URI in that case.
-3. `required_bindings` and `binding_requirements` still need runtime values.
+4. `required_bindings` and `binding_requirements` still need runtime values.
    `ready_for_execution_attempt=True` does not mean DoxaBase has supplied those
-   values.
-4. `review_gate.executable_without_review` says graph metadata has no recorded
+   values. `handoff_kind="binding_values_required"` makes that case explicit.
+5. `review_gate.executable_without_review` says graph metadata has no recorded
    review blocker for the selected candidate.
-5. `storage_environment.runtime_resolution_required` says endpoint, credential,
+6. `storage_environment.runtime_resolution_required` says endpoint, credential,
    region, or equivalent runtime context still needs resolving.
-6. `review_gate.ready_for_execution_attempt` is the stricter handoff boolean:
+7. `review_gate.ready_for_execution_attempt` is the stricter handoff boolean:
    it is true only when the review gate is clear and runtime resolution is not
    required.
    `review_gate.blocking_reason_codes` can add
@@ -60,3 +63,8 @@ If `runtime_resolution_required=False` for bare database storage, read the note
 before treating it as reachable. The boolean only says there is no recorded
 endpoint or credential profile left for DoxaBase to resolve; it is not a
 database connectivity guarantee.
+
+Current `handoff_kind` values are `no_query_target`,
+`metadata_review_required`, `context_review_required`,
+`runtime_resolution_required`, `database_relation_handoff`,
+`binding_values_required`, and `execution_attempt_ready`.

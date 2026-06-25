@@ -192,6 +192,19 @@ intentionally wants a capped payload. The run is inferred from profile
 observations linked to the requested evidence IRI, not from a separate
 persisted profile-run node.
 
+`doxabase.draft_profile_map_updates`
+
+Returns read-only review recommendations by comparing one
+`describe_profile_run(dataset_iri, evidence_iri)` result with current map facts.
+Use it after a shared-evidence profile run surfaces row-count drift, mapped
+column nullability evidence, unmapped profiled columns, or project-specific
+profile metric IRIs that may need vocabulary review. The helper does not mutate
+or stage graph changes. It returns `recommendations` with helper names and
+arguments for accepted map-helper updates, plus `metric_advisories` for
+project-specific metric kinds that should be defined before reuse. Sampled
+zero-null profiles are intentionally not promoted into non-null map
+recommendations.
+
 `doxabase.describe_query_context`
 
 Returns a compact read-only projection for query planning around one dataset:
@@ -222,7 +235,11 @@ template for file/object storage, database relation fields for database-backed
 storage, parsed `required_bindings`, structured `binding_requirements`,
 non-secret storage environment hints, copied issues and analysis warnings,
 caveats, and a `review_gate`. Binding rows preserve the source text and say
-when DoxaBase has not inferred derivation or runtime values. `review_gate`
+when DoxaBase has not inferred derivation or runtime values. Top-level
+`handoff_kind` gives a compact machine-readable route, such as
+`metadata_review_required`, `context_review_required`,
+`runtime_resolution_required`, `database_relation_handoff`,
+`binding_values_required`, or `execution_attempt_ready`. `review_gate`
 includes `blocking_reason_codes`, `all_issue_codes`, the legacy `reason_codes`
 alias for blocking reasons, and `ready_for_execution_attempt`. It may add
 handoff-only blockers such as `query_context_has_other_blockers` for clean

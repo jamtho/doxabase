@@ -46,6 +46,12 @@ Create or replace a scratch capsule with `DoxaBase.create(path, overwrite=True)`
 Reopen an existing capsule with `DoxaBase(path)`. There is no `DoxaBase.open()`
 helper in the current API.
 
+When a trial changes MCP docs or tool registrations, remember that existing
+Codex-bound MCP server sessions are long-running Python processes. They may keep
+the old `agent_docs.DOCS` registry and decorated tool set until a fresh MCP
+session starts. Cross-check with a fresh local Python process before treating a
+stale `doxabase.list_docs` or missing tool as evidence that the commit failed.
+
 When running a trial through Codex sub-agents, keep the harness explicit:
 
 - require a final thread report and a backup report file under `/tmp`;

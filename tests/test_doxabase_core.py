@@ -5494,6 +5494,7 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
 
     assert plan.helper == "draft_query_plan"
     assert plan.mode == "non_executed_review_draft"
+    assert plan.handoff_kind == "metadata_review_required"
     assert plan.engine.name == "duckdb"
     assert plan.source_context.api == "DoxaBase.describe_query_context"
     assert plan.source_context.readiness == "needs_review"
@@ -5612,6 +5613,7 @@ def test_draft_query_plan_carries_dataset_template_verification(
     assert plan.scan.template_lineage is not None
     assert "dataset Local events" in plan.scan.template_lineage
     assert verification_note in plan.scan.template_lineage
+    assert plan.handoff_kind == "binding_values_required"
 
 
 def test_draft_query_plan_scan_surfaces_inherited_path_lineage(
@@ -5874,6 +5876,8 @@ def test_query_target_candidates_surface_global_blockers(
     assert context.query_target_decision.reason_codes == [
         "query_context_has_other_blockers"
     ]
+    plan = db.draft_query_plan(dataset)
+    assert plan.handoff_kind == "context_review_required"
 
 
 def test_describe_query_context_warns_on_protocol_location_mismatch(
@@ -6115,6 +6119,7 @@ def test_describe_query_context_warns_on_unresolved_s3_access(
     assert plan.storage_environment.credential_reference is None
     assert plan.storage_environment.region is None
     assert plan.storage_environment.runtime_resolution_required is True
+    assert plan.handoff_kind == "runtime_resolution_required"
     assert "Record or resolve the S3 endpoint profile" in (
         plan.storage_environment.runtime_resolution_note
     )
@@ -6351,6 +6356,7 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     assert plan.review_gate.executable_without_review is True
     assert plan.review_gate.runtime_resolution_required is False
     assert plan.review_gate.ready_for_execution_attempt is True
+    assert plan.handoff_kind == "execution_attempt_ready"
     assert "No endpoint or credential profile is recorded or required" in (
         plan.storage_environment.runtime_resolution_note
     )
@@ -6419,6 +6425,7 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
     assert plan.review_gate.ready_for_execution_attempt is False
     assert plan.review_gate.blocking_reason_codes == ["scan_function_not_inferred"]
     assert plan.review_gate.reason_codes == ["scan_function_not_inferred"]
+    assert plan.handoff_kind == "database_relation_handoff"
 
 
 @pytest.mark.parametrize("location_kind", [None, "directory", "prefix", "connection"])
@@ -6653,6 +6660,7 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
         "query_context_has_other_blockers"
     ]
     assert plan.review_gate.reason_codes == ["query_context_has_other_blockers"]
+    assert plan.handoff_kind == "context_review_required"
 
 
 def test_query_target_candidate_template_warnings_do_not_bleed_to_siblings(
@@ -10037,6 +10045,190 @@ def test_profile_bundle_handoff_distinguishes_existing_map_context_without_snaps
         profile.iri for profile in context_slice.seed_profile_observations
     } == set(bundle.handoff_entrypoints.profile_observation_iris)
     assert context_slice.route_counts["observed_profile_metric"] == 2
+
+
+def test_draft_profile_map_updates_surfaces_review_candidates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Payments"
+    status_column = "https://example.test/project#PaymentsStatus"
+    amount_column = "https://example.test/project#PaymentsAmount"
+    settlement_column = "https://example.test/project#PaymentsSettlementMethod"
+    evidence = "https://example.test/project#PaymentsProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessRatio"
+
+    db.record_map_dataset(
+        dataset,
+        label="Payments",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        nullable=False,
+    )
+    db.record_map_column(
+        amount_column,
+        table_iri=dataset,
+        column_name="amount",
+        nullable=False,
+    )
+
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Payments were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://payments-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the test Payments table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.90",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status had nulls in the full scan.",
+                "null_count": 2,
+                "distinct_count": 3,
+            },
+            {
+                "column_iri": amount_column,
+                "column_name": "amount",
+                "summary": "Amount had no nulls in the full scan.",
+                "null_count": 0,
+                "distinct_count": 12,
+            },
+            {
+                "column_iri": settlement_column,
+                "column_name": "settlement_method",
+                "summary": "Settlement method was observed but is unmapped.",
+                "null_count": 0,
+                "distinct_count": 2,
+            },
+        ],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.map_dataset_found is True
+    assert draft.evidence_iri == evidence
+    assert len(draft.profile_observation_iris) == 4
+    assert "read-only review context" in draft.review_note
+    assert [
+        (recommendation.kind, recommendation.resource.iri)
+        for recommendation in draft.recommendations
+    ] == [
+        ("dataset_row_count_snapshot", dataset),
+        ("column_nullable", status_column),
+        ("unmapped_profiled_column", settlement_column),
+    ]
+
+    row_count = draft.recommendations[0]
+    assert row_count.action == "replace_map_value"
+    assert row_count.current_value == 10
+    assert row_count.observed_value == 12
+    assert row_count.basis == "full_scan"
+    assert row_count.confidence == "high"
+    assert row_count.helper_name == "record_map_dataset"
+    assert row_count.helper_arguments == {
+        "iri": dataset,
+        "row_count_snapshot": 12,
+    }
+
+    nullable = draft.recommendations[1]
+    assert nullable.action == "replace_map_value"
+    assert nullable.current_value is False
+    assert nullable.observed_value is True
+    assert nullable.observed_count == 2
+    assert nullable.helper_arguments == {
+        "iri": status_column,
+        "table_iri": dataset,
+        "column_name": "status",
+        "nullable": True,
+    }
+
+    unmapped = draft.recommendations[2]
+    assert unmapped.action == "add_map_column_shell"
+    assert unmapped.current_value is None
+    assert unmapped.observed_value == "settlement_method"
+    assert unmapped.helper_arguments == {
+        "iri": settlement_column,
+        "table_iri": dataset,
+        "column_name": "settlement_method",
+    }
+
+    assert len(draft.metric_advisories) == 1
+    assert draft.metric_advisories[0].metric.iri == project_metric
+    assert draft.metric_advisories[0].recommendation == (
+        "review_metric_vocabulary_before_reuse"
+    )
+
+    description = db.describe_dataset(dataset)
+    assert description.row_count_snapshot == 10
+    assert {
+        column.iri: column.nullable for column in description.columns
+    } == {
+        status_column: False,
+        amount_column: False,
+    }
+
+
+def test_draft_profile_map_updates_skips_sampled_zero_null_promotion(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    promo_column = "https://example.test/project#OrdersPromoCode"
+    evidence = "https://example.test/project#OrdersSampleProfileEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        promo_column,
+        table_iri=dataset,
+        column_name="promo_code",
+        nullable=True,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled from a sample.",
+        evidence_summary="Synthetic sampled profile.",
+        evidence_sources=["test://orders-sample-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=25,
+        sample_scope="Not a full population; 25 sampled Orders rows.",
+        sample_method="DuckDB random sample profile.",
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": promo_column,
+                "column_name": "promo_code",
+                "summary": "Promo code had zero nulls in the sample.",
+                "null_count": 0,
+                "distinct_count": 8,
+            }
+        ],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendations == []
+    assert draft.metric_advisories == []
+    description = db.describe_dataset(dataset)
+    assert description.columns[0].nullable is True
 
 
 def test_describe_profile_run_rejects_invalid_limit(tmp_path: Path) -> None:
