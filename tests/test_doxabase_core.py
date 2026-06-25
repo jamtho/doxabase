@@ -7377,6 +7377,61 @@ def test_context_slice_structures_seed_profile_outside_bounded_dataset_profiles(
     assert old_profile.observation.evidence_iri in resources
 
 
+def test_describe_context_slice_expands_unmapped_observed_column_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    promo_column = "https://example.test/project#orders__promo_code"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled for redacted promo-code metrics.",
+        evidence_summary="Orders profile run.",
+        evidence_sources=["test://orders-profile"],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": promo_column,
+                "column_name": "promo_code",
+                "summary": "Sampled redacted promo-code metrics.",
+                "profile_metrics": [
+                    {
+                        "metric": "https://example.test/project#SuppressedValueBucketCount",
+                        "value": 3,
+                    }
+                ],
+            }
+        ],
+    )
+
+    context_slice = db.describe_context_slice(
+        [promo_column],
+        profile="dataset_brief",
+        max_triples=300,
+    )
+
+    profile_observation_iri = bundle.column_profiles[0].observation.observation_iri
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert promo_column in resources
+    assert resources[promo_column].referenced_only is True
+    assert resources[promo_column].primary_route.route == "seed"
+    assert any(
+        route.route == "seed_observed_column"
+        for route in resources[promo_column].routes
+    )
+    assert profile_observation_iri in resources
+    assert dataset in resources
+    assert context_slice.dataset_contexts[0].iri == dataset
+    assert [
+        profile.iri for profile in context_slice.seed_profile_observations
+    ] == [profile_observation_iri]
+    assert context_slice.route_counts["seed_observed_column"] == 1
+    assert context_slice.route_counts["seed_profile_observation"] == 1
+    assert context_slice.route_counts["observed_column"] == 1
+    assert "Seed resource" not in " ".join(context_slice.warnings)
+
+
 def test_describe_context_slice_expands_profile_metric_kind_seed(
     tmp_path: Path,
 ) -> None:

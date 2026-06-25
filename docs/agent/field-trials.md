@@ -507,6 +507,13 @@ few useful gaps:
   while keeping the profile row count observation-only. Handoff notes now call
   out the mixed case where map context already existed but the bundle did not
   write dataset map facts.
+- A follow-up profile metric/map-facts trial confirmed project metric IRIs,
+  awkward unmapped-column metrics, shared evidence, and ontology promotion work
+  together, but showed that an observation-only column IRI failed as a
+  `describe_context_slice` seed. Dataset/deep-lore slices now accept IRIs that
+  appear only as `rc:observedColumn` objects and expand through the matching
+  profile observation(s) with `seed_observed_column` and
+  `seed_profile_observation` routes.
 - A staged restage workflow trial confirmed batch dry-run, grouped export,
   successor routing, apply-one-then-recheck, and applied-source inspection work
   as documented. It also exposed that staged patches targeting `history` become

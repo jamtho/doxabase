@@ -38,8 +38,9 @@ and reconsiderations that directly target or observe that column. This is the
 preferred route when an agent starts from a column IRI and needs column-specific
 lore without first rediscovering the owning dataset by hand. If a column was
 recorded only in a profile observation with `update_map_column=false`, its IRI
-is an observed object rather than a mapped `rc:Column` subject; seed the profile
-observation IRI instead.
+is an observed object rather than a mapped `rc:Column` subject; dataset/deep
+slices still accept that IRI and expand through the matching profile
+observation(s) with a `seed_observed_column` route.
 
 Deep-lore slices also understand revision seeds. A seed `rc:GraphRevision`
 expands to supporting observations, claims, patterns, revision evidence, anchor
@@ -73,8 +74,8 @@ Useful fields:
   profile summary total and omitted counts before assuming no older profile
   observations exist.
 - `seed_profile_observations`: structured profile rows selected by
-  profile-observation, observed-profile-metric, or metric-kind seeds,
-  independent of the bounded dataset profile lists.
+  profile-observation, observed-profile-metric, metric-kind, or observed-column
+  seeds, independent of the bounded dataset profile lists.
 - `warnings`: notes about how to read the slice. In `deep_lore`, a warning may
   explicitly say that no claims, patterns, reconsiderations, evidence, or
   revision history were found beyond ordinary map context. When a seed type does

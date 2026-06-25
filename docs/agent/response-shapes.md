@@ -399,19 +399,22 @@ not unique resource counts; a
 resource reached through two useful routes contributes to both route counts.
 Dataset/deep-lore slices can include routes such as
 `dataset_profile_observation`, `column_profile_observation`,
-`unmapped_column_profile_observation`, `observed_profile_metric`,
-`observed_value_frequency`, `profile_metric_kind`, and
+`unmapped_column_profile_observation`, `seed_observed_column`,
+`observed_profile_metric`, `observed_value_frequency`, `profile_metric_kind`, and
 `profile_metric_target`. These routes are bounded by the same returned profile
 observations used by `describe_dataset()`. A metric-kind IRI that has no subject
 triples can still appear with `referenced_only=True` when it was reached through
-`rc:profileMetricKind`. Broad metric-kind seeds are capped; read `warnings` for
-omitted observed profile metric counts and use narrower seeds when needed.
+`rc:profileMetricKind`. An observed-column IRI that has no mapped `rc:Column`
+subject can still seed a dataset/deep-lore slice through matching
+`rc:observedColumn` profile observations. Broad metric-kind seeds are capped;
+read `warnings` for omitted observed profile metric counts and use narrower
+seeds when needed.
 Profile and metric seeds may include bounded same-dataset profile context
 beyond the exact seed while avoiding unrelated dataset leakage.
 `seed_profile_observations` gives structured `ProfileObservationSummary` rows
 for explicit profile-observation seeds and profile observations reached from
-observed-profile-metric or metric-kind seeds, even when those rows are older
-than the bounded `dataset_contexts[].profile_observations` slice.
+observed-profile-metric, metric-kind, or observed-column seeds, even when those
+rows are older than the bounded `dataset_contexts[].profile_observations` slice.
 
 Each item in `context.resources` is a `ContextSliceResource`:
 

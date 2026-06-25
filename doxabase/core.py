@@ -4428,7 +4428,21 @@ class DoxaBase:
                 "rc:profileMetricKind",
                 seed,
             )
-            if not seed_is_subject and not metric_kind_metric_iris:
+            observed_column_profile_observation_iris = self._subjects(
+                all_graphs,
+                "rc:observedColumn",
+                seed,
+            )
+            seed_is_observed_column_only = (
+                profile in {"dataset_brief", "deep_lore"}
+                and not seed_is_subject
+                and bool(observed_column_profile_observation_iris)
+            )
+            if (
+                not seed_is_subject
+                and not metric_kind_metric_iris
+                and not seed_is_observed_column_only
+            ):
                 raise DoxaBaseError(f"Seed resource '{seed}' was not found")
             add_resource(seed, "seed", "seed resource", depth=0)
             seed_types = self._types_from_graphs(all_graphs, seed)
@@ -4472,6 +4486,22 @@ class DoxaBase:
                 and self.expand_iri("rc:ObservedProfileMetric") in seed_types
             ):
                 add_profile_metric(seed, None, 0)
+            elif seed_is_observed_column_only:
+                add_resource(
+                    seed,
+                    "seed_observed_column",
+                    "seed observed column",
+                    depth=0,
+                )
+                for observation_iri in observed_column_profile_observation_iris:
+                    add_observation(
+                        observation_iri,
+                        seed,
+                        1,
+                        route="seed_profile_observation",
+                        route_label="seed profile observation",
+                        expand_observed_dataset=True,
+                    )
             elif (
                 profile == "deep_lore"
                 and self.expand_iri("rc:GraphRevision") in seed_types
@@ -4731,6 +4761,7 @@ class DoxaBase:
             "seed": 0,
             "seed_dataset": 1,
             "seed_column": 2,
+            "seed_observed_column": 2,
             "seed_revision": 2,
             "linked_pattern": 2,
             "pattern_target": 3,
@@ -4859,6 +4890,9 @@ class DoxaBase:
             "seed": "The resource the caller asked about directly.",
             "seed_dataset": "A seed resource expanded as a dataset or table.",
             "seed_column": "A seed resource expanded as a mapped column.",
+            "seed_observed_column": (
+                "A seed IRI found only as an observed column in profile observations."
+            ),
             "seed_revision": "A seed resource expanded as revision-history metadata.",
             "related_column": (
                 "A column reached from a selected column seed or lore route."
