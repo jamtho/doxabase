@@ -7665,6 +7665,65 @@ def test_describe_context_slice_expands_unmapped_observed_column_seed(
     assert "Seed resource" not in " ".join(context_slice.warnings)
 
 
+def test_describe_context_slice_expands_unmapped_observed_column_after_workflow_import(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    dataset = "https://example.test/project#Orders"
+    promo_column = "https://example.test/project#orders__promo_code"
+    source.record_map_dataset(dataset, label="Orders", is_table=True)
+    bundle = source.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled for redacted promo-code metrics.",
+        evidence_summary="Orders profile run.",
+        evidence_sources=["test://orders-profile"],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": promo_column,
+                "column_name": "promo_code",
+                "summary": "Sampled redacted promo-code metrics.",
+                "profile_metrics": [
+                    {
+                        "metric": "https://example.test/project#SuppressedValueBucketCount",
+                        "value": 3,
+                    }
+                ],
+            }
+        ],
+    )
+    export_path = tmp_path / "workflow.trig"
+
+    export_result = source.export_trig(export_path, graphs="workflow")
+    imported = DoxaBase.create(tmp_path / "workflow-import.sqlite")
+    import_counts = imported.import_trig(export_path)
+    context_slice = imported.describe_context_slice(
+        [promo_column],
+        profile="dataset_brief",
+        max_triples=300,
+    )
+
+    assert "ontology" not in export_result.graphs
+    assert import_counts["observations"] == source.triple_count("observations")
+    profile_observation_iri = bundle.column_profiles[0].observation.observation_iri
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert promo_column in resources
+    assert resources[promo_column].referenced_only is True
+    assert any(
+        route.route == "seed_observed_column"
+        for route in resources[promo_column].routes
+    )
+    assert profile_observation_iri in resources
+    assert dataset in resources
+    assert [
+        profile.iri for profile in context_slice.seed_profile_observations
+    ] == [profile_observation_iri]
+    assert context_slice.route_counts["seed_observed_column"] == 1
+    assert context_slice.route_counts["seed_profile_observation"] == 1
+    assert context_slice.route_counts["observed_column"] == 1
+    assert "Seed resource" not in " ".join(context_slice.warnings)
+
+
 def test_describe_context_slice_expands_profile_metric_kind_seed(
     tmp_path: Path,
 ) -> None:
