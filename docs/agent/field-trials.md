@@ -491,6 +491,27 @@ few useful gaps:
   warning messages avoid doubled punctuation before impact text. A retest found
   the split clear and suggested exposing dataset-level verification status
   directly in query context for a complete compact inventory.
+- A profile-bundle metrics handoff trial confirmed shared evidence, scalar
+  metrics, unmapped column profiles, run-level patterns, `describe_profile_run`,
+  and profile-seeded context slices now line up. It also showed that
+  `update_map_snapshot=false` suppresses the bundle's dataset map write; create
+  a map shell first when the next agent should start from `describe_dataset`
+  while keeping the profile row count observation-only. Handoff notes now call
+  out the mixed case where map context already existed but the bundle did not
+  write dataset map facts.
+- A staged restage workflow trial confirmed batch dry-run, grouped export,
+  successor routing, apply-one-then-recheck, and applied-source inspection work
+  as documented. It also exposed that staged patches targeting `history` become
+  immediately stale because staging metadata is recorded in `history`; staged
+  patch creation now rejects `history` targets and points agents to
+  `record_graph_revision` for durable history notes.
+- A query-planning metadata trial confirmed complete local paths, root-only
+  object locations, broad root review gates, S3 protocol/template mismatches,
+  and analysis caveats work as intended. It exposed one draft-plan bug:
+  unresolved S3-compatible access was review-gated but
+  `storage_environment.runtime_resolution_required` was false. Draft plans now
+  mark runtime resolution required when the selected S3 candidate lacks endpoint,
+  credential, and region metadata.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

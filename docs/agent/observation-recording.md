@@ -173,8 +173,12 @@ is supplied. `record_column_profile` defaults `update_map_column=true` and can
 write map column metadata when map fields are supplied. Set these booleans to
 `false` when the profile result is a scratch sample, a tentative measurement, or
 otherwise not ready to become current-best map context.
-When `update_map_snapshot=false` on a brand-new dataset, `describe_dataset()`
-may not find the dataset until map context is recorded. Use
+For bundle dataset profiles, `update_map_snapshot=false` also suppresses the
+bundle's dataset map label/type/snapshot write. If a receiver should start from
+`describe_dataset()` while the profile row count stays observation-only, call
+`record_map_dataset()` first to create the map shell. When
+`update_map_snapshot=false` on a brand-new dataset, `describe_dataset()` may not
+find the dataset until map context is recorded. Use
 `record_profile_bundle(...).handoff_entrypoints`, call
 `describe_profile_run(dataset_iri, shared_evidence_iri)`, or seed
 `describe_context_slice` from profile observation IRIs for observation-only

@@ -505,6 +505,9 @@ When `dataset_describe_available` is false, do not start a handoff by calling
 when `profile_run_available` is true, or seed `describe_context_slice` from
 `profile_observation_iris`. This commonly happens when
 `update_map_snapshot=False` keeps a brand-new dataset observation-only.
+`map_dataset_recorded` means this bundle call wrote dataset map facts. It can be
+false while `dataset_describe_available` is true when map context already existed
+before a bundle recorded profile observations with `update_map_snapshot=False`.
 
 Copyable bundle shape:
 
@@ -1012,6 +1015,9 @@ path-template placeholders. DoxaBase does not infer binding types,
 dependencies, or runtime values. `plan.storage_environment` carries non-secret
 storage hints such as bucket, endpoint profile, credential reference, path-style
 access, and DuckDB-shaped settings inferred directly from graph metadata.
+`plan.storage_environment.runtime_resolution_required` is true when endpoint or
+credential references must be resolved, or when selected S3-compatible access is
+review-gated because endpoint/credential/region metadata is not yet recorded.
 `plan.review_gate` keeps the query-target decision status,
 `blocking_reason_codes`, `all_issue_codes`, the legacy alias `reason_codes`,
 and `executable_without_review`; treat the plan as review-required whenever

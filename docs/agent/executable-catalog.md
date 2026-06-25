@@ -105,7 +105,10 @@ agent runtime decides how profile X resolves.
    requirements, storage hints, review gate, issues, and caveats. Binding rows
    tell you when DoxaBase has not inferred derivations or runtime values. It
    does not resolve credentials, endpoint profiles, object existence, or execute
-   SQL.
+   SQL. If selected S3-compatible access is missing endpoint, credential, and
+   region metadata, `plan.storage_environment.runtime_resolution_required`
+   remains true even though those fields are absent; resolve or record that
+   runtime context before execution.
    Read `plan.scan.dataset_verification_note`, `plan.scan.template_lineage`,
    and the scan source verification fields before trusting a path. In the AIS
    fixture, `DailyIndex` currently shares the broadcast partition template and

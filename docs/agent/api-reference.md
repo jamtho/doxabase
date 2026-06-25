@@ -496,6 +496,9 @@ and records ordered `rc:GraphPatch` entries for later review. Each patch has an
 preview order. When validation reports results, the staged revision stores
 linked `sh:ValidationResult` diagnostics with focus node, result path,
 constraint, severity, value, and messages where pySHACL provides them.
+Staged patch targets cannot be `history`, because staging metadata is itself
+written there and would make the target snapshot immediately stale. Use
+`record_graph_revision()` for durable history notes.
 The immediate staged record also returns its `summary`, `rationale`,
 `review_note`, and `review_recommendation` so scratch logs and wrapper payloads
 do not need a second describe call just to show the proposal headline.

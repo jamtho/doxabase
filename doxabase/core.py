@@ -5602,8 +5602,28 @@ class DoxaBase:
             if selected_candidate is not None
             else False
         )
+        unresolved_s3_access = (
+            selected_candidate is not None
+            and any(
+                reason.code == "s3_access_resolution_unrecorded"
+                for reason in selected_candidate.review_reasons
+            )
+        )
         runtime_resolution_required = bool(
-            endpoint_profile or credential_reference or requires_endpoint_profile
+            endpoint_profile
+            or credential_reference
+            or requires_endpoint_profile
+            or unresolved_s3_access
+        )
+        runtime_resolution_note = (
+            "Record or resolve the S3 endpoint profile, credential reference, "
+            "region, and object access in the local runtime before running any "
+            "query."
+            if unresolved_s3_access
+            else (
+                "Resolve endpoint profiles, credential references, and object "
+                "access in the local runtime before running any query."
+            )
         )
         return DraftQueryPlanStorageEnvironment(
             storage_protocol=(
@@ -5634,10 +5654,7 @@ class DoxaBase:
             requires_endpoint_profile=requires_endpoint_profile,
             runtime_resolution_required=runtime_resolution_required,
             duckdb_settings_from_context=duckdb_settings,
-            runtime_resolution_note=(
-                "Resolve endpoint profiles, credential references, and object "
-                "access in the local runtime before running any query."
-            ),
+            runtime_resolution_note=runtime_resolution_note,
         )
 
     def _draft_query_plan_review_gate(
@@ -8729,6 +8746,7 @@ class DoxaBase:
             dataset_iri,
             self._expand_graphs(["map"]),
         )
+        map_dataset_recorded = dataset_profile.map_dataset is not None
         profile_run_available = profile_run_evidence_iri is not None
         suggested_next_calls: list[str] = []
         if dataset_describe_available:
@@ -8751,17 +8769,33 @@ class DoxaBase:
             ")"
         )
         if dataset_describe_available and profile_run_available:
-            handoff_note = (
-                "Map dataset context is available; use describe_dataset for the "
-                "bounded dataset view or describe_profile_run for the shared "
-                "evidence run."
-            )
+            if map_dataset_recorded:
+                handoff_note = (
+                    "Map dataset context is available; use describe_dataset for the "
+                    "bounded dataset view or describe_profile_run for the shared "
+                    "evidence run."
+                )
+            else:
+                handoff_note = (
+                    "Map dataset context already existed; this profile bundle did "
+                    "not write dataset map facts or a row-count snapshot. Use "
+                    "describe_dataset for the bounded dataset view or "
+                    "describe_profile_run for the shared evidence run."
+                )
         elif dataset_describe_available:
-            handoff_note = (
-                "Map dataset context is available, but no shared evidence IRI "
-                "was supplied; use profile_observation_iris for run-level "
-                "handoff."
-            )
+            if map_dataset_recorded:
+                handoff_note = (
+                    "Map dataset context is available, but no shared evidence IRI "
+                    "was supplied; use profile_observation_iris for run-level "
+                    "handoff."
+                )
+            else:
+                handoff_note = (
+                    "Map dataset context already existed, but this profile bundle "
+                    "did not write dataset map facts and no shared evidence IRI "
+                    "was supplied; use profile_observation_iris for run-level "
+                    "handoff."
+                )
         elif profile_run_available:
             handoff_note = (
                 "No map dataset subject is currently available; use "
@@ -8779,7 +8813,7 @@ class DoxaBase:
             dataset_profile_observation_iri=dataset_profile_observation_iri,
             column_profile_observation_iris=column_profile_observation_iris,
             profile_observation_iris=profile_observation_iris,
-            map_dataset_recorded=dataset_profile.map_dataset is not None,
+            map_dataset_recorded=map_dataset_recorded,
             map_column_iris=[
                 column_profile.column_iri
                 for column_profile in column_profiles
@@ -15865,7 +15899,7 @@ class DoxaBase:
                         "Each staged patch must target exactly one concrete graph role"
                     )
                 target_graph = graph_names[0]
-                self._ensure_mutable(target_graph)
+                self._ensure_staged_patch_target_graph(target_graph)
                 patch_format = str(spec.get("format") or "turtle").strip()
                 content = str(spec.get("content") or spec.get("turtle") or "").strip()
                 if not content:
@@ -15970,8 +16004,28 @@ class DoxaBase:
                 f"Staged patch '{patch.iri}' must target exactly one concrete "
                 f"graph role, not '{target_graph}'"
             )
-        self._ensure_mutable(target_graph)
+        self._ensure_staged_patch_target_graph(target_graph, patch_iri=patch.iri)
         return target_graph
+
+    def _ensure_staged_patch_target_graph(
+        self,
+        target_graph: str,
+        *,
+        patch_iri: str | None = None,
+    ) -> None:
+        self._ensure_mutable(target_graph)
+        if target_graph == "history":
+            prefix = (
+                f"Staged patch '{patch_iri}'"
+                if patch_iri is not None
+                else "stage_graph_revision"
+            )
+            raise DoxaBaseError(
+                f"{prefix} cannot target 'history' because staged revision "
+                "metadata is itself recorded in history; use record_graph_revision "
+                "for durable history notes or stage the project graph change the "
+                "history note describes."
+            )
 
     def _required_staged_patch_field(
         self,

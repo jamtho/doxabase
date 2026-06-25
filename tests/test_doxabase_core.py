@@ -3908,6 +3908,33 @@ def test_stage_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> 
         )
 
 
+def test_stage_graph_revision_rejects_history_target_without_metadata_write(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_history_count = db.triple_count("history")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="cannot target 'history'.*record_graph_revision",
+    ):
+        db.stage_graph_revision(
+            summary="Invalid staged history patch",
+            rationale="Staged patch metadata is itself written to history.",
+            additions=[
+                {
+                    "graph": "history",
+                    "content": (
+                        "@prefix ex: <https://example.test/> . "
+                        "ex:review ex:note \"Manual review note\" ."
+                    ),
+                }
+            ],
+        )
+
+    assert db.triple_count("history") == before_history_count
+
+
 def test_stage_systematisation_preserves_alternative_rdf_framings(
     tmp_path: Path,
 ) -> None:
@@ -5541,6 +5568,18 @@ def test_describe_query_context_warns_on_unresolved_s3_access(
     assert any(
         reason.code == "s3_access_resolution_unrecorded"
         for reason in target.review_reasons
+    )
+    plan = db.draft_query_plan(dataset)
+    assert plan.review_gate.executable_without_review is False
+    assert plan.review_gate.blocking_reason_codes == ["s3_access_resolution_unrecorded"]
+    assert plan.storage_environment.bucket_name == "orders"
+    assert plan.storage_environment.key_prefix == "warehouse"
+    assert plan.storage_environment.endpoint_profile is None
+    assert plan.storage_environment.credential_reference is None
+    assert plan.storage_environment.region is None
+    assert plan.storage_environment.runtime_resolution_required is True
+    assert "Record or resolve the S3 endpoint profile" in (
+        plan.storage_environment.runtime_resolution_note
     )
 
 
@@ -9000,6 +9039,68 @@ def test_describe_profile_run_works_for_observation_only_dataset(
     assert profile_run.returned_dataset_profile_count == 1
     assert profile_run.returned_unmapped_column_profile_count == 1
     assert profile_run.returned_profile_count == 2
+
+
+def test_profile_bundle_handoff_distinguishes_existing_map_context_without_snapshot(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#ExistingMapOrders"
+    status_column = "https://example.test/project#ExistingMapOrdersStatus"
+    shared_evidence = "https://example.test/project#ExistingMapOrdersProfileEvidence"
+    db.record_map_dataset(dataset, label="Existing Map Orders", is_table=True)
+
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Existing map Orders profile stayed observation-only.",
+        evidence_summary="Profile pass over existing map shell.",
+        evidence_sources=["test://existing-map-orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        row_count=120,
+        update_map_snapshot=False,
+        profile_metrics=[{"metric": "rc:MeanValue", "value": 4.5}],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Existing map Orders status values were profiled.",
+                "distinct_count": 3,
+                "profile_metrics": [{"metric": "rc:MaximumValue", "value": 9}],
+            }
+        ],
+    )
+
+    assert bundle.dataset_profile.map_dataset is None
+    assert bundle.handoff_entrypoints.map_dataset_recorded is False
+    assert bundle.handoff_entrypoints.dataset_describe_available is True
+    assert bundle.handoff_entrypoints.profile_run_available is True
+    assert bundle.handoff_entrypoints.suggested_next_calls[:2] == [
+        f"describe_dataset('{dataset}')",
+        f"describe_profile_run('{dataset}', '{shared_evidence}')",
+    ]
+    assert "already existed" in bundle.handoff_entrypoints.handoff_note
+    assert "did not write dataset map facts" in bundle.handoff_entrypoints.handoff_note
+    assert "row-count snapshot" in bundle.handoff_entrypoints.handoff_note
+
+    description = db.describe_dataset(dataset)
+    assert description.row_count_snapshot is None
+    assert description.profile_summary.returned_profile_count == 2
+
+    profile_run = db.describe_profile_run(dataset, shared_evidence)
+    assert profile_run.returned_profile_count == 2
+    assert set(profile_run.profile_observation_iris) == set(
+        bundle.handoff_entrypoints.profile_observation_iris
+    )
+
+    context_slice = db.describe_context_slice(
+        bundle.handoff_entrypoints.profile_observation_iris,
+        profile="dataset_brief",
+    )
+    assert {
+        profile.iri for profile in context_slice.seed_profile_observations
+    } == set(bundle.handoff_entrypoints.profile_observation_iris)
+    assert context_slice.route_counts["observed_profile_metric"] == 2
 
 
 def test_describe_profile_run_rejects_invalid_limit(tmp_path: Path) -> None:

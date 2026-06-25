@@ -69,9 +69,12 @@ place. Use generic
 `stage_graph_revision` when the patch is multi-resource, multi-graph, or cannot
 be expressed as one assertion add/remove/replace.
 
-Each patch must target one mutable graph role. The helper parses the RDF, rejects
-empty or malformed payloads, previews additions/removals in memory, runs SHACL
-validation over the preview scope, and records staged metadata in `history`.
+Each patch must target one mutable graph role other than `history`. Staged
+revision metadata is itself recorded in `history`, so a staged patch cannot use
+`history` as its target graph; use `record_graph_revision` for durable history
+notes. The helper parses the RDF, rejects empty or malformed payloads, previews
+additions/removals in memory, runs SHACL validation over the preview scope, and
+records staged metadata in `history`.
 
 The target graph is not changed when a revision is staged. Staged revisions are
 review objects until `doxabase.apply_staged_revision` applies one.
