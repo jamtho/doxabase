@@ -2077,6 +2077,36 @@ grouped Markdown export for `review_revision_iris`; otherwise it is `None` and
 the summary fields are computed in memory. In dry-run mode, `path` still writes
 the requested review export even though no refreshed successor is created.
 
+Mixed batches often contain stale rows, ready rows, validation failures, and
+no-op successors together. Read them in this order:
+
+```python
+batch.restaged_revision_iris
+# Successors created by this batch, not an apply queue. Some may be no-op or
+# validation-failed after replay.
+
+batch.bundle_summary.ready_restage_successor_revision_iris
+# Fresh successors that are ready for review/apply consideration.
+
+batch.bundle_summary.next_action_queue
+# Compact routing buckets such as apply_after_review, restage_after_review,
+# repair_or_replace, inspect_already_applied, and informational.
+
+applied = db.apply_staged_revision(ready_successor)
+applied.post_apply_recheck_revision_iris
+# Sibling staged revisions sharing changed graphs; re-check or regenerate a
+# grouped review before applying any of them.
+```
+
+For example, if a batch creates two successors but only one appears in
+`ready_restage_successor_revision_iris`, review/apply only that ready successor.
+Inspect the other row's `status_after`, `decision_after`,
+`stale_resolution_state_after`, and `blocking_reasons_after`; it may be a no-op
+or validation-failed successor that belongs in an informational or repair queue.
+After any apply, discard stale bundle readiness and feed
+`post_apply_recheck_revision_iris` into a fresh check, grouped export, or batch
+restage pass.
+
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,
 result path, constraint, severity, value, and messages. In API and MCP JSON,

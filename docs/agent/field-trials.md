@@ -575,7 +575,11 @@ few useful gaps:
   inspection, stale successor, and repair queues work together. It also showed
   that stale drift can temporarily mask a staged-time validation failure until
   a refreshed successor is checked, so repair queues should be read after
-  restage as well as before it.
+  restage as well as before it. A mixed batch apply follow-up confirmed
+  `restaged_revision_iris` is only a creation list; use
+  `ready_restage_successor_revision_iris`, then feed
+  `apply_staged_revision().post_apply_recheck_revision_iris` into the next
+  check/export/restage pass.
 - A profile-metric vocabulary trial confirmed project-specific metric IRIs work
   before ontology terms exist, while patterns and claims are the best low-commitment
   place to explain awkward metrics. When the metric meaning should become shared

@@ -157,7 +157,9 @@ describe `current_revision_iri` after the batch decision; use
 `bundle_summary.ready_restage_successor_revision_iris` plus
 `check_staged_revision_apply()` before each apply. After any successful apply,
 discard old grouped readiness and re-check or regenerate the bundle before
-touching remaining candidates. If a skipped
+touching remaining candidates. In a mixed batch, a created successor can be
+no-op or validation-failed; keep those out of the apply path and route by
+`bundle_summary.next_action_queue` plus the item's `*_after` fields. If a skipped
 already-handled row reports
 `stale_resolution_state_after="restaged_successor_stale_unresolved"`, the
 current successor is stale too; inspect or restage `current_revision_iri`.
@@ -545,7 +547,10 @@ is the same list under its older compatibility name. Both are pre-apply
 grouped-review hazard lists. After the actual mutation, prefer the
 `post_apply_recheck_revisions` returned by `apply_staged_revision`, then re-run
 `check_staged_revision_apply` or `export_staged_revisions` before acting on
-siblings.
+siblings. In scripts, the practical loop is: batch restage, review
+`ready_restage_successor_revision_iris`, apply at most one ready successor,
+then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the
+next check/export/restage pass.
 Grouped Markdown also includes a `Review Queues` section that mirrors the
 derived next-action buckets plus the compatibility apply/restage, repair,
 applied-inspection, and post-apply recheck buckets from `bundle_summary`.
