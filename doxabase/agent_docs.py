@@ -113,6 +113,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "executable-catalog.md",
     ),
     AgentDoc(
+        id="query_planning",
+        title="Query Planning",
+        description="How to read query-context and draft-plan routing fields.",
+        path=DOCS_DIR / "query-planning.md",
+    ),
+    AgentDoc(
         id="field_trials",
         title="Agent Field Trials",
         description="How to run bounded sub-agent trials and turn friction into product signal.",

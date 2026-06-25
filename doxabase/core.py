@@ -2723,9 +2723,9 @@ class DoxaBase:
                     "include_triples=True) to include arrays."
                 )
         else:
-            note = (
-                "Exact before/after snapshot triples are unavailable because "
-                "one or both revision snapshots lack stored rows."
+            note = self._missing_applied_snapshot_rows_note(
+                before_snapshot=before_snapshot,
+                after_snapshot=after_snapshot,
             )
 
         return AppliedRevisionGraphSnapshotDiff(
@@ -2755,6 +2755,24 @@ class DoxaBase:
             triples_removed=triples_removed,
             note=note,
         )
+
+    @staticmethod
+    def _missing_applied_snapshot_rows_note(
+        *,
+        before_snapshot: GraphSnapshotDescription | None,
+        after_snapshot: GraphSnapshotDescription | None,
+    ) -> str:
+        note = (
+            "Exact before/after snapshot triples are unavailable because "
+            "one or both revision snapshots lack stored rows."
+        )
+        if before_snapshot is not None or after_snapshot is not None:
+            note += (
+                " If this capsule was populated from an RDF project/history "
+                "handoff, import the companion JSON bundle with "
+                "import_revision_snapshots(...) after import_trig(...)."
+            )
+        return note
 
     def _applied_staged_revision_source_summary(
         self,
@@ -19535,6 +19553,13 @@ class DoxaBase:
                 raise DoxaBaseError(
                     f"snapshots[{index}].quads[{quad_index}] must be an object"
                 )
+            object_kind = self._snapshot_bundle_quad_kind(
+                raw_quad,
+                "object_kind",
+                allowed={"uri", "bnode", "literal"},
+                index=index,
+                quad_index=quad_index,
+            )
             quads.append(
                 {
                     "subject": self._required_bundle_string(
@@ -19558,21 +19583,13 @@ class DoxaBase:
                         quad_index=quad_index,
                         strip=False,
                     ),
-                    "object": self._required_bundle_string(
+                    "object": self._snapshot_bundle_object_value(
                         raw_quad,
-                        "object",
-                        index=index,
-                        quad_index=quad_index,
-                        allow_empty=True,
-                        strip=False,
-                    ),
-                    "object_kind": self._snapshot_bundle_quad_kind(
-                        raw_quad,
-                        "object_kind",
-                        allowed={"uri", "bnode", "literal"},
+                        object_kind=object_kind,
                         index=index,
                         quad_index=quad_index,
                     ),
+                    "object_kind": object_kind,
                     "datatype": self._optional_bundle_string(
                         raw_quad,
                         "datatype",
@@ -19640,6 +19657,29 @@ class DoxaBase:
             raise DoxaBaseError(
                 f"snapshots[{index}].quads[{quad_index}].{field_name} "
                 f"must be one of '{allowed_values}'"
+            )
+        return value
+
+    @staticmethod
+    def _snapshot_bundle_object_value(
+        mapping: MappingABC[str, Any],
+        *,
+        object_kind: str,
+        index: int,
+        quad_index: int,
+    ) -> str:
+        value = DoxaBase._required_bundle_string(
+            mapping,
+            "object",
+            index=index,
+            quad_index=quad_index,
+            allow_empty=True,
+            strip=False,
+        )
+        if object_kind != "literal" and not value.strip():
+            raise DoxaBaseError(
+                f"snapshots[{index}].quads[{quad_index}].object must be "
+                f"non-empty when object_kind is '{object_kind}'"
             )
         return value
 

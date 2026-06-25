@@ -160,6 +160,10 @@ In Python, use `DoxaBase.create(path, overwrite=True)` to create or replace a
 scratch capsule, and `DoxaBase(path)` to reopen an existing capsule. There is no
 `DoxaBase.open()` helper in the current API.
 
+MCP doc IDs use underscores, for example `staged_revisions` and
+`query_planning`; their on-disk files usually use hyphens, for example
+`docs/agent/staged-revisions.md` and `docs/agent/query-planning.md`.
+
 Sandboxed sub-agents may not have access to the user's uv cache. Do not rely on
 `uv run` inside a sub-agent trial unless the trial is explicitly testing the
 developer environment. Require a final thread report and, for non-trivial
@@ -174,6 +178,8 @@ trials, a backup report under `/tmp`.
 - `map_authoring`, `staged_revisions`, and `revisions`: how useful lore becomes
   durable structure or reviewable graph changes.
 - `context_slicing` and `lexical_search`: retrieval and handoff routes.
+- `executable_catalog` and `query_planning`: physical metadata and draft query
+  handoff routing.
 - `field_trials`: how to test DoxaBase with sub-agents and turn friction into
   product signal.
 - `response_shapes`, `api_reference`, and `mcp_tools`: exact Python and MCP

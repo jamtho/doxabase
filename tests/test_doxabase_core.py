@@ -1878,6 +1878,9 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         imported_diff_before_snapshots.graph_diffs[0].exact_changed_triples_available
         is False
     )
+    assert "import_revision_snapshots" in (
+        imported_diff_before_snapshots.graph_diffs[0].note
+    )
 
     snapshot_import = round_trip.import_revision_snapshots(snapshot_path)
     assert snapshot_import.imported_snapshot_count == 2
@@ -1978,55 +1981,104 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
 def test_import_revision_snapshots_validates_bundle_before_writing(
     tmp_path: Path,
 ) -> None:
-    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    valid_db = DoxaBase.create(tmp_path / "valid.sqlite")
     valid_revision = "https://example.test/revision#valid"
     invalid_revision = "https://example.test/revision#invalid"
-    payload = {
-        "format": "doxabase.revision_snapshot_bundle.v1",
-        "snapshots": [
+    valid_snapshot = {
+        "revision_iri": valid_revision,
+        "graph_role": "map",
+        "stored_at": "2026-06-25T00:00:00+00:00",
+        "triple_count": 1,
+        "content_digest": "sha256:valid",
+        "quads": [
             {
-                "revision_iri": valid_revision,
-                "graph_role": "map",
-                "stored_at": "2026-06-25T00:00:00+00:00",
-                "triple_count": 1,
-                "content_digest": "sha256:valid",
-                "quads": [
-                    {
-                        "subject": "https://example.test/project#Thing",
-                        "subject_kind": "uri",
-                        "predicate": "https://example.test/project#note",
-                        "object": "",
-                        "object_kind": "literal",
-                        "datatype": str(XSD.string),
-                        "lang": None,
-                    }
-                ],
-            },
-            {
-                "revision_iri": invalid_revision,
-                "graph_role": "map",
-                "stored_at": "2026-06-25T00:00:00+00:00",
-                "triple_count": 1,
-                "content_digest": "sha256:invalid",
-                "quads": [
-                    {
-                        "subject": "https://example.test/project#Thing",
-                        "subject_kind": "uri",
-                        "predicate": "https://example.test/project#note",
-                        "object": "not a storage kind",
-                        "object_kind": "resource",
-                        "datatype": None,
-                        "lang": None,
-                    }
-                ],
-            },
+                "subject": "https://example.test/project#Thing",
+                "subject_kind": "uri",
+                "predicate": "https://example.test/project#note",
+                "object": "",
+                "object_kind": "literal",
+                "datatype": str(XSD.string),
+                "lang": None,
+            }
         ],
     }
 
-    with pytest.raises(DoxaBaseError, match="object_kind must be one of"):
-        db.import_revision_snapshots(json.dumps(payload))
+    imported = valid_db.import_revision_snapshots(
+        json.dumps(
+            {
+                "format": "doxabase.revision_snapshot_bundle.v1",
+                "snapshots": [valid_snapshot],
+            }
+        )
+    )
+    assert imported.imported_snapshot_count == 1
+    assert valid_db._graph_snapshot_storage_rows(valid_revision, "map")[0][3] == ""
 
-    assert not db._graph_snapshot_storage_exists(valid_revision, "map")
+    invalid_kind_db = DoxaBase.create(tmp_path / "invalid-kind.sqlite")
+    with pytest.raises(DoxaBaseError, match="object_kind must be one of"):
+        invalid_kind_db.import_revision_snapshots(
+            json.dumps(
+                {
+                    "format": "doxabase.revision_snapshot_bundle.v1",
+                    "snapshots": [
+                        valid_snapshot,
+                        {
+                            "revision_iri": invalid_revision,
+                            "graph_role": "map",
+                            "stored_at": "2026-06-25T00:00:00+00:00",
+                            "triple_count": 1,
+                            "content_digest": "sha256:invalid",
+                            "quads": [
+                                {
+                                    "subject": "https://example.test/project#Thing",
+                                    "subject_kind": "uri",
+                                    "predicate": "https://example.test/project#note",
+                                    "object": "not a storage kind",
+                                    "object_kind": "resource",
+                                    "datatype": None,
+                                    "lang": None,
+                                }
+                            ],
+                        },
+                    ],
+                }
+            )
+        )
+
+    assert not invalid_kind_db._graph_snapshot_storage_exists(valid_revision, "map")
+
+    empty_uri_db = DoxaBase.create(tmp_path / "empty-uri.sqlite")
+    with pytest.raises(DoxaBaseError, match="object must be non-empty"):
+        empty_uri_db.import_revision_snapshots(
+            json.dumps(
+                {
+                    "format": "doxabase.revision_snapshot_bundle.v1",
+                    "snapshots": [
+                        valid_snapshot,
+                        {
+                            "revision_iri": invalid_revision,
+                            "graph_role": "map",
+                            "stored_at": "2026-06-25T00:00:00+00:00",
+                            "triple_count": 1,
+                            "content_digest": "sha256:invalid",
+                            "quads": [
+                                {
+                                    "subject": "https://example.test/project#Thing",
+                                    "subject_kind": "uri",
+                                    "predicate": "https://example.test/project#link",
+                                    "object": "",
+                                    "object_kind": "uri",
+                                    "datatype": None,
+                                    "lang": None,
+                                }
+                            ],
+                        },
+                    ],
+                }
+            )
+        )
+
+    assert not empty_uri_db._graph_snapshot_storage_exists(valid_revision, "map")
 
 
 def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:

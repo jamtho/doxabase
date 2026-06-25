@@ -689,6 +689,14 @@ few useful gaps:
   trial added `export_revision_snapshots` / `import_revision_snapshots` as the
   opt-in JSON companion for exact applied-diff or stale-drift triple
   reconstruction after RDF import.
+- A four-agent loop after snapshot-bundle publication confirmed the main
+  multi-graph handoff path, stale drift/restage/apply queues, query-planning
+  readiness split, and awkward profile/systematisation flow. The snapshot trial
+  exposed that empty object strings should only be valid for literal snapshot
+  rows, which import validation now enforces. The stale-drift trial reinforced
+  `next_action_queue` as the fast routing surface, and the query-planning trial
+  added a `query_planning` doc because fresh agents looked for one before
+  discovering the executable-catalog details.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

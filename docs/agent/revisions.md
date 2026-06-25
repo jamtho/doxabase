@@ -88,6 +88,11 @@ preserve before/after exports when no snapshot bundle is available.
 Snapshot bundles can contain historical triples that are no longer present in
 current graphs, so treat them as review artifacts with the same care as graph
 exports.
+Snapshot export filters are inclusive and quiet: if a requested revision IRI has
+no stored rows, the export can still be a valid empty bundle. The returned
+`revision_iris` and `graph_roles` list what was actually exported, in storage
+order rather than caller input order. A zero-quad snapshot row can still be
+meaningful, for example the empty before-state of an applied staged revision.
 
 ## Revision List Triage
 
@@ -161,6 +166,19 @@ for item in queue.revisions:
     )
 ```
 
+For fast routing, prefer the queue fields in this order:
+
+1. Use `next_action_queue` on `list_graph_revisions()` or
+   `export_staged_revisions().bundle_summary` to group work by current action
+   class.
+2. Use each row's `next_action.queue`, `next_action.action_label`, and
+   `next_action.arguments` for row-level routing.
+3. Use `suggested_next_actions` when you need concrete follow-up calls and
+   arguments.
+4. Use `application_status`, `application_blocking_reasons`,
+   `stale_resolution_state`, and `not_current_staged_work_reason` to explain
+   why the row landed in that queue.
+
 Treat that as a triage queue, not an apply queue. It can include ready mutation
 candidates, validation-failed repair work, no-op rows, and stale refreshed
 successors. Use `application_status="ready"` when you want only mechanically
@@ -223,6 +241,40 @@ A staged patch can be blocked even when its own triples are still absent from th
 target graph. DoxaBase applies staged revisions conservatively: unrelated count
 or digest drift means the target graph is no longer the same graph state the
 proposal was previewed against, so restage or inspect before applying.
+
+## Stale Drift Cookbook
+
+When a staged proposal reports `target_count_drift` or `target_digest_drift`,
+use a short inspect-restage-apply loop:
+
+```python
+queue = db.list_graph_revisions(
+    current_staged_work_only=True,
+    include_apply_checks=True,
+    drift_detail="summary",
+)
+
+stale = db.list_graph_revisions(
+    stale_resolution_state="stale_unresolved",
+    include_apply_checks=True,
+    drift_detail="exact",
+)
+
+for item in stale.revisions:
+    db.describe_staged_revision(item.iri, include_current_apply_check=True)
+    restaged = db.restage_staged_revision(item.iri)
+    check = db.check_staged_revision_apply(restaged.revision_iri)
+    if check.can_apply:
+        applied = db.apply_staged_revision(restaged.revision_iri)
+        for recheck_iri in applied.post_apply_recheck_revision_iris:
+            db.check_staged_revision_apply(recheck_iri)
+```
+
+After any apply, treat old readiness as stale. Re-list
+`current_staged_work_only=True` or follow
+`post_apply_recheck_revision_iris` before applying another same-graph proposal.
+Use `record_kind="applied_event"` when you are browsing history after the live
+mutation queue is empty.
 
 ## Revision Types
 
