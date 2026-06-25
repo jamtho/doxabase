@@ -615,6 +615,25 @@ few useful gaps:
   columns but only listed columns whose map facts were written by the bundle;
   bundles now also expose `updated_map_column_iris` and
   `mapped_profiled_column_iris`.
+- A validation-repair JSON trial confirmed validation-failed, patch-conflict,
+  and ready staged revisions stay separated in JSON-like apply checks, grouped
+  queues, suggested actions, and dry-run restage classifications. No code change
+  was justified; agents should keep reading compact status/decision/queue fields
+  before long row-level recommendation prose.
+- An assertion-judgement trial confirmed `stage_map_assertion_change` handles
+  physical type, semantic type, row semantics, path template, and caveat
+  add/remove/replace cases with useful judgement panels and impact spotlights.
+  It exposed that remove panels read awkwardly when only legacy
+  `proposed_value` carried the object being removed; judgement panels now also
+  expose `target_value` and `removed_value`, and Markdown exports label remove
+  values as removed.
+- A controlled replacement/import trial confirmed same-count
+  `replace_graph_triples`, revision metadata, default/workflow export
+  boundaries, and revision-seed deep-lore expansion. It reinforced the current
+  RDF-only handoff boundary: graph snapshot summaries survive default import,
+  but SQLite snapshot rows for exact drift do not; preserve source capsules,
+  before/after exports, or exact assertion text when downstream agents need
+  exact manual replacement diffs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

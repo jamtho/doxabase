@@ -503,6 +503,9 @@ scopes, semantic risk level/reasons, value-type context, reasons the current
 value may be intentional, strongest route summaries, impact spotlight entries,
 and safety notes. For physical type changes, `value_type_context` surfaces
 current `rc:valueType` resources and declared `rc:requiredPhysicalType` values.
+`target_value` names the requested object for add, replace, and remove changes;
+`removed_value` is populated for remove changes so reviewers do not have to
+interpret legacy `proposed_value` as the removed value.
 Routes marked `generic_value_only` matched only shared values such as
 `rc:Varchar`; treat them as weak context. Drill into `assertion_support` and
 `describe_staged_revision` when the change needs more thought.
@@ -513,6 +516,9 @@ already present on a multi-valued predicate, treat the replace as mainly a
 removal of the other current values and review their support routes before
 applying. It does not apply the change; use `describe_staged_revision` and
 `check_staged_revision_apply` before application.
+A competing singleton `add`, such as a second `rc:physicalType`, may correctly
+fail validation while a `replace` candidate remains reviewable. Re-run apply
+checks for sibling staged assertions after any successful apply.
 `can_apply=True` means the patch replays and validates mechanically; it does not
 mean the semantic change is wise.
 

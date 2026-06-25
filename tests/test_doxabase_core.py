@@ -1357,6 +1357,29 @@ def test_stage_map_assertion_change_packages_support_context(
     assert comment_check.semantic_risk_level == "high"
     assert comment_check.semantic_risk_reasons
 
+    remove_change = db.stage_map_assertion_change(
+        subject="https://example.test/project#PriceSnapshots",
+        predicate="rc:hasKnownCaveat",
+        object="https://example.test/project#mixed_price_payload_caveat",
+        change_kind="remove",
+        rationale="Check that caveat removals expose an explicit removed value.",
+    )
+    remove_panel = remove_change.judgement_panel
+    assert remove_panel.proposed_value is not None
+    assert remove_panel.proposed_value.label == "Mixed price payload caveat"
+    assert remove_panel.target_value is not None
+    assert remove_panel.target_value.label == "Mixed price payload caveat"
+    assert remove_panel.removed_value is not None
+    assert remove_panel.removed_value.label == "Mixed price payload caveat"
+    remove_export_path = tmp_path / "price-caveat-removal-review.md"
+    db.export_staged_revision(
+        remove_change.staged_revision.revision_iri,
+        remove_export_path,
+    )
+    remove_exported = remove_export_path.read_text()
+    assert "| Removed | Mixed price payload caveat | iri |" in remove_exported
+    assert "| Proposed | Mixed price payload caveat | iri |" not in remove_exported
+
 
 def test_stage_map_assertion_replace_existing_value_warns_about_removals(
     tmp_path: Path,

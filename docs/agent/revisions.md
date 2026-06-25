@@ -81,7 +81,9 @@ Exact staged/apply snapshot rows are SQLite-side review state. RDF
 does not currently round-trip those stored snapshot rows, so exact applied-diff
 or stale-drift triples may be unavailable after reopening an imported RDF
 bundle. Keep the source capsule or explicit before/after exports when exact
-diff reconstruction must survive a handoff.
+diff reconstruction must survive a handoff. For controlled replacements, record
+the exact removed/added assertions in the rationale or preserve before/after
+exports when a downstream agent will only receive an RDF bundle.
 
 ## Revision List Triage
 

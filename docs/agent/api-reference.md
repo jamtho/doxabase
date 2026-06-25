@@ -543,8 +543,15 @@ current/proposed values, semantic risk level/reasons, value-type context, reason
 the current value may be intentional, caveat scopes, strongest related-lore
 routes, impact spotlight entries, and safety notes. For physical type changes,
 the panel includes current `rc:valueType` resources and any declared
-`rc:requiredPhysicalType`. Use it for common assertion changes before reaching
-for generic `stage_graph_revision`.
+`rc:requiredPhysicalType`. `target_value` names the requested object for add,
+replace, and remove changes; `removed_value` is populated for remove changes so
+reviewers do not have to interpret legacy `proposed_value` as the value being
+removed. Use it for common assertion changes before reaching for generic
+`stage_graph_revision`.
+When testing a changed singleton assertion such as `rc:physicalType`, a
+competing `add` may correctly fail validation while an explicit `replace` stays
+reviewable. After applying any staged assertion, re-run apply checks for sibling
+revisions before relying on earlier readiness.
 For `replace`, the generated patch set adds the requested assertion and removes
 current same-subject/predicate values except the requested object. The recorded
 patch sequence shows the exact preview/apply order. If the requested value is

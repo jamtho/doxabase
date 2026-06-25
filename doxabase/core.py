@@ -1700,6 +1700,8 @@ class MapAssertionJudgementPanel:
     assertion_present_before: bool
     current_values: list[MapAssertionJudgementValue]
     proposed_value: MapAssertionJudgementValue | None
+    target_value: MapAssertionJudgementValue | None
+    removed_value: MapAssertionJudgementValue | None
     absence_note: str | None
     semantic_risk_level: str
     semantic_risk_reasons: list[str]
@@ -14540,6 +14542,8 @@ class DoxaBase:
             assertion_present_before=support.assertion_present,
             current_values=current_values,
             proposed_value=proposed_value,
+            target_value=proposed_value,
+            removed_value=proposed_value if change_kind == "remove" else None,
             absence_note=support.absence_note,
             semantic_risk_level=semantic_risk_level,
             semantic_risk_reasons=semantic_risk_reasons,
@@ -17228,7 +17232,17 @@ class DoxaBase:
                 )
         else:
             lines.append("| Current | (none) |  |")
-        if panel.proposed_value is not None:
+        if panel.removed_value is not None:
+            lines.append(
+                "| Removed | "
+                + self._markdown_table_cell(
+                    self._judgement_value_label(panel.removed_value)
+                )
+                + " | "
+                + self._markdown_table_cell(panel.removed_value.value_kind)
+                + " |"
+            )
+        elif panel.proposed_value is not None:
             lines.append(
                 "| Proposed | "
                 + self._markdown_table_cell(

@@ -312,6 +312,8 @@ panel.recommendation
 panel.assertion_present_before
 panel.current_values
 panel.proposed_value
+panel.target_value
+panel.removed_value
 panel.absence_note
 panel.semantic_risk_level
 panel.semantic_risk_reasons
@@ -328,7 +330,10 @@ and proposed values, physical/value-type context, reasons the current value may
 be intentional, caveat scopes, strongest related-lore routes, deterministic
 impact spotlight entries, and safety notes that a reviewer should consider
 before apply. `semantic_risk_level` is `none`, `attention`, or `high`; it is a
-review cue, not a validation failure.
+review cue, not an apply decision or validation failure. `target_value` is the
+requested assertion object for add, replace, and remove changes. `removed_value`
+is populated for remove changes so reviewers do not have to read legacy
+`proposed_value` as the value being removed.
 
 For `replace`, if `panel.assertion_present_before` is true and
 `panel.current_values` includes other values, the meaningful mutation is removal
