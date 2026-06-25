@@ -3946,6 +3946,38 @@ class DoxaBase:
                     depth=depth,
                 )
 
+        def add_column(column_iri: str, source_iri: str | None, depth: int) -> None:
+            add_resource(
+                column_iri,
+                "seed_column" if source_iri is None else "related_column",
+                "seed column" if source_iri is None else "related column",
+                source_iri=source_iri,
+                depth=depth,
+            )
+            owner = self._first_owner_dataset_iri(all_graphs, column_iri)
+            if owner is not None:
+                add_dataset(owner, column_iri, depth + 1)
+            for pattern_iri in self._subjects(
+                all_graphs,
+                "rc:patternTarget",
+                column_iri,
+            ):
+                add_pattern(pattern_iri, column_iri, depth + 1)
+            for pattern_iri in self._subjects(
+                all_graphs,
+                "rc:mapImplication",
+                column_iri,
+            ):
+                add_pattern(pattern_iri, column_iri, depth + 1)
+            for claim_iri in self._subjects(all_graphs, "rc:claimTarget", column_iri):
+                add_claim(claim_iri, column_iri, depth + 1)
+            for observation_iri in self._subjects(
+                all_graphs,
+                "rc:observedColumn",
+                column_iri,
+            ):
+                add_observation(observation_iri, column_iri, depth + 1)
+
         def add_relationship(relationship: RelationshipDescription, depth: int) -> None:
             add_resource(
                 relationship.iri,
@@ -4264,6 +4296,11 @@ class DoxaBase:
                 add_claim(seed, None, 0)
             elif (
                 profile in {"dataset_brief", "deep_lore"}
+                and self.expand_iri("rc:Column") in seed_types
+            ):
+                add_column(seed, None, 0)
+            elif (
+                profile in {"dataset_brief", "deep_lore"}
                 and self.expand_iri("rc:ProfileObservation") in seed_types
             ):
                 add_observation(
@@ -4527,6 +4564,7 @@ class DoxaBase:
         exact = {
             "seed": 0,
             "seed_dataset": 1,
+            "seed_column": 2,
             "linked_pattern": 2,
             "pattern_target": 3,
             "map_implication": 4,
@@ -4535,6 +4573,7 @@ class DoxaBase:
             "dataset_relationship": 7,
             "related_dataset_reason": 8,
             "related_dataset": 9,
+            "related_column": 9,
             "supporting_claim": 10,
             "claim_reconsideration": 11,
             "incoming_claim_reconsideration": 11,
@@ -4639,6 +4678,10 @@ class DoxaBase:
         meanings = {
             "seed": "The resource the caller asked about directly.",
             "seed_dataset": "A seed resource expanded as a dataset or table.",
+            "seed_column": "A seed resource expanded as a mapped column.",
+            "related_column": (
+                "A column reached from a selected column seed or lore route."
+            ),
             "linked_pattern": (
                 "A selected or dataset-linked pattern included for surrounding lore."
             ),

@@ -533,6 +533,20 @@ few useful gaps:
   candidate can remain `orientation_only` because sibling S3 or stale partition
   hints block the overall context; read `query_target_decision.status` and
   `direct_review_required` before concluding the local route itself is bad.
+- A claim-reconsideration slice trial confirmed lifecycle mechanics and pattern
+  routes work, but showed that column-only seeds were too narrow for column
+  lore. `describe_context_slice` now treats mapped `rc:Column` seeds as valid
+  dataset/deep-lore entry points and expands to owning dataset, direct
+  claims/patterns, observations, and reconsiderations.
+- A catalog round-trip trial confirmed executable-catalog map, profile, query
+  context, and draft-plan handoffs survive TriG export/import/reopen. Empty
+  mutable graph roles appear in the export record but not as zero-triple TriG
+  graph blocks; import into a fresh seeded capsule recreates role metadata.
+- A batch restage routing trial confirmed dry-run/real batch, applied
+  inspection, stale successor, and repair queues work together. It also showed
+  that stale drift can temporarily mask a staged-time validation failure until
+  a refreshed successor is checked, so repair queues should be read after
+  restage as well as before it.
 - A profile-metric vocabulary trial confirmed project-specific metric IRIs work
   before ontology terms exist, while patterns and claims are the best low-commitment
   place to explain awkward metrics. When the metric meaning should become shared

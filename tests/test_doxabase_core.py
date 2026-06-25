@@ -7788,6 +7788,78 @@ def test_record_claim_reconsideration_links_claim_lifecycle(
     ]
 
 
+def test_context_slice_column_seed_expands_claim_reconsideration_lore(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/payments#transactions"
+    column = "https://example.test/payments#transactions__merchant_category"
+    db.record_map_dataset(
+        dataset,
+        label="Payments transactions",
+        is_table=True,
+    )
+    db.record_map_column(
+        column,
+        table_iri=dataset,
+        column_name="merchant_category",
+        physical_type="rc:Varchar",
+    )
+    older = db.record_claim_observation(
+        summary="Merchant category looked like a stable domain.",
+        claim_text="merchant_category appeared to be a stable merchant domain.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=[column],
+        evidence_sources=["scratch://merchant-category-profile.json"],
+    )
+    newer = db.record_claim_observation(
+        summary="Merchant category needs acquirer-specific caveats.",
+        claim_text=(
+            "merchant_category is acquirer-normalized and should not be treated "
+            "as a universal closed domain."
+        ),
+        claim_kind="rc:CaveatClaim",
+        claim_targets=[column],
+        evidence_sources=["scratch://merchant-category-review.json"],
+        observation_status="rc:Checked",
+    )
+    db.record_claim_reconsideration(
+        newer_claim=newer.claim_iri,
+        older_claim=older.claim_iri,
+        relation="weakens",
+        rationale="Later review shows the original domain claim was too broad.",
+        evidence_sources=["scratch://merchant-category-reconsideration.json"],
+    )
+    followup = db.record_pattern(
+        summary="Merchant category claims require acquirer caveats.",
+        pattern_text=(
+            "Use the checked caveat claim before reusing the earlier merchant "
+            "category domain hunch."
+        ),
+        rationale="Both claims target the same mapped column.",
+        pattern_targets=[column],
+        supporting_claims=[older.claim_iri, newer.claim_iri],
+    )
+
+    context_slice = db.describe_context_slice([column], profile="deep_lore")
+
+    assert not context_slice.warnings
+    assert context_slice.dataset_contexts[0].iri == dataset
+    assert followup.pattern_iri in [
+        pattern_context.iri for pattern_context in context_slice.pattern_contexts
+    ]
+    assert context_slice.route_counts["seed_column"] == 1
+    assert context_slice.route_counts["related_dataset"] == 1
+    assert context_slice.route_counts["supporting_claim"] >= 2
+    assert context_slice.route_counts["claim_target"] >= 2
+    assert context_slice.route_counts["incoming_claim_reconsideration"] == 1
+    assert context_slice.route_counts["reconsidering_claim"] == 1
+    route_legend = {row.route: row for row in context_slice.route_legend}
+    assert route_legend["seed_column"].meaning == (
+        "A seed resource expanded as a mapped column."
+    )
+
+
 def test_record_pattern_links_observations_claims_evidence_and_targets(
     tmp_path: Path,
 ) -> None:

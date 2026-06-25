@@ -167,6 +167,11 @@ for semantic repair. Inspect `validation_results`, then stage a repaired or
 alternative candidate. For overlapping single-assertion cases, the repair is
 usually a removal+addition patch or a `stage_map_assertion_change` replacement
 that explicitly replaces the now-current assertion.
+If a row was validation-failed at staging time and later becomes stale, the
+first dry-run may route it as count/digest drift because the current graph no
+longer matches the staged snapshot. Restage or inspect the refreshed successor
+before assuming there is no repair work; validation failures can reappear after
+the patch is replayed against the current graph.
 Grouped exports keep handled stale rows in the summary for provenance, but their
 effective `summary_recommendation` redirects to the refreshed successor.
 Structured consumers should follow `active_recommendation_field`, and treat

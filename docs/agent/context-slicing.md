@@ -31,6 +31,12 @@ The `seed_profile_observations` field preserves structured profile summaries
 selected by profile-observation, observed-profile-metric, or metric-kind seeds
 even when those rows are older than the bounded dataset profile lists.
 
+Dataset and deep-lore slices also understand mapped column seeds. A seed
+`rc:Column` expands to its owning dataset plus claims, patterns, observations,
+and reconsiderations that directly target or observe that column. This is the
+preferred route when an agent starts from a column IRI and needs column-specific
+lore without first rediscovering the owning dataset by hand.
+
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference
 between a lore handoff and an opaque RDF neighborhood.

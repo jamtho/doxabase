@@ -49,7 +49,10 @@ db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
 DoxaBase capsule can import it again. The default exports mutable project
 graphs. Use `graphs="workflow"` for `map`, `observations`, `patterns`, and
 `evidence`; use `graphs="all_with_seeds"` only when you explicitly need shipped
-seed graphs in the bundle.
+seed graphs in the bundle. The export record can list empty graph roles, but
+TriG serializes only graph blocks that contain triples. Importing into a fresh
+`DoxaBase.create(...)` capsule recreates the standard role metadata before the
+non-empty graphs are imported.
 
 ## Replace Graph Triples
 
@@ -313,10 +316,12 @@ seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
 dataset/table map context, bounded profile observations/metrics, and linked
 lore, `pattern_brief` starts from pattern support, and `deep_lore` also
 includes directly relevant revision metadata. Dataset/deep-lore slices can also
-start from profile observations, observed profile metric nodes, or metric-kind
-IRIs used by profile metrics. `seed_profile_observations` preserves structured
-profile summaries selected by those profile/metric seeds even when the same row
-is older than the bounded dataset profile list.
+start from mapped column IRIs, profile observations, observed profile metric
+nodes, or metric-kind IRIs used by profile metrics. Column seeds expand to their
+owning dataset plus directly targeting claims, patterns, observations, and
+reconsideration lore. `seed_profile_observations` preserves structured profile
+summaries selected by profile/metric seeds even when the same row is older than
+the bounded dataset profile list.
 Use `resources[].routes`, `route_counts`, `dataset_contexts`, and
 `pattern_contexts` as the reading path before raw `triples`. The response also
 includes `reading_order` and a filtered `route_legend` so cold agents can follow
