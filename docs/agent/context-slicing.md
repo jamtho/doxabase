@@ -35,7 +35,10 @@ Dataset and deep-lore slices also understand mapped column seeds. A seed
 `rc:Column` expands to its owning dataset plus claims, patterns, observations,
 and reconsiderations that directly target or observe that column. This is the
 preferred route when an agent starts from a column IRI and needs column-specific
-lore without first rediscovering the owning dataset by hand.
+lore without first rediscovering the owning dataset by hand. If a column was
+recorded only in a profile observation with `update_map_column=false`, its IRI
+is an observed object rather than a mapped `rc:Column` subject; seed the profile
+observation IRI instead.
 
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference

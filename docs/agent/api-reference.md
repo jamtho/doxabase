@@ -52,7 +52,10 @@ graphs. Use `graphs="workflow"` for `map`, `observations`, `patterns`, and
 seed graphs in the bundle. The export record can list empty graph roles, but
 TriG serializes only graph blocks that contain triples. Importing into a fresh
 `DoxaBase.create(...)` capsule recreates the standard role metadata before the
-non-empty graphs are imported.
+non-empty graphs are imported. Workflow exports intentionally omit project
+`ontology`; use the default project export or an ontology-bearing bundle when
+project-specific metric kinds, value types, classes, or predicates are part of
+the handoff.
 
 ## Replace Graph Triples
 
@@ -87,7 +90,10 @@ right move.
 Use this for controlled graph maintenance or staged-revision field trials. It is
 not a semantic merge/rebase helper; staged proposals that become stale still
 need `check_staged_revision_apply()`, review, and usually
-`restage_staged_revision()`.
+`restage_staged_revision()`. If the exact replacement diff must remain
+mechanically retrievable later, preserve it with before/after exports, a staged
+snapshot/apply-check, or explicit revision rationale/metadata when you record
+the graph revision.
 
 ## Inspect
 
@@ -319,9 +325,12 @@ includes directly relevant revision metadata. Dataset/deep-lore slices can also
 start from mapped column IRIs, profile observations, observed profile metric
 nodes, or metric-kind IRIs used by profile metrics. Column seeds expand to their
 owning dataset plus directly targeting claims, patterns, observations, and
-reconsideration lore. `seed_profile_observations` preserves structured profile
-summaries selected by profile/metric seeds even when the same row is older than
-the bounded dataset profile list.
+reconsideration lore. Profile-only column IRIs recorded with
+`update_map_column=false` are object references rather than mapped column
+subjects; seed their profile observation IRIs when you need that handoff.
+`seed_profile_observations` preserves structured profile summaries selected by
+profile/metric seeds even when the same row is older than the bounded dataset
+profile list.
 Use `resources[].routes`, `route_counts`, `dataset_contexts`, and
 `pattern_contexts` as the reading path before raw `triples`. The response also
 includes `reading_order` and a filtered `route_legend` so cold agents can follow

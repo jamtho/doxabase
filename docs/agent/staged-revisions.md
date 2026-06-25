@@ -560,7 +560,12 @@ For scratch trials or controlled graph maintenance that intentionally needs a
 same-count digest drift, use `replace_graph_triples()` /
 `doxabase.replace_graph_triples` with `expected_count` and the default
 `allow_count_change=false`. That avoids staging and applying a throwaway helper
-revision or exporting, RDFLib-editing, and re-importing the whole graph.
+revision or exporting, RDFLib-editing, and re-importing the whole graph. The
+helper returns the effective added/removed triple counts and graph digests, but
+ordinary history records do not reconstruct exact replacement triples by
+themselves. If exact changed triples matter later, keep before/after exports,
+record the replacement result in revision rationale/metadata, or rely on a
+staged snapshot/apply-check that captured the earlier graph state.
 
 Patch entries record:
 

@@ -555,6 +555,20 @@ few useful gaps:
   that metric-seeded context slices preserve the profile row in
   `seed_profile_observations`, but `dataset_contexts` may stay empty until a map
   dataset shell exists.
+- A profile/catalog workflow-import trial confirmed workflow exports preserve
+  map, profile, shared-evidence, query-context, and draft-plan handoffs after
+  import/reopen. It also confirmed the expected boundary: workflow exports omit
+  `ontology`, so project metric-kind labels/comments/types require the default
+  export or another ontology-bearing bundle.
+- A column-seed MCP parity trial confirmed mapped column seeds work through the
+  wrapper JSON surface. It also showed that profile-only unmapped column IRIs
+  are object references, not seedable subjects; seed the profile observation
+  when `update_map_column=false` was used.
+- A controlled replacement-history trial confirmed `replace_graph_triples`
+  handles same-count drift cleanly and stale staged snapshots surface
+  `target_digest_drift`. Exact changed triples remain mechanically available
+  through staged snapshots/apply checks or explicit before/after exports; plain
+  revision history needs authored rationale/metadata if that exact diff matters.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
