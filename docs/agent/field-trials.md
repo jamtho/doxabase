@@ -533,6 +533,15 @@ few useful gaps:
   candidate can remain `orientation_only` because sibling S3 or stale partition
   hints block the overall context; read `query_target_decision.status` and
   `direct_review_required` before concluding the local route itself is bad.
+- A query storage-metadata matrix trial covered local file/object roots,
+  directory roots, S3 bucket/prefix/template combinations, HTTPS roots, and
+  database-backed table-like storage. It confirmed MCP/Python parity and
+  surfaced three draft-plan handoff gaps: sibling-only storage-template
+  warnings could make `executable_without_review=false` with no blocking code,
+  verified database storage could look executable despite `scan.function=None`,
+  and local/HTTPS plans used an over-broad runtime-resolution note. Draft plans
+  now add review-gate codes for sibling blockers and missing scan functions,
+  and local non-secret paths get a narrower note.
 - A claim-reconsideration slice trial confirmed lifecycle mechanics and pattern
   routes work, but showed that column-only seeds were too narrow for column
   lore. `describe_context_slice` now treats mapped `rc:Column` seeds as valid

@@ -5585,6 +5585,15 @@ class DoxaBase:
         binding_requirements = self._draft_query_plan_binding_requirements(
             selected_candidate
         )
+        scan = self._draft_query_plan_scan(
+            selected_candidate,
+            dataset_verification_status=context.layout_verification_status,
+            dataset_verification_note=context.layout_verification_note,
+            partition_schemes=context.partition_schemes,
+            physical_layouts=context.physical_layouts,
+            storage_accesses=context.storage_accesses,
+            engine=engine_value,
+        )
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
@@ -5601,15 +5610,7 @@ class DoxaBase:
                 selected_candidate_index=decision.candidate_index,
             ),
             selected_candidate=selected_candidate,
-            scan=self._draft_query_plan_scan(
-                selected_candidate,
-                dataset_verification_status=context.layout_verification_status,
-                dataset_verification_note=context.layout_verification_note,
-                partition_schemes=context.partition_schemes,
-                physical_layouts=context.physical_layouts,
-                storage_accesses=context.storage_accesses,
-                engine=engine_value,
-            ),
+            scan=scan,
             required_bindings=[binding.name for binding in binding_requirements],
             binding_requirements=binding_requirements,
             binding_note=(
@@ -5622,7 +5623,11 @@ class DoxaBase:
                 storage_access,
                 engine=engine_value,
             ),
-            review_gate=self._draft_query_plan_review_gate(context, selected_candidate),
+            review_gate=self._draft_query_plan_review_gate(
+                context,
+                selected_candidate,
+                scan=scan,
+            ),
             issues=context.issues,
             analysis_warnings=context.analysis_warnings,
             caveats=context.caveats,
@@ -5674,8 +5679,14 @@ class DoxaBase:
             partition_schemes=partition_schemes,
             storage_accesses=storage_accesses,
         )
+        scan_function = (
+            None
+            if selected_candidate is not None
+            and self._is_database_storage(selected_candidate.storage_protocol)
+            else self._draft_query_plan_scan_function(engine, file_format)
+        )
         return DraftQueryPlanScan(
-            function=self._draft_query_plan_scan_function(engine, file_format),
+            function=scan_function,
             uri_template=(
                 selected_candidate.candidate_path
                 if selected_candidate is not None
@@ -5876,16 +5887,24 @@ class DoxaBase:
             or requires_endpoint_profile
             or unresolved_s3_access
         )
-        runtime_resolution_note = (
-            "Record or resolve the S3 endpoint profile, credential reference, "
-            "region, and object access in the local runtime before running any "
-            "query."
-            if unresolved_s3_access
-            else (
-                "Resolve endpoint profiles, credential references, and object "
-                "access in the local runtime before running any query."
+        if unresolved_s3_access:
+            runtime_resolution_note = (
+                "Record or resolve the S3 endpoint profile, credential reference, "
+                "region, and object access in the local runtime before running any "
+                "query."
             )
-        )
+        elif runtime_resolution_required:
+            runtime_resolution_note = (
+                "Resolve the recorded endpoint profile or credential reference "
+                "in the local runtime, and verify object access before running "
+                "any query."
+            )
+        else:
+            runtime_resolution_note = (
+                "No endpoint or credential profile is recorded or required by "
+                "the graph; still verify local paths or remote object existence "
+                "before running any query."
+            )
         return DraftQueryPlanStorageEnvironment(
             storage_protocol=(
                 selected_candidate.storage_protocol
@@ -5922,22 +5941,30 @@ class DoxaBase:
         self,
         context: QueryPlanningContext,
         selected_candidate: QueryTargetCandidate | None,
+        *,
+        scan: DraftQueryPlanScan,
     ) -> DraftQueryPlanReviewGate:
         decision = context.query_target_decision
+        blocking_reason_codes = self._draft_query_plan_blocking_reason_codes(
+            context,
+            selected_candidate,
+            scan=scan,
+        )
         executable_without_review = (
             context.readiness == "ready_for_query_planning"
             and decision.status == "ready"
             and decision.candidate_path_status == "ready"
             and decision.direct_review_required is False
+            and not blocking_reason_codes
         )
         return DraftQueryPlanReviewGate(
             executable_without_review=executable_without_review,
             status=decision.status,
             direct_review_required=decision.direct_review_required,
             candidate_path_status=decision.candidate_path_status,
-            blocking_reason_codes=decision.reason_codes,
+            blocking_reason_codes=blocking_reason_codes,
             all_issue_codes=self._query_issue_codes(context.issues),
-            reason_codes=decision.reason_codes,
+            reason_codes=blocking_reason_codes,
             review_note=(
                 "This helper drafts a non-executed plan. Review selected "
                 "candidate reasons, physical metadata issues, verification "
@@ -5947,6 +5974,31 @@ class DoxaBase:
             ),
         )
 
+    def _draft_query_plan_blocking_reason_codes(
+        self,
+        context: QueryPlanningContext,
+        selected_candidate: QueryTargetCandidate | None,
+        *,
+        scan: DraftQueryPlanScan,
+    ) -> list[str]:
+        decision = context.query_target_decision
+        codes = list(decision.reason_codes)
+        if not codes and context.readiness != "ready_for_query_planning":
+            issue_codes = self._query_blocking_issue_codes(context.issues)
+            if selected_candidate is None:
+                codes.extend(issue_codes)
+            elif issue_codes and decision.direct_review_required is False:
+                codes.append("query_context_has_other_blockers")
+            else:
+                codes.extend(issue_codes)
+        if (
+            selected_candidate is not None
+            and decision.candidate_path_status == "ready"
+            and scan.function is None
+        ):
+            codes.append("scan_function_not_inferred")
+        return list(dict.fromkeys(codes))
+
     @staticmethod
     def _query_issue_codes(
         issues: Iterable[QueryPlanningIssue],
@@ -5954,6 +6006,21 @@ class DoxaBase:
         codes: list[str] = []
         seen: set[str] = set()
         for issue in issues:
+            if issue.code in seen:
+                continue
+            seen.add(issue.code)
+            codes.append(issue.code)
+        return codes
+
+    @staticmethod
+    def _query_blocking_issue_codes(
+        issues: Iterable[QueryPlanningIssue],
+    ) -> list[str]:
+        codes: list[str] = []
+        seen: set[str] = set()
+        for issue in issues:
+            if issue.severity not in {"error", "warning"}:
+                continue
             if issue.code in seen:
                 continue
             seen.add(issue.code)

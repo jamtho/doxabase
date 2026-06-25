@@ -5918,6 +5918,54 @@ def test_describe_query_context_surfaces_storage_root_only_location(
         in plan.scan.template_lineage
     )
     assert "Template comes from storage_access_location" not in plan.scan.template_lineage
+    assert plan.storage_environment.runtime_resolution_required is False
+    assert "No endpoint or credential profile is recorded or required" in (
+        plan.storage_environment.runtime_resolution_note
+    )
+
+
+def test_draft_query_plan_review_gates_database_backed_table_without_scan_function(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#VerifiedEvents"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#verified_events_database_storage",
+        label="Verified events database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-prod",
+        path_templates=["public.verified_events"],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#verified_events_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Verified events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "ready_for_query_planning"
+    assert context.query_target_decision.status == "ready"
+    assert context.query_target_decision.reason_codes == []
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.scan.function is None
+    assert plan.review_gate.executable_without_review is False
+    assert plan.review_gate.blocking_reason_codes == ["scan_function_not_inferred"]
+    assert plan.review_gate.reason_codes == ["scan_function_not_inferred"]
 
 
 @pytest.mark.parametrize("location_kind", [None, "directory", "prefix", "connection"])
@@ -6143,6 +6191,15 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
         and "repeat recorded key_prefix" in reason.message
         for reason in repeated_prefix.direct_review_reasons
     )
+
+    plan = db.draft_query_plan(dataset)
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template == "fleet/storage-ok/dt={date}.parquet"
+    assert plan.review_gate.executable_without_review is False
+    assert plan.review_gate.blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert plan.review_gate.reason_codes == ["query_context_has_other_blockers"]
 
 
 def test_query_target_candidate_template_warnings_do_not_bleed_to_siblings(

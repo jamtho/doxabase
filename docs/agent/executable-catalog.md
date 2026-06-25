@@ -165,6 +165,7 @@ db.record_map_partition_scheme(
     partition,
     path_template="retail/events/event_date={date}/*.parquet",
     partition_columns=[event_date],
+    granularity="rc:Daily",
     datasets=[table],
     layout_verification_status="rc:CandidateLayout",
     layout_verification_note="Path template came from a handoff note; verify listing.",

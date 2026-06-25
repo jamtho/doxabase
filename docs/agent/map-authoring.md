@@ -49,6 +49,9 @@ descriptive prose. Pass terms such as `rc:EventRow`, `rc:FixedSchema`,
 `rc:Parquet`, or a project IRI for columns, datasets, caveats, storage access,
 and relationship endpoints. Put ordinary explanation in `description`,
 `layout_verification_note`, caveat text, observations, or patterns.
+For partition schemes, `granularity` is SHACL-checked against
+`rc:Daily`, `rc:Hourly`, `rc:Monthly`, and `rc:ByValue`; use a project term
+only after extending the project shapes accordingly.
 
 ## When To Use Map Helpers
 
