@@ -935,9 +935,14 @@ for callers that need a safer handoff than raw `path_templates` plus
 `storage_access_location`), the relevant storage access metadata, a best-effort
 `candidate_path`, a `composition` value such as `template_as_returned`,
 `storage_root_joined`, `storage_root_as_candidate`, `bucket_prefix_joined`,
-`key_prefix_joined`, or `unresolved`, and `review_reasons` copied from physical
-query-planning issues that apply to the candidate. These cards do not resolve
-credentials, endpoint profiles, or executable SQL. `review_reasons` may include
+`key_prefix_joined`, database-specific values such as
+`database_connection_and_relation`, `database_relation`, or
+`database_connection_as_candidate`, or `unresolved`, and `review_reasons` copied
+from physical query-planning issues that apply to the candidate. For
+database-backed storage, `candidate_path` is the relation-like planning target
+rather than a joined connection path; read `relation_identifier` and
+`connection_reference` for the explicit database handoff. These cards do not
+resolve credentials, endpoint profiles, or executable SQL. `review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
 requires review before executable use. `direct_review_reasons` excludes the
 synthetic `query_context_has_other_blockers` warning, so use
@@ -979,6 +984,8 @@ candidate.endpoint_profile
 candidate.bucket_name
 candidate.key_prefix
 candidate.candidate_path
+candidate.relation_identifier
+candidate.connection_reference
 candidate.composition
 candidate.candidate_path_status
 candidate.requires_endpoint_profile
@@ -1051,8 +1058,9 @@ function such as `read_parquet`, a URI/path template for file/object storage,
 file format, compression, and the selected candidate path status. For
 database-backed storage, `scan.uri_template` is intentionally absent;
 `scan.relation_identifier` and `scan.connection_reference` carry the graph's
-relation/connection handoff for review rather than executable SQL. The scan
-card also carries the dataset-level
+relation/connection handoff for review rather than executable SQL and should
+match the selected candidate's database fields. The scan card also carries the
+dataset-level
 `dataset_verification_status` / `dataset_verification_note`, and repeats path
 lineage fields from the selected candidate: `template_source`,
 `template_source_resource`, `template_source_verification_status`,

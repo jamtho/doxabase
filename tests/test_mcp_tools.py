@@ -1737,6 +1737,12 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
 
     result = draft_query_plan_tool(db, iri=dataset)
 
+    assert result["selected_candidate"]["candidate_path"] == "mart.orders"
+    assert result["selected_candidate"]["relation_identifier"] == "mart.orders"
+    assert result["selected_candidate"]["connection_reference"] == "warehouse-prod"
+    assert result["selected_candidate"]["composition"] == (
+        "database_connection_and_relation"
+    )
     assert result["scan"]["function"] is None
     assert result["scan"]["uri_template"] is None
     assert result["scan"]["relation_identifier"] == "mart.orders"

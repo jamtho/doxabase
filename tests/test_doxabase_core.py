@@ -6195,10 +6195,20 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
 
     assert context.readiness == "ready_for_query_planning"
     assert context.query_target_decision.status == "ready"
+    assert context.query_target_decision.candidate_path == "public.verified_events"
     assert context.query_target_decision.reason_codes == []
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == "public.verified_events"
+    assert target.relation_identifier == "public.verified_events"
+    assert target.connection_reference == "analytics-prod"
+    assert target.composition == "database_connection_and_relation"
 
     plan = db.draft_query_plan(dataset)
 
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.candidate_path == "public.verified_events"
+    assert plan.selected_candidate.relation_identifier == "public.verified_events"
+    assert plan.selected_candidate.connection_reference == "analytics-prod"
     assert plan.scan.function is None
     assert plan.scan.uri_template is None
     assert plan.scan.relation_identifier == "public.verified_events"

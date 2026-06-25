@@ -208,7 +208,9 @@ physical metadata and warnings without the full relationship/pattern handoff in
 `candidate_index` points into `query_target_candidates`. Candidate
 `review_required` includes whole-context blockers; `direct_review_required`
 ignores sibling blockers and shows which target candidates have their own
-storage/path/layout problem.
+storage/path/layout problem. For database-backed storage, candidates expose
+`relation_identifier` and `connection_reference`, and `candidate_path` is the
+relation-like planning target rather than a joined connection path.
 
 `doxabase.draft_query_plan`
 
@@ -229,7 +231,8 @@ function for the selected storage/layout shape. Database-backed storage still
 uses this generic review-draft shape today, so expect `scan.function=None` and
 review gating rather than executable SQL; read `scan.relation_identifier` and
 `scan.connection_reference` instead of `scan.uri_template` for the recorded
-database handoff. The `scan` card includes dataset-level
+database handoff. These scan fields mirror the selected candidate's
+database-specific fields. The `scan` card includes dataset-level
 verification notes plus template lineage and source verification fields, so
 surprising shared or inherited path templates stay attached to their source
 resource and warning notes. It does not resolve endpoint profiles, credentials,

@@ -559,8 +559,9 @@ few useful gaps:
   formats in the current review-only workflow. Database-backed storage still
   uses the generic draft-plan shape, but runtime notes now say to verify
   connection, schema, table, or source access rather than object access, and
-  `plan.scan` now exposes database-shaped `relation_identifier` and
-  `connection_reference` fields instead of a file-like `uri_template`.
+  query target candidates plus `plan.scan` now expose database-shaped
+  `relation_identifier` and `connection_reference` fields instead of a
+  file-like joined connection path.
 - A claim-reconsideration slice trial confirmed lifecycle mechanics and pattern
   routes work, but showed that column-only seeds were too narrow for column
   lore. `describe_context_slice` now treats mapped `rc:Column` seeds as valid

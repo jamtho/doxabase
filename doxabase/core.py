@@ -997,6 +997,8 @@ class QueryTargetCandidate:
     bucket_name: str | None
     key_prefix: str | None
     candidate_path: str | None
+    relation_identifier: str | None
+    connection_reference: str | None
     composition: str
     candidate_path_status: str
     requires_endpoint_profile: bool
@@ -5838,12 +5840,12 @@ class DoxaBase:
                 else None
             ),
             relation_identifier=(
-                self._draft_query_plan_relation_identifier(selected_candidate)
+                selected_candidate.relation_identifier
                 if selected_candidate is not None and database_storage
                 else None
             ),
             connection_reference=(
-                selected_candidate.storage_root
+                selected_candidate.connection_reference
                 if selected_candidate is not None and database_storage
                 else None
             ),
@@ -5875,13 +5877,7 @@ class DoxaBase:
                 verification_note=template_note,
             ),
             composition=(
-                self._draft_query_plan_database_composition(selected_candidate)
-                if selected_candidate is not None and database_storage
-                else (
-                    selected_candidate.composition
-                    if selected_candidate is not None
-                    else None
-                )
+                selected_candidate.composition if selected_candidate is not None else None
             ),
             non_executed_note=(
                 "Review-only draft; do not run without resolving runtime "
@@ -5889,25 +5885,6 @@ class DoxaBase:
                 "analysis caveats."
             ),
         )
-
-    @staticmethod
-    def _draft_query_plan_relation_identifier(
-        selected_candidate: QueryTargetCandidate,
-    ) -> str | None:
-        if selected_candidate.template_source == "storage_access_location":
-            return None
-        relation = selected_candidate.template.strip()
-        return relation or selected_candidate.candidate_path
-
-    @staticmethod
-    def _draft_query_plan_database_composition(
-        selected_candidate: QueryTargetCandidate,
-    ) -> str:
-        if selected_candidate.template_source == "storage_access_location":
-            return "database_connection_as_candidate"
-        if selected_candidate.storage_root:
-            return "database_connection_and_relation"
-        return "database_relation"
 
     def _draft_query_plan_template_verification(
         self,
@@ -6281,13 +6258,42 @@ class DoxaBase:
             if key in seen_candidates:
                 return
             seen_candidates.add(key)
+            database_storage = (
+                storage_access is not None
+                and self._is_database_storage(storage_access.storage_protocol)
+            )
+            relation_identifier = (
+                template.strip() or None
+                if database_storage and template_source != "storage_access_location"
+                else None
+            )
+            connection_reference = (
+                storage_access.storage_root
+                if database_storage and storage_access is not None
+                else None
+            )
             if template_source == "storage_access_location":
                 candidate_path = template.strip() or None
-                composition = (
-                    "storage_root_as_candidate"
-                    if candidate_path is not None
-                    else "unresolved"
-                )
+                if database_storage:
+                    composition = (
+                        "database_connection_as_candidate"
+                        if candidate_path is not None
+                        else "unresolved"
+                    )
+                else:
+                    composition = (
+                        "storage_root_as_candidate"
+                        if candidate_path is not None
+                        else "unresolved"
+                    )
+            elif database_storage:
+                candidate_path = relation_identifier
+                if candidate_path is None:
+                    composition = "unresolved"
+                elif connection_reference:
+                    composition = "database_connection_and_relation"
+                else:
+                    composition = "database_relation"
             else:
                 candidate_path, composition = self._query_candidate_path(
                     template,
@@ -6385,6 +6391,8 @@ class DoxaBase:
                         storage_access.key_prefix if storage_access is not None else None
                     ),
                     candidate_path=candidate_path,
+                    relation_identifier=relation_identifier,
+                    connection_reference=connection_reference,
                     composition=composition,
                     candidate_path_status=self._query_candidate_path_status(
                         candidate_path,

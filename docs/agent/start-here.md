@@ -49,7 +49,10 @@ When arriving cold, use this route before reading every reference doc.
    lore attached. Check `nearby_caveat_links.scope` before treating an
    owner-dataset caveat as a direct caveat on one column.
 8. Call `doxabase.describe_query_context` when the task is physical query
-   planning and you need storage/layout/path/caveat readiness.
+   planning and you need storage/layout/path/caveat readiness. For
+   database-backed storage, prefer candidate or draft-plan
+   `relation_identifier` plus `connection_reference` over treating
+   `candidate_path` as a file URI.
 9. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread.
 10. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
