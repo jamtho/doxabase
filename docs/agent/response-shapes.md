@@ -737,6 +737,10 @@ recommendation.predicate
 recommendation.current_value
 recommendation.observed_value
 recommendation.observed_count
+recommendation.sample_size
+recommendation.sample_scope
+recommendation.sample_method
+recommendation.profile_row_count
 recommendation.profile_observation_iri
 recommendation.evidence_iri
 recommendation.basis
@@ -1103,10 +1107,10 @@ selected draft. It is one of `no_query_target`, `metadata_review_required`,
 `execution_attempt_ready`. The field is derived from the selected candidate,
 review gate, runtime-resolution state, scan shape, and binding requirements; it
 is a shortcut for routing, not a replacement for reading the underlying fields.
-`binding_values_required` can appear when
-`review_gate.ready_for_execution_attempt` is true but URI-template placeholders
-still need caller-supplied runtime values. `plan.selected_candidate` is the
-candidate named by
+`binding_values_required` appears when URI-template placeholders still need
+caller-supplied runtime values; in that case
+`review_gate.ready_for_execution_attempt` is false.
+`plan.selected_candidate` is the candidate named by
 `query_target_decision.candidate_index`. `plan.scan` gives a best-effort scan
 function such as `read_parquet`, a URI/path template for file/object storage,
 file format, compression, and the selected candidate path status. For
@@ -1140,7 +1144,8 @@ credential references must be resolved, or when selected S3-compatible access is
 review-gated because endpoint/credential/region metadata is not yet recorded.
 `plan.review_gate` keeps the query-target decision status,
 `blocking_reason_codes`, `all_issue_codes`, the legacy alias `reason_codes`,
-`executable_without_review`, `runtime_resolution_required`, and
+`executable_without_review`, `runtime_resolution_required`,
+`binding_values_required`, and
 `ready_for_execution_attempt`. Treat the plan as review-required whenever
 `executable_without_review` is false. The blocking codes are self-contained for
 plan handoff: they may include decision reasons,
@@ -1156,7 +1161,8 @@ right thing to pass to a database-aware runtime rather than a file scan.
 physical-metadata blocker for the selected candidate. It is not a runtime
 credential/object-existence guarantee.
 `ready_for_execution_attempt` is the stricter handoff boolean: it is true only
-when the review gate is clear and `runtime_resolution_required` is false.
+when the review gate is clear, `runtime_resolution_required` is false, and
+`binding_values_required` is false.
 
 Each caveat in `dataset.caveats` has:
 
@@ -1330,6 +1336,7 @@ item.application_validation_skipped_reason
 item.application_blocking_reasons
 item.application_count_drifts
 item.application_snapshot_drifts
+item.snapshot_evidence
 item.next_action
 item.suggested_next_actions
 item.suggested_next_calls
@@ -1395,6 +1402,9 @@ records, or revision provenance. Use `has_patch_payload` and `patch_count` to
 decide whether `describe_staged_revision` is available. Use
 `list_graph_revisions` to discover reviewable or applied history before calling
 `describe_graph_revision` or `describe_staged_revision` on a specific IRI.
+`item.snapshot_evidence` has the same shape as
+`describe_revision_snapshot_evidence()` and lets list consumers see whether
+exact snapshot rows are available before opening a detail view.
 Stored `validation_conforms` and `validation_result_count` are staged-time
 preview diagnostics. The `application_*` fields are a live apply check against
 the current graph. A row can therefore have stored validation failures while
@@ -1436,6 +1446,7 @@ description.validation_conforms
 description.validation_result_count
 description.validation_results
 description.graph_snapshots
+description.snapshot_evidence
 description.supporting_observations
 description.supporting_claims
 description.supporting_patterns
@@ -1450,6 +1461,27 @@ content, and support-link counts. It is meant for quick history scanning; call
 `describe_staged_revision(description.applies_staged_revision)` for patch
 content, full diagnostics, impacts, or judgement panels.
 The `applied_source` relation fields are also nullable IRI strings.
+
+`description.snapshot_evidence` has the same shape as
+`describe_revision_snapshot_evidence()`:
+
+```python
+snapshot_evidence.revision_iri
+snapshot_evidence.status
+snapshot_evidence.history_revision_found
+snapshot_evidence.rdf_snapshot_graph_roles
+snapshot_evidence.stored_snapshot_graph_roles
+snapshot_evidence.exact_snapshot_graph_roles
+snapshot_evidence.missing_snapshot_row_graph_roles
+snapshot_evidence.orphan_snapshot_row_graph_roles
+snapshot_evidence.note
+```
+
+Status values are `history_missing`, `history_only_count_digest`,
+`history_plus_snapshot_rows`, and `snapshot_rows_without_history`. A
+workflow-only RDF import plus snapshot JSON can produce
+`snapshot_rows_without_history`: snapshot rows exist, but normal revision
+helpers still need the matching RDF history records.
 
 `applied_source` has:
 
@@ -1578,6 +1610,28 @@ added/removed counts but omits changed-triple arrays. Pass
 added/removed array and truncation flags say whether arrays were shortened.
 Use `describe_staged_revision()` when you need original patch payloads,
 validation diagnostics, impacts, or judgement context.
+
+`db.describe_revision_snapshot_evidence(revision_iri)` returns
+`RevisionSnapshotEvidenceStatus`:
+
+```python
+snapshot_evidence.revision_iri
+snapshot_evidence.status
+snapshot_evidence.history_revision_found
+snapshot_evidence.rdf_snapshot_graph_roles
+snapshot_evidence.stored_snapshot_graph_roles
+snapshot_evidence.exact_snapshot_graph_roles
+snapshot_evidence.missing_snapshot_row_graph_roles
+snapshot_evidence.orphan_snapshot_row_graph_roles
+snapshot_evidence.note
+```
+
+Status values are `history_missing`, `history_only_count_digest`,
+`history_plus_snapshot_rows`, and `snapshot_rows_without_history`. Use it after
+RDF and snapshot JSON imports to decide whether exact applied diffs or stale
+drift triples can be reconstructed. Snapshot rows without matching RDF history
+records are orphan review artifacts; import a project/history RDF bundle before
+using normal revision helpers.
 
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
 returns `RevisionSnapshotBundleExportRecord`:

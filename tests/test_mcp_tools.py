@@ -18,6 +18,7 @@ from doxabase.mcp_tools import (
     describe_pattern_tool,
     describe_query_context_tool,
     describe_resource_tool,
+    describe_revision_snapshot_evidence_tool,
     describe_staged_revision_tool,
     draft_profile_map_updates_tool,
     draft_query_plan_tool,
@@ -76,6 +77,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
+    assert "doxabase.describe_revision_snapshot_evidence" in tool_names
     assert "doxabase.describe_applied_revision_diff" in tool_names
     assert "doxabase.list_graph_revisions" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
@@ -843,6 +845,12 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["revisions"][0]["not_current_staged_work_reason"] is None
     assert result["revisions"][0]["has_patch_payload"] is True
     assert result["revisions"][0]["patch_count"] == 1
+    assert result["revisions"][0]["snapshot_evidence"]["status"] == (
+        "history_plus_snapshot_rows"
+    )
+    assert result["revisions"][0]["snapshot_evidence"]["exact_snapshot_graph_roles"] == [
+        "map"
+    ]
     assert result["revisions"][0]["application_status"] == "ready"
     assert result["revisions"][0]["staged_validation_status"] == "conforms"
     assert result["revisions"][0]["application_decision"] == "review_then_apply"
@@ -1208,6 +1216,8 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     description = describe_graph_revision_tool(db, result["applied_revision_iri"])
     assert description["revision_type_label"] == "applied staged revision"
     assert description["applies_staged_revision"] == staged["revision_iri"]
+    assert description["snapshot_evidence"]["status"] == "history_plus_snapshot_rows"
+    assert description["snapshot_evidence"]["exact_snapshot_graph_roles"] == ["map"]
     assert description["applied_source"]["iri"] == staged["revision_iri"]
     assert description["applied_source"]["summary"] == "Stage messages table"
     assert description["applied_source"]["patch_count"] == 1
@@ -1250,6 +1260,11 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
 
     round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
     round_trip.import_trig(project_path)
+    snapshot_status_before_import = describe_revision_snapshot_evidence_tool(
+        round_trip,
+        result["applied_revision_iri"],
+    )
+    assert snapshot_status_before_import["status"] == "history_only_count_digest"
     imported_diff_before_snapshots = describe_applied_revision_diff_tool(
         round_trip,
         result["applied_revision_iri"],
@@ -1267,6 +1282,12 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert snapshot_import["imported_snapshot_count"] == 2
     assert snapshot_import["skipped_snapshot_count"] == 0
+    snapshot_status_after_import = describe_revision_snapshot_evidence_tool(
+        round_trip,
+        result["applied_revision_iri"],
+    )
+    assert snapshot_status_after_import["status"] == "history_plus_snapshot_rows"
+    assert snapshot_status_after_import["exact_snapshot_graph_roles"] == ["map"]
     imported_exact_diff = describe_applied_revision_diff_tool(
         round_trip,
         result["applied_revision_iri"],
@@ -1742,6 +1763,7 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     ]
     assert result["review_gate"]["executable_without_review"] is False
     assert result["review_gate"]["runtime_resolution_required"] is True
+    assert result["review_gate"]["binding_values_required"] is True
     assert result["review_gate"]["ready_for_execution_attempt"] is False
     assert result["review_gate"]["blocking_reason_codes"] == [
         "layout_needs_verification"
@@ -1803,6 +1825,7 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["review_gate"]["blocking_reason_codes"] == [
         "scan_function_not_inferred"
     ]
+    assert result["review_gate"]["binding_values_required"] is False
     assert result["review_gate"]["ready_for_execution_attempt"] is False
     assert result["handoff_kind"] == "database_relation_handoff"
 
@@ -2673,6 +2696,14 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         "iri": table,
         "row_count_snapshot": 10,
     }
+    assert result["recommendations"][0]["sample_size"] == 10
+    assert result["recommendations"][0]["sample_scope"] == (
+        "All rows in the Orders table."
+    )
+    assert result["recommendations"][0]["sample_method"] == (
+        "DuckDB full-table profile."
+    )
+    assert result["recommendations"][0]["profile_row_count"] == 10
     assert result["recommendations"][1]["helper_arguments"]["nullable"] is True
     assert result["metric_advisories"] == []
 

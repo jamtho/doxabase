@@ -73,8 +73,19 @@ rationale, revision type, changed graph roles, included review/export graph
 roles, validation result, export path, graph snapshots with counts and
 `sha256:<hex>` content digests, `applies_staged_revision` for applied events,
 `applied_source` compact source context for applied staged revision events, and
-support links. `applied_source` omits patch content and full diagnostics; call
+support links. `snapshot_evidence` classifies whether RDF history metadata and
+SQLite snapshot rows are both present for exact diff/drift work.
+`applied_source` omits patch content and full diagnostics; call
 `describe_staged_revision` on `applies_staged_revision` when those are needed.
+
+`doxabase.describe_revision_snapshot_evidence`
+
+Classifies revision recovery evidence for one revision IRI without requiring
+the full revision detail to exist. Status values are `history_missing`,
+`history_only_count_digest`, `history_plus_snapshot_rows`, and
+`snapshot_rows_without_history`. Use this after RDF/snapshot imports to detect
+whether exact changed triples are available, only count/digest RDF snapshots
+survived, or snapshot JSON was imported without the matching `history` graph.
 
 `doxabase.list_graph_revisions`
 
@@ -85,7 +96,8 @@ knowing which proposals are ready, stale, or already applied. Apply checks are
 only populated for revisions with graph patch payloads. Rows include
 `record_kind`, `has_patch_payload`, `patch_count`, revision relation links,
 selected apply-check blockers/drift summaries, and review-first suggested next
-actions. Use `record_kind`, `application_status`,
+actions. Rows also include `snapshot_evidence` for the same history/snapshot-row
+classification as revision detail. Use `record_kind`, `application_status`,
 `staged_validation_status`, and `stale_resolution_state` filters to ask
 directly for applied events, ready staged proposals, rows with stored staged-time
 validation failures, unresolved stale sources, or handled stale sources. Rows
@@ -241,13 +253,15 @@ when DoxaBase has not inferred derivation or runtime values. Top-level
 `runtime_resolution_required`, `database_relation_handoff`,
 `binding_values_required`, or `execution_attempt_ready`. `review_gate`
 includes `blocking_reason_codes`, `all_issue_codes`, the legacy `reason_codes`
-alias for blocking reasons, and `ready_for_execution_attempt`. It may add
+alias for blocking reasons, `binding_values_required`, and
+`ready_for_execution_attempt`. It may add
 handoff-only blockers such as `query_context_has_other_blockers` for clean
 selected candidates with bad siblings, or `scan_function_not_inferred` when
 DuckDB has no file-scan function for the selected storage/layout shape.
 `executable_without_review=true` means the selected graph metadata has no
 review blocker; `ready_for_execution_attempt=true` also requires no recorded
-runtime resolution to remain. Database-backed storage still uses this generic
+runtime resolution and no required binding placeholders to remain.
+Database-backed storage still uses this generic
 review-draft shape today, so expect `scan.function=None` and review gating
 rather than executable SQL; read `scan.relation_identifier` and
 `scan.connection_reference` instead of `scan.uri_template` for the recorded

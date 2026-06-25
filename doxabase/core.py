@@ -639,6 +639,19 @@ class GraphSnapshotDescription:
 
 
 @dataclass(frozen=True)
+class RevisionSnapshotEvidenceStatus:
+    revision_iri: str
+    status: str
+    history_revision_found: bool
+    rdf_snapshot_graph_roles: list[str]
+    stored_snapshot_graph_roles: list[str]
+    exact_snapshot_graph_roles: list[str]
+    missing_snapshot_row_graph_roles: list[str]
+    orphan_snapshot_row_graph_roles: list[str]
+    note: str
+
+
+@dataclass(frozen=True)
 class StagedGraphPatchDescription:
     iri: str
     operation: str
@@ -776,6 +789,7 @@ class GraphRevisionDescription:
     validation_result_count: int | None
     validation_results: list[ValidationDiagnostic]
     graph_snapshots: list[GraphSnapshotDescription]
+    snapshot_evidence: RevisionSnapshotEvidenceStatus
     supporting_observations: list[ResourceSummary]
     supporting_claims: list[ResourceSummary]
     supporting_patterns: list[ResourceSummary]
@@ -819,6 +833,7 @@ class GraphRevisionListItem:
     application_blocking_reasons: list[str]
     application_count_drifts: list[StagedGraphCountDrift]
     application_snapshot_drifts: list[StagedGraphSnapshotDrift]
+    snapshot_evidence: RevisionSnapshotEvidenceStatus
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -1136,6 +1151,7 @@ class DraftQueryPlanStorageEnvironment:
 class DraftQueryPlanReviewGate:
     executable_without_review: bool
     runtime_resolution_required: bool
+    binding_values_required: bool
     ready_for_execution_attempt: bool
     status: str
     direct_review_required: bool | None
@@ -1374,6 +1390,10 @@ class ProfileMapUpdateRecommendation:
     current_value: Any
     observed_value: Any
     observed_count: int | None
+    sample_size: int | None
+    sample_scope: str | None
+    sample_method: str | None
+    profile_row_count: int | None
     profile_observation_iri: str
     evidence_iri: str
     basis: str
@@ -2630,6 +2650,10 @@ class DoxaBase:
                 data_graphs,
             ),
             graph_snapshots=snapshots,
+            snapshot_evidence=self._revision_snapshot_evidence_status(
+                revision_iri,
+                data_graphs,
+            ),
             supporting_observations=self._resource_summaries(
                 all_lookup_graphs,
                 self._objects(
@@ -2654,6 +2678,100 @@ class DoxaBase:
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
             ),
+        )
+
+    def describe_revision_snapshot_evidence(
+        self,
+        iri: str,
+        *,
+        graph: str | None = "history",
+    ) -> RevisionSnapshotEvidenceStatus:
+        revision_iri = self.expand_iri(iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        return self._revision_snapshot_evidence_status(revision_iri, data_graphs)
+
+    def _revision_snapshot_evidence_status(
+        self,
+        revision_iri: str,
+        graphs: list[str],
+    ) -> RevisionSnapshotEvidenceStatus:
+        history_revision_found = (
+            self._subject_exists(revision_iri, graphs)
+            and self.expand_iri("rc:GraphRevision")
+            in self._types_from_graphs(graphs, revision_iri)
+        )
+        rdf_snapshot_graph_roles = [
+            snapshot.graph_role
+            for snapshot in self._graph_revision_snapshots(revision_iri, graphs)
+        ]
+        stored_snapshot_graph_roles = self._graph_snapshot_storage_graph_roles(
+            revision_iri
+        )
+        stored_role_set = set(stored_snapshot_graph_roles)
+        rdf_role_set = set(rdf_snapshot_graph_roles)
+        exact_snapshot_graph_roles = [
+            role for role in rdf_snapshot_graph_roles if role in stored_role_set
+        ]
+        missing_snapshot_row_graph_roles = [
+            role for role in rdf_snapshot_graph_roles if role not in stored_role_set
+        ]
+        orphan_snapshot_row_graph_roles = [
+            role for role in stored_snapshot_graph_roles if role not in rdf_role_set
+        ]
+
+        if not history_revision_found:
+            if stored_snapshot_graph_roles:
+                status = "snapshot_rows_without_history"
+                note = (
+                    "SQLite snapshot rows exist for this revision IRI, but the "
+                    "RDF history revision record is missing. Import the project "
+                    "or history RDF bundle before using normal revision helpers; "
+                    "workflow RDF exports do not include history."
+                )
+            else:
+                status = "history_missing"
+                note = (
+                    "No RDF history revision record or SQLite snapshot rows were "
+                    "found for this revision IRI."
+                )
+        elif not stored_snapshot_graph_roles:
+            status = "history_only_count_digest"
+            note = (
+                "RDF history metadata and count/digest graph snapshots are "
+                "present, but SQLite snapshot rows for exact changed-triple "
+                "inspection are absent. Import a companion revision snapshot "
+                "JSON bundle when exact applied diffs or stale drift triples are "
+                "needed."
+            )
+        else:
+            status = "history_plus_snapshot_rows"
+            note = (
+                "RDF history metadata and SQLite snapshot rows are present. "
+                "Exact changed-triple inspection is available for graph roles "
+                "listed in exact_snapshot_graph_roles."
+            )
+            if missing_snapshot_row_graph_roles:
+                note = (
+                    f"{note} Some RDF snapshot graph roles lack stored rows: "
+                    f"{', '.join(missing_snapshot_row_graph_roles)}."
+                )
+            if orphan_snapshot_row_graph_roles:
+                note = (
+                    f"{note} Some stored snapshot rows have no matching RDF "
+                    "snapshot metadata in the selected history graph: "
+                    f"{', '.join(orphan_snapshot_row_graph_roles)}."
+                )
+
+        return RevisionSnapshotEvidenceStatus(
+            revision_iri=revision_iri,
+            status=status,
+            history_revision_found=history_revision_found,
+            rdf_snapshot_graph_roles=rdf_snapshot_graph_roles,
+            stored_snapshot_graph_roles=stored_snapshot_graph_roles,
+            exact_snapshot_graph_roles=exact_snapshot_graph_roles,
+            missing_snapshot_row_graph_roles=missing_snapshot_row_graph_roles,
+            orphan_snapshot_row_graph_roles=orphan_snapshot_row_graph_roles,
+            note=note,
         )
 
     def describe_applied_revision_diff(
@@ -3153,6 +3271,10 @@ class DoxaBase:
                     application_blocking_reasons=application_blocking_reasons,
                     application_count_drifts=application_count_drifts,
                     application_snapshot_drifts=application_snapshot_drifts,
+                    snapshot_evidence=self._revision_snapshot_evidence_status(
+                        revision_iri,
+                        data_graphs,
+                    ),
                     next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=[
@@ -5779,6 +5901,10 @@ class DoxaBase:
                     current_value=current_row_count,
                     observed_value=profile.row_count,
                     observed_count=profile.row_count,
+                    sample_size=profile.sample_size,
+                    sample_scope=profile.sample_scope,
+                    sample_method=profile.sample_method,
+                    profile_row_count=profile.row_count,
                     profile_observation_iri=profile.iri,
                     evidence_iri=evidence_value,
                     basis=basis,
@@ -5792,6 +5918,10 @@ class DoxaBase:
                         "Profile row_count differs from the current map "
                         "row-count snapshot; review before recording the "
                         "profile value as current map context."
+                        if map_dataset_found
+                        else "No current map dataset was found; review the "
+                        "profile scope before recording this intentionally "
+                        "thin dataset shell with a row-count snapshot."
                     ),
                 )
             )
@@ -5823,6 +5953,10 @@ class DoxaBase:
                     current_value=column.nullable,
                     observed_value=observed_nullable,
                     observed_count=profile.null_count,
+                    sample_size=profile.sample_size,
+                    sample_scope=profile.sample_scope,
+                    sample_method=profile.sample_method,
+                    profile_row_count=profile.row_count,
                     profile_observation_iri=profile.iri,
                     evidence_iri=evidence_value,
                     basis=basis,
@@ -5861,6 +5995,10 @@ class DoxaBase:
                     current_value=None,
                     observed_value=column_name,
                     observed_count=profile.row_count,
+                    sample_size=profile.sample_size,
+                    sample_scope=profile.sample_scope,
+                    sample_method=profile.sample_method,
+                    profile_row_count=profile.row_count,
                     profile_observation_iri=profile.iri,
                     evidence_iri=evidence_value,
                     basis=basis,
@@ -5876,6 +6014,11 @@ class DoxaBase:
                         "as a current column. The draft only proposes a column "
                         "shell because profile observations do not carry "
                         "helper-owned physical_type or value_type facts."
+                        if map_dataset_found
+                        else "No current map dataset was found; this draft "
+                        "proposes only a thin column shell under the profiled "
+                        "asset because profile observations do not carry "
+                        "helper-owned table, physical_type, or value_type facts."
                     ),
                 )
             )
@@ -6016,6 +6159,7 @@ class DoxaBase:
             selected_candidate,
             scan=scan,
             storage_environment=storage_environment,
+            binding_requirements=binding_requirements,
         )
         return DraftQueryPlan(
             helper="draft_query_plan",
@@ -6433,6 +6577,7 @@ class DoxaBase:
         *,
         scan: DraftQueryPlanScan,
         storage_environment: DraftQueryPlanStorageEnvironment,
+        binding_requirements: list[DraftQueryPlanBinding],
     ) -> DraftQueryPlanReviewGate:
         decision = context.query_target_decision
         blocking_reason_codes = self._draft_query_plan_blocking_reason_codes(
@@ -6447,14 +6592,19 @@ class DoxaBase:
             and decision.direct_review_required is False
             and not blocking_reason_codes
         )
+        binding_values_required = any(
+            binding.required for binding in binding_requirements
+        )
         return DraftQueryPlanReviewGate(
             executable_without_review=executable_without_review,
             runtime_resolution_required=(
                 storage_environment.runtime_resolution_required
             ),
+            binding_values_required=binding_values_required,
             ready_for_execution_attempt=(
                 executable_without_review
                 and not storage_environment.runtime_resolution_required
+                and not binding_values_required
             ),
             status=decision.status,
             direct_review_required=decision.direct_review_required,
@@ -7996,6 +8146,9 @@ class DoxaBase:
             for value in (profile.sample_method, profile.sample_scope)
             if value
         )
+        sample_markers = ("sample", "sampled", "sampling")
+        if any(marker in text for marker in sample_markers):
+            return "sample"
         full_scan_markers = (
             "full scan",
             "full-table",
@@ -20249,6 +20402,18 @@ class DoxaBase:
             (revision_iri, graph_role),
         ).fetchone()
         return row is not None
+
+    def _graph_snapshot_storage_graph_roles(self, revision_iri: str) -> list[str]:
+        rows = self._conn.execute(
+            """
+            SELECT graph_role
+            FROM graph_snapshot_storage
+            WHERE revision_iri = ?
+            ORDER BY graph_role
+            """,
+            (revision_iri,),
+        ).fetchall()
+        return [row["graph_role"] for row in rows]
 
     def _graph_snapshot_storage_rows(
         self,

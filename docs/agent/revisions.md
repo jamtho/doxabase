@@ -93,6 +93,13 @@ no stored rows, the export can still be a valid empty bundle. The returned
 `revision_iris` and `graph_roles` list what was actually exported, in storage
 order rather than caller input order. A zero-quad snapshot row can still be
 meaningful, for example the empty before-state of an applied staged revision.
+Use `describe_revision_snapshot_evidence(revision_iri)` after imports when the
+revision recovery state is unclear. It classifies `history_missing`,
+`history_only_count_digest`, `history_plus_snapshot_rows`, and
+`snapshot_rows_without_history`. The last state means snapshot JSON was imported
+but the matching RDF history records are absent; this commonly happens after a
+workflow-only RDF handoff, and normal revision helpers still need a project or
+history RDF import.
 
 ## Revision List Triage
 

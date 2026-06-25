@@ -715,6 +715,25 @@ few useful gaps:
   that patch conflicts were wrongly routed to `restage_after_review`; compact
   queues now put `inspect_patch_conflict` and validation failures in
   `repair_or_replace`, while count/digest drift remains `restage_after_review`.
+- A query handoff routing trial confirmed `draft_query_plan.handoff_kind` is a
+  good queue key, but found that `ready_for_execution_attempt` was too easy to
+  over-read when URI-template bindings were still required. The review gate now
+  exposes `binding_values_required`, and execution-attempt readiness is false
+  until required binding placeholders are gone.
+- A profile-to-map draft trial found that explicit sampled wording must beat a
+  `sample_size == row_count` heuristic; otherwise a single sampled partition can
+  look like a high-confidence full scan. Profile map recommendations now carry
+  sample metadata and treat explicit sampled evidence conservatively.
+- A snapshot evidence recovery trial showed that workflow RDF plus snapshot
+  JSON creates an orphan state: SQLite snapshot rows import successfully, but
+  normal revision helpers cannot use them without RDF `history` records.
+  `describe_revision_snapshot_evidence` now classifies history-only,
+  history-plus-rows, missing-history, and rows-without-history cases.
+- A lineage/version-boundary trial confirmed restage/apply chains are
+  recoverable from existing list/detail/diff calls, but resource-centric history
+  remains scattered, especially for unanchored staged patch touches. Consider a
+  future `list_resource_revisions` or lineage helper rather than relying on
+  every agent to parse patch payloads by hand.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -320,9 +320,10 @@ Binding rows identify the placeholder source text and explicitly report when
 DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 `blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`
 as a legacy alias for blocking reasons. It also exposes
-`ready_for_execution_attempt`, which is true only when the graph-metadata review
-gate is clear and no runtime endpoint/credential/object resolution remains
-recorded. It may add handoff-only blockers such as
+`binding_values_required` and `ready_for_execution_attempt`, which is true only
+when the graph-metadata review gate is clear, no runtime endpoint/credential or
+object resolution remains recorded, and no required binding placeholders remain
+in the selected template. It may add handoff-only blockers such as
 `query_context_has_other_blockers` for clean selected candidates with bad
 siblings, or `scan_function_not_inferred` when DuckDB has no file-scan function
 for the selected storage/layout shape. Database-backed storage still uses this
@@ -360,8 +361,11 @@ drift, mapped-column nullability changes, unmapped profiled columns, or
 project-specific metric kinds that need vocabulary review. It returns
 `recommendations` with `helper_name`/`helper_arguments` for accepted map-helper
 updates, `metric_advisories` for project-specific profile metrics, and a
-`review_note`. It does not mutate or stage graph changes, and it skips sampled
-zero-null promotions.
+`review_note`. Recommendation rows carry the source profile observation IRI,
+evidence IRI, `sample_size`, `sample_scope`, `sample_method`, and
+`profile_row_count` so agents can review whether the profile was a full scan,
+sample, or ambiguous run before applying helper arguments. It does not mutate
+or stage graph changes, and it skips sampled zero-null promotions.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
@@ -636,6 +640,16 @@ rationale, changed/included graph roles, graph snapshots with counts and
 diagnostics, export path, `applies_staged_revision` for applied events,
 `applied_source` compact source context for applied staged revision events,
 revision anchors, and supporting observation/claim/pattern/evidence links.
+It also includes `snapshot_evidence`, which classifies whether RDF history
+metadata and SQLite snapshot rows are both present for exact diff/drift work.
+
+`describe_revision_snapshot_evidence(revision_iri)` returns just that snapshot
+handoff status for a revision IRI. Use it after imports when you need to know
+whether the capsule has `history_missing`, `history_only_count_digest`,
+`history_plus_snapshot_rows`, or `snapshot_rows_without_history`. The last case
+usually means a workflow-only RDF bundle was paired with snapshot JSON: the
+snapshot rows imported, but normal revision helpers still need the project or
+history RDF records.
 
 `list_graph_revisions()` returns compact history rows for `rc:GraphRevision`
 resources, newest first. Each row includes summary, revision type/stance,
@@ -645,6 +659,8 @@ presence/count, relation links such as `applied_by`, `applies_staged_revision`,
 `current_restaged_by`, plus `stale_resolution_state` and optional staged
 apply-check status, summary, recommended resolution, validation-skipped reason,
 blockers, drift summaries, and suggested actions when `include_apply_checks=True`.
+Rows also carry `snapshot_evidence` so list consumers can see whether exact
+snapshot rows are present without opening the revision detail first.
 When apply checks are present, each row also carries `next_action`, a compact
 advisory route derived from status, stale/restage state, and the structured
 suggested actions. The response-level `next_action_queue` groups returned rows
@@ -810,6 +826,8 @@ It is a narrow applied-event inspection helper, not general historical graph
 browsing. RDF `export_trig()`/`import_trig()` preserves the graph snapshot
 metadata in `history`, but exact snapshot rows require an
 `export_revision_snapshots()` / `import_revision_snapshots()` JSON bundle.
+Call `describe_revision_snapshot_evidence()` when imported capsules behave
+surprisingly; snapshot JSON alone is not a standalone revision manifest.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted
 staged revision's existing patch payloads, recomputing before/after counts and

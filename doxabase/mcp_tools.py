@@ -98,6 +98,14 @@ def describe_graph_revision_tool(
     return to_dict(db.describe_graph_revision(iri=iri, graph=graph))
 
 
+def describe_revision_snapshot_evidence_tool(
+    db: DoxaBase,
+    iri: str,
+    graph: str | None = "history",
+) -> dict[str, Any]:
+    return to_dict(db.describe_revision_snapshot_evidence(iri=iri, graph=graph))
+
+
 def describe_applied_revision_diff_tool(
     db: DoxaBase,
     iri: str,

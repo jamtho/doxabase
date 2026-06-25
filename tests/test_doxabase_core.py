@@ -1802,6 +1802,8 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
 
     applied = db.describe_graph_revision(result.applied_revision_iri)
     assert applied.revision_type == RC + "AppliedStagedRevision"
+    assert applied.snapshot_evidence.status == "history_plus_snapshot_rows"
+    assert applied.snapshot_evidence.exact_snapshot_graph_roles == ["map"]
     assert applied.revision_type_label == "applied staged revision"
     assert applied.applies_staged_revision == staged.revision_iri
     assert applied.applied_source is not None
@@ -1870,6 +1872,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
 
     round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
     round_trip.import_trig(project_path)
+    imported_status_before_snapshots = round_trip.describe_revision_snapshot_evidence(
+        result.applied_revision_iri
+    )
+    assert imported_status_before_snapshots.status == "history_only_count_digest"
+    assert imported_status_before_snapshots.rdf_snapshot_graph_roles == ["map"]
+    assert imported_status_before_snapshots.stored_snapshot_graph_roles == []
     imported_diff_before_snapshots = round_trip.describe_applied_revision_diff(
         result.applied_revision_iri,
         include_triples=True,
@@ -1886,6 +1894,11 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert snapshot_import.imported_snapshot_count == 2
     assert snapshot_import.skipped_snapshot_count == 0
     assert snapshot_import.imported_quad_count == 3
+    imported_status_after_snapshots = round_trip.describe_revision_snapshot_evidence(
+        result.applied_revision_iri
+    )
+    assert imported_status_after_snapshots.status == "history_plus_snapshot_rows"
+    assert imported_status_after_snapshots.exact_snapshot_graph_roles == ["map"]
     imported_exact_diff = round_trip.describe_applied_revision_diff(
         result.applied_revision_iri,
         include_triples=True,
@@ -1898,6 +1911,28 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     skipped_import = round_trip.import_revision_snapshots(snapshot_path)
     assert skipped_import.imported_snapshot_count == 0
     assert skipped_import.skipped_snapshot_count == 2
+    workflow_path = tmp_path / "workflow.trig"
+    db.export_trig(workflow_path, graphs="workflow")
+    workflow_round_trip = DoxaBase.create(tmp_path / "workflow-round-trip.sqlite")
+    workflow_round_trip.import_trig(workflow_path)
+    workflow_status = workflow_round_trip.describe_revision_snapshot_evidence(
+        result.applied_revision_iri
+    )
+    assert workflow_status.status == "history_missing"
+    assert workflow_status.rdf_snapshot_graph_roles == []
+    assert workflow_status.stored_snapshot_graph_roles == []
+    with pytest.raises(DoxaBaseError, match="was not found in history"):
+        workflow_round_trip.describe_graph_revision(result.applied_revision_iri)
+    workflow_round_trip.import_revision_snapshots(snapshot_path)
+    orphan_status = workflow_round_trip.describe_revision_snapshot_evidence(
+        result.applied_revision_iri
+    )
+    assert orphan_status.status == "snapshot_rows_without_history"
+    assert orphan_status.orphan_snapshot_row_graph_roles == ["map"]
+    with pytest.raises(DoxaBaseError, match="was not found in history"):
+        workflow_round_trip.describe_applied_revision_diff(
+            result.applied_revision_iri
+        )
     assert exact_map_diff.triples_removed == []
     with pytest.raises(DoxaBaseError, match="max_triples must be at least 1"):
         db.describe_applied_revision_diff(
@@ -4000,6 +4035,12 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert staged_listing.revisions[0].revision_type_label == "staged revision"
     assert staged_listing.revisions[0].has_patch_payload is True
     assert staged_listing.revisions[0].patch_count == 1
+    assert staged_listing.revisions[0].snapshot_evidence.status == (
+        "history_plus_snapshot_rows"
+    )
+    assert staged_listing.revisions[0].snapshot_evidence.exact_snapshot_graph_roles == [
+        "map"
+    ]
     assert staged_listing.revisions[0].application_status == "ready"
     assert staged_listing.revisions[0].staged_validation_status == "conforms"
     assert staged_listing.revisions[0].application_can_apply is True
@@ -5548,6 +5589,7 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
         "s3_region=local",
     ]
     assert plan.review_gate.executable_without_review is False
+    assert plan.review_gate.binding_values_required is True
     assert plan.review_gate.status == "candidate_needs_review"
     assert plan.review_gate.blocking_reason_codes == ["layout_needs_verification"]
     assert plan.review_gate.all_issue_codes == [
@@ -5614,6 +5656,9 @@ def test_draft_query_plan_carries_dataset_template_verification(
     assert "dataset Local events" in plan.scan.template_lineage
     assert verification_note in plan.scan.template_lineage
     assert plan.handoff_kind == "binding_values_required"
+    assert plan.review_gate.executable_without_review is True
+    assert plan.review_gate.binding_values_required is True
+    assert plan.review_gate.ready_for_execution_attempt is False
 
 
 def test_draft_query_plan_scan_surfaces_inherited_path_lineage(
@@ -6355,6 +6400,7 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     assert plan.storage_environment.runtime_resolution_required is False
     assert plan.review_gate.executable_without_review is True
     assert plan.review_gate.runtime_resolution_required is False
+    assert plan.review_gate.binding_values_required is False
     assert plan.review_gate.ready_for_execution_attempt is True
     assert plan.handoff_kind == "execution_attempt_ready"
     assert "No endpoint or credential profile is recorded or required" in (
@@ -10140,6 +10186,10 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert row_count.action == "replace_map_value"
     assert row_count.current_value == 10
     assert row_count.observed_value == 12
+    assert row_count.sample_size == 12
+    assert row_count.sample_scope == "All rows in the test Payments table."
+    assert row_count.sample_method == "DuckDB full-table aggregate profile."
+    assert row_count.profile_row_count == 12
     assert row_count.basis == "full_scan"
     assert row_count.confidence == "high"
     assert row_count.helper_name == "record_map_dataset"
@@ -10153,6 +10203,7 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert nullable.current_value is False
     assert nullable.observed_value is True
     assert nullable.observed_count == 2
+    assert nullable.sample_size == 12
     assert nullable.helper_arguments == {
         "iri": status_column,
         "table_iri": dataset,
@@ -10228,6 +10279,64 @@ def test_draft_profile_map_updates_skips_sampled_zero_null_promotion(
     assert draft.recommendations == []
     assert draft.metric_advisories == []
     description = db.describe_dataset(dataset)
+    assert description.columns[0].nullable is True
+
+
+def test_draft_profile_map_updates_treats_explicit_sample_text_as_sample(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    sample_only_column = "https://example.test/project#OrdersSampleOnlyFlag"
+    evidence = "https://example.test/project#OrdersPartitionSampleEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    db.record_map_column(
+        sample_only_column,
+        table_iri=dataset,
+        column_name="sample_only_flag",
+        nullable=True,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled from one sampled partition.",
+        evidence_summary="Synthetic partition sample profile.",
+        evidence_sources=["test://orders-partition-sample-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=40,
+        sample_scope="Sampled partition rows; not the full Orders table.",
+        sample_method="DuckDB sampled partition profile.",
+        row_count=40,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": sample_only_column,
+                "column_name": "sample_only_flag",
+                "summary": "Sample-only flag had zero nulls in the partition sample.",
+                "null_count": 0,
+                "distinct_count": 2,
+            }
+        ],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert [(item.kind, item.basis) for item in draft.recommendations] == [
+        ("dataset_row_count_snapshot", "sample")
+    ]
+    row_count = draft.recommendations[0]
+    assert row_count.confidence == "medium"
+    assert row_count.sample_size == 40
+    assert row_count.profile_row_count == 40
+    assert "sampled partition" in (row_count.sample_method or "").lower()
+    description = db.describe_dataset(dataset)
+    assert description.row_count_snapshot == 100
     assert description.columns[0].nullable is True
 
 

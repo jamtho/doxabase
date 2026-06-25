@@ -28,15 +28,16 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    database-backed storage handoffs; do not treat the candidate path as a file
    URI in that case.
 4. `required_bindings` and `binding_requirements` still need runtime values.
-   `ready_for_execution_attempt=True` does not mean DoxaBase has supplied those
-   values. `handoff_kind="binding_values_required"` makes that case explicit.
+   `review_gate.binding_values_required=True` and
+   `handoff_kind="binding_values_required"` make that case explicit.
 5. `review_gate.executable_without_review` says graph metadata has no recorded
    review blocker for the selected candidate.
 6. `storage_environment.runtime_resolution_required` says endpoint, credential,
    region, or equivalent runtime context still needs resolving.
 7. `review_gate.ready_for_execution_attempt` is the stricter handoff boolean:
-   it is true only when the review gate is clear and runtime resolution is not
-   required.
+   it is true only when the review gate is clear, runtime resolution is not
+   required, and no required binding placeholders remain in the selected
+   template.
    `review_gate.blocking_reason_codes` can add
    `query_context_has_other_blockers` when the selected candidate is clean but
    the broader query context is not.
