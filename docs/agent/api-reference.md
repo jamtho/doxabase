@@ -349,7 +349,10 @@ the built-in base kinds. These scalar metrics are observed profile evidence,
 not constraints, shapes, allowed values, or durable map semantics by themselves.
 DoxaBase rejects unknown `rc:` metric kinds to catch typos; use a full project
 IRI for durable project-specific metric kinds and define it in the project
-ontology once it becomes stable shared vocabulary. A metric item may include `target`
+ontology once it becomes stable shared vocabulary. When checking promoted
+project terms, `list_entities(type="rc:ProfileMetricKind", graph="ontology")`
+includes both `base_ontology` and project ontology results; filter each returned
+entity's `graph` field for project-local vocabulary. A metric item may include `target`
 when the scalar is specifically about a resource narrower than the profile
 observation as a whole. Profile evidence entries include source strings and
 source spans when recorded. `update_map_snapshot`

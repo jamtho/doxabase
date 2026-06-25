@@ -277,7 +277,10 @@ map semantics by themselves. Use `list_entities(type="rc:ProfileMetricKind",
 graph="base_ontology")` to list built-in metric kinds before recording. Use
 full project-specific metric kind IRIs for profiler outputs that do not fit the
 base `rc:` metric kinds; define those terms in the project ontology once they
-become durable vocabulary. DoxaBase rejects unknown `rc:` metric kinds so typos
+become durable vocabulary. `graph="ontology"` is an effective-ontology listing,
+so it includes built-in `base_ontology` results; filter returned entities by
+`graph == "ontology"` when you need project-local metric kinds only. DoxaBase
+rejects unknown `rc:` metric kinds so typos
 such as `rc:MinValue` do not become ad hoc RDF. A metric item may include
 `target` when the scalar is specifically about a resource narrower than the
 profile observation as a whole. Profile evidence entries include source strings

@@ -259,6 +259,15 @@ low-commitment loop is:
    `stage_pattern_promotion` to propose ontology terms such as
    `rc:ProfileMetricKind` labels, comments, units, or calculation notes.
 
+The promotion framing is usually caller-authored Turtle. A conservative
+definition can use `rdfs:comment` for calculation and unit notes until the
+project defines sharper vocabulary. After applying the staged ontology
+revision, remember that `list_entities(type="rc:ProfileMetricKind",
+graph="ontology")` is an effective-ontology lookup: it includes built-in
+`base_ontology` metric kinds as well as project ontology terms. When you need
+project-local metric kinds only, filter the returned entities for
+`graph == "ontology"`.
+
 ```python
 metric = "https://example.test/project#FreshnessLagP95Seconds"
 profile = db.record_dataset_profile(

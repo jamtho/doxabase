@@ -470,6 +470,14 @@ few useful gaps:
   project-specific metric IRIs; agents should use
   `list_entities(type="rc:ProfileMetricKind", graph="base_ontology")` before
   choosing a base kind.
+- A profile-metric promotion/apply trial confirmed that project metric kinds
+  can be recorded as full IRIs, explained with a claim and pattern, promoted
+  through `stage_pattern_promotion`, applied to `ontology`, and retrieved by a
+  metric-seeded context slice. It also showed that
+  `list_entities(type="rc:ProfileMetricKind", graph="ontology")` is an
+  effective-ontology lookup: project-local checks need to filter returned
+  entities by `graph == "ontology"` because built-in `base_ontology` metric
+  kinds are included too.
 - A deeper mini-handoff trial on the Polymarket fixture recorded four claim
   observations plus one synthesis pattern around snapshot/event grain,
   condition-ID versus CLOB-token-ID join lanes, embedded JSON/string payloads,
