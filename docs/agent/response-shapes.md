@@ -234,6 +234,25 @@ compact human label for the action's role in the route. `tool_name` is the local
 helper-style name, and `suggested_next_calls` contains equivalent bare call
 strings for older callers.
 
+`RevisionNextAction` wraps the most relevant suggested action for queue routing:
+
+```python
+next_action.action_type
+next_action.queue
+next_action.action_label
+next_action.tool_name
+next_action.mcp_tool_name
+next_action.arguments
+next_action.reason
+next_action.call
+next_action.source
+```
+
+It is advisory. Use it to choose the first queue (`apply_after_review`,
+`restage_after_review`, `repair_or_replace`, `inspect_already_applied`, or
+`informational`), then inspect the full `suggested_next_actions` when the row
+needs more context.
+
 `related_route_summaries` groups and ranks `related_routes` by related resource.
 Scan these first when the payload has many routes; use raw routes when you need
 the exact link that pulled a resource in. Each summary has:
@@ -1179,6 +1198,10 @@ revision.validation_scope
 revision.validation_conforms
 revision.validation_result_count
 revision.validation_results
+revision.alternative_to
+revision.restaged_from
+revision.restage_reason
+revision.current_restaged_by
 ```
 
 `db.list_graph_revisions(...)` returns `GraphRevisionList`:
@@ -1194,6 +1217,7 @@ revisions.application_status
 revisions.staged_validation_status
 revisions.stale_resolution_state
 revisions.current_staged_work_only
+revisions.next_action_queue
 revisions.include_apply_checks
 revisions.drift_detail
 ```
@@ -1235,6 +1259,7 @@ item.application_validation_skipped_reason
 item.application_blocking_reasons
 item.application_count_drifts
 item.application_snapshot_drifts
+item.next_action
 item.suggested_next_actions
 item.suggested_next_calls
 ```
@@ -1244,7 +1269,10 @@ already been applied and have not been superseded by a refreshed successor. Use
 `current_staged_work_only=True` when a list should show the live mutation-review
 queue instead of handled stale sources or applied history. The filter also
 computes apply checks, so the returned rows include current application status
-and suggested actions.
+and suggested actions. `next_action` is a compact routing hint derived from
+those fields; `next_action_queue` groups the returned rows by queues such as
+`apply_after_review`, `restage_after_review`, `repair_or_replace`,
+`inspect_already_applied`, and `informational`.
 When `is_current_staged_work` is false,
 `not_current_staged_work_reason` explains why. Current reason values include
 `already_applied_source`, `superseded_by_restage`, `applied_event_record`,
@@ -1885,6 +1913,7 @@ item.restaged_from
 item.restaged_by
 item.current_restaged_by
 item.stale_resolution_state
+item.next_action
 item.suggested_next_actions
 item.suggested_next_calls
 ```
@@ -1897,9 +1926,10 @@ for the row's current status, such as validation repair or restage advice.
 `item.apply_recommendation_scope` is `current_apply_check` for active row
 guidance and `prior_source_apply_check_context` when a handled stale source
 keeps its old apply-check guidance for provenance. The Markdown summary table
-uses `item.summary_recommendation`, which prefers authored review
-recommendations, redirects handled stale rows to their current successor, and
-otherwise falls back to `item.apply_recommended_resolution`.
+uses `item.summary_recommendation`, which redirects handled stale rows to their
+current successor, otherwise prefers live `item.apply_recommended_resolution`,
+and only falls back to authored review recommendations when no current
+mechanical guidance is available.
 `item.summary_recommendation_source` names that provenance
 (`review_recommendation`, `stale_resolution_redirect`,
 `apply_recommended_resolution`, or `none`). Structured consumers should follow
@@ -1936,6 +1966,7 @@ bundle.recommended_mutation_review_iris
 bundle.recommended_apply_or_restage_review_iris
 bundle.recommended_repair_review_iris
 bundle.recommended_applied_inspection_iris
+bundle.next_action_queue
 ```
 
 Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
@@ -1964,6 +1995,11 @@ staged revisions that may still need restage, repair, apply, or manual mutation
 decisions. Use `recommended_apply_or_restage_review_iris` for rows that need
 apply/reapply or restage judgement, and `recommended_repair_review_iris` for
 validation-failed or patch-conflict rows that need a repaired proposal.
+`next_action_queue` is the newer compact routing map derived from each row's
+`next_action.queue`, so automation can start from apply-after-review,
+restage-after-review, repair-or-replace, already-applied inspection, and
+informational buckets without joining status, stale state, and recommendation
+fields manually.
 `warnings` calls out bundle-level sequencing hazards, and
 `post_apply_recheck_revision_iris` lists grouped ready/no-op staged revisions
 sharing a changed graph whose old readiness should be discarded after any

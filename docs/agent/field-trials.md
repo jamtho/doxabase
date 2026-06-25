@@ -652,6 +652,14 @@ few useful gaps:
   `staged_validation_status="failed"` for staged-time validation failures, and
   grouped export summaries expose `staged_validation_failed_revision_iris`
   beside the live `validation_failed_revision_iris` queue.
+- A conflict/restage queue trial showed that the revision surfaces had enough
+  raw signal but made agents join status, stale state, recommendations, and
+  suggested actions to choose the next move. Revision lists and grouped exports
+  now expose per-row `next_action` plus `next_action_queue`; grouped Markdown
+  also prefers current mechanical guidance over older authored review prose in
+  the summary recommendation column. A systematisation trial also confirmed that
+  immediate restage returns should carry `restaged_from`, `restage_reason`,
+  `alternative_to`, and `current_restaged_by` for handoffs.
 - An assertion-judgement trial confirmed `stage_map_assertion_change` handles
   physical type, semantic type, row semantics, path template, and caveat
   add/remove/replace cases with useful judgement panels and impact spotlights.

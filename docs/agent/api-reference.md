@@ -605,6 +605,11 @@ presence/count, relation links such as `applied_by`, `applies_staged_revision`,
 `current_restaged_by`, plus `stale_resolution_state` and optional staged
 apply-check status, summary, recommended resolution, validation-skipped reason,
 blockers, drift summaries, and suggested actions when `include_apply_checks=True`.
+When apply checks are present, each row also carries `next_action`, a compact
+advisory route derived from status, stale/restage state, and the structured
+suggested actions. The response-level `next_action_queue` groups returned rows
+into queues such as `apply_after_review`, `restage_after_review`,
+`repair_or_replace`, `inspect_already_applied`, and `informational`.
 Use `record_kind`, `application_status`, `staged_validation_status`, and
 `stale_resolution_state` filters to find rows such as applied events,
 mechanically ready staged proposals, rows with stored staged-time validation
@@ -684,7 +689,10 @@ of the grouped status rows with current apply status, blockers, validation
 state, alternative/restage links, authored review recommendations, live
 `apply_recommended_resolution` guidance, effective `summary_recommendation`
 text matching the grouped Markdown table, recommendation source/scope fields,
-and suggested next actions.
+per-row `next_action`, and suggested next actions. Grouped Markdown and
+`bundle_summary.next_action_queue` expose the same compact next-action buckets
+for routing; the older recommended queues remain for compatibility and broader
+review grouping.
 Stale sources that already have `restaged_by` point suggested actions at the
 current refreshed successor instead of another restage. `current_restaged_by`
 follows deeper restage chains while preserving direct `restaged_by` provenance.
@@ -701,6 +709,9 @@ decisions. Narrower mutation routes split that set into
 and `recommended_repair_review_iris` for validation-failed or patch-conflict
 repair work. `recommended_applied_inspection_iris` covers already applied
 staged revisions that are useful context but not mutation targets.
+`next_action_queue` is the most direct routing surface for autonomous scripts:
+it groups current per-row action hints without requiring callers to join apply
+status, stale state, recommendation source, and suggested action fields by hand.
 `bundle_summary.warnings` calls out sequencing hazards, including grouped
 ready/no-op reviews on the same changed graph that should be re-checked after
 each apply, and `post_apply_recheck_revision_iris` gives scripts the affected
@@ -768,7 +779,10 @@ available, before repeating the original rationale. Use it for count or digest
 drift conflicts; it does not merge semantic conflicts, repair invalid RDF
 proposals, or apply the refreshed revision. It refuses to create a parallel
 successor when the stale source already has `restaged_by` /
-`current_restaged_by`; inspect or restage the current successor instead.
+`current_restaged_by`; inspect or restage the current successor instead. The
+immediate return includes `restaged_from`, `restage_reason`, `alternative_to`,
+and `current_restaged_by` fields so handoffs do not need a separate
+`describe_staged_revision()` call just to record restage provenance.
 
 `restage_staged_revisions()` is the batch recovery helper for larger stale sets.
 It checks each requested staged revision, restages conflicted revisions that do

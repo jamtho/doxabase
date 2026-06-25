@@ -245,6 +245,10 @@ class StagedGraphRevisionRecord:
     validation_conforms: bool
     validation_result_count: int
     validation_results: list[ValidationDiagnostic]
+    alternative_to: str | None = None
+    restaged_from: str | None = None
+    restage_reason: str | None = None
+    current_restaged_by: str | None = None
 
 
 @dataclass(frozen=True)
@@ -506,6 +510,7 @@ class StagedGraphRevisionExportSummary:
     restaged_by: str | None
     current_restaged_by: str | None
     stale_resolution_state: str | None
+    next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
 
@@ -528,6 +533,7 @@ class StagedGraphRevisionBundleSummary:
     recommended_apply_or_restage_review_iris: list[str]
     recommended_repair_review_iris: list[str]
     recommended_applied_inspection_iris: list[str]
+    next_action_queue: dict[str, list[str]]
 
 
 @dataclass(frozen=True)
@@ -787,6 +793,7 @@ class GraphRevisionListItem:
     application_blocking_reasons: list[str]
     application_count_drifts: list[StagedGraphCountDrift]
     application_snapshot_drifts: list[StagedGraphSnapshotDrift]
+    next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
 
@@ -803,6 +810,7 @@ class GraphRevisionList:
     staged_validation_status: str | None
     stale_resolution_state: str | None
     current_staged_work_only: bool
+    next_action_queue: dict[str, list[str]]
     include_apply_checks: bool
     drift_detail: str
 
@@ -1609,6 +1617,19 @@ class SuggestedNextAction:
     arguments: dict[str, Any]
     reason: str
     call: str
+
+
+@dataclass(frozen=True)
+class RevisionNextAction:
+    action_type: str
+    queue: str
+    action_label: str
+    tool_name: str | None
+    mcp_tool_name: str | None
+    arguments: dict[str, Any]
+    reason: str
+    call: str | None
+    source: str
 
 
 @dataclass(frozen=True)
@@ -2967,6 +2988,16 @@ class DoxaBase:
             if current_staged_work_only and not is_current_staged_work:
                 continue
 
+            next_action = self._revision_next_action(
+                revision_iri,
+                apply_status=application_status,
+                apply_decision=application_decision,
+                stale_resolution_state=item_stale_resolution_state,
+                suggested_next_actions=suggested_next_actions,
+                restaged_by=restaged_by,
+                current_restaged_by=current_restaged_by,
+                record_kind=item_record_kind,
+            )
             items.append(
                 GraphRevisionListItem(
                     iri=revision_iri,
@@ -3028,6 +3059,7 @@ class DoxaBase:
                     application_blocking_reasons=application_blocking_reasons,
                     application_count_drifts=application_count_drifts,
                     application_snapshot_drifts=application_snapshot_drifts,
+                    next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=[
                         action.call for action in suggested_next_actions
@@ -3055,6 +3087,9 @@ class DoxaBase:
             staged_validation_status=staged_validation_status_filter,
             stale_resolution_state=stale_resolution_state_filter,
             current_staged_work_only=current_staged_work_only,
+            next_action_queue=self._revision_next_action_queue(
+                (item.iri, item.next_action) for item in sliced_items
+            ),
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
         )
@@ -11432,6 +11467,11 @@ class DoxaBase:
             validation_conforms=validation.conforms,
             validation_result_count=validation.result_count,
             validation_results=validation.results,
+            alternative_to=(
+                self.expand_iri(alternative_to)
+                if alternative_to is not None
+                else None
+            ),
         )
 
     def restage_staged_revision(
@@ -11559,7 +11599,23 @@ class DoxaBase:
             )
         )
         extra_triples = self._insert_graph("history", metadata)
-        return replace(staged, triples=staged.triples + extra_triples)
+        staged_description = self.describe_staged_revision(staged.revision_iri)
+        return replace(
+            staged,
+            triples=staged.triples + extra_triples,
+            alternative_to=(
+                staged_description.alternative_to.iri
+                if staged_description.alternative_to is not None
+                else None
+            ),
+            restaged_from=source.iri,
+            restage_reason=staged_description.restage_reason,
+            current_restaged_by=(
+                staged_description.current_restaged_by.iri
+                if staged_description.current_restaged_by is not None
+                else None
+            ),
+        )
 
     def _restage_source_summary(self, summary: str | None) -> str | None:
         if summary is None:
@@ -13640,6 +13696,158 @@ class DoxaBase:
             )
         return actions
 
+    def _revision_next_action(
+        self,
+        revision_iri: str,
+        *,
+        apply_status: str | None,
+        apply_decision: str | None,
+        stale_resolution_state: str | None,
+        suggested_next_actions: list[SuggestedNextAction],
+        restaged_by: str | None = None,
+        current_restaged_by: str | None = None,
+        record_kind: str | None = None,
+    ) -> RevisionNextAction | None:
+        if apply_status is None and not suggested_next_actions:
+            return None
+
+        def find_action(
+            *,
+            tool_name: str | None = None,
+            action_label: str | None = None,
+        ) -> SuggestedNextAction | None:
+            for action in suggested_next_actions:
+                if tool_name is not None and action.tool_name == tool_name:
+                    return action
+                if action_label is not None and action.action_label == action_label:
+                    return action
+            return suggested_next_actions[0] if suggested_next_actions else None
+
+        action_type = "inspect_staged_revision"
+        queue = "informational"
+        label = "Inspect staged revision"
+        reason = "Inspect staged revision details before taking action."
+        selected_action: SuggestedNextAction | None = None
+
+        if record_kind == "applied_event" or apply_status == "applied_event":
+            action_type = "inspect_applied_event"
+            queue = "inspect_already_applied"
+            label = "Inspect applied event"
+            reason = "Inspect the applied revision event for durable history context."
+            selected_action = SuggestedNextAction(
+                action_label=label,
+                tool_name="describe_graph_revision",
+                mcp_tool_name="doxabase.describe_graph_revision",
+                arguments={"iri": revision_iri},
+                reason=reason,
+                call=self._suggested_call_string(
+                    "describe_graph_revision",
+                    {"iri": revision_iri},
+                ),
+            )
+        elif stale_resolution_state == "stale_handled_by_restage" or (
+            apply_status == "conflict" and (current_restaged_by or restaged_by)
+        ):
+            action_type = "inspect_current_successor"
+            queue = "informational"
+            label = "Inspect current refreshed successor"
+            reason = (
+                "This stale source already has a refreshed successor; inspect "
+                "the current successor instead of restaging this row again."
+            )
+            selected_action = find_action(action_label=label)
+        elif apply_decision == "review_then_apply" or apply_status == "ready":
+            action_type = "apply_after_review"
+            queue = "apply_after_review"
+            label = "Apply after review"
+            reason = (
+                "Review the staged revision and apply only if the proposal is "
+                "still desired."
+            )
+            selected_action = find_action(tool_name="apply_staged_revision")
+        elif (
+            apply_decision == "restage_against_current_graph"
+            or apply_status == "conflict"
+        ):
+            action_type = "restage_after_review"
+            queue = "restage_after_review"
+            label = "Restage after review"
+            reason = (
+                "Review the stale proposal, then restage it against the current "
+                "graph if the patch intent is still desired."
+            )
+            selected_action = find_action(tool_name="restage_staged_revision")
+        elif apply_decision in {
+            "inspect_validation_results",
+            "inspect_patch_conflict",
+        } or apply_status == "validation_failed":
+            action_type = "repair_or_replace"
+            queue = "repair_or_replace"
+            label = "Repair or replace"
+            reason = (
+                "Inspect diagnostics, then stage a repaired or alternative "
+                "candidate instead of applying this row."
+            )
+            selected_action = find_action(tool_name="describe_staged_revision")
+        elif (
+            apply_decision == "inspect_applied_revision"
+            or apply_status == "already_applied"
+        ):
+            action_type = "inspect_already_applied"
+            queue = "inspect_already_applied"
+            label = "Inspect applied event"
+            reason = "Inspect the applied revision event instead of applying again."
+            selected_action = find_action(tool_name="describe_graph_revision")
+        elif (
+            apply_decision == "inspect_no_effective_change"
+            or apply_status == "noop"
+        ):
+            action_type = "inspect_no_effective_change"
+            queue = "informational"
+            label = "Inspect no-op revision"
+            reason = (
+                "Patch replay validates but would not change graph triples; "
+                "inspect before replacing or ignoring it."
+            )
+            selected_action = find_action(tool_name="describe_staged_revision")
+        else:
+            selected_action = find_action(tool_name="describe_staged_revision")
+
+        if selected_action is not None:
+            return RevisionNextAction(
+                action_type=action_type,
+                queue=queue,
+                action_label=selected_action.action_label or label,
+                tool_name=selected_action.tool_name,
+                mcp_tool_name=selected_action.mcp_tool_name,
+                arguments=selected_action.arguments,
+                reason=selected_action.reason or reason,
+                call=selected_action.call,
+                source="suggested_next_actions",
+            )
+        return RevisionNextAction(
+            action_type=action_type,
+            queue=queue,
+            action_label=label,
+            tool_name=None,
+            mcp_tool_name=None,
+            arguments={},
+            reason=reason,
+            call=None,
+            source="derived",
+        )
+
+    @staticmethod
+    def _revision_next_action_queue(
+        rows: Iterable[tuple[str, RevisionNextAction | None]],
+    ) -> dict[str, list[str]]:
+        queues: dict[str, list[str]] = {}
+        for revision_iri, next_action in rows:
+            if next_action is None:
+                continue
+            queues.setdefault(next_action.queue, []).append(revision_iri)
+        return queues
+
     def export_staged_revision(
         self,
         iri: str,
@@ -13778,6 +13986,20 @@ class DoxaBase:
                     apply_recommended_resolution=apply_recommended_resolution,
                 )
             )
+            suggested_next_actions = (
+                apply_check.suggested_next_actions if apply_check is not None else []
+            )
+            next_action = self._revision_next_action(
+                description.iri,
+                apply_status=apply_check.status if apply_check is not None else None,
+                apply_decision=(
+                    apply_check.decision if apply_check is not None else None
+                ),
+                stale_resolution_state=stale_resolution_state,
+                suggested_next_actions=suggested_next_actions,
+                restaged_by=restaged_by,
+                current_restaged_by=current_restaged_by,
+            )
             summaries.append(
                 StagedGraphRevisionExportSummary(
                     revision_iri=description.iri,
@@ -13857,11 +14079,8 @@ class DoxaBase:
                     restaged_by=restaged_by,
                     current_restaged_by=current_restaged_by,
                     stale_resolution_state=stale_resolution_state,
-                    suggested_next_actions=(
-                        apply_check.suggested_next_actions
-                        if apply_check is not None
-                        else []
-                    ),
+                    next_action=next_action,
+                    suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=(
                         apply_check.suggested_next_calls
                         if apply_check is not None
@@ -13998,6 +14217,9 @@ class DoxaBase:
             ),
             recommended_repair_review_iris=recommended_repair_review,
             recommended_applied_inspection_iris=recommended_applied_inspection,
+            next_action_queue=self._revision_next_action_queue(
+                (summary.revision_iri, summary.next_action) for summary in summaries
+            ),
         )
 
     def _staged_revisions_post_apply_recheck_revision_iris(
@@ -17747,18 +17969,18 @@ class DoxaBase:
         current_restaged_by: str | None,
         apply_recommended_resolution: str | None,
     ) -> str:
-        if review_recommendation:
-            return review_recommendation
         if stale_resolution_state == "stale_handled_by_restage":
             successor_iri = current_restaged_by or restaged_by
             if successor_iri is not None:
                 return (
                     "Handled by refreshed successor; follow Review Queues or "
                     f"inspect `{successor_iri}`."
-                )
+            )
             return "Handled by refreshed successor; follow Review Queues."
         if apply_recommended_resolution:
             return apply_recommended_resolution
+        if review_recommendation:
+            return review_recommendation
         return ""
 
     @staticmethod
@@ -17768,12 +17990,12 @@ class DoxaBase:
         stale_resolution_state: str | None,
         apply_recommended_resolution: str | None,
     ) -> str:
-        if review_recommendation:
-            return "review_recommendation"
         if stale_resolution_state == "stale_handled_by_restage":
             return "stale_resolution_redirect"
         if apply_recommended_resolution:
             return "apply_recommended_resolution"
+        if review_recommendation:
+            return "review_recommendation"
         return "none"
 
     @staticmethod
@@ -17792,7 +18014,18 @@ class DoxaBase:
         self,
         bundle_summary: StagedGraphRevisionBundleSummary,
     ) -> list[str]:
+        next_action_labels = [
+            ("Next action - apply after review", "apply_after_review"),
+            ("Next action - restage after review", "restage_after_review"),
+            ("Next action - repair or replace", "repair_or_replace"),
+            ("Next action - inspect already applied", "inspect_already_applied"),
+            ("Next action - informational", "informational"),
+        ]
         queues = [
+            *(
+                (label, bundle_summary.next_action_queue.get(queue, []))
+                for label, queue in next_action_labels
+            ),
             (
                 "Apply/restage review",
                 bundle_summary.recommended_apply_or_restage_review_iris,

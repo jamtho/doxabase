@@ -665,7 +665,10 @@ snapshot drift triples when available. It does not merge semantic conflicts,
 repair SHACL failures, or apply the result; review the new staged revision and
 run `check_staged_revision_apply` again. If the stale source already has a
 `restaged_by` / `current_restaged_by` successor, this helper refuses to create a
-parallel successor; inspect or restage the current successor instead.
+parallel successor; inspect or restage the current successor instead. The
+immediate return includes `restaged_from`, `restage_reason`, `alternative_to`,
+and `current_restaged_by` so the handoff can record provenance without an
+immediate describe call.
 
 `doxabase.restage_staged_revisions`
 
@@ -743,7 +746,7 @@ rows as structured data: current apply status, blockers, validation state,
 alternative/restage links, authored review recommendations, live
 `apply_recommended_resolution` guidance, effective `summary_recommendation`
 text matching the grouped Markdown table, recommendation source/scope fields,
-and suggested next actions. Stale
+per-row `next_action`, and suggested next actions. Stale
 sources that already have `restaged_by` point suggested actions at the refreshed
 current successor instead of another restage. `current_restaged_by` follows
 deeper restage chains while `restaged_by` preserves the direct provenance edge.
@@ -754,7 +757,10 @@ stale sources, ready successors, all validation-failed revisions by current
 apply status, deduped
 `recommended_review_iris`, `recommended_mutation_review_iris`,
 `recommended_apply_or_restage_review_iris`, `recommended_repair_review_iris`,
-and `recommended_applied_inspection_iris`. `bundle_summary.warnings` calls out
+and `recommended_applied_inspection_iris`. Prefer
+`bundle_summary.next_action_queue` when an autonomous script needs the most
+direct apply/restage/repair/inspection routing without joining the older fields
+manually. `bundle_summary.warnings` calls out
 bundle-level sequencing hazards such as ready/no-op reviews sharing a changed
 graph that should be re-checked after each apply;
 `post_apply_recheck_revision_iris` is the machine-readable affected-revision
@@ -767,7 +773,8 @@ Treat
 narrower apply/restage, repair, or applied-inspection fields when routing
 automation.
 Grouped Markdown mirrors those buckets in a `Review Queues` section so human
-reviewers do not have to infer the routing from the summary table alone.
+reviewers do not have to infer the routing from the summary table alone. It also
+mirrors the derived next-action buckets there.
 Bundles with restaged revisions include a `Restage Context` section near the
 top. When a stored alternative target has a restaged successor, grouped
 Markdown includes `Alternative Context` with the current comparison target.

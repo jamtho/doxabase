@@ -525,7 +525,11 @@ payloads also include per-row `stale_resolution_state`, `current_alternative_to`
 `current_restaged_by`, and a `bundle_summary` so recovery scripts can find
 unresolved stale proposals, already-handled stale sources, ready successors,
 validation-failed rows, the current mutation-review set, and already-applied
-inspection set without recomputing those buckets.
+inspection set without recomputing those buckets. Prefer
+`bundle_summary.next_action_queue` when routing autonomous work; it groups rows
+by derived next action (`apply_after_review`, `restage_after_review`,
+`repair_or_replace`, `inspect_already_applied`, and `informational`) without
+requiring the agent to join status, stale state, and recommendation fields.
 Grouped Markdown mirrors the important `current_alternative_to` case in
 `Alternative Context` when a stored alternative target has been restaged.
 Restaging is for count or digest drift conflicts; validation failures still need
@@ -543,8 +547,8 @@ grouped-review hazard lists. After the actual mutation, prefer the
 `check_staged_revision_apply` or `export_staged_revisions` before acting on
 siblings.
 Grouped Markdown also includes a `Review Queues` section that mirrors the
-apply/restage, repair, applied-inspection, and post-apply recheck buckets from
-`bundle_summary`.
+derived next-action buckets plus the compatibility apply/restage, repair,
+applied-inspection, and post-apply recheck buckets from `bundle_summary`.
 When a requested stale source already has a restage chain, batch restage maps it
 to `current_restaged_by` so the review bundle opens the latest known successor.
 The summary also keeps

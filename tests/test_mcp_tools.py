@@ -454,6 +454,11 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
 
     assert restaged["revision_iri"] != staged["revision_iri"]
     assert restaged["patches"][0]["before_triple_count"] == db.triple_count("map")
+    assert restaged["alternative_to"] is None
+    assert restaged["restaged_from"] == staged["revision_iri"]
+    assert "prior status conflict" in restaged["restage_reason"]
+    assert "blockers target_count_drift" in restaged["restage_reason"]
+    assert restaged["current_restaged_by"] is None
     with pytest.raises(DoxaBaseError, match=restaged["revision_iri"]):
         restage_staged_revision_tool(db, iri=staged["revision_iri"])
     stale_description = describe_staged_revision_tool(db, staged["revision_iri"])
@@ -489,6 +494,7 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
                 """,
             }
         ],
+        review_recommendation="Old authored review guidance should not mask live status.",
     )
     second = stage_graph_revision_tool(
         db,
@@ -555,8 +561,18 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
         already_restaged["revision_iri"],
         restaged_second,
     ]
+    assert result["bundle_summary"]["next_action_queue"]["apply_after_review"] == [
+        already_restaged["revision_iri"],
+        restaged_second,
+    ]
+    assert result["bundle_summary"]["next_action_queue"]["informational"] == [
+        first["revision_iri"],
+        second["revision_iri"],
+    ]
     assert result["bundle_summary"]["recommended_repair_review_iris"] == []
     stale_summary = result["revision_summaries"][0]
+    assert stale_summary["next_action"]["action_type"] == "inspect_current_successor"
+    assert stale_summary["next_action"]["queue"] == "informational"
     assert (
         stale_summary["apply_recommendation_scope"]
         == "prior_source_apply_check_context"
@@ -573,6 +589,8 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     export_text = expected_path.read_text(encoding="utf-8")
     assert "## Bundle Warnings" in export_text
     assert "## Review Queues" in export_text
+    assert "- Next action - apply after review: " in export_text
+    assert "- Next action - informational: " in export_text
     assert "- Apply/restage review: " in export_text
     assert "- Post-apply recheck: " in export_text
     assert "## Restage Context" in export_text
@@ -697,6 +715,7 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
                 """,
             }
         ],
+        review_recommendation="Old authored review guidance should not mask live status.",
     )
 
     export = export_staged_revisions_tool(
@@ -724,12 +743,18 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["bundle_summary"]["warnings"] == []
     assert export["bundle_summary"]["validation_failed_revision_iris"] == []
     assert export["bundle_summary"]["recommended_applied_inspection_iris"] == []
+    assert export["bundle_summary"]["next_action_queue"] == {
+        "apply_after_review": [staged["revision_iri"]]
+    }
     assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]
     assert export["revision_summaries"][0]["alternative_to"] is None
     assert export["revision_summaries"][0]["current_alternative_to"] is None
     assert export["revision_summaries"][0]["stale_resolution_state"] == "ready"
     assert export["revision_summaries"][0]["apply_status"] == "ready"
     assert export["revision_summaries"][0]["apply_decision"] == "review_then_apply"
+    assert export["revision_summaries"][0]["review_recommendation"] == (
+        "Old authored review guidance should not mask live status."
+    )
     assert (
         export["revision_summaries"][0]["apply_recommendation_scope"]
         == "current_apply_check"
@@ -737,6 +762,9 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert (
         export["revision_summaries"][0]["summary_recommendation_source"]
         == "apply_recommended_resolution"
+    )
+    assert export["revision_summaries"][0]["summary_recommendation"] != (
+        "Old authored review guidance should not mask live status."
     )
     assert (
         export["revision_summaries"][0]["active_recommendation_field"]
@@ -751,6 +779,15 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["revision_summaries"][0]["suggested_next_actions"][-1][
         "tool_name"
     ] == "apply_staged_revision"
+    assert export["revision_summaries"][0]["next_action"]["action_type"] == (
+        "apply_after_review"
+    )
+    assert export["revision_summaries"][0]["next_action"]["queue"] == (
+        "apply_after_review"
+    )
+    assert export["revision_summaries"][0]["next_action"]["tool_name"] == (
+        "apply_staged_revision"
+    )
     assert expected_path.exists()
     assert expected_path.read_text(encoding="utf-8").startswith("# Relative bundle\n")
 
@@ -791,6 +828,9 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["staged_validation_status"] is None
     assert result["stale_resolution_state"] is None
     assert result["current_staged_work_only"] is False
+    assert result["next_action_queue"] == {
+        "apply_after_review": [staged["revision_iri"]]
+    }
     assert result["revisions"][0]["iri"] == staged["revision_iri"]
     assert result["revisions"][0]["record_kind"] == "staged_patch"
     assert result["revisions"][0]["is_current_staged_work"] is True
@@ -801,6 +841,12 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["revisions"][0]["staged_validation_status"] == "conforms"
     assert result["revisions"][0]["application_decision"] == "review_then_apply"
     assert result["revisions"][0]["application_can_apply"] is True
+    assert result["revisions"][0]["next_action"]["action_type"] == (
+        "apply_after_review"
+    )
+    assert result["revisions"][0]["next_action"]["tool_name"] == (
+        "apply_staged_revision"
+    )
     assert result["revisions"][0]["suggested_next_actions"]
 
     ready_result = list_graph_revisions_tool(

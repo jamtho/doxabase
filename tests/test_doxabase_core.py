@@ -2720,6 +2720,11 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert restaged.revision_iri != staged.revision_iri
     assert restaged.patches[0].before_triple_count == db.triple_count("map")
     assert restaged.patches[0].after_triple_count == db.triple_count("map") + 1
+    assert restaged.alternative_to is None
+    assert restaged.restaged_from == staged.revision_iri
+    assert restaged.restage_reason is not None
+    assert "prior status conflict" in restaged.restage_reason
+    assert restaged.current_restaged_by is None
     restaged_description = db.describe_staged_revision(restaged.revision_iri)
     assert restaged_description.restaged_from is not None
     assert restaged_description.restaged_from.iri == staged.revision_iri
@@ -4366,15 +4371,20 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert export.revision_summaries[1].review_recommendation == "Preferred for now."
     assert (
         export.revision_summaries[1].summary_recommendation
-        == "Preferred for now."
+        == export.revision_summaries[1].apply_recommended_resolution
     )
     assert (
         export.revision_summaries[1].summary_recommendation_source
-        == "review_recommendation"
+        == "apply_recommended_resolution"
     )
     assert (
         export.revision_summaries[1].active_recommendation_field
         == "summary_recommendation"
+    )
+    assert export.revision_summaries[1].next_action is not None
+    assert export.revision_summaries[1].next_action.queue == "apply_after_review"
+    assert export.revision_summaries[1].next_action.tool_name == (
+        "apply_staged_revision"
     )
     assert export.revision_summaries[1].suggested_next_actions[-1].tool_name == (
         "apply_staged_revision"
