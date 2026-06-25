@@ -223,13 +223,16 @@ storage, parsed `required_bindings`, structured `binding_requirements`,
 non-secret storage environment hints, copied issues and analysis warnings,
 caveats, and a `review_gate`. Binding rows preserve the source text and say
 when DoxaBase has not inferred derivation or runtime values. `review_gate`
-includes `blocking_reason_codes`, `all_issue_codes`, and the legacy
-`reason_codes` alias for blocking reasons. It may add handoff-only blockers
-such as `query_context_has_other_blockers` for clean selected candidates with
-bad siblings, or `scan_function_not_inferred` when DuckDB has no file-scan
-function for the selected storage/layout shape. Database-backed storage still
-uses this generic review-draft shape today, so expect `scan.function=None` and
-review gating rather than executable SQL; read `scan.relation_identifier` and
+includes `blocking_reason_codes`, `all_issue_codes`, the legacy `reason_codes`
+alias for blocking reasons, and `ready_for_execution_attempt`. It may add
+handoff-only blockers such as `query_context_has_other_blockers` for clean
+selected candidates with bad siblings, or `scan_function_not_inferred` when
+DuckDB has no file-scan function for the selected storage/layout shape.
+`executable_without_review=true` means the selected graph metadata has no
+review blocker; `ready_for_execution_attempt=true` also requires no recorded
+runtime resolution to remain. Database-backed storage still uses this generic
+review-draft shape today, so expect `scan.function=None` and review gating
+rather than executable SQL; read `scan.relation_identifier` and
 `scan.connection_reference` instead of `scan.uri_template` for the recorded
 database handoff. These scan fields mirror the selected candidate's
 database-specific fields. The `scan` card includes dataset-level

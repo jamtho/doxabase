@@ -532,6 +532,10 @@ inspection set without recomputing those buckets. Prefer
 by derived next action (`apply_after_review`, `restage_after_review`,
 `repair_or_replace`, `inspect_already_applied`, and `informational`) without
 requiring the agent to join status, stale state, and recommendation fields.
+That queue describes current mechanics, not all staged-time semantics. When a
+row has `staged_validation_conforms=False` or a failed
+`staged_validation_status`, preserve that repair signal even if the live apply
+check now reports count or digest drift.
 Grouped Markdown mirrors the important `current_alternative_to` case in
 `Alternative Context` when a stored alternative target has been restaged.
 Restaging is for count or digest drift conflicts; validation failures still need

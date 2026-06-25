@@ -1109,6 +1109,8 @@ class DraftQueryPlanStorageEnvironment:
 @dataclass(frozen=True)
 class DraftQueryPlanReviewGate:
     executable_without_review: bool
+    runtime_resolution_required: bool
+    ready_for_execution_attempt: bool
     status: str
     direct_review_required: bool | None
     candidate_path_status: str | None
@@ -5737,6 +5739,11 @@ class DoxaBase:
             storage_accesses=context.storage_accesses,
             engine=engine_value,
         )
+        storage_environment = self._draft_query_plan_storage_environment(
+            selected_candidate,
+            storage_access,
+            engine=engine_value,
+        )
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
@@ -5761,15 +5768,12 @@ class DoxaBase:
                 "template. DoxaBase does not infer binding types, derivations, "
                 "or execution-time values."
             ),
-            storage_environment=self._draft_query_plan_storage_environment(
-                selected_candidate,
-                storage_access,
-                engine=engine_value,
-            ),
+            storage_environment=storage_environment,
             review_gate=self._draft_query_plan_review_gate(
                 context,
                 selected_candidate,
                 scan=scan,
+                storage_environment=storage_environment,
             ),
             issues=context.issues,
             analysis_warnings=context.analysis_warnings,
@@ -6118,6 +6122,7 @@ class DoxaBase:
         selected_candidate: QueryTargetCandidate | None,
         *,
         scan: DraftQueryPlanScan,
+        storage_environment: DraftQueryPlanStorageEnvironment,
     ) -> DraftQueryPlanReviewGate:
         decision = context.query_target_decision
         blocking_reason_codes = self._draft_query_plan_blocking_reason_codes(
@@ -6134,6 +6139,13 @@ class DoxaBase:
         )
         return DraftQueryPlanReviewGate(
             executable_without_review=executable_without_review,
+            runtime_resolution_required=(
+                storage_environment.runtime_resolution_required
+            ),
+            ready_for_execution_attempt=(
+                executable_without_review
+                and not storage_environment.runtime_resolution_required
+            ),
             status=decision.status,
             direct_review_required=decision.direct_review_required,
             candidate_path_status=decision.candidate_path_status,

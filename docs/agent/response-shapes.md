@@ -1086,18 +1086,20 @@ credential references must be resolved, or when selected S3-compatible access is
 review-gated because endpoint/credential/region metadata is not yet recorded.
 `plan.review_gate` keeps the query-target decision status,
 `blocking_reason_codes`, `all_issue_codes`, the legacy alias `reason_codes`,
-and `executable_without_review`; treat the plan as review-required whenever
-that field is false. The blocking codes are self-contained for plan handoff:
-they may include decision reasons, `query_context_has_other_blockers` when the
-selected candidate is clean but sibling metadata blocks the overall context, or
-`scan_function_not_inferred` when DuckDB has no file-scan function for the
-selected storage/layout shape. Database-backed storage currently uses this
-generic review-draft shape too; expect `scan.function=None` and
-`scan_function_not_inferred` until a database-query-specific plan mode exists.
-`executable_without_review=true` means DoxaBase
-found no recorded physical-metadata blocker for the selected candidate. It is
-not a runtime credential/object-existence guarantee; still check
-`plan.storage_environment.runtime_resolution_required` before execution.
+`executable_without_review`, `runtime_resolution_required`, and
+`ready_for_execution_attempt`. Treat the plan as review-required whenever
+`executable_without_review` is false. The blocking codes are self-contained for
+plan handoff: they may include decision reasons,
+`query_context_has_other_blockers` when the selected candidate is clean but
+sibling metadata blocks the overall context, or `scan_function_not_inferred`
+when DuckDB has no file-scan function for the selected storage/layout shape.
+Database-backed storage currently uses this generic review-draft shape too;
+expect `scan.function=None` and `scan_function_not_inferred` until a
+database-query-specific plan mode exists. `executable_without_review=true`
+means DoxaBase found no recorded physical-metadata blocker for the selected
+candidate. It is not a runtime credential/object-existence guarantee.
+`ready_for_execution_attempt` is the stricter handoff boolean: it is true only
+when the review gate is clear and `runtime_resolution_required` is false.
 
 Each caveat in `dataset.caveats` has:
 

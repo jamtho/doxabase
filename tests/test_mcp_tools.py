@@ -1691,6 +1691,8 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
         "s3_region=local",
     ]
     assert result["review_gate"]["executable_without_review"] is False
+    assert result["review_gate"]["runtime_resolution_required"] is True
+    assert result["review_gate"]["ready_for_execution_attempt"] is False
     assert result["review_gate"]["blocking_reason_codes"] == [
         "layout_needs_verification"
     ]
@@ -1751,6 +1753,7 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["review_gate"]["blocking_reason_codes"] == [
         "scan_function_not_inferred"
     ]
+    assert result["review_gate"]["ready_for_execution_attempt"] is False
 
 
 def test_describe_query_context_tool_matches_python_target_candidates(

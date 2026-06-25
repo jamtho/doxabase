@@ -5591,6 +5591,10 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     assert "storage_access Orders S3 access" in plan.scan.template_lineage
     assert "verified by listing" in plan.scan.template_lineage
     assert "Confirmed by listing the warehouse prefix" in plan.scan.template_lineage
+    assert plan.storage_environment.runtime_resolution_required is True
+    assert plan.review_gate.executable_without_review is True
+    assert plan.review_gate.runtime_resolution_required is True
+    assert plan.review_gate.ready_for_execution_attempt is False
 
 
 def test_query_target_candidates_surface_global_blockers(
@@ -6156,6 +6160,9 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     )
     assert "Template comes from storage_access_location" not in plan.scan.template_lineage
     assert plan.storage_environment.runtime_resolution_required is False
+    assert plan.review_gate.executable_without_review is True
+    assert plan.review_gate.runtime_resolution_required is False
+    assert plan.review_gate.ready_for_execution_attempt is True
     assert "No endpoint or credential profile is recorded or required" in (
         plan.storage_environment.runtime_resolution_note
     )
@@ -6221,6 +6228,7 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
         plan.storage_environment.runtime_resolution_note
     )
     assert plan.review_gate.executable_without_review is False
+    assert plan.review_gate.ready_for_execution_attempt is False
     assert plan.review_gate.blocking_reason_codes == ["scan_function_not_inferred"]
     assert plan.review_gate.reason_codes == ["scan_function_not_inferred"]
 

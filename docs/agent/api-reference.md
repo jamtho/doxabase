@@ -300,8 +300,11 @@ environment hints, copied issues and analysis warnings, caveats, and a
 Binding rows identify the placeholder source text and explicitly report when
 DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 `blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`
-as a legacy alias for blocking reasons. It may add handoff-only blockers such
-as `query_context_has_other_blockers` for clean selected candidates with bad
+as a legacy alias for blocking reasons. It also exposes
+`ready_for_execution_attempt`, which is true only when the graph-metadata review
+gate is clear and no runtime endpoint/credential/object resolution remains
+recorded. It may add handoff-only blockers such as
+`query_context_has_other_blockers` for clean selected candidates with bad
 siblings, or `scan_function_not_inferred` when DuckDB has no file-scan function
 for the selected storage/layout shape. Database-backed storage still uses this
 generic review-draft shape today, so expect `scan.function=None` and review

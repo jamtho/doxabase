@@ -609,7 +609,9 @@ few useful gaps:
   mirror dataset verification there. The same trial reinforced that
   `review_gate.executable_without_review=true` is physical metadata readiness,
   not proof that runtime S3 profiles, credentials, regions, or objects are
-  resolved.
+  resolved. A query-context contract trial later added
+  `review_gate.ready_for_execution_attempt` as the stricter handoff boolean
+  that also requires no recorded runtime resolution to remain.
 - A query-verification trial confirmed dataset-, storage-, and
   partition-owned templates now carry source verification into draft plans. It
   exposed one wording gap for root-only `storage_access_location` candidates:

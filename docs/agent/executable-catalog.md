@@ -108,7 +108,10 @@ agent runtime decides how profile X resolves.
    SQL. If selected S3-compatible access is missing endpoint, credential, and
    region metadata, `plan.storage_environment.runtime_resolution_required`
    remains true even though those fields are absent; resolve or record that
-   runtime context before execution.
+   runtime context before execution. Treat
+   `plan.review_gate.ready_for_execution_attempt` as the compact "no recorded
+   review or runtime-resolution blocker" signal before considering a local
+   execution attempt.
    Read `plan.scan.dataset_verification_note`, `plan.scan.template_lineage`,
    and the scan source verification fields before trusting a path. In the AIS
    fixture, `DailyIndex` currently shares the broadcast partition template and

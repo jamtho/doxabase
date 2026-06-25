@@ -120,6 +120,9 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 - Several stale staged patches: use `restage_staged_revisions(dry_run=True)`
   first to classify the batch without creating successors, then run the real
   batch restage for rows you still want to refresh.
+- Grouped staged review: use `bundle_summary.next_action_queue` for current
+  mechanical routing, but also read each row's staged-time validation fields;
+  current drift can hide why a candidate was invalid when it was first staged.
 - Unknown staged/applied/history record: use `list_graph_revisions`, then
   inspect a specific result with `describe_graph_revision` or
   `describe_staged_revision`.
