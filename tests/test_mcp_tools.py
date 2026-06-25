@@ -1016,6 +1016,64 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     ] == "changed_physical_type"
 
 
+def test_assertion_literal_metadata_tools_return_json_like_payloads(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:Orders a rc:Dataset, rc:Table ;
+            rdfs:label "Orders"@en ;
+            rc:hasColumn ex:is_active .
+
+        ex:is_active a rc:Column ;
+            rc:columnName "is_active" ;
+            rc:physicalType rc:Boolean ;
+            rc:nullable false .
+        """,
+        graph="map",
+    )
+
+    support = describe_assertion_support_tool(
+        db,
+        subject="https://example.test/project#Orders",
+        predicate="rdfs:label",
+        object="Orders",
+        object_kind="literal",
+        object_lang="en",
+    )
+    assert support["requested_object"]["lang"] == "en"
+    assert support["matching_triples"][0]["object_lang"] == "en"
+
+    result = stage_map_assertion_change_tool(
+        db,
+        subject="https://example.test/project#is_active",
+        predicate="rc:nullable",
+        object="true",
+        object_kind="literal",
+        object_datatype="xsd:boolean",
+        change_kind="replace",
+        rationale="Exercise typed literal metadata through the MCP wrapper.",
+    )
+
+    assert result["object_datatype"] == str(XSD.boolean)
+    assert result["object_lang"] is None
+    assert result["judgement_panel"]["proposed_value"]["datatype"] == str(
+        XSD.boolean
+    )
+    description = describe_staged_revision_tool(
+        db,
+        result["staged_revision"]["revision_iri"],
+    )
+    assert description["judgement_panel"]["proposed_value"]["datatype"] == str(
+        XSD.boolean
+    )
+
+
 def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     staged = stage_graph_revision_tool(

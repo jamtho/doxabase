@@ -188,6 +188,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         object: str | None = None,
         graph: str | None = "map",
         object_kind: str = "auto",
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
         """Return support context for one subject/predicate/object assertion."""
@@ -199,6 +201,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             object=object,
             graph=graph,
             object_kind=object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
             limit=limit,
         )
 
@@ -1121,6 +1125,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         change_kind: str = "replace",
         graph: str = "map",
         object_kind: str = "auto",
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
         summary: str | None = None,
         stance: str = "rc:CandidateRevision",
         revision_type: str = "rc:StagedRevision",
@@ -1150,6 +1156,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             change_kind=change_kind,
             graph=graph,
             object_kind=object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
             summary=summary,
             stance=stance,
             revision_type=revision_type,

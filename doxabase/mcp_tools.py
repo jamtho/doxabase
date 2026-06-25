@@ -73,6 +73,8 @@ def describe_assertion_support_tool(
     object: str | None = None,
     graph: str | None = "map",
     object_kind: str = "auto",
+    object_datatype: str | None = None,
+    object_lang: str | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
     result = db.describe_assertion_support(
@@ -81,6 +83,8 @@ def describe_assertion_support_tool(
         object=object,
         graph=graph,
         object_kind=object_kind,  # type: ignore[arg-type]
+        object_datatype=object_datatype,
+        object_lang=object_lang,
         limit=limit,
     )
     return to_dict(result)
@@ -1054,6 +1058,8 @@ def stage_map_assertion_change_tool(
     change_kind: str = "replace",
     graph: str = "map",
     object_kind: str = "auto",
+    object_datatype: str | None = None,
+    object_lang: str | None = None,
     summary: str | None = None,
     stance: str = "rc:CandidateRevision",
     revision_type: str = "rc:StagedRevision",
@@ -1080,6 +1086,8 @@ def stage_map_assertion_change_tool(
         change_kind=change_kind,  # type: ignore[arg-type]
         graph=graph,  # type: ignore[arg-type]
         object_kind=object_kind,  # type: ignore[arg-type]
+        object_datatype=object_datatype,
+        object_lang=object_lang,
         summary=summary,
         stance=stance,
         revision_type=revision_type,

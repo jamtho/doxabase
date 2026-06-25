@@ -539,11 +539,14 @@ do not need a second describe call just to show the proposal headline.
 
 `stage_map_assertion_change()` stages a reviewable add/remove/replace for one
 `map` assertion. Pass `subject`, `predicate`, optional `object`, a `rationale`,
-and `change_kind` (`"add"`, `"remove"`, or `"replace"`). It calls
-`describe_assertion_support()` before staging, generates the Turtle patches,
-links related observations/claims/patterns/evidence and revision anchors, and
-stores an assertion-support summary in the staged revision review note. The
-returned `judgement_panel` is the compact reviewer view: headline,
+and `change_kind` (`"add"`, `"remove"`, or `"replace"`). For typed or
+language-tagged literals, also pass `object_datatype` or `object_lang`; the
+helper will author the corresponding typed/language-tagged Turtle instead of a
+plain literal. It calls `describe_assertion_support()` before staging, generates
+the Turtle patches, links related observations/claims/patterns/evidence and
+revision anchors, and stores an assertion-support summary in the staged revision
+review note. The returned `judgement_panel` is the compact reviewer view:
+headline,
 current/proposed values, semantic risk level/reasons, value-type context, reasons
 the current value may be intentional, caveat scopes, strongest related-lore
 routes, impact spotlight entries, and safety notes. For physical type changes,
@@ -551,8 +554,9 @@ the panel includes current `rc:valueType` resources and any declared
 `rc:requiredPhysicalType`. `target_value` names the requested object for add,
 replace, and remove changes; `removed_value` is populated for remove changes so
 reviewers do not have to interpret legacy `proposed_value` as the value being
-removed. Use it for common assertion changes before reaching for generic
-`stage_graph_revision`.
+removed. For exact removals, `removed_value` reflects the matched graph triple,
+including datatype or language-tag context. Use it for common assertion changes
+before reaching for generic `stage_graph_revision`.
 When testing a changed singleton assertion such as `rc:physicalType`, a
 competing `add` may correctly fail validation while an explicit `replace` stays
 reviewable. After applying any staged assertion, re-run apply checks for sibling
@@ -822,9 +826,12 @@ context rather than a type-specific helper.
 
 `describe_assertion_support()` returns support context for one map assertion.
 Pass `subject`, `predicate`, optional `object`, and optional `object_kind`
-(`"auto"`, `"iri"`, or `"literal"`). It reports whether the assertion is
-present, exact matching triples, current same-subject/predicate triples, the
-touched resources, column owner summary when known, nearby caveats, related
+(`"auto"`, `"iri"`, or `"literal"`). For literal assertions, pass
+`object_datatype` such as `"xsd:boolean"` or `"xsd:decimal"` for typed-literal
+matching, or `object_lang` such as `"en"` for language-tagged matching. It
+reports whether the assertion is present, exact matching triples, current
+same-subject/predicate triples, the touched resources, column owner summary when
+known, nearby caveats, related
 observations/claims/patterns/evidence/revisions, selected direct layout/path
 context triples, the retrieval boundary, absence notes, and suggested next
 calls. `nearby_caveat_links` explains the scope of each caveat, for example

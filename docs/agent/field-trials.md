@@ -658,7 +658,12 @@ few useful gaps:
   It exposed that remove panels read awkwardly when only legacy
   `proposed_value` carried the object being removed; judgement panels now also
   expose `target_value` and `removed_value`, and Markdown exports label remove
-  values as removed.
+  values as removed. A later literal-edge trial found that agents also need
+  precise typed and language-tagged literal targeting; use `object_datatype` or
+  `object_lang` on `describe_assertion_support` and
+  `stage_map_assertion_change` for typed boolean/decimal replacements and exact
+  language-tagged removals. Exact remove panels now prefer the matched graph
+  triple for `removed_value`, preserving datatype or language tag context.
 - A controlled replacement/import trial confirmed same-count
   `replace_graph_triples`, revision metadata, default/workflow export
   boundaries, and revision-seed deep-lore expansion. It reinforced the current

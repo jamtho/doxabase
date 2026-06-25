@@ -1381,6 +1381,133 @@ def test_stage_map_assertion_change_packages_support_context(
     assert "| Proposed | Mixed price payload caveat | iri |" not in remove_exported
 
 
+def test_stage_map_assertion_change_targets_typed_and_lang_literals(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        ex:Orders a rc:Dataset, rc:Table ;
+            rdfs:label "Orders" ;
+            rdfs:comment "Orders table"@en, "Table commandes"@fr ;
+            rc:rowCountSnapshot 12 ;
+            rc:hasColumn ex:is_active ;
+            ex:confidenceScore "0.875"^^xsd:decimal .
+
+        ex:is_active a rc:Column ;
+            rc:columnName "is_active" ;
+            rc:physicalType rc:Boolean ;
+            rc:nullable false .
+        """,
+        graph="map",
+    )
+
+    decimal_support = db.describe_assertion_support(
+        "https://example.test/project#Orders",
+        "https://example.test/project#confidenceScore",
+        "0.875",
+        object_kind="literal",
+        object_datatype="xsd:decimal",
+    )
+    assert decimal_support.assertion_present is True
+    assert decimal_support.requested_object is not None
+    assert decimal_support.requested_object.datatype == str(XSD.decimal)
+    assert decimal_support.matching_triples[0].object_datatype == str(XSD.decimal)
+
+    boolean_change = db.stage_map_assertion_change(
+        subject="https://example.test/project#is_active",
+        predicate="rc:nullable",
+        object="true",
+        object_kind="literal",
+        object_datatype="xsd:boolean",
+        change_kind="replace",
+        rationale="Stage a valid typed boolean replacement.",
+    )
+    assert boolean_change.object_datatype == str(XSD.boolean)
+    assert boolean_change.judgement_panel.proposed_value is not None
+    assert boolean_change.judgement_panel.proposed_value.datatype == str(XSD.boolean)
+    boolean_addition = Graph()
+    boolean_addition.parse(data=boolean_change.additions[0]["content"], format="turtle")
+    assert (
+        URIRef("https://example.test/project#is_active"),
+        URIRef(RC + "nullable"),
+        Literal("true", datatype=XSD.boolean),
+    ) in boolean_addition
+    boolean_description = db.describe_staged_revision(
+        boolean_change.staged_revision.revision_iri
+    )
+    assert boolean_description.judgement_panel is not None
+    assert boolean_description.judgement_panel.proposed_value is not None
+    assert boolean_description.judgement_panel.proposed_value.datatype == str(
+        XSD.boolean
+    )
+    assert boolean_description.validation_conforms is True
+
+    row_count_remove = db.stage_map_assertion_change(
+        subject="https://example.test/project#Orders",
+        predicate="rc:rowCountSnapshot",
+        object="12",
+        object_kind="literal",
+        change_kind="remove",
+        rationale=(
+            "Compatible untyped targeting should still show the typed graph value "
+            "being removed."
+        ),
+    )
+    assert row_count_remove.judgement_panel.target_value is not None
+    assert row_count_remove.judgement_panel.target_value.datatype is None
+    assert row_count_remove.judgement_panel.removed_value is not None
+    assert row_count_remove.judgement_panel.removed_value.datatype == str(XSD.integer)
+
+    decimal_remove = db.stage_map_assertion_change(
+        subject="https://example.test/project#Orders",
+        predicate="https://example.test/project#confidenceScore",
+        object="0.875",
+        object_kind="literal",
+        object_datatype="xsd:decimal",
+        change_kind="remove",
+        rationale="Remove exactly the decimal confidence-score assertion.",
+    )
+    assert decimal_remove.judgement_panel.removed_value is not None
+    assert decimal_remove.judgement_panel.removed_value.datatype == str(XSD.decimal)
+    decimal_removal = Graph()
+    decimal_removal.parse(data=decimal_remove.removals[0]["content"], format="turtle")
+    assert (
+        URIRef("https://example.test/project#Orders"),
+        URIRef("https://example.test/project#confidenceScore"),
+        Literal("0.875", datatype=XSD.decimal),
+    ) in decimal_removal
+
+    label_change = db.stage_map_assertion_change(
+        subject="https://example.test/project#Orders",
+        predicate="rdfs:comment",
+        object="Orders table",
+        object_kind="literal",
+        object_lang="en",
+        change_kind="remove",
+        rationale="Remove only the English comment while leaving other comments alone.",
+    )
+    assert label_change.object_lang == "en"
+    assert label_change.judgement_panel.removed_value is not None
+    assert label_change.judgement_panel.removed_value.lang == "en"
+    assert {triple.object_lang for triple in label_change.current_values_before} == {
+        "en",
+        "fr",
+    }
+    label_removal = Graph()
+    label_removal.parse(data=label_change.removals[0]["content"], format="turtle")
+    assert (
+        URIRef("https://example.test/project#Orders"),
+        URIRef("http://www.w3.org/2000/01/rdf-schema#comment"),
+        Literal("Orders table", lang="en"),
+    ) in label_removal
+
+
 def test_stage_map_assertion_replace_existing_value_warns_about_removals(
     tmp_path: Path,
 ) -> None:

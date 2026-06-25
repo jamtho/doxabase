@@ -1724,6 +1724,8 @@ class StagedMapAssertionChangeRecord:
     predicate: str
     object_value: str | None
     object_kind: str
+    object_datatype: str | None
+    object_lang: str | None
     assertion_present_before: bool
     current_values_before: list[ResourceTriple]
     additions: list[dict[str, str]]
@@ -2068,6 +2070,8 @@ class DoxaBase:
         *,
         graph: str | None = "map",
         object_kind: TypingLiteral["auto", "iri", "uri", "literal"] = "auto",
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
         limit: int = 20,
     ) -> AssertionSupportDescription:
         if limit < 1:
@@ -2076,7 +2080,12 @@ class DoxaBase:
         predicate_iri = self.expand_iri(predicate)
         graphs = self._expand_graphs([graph] if graph else None)
         lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
-        object_filter = self._assertion_object_filter(object, object_kind)
+        object_filter = self._assertion_object_filter(
+            object,
+            object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
+        )
         matching_triples = self._assertion_triples(
             graphs,
             subject=subject_iri,
@@ -2244,6 +2253,8 @@ class DoxaBase:
         change_kind: TypingLiteral["add", "remove", "replace"] = "replace",
         graph: TypingLiteral["map"] = "map",
         object_kind: TypingLiteral["auto", "iri", "uri", "literal"] = "auto",
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
         summary: str | None = None,
         stance: str = "rc:CandidateRevision",
         revision_type: str = "rc:StagedRevision",
@@ -2285,11 +2296,18 @@ class DoxaBase:
             object,
             graph=graph,
             object_kind=object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
             limit=limit,
         )
         subject_iri = support.subject.iri
         predicate_iri = support.predicate
-        object_filter = self._assertion_object_filter(object, object_kind)
+        object_filter = self._assertion_object_filter(
+            object,
+            object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
+        )
         requested_node = (
             self._node_from_object_filter(object_filter)
             if object_filter is not None
@@ -2419,6 +2437,16 @@ class DoxaBase:
             object_kind=support.requested_object.value_kind
             if support.requested_object is not None
             else object_kind,
+            object_datatype=(
+                support.requested_object.datatype
+                if support.requested_object is not None
+                else None
+            ),
+            object_lang=(
+                support.requested_object.lang
+                if support.requested_object is not None
+                else None
+            ),
             assertion_present_before=support.assertion_present,
             current_values_before=support.same_subject_predicate_triples,
             additions=additions,
@@ -14343,12 +14371,40 @@ class DoxaBase:
         self,
         object_value: str | None,
         object_kind: str,
+        *,
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
     ) -> tuple[str, str, str | None, str | None] | None:
         if object_value is None:
+            if object_datatype is not None or object_lang is not None:
+                raise DoxaBaseError(
+                    "object_datatype and object_lang require an object value"
+                )
             return None
         kind = object_kind.strip().lower()
         if kind == "uri":
             kind = "iri"
+        datatype = object_datatype.strip() if object_datatype is not None else None
+        if datatype == "":
+            datatype = None
+        lang = object_lang.strip() if object_lang is not None else None
+        if lang == "":
+            lang = None
+        if datatype is not None and lang is not None:
+            raise DoxaBaseError(
+                "Literal assertions cannot specify both object_datatype and object_lang"
+            )
+        if datatype is not None or lang is not None:
+            if kind == "iri":
+                raise DoxaBaseError(
+                    "object_datatype and object_lang can only be used with literal objects"
+                )
+            node = Literal(
+                object_value,
+                datatype=URIRef(self.expand_iri(datatype)) if datatype else None,
+                lang=lang,
+            )
+            return self._object_to_storage(node)
         if kind == "auto":
             node = self._resource_or_literal(object_value)
         elif kind == "iri":
@@ -14660,6 +14716,14 @@ class DoxaBase:
             if support.requested_object is not None
             else None
         )
+        removed_value = None
+        if change_kind == "remove":
+            if support.matching_triples:
+                removed_value = self._map_assertion_judgement_value_from_triple(
+                    support.matching_triples[0]
+                )
+            else:
+                removed_value = proposed_value
         value_type_context = self._map_assertion_value_type_context(
             support,
             current_values=current_values,
@@ -14712,7 +14776,7 @@ class DoxaBase:
             current_values=current_values,
             proposed_value=proposed_value,
             target_value=proposed_value,
-            removed_value=proposed_value if change_kind == "remove" else None,
+            removed_value=removed_value,
             absence_note=support.absence_note,
             semantic_risk_level=semantic_risk_level,
             semantic_risk_reasons=semantic_risk_reasons,
@@ -17221,13 +17285,23 @@ class DoxaBase:
         candidate = self._single_map_assertion_candidate(description)
         if candidate is None:
             return None
-        subject, predicate, object_value, object_kind, change_kind = candidate
+        (
+            subject,
+            predicate,
+            object_value,
+            object_kind,
+            object_datatype,
+            object_lang,
+            change_kind,
+        ) = candidate
         support = self.describe_assertion_support(
             subject,
             predicate,
             object_value,
             graph="map",
             object_kind=object_kind,  # type: ignore[arg-type]
+            object_datatype=object_datatype,
+            object_lang=object_lang,
         )
         support = self._assertion_support_without_revision(support, description.iri)
         return self._map_assertion_change_judgement_panel(
@@ -17316,7 +17390,7 @@ class DoxaBase:
     def _single_map_assertion_candidate(
         self,
         description: StagedGraphRevisionDescription,
-    ) -> tuple[str, str, str | None, str, str] | None:
+    ) -> tuple[str, str, str | None, str, str | None, str | None, str] | None:
         addition_operation = self.expand_iri("rc:AdditionPatch")
         removal_operation = self.expand_iri("rc:RemovalPatch")
         additions: list[tuple[Identifier, URIRef, Node]] = []
@@ -17348,24 +17422,39 @@ class DoxaBase:
         if isinstance(subject, BNode) or not isinstance(predicate, URIRef):
             return None
         object_node = additions[0][2] if additions else removals[0][2]
-        object_value, object_kind = self._object_filter_from_node(object_node)
+        object_value, object_kind, object_datatype, object_lang = (
+            self._object_filter_from_node(object_node)
+        )
         if additions and removals:
             change_kind = "replace"
         elif additions:
             change_kind = "add"
         else:
             change_kind = "remove"
-        return str(subject), str(predicate), object_value, object_kind, change_kind
+        return (
+            str(subject),
+            str(predicate),
+            object_value,
+            object_kind,
+            object_datatype,
+            object_lang,
+            change_kind,
+        )
 
     def _object_filter_from_node(
         self,
         node: Node,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, str | None, str | None]:
         if isinstance(node, URIRef):
-            return str(node), "iri"
+            return str(node), "iri", None, None
         if isinstance(node, Literal):
-            return str(node), "literal"
-        return str(node), "literal"
+            return (
+                str(node),
+                "literal",
+                str(node.datatype) if node.datatype is not None else None,
+                node.language,
+            )
+        return str(node), "literal", None, None
 
     def _map_assertion_judgement_panel_markdown(
         self,

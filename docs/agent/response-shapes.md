@@ -175,7 +175,9 @@ selected graph; the helper may still return context for the subject or requested
 object. Literal object matching accepts common typed scalar equivalents, so
 plain string inputs such as `"12"` and `"true"` can match stored integer and
 boolean literals. Inspect `matching_triples[].object_datatype` to see what the
-graph actually stores.
+graph actually stores. For exact typed decimals or language-tagged strings,
+pass `object_datatype` or `object_lang`; those fields also let
+`stage_map_assertion_change` author the same literal form.
 
 When `object` is supplied, `same_subject_predicate_triples` lists the current
 triples for the same subject and predicate in the selected graph. This is
@@ -278,7 +280,10 @@ value.caveat
 
 By default `object_kind="auto"` treats known CURIE/IRI-looking values as
 resources and plain strings as literals. Use `object_kind="literal"` when you
-need to match a literal that contains a colon.
+need to match a literal that contains a colon. Pass `object_datatype` such as
+`"xsd:boolean"` or `"xsd:decimal"` to target or author a typed literal; pass
+`object_lang` such as `"en"` to target or author a language-tagged literal.
+Do not pass both on the same literal.
 
 ## Staged Map Assertion Changes
 
@@ -292,6 +297,8 @@ change.subject
 change.predicate
 change.object_value
 change.object_kind
+change.object_datatype
+change.object_lang
 change.assertion_present_before
 change.current_values_before
 change.additions
@@ -333,7 +340,11 @@ before apply. `semantic_risk_level` is `none`, `attention`, or `high`; it is a
 review cue, not an apply decision or validation failure. `target_value` is the
 requested assertion object for add, replace, and remove changes. `removed_value`
 is populated for remove changes so reviewers do not have to read legacy
-`proposed_value` as the value being removed.
+`proposed_value` as the value being removed. For exact removals,
+`removed_value` reflects the graph triple that matched the request, so compatible
+literal targeting keeps datatype or language-tag context visible even when the
+request was a plain string. Remove-all changes leave `removed_value` empty; read
+`current_values` and the removal patch to see every removed assertion.
 
 For `replace`, if `panel.assertion_present_before` is true and
 `panel.current_values` includes other values, the meaningful mutation is removal

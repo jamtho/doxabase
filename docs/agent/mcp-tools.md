@@ -514,7 +514,13 @@ and safety notes. For physical type changes, `value_type_context` surfaces
 current `rc:valueType` resources and declared `rc:requiredPhysicalType` values.
 `target_value` names the requested object for add, replace, and remove changes;
 `removed_value` is populated for remove changes so reviewers do not have to
-interpret legacy `proposed_value` as the removed value.
+interpret legacy `proposed_value` as the removed value. For typed or
+language-tagged literals, pass `object_datatype` such as `"xsd:boolean"` or
+`"xsd:decimal"`, or `object_lang` such as `"en"`; the helper uses those fields
+for exact matching and for the Turtle it authors. For exact removals,
+`removed_value` reflects the matched graph triple, including datatype or
+language-tag context. Remove-all changes still put the removed assertions in
+`current_values` and the removal patch.
 Routes marked `generic_value_only` matched only shared values such as
 `rc:Varchar`; treat them as weak context. Drill into `assertion_support` and
 `describe_staged_revision` when the change needs more thought.
