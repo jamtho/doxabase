@@ -117,6 +117,95 @@ agent runtime decides how profile X resolves.
 10. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 
+## Copyable Helper Recipe
+
+Use this shape when a scratch or project handoff needs one executable-catalog
+slice without hand-authored RDF. Put a relative path template on either the
+storage access or the partition scheme when that resource owns the verification
+note. Duplicate a template only when both resources really need to carry their
+own provenance.
+
+```python
+from pathlib import Path
+
+from doxabase import DoxaBase, to_dict
+
+db = DoxaBase.create(Path("/tmp/doxabase-catalog-recipe.sqlite"), overwrite=True)
+base = "https://example.test/catalog#"
+table = f"{base}RetailEvents"
+event_id = f"{base}retail_events__event_id"
+event_date = f"{base}retail_events__event_date"
+storage = f"{base}retail_events_storage"
+layout = f"{base}retail_events_parquet_layout"
+partition = f"{base}retail_events_daily_partition"
+caveat = f"{base}retail_events_sparse_revenue"
+
+db.record_map_column(event_id, column_name="event_id", table_iri=table)
+db.record_map_column(event_date, column_name="event_date", table_iri=table)
+db.record_map_storage_access(
+    storage,
+    label="retail events local storage",
+    storage_protocol="rc:LocalFilesystemStorage",
+    access_mode="rc:ReadOnlyAccess",
+    location_kind="directory",
+    storage_root="/tmp/warehouse",
+    datasets=[table],
+    layout_verification_status="rc:CandidateLayout",
+    layout_verification_note="Path shape came from a handoff note; verify listing.",
+)
+db.record_map_physical_layout(
+    layout,
+    file_format="rc:Parquet",
+    compression_codec="rc:Zstd",
+    datasets=[table],
+    layout_verification_status="rc:CandidateLayout",
+)
+db.record_map_partition_scheme(
+    partition,
+    path_template="retail/events/event_date={date}/*.parquet",
+    partition_columns=[event_date],
+    datasets=[table],
+    layout_verification_status="rc:CandidateLayout",
+)
+db.record_map_caveat(
+    caveat,
+    description="gross_revenue_cents is populated only for purchase events.",
+    severity="rc:Moderate",
+    targets=[table],
+)
+db.record_map_dataset(
+    table,
+    label="Retail events",
+    is_table=True,
+    row_semantics="rc:EventRow",
+    entity_key=event_id,
+    schema_stability="rc:InferredSchema",
+    columns=[event_id, event_date],
+    storage_accesses=[storage],
+    physical_layouts=[layout],
+    caveats=[caveat],
+    layout_verification_status="rc:CandidateLayout",
+)
+
+dataset = db.describe_dataset(table)
+query = db.describe_query_context(table)
+plan = db.draft_query_plan(table)
+slice_ = db.describe_context_slice([table], profile="dataset_brief")
+validation = db.validate_graph(scope="all")
+
+print(
+    to_dict(
+        {
+            "dataset": dataset,
+            "query_decision": query.query_target_decision,
+            "review_gate": plan.review_gate,
+            "slice_routes": slice_.route_counts,
+            "validation_conforms": validation.conforms,
+        }
+    )
+)
+```
+
 Tiny direct Python scratch example:
 
 ```python

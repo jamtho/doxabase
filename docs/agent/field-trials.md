@@ -512,6 +512,17 @@ few useful gaps:
   `storage_environment.runtime_resolution_required` was false. Draft plans now
   mark runtime resolution required when the selected S3 candidate lacks endpoint,
   credential, and region metadata.
+- A query catalog boilerplate trial showed the existing map helpers can model a
+  realistic small executable catalog without a new mega-helper, but agents need a
+  copyable recipe for dataset, columns, storage, layout, partition, caveat, and
+  inspection calls. The same trial exposed that draft query plans only carried
+  partition-scheme template verification into `plan.scan`; storage-access-owned
+  templates now preserve their verification status and note too.
+- A profile-metric vocabulary trial confirmed project-specific metric IRIs work
+  before ontology terms exist, while patterns and claims are the best low-commitment
+  place to explain awkward metrics. When the metric meaning should become shared
+  vocabulary, stage a pattern-supported ontology promotion rather than directly
+  importing terms without review context.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

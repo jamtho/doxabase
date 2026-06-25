@@ -247,6 +247,70 @@ When a profile helper creates a pattern and the profile observation has
 evidence, DoxaBase links that same evidence to the pattern so
 `describe_pattern` can show the source directly.
 
+Project-specific profile metric IRIs are allowed before they are durable
+vocabulary, but explain them before relying on the local name alone. A useful
+low-commitment loop is:
+
+1. Record the profile metric with a full project IRI.
+2. Record a claim that says what the metric means and what it does not mean.
+3. Record a pattern with the metric IRI in `pattern_targets` and
+   `map_implications`.
+4. When the meaning is ready to become vocabulary, use
+   `stage_pattern_promotion` to propose ontology terms such as
+   `rc:ProfileMetricKind` labels, comments, units, or calculation notes.
+
+```python
+metric = "https://example.test/project#FreshnessLagP95Seconds"
+profile = db.record_dataset_profile(
+    "https://example.test/project#orders",
+    summary="Orders freshness lag was profiled from ingestion timestamps.",
+    evidence_sources=["scratch://orders-freshness.sql"],
+    profile_metrics=[{"metric": metric, "value": 42}],
+    update_map_snapshot=False,
+)
+claim = db.record_claim_observation(
+    summary="Freshness lag p95 is an operational quality metric.",
+    claim_text=(
+        "FreshnessLagP95Seconds measures ingestion delay, not row validity or "
+        "a value-domain constraint."
+    ),
+    claim_kind="rc:InterpretationClaim",
+    claim_targets=[metric],
+    evidence_sources=["scratch://orders-freshness.sql"],
+)
+pattern = db.record_pattern(
+    summary="Orders freshness metric needs vocabulary before reuse.",
+    pattern_text=(
+        "The profile metric is useful for operational quality handoff, but its "
+        "calculation and units should be defined before other agents compare it."
+    ),
+    rationale="The profile and interpretation claim describe the same metric.",
+    pattern_targets=[metric],
+    supporting_observations=[profile.observation.observation_iri],
+    supporting_claims=[claim.claim_iri],
+    map_implications=[metric],
+)
+db.stage_pattern_promotion(
+    patterns=[pattern.pattern_iri],
+    summary="Define orders freshness lag metric",
+    rationale="The metric now has profile evidence and an interpretation claim.",
+    framings=[
+        {
+            "label": "ontology definition",
+            "graph": "ontology",
+            "content": f'''
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                <{metric}> a rc:ProfileMetricKind ;
+                    rdfs:label "freshness lag p95 seconds" ;
+                    rdfs:comment "95th percentile ingestion delay in seconds." .
+            ''',
+        }
+    ],
+)
+```
+
 Profile-only capsules may still show `describe_dataset` operational warnings
 about missing storage access, path templates, or physical layouts. Those
 warnings mean DoxaBase cannot yet give complete query-planning context; they do

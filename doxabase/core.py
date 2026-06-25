@@ -5369,6 +5369,7 @@ class DoxaBase:
                 dataset_verification_note=context.layout_verification_note,
                 partition_schemes=context.partition_schemes,
                 physical_layouts=context.physical_layouts,
+                storage_accesses=context.storage_accesses,
                 engine=engine_value,
             ),
             required_bindings=[binding.name for binding in binding_requirements],
@@ -5419,6 +5420,7 @@ class DoxaBase:
         dataset_verification_note: str | None,
         partition_schemes: list[PartitionDescription],
         physical_layouts: list[PhysicalLayoutDescription],
+        storage_accesses: list[StorageAccessDescription],
         engine: str,
     ) -> DraftQueryPlanScan:
         file_format = self._draft_query_plan_resource_label(
@@ -5430,6 +5432,7 @@ class DoxaBase:
         template_status, template_note = self._draft_query_plan_template_verification(
             selected_candidate,
             partition_schemes=partition_schemes,
+            storage_accesses=storage_accesses,
         )
         return DraftQueryPlanScan(
             function=self._draft_query_plan_scan_function(engine, file_format),
@@ -5480,6 +5483,7 @@ class DoxaBase:
         selected_candidate: QueryTargetCandidate | None,
         *,
         partition_schemes: list[PartitionDescription],
+        storage_accesses: list[StorageAccessDescription],
     ) -> tuple[ResourceSummary | None, str | None]:
         if selected_candidate is None:
             return None, None
@@ -5489,6 +5493,16 @@ class DoxaBase:
                     return (
                         partition.layout_verification_status,
                         partition.layout_verification_note,
+                    )
+        if selected_candidate.template_source in {
+            "storage_access",
+            "storage_access_location",
+        }:
+            for storage_access in storage_accesses:
+                if storage_access.iri == selected_candidate.source_resource.iri:
+                    return (
+                        storage_access.layout_verification_status,
+                        storage_access.layout_verification_note,
                     )
         return None, None
 

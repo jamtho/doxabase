@@ -5210,6 +5210,7 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
         path_templates=["orders/dt={date}.parquet"],
         credential_reference="profile:orders-readonly",
         layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note="Confirmed by listing the warehouse prefix.",
     )
     layout = db.record_map_physical_layout(
         "https://example.test/project#orders_parquet_layout",
@@ -5246,6 +5247,23 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     assert context.query_target_decision.candidate_path_status == "ready"
     assert context.query_target_decision.direct_review_required is False
     assert context.query_target_decision.reason_codes == []
+
+    plan = db.draft_query_plan(dataset)
+    assert plan.scan.template_source == "storage_access"
+    assert plan.scan.template_source_resource is not None
+    assert plan.scan.template_source_resource.iri == storage.iri
+    assert plan.scan.template_source_verification_status is not None
+    assert (
+        plan.scan.template_source_verification_status.iri
+        == RC + "VerifiedByListingLayout"
+    )
+    assert plan.scan.template_source_verification_note == (
+        "Confirmed by listing the warehouse prefix."
+    )
+    assert plan.scan.template_lineage is not None
+    assert "storage_access Orders S3 access" in plan.scan.template_lineage
+    assert "verified by listing" in plan.scan.template_lineage
+    assert "Confirmed by listing the warehouse prefix" in plan.scan.template_lineage
 
 
 def test_query_target_candidates_surface_global_blockers(
