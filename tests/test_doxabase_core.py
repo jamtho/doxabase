@@ -5111,6 +5111,61 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     assert "not executable code" in plan.planning_notes[-1]
 
 
+def test_draft_query_plan_carries_dataset_template_verification(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    root = tmp_path / "warehouse"
+    dataset = "https://example.test/project#LocalEvents"
+    template = str(root / "events/date={date}/part-*.parquet")
+    verification_note = "Complete absolute path template matched the scratch layout."
+    storage = db.record_map_storage_access(
+        "https://example.test/project#local_events_storage",
+        label="Local events storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(root),
+        location_kind="directory",
+        access_mode="rc:ReadOnlyAccess",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#local_events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Local events",
+        is_table=True,
+        path_templates=[template],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note=verification_note,
+    )
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template_source == "dataset"
+    assert plan.scan.template_source == "dataset"
+    assert plan.scan.template_source_resource is not None
+    assert plan.scan.template_source_resource.iri == dataset
+    assert plan.scan.template_source_verification_status is not None
+    assert plan.scan.template_source_verification_status.iri == (
+        RC + "VerifiedByListingLayout"
+    )
+    assert plan.scan.template_source_verification_note == verification_note
+    assert plan.scan.dataset_verification_status is not None
+    assert plan.scan.dataset_verification_status.iri == (
+        RC + "VerifiedByListingLayout"
+    )
+    assert plan.scan.dataset_verification_note == verification_note
+    assert plan.scan.template_lineage is not None
+    assert "dataset Local events" in plan.scan.template_lineage
+    assert verification_note in plan.scan.template_lineage
+
+
 def test_draft_query_plan_scan_surfaces_inherited_path_lineage(
     tmp_path: Path,
 ) -> None:

@@ -569,6 +569,14 @@ few useful gaps:
   `target_digest_drift`. Exact changed triples remain mechanically available
   through staged snapshots/apply checks or explicit before/after exports; plain
   revision history needs authored rationale/metadata if that exact diff matters.
+- A partial-storage query-planning trial confirmed root-only object, directory,
+  prefix, connection, S3 runtime, and contradicted-partition status pairings are
+  mostly clear. It exposed that dataset-owned templates did not copy dataset
+  verification into `plan.scan.template_source_verification_*`; draft plans now
+  mirror dataset verification there. The same trial reinforced that
+  `review_gate.executable_without_review=true` is physical metadata readiness,
+  not proof that runtime S3 profiles, credentials, regions, or objects are
+  resolved.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

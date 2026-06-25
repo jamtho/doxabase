@@ -5474,6 +5474,8 @@ class DoxaBase:
         )
         template_status, template_note = self._draft_query_plan_template_verification(
             selected_candidate,
+            dataset_verification_status=dataset_verification_status,
+            dataset_verification_note=dataset_verification_note,
             partition_schemes=partition_schemes,
             storage_accesses=storage_accesses,
         )
@@ -5525,11 +5527,15 @@ class DoxaBase:
         self,
         selected_candidate: QueryTargetCandidate | None,
         *,
+        dataset_verification_status: ResourceSummary | None,
+        dataset_verification_note: str | None,
         partition_schemes: list[PartitionDescription],
         storage_accesses: list[StorageAccessDescription],
     ) -> tuple[ResourceSummary | None, str | None]:
         if selected_candidate is None:
             return None, None
+        if selected_candidate.template_source == "dataset":
+            return dataset_verification_status, dataset_verification_note
         if selected_candidate.template_source == "partition_scheme":
             for partition in partition_schemes:
                 if partition.iri == selected_candidate.source_resource.iri:

@@ -1007,10 +1007,12 @@ and the selected candidate path status. It also carries the dataset-level
 `dataset_verification_status` / `dataset_verification_note`, and repeats path
 lineage fields from the selected candidate: `template_source`,
 `template_source_resource`, `template_source_verification_status`,
-`template_source_verification_note`, and `template_lineage`. Read these before
-treating a surprising URI template as the dataset's actual executable location;
-related or aggregate datasets can share a partition template while still being
-review-gated. `plan.required_bindings` is
+`template_source_verification_note`, and `template_lineage`. For dataset-owned
+templates, the template-source verification fields mirror the dataset layout
+verification fields; for partition/storage-owned templates they mirror that
+source resource. Read these before treating a surprising URI template as the
+dataset's actual executable location; related or aggregate datasets can share a
+partition template while still being review-gated. `plan.required_bindings` is
 parsed from
 `{placeholders}` in the selected path and remains as a compact compatibility
 list. Prefer `plan.binding_requirements` for handoff work: each row has `name`,
@@ -1026,7 +1028,10 @@ review-gated because endpoint/credential/region metadata is not yet recorded.
 `plan.review_gate` keeps the query-target decision status,
 `blocking_reason_codes`, `all_issue_codes`, the legacy alias `reason_codes`,
 and `executable_without_review`; treat the plan as review-required whenever
-that field is false.
+that field is false. `executable_without_review=true` means DoxaBase found no
+recorded physical-metadata blocker for the selected candidate. It is not a
+runtime credential/object-existence guarantee; still check
+`plan.storage_environment.runtime_resolution_required` before execution.
 
 Each caveat in `dataset.caveats` has:
 
