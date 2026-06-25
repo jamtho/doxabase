@@ -19544,12 +19544,12 @@ class DoxaBase:
                         quad_index=quad_index,
                         strip=False,
                     ),
-                    "subject_kind": self._required_bundle_string(
+                    "subject_kind": self._snapshot_bundle_quad_kind(
                         raw_quad,
                         "subject_kind",
+                        allowed={"uri", "bnode"},
                         index=index,
                         quad_index=quad_index,
-                        strip=False,
                     ),
                     "predicate": self._required_bundle_string(
                         raw_quad,
@@ -19566,12 +19566,12 @@ class DoxaBase:
                         allow_empty=True,
                         strip=False,
                     ),
-                    "object_kind": self._required_bundle_string(
+                    "object_kind": self._snapshot_bundle_quad_kind(
                         raw_quad,
                         "object_kind",
+                        allowed={"uri", "bnode", "literal"},
                         index=index,
                         quad_index=quad_index,
-                        strip=False,
                     ),
                     "datatype": self._optional_bundle_string(
                         raw_quad,
@@ -19619,6 +19619,29 @@ class DoxaBase:
                 prefix = f"{prefix}.quads[{quad_index}]"
             raise DoxaBaseError(f"{prefix}.{field_name} must be a non-empty string")
         return cleaned
+
+    @staticmethod
+    def _snapshot_bundle_quad_kind(
+        mapping: MappingABC[str, Any],
+        field_name: str,
+        *,
+        allowed: set[str],
+        index: int,
+        quad_index: int,
+    ) -> str:
+        value = DoxaBase._required_bundle_string(
+            mapping,
+            field_name,
+            index=index,
+            quad_index=quad_index,
+        )
+        if value not in allowed:
+            allowed_values = "', '".join(sorted(allowed))
+            raise DoxaBaseError(
+                f"snapshots[{index}].quads[{quad_index}].{field_name} "
+                f"must be one of '{allowed_values}'"
+            )
+        return value
 
     @staticmethod
     def _optional_bundle_string(

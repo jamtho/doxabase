@@ -1,3 +1,4 @@
+import json
 import warnings
 from collections.abc import Callable
 from pathlib import Path
@@ -1972,6 +1973,60 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_export.bundle_summary.recommended_applied_inspection_iris == [
         staged.revision_iri
     ]
+
+
+def test_import_revision_snapshots_validates_bundle_before_writing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    valid_revision = "https://example.test/revision#valid"
+    invalid_revision = "https://example.test/revision#invalid"
+    payload = {
+        "format": "doxabase.revision_snapshot_bundle.v1",
+        "snapshots": [
+            {
+                "revision_iri": valid_revision,
+                "graph_role": "map",
+                "stored_at": "2026-06-25T00:00:00+00:00",
+                "triple_count": 1,
+                "content_digest": "sha256:valid",
+                "quads": [
+                    {
+                        "subject": "https://example.test/project#Thing",
+                        "subject_kind": "uri",
+                        "predicate": "https://example.test/project#note",
+                        "object": "",
+                        "object_kind": "literal",
+                        "datatype": str(XSD.string),
+                        "lang": None,
+                    }
+                ],
+            },
+            {
+                "revision_iri": invalid_revision,
+                "graph_role": "map",
+                "stored_at": "2026-06-25T00:00:00+00:00",
+                "triple_count": 1,
+                "content_digest": "sha256:invalid",
+                "quads": [
+                    {
+                        "subject": "https://example.test/project#Thing",
+                        "subject_kind": "uri",
+                        "predicate": "https://example.test/project#note",
+                        "object": "not a storage kind",
+                        "object_kind": "resource",
+                        "datatype": None,
+                        "lang": None,
+                    }
+                ],
+            },
+        ],
+    }
+
+    with pytest.raises(DoxaBaseError, match="object_kind must be one of"):
+        db.import_revision_snapshots(json.dumps(payload))
+
+    assert not db._graph_snapshot_storage_exists(valid_revision, "map")
 
 
 def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
