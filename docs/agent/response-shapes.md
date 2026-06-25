@@ -1010,7 +1010,9 @@ lineage fields from the selected candidate: `template_source`,
 `template_source_verification_note`, and `template_lineage`. For dataset-owned
 templates, the template-source verification fields mirror the dataset layout
 verification fields; for partition/storage-owned templates they mirror that
-source resource. Read these before treating a surprising URI template as the
+source resource. When `template_source == "storage_access_location"`, no path
+template exists and `template_lineage` describes the storage root candidate
+instead. Read these before treating a surprising URI template or root as the
 dataset's actual executable location; related or aggregate datasets can share a
 partition template while still being review-gated. `plan.required_bindings` is
 parsed from

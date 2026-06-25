@@ -179,6 +179,17 @@ Structured consumers should follow `active_recommendation_field`, and treat
 `apply_recommendation_scope="prior_source_apply_check_context"`. Restage
 Context lines for successors describe prior/source apply-check context, not
 necessarily the successor's current status.
+In mixed recovery queues, a dry-run can legitimately classify an already-handled
+stale source as skipped and classify its ready successor as not restageable with
+reason `ready`. That does not mean there is no next action. Read
+`current_revision_by_source`, `bundle_summary.ready_restage_successor_revision_iris`,
+and the grouped export's apply/repair review queues to find the active successor
+to review or the remaining patch-conflict candidate to repair.
+After applying one ready alternative, sibling alternatives may become stale or
+conflicted because the applied candidate changed the same graph roles. Preserve
+their original staged validation diagnostics in your review: a stale live check
+explains current replay state, while the staged diagnostic can still explain the
+semantic repair that made the sibling useful to keep.
 
 ### Grouped Review Recipe
 

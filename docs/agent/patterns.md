@@ -98,6 +98,19 @@ used as revision anchors. The helper does not decide the graph shape for you.
 Use it for pattern-supported map, ontology, or shape changes that should be
 validated and reviewed before becoming durable project structure.
 
+A useful promotion bundle can share provisional project vocabulary across
+several framings. Put common project ontology and any temporary project SHACL
+rules in shared additions, then let each framing supply its own map additions.
+Keeping one intentionally incomplete or invalid framing is often useful: it
+turns validation diagnostics into a review cue while a complete sibling remains
+ready to apply. For example, a pattern might support a project-local
+`wf:SemanticStorageClass` term and a `wf:semanticStorageClass` predicate; one
+framing can classify every current dataset, while another omits a dataset so
+the grouped review bundle shows exactly how the shape catches missing
+assignments. If the ready sibling is applied, stale alternatives should still be
+read alongside their original staged validation diagnostics before deciding
+whether to repair, supersede, or discard them.
+
 ## Validation
 
 Pattern validation is intentionally stricter than map validation. A pattern must

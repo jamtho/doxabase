@@ -5568,10 +5568,13 @@ class DoxaBase:
             selected_candidate.source_resource.label
             or selected_candidate.source_resource.iri
         )
-        lineage = (
-            f"Template comes from {selected_candidate.template_source} "
-            f"{source_label}."
-        )
+        if selected_candidate.template_source == "storage_access_location":
+            lineage = f"Candidate storage root comes from storage access {source_label}."
+        else:
+            lineage = (
+                f"Template comes from {selected_candidate.template_source} "
+                f"{source_label}."
+            )
         if verification_status is not None:
             status_label = verification_status.label or verification_status.iri
             lineage = f"{lineage} Verification status: {status_label}."

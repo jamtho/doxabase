@@ -577,6 +577,24 @@ few useful gaps:
   `review_gate.executable_without_review=true` is physical metadata readiness,
   not proof that runtime S3 profiles, credentials, regions, or objects are
   resolved.
+- A query-verification trial confirmed dataset-, storage-, and
+  partition-owned templates now carry source verification into draft plans. It
+  exposed one wording gap for root-only `storage_access_location` candidates:
+  `template_lineage` talked about a template even though the storage root itself
+  was the candidate. Draft plans now describe those as storage-root candidates
+  from a storage access.
+- A staged-revision recovery trial confirmed count/digest drift, restage,
+  successor apply, applied diffs, patch-conflict classification, and grouped
+  exports work together. It also showed that mixed batch dry-runs can report
+  handled stale sources and ready successors as skipped/not-restageable while
+  grouped export queues still identify active apply and repair review rows; read
+  the queue fields before assuming there is no next action.
+- A pattern-promotion trial confirmed `stage_pattern_promotion` can carry shared
+  project ontology and project SHACL shapes with several pattern-supported
+  framings. A complete framing applied cleanly, while an intentionally
+  incomplete sibling stayed useful as a validation diagnostic. After one ready
+  alternative is applied, stale sibling live checks should be read alongside
+  their original staged validation diagnostics.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

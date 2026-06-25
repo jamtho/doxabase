@@ -5888,6 +5888,13 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     assert target.review_required is False
     assert target.review_reasons == []
     assert context.storage_accesses[0].location_kind == "object"
+    plan = db.draft_query_plan(dataset)
+    assert plan.scan.template_lineage is not None
+    assert (
+        "Candidate storage root comes from storage access Orders local storage."
+        in plan.scan.template_lineage
+    )
+    assert "Template comes from storage_access_location" not in plan.scan.template_lineage
 
 
 @pytest.mark.parametrize("location_kind", [None, "directory", "prefix", "connection"])
@@ -5952,6 +5959,13 @@ def test_describe_query_context_demotes_non_object_root_only_location(
     assert context.query_target_decision.reason_codes == [
         "storage_location_kind_needs_path_template"
     ]
+    plan = db.draft_query_plan(dataset)
+    assert plan.scan.template_lineage is not None
+    assert (
+        "Candidate storage root comes from storage access Orders local storage."
+        in plan.scan.template_lineage
+    )
+    assert "Template comes from storage_access_location" not in plan.scan.template_lineage
 
 
 def test_record_map_storage_access_rejects_unknown_location_kind(
