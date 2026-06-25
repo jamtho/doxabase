@@ -522,7 +522,10 @@ few useful gaps:
   before ontology terms exist, while patterns and claims are the best low-commitment
   place to explain awkward metrics. When the metric meaning should become shared
   vocabulary, stage a pattern-supported ontology promotion rather than directly
-  importing terms without review context.
+  importing terms without review context. A profile-only recipe probe confirmed
+  that metric-seeded context slices preserve the profile row in
+  `seed_profile_observations`, but `dataset_contexts` may stay empty until a map
+  dataset shell exists.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -288,6 +288,7 @@ pattern = db.record_pattern(
     pattern_targets=[metric],
     supporting_observations=[profile.observation.observation_iri],
     supporting_claims=[claim.claim_iri],
+    evidence_iri=profile.observation.evidence_iri,
     map_implications=[metric],
 )
 db.stage_pattern_promotion(
@@ -310,6 +311,13 @@ db.stage_pattern_promotion(
     ],
 )
 ```
+
+Because this example keeps the profile observation-only, a metric-seeded
+`describe_context_slice(..., profile="dataset_brief")` preserves the profile row
+in `seed_profile_observations` but may not include `dataset_contexts`. Call
+`record_map_dataset()` first when a receiving agent should start from a dataset
+entrypoint, and use `describe_pattern(pattern.pattern_iri)` for the pattern
+handoff rather than expecting `pattern_brief` expansion from the metric IRI.
 
 Profile-only capsules may still show `describe_dataset` operational warnings
 about missing storage access, path templates, or physical layouts. Those

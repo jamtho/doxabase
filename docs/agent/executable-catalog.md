@@ -126,6 +126,7 @@ note. Duplicate a template only when both resources really need to carry their
 own provenance.
 
 ```python
+import json
 from pathlib import Path
 
 from doxabase import DoxaBase, to_dict
@@ -151,7 +152,7 @@ db.record_map_storage_access(
     storage_root="/tmp/warehouse",
     datasets=[table],
     layout_verification_status="rc:CandidateLayout",
-    layout_verification_note="Path shape came from a handoff note; verify listing.",
+    layout_verification_note="Warehouse root came from a handoff note; verify listing.",
 )
 db.record_map_physical_layout(
     layout,
@@ -166,6 +167,7 @@ db.record_map_partition_scheme(
     partition_columns=[event_date],
     datasets=[table],
     layout_verification_status="rc:CandidateLayout",
+    layout_verification_note="Path template came from a handoff note; verify listing.",
 )
 db.record_map_caveat(
     caveat,
@@ -194,14 +196,17 @@ slice_ = db.describe_context_slice([table], profile="dataset_brief")
 validation = db.validate_graph(scope="all")
 
 print(
-    to_dict(
-        {
-            "dataset": dataset,
-            "query_decision": query.query_target_decision,
-            "review_gate": plan.review_gate,
-            "slice_routes": slice_.route_counts,
-            "validation_conforms": validation.conforms,
-        }
+    json.dumps(
+        to_dict(
+            {
+                "dataset": dataset,
+                "query_decision": query.query_target_decision,
+                "review_gate": plan.review_gate,
+                "slice_routes": slice_.route_counts,
+                "validation_conforms": validation.conforms,
+            }
+        ),
+        indent=2,
     )
 )
 ```
