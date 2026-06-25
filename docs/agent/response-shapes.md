@@ -1047,8 +1047,12 @@ The helper currently supports `engine="duckdb"` and drafts review context only:
 it does not resolve endpoint profiles, credentials, object existence, or SQL
 execution. `plan.selected_candidate` is the candidate named by
 `query_target_decision.candidate_index`. `plan.scan` gives a best-effort scan
-function such as `read_parquet`, a URI/path template, file format, compression,
-and the selected candidate path status. It also carries the dataset-level
+function such as `read_parquet`, a URI/path template for file/object storage,
+file format, compression, and the selected candidate path status. For
+database-backed storage, `scan.uri_template` is intentionally absent;
+`scan.relation_identifier` and `scan.connection_reference` carry the graph's
+relation/connection handoff for review rather than executable SQL. The scan
+card also carries the dataset-level
 `dataset_verification_status` / `dataset_verification_note`, and repeats path
 lineage fields from the selected candidate: `template_source`,
 `template_source_resource`, `template_source_verification_status`,

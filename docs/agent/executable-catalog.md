@@ -113,7 +113,9 @@ agent runtime decides how profile X resolves.
    and the scan source verification fields before trusting a path. In the AIS
    fixture, `DailyIndex` currently shares the broadcast partition template and
    is intentionally review-gated until storage listing or query evidence
-   confirms the real index layout.
+   confirms the real index layout. For database-backed storage, read
+   `plan.scan.relation_identifier` and `plan.scan.connection_reference`;
+   `plan.scan.uri_template` is reserved for file/object scan handoffs.
 10. If a query is run, record the result or failure with
    `doxabase.record_observation` and supporting evidence.
 

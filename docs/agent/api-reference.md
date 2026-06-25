@@ -289,9 +289,11 @@ sibling hints block the overall context.
 over `describe_query_context()`. It currently supports `engine="duckdb"` and
 selects the candidate identified by `query_target_decision.candidate_index`.
 The response includes a scan hint such as `read_parquet`, the candidate
-URI/path template, parsed placeholder names in `required_bindings`, structured
-`binding_requirements` rows for handoff work, non-secret storage environment
-hints, copied issues and analysis warnings, caveats, and a `review_gate`.
+URI/path template for file/object storage, database relation fields for
+database-backed storage, parsed placeholder names in `required_bindings`,
+structured `binding_requirements` rows for handoff work, non-secret storage
+environment hints, copied issues and analysis warnings, caveats, and a
+`review_gate`.
 Binding rows identify the placeholder source text and explicitly report when
 DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 `blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`
@@ -300,7 +302,9 @@ as `query_context_has_other_blockers` for clean selected candidates with bad
 siblings, or `scan_function_not_inferred` when DuckDB has no file-scan function
 for the selected storage/layout shape. Database-backed storage still uses this
 generic review-draft shape today, so expect `scan.function=None` and review
-gating rather than executable SQL. The `scan` card carries dataset-level
+gating rather than executable SQL; `scan.uri_template` is intentionally absent
+there, and `scan.relation_identifier` plus `scan.connection_reference` carry
+the recorded database handoff for review. The `scan` card carries dataset-level
 verification status/notes and template lineage/source verification fields so
 agents can see, for example, that a dataset-owned path was verified by listing
 or that an aggregate table's path came from a shared partition scheme and is

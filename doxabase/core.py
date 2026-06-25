@@ -1060,6 +1060,8 @@ class DraftQueryPlanSourceContext:
 class DraftQueryPlanScan:
     function: str | None
     uri_template: str | None
+    relation_identifier: str | None
+    connection_reference: str | None
     file_format: str | None
     compression: str | None
     candidate_path_status: str | None
@@ -5824,11 +5826,25 @@ class DoxaBase:
             and self._is_database_storage(selected_candidate.storage_protocol)
             else self._draft_query_plan_scan_function(engine, file_format)
         )
+        database_storage = (
+            selected_candidate is not None
+            and self._is_database_storage(selected_candidate.storage_protocol)
+        )
         return DraftQueryPlanScan(
             function=scan_function,
             uri_template=(
                 selected_candidate.candidate_path
-                if selected_candidate is not None
+                if selected_candidate is not None and not database_storage
+                else None
+            ),
+            relation_identifier=(
+                self._draft_query_plan_relation_identifier(selected_candidate)
+                if selected_candidate is not None and database_storage
+                else None
+            ),
+            connection_reference=(
+                selected_candidate.storage_root
+                if selected_candidate is not None and database_storage
                 else None
             ),
             file_format=file_format,
@@ -5859,7 +5875,13 @@ class DoxaBase:
                 verification_note=template_note,
             ),
             composition=(
-                selected_candidate.composition if selected_candidate is not None else None
+                self._draft_query_plan_database_composition(selected_candidate)
+                if selected_candidate is not None and database_storage
+                else (
+                    selected_candidate.composition
+                    if selected_candidate is not None
+                    else None
+                )
             ),
             non_executed_note=(
                 "Review-only draft; do not run without resolving runtime "
@@ -5867,6 +5889,25 @@ class DoxaBase:
                 "analysis caveats."
             ),
         )
+
+    @staticmethod
+    def _draft_query_plan_relation_identifier(
+        selected_candidate: QueryTargetCandidate,
+    ) -> str | None:
+        if selected_candidate.template_source == "storage_access_location":
+            return None
+        relation = selected_candidate.template.strip()
+        return relation or selected_candidate.candidate_path
+
+    @staticmethod
+    def _draft_query_plan_database_composition(
+        selected_candidate: QueryTargetCandidate,
+    ) -> str:
+        if selected_candidate.template_source == "storage_access_location":
+            return "database_connection_as_candidate"
+        if selected_candidate.storage_root:
+            return "database_connection_and_relation"
+        return "database_relation"
 
     def _draft_query_plan_template_verification(
         self,

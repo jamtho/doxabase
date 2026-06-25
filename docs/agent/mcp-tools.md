@@ -216,7 +216,8 @@ Returns a non-executed, review-gated physical plan draft over
 `describe_query_context`. It currently supports `engine="duckdb"` and selects
 the candidate named by `query_target_decision.candidate_index`. The payload
 includes the selected candidate, scan hint such as `read_parquet`, URI/path
-template, parsed `required_bindings`, structured `binding_requirements`,
+template for file/object storage, database relation fields for database-backed
+storage, parsed `required_bindings`, structured `binding_requirements`,
 non-secret storage environment hints, copied issues and analysis warnings,
 caveats, and a `review_gate`. Binding rows preserve the source text and say
 when DoxaBase has not inferred derivation or runtime values. `review_gate`
@@ -226,7 +227,9 @@ such as `query_context_has_other_blockers` for clean selected candidates with
 bad siblings, or `scan_function_not_inferred` when DuckDB has no file-scan
 function for the selected storage/layout shape. Database-backed storage still
 uses this generic review-draft shape today, so expect `scan.function=None` and
-review gating rather than executable SQL. The `scan` card includes dataset-level
+review gating rather than executable SQL; read `scan.relation_identifier` and
+`scan.connection_reference` instead of `scan.uri_template` for the recorded
+database handoff. The `scan` card includes dataset-level
 verification notes plus template lineage and source verification fields, so
 surprising shared or inherited path templates stay attached to their source
 resource and warning notes. It does not resolve endpoint profiles, credentials,

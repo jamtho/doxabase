@@ -6200,6 +6200,10 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
     plan = db.draft_query_plan(dataset)
 
     assert plan.scan.function is None
+    assert plan.scan.uri_template is None
+    assert plan.scan.relation_identifier == "public.verified_events"
+    assert plan.scan.connection_reference == "analytics-prod"
+    assert plan.scan.composition == "database_connection_and_relation"
     assert "database endpoint profile" in (
         plan.storage_environment.runtime_resolution_note
     )

@@ -1705,6 +1705,48 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["caveats"]
 
 
+def test_draft_query_plan_tool_returns_database_relation_handoff(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_database_storage",
+        label="Orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["mart.orders"],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = draft_query_plan_tool(db, iri=dataset)
+
+    assert result["scan"]["function"] is None
+    assert result["scan"]["uri_template"] is None
+    assert result["scan"]["relation_identifier"] == "mart.orders"
+    assert result["scan"]["connection_reference"] == "warehouse-prod"
+    assert result["scan"]["composition"] == "database_connection_and_relation"
+    assert result["review_gate"]["blocking_reason_codes"] == [
+        "scan_function_not_inferred"
+    ]
+
+
 def test_describe_query_context_tool_matches_python_target_candidates(
     tmp_path: Path,
 ) -> None:
