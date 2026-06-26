@@ -79,6 +79,10 @@ accepted profile-derived changes should be reviewed before apply. It stages one
 grouped helper-equivalent map revision, including multi-triple dataset and
 column shells, so applying one accepted profile batch does not create sibling
 staged revisions that immediately drift after the first apply.
+If the draft has no recommendations and `metric_advisory_count > 0`, handle it
+as advisory-only: follow the advisory suggested calls for vocabulary/context
+review and do not call `stage_profile_map_updates`. Advisory rows are not
+map-update recommendations, and no-op advisory staging is deferred.
 An accepted index is still routed through guardrails: it may be `staged` or
 `skipped`, while `not_selected` means the draft row was not accepted for that
 call. Check `status_counts` first, then item reasons.

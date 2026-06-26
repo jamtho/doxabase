@@ -241,6 +241,9 @@ recommendations. Metric advisory rows include `advisory_status`,
 nearby metric vocabulary before recording claims/patterns/promotions. The draft
 also includes `metric_advisory_count` and `metric_advisory_status_counts` for
 quick routing.
+If `recommendations` is empty and `metric_advisory_count > 0`, handle the result
+as advisory-only: follow advisory suggested actions and do not call
+`doxabase.stage_profile_map_updates`.
 
 `doxabase.stage_profile_map_updates`
 
@@ -289,7 +292,10 @@ direct-clean but sibling metadata still blocks the whole context. If
 `candidate_index` using the returned candidate snippets. `source_context`
 also reports `candidate_count`, `ready_candidate_indexes`, and
 `unselected_ready_candidate_indexes` so automatic plans reveal peer ready
-candidates that may deserve explicit selection. The payload
+candidates that may deserve explicit selection. Read
+`context_blocked_candidate_allowed` with `context_blocked_candidate_used`: if the
+switch was requested but not used, direct blocking codes distinguish already
+ready candidates from candidates that still need review. The payload
 includes the selected candidate, scan hint such as `read_parquet`, URI/path
 template for file/object storage, database relation fields for database-backed
 storage, parsed `required_bindings`, structured `binding_requirements`,

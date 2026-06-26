@@ -3387,6 +3387,38 @@ def test_ready_restage_source_apply_check_redirects_to_successor(
         include_apply_checks=True,
     )
     assert [item.iri for item in listing.revisions] == [repair.revision_iri]
+    export_path = tmp_path / "ready-superseded-review.md"
+    export = db.export_staged_revisions(
+        [source.revision_iri, repair.revision_iri],
+        export_path,
+    )
+    summaries = {item.revision_iri: item for item in export.revision_summaries}
+    assert summaries[source.revision_iri].apply_status == "superseded_by_restage"
+    assert summaries[source.revision_iri].suggested_next_actions[0].tool_name == (
+        "describe_staged_revision"
+    )
+    assert summaries[source.revision_iri].suggested_next_actions[0].arguments == {
+        "iri": repair.revision_iri
+    }
+    assert not any(
+        action.tool_name == "apply_staged_revision"
+        for action in summaries[source.revision_iri].suggested_next_actions
+    )
+    assert summaries[repair.revision_iri].apply_status == "ready"
+    assert any(
+        action.tool_name == "apply_staged_revision"
+        for action in summaries[repair.revision_iri].suggested_next_actions
+    )
+    exported = export_path.read_text(encoding="utf-8")
+    source_section = exported.split("## Revision 1: Stage old orders label", 1)[
+        1
+    ].split(
+        "## Revision 2:",
+        1,
+    )[0]
+    assert "**Inspect current refreshed successor:**" in source_section
+    assert "apply_staged_revision" not in source_section
+    assert repair.revision_iri in source_section
 
 
 def test_stage_map_assertion_change_can_repair_stale_assertion_successor(

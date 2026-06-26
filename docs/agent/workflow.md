@@ -16,6 +16,9 @@ compaction, read `start_here` first.
 5. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.
 6. Call `doxabase.describe_dataset` for a bounded view of one table's row semantics, columns, layouts, storage access, caveats, provenance, relationships, linked patterns, linked-pattern reasons, and grouped related-dataset reasons.
 7. Call `doxabase.describe_profile_run` with a dataset IRI and shared evidence IRI when `describe_dataset().profile_summary.profile_run_candidates` points at a profiler run whose full returned observations matter.
+   If `draft_profile_map_updates()` returns no recommendations but
+   `metric_advisory_count > 0`, treat it as vocabulary/context review only and do
+   not call `stage_profile_map_updates`.
 8. Call `doxabase.describe_query_context` when the task is physical query planning and you need storage/layout/path/caveat readiness without the full handoff.
 9. Call `doxabase.describe_context_slice` when you need a route-explained subgraph around a dataset, pattern, or lore thread.
 10. Use `doxabase.list_entities` with `type="rc:Pattern"` followed by `doxabase.describe_pattern` when you need the full handoff behind a linked pattern.

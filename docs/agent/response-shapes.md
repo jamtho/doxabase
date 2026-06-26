@@ -786,6 +786,10 @@ metric lookup. Defined metrics point at
 ambiguous metrics point at both the existing definition and nearby metric
 lookup. Use `metric_advisory_count` and `metric_advisory_status_counts` for
 queue routing before reading full advisory rows.
+When `draft.recommendations` is empty and `metric_advisory_count > 0`, the
+draft is advisory-only. Follow advisory suggested actions for vocabulary/context
+review and do not call `stage_profile_map_updates`; no-op advisory staging is
+deferred.
 
 `db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 returns a `ProfileMapUpdateStagingRecord`:
@@ -1258,6 +1262,13 @@ context-blocked selection changed the handoff gate. When
 warning/error, sibling-only context blockers can be excluded from the selected
 handoff while remaining visible in `issues`, the automatic decision, and
 `context_blocking_reason_codes`.
+Interpret the two allowance booleans together: `allowed=false` / `used=false`
+means no allowance was requested; `allowed=true` / `used=true` means the selected
+candidate was made direct-clean by excluding sibling-only blockers;
+`allowed=true` / `used=false` with no direct blocking codes usually means the
+candidate was already ready or had no sibling-only blockers to exclude; and
+`allowed=true` / `used=false` with direct blocking codes means direct candidate
+issues still require review.
 Database-backed storage currently uses this generic review-draft shape too;
 expect `scan.function=None` and `scan_function_not_inferred` until a
 database-query-specific plan mode exists. Those plans use

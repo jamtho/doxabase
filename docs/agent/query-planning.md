@@ -54,6 +54,13 @@ The source context keeps the automatic `query_target_decision` plus the explicit
 selection mode, and the review gate reports whether a context-blocked candidate
 was used. Only use this switch when `direct_review_required` is false for the
 selected candidate; direct blockers still keep the plan review-gated.
+Interpret the allowance fields together: `allowed=false/used=false` means no
+override was requested; `allowed=true/used=true` means sibling-only context
+blockers were excluded for this selected candidate; `allowed=true/used=false`
+with no direct blocking codes usually means the selected candidate was already
+ready or had no sibling-only context blockers to exclude; `allowed=true/used=false`
+with direct blocking codes means the switch did not apply and the candidate
+still needs review.
 
 When `storage_access_iri` matches multiple candidate paths, the error includes
 compact candidate snippets. Choose from those snippets and rerun with

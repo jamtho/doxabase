@@ -383,6 +383,10 @@ sample, or ambiguous run before applying helper arguments. It does not mutate
 or stage graph changes, and it skips sampled zero-null promotions. Metric
 advisories carry `advisory_status`, `definition_found`, optional `definition`,
 and structured `suggested_next_actions` for ontology/context review.
+If `recommendations` is empty and `metric_advisory_count > 0`, treat the draft
+as advisory-only: follow the advisory suggested actions and do not call
+`stage_profile_map_updates`, because advisory rows are not map-update
+recommendations.
 
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped
