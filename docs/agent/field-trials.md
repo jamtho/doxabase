@@ -1154,8 +1154,9 @@ few useful gaps:
   count/digest conflicts now keep their drift status but route compact
   `next_action` to informational `inspect_no_effective_change`, and batch
   restage skips them with `not_restageable_reason="already_effective"` instead
-  of manufacturing a no-op. This is deliberately not `already_applied`; only an
-  applied revision event records durable review lineage.
+  of manufacturing a no-op. The direct restage helper now rejects the same route
+  for future calls. This is deliberately not `already_applied`; only an applied
+  revision event records durable review lineage.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

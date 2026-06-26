@@ -585,7 +585,10 @@ This is not a full merge system. A harmless unrelated graph change can still
 show up as a conflict because the guards compare staged graph state with current
 graph state. In that case, call `doxabase.restage_staged_revision` to copy the
 stale proposal into a fresh staged revision with current before/after counts and
-graph snapshots, then review and check the new revision before applying. The
+graph snapshots, then review and check the new revision before applying. If the
+stale source is `already_effective`, the direct helper refuses to create a no-op
+successor; inspect/export it or stage a repaired successor with
+`restages_revision` if semantic work remains. The
 refreshed revision records `rc:restagesRevision` back to the stale proposal, and
 its generated rationale summarizes the stale apply check, including exact
 snapshot drift triples when available. `describe_staged_revision` also surfaces

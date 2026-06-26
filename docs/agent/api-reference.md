@@ -1053,9 +1053,10 @@ back to the stale proposal and preserves support links, anchors, stance, review
 notes, and review recommendations. The generated rationale summarizes the stale
 apply check, including count drift and exact snapshot drift triples when
 available, before repeating the original rationale. Use it for count or digest
-drift conflicts; it does not merge semantic conflicts, repair invalid RDF
-proposals, or apply the refreshed revision. It refuses to create a parallel
-successor when the stale source already has `restaged_by` /
+drift conflicts that still have an effective current delta; it does not merge
+semantic conflicts, repair invalid RDF proposals, apply the refreshed revision,
+or create no-op successors for `already_effective` stale sources. It refuses to
+create a parallel successor when the stale source already has `restaged_by` /
 `current_restaged_by`; inspect or restage the current successor instead. The
 immediate return includes `restaged_from`, `restage_reason`, `alternative_to`,
 and `current_restaged_by` fields so handoffs do not need a separate

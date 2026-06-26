@@ -16751,6 +16751,16 @@ class DoxaBase:
                 "inspect patch checks and stage a repaired or alternative "
                 "candidate for unreplayable patch conflicts."
             )
+        if (
+            check.next_action is not None
+            and check.next_action.action_type == "inspect_no_effective_change"
+        ):
+            raise DoxaBaseError(
+                "restage_staged_revision will not create a no-op successor for "
+                "an already-effective stale source. Inspect or export the stale "
+                "revision, or stage a repaired replacement with restages_revision "
+                "if semantic work remains."
+            )
 
         ordered_patch_specs = self._ordered_staged_patch_specs_from_descriptions(
             source.patches

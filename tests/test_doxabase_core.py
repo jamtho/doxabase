@@ -4436,44 +4436,78 @@ def test_restaged_revision_with_realized_addition_reports_noop(
     }
     assert dry_run.bundle_summary.recommended_mutation_review_iris == []
 
-    restaged = db.restage_staged_revision(staged.revision_iri)
-    check = db.check_staged_revision_apply(restaged.revision_iri)
-
-    assert check.status == "noop"
-    assert check.can_apply is False
-    assert check.decision == "inspect_no_effective_change"
-    assert check.blocking_reasons == ["no_effective_patch_triples"]
-    assert check.triples_to_add == 0
-    assert check.triples_to_remove == 0
-    assert check.validation_conforms is True
-    patch_check = check.patch_checks[0]
-    assert patch_check.effective_triples_to_add == 0
-    assert patch_check.effective_triples_to_remove == 0
-    assert patch_check.already_present_triples == 1
-    assert patch_check.already_absent_triples == 0
-    assert not any(
-        action.tool_name == "apply_staged_revision"
-        for action in check.suggested_next_actions
-    )
-    with pytest.raises(DoxaBaseError, match="no effective patch triples"):
-        db.apply_staged_revision(restaged.revision_iri)
+    with pytest.raises(DoxaBaseError, match="already-effective stale source"):
+        db.restage_staged_revision(staged.revision_iri)
 
     export = db.export_staged_revisions(
-        [staged.revision_iri, restaged.revision_iri],
-        tmp_path / "noop-restage-review.md",
+        [staged.revision_iri],
+        tmp_path / "already-effective-stale-review.md",
     )
-    restaged_summary = export.revision_summaries[1]
-    assert restaged_summary.apply_status == "noop"
-    assert restaged_summary.stale_resolution_state == "restaged_successor_noop"
+    summary = export.revision_summaries[0]
+    assert summary.apply_status == "conflict"
+    assert summary.next_action is not None
+    assert summary.next_action.action_type == "inspect_no_effective_change"
     assert export.bundle_summary.post_apply_recheck_revision_iris == []
     assert export.bundle_summary.recommended_mutation_review_iris == []
     assert export.bundle_summary.recommended_apply_or_restage_review_iris == []
     assert export.bundle_summary.recommended_repair_review_iris == []
-    exported_text = (tmp_path / "noop-restage-review.md").read_text(
+    exported_text = (tmp_path / "already-effective-stale-review.md").read_text(
         encoding="utf-8"
     )
     assert "Effective +" in exported_text
-    assert "no_effective_patch_triples" in exported_text
+    assert "Inspect already-effective stale source" in exported_text
+
+
+def test_stale_removal_with_target_already_absent_routes_to_inspection(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_map_assertion_change(
+        subject=orders,
+        predicate="rdfs:label",
+        object="Orders",
+        object_kind="literal",
+        change_kind="remove",
+        rationale="Remove redundant label after review.",
+    )
+    db.replace_graph_triples(
+        "map",
+        removals="""
+            @prefix ex: <https://example.test/project#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            ex:Orders rdfs:label "Orders" .
+        """,
+        allow_count_change=True,
+    )
+
+    check = db.check_staged_revision_apply(source.staged_revision.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.decision == "restage_against_current_graph"
+    assert check.next_action is not None
+    assert check.next_action.action_type == "inspect_no_effective_change"
+    assert check.next_action.queue == "informational"
+    assert not any(
+        action.tool_name == "restage_staged_revision"
+        for action in check.suggested_next_actions
+    )
+    patch_check = check.patch_checks[0]
+    assert patch_check.already_present_triples == 0
+    assert patch_check.already_absent_triples == 1
+    assert patch_check.effective_triples_to_remove == 0
+
+    dry_run = db.restage_staged_revisions(
+        [source.staged_revision.revision_iri],
+        dry_run=True,
+    )
+    assert dry_run.not_restageable_revision_iris_by_reason == {
+        "already_effective": [source.staged_revision.revision_iri]
+    }
+    with pytest.raises(DoxaBaseError, match="already-effective stale source"):
+        db.restage_staged_revision(source.staged_revision.revision_iri)
 
 
 def test_noop_successor_post_apply_recheck_reports_live_decision(
@@ -4503,7 +4537,25 @@ def test_noop_successor_post_apply_recheck_reports_live_decision(
         "https://example.test/project#OtherDataset",
         label="Other dataset",
     )
-    noop_successor = db.restage_staged_revision(source.revision_iri)
+    noop_successor = db.stage_graph_revision(
+        summary="Authored no-op successor",
+        rationale=(
+            "Preserve the old already-realized framing as an authored successor "
+            "without using mechanical restage."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        restages_revision=source.revision_iri,
+    )
     noop_check = db.check_staged_revision_apply(noop_successor.revision_iri)
     assert noop_check.status == "noop"
     assert noop_check.decision == "inspect_no_effective_change"
@@ -4545,11 +4597,8 @@ def test_noop_successor_post_apply_recheck_reports_live_decision(
         "include_current_apply_check": True,
     }
 
-    restaged_noop = db.restage_staged_revision(noop_successor.revision_iri)
-    restaged_check = db.check_staged_revision_apply(restaged_noop.revision_iri)
-    assert restaged_check.status == "noop"
-    assert restaged_check.decision == "inspect_no_effective_change"
-    assert restaged_check.blocking_reasons == ["no_effective_patch_triples"]
+    with pytest.raises(DoxaBaseError, match="already-effective stale source"):
+        db.restage_staged_revision(noop_successor.revision_iri)
 
 
 def test_post_apply_recheck_preserves_staged_validation_repair_signal(
