@@ -518,6 +518,20 @@ route.depth
 
 ## Profile Helper Records
 
+`db.record_observation(...)` returns an `ObservationRecord`:
+
+```python
+observation.observation_iri
+observation.observation_type
+observation.evidence_iri
+observation.observation_triples
+observation.evidence_triples
+```
+
+For direct profile type findings, call it with `observation_type="profile"`,
+`observed_column`, and `observed_physical_type` / `observed_value_type`. These
+persist observed type evidence without asserting current map facts.
+
 `db.record_dataset_profile(...)` returns a `DatasetProfileRecord`:
 
 ```python
@@ -895,6 +909,9 @@ advisory.current_value_type
 advisory.advisory_status
 advisory.recommendation
 advisory.rationale
+advisory.routing_note
+advisory.related_recommendation_indexes
+advisory.related_recommendation_kinds
 advisory.suggested_next_actions
 advisory.suggested_next_calls
 advisory.duplicate_group_key
@@ -907,13 +924,18 @@ advisory.duplicate_profile_observation_iris
 `type_finding_conflicts_current_map`, `type_finding_missing_map_type`, or
 `type_finding_needs_review`. Use `type_advisory_count` and
 `type_advisory_status_counts` for queue routing before reading full advisory
-rows.
+rows. For `type_finding_unmapped_column`, `related_recommendation_indexes` points
+at the matching `unmapped_profiled_column` shell recommendation; review/stage
+that column-shell route first, then rerun or review type assertions once the
+column is map-present. When duplicate type advisories collapse to one top-level
+suggested action set, the representative pattern/staged-assertion actions
+preserve every grouped profile observation in `supporting_observations`.
 
 Use `recommendation_count` and top-level `suggested_next_actions` for first-pass
-machine routing. Drafts with recommendations include a
-`stage_profile_map_updates` action whose `accepted_recommendation_indexes`
-defaults to the representative indexes whose recommendation rows have
-`default_stageable=True`. Sampled row-count recommendations can still appear in
+machine routing. Drafts with at least one default-stageable representative
+recommendation include a `stage_profile_map_updates` action whose
+`accepted_recommendation_indexes` defaults to those representatives. Sampled
+row-count recommendations can still appear in
 `representative_recommendation_indexes` for review, but the default staging
 action omits them unless the caller explicitly opts in. Pass only the indexes
 actually accepted after reviewing sample scope and modelling intent; include

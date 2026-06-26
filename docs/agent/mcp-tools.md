@@ -268,7 +268,9 @@ Type findings are not accepted profile-map recommendation indexes.
 `physical_type` and `value_type` are persisted on profile observations as
 observed evidence; when they differ from or fill gaps in current map column
 facts, the draft returns `type_advisories` with context, pattern, and focused
-`stage_map_assertion_change` suggested actions for review.
+`stage_map_assertion_change` suggested actions for review. Unmapped-column type
+advisories also name related `unmapped_profiled_column` recommendation indexes
+so agents can stage the column shell before reviewing type assertions.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `metric_advisory_status_counts`,
@@ -277,10 +279,10 @@ also includes `recommendation_count`, `representative_recommendation_indexes`,
 Recommendation rows carry `recommendation_index`, `default_stageable`,
 `default_skip_reason`, and duplicate-group fields; metric and type advisories
 carry duplicate-group fields too.
-If `recommendation_count > 0`, review the draft and use the top-level
-`stage_profile_map_updates` action as a starting point. Its accepted indexes
-default to the representative indexes whose rows have `default_stageable=True`.
-Sampled row-count recommendations remain review candidates in
+If a top-level `stage_profile_map_updates` action is present, review the draft
+and use that action as a starting point. Its accepted indexes default to the
+representative indexes whose rows have `default_stageable=True`. Sampled
+row-count recommendations remain review candidates in
 `representative_recommendation_indexes`, but they are omitted from the default
 staging action unless the caller explicitly opts in with
 `allow_sampled_row_count_updates=true`. If

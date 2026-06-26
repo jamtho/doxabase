@@ -3470,6 +3470,11 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         RC + "Varchar"
     )
     assert result["type_advisories"][0]["current_physical_type"] is None
+    assert result["type_advisories"][0]["related_recommendation_indexes"] == []
+    assert result["type_advisories"][0]["related_recommendation_kinds"] == []
+    assert result["type_advisories"][0]["routing_note"].startswith(
+        "Inspect current map context"
+    )
     assert result["type_advisories"][0]["suggested_next_actions"][0][
         "tool_name"
     ] == "describe_context_slice"

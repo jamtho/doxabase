@@ -1051,6 +1051,16 @@ few useful gaps:
   current map facts without review. Observation-only type findings are now
   persisted on profile observations and surfaced as profile-map type advisories;
   follow those review actions before recording or staging map type assertions.
+- A profile-type handoff trial found unmapped type advisories were mechanically
+  correct but did not explain the column-shell sequence. They now carry
+  `related_recommendation_indexes` / `related_recommendation_kinds` and a routing
+  note that points agents at the matching `unmapped_profiled_column`
+  recommendation before reviewing type assertions.
+- A repeated profile-type advisory trial found duplicate grouping alone was not
+  enough because staged assertion calls still carried per-profile rationale.
+  Type advisory suggested actions now collapse duplicate top-level calls while
+  preserving every grouped profile observation as pattern/staged-assertion
+  support.
 - A systematisation/pattern-promotion trial confirmed grouped exports preserve
   pattern-first, ontology-first, concrete map, and intentionally invalid
   diagnostic framings side by side. Validation on an incomplete shape-backed

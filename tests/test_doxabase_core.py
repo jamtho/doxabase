@@ -13069,6 +13069,9 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert advisory.current_physical_type.iri == RC + "Varchar"
     assert advisory.current_value_type is None
     assert advisory.recommendation == "review_profile_type_finding_before_map_update"
+    assert advisory.related_recommendation_indexes == []
+    assert advisory.related_recommendation_kinds == []
+    assert advisory.routing_note.startswith("Inspect current map context")
     assert [action.tool_name for action in advisory.suggested_next_actions] == [
         "describe_context_slice",
         "record_pattern",
@@ -13087,6 +13090,149 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
         "stage_map_assertion_change",
     ]
     assert db.validate_graph(scope="all").conforms
+
+
+def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    channel_column = "https://example.test/project#OrdersChannel"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+
+    def record_unmapped_type_profile() -> None:
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary="Orders were profiled without changing the map.",
+            evidence_summary="Synthetic type-finding profile run.",
+            evidence_sources=["test://orders-profile"],
+            shared_evidence_iri=evidence,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+            column_profiles=[
+                {
+                    "column_iri": channel_column,
+                    "column_name": "channel",
+                    "summary": "Channel was observed as varchar.",
+                    "physical_type": "rc:Varchar",
+                }
+            ],
+        )
+
+    record_unmapped_type_profile()
+    record_unmapped_type_profile()
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 2
+    assert [recommendation.kind for recommendation in draft.recommendations] == [
+        "unmapped_profiled_column",
+        "unmapped_profiled_column",
+    ]
+    assert draft.type_advisory_count == 2
+    assert draft.type_advisory_status_counts == {
+        "type_finding_unmapped_column": 2,
+    }
+    type_observations = {
+        advisory.profile_observation_iri for advisory in draft.type_advisories
+    }
+    for advisory in draft.type_advisories:
+        assert advisory.map_column_found is False
+        assert advisory.duplicate_count == 2
+        assert advisory.duplicate_advisory_indexes == [0, 1]
+        assert set(advisory.duplicate_profile_observation_iris) == (
+            type_observations
+        )
+        assert advisory.related_recommendation_indexes == [0, 1]
+        assert advisory.related_recommendation_kinds == [
+            "unmapped_profiled_column"
+        ]
+        assert "recommendation index(es) 0, 1 first" in advisory.routing_note
+        assert "column shell" in advisory.routing_note
+        assert [action.tool_name for action in advisory.suggested_next_actions] == [
+            "describe_context_slice",
+            "record_pattern",
+        ]
+    assert [action.tool_name for action in draft.suggested_next_actions] == [
+        "stage_profile_map_updates",
+        "describe_context_slice",
+        "record_pattern",
+    ]
+
+
+def test_profile_type_advisory_duplicate_actions_preserve_support(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+    )
+
+    def record_repeated_type_profile() -> None:
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary="Orders were profiled without changing the map.",
+            evidence_summary="Repeated type-finding profile run.",
+            evidence_sources=["test://orders-profile"],
+            shared_evidence_iri=evidence,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+            column_profiles=[
+                {
+                    "column_iri": status_column,
+                    "column_name": "status",
+                    "summary": "Status looked varchar in the profile.",
+                    "physical_type": "rc:Varchar",
+                }
+            ],
+        )
+
+    record_repeated_type_profile()
+    record_repeated_type_profile()
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.type_advisory_count == 2
+    assert draft.type_advisory_status_counts == {
+        "type_finding_missing_map_type": 2,
+    }
+    type_group_key = draft.type_advisories[0].duplicate_group_key
+    type_observations = {
+        advisory.profile_observation_iri for advisory in draft.type_advisories
+    }
+    for advisory in draft.type_advisories:
+        assert advisory.duplicate_group_key == type_group_key
+        assert advisory.duplicate_group_key.startswith("profile-type-advisory:")
+        assert advisory.duplicate_count == 2
+        assert advisory.duplicate_advisory_indexes == [0, 1]
+        assert set(advisory.duplicate_profile_observation_iris) == type_observations
+        stage_action = [
+            action
+            for action in advisory.suggested_next_actions
+            if action.tool_name == "stage_map_assertion_change"
+        ][0]
+        assert set(stage_action.arguments["supporting_observations"]) == (
+            type_observations
+        )
+
+    assert [action.tool_name for action in draft.suggested_next_actions] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_map_assertion_change",
+    ]
+    top_stage_action = draft.suggested_next_actions[2]
+    assert set(top_stage_action.arguments["supporting_observations"]) == (
+        type_observations
+    )
 
 
 def test_profile_map_update_duplicate_groups_preserve_representative_support(

@@ -1640,6 +1640,9 @@ class ProfileTypeFindingAdvisory:
     advisory_status: str
     recommendation: str
     rationale: str
+    routing_note: str
+    related_recommendation_indexes: list[int]
+    related_recommendation_kinds: list[str]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     duplicate_group_key: str = ""
@@ -7141,6 +7144,7 @@ class DoxaBase:
             all_profiles,
             evidence_value,
             columns_by_iri=columns_by_iri,
+            recommendations=recommendations,
         )
         recommendations = self._with_profile_update_default_staging_metadata(
             recommendations
@@ -11031,6 +11035,7 @@ class DoxaBase:
         evidence_iri: str,
         *,
         columns_by_iri: dict[str, ColumnDescription],
+        recommendations: list[ProfileMapUpdateRecommendation],
     ) -> list[ProfileTypeFindingAdvisory]:
         advisories: list[ProfileTypeFindingAdvisory] = []
         for profile in profiles:
@@ -11055,6 +11060,22 @@ class DoxaBase:
                 map_column_found=column is not None,
                 current_physical_type=current_physical_type,
                 current_value_type=current_value_type,
+            )
+            related_recommendations = (
+                self._profile_type_related_recommendations(
+                    profile,
+                    recommendations,
+                    advisory_status=advisory_status,
+                )
+            )
+            related_recommendation_indexes = [
+                recommendation.recommendation_index
+                for recommendation in related_recommendations
+            ]
+            related_recommendation_kinds = list(
+                dict.fromkeys(
+                    recommendation.kind for recommendation in related_recommendations
+                )
             )
             suggested_next_actions = self._profile_type_advisory_actions(
                 profile=profile,
@@ -11081,6 +11102,15 @@ class DoxaBase:
                         profile,
                         advisory_status=advisory_status,
                     ),
+                    routing_note=self._profile_type_advisory_routing_note(
+                        advisory_status,
+                        related_recommendation_indexes=(
+                            related_recommendation_indexes
+                        ),
+                        related_recommendation_kinds=related_recommendation_kinds,
+                    ),
+                    related_recommendation_indexes=related_recommendation_indexes,
+                    related_recommendation_kinds=related_recommendation_kinds,
                     suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=[
                         action.call for action in suggested_next_actions
@@ -11088,6 +11118,26 @@ class DoxaBase:
                 )
             )
         return self._with_profile_type_advisory_duplicate_metadata(advisories)
+
+    @staticmethod
+    def _profile_type_related_recommendations(
+        profile: ProfileObservationSummary,
+        recommendations: list[ProfileMapUpdateRecommendation],
+        *,
+        advisory_status: str,
+    ) -> list[ProfileMapUpdateRecommendation]:
+        if (
+            advisory_status != "type_finding_unmapped_column"
+            or profile.observed_column is None
+        ):
+            return []
+        return [
+            recommendation
+            for recommendation in recommendations
+            if recommendation.kind == "unmapped_profiled_column"
+            and recommendation.profile_observation_iri == profile.iri
+            and recommendation.resource.iri == profile.observed_column.iri
+        ]
 
     @staticmethod
     def _profile_type_finding_matches_current_map(
@@ -11157,22 +11207,104 @@ class DoxaBase:
         for advisory in advisories:
             group_key = self._profile_type_advisory_duplicate_group_key(advisory)
             group = groups[group_key]
+            duplicate_advisory_indexes = [group_index for group_index, _ in group]
+            duplicate_profile_observation_iris = list(
+                dict.fromkeys(item.profile_observation_iri for _, item in group)
+            )
+            related_recommendation_indexes = list(
+                dict.fromkeys(
+                    recommendation_index
+                    for _, item in group
+                    for recommendation_index in item.related_recommendation_indexes
+                )
+            )
+            related_recommendation_kinds = list(
+                dict.fromkeys(
+                    recommendation_kind
+                    for _, item in group
+                    for recommendation_kind in item.related_recommendation_kinds
+                )
+            )
+            suggested_next_actions = (
+                self._profile_type_advisory_actions_with_duplicate_support(
+                    advisory.suggested_next_actions,
+                    duplicate_profile_observation_iris,
+                )
+            )
             annotated.append(
                 replace(
                     advisory,
                     duplicate_group_key=group_key,
                     duplicate_count=len(group),
-                    duplicate_advisory_indexes=[
-                        group_index for group_index, _ in group
-                    ],
-                    duplicate_profile_observation_iris=list(
-                        dict.fromkeys(
-                            item.profile_observation_iri for _, item in group
-                        )
+                    duplicate_advisory_indexes=duplicate_advisory_indexes,
+                    duplicate_profile_observation_iris=(
+                        duplicate_profile_observation_iris
                     ),
+                    related_recommendation_indexes=related_recommendation_indexes,
+                    related_recommendation_kinds=related_recommendation_kinds,
+                    routing_note=self._profile_type_advisory_routing_note(
+                        advisory.advisory_status,
+                        related_recommendation_indexes=(
+                            related_recommendation_indexes
+                        ),
+                        related_recommendation_kinds=related_recommendation_kinds,
+                    ),
+                    suggested_next_actions=suggested_next_actions,
+                    suggested_next_calls=[
+                        action.call for action in suggested_next_actions
+                    ],
                 )
             )
         return annotated
+
+    def _profile_type_advisory_actions_with_duplicate_support(
+        self,
+        actions: list[SuggestedNextAction],
+        duplicate_profile_observation_iris: list[str],
+    ) -> list[SuggestedNextAction]:
+        if not duplicate_profile_observation_iris:
+            return actions
+        updated_actions: list[SuggestedNextAction] = []
+        for action in actions:
+            arguments = dict(action.arguments)
+            if action.tool_name == "describe_context_slice":
+                seed_iris = list(arguments.get("seed_iris") or [])
+                arguments["seed_iris"] = list(
+                    dict.fromkeys(
+                        [*duplicate_profile_observation_iris, *seed_iris]
+                    )
+                )
+            elif action.tool_name in {
+                "record_pattern",
+                "stage_map_assertion_change",
+            }:
+                arguments["supporting_observations"] = (
+                    duplicate_profile_observation_iris
+                )
+                if (
+                    action.tool_name == "stage_map_assertion_change"
+                    and len(duplicate_profile_observation_iris) > 1
+                ):
+                    arguments["rationale"] = (
+                        "Duplicate profile observations "
+                        f"{', '.join(duplicate_profile_observation_iris)} "
+                        f"recorded {arguments.get('predicate')} "
+                        f"{arguments.get('object')} for "
+                        f"{arguments.get('subject')}. Treat this as a "
+                        "candidate map assertion and review current context "
+                        "before applying."
+                    )
+            else:
+                updated_actions.append(action)
+                continue
+            updated_actions.append(
+                replace(
+                    action,
+                    arguments=arguments,
+                    call=self._suggested_call_string(action.tool_name, arguments),
+                )
+            )
+        return updated_actions
 
     @staticmethod
     def _profile_type_advisory_duplicate_group_key(
@@ -11204,6 +11336,7 @@ class DoxaBase:
                 else None
             ),
             "advisory_status": advisory.advisory_status,
+            "related_recommendation_kinds": advisory.related_recommendation_kinds,
         }
         digest = hashlib.sha256(
             json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
@@ -11443,6 +11576,45 @@ class DoxaBase:
             f"The profile observed type information for {column_label}. Review "
             "the profile evidence and modelling intent before recording map "
             "type facts."
+        )
+
+    @staticmethod
+    def _profile_type_advisory_routing_note(
+        advisory_status: str,
+        *,
+        related_recommendation_indexes: list[int],
+        related_recommendation_kinds: list[str],
+    ) -> str:
+        if advisory_status == "type_finding_unmapped_column":
+            if related_recommendation_indexes:
+                indexes = ", ".join(
+                    str(index) for index in related_recommendation_indexes
+                )
+                kinds = ", ".join(related_recommendation_kinds)
+                return (
+                    f"Review the related {kinds} recommendation index(es) "
+                    f"{indexes} first. Stage/apply the column shell if "
+                    "appropriate, then rerun or review type assertions after "
+                    "the column is map-present."
+                )
+            return (
+                "No related unmapped_profiled_column recommendation was found; "
+                "preserve the type finding as observation/pattern lore until "
+                "there is current map column context to review."
+            )
+        if advisory_status == "type_finding_conflicts_current_map":
+            return (
+                "Inspect current map context and value-type semantics before "
+                "staging any replacement type assertion."
+            )
+        if advisory_status == "type_finding_missing_map_type":
+            return (
+                "Inspect current map context before staging missing type facts "
+                "as durable map assertions."
+            )
+        return (
+            "Inspect the profile evidence and modelling intent before recording "
+            "map type facts."
         )
 
     def _profile_metric_vocabulary_advisories(

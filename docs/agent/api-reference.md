@@ -429,14 +429,16 @@ observed evidence, and observation-only profile records now produce
 `type_advisories` when they differ from or fill gaps in current map column
 facts. Follow those advisories for context loading, pattern recording, or
 focused `stage_map_assertion_change` calls before turning type evidence into
-durable map assertions.
-If `recommendation_count > 0`, review the draft and use the top-level
-`stage_profile_map_updates` action as a starting point. Its
-`accepted_recommendation_indexes` defaults to the representative indexes whose
-rows have `default_stageable=True`, so agents do not have to stage duplicate
-siblings just to preserve observation support or accidentally stage sampled
-row-count rows. Sampled row-count representatives remain in
-`representative_recommendation_indexes` for explicit review/override. If
+durable map assertions. For unmapped columns, the advisory names related
+`unmapped_profiled_column` recommendation indexes so agents can stage the
+column shell before reviewing type assertions.
+If a top-level `stage_profile_map_updates` action is present, review the draft
+and use that action as a starting point. Its `accepted_recommendation_indexes`
+defaults to the representative indexes whose rows have `default_stageable=True`,
+so agents do not have to stage duplicate siblings just to preserve observation
+support or accidentally stage sampled row-count rows. Sampled row-count
+representatives remain in `representative_recommendation_indexes` for explicit
+review/override. If
 `recommendation_count == 0` and either metric or type advisories are present,
 treat the draft as advisory-only: follow the top-level advisory suggested
 actions and do not call `stage_profile_map_updates`, because advisory rows are
