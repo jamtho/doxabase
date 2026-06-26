@@ -1003,6 +1003,13 @@ actions point to inspection/export rather than apply. `triples_to_add` and
 `triples_to_remove` are effective deltas for the current preview, and
 `patch_checks` records effective add/remove counts plus already-present/absent
 payload triples for partial or no-op replay.
+If a stale count/digest conflict has zero effective add/remove delta across all
+patches, it remains `status="conflict"` with drift blockers but compact
+`next_action` routes to `inspect_no_effective_change` in the `informational`
+queue and restage is omitted from suggested mutations. This means the payload is
+already effective in current graph state, not that the staged revision has an
+applied event; reserve `already_applied` for durable `rc:appliesStagedRevision`
+history.
 `count_drifts` gives expected/current counts and deltas, plus whether the staged
 patch triples themselves are currently present, absent, or mixed in the target
 graph. `snapshot_drifts` gives staged/current `sha256:<hex>` digest mismatches,
@@ -1079,6 +1086,9 @@ Guarded same-slot conflicts whose apply check already suggests
 `stage_map_assertion_change` replacement are skipped with
 `not_restageable_reason="same_slot_replacement"`; use `next_action_after` rather
 than forcing a mechanical restage.
+Stale conflicts whose patch payload already has no effective current delta are
+skipped with `not_restageable_reason="already_effective"`; inspect or export the
+source rather than creating a refreshed no-op successor.
 Each item also carries
 `status_after`, `decision_after`, `stale_resolution_state_after`,
 `blocking_reasons_after`, and effective triple deltas for `current_revision_iri`

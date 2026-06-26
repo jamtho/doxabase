@@ -1148,6 +1148,14 @@ few useful gaps:
   including post-apply recheck rows, and docs clarify that
   `suggested_next_actions` are the review-first sequence while `next_action` is
   the row route.
+- An already-effective stale-source trial showed agents could be routed into a
+  mechanical restage even when patch checks already showed the target payload
+  had zero effective current delta, producing only a no-op successor. Stale
+  count/digest conflicts now keep their drift status but route compact
+  `next_action` to informational `inspect_no_effective_change`, and batch
+  restage skips them with `not_restageable_reason="already_effective"` instead
+  of manufacturing a no-op. This is deliberately not `already_applied`; only an
+  applied revision event records durable review lineage.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

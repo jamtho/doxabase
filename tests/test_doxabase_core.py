@@ -3934,6 +3934,111 @@ def test_stale_authored_replacement_suggests_same_slot_repair(
     ).status == "ready"
 
 
+def test_stale_authored_replacement_with_target_already_current_routes_to_inspection(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        orders,
+        label="Orders",
+        is_table=True,
+        row_semantics="rc:EventRow",
+    )
+    source = db.stage_map_assertion_change(
+        subject=orders,
+        predicate="rc:rowSemantics",
+        object="rc:SnapshotRow",
+        change_kind="replace",
+        rationale="Original replacement before another route made it current.",
+    )
+    db.record_map_dataset(orders, row_semantics="rc:SnapshotRow")
+
+    check = db.check_staged_revision_apply(source.staged_revision.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.decision == "restage_against_current_graph"
+    assert check.already_applied_by is None
+    assert check.next_action is not None
+    assert check.next_action.action_type == "inspect_no_effective_change"
+    assert check.next_action.queue == "informational"
+    assert check.next_action.tool_name == "describe_staged_revision"
+    assert not any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in check.suggested_next_actions
+    )
+    assert not any(
+        action.tool_name == "restage_staged_revision"
+        for action in check.suggested_next_actions
+    )
+    by_operation = {patch.operation: patch for patch in check.patch_checks}
+    addition_patch = by_operation[db.expand_iri("rc:AdditionPatch")]
+    removal_patch = by_operation[db.expand_iri("rc:RemovalPatch")]
+    assert addition_patch.already_present_triples == 1
+    assert addition_patch.effective_triples_to_add == 0
+    assert removal_patch.already_absent_triples == 1
+    assert removal_patch.effective_triples_to_remove == 0
+
+    dry_run = db.restage_staged_revisions(
+        [source.staged_revision.revision_iri],
+        dry_run=True,
+    )
+    assert dry_run.not_restageable_revision_iris_by_reason == {
+        "already_effective": [source.staged_revision.revision_iri]
+    }
+    assert dry_run.bundle_summary.next_action_queue == {
+        "informational": [source.staged_revision.revision_iri]
+    }
+    assert dry_run.bundle_summary.recommended_mutation_review_iris == []
+
+
+def test_stale_authored_replacement_keeps_restage_route_when_removal_still_matters(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        orders,
+        label="Orders",
+        is_table=True,
+        row_semantics="rc:EventRow",
+    )
+    source = db.stage_map_assertion_change(
+        subject=orders,
+        predicate="rc:rowSemantics",
+        object="rc:SnapshotRow",
+        change_kind="replace",
+        rationale="Original replacement before another route added the target.",
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders rc:rowSemantics rc:SnapshotRow .
+        """,
+        graph="map",
+    )
+
+    check = db.check_staged_revision_apply(source.staged_revision.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.action_type == "restage_after_review"
+    assert check.next_action.tool_name == "restage_staged_revision"
+    assert not any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in check.suggested_next_actions
+    )
+    by_operation = {patch.operation: patch for patch in check.patch_checks}
+    addition_patch = by_operation[db.expand_iri("rc:AdditionPatch")]
+    removal_patch = by_operation[db.expand_iri("rc:RemovalPatch")]
+    assert addition_patch.already_present_triples == 1
+    assert addition_patch.effective_triples_to_add == 0
+    assert removal_patch.already_present_triples == 1
+    assert removal_patch.effective_triples_to_remove == 1
+
+
 def test_column_physical_type_same_slot_drift_suggests_replacement(
     tmp_path: Path,
 ) -> None:
@@ -4293,9 +4398,43 @@ def test_restaged_revision_with_realized_addition_reports_noop(
 
     stale_check = db.check_staged_revision_apply(staged.revision_iri)
     assert stale_check.status == "conflict"
+    assert stale_check.decision == "restage_against_current_graph"
+    assert stale_check.already_applied_by is None
+    assert stale_check.next_action is not None
+    assert stale_check.next_action.action_type == "inspect_no_effective_change"
+    assert stale_check.next_action.queue == "informational"
+    assert stale_check.next_action.tool_name == "describe_staged_revision"
+    assert stale_check.next_action.arguments == {
+        "iri": staged.revision_iri,
+        "include_current_apply_check": True,
+    }
+    assert stale_check.recommended_resolution is not None
+    assert "no effective delta" in stale_check.recommended_resolution
+    assert not any(
+        action.tool_name == "restage_staged_revision"
+        for action in stale_check.suggested_next_actions
+    )
     assert stale_check.count_drifts[0].patch_triple_status == (
         "all_patch_triples_present"
     )
+    dry_run = db.restage_staged_revisions([staged.revision_iri], dry_run=True)
+    assert dry_run.would_restage_revision_iris == []
+    assert dry_run.restaged_revision_iris == []
+    assert dry_run.not_restageable_revision_iris_by_reason == {
+        "already_effective": [staged.revision_iri]
+    }
+    dry_item = dry_run.items[0]
+    assert dry_item.action == "skipped_not_restageable"
+    assert dry_item.not_restageable_reason == "already_effective"
+    assert dry_item.status_before == "conflict"
+    assert dry_item.status_after == "conflict"
+    assert dry_item.next_action_after is not None
+    assert dry_item.next_action_after.action_type == "inspect_no_effective_change"
+    assert dry_item.next_action_after.queue == "informational"
+    assert dry_run.bundle_summary.next_action_queue == {
+        "informational": [staged.revision_iri]
+    }
+    assert dry_run.bundle_summary.recommended_mutation_review_iris == []
 
     restaged = db.restage_staged_revision(staged.revision_iri)
     check = db.check_staged_revision_apply(restaged.revision_iri)
@@ -4398,8 +4537,13 @@ def test_noop_successor_post_apply_recheck_reports_live_decision(
     assert recheck.decision == "restage_against_current_graph"
     assert "target_count_drift" in recheck.blocking_reasons
     assert recheck.next_action is not None
-    assert recheck.next_action.action_type == "restage_after_review"
-    assert recheck.next_action.arguments == {"iri": noop_successor.revision_iri}
+    assert recheck.next_action.action_type == "inspect_no_effective_change"
+    assert recheck.next_action.queue == "informational"
+    assert recheck.next_action.tool_name == "describe_staged_revision"
+    assert recheck.next_action.arguments == {
+        "iri": noop_successor.revision_iri,
+        "include_current_apply_check": True,
+    }
 
     restaged_noop = db.restage_staged_revision(noop_successor.revision_iri)
     restaged_check = db.check_staged_revision_apply(restaged_noop.revision_iri)

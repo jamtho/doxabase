@@ -16907,10 +16907,15 @@ class DoxaBase:
                 )
                 else None
             )
+            already_effective_route = (
+                check.next_action is not None
+                and check.next_action.action_type == "inspect_no_effective_change"
+            )
             if (
                 is_restageable_conflict
                 and restaged_by is None
                 and repair_route is None
+                and not already_effective_route
             ):
                 if dry_run:
                     would_restage_revision_iris.append(source.iri)
@@ -16940,7 +16945,7 @@ class DoxaBase:
             elif (
                 is_restageable_conflict
                 and restaged_by is None
-                and repair_route is not None
+                and (repair_route is not None or already_effective_route)
             ):
                 skipped_revision_iris.append(source.iri)
                 not_restageable_revision_iris.append(source.iri)
@@ -16952,9 +16957,14 @@ class DoxaBase:
                     [],
                 ).append(source.iri)
                 action = "skipped_not_restageable"
+                route_label = (
+                    "inspection"
+                    if already_effective_route
+                    else "repair or replacement"
+                )
                 note = (
-                    "Skipped because the current apply check recommends repair "
-                    "or replacement instead of mechanical restage "
+                    "Skipped because the current apply check recommends "
+                    f"{route_label} instead of mechanical restage "
                     f"(reason='{not_restageable_reason}', "
                     f"status='{check.status}', "
                     f"blocking_reasons={check.blocking_reasons})."
@@ -17162,6 +17172,11 @@ class DoxaBase:
             and check.next_action.tool_name == "stage_map_assertion_change"
         ):
             return "same_slot_replacement"
+        if (
+            check.next_action is not None
+            and check.next_action.action_type == "inspect_no_effective_change"
+        ):
+            return "already_effective"
         if check.decision == "inspect_restaged_source_validation_failure":
             return check.decision
         if "patch_conflict" in check.blocking_reasons:
@@ -18923,6 +18938,18 @@ class DoxaBase:
             return "all_patch_triples_present"
         return "mixed_patch_triples_present"
 
+    @staticmethod
+    def _patch_checks_have_no_effective_delta(
+        patch_checks: list[StagedPatchApplyCheck],
+    ) -> bool:
+        if not patch_checks:
+            return False
+        return all(
+            patch_check.effective_triples_to_add == 0
+            and patch_check.effective_triples_to_remove == 0
+            for patch_check in patch_checks
+        )
+
     def _staged_apply_check_blocking_reasons(
         self,
         *,
@@ -19009,6 +19036,16 @@ class DoxaBase:
                 "same single-valued map assertion slot. Stage the suggested "
                 "stage_map_assertion_change replacement successor after review "
                 "instead of mechanically restaging the stale source patch."
+            )
+        if status == "conflict" and any(
+            action.action_label == "Inspect already-effective stale source"
+            for action in suggested_next_actions or []
+        ):
+            return (
+                "The target graph drifted, but the staged patch payload already "
+                "has no effective delta in current graph state. Inspect or export "
+                "the stale source instead of mechanically restaging it just to "
+                "create a no-op successor."
             )
         if (
             "target_count_drift" in blocking_reasons
@@ -19209,47 +19246,68 @@ class DoxaBase:
                     blocking_reasons or []
                 )
             )
+            already_effective_stale = (
+                is_restageable_conflict
+                and self._patch_checks_have_no_effective_delta(patch_checks or [])
+            )
+            if already_effective_stale:
+                review_reason = (
+                    "Review the stale source and current graph state; the "
+                    "stored patch payload already has no effective delta, so "
+                    "a mechanical restage would only create a no-op successor."
+                )
+                review_label = "Inspect already-effective stale source"
+                export_slug = "staged-revision-already-effective"
+                export_reason = (
+                    "Write a review bundle that captures the stale no-effective "
+                    "proposal and current patch-triple presence."
+                )
+                export_label = "Export already-effective stale bundle"
+            elif is_restageable_conflict:
+                review_reason = (
+                    "Review the original patch payloads, count previews, "
+                    "impacts, and support before deciding whether to restage "
+                    "against current graph state."
+                )
+                review_label = "Review stale source"
+                export_slug = "staged-revision-conflict"
+                export_reason = (
+                    "Write a review bundle that captures the blocked staged proposal."
+                )
+                export_label = "Export conflict bundle"
+            else:
+                review_reason = (
+                    "Inspect the stored patch conflict, then stage a repaired "
+                    "or alternative candidate instead of restaging this row."
+                )
+                review_label = "Review patch conflict"
+                export_slug = "staged-revision-patch-conflict"
+                export_reason = (
+                    "Write a review bundle that captures the blocked staged proposal."
+                )
+                export_label = "Export conflict bundle"
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri, "include_current_apply_check": True},
-                (
-                    (
-                        "Review the original patch payloads, count previews, "
-                        "impacts, and support before deciding whether to restage "
-                        "against current graph state."
-                    )
-                    if is_restageable_conflict
-                    else (
-                        "Inspect the stored patch conflict, then stage a repaired "
-                        "or alternative candidate instead of restaging this row."
-                    )
-                ),
-                action_label=(
-                    "Review stale source"
-                    if is_restageable_conflict
-                    else "Review patch conflict"
-                ),
+                review_reason,
+                action_label=review_label,
             )
             add_action(
                 "export_staged_revision",
                 {
                     "iri": staged_revision_iri,
                     "path": self._suggested_review_export_path(
-                        (
-                            "staged-revision-conflict"
-                            if is_restageable_conflict
-                            else "staged-revision-patch-conflict"
-                        ),
+                        export_slug,
                         [staged_revision_iri],
                     ),
                 },
-                "Write a review bundle that captures the blocked staged proposal.",
-                action_label="Export conflict bundle",
+                export_reason,
+                action_label=export_label,
             )
             if is_restageable_conflict and any(
                 not drift.exact_changed_triples_available
                 for drift in snapshot_drifts or []
-            ):
+            ) and not already_effective_stale:
                 add_action(
                     "import_revision_snapshots",
                     {"path": "/tmp/revision-snapshots.json"},
@@ -19269,12 +19327,18 @@ class DoxaBase:
                     snapshot_drifts=snapshot_drifts or [],
                     validation_scope=validation_scope,
                 )
-                if is_restageable_conflict and restaged_by is None
+                if is_restageable_conflict
+                and restaged_by is None
+                and not already_effective_stale
                 else None
             )
             if same_slot_replacement_action is not None:
                 actions.append(same_slot_replacement_action)
-            if restaged_by is None and is_restageable_conflict:
+            if (
+                restaged_by is None
+                and is_restageable_conflict
+                and not already_effective_stale
+            ):
                 add_action(
                     "restage_staged_revision",
                     {"iri": staged_revision_iri},
@@ -19657,6 +19721,22 @@ class DoxaBase:
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"
+        ) and find_exact_action(
+            action_label="Inspect already-effective stale source"
+        ) is not None:
+            action_type = "inspect_no_effective_change"
+            queue = "informational"
+            label = "Inspect already-effective stale source"
+            reason = (
+                "The target graph drifted, but the stored patch payload already "
+                "has no effective delta; inspect before ignoring or replacing it."
+            )
+            selected_action = find_exact_action(
+                action_label="Inspect already-effective stale source"
+            )
+        elif (
+            apply_decision == "restage_against_current_graph"
+            or apply_status == "conflict"
         ) and find_exact_action(tool_name="stage_map_assertion_change") is not None:
             action_type = "repair_or_replace"
             queue = "repair_or_replace"
@@ -20018,6 +20098,12 @@ class DoxaBase:
             summary: StagedGraphRevisionExportSummary,
         ) -> None:
             if (
+                summary.next_action is not None
+                and summary.next_action.action_type
+                == "inspect_no_effective_change"
+            ):
+                recommend(summary.revision_iri)
+            elif (
                 summary.next_action is not None
                 and summary.next_action.queue == "repair_or_replace"
             ):

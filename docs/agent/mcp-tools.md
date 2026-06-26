@@ -875,6 +875,12 @@ expected/current graph counts and deltas for count conflicts, plus whether the
 staged patch triples themselves are currently present, absent, or mixed in the
 target graph. `patch_checks` records effective add/remove counts and
 already-present/absent payload triples for partial or no-op replay.
+When stale count/digest drift remains a `conflict` but every patch already has
+zero effective add/remove delta, compact `next_action` routes to
+`inspect_no_effective_change` in the `informational` queue and mutation
+suggestions omit mechanical restage. Treat this as "already effective in current
+graph state", not as `already_applied`; there is no applied revision event or
+durable review lineage unless `already_applied` says so.
 `snapshot_drifts` records staged/current `sha256:<hex>` digest
 mismatches, including same-count graph changes. For revisions staged with the
 current runtime, it also includes exact triples added to and removed from the
@@ -972,6 +978,10 @@ Guarded same-slot conflicts that already carry a
 `not_restageable_reason="same_slot_replacement"`; follow
 `next_action_after` / `suggested_next_actions_after` instead of forcing a
 mechanical restage.
+Stale conflicts whose patch payload already has no effective delta are likewise
+`skipped_not_restageable`, with
+`not_restageable_reason="already_effective"`; inspect/export the stale source
+instead of creating a no-op successor.
 In real batch runs, top-level `current_revision_by_source` is recomputed after
 the whole batch, so a requested stale ancestor maps to the latest successor even
 when an intermediate successor was also processed and restaged. Item-level

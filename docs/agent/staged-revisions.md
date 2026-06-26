@@ -542,6 +542,12 @@ realized the proposed addition or removal. Inspect/export or stage a replacement
 instead of applying it. `triples_to_add` and `triples_to_remove` are effective
 current-preview deltas; `patch_checks` also reports effective add/remove counts
 and already-present/absent payload triples.
+An already-effective stale source is different from a fresh `noop`: the target
+graph has count/digest drift, so the row still reports `status="conflict"` and
+drift blockers, but every patch already has zero effective add/remove delta.
+These rows route compact `next_action` to `inspect_no_effective_change` in the
+`informational` queue and omit restage suggestions. Do not call them
+`already_applied`; only an applied revision event proves durable review lineage.
 If `blocking_reasons` contains `patch_conflict`, the stored patch itself could
 not be replayed. Inspect `patch_checks[].conflict` and export the staged
 revision before mutating. Common causes are malformed stored patch Turtle or a
@@ -663,7 +669,9 @@ The summary also keeps
 Rows skipped as
 `skipped_not_restageable` carry `not_restageable_reason`, and the batch-level
 `not_restageable_revision_iris_by_reason` groups ready, already-applied,
-validation-failed, and `patch_conflict` skips for quick triage. Use
+validation-failed, `patch_conflict`, and `already_effective` skips for quick
+triage. `already_effective` means a stale source's patch payload has no current
+delta, so inspect/export it rather than creating a no-op restage successor. Use
 `dry_run=true` when an autonomous loop wants to inspect which rows would be
 refreshed before taking the mutation.
 
