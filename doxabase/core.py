@@ -1487,8 +1487,13 @@ class ProfileMetricVocabularyAdvisory:
     value: str
     value_datatype: str | None
     value_lang: str | None
+    advisory_status: str
+    definition_found: bool
+    definition: ResourceSummary | None
     recommendation: str
     rationale: str
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -9382,10 +9387,30 @@ class DoxaBase:
         evidence_iri: str,
     ) -> list[ProfileMetricVocabularyAdvisory]:
         advisories: list[ProfileMetricVocabularyAdvisory] = []
+        ontology_graphs = self._expand_graphs(["ontology"])
+        profile_metric_kind = self.expand_iri("rc:ProfileMetricKind")
         for profile in profiles:
             for metric in profile.profile_metrics:
                 if metric.metric.iri.startswith(PREFIXES["rc"]):
                     continue
+                metric_iri = metric.metric.iri
+                definition_found = self._subject_exists(metric_iri, ontology_graphs)
+                metric_types = self._types_from_graphs(ontology_graphs, metric_iri)
+                definition = (
+                    self._resource_summary(ontology_graphs, metric_iri)
+                    if definition_found
+                    else None
+                )
+                if profile_metric_kind in metric_types:
+                    advisory_status = "project_metric_defined"
+                elif definition_found:
+                    advisory_status = "project_metric_definition_ambiguous"
+                else:
+                    advisory_status = "project_metric_undefined"
+                suggested_next_actions = self._profile_metric_advisory_actions(
+                    metric_iri=metric_iri,
+                    advisory_status=advisory_status,
+                )
                 advisories.append(
                     ProfileMetricVocabularyAdvisory(
                         profile_observation_iri=profile.iri,
@@ -9395,6 +9420,9 @@ class DoxaBase:
                         value=metric.value,
                         value_datatype=metric.value_datatype,
                         value_lang=metric.value_lang,
+                        advisory_status=advisory_status,
+                        definition_found=definition_found,
+                        definition=definition,
                         recommendation="review_metric_vocabulary_before_reuse",
                         rationale=(
                             "Project-specific profile metric IRIs are valid "
@@ -9402,9 +9430,74 @@ class DoxaBase:
                             "policy should define the metric meaning, unit, and "
                             "calculation in project ontology or supporting lore."
                         ),
+                        suggested_next_actions=suggested_next_actions,
+                        suggested_next_calls=[
+                            action.call for action in suggested_next_actions
+                        ],
                     )
                 )
         return advisories
+
+    def _profile_metric_advisory_actions(
+        self,
+        *,
+        metric_iri: str,
+        advisory_status: str,
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+
+        def add_action(
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+            *,
+            action_label: str,
+        ) -> None:
+            actions.append(
+                SuggestedNextAction(
+                    action_label=action_label,
+                    tool_name=tool_name,
+                    mcp_tool_name=f"doxabase.{tool_name}",
+                    arguments=arguments,
+                    reason=reason,
+                    call=self._suggested_call_string(tool_name, arguments),
+                )
+            )
+
+        add_action(
+            "describe_context_slice",
+            {"seed_iris": [metric_iri], "profile": "dataset_brief"},
+            (
+                "Load bounded lore around the observed project-specific profile "
+                "metric before reusing it in comparison, map policy, or ontology."
+            ),
+            action_label="Inspect metric context",
+        )
+        if advisory_status == "project_metric_defined":
+            add_action(
+                "describe_resource",
+                {"iri": metric_iri, "graph": "ontology"},
+                (
+                    "Inspect the existing project ontology definition before "
+                    "using this metric in durable comparisons or map policy."
+                ),
+                action_label="Inspect metric definition",
+            )
+        else:
+            add_action(
+                "list_entities",
+                {
+                    "type": "rc:ProfileMetricKind",
+                    "graph": "ontology",
+                    "text": self._local_name(metric_iri),
+                },
+                (
+                    "Look for nearby metric vocabulary before recording claims, "
+                    "patterns, or a promoted ontology definition for this metric."
+                ),
+                action_label="List nearby metric vocabulary",
+            )
+        return actions
 
     def _profile_handoff_note(
         self,

@@ -235,7 +235,10 @@ or stage graph changes. It returns `recommendations` with helper names and
 arguments for accepted map-helper updates, plus `metric_advisories` for
 project-specific metric kinds that should be defined before reuse. Sampled
 zero-null profiles are intentionally not promoted into non-null map
-recommendations.
+recommendations. Metric advisory rows include `advisory_status`,
+`definition_found`, optional `definition`, and structured
+`suggested_next_actions` so agents can inspect existing ontology definitions or
+nearby metric vocabulary before recording claims/patterns/promotions.
 
 `doxabase.stage_profile_map_updates`
 

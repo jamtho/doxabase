@@ -323,6 +323,10 @@ graph="ontology")` is an effective-ontology lookup: it includes built-in
 `base_ontology` metric kinds as well as project ontology terms. When you need
 project-local metric kinds only, filter the returned entities for
 `graph == "ontology"`.
+`draft_profile_map_updates().metric_advisories[]` now points into this loop:
+`project_metric_undefined` / `project_metric_definition_ambiguous` advisories
+suggest context loading and nearby metric lookup, while `project_metric_defined`
+advisories also suggest inspecting the existing ontology definition.
 
 ```python
 metric = "https://example.test/project#FreshnessLagP95Seconds"

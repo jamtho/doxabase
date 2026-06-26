@@ -10916,8 +10916,20 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     }
 
     assert len(draft.metric_advisories) == 1
-    assert draft.metric_advisories[0].metric.iri == project_metric
-    assert draft.metric_advisories[0].recommendation == (
+    metric_advisory = draft.metric_advisories[0]
+    assert metric_advisory.metric.iri == project_metric
+    assert metric_advisory.advisory_status == "project_metric_undefined"
+    assert metric_advisory.definition_found is False
+    assert metric_advisory.definition is None
+    assert [action.tool_name for action in metric_advisory.suggested_next_actions] == [
+        "describe_context_slice",
+        "list_entities",
+    ]
+    assert metric_advisory.suggested_next_actions[0].arguments == {
+        "seed_iris": [project_metric],
+        "profile": "dataset_brief",
+    }
+    assert metric_advisory.recommendation == (
         "review_metric_vocabulary_before_reuse"
     )
 
@@ -10928,6 +10940,70 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     } == {
         status_column: False,
         amount_column: False,
+    }
+
+
+def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    db.replace_graph_triples(
+        "ontology",
+        additions=f"""
+            @prefix metric: <https://example.test/project#> .
+            @prefix rc: <https://richcanopy.org/ns/rc#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            <{project_metric}> a rc:ProfileMetricKind ;
+                rdfs:label "Completeness score" ;
+                rdfs:comment "Share of records with complete required fields." .
+        """,
+        allow_count_change=True,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with a project metric.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        row_count=100,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendations == []
+    assert len(draft.metric_advisories) == 1
+    advisory = draft.metric_advisories[0]
+    assert advisory.advisory_status == "project_metric_defined"
+    assert advisory.definition_found is True
+    assert advisory.definition is not None
+    assert advisory.definition.iri == project_metric
+    assert advisory.definition.label == "Completeness score"
+    assert [action.tool_name for action in advisory.suggested_next_actions] == [
+        "describe_context_slice",
+        "describe_resource",
+    ]
+    assert advisory.suggested_next_actions[1].arguments == {
+        "iri": project_metric,
+        "graph": "ontology",
     }
 
 

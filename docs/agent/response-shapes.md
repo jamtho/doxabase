@@ -757,7 +757,30 @@ and unmapped profiled columns. It intentionally skips sampled zero-null
 promotion because a sample with no nulls does not prove a full-population
 non-null constraint. `metric_advisories[]` rows name project-specific profile
 metric IRIs observed in the run and recommend vocabulary review before reusable
-comparison or map policy.
+comparison or map policy. Each advisory includes:
+
+```python
+advisory.profile_observation_iri
+advisory.evidence_iri
+advisory.metric
+advisory.target
+advisory.value
+advisory.value_datatype
+advisory.value_lang
+advisory.advisory_status
+advisory.definition_found
+advisory.definition
+advisory.recommendation
+advisory.rationale
+advisory.suggested_next_actions
+advisory.suggested_next_calls
+```
+
+`advisory_status` is `project_metric_undefined`,
+`project_metric_defined`, or `project_metric_definition_ambiguous`.
+Undefined or ambiguous metrics point suggested actions at context loading and
+nearby ontology metric lookup. Defined metrics also point at
+`describe_resource(..., graph="ontology")` for the existing definition.
 
 `db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 returns a `ProfileMapUpdateStagingRecord`:

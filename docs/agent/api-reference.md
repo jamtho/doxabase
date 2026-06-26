@@ -370,7 +370,9 @@ updates, `metric_advisories` for project-specific profile metrics, and a
 evidence IRI, `sample_size`, `sample_scope`, `sample_method`, and
 `profile_row_count` so agents can review whether the profile was a full scan,
 sample, or ambiguous run before applying helper arguments. It does not mutate
-or stage graph changes, and it skips sampled zero-null promotions.
+or stage graph changes, and it skips sampled zero-null promotions. Metric
+advisories carry `advisory_status`, `definition_found`, optional `definition`,
+and structured `suggested_next_actions` for ontology/context review.
 
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped

@@ -2852,6 +2852,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     table = "https://example.test/project#Orders"
     status_column = "https://example.test/project#OrdersStatus"
     shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessRatio"
 
     db.record_map_dataset(table, label="Orders", is_table=True, row_count_snapshot=8)
     db.record_map_column(
@@ -2872,6 +2873,13 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         sample_method="DuckDB full-table profile.",
         row_count=10,
         update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.90",
+                "datatype": "xsd:decimal",
+            }
+        ],
         column_defaults={"update_map_column": False},
         column_profiles=[
             {
@@ -2912,7 +2920,14 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     )
     assert result["recommendations"][0]["profile_row_count"] == 10
     assert result["recommendations"][1]["helper_arguments"]["nullable"] is True
-    assert result["metric_advisories"] == []
+    assert result["metric_advisories"][0]["metric"]["iri"] == project_metric
+    assert result["metric_advisories"][0]["advisory_status"] == (
+        "project_metric_undefined"
+    )
+    assert result["metric_advisories"][0]["definition_found"] is False
+    assert result["metric_advisories"][0]["suggested_next_actions"][0][
+        "tool_name"
+    ] == "describe_context_slice"
 
 
 def test_stage_profile_map_updates_tool_returns_json_like_payload(

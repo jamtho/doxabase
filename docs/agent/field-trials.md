@@ -765,6 +765,10 @@ few useful gaps:
   skips sampled row-count recommendations by default. A follow-up trial showed
   agents read this most reliably when the response carries `status_counts` and
   docs say accepted indexes can still route to `skipped`.
+  A profile-advisory routing trial showed map-update recommendation rows were
+  routeable, but metric advisories were prose-only and could not distinguish
+  defined from undefined project metrics. Metric advisories now carry
+  `advisory_status`, definition state, and structured next actions.
 - A resource-revision stress trial confirmed `list_resource_revisions` handles
   anchors, exact patch roles, pagination after filtering, restage chains, and
   applied-source patch mentions, but found two import/repair edges. Applied
