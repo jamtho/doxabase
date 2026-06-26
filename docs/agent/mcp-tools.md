@@ -900,7 +900,10 @@ Imports a JSON revision snapshot handoff bundle written by
 `doxabase.export_revision_snapshots`. Use it after an RDF project/history import
 when exact applied-diff or stale-drift triples must be available in the
 receiving capsule. Existing `(revision_iri, graph_role)` snapshot pairs are
-skipped by default; pass `replace=true` to overwrite them.
+skipped by default; pass `replace=true` to overwrite them. The result includes
+`post_import_snapshot_evidence` with the same status/action shape as
+`describe_revision_snapshot_evidence`; if rows were imported before history RDF,
+follow its `import_trig` action.
 
 `doxabase.export_graph`
 

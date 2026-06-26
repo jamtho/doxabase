@@ -102,6 +102,9 @@ workflow-only RDF handoff, and normal revision helpers still need a project or
 history RDF import. The status includes structured `suggested_next_actions`:
 missing exact rows point at `import_revision_snapshots`, and orphan snapshot
 rows point at `import_trig` for the project/history RDF.
+`import_revision_snapshots()` also returns `post_import_snapshot_evidence` for
+the bundle's revision IRIs, so snapshot-before-history imports can be routed
+without making a separate evidence call first.
 
 ## Revision List Triage
 

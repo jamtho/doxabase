@@ -747,7 +747,11 @@ few useful gaps:
   diffs with useful prose but no machine-readable recovery route. Snapshot
   evidence now carries structured import actions, applied diffs expose applied
   and source snapshot evidence, and stale checks with missing exact drift rows
-  suggest importing the companion snapshot JSON before restaging.
+  suggest importing the companion snapshot JSON before restaging. A retest
+  showed snapshot JSON imported before history RDF was still silent at the
+  import boundary; `import_revision_snapshots` now returns
+  `post_import_snapshot_evidence` with the same structured `import_trig`
+  recovery action.
 - A lineage/version-boundary trial confirmed restage/apply chains are
   recoverable from existing list/detail/diff calls, but resource-centric history
   remains scattered, especially for unanchored staged patch touches. Consider a

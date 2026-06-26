@@ -1916,6 +1916,13 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert snapshot_import.imported_snapshot_count == 2
     assert snapshot_import.skipped_snapshot_count == 0
     assert snapshot_import.imported_quad_count == 3
+    assert {
+        item.revision_iri: item.status
+        for item in snapshot_import.post_import_snapshot_evidence
+    } == {
+        result.applied_revision_iri: "history_plus_snapshot_rows",
+        staged.revision_iri: "history_plus_snapshot_rows",
+    }
     imported_status_after_snapshots = round_trip.describe_revision_snapshot_evidence(
         result.applied_revision_iri
     )
@@ -1933,6 +1940,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     skipped_import = round_trip.import_revision_snapshots(snapshot_path)
     assert skipped_import.imported_snapshot_count == 0
     assert skipped_import.skipped_snapshot_count == 2
+    assert [
+        item.status for item in skipped_import.post_import_snapshot_evidence
+    ] == [
+        "history_plus_snapshot_rows",
+        "history_plus_snapshot_rows",
+    ]
     workflow_path = tmp_path / "workflow.trig"
     db.export_trig(workflow_path, graphs="workflow")
     workflow_round_trip = DoxaBase.create(tmp_path / "workflow-round-trip.sqlite")
@@ -1945,7 +1958,20 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert workflow_status.stored_snapshot_graph_roles == []
     with pytest.raises(DoxaBaseError, match="was not found in history"):
         workflow_round_trip.describe_graph_revision(result.applied_revision_iri)
-    workflow_round_trip.import_revision_snapshots(snapshot_path)
+    orphan_import = workflow_round_trip.import_revision_snapshots(snapshot_path)
+    assert {
+        item.revision_iri: item.status
+        for item in orphan_import.post_import_snapshot_evidence
+    } == {
+        result.applied_revision_iri: "snapshot_rows_without_history",
+        staged.revision_iri: "snapshot_rows_without_history",
+    }
+    assert [
+        action.tool_name
+        for action in orphan_import.post_import_snapshot_evidence[
+            0
+        ].suggested_next_actions
+    ] == ["import_trig"]
     orphan_status = workflow_round_trip.describe_revision_snapshot_evidence(
         result.applied_revision_iri
     )
@@ -2119,6 +2145,15 @@ def test_import_revision_snapshots_validates_bundle_before_writing(
         )
     )
     assert imported.imported_snapshot_count == 1
+    assert len(imported.post_import_snapshot_evidence) == 1
+    assert imported.post_import_snapshot_evidence[0].revision_iri == valid_revision
+    assert imported.post_import_snapshot_evidence[0].status == (
+        "snapshot_rows_without_history"
+    )
+    assert [
+        action.tool_name
+        for action in imported.post_import_snapshot_evidence[0].suggested_next_actions
+    ] == ["import_trig"]
     assert valid_db._graph_snapshot_storage_rows(valid_revision, "map")[0][3] == ""
 
     invalid_kind_db = DoxaBase.create(tmp_path / "invalid-kind.sqlite")

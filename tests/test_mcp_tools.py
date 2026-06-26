@@ -1425,6 +1425,28 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert snapshot_import["imported_snapshot_count"] == 2
     assert snapshot_import["skipped_snapshot_count"] == 0
+    assert {
+        item["revision_iri"]: item["status"]
+        for item in snapshot_import["post_import_snapshot_evidence"]
+    } == {
+        result["applied_revision_iri"]: "history_plus_snapshot_rows",
+        staged["revision_iri"]: "history_plus_snapshot_rows",
+    }
+    orphan_round_trip = DoxaBase.create(tmp_path / "orphan-round-trip.sqlite")
+    orphan_import = import_revision_snapshots_tool(
+        orphan_round_trip,
+        path=str(snapshot_path),
+    )
+    assert {
+        item["revision_iri"]: item["status"]
+        for item in orphan_import["post_import_snapshot_evidence"]
+    } == {
+        result["applied_revision_iri"]: "snapshot_rows_without_history",
+        staged["revision_iri"]: "snapshot_rows_without_history",
+    }
+    assert orphan_import["post_import_snapshot_evidence"][0][
+        "suggested_next_actions"
+    ][0]["tool_name"] == "import_trig"
     snapshot_status_after_import = describe_revision_snapshot_evidence_tool(
         round_trip,
         result["applied_revision_iri"],

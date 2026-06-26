@@ -223,6 +223,7 @@ class RevisionSnapshotBundleImportRecord:
     skipped_snapshot_count: int
     quad_count: int
     imported_quad_count: int
+    post_import_snapshot_evidence: list[RevisionSnapshotEvidenceStatus]
 
 
 @dataclass(frozen=True)
@@ -20483,17 +20484,27 @@ class DoxaBase:
             imported_snapshot_count += 1
             imported_quad_count += len(snapshot["quads"])
         self._conn.commit()
+        unique_revision_iris = list(dict.fromkeys(revision_iris))
+        history_graphs = self._expand_graphs(["history"])
+        post_import_snapshot_evidence = [
+            self._revision_snapshot_evidence_status(
+                revision_iri,
+                history_graphs,
+            )
+            for revision_iri in unique_revision_iris
+        ]
         return RevisionSnapshotBundleImportRecord(
             path=source_label,
             format=format_value,
             replace=replace,
-            revision_iris=list(dict.fromkeys(revision_iris)),
+            revision_iris=unique_revision_iris,
             graph_roles=list(dict.fromkeys(graph_roles)),
             snapshot_count=len(snapshots),
             imported_snapshot_count=imported_snapshot_count,
             skipped_snapshot_count=skipped_snapshot_count,
             quad_count=sum(len(snapshot["quads"]) for snapshot in normalized_snapshots),
             imported_quad_count=imported_quad_count,
+            post_import_snapshot_evidence=post_import_snapshot_evidence,
         )
 
     def replace_graph_triples(

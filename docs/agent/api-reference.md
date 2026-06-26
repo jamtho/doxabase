@@ -41,6 +41,9 @@ db.import_revision_snapshots("path/to/revision-snapshots.json")
 revision snapshot rows. Use it after an RDF project/history import when exact
 `describe_applied_revision_diff(include_triples=True)` reconstruction must
 survive the handoff. Existing snapshot pairs are skipped unless `replace=True`.
+The result includes `post_import_snapshot_evidence`; if snapshot rows were
+imported before history RDF, follow its structured `import_trig` action before
+using normal revision helpers.
 
 ## Export Data
 

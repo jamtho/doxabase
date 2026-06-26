@@ -1867,10 +1867,16 @@ bundle.imported_snapshot_count
 bundle.skipped_snapshot_count
 bundle.quad_count
 bundle.imported_quad_count
+bundle.post_import_snapshot_evidence
 ```
 
 Import RDF project/history graphs first, then import the snapshot bundle.
 Existing snapshot pairs are skipped unless `replace=True`.
+`post_import_snapshot_evidence[]` has the same shape as
+`describe_revision_snapshot_evidence()` for each imported bundle revision IRI.
+If snapshot JSON was imported before history RDF, rows report
+`status="snapshot_rows_without_history"` and include an `import_trig` suggested
+action.
 
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:
