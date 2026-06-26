@@ -406,7 +406,10 @@ and
 sample, or ambiguous run before applying helper arguments. It does not mutate
 or stage graph changes, and it skips sampled zero-null promotions. Metric
 advisories carry `advisory_status`, `definition_found`, optional `definition`,
-and structured `suggested_next_actions` for ontology/context review.
+`promotion_patterns`, and structured `suggested_next_actions` for
+ontology/context review. Undefined metrics with a same-evidence pattern that
+names the metric as a target or map implication also get a reviewable
+`stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
 If `recommendation_count > 0`, review the draft and use the top-level
 `stage_profile_map_updates` action as a starting point, passing only accepted
 indexes. If `recommendation_count == 0 and metric_advisory_count > 0`, treat

@@ -3243,6 +3243,85 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     ] == "describe_context_slice"
 
 
+def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    record_map_dataset_tool(
+        db,
+        table,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    bundle = record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        row_count=10,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.90",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+    pattern = record_pattern_tool(
+        db,
+        summary="Orders completeness score needs vocabulary.",
+        pattern_text=(
+            "The Orders profile uses a reusable completeness score that needs "
+            "a project metric definition before comparison."
+        ),
+        rationale="The pattern and profile run share one evidence resource.",
+        pattern_targets=[table],
+        supporting_observations=(
+            bundle["handoff_entrypoints"]["profile_observation_iris"]
+        ),
+        evidence_iri=shared_evidence,
+        map_implications=[project_metric],
+    )
+
+    result = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+
+    assert result["recommendation_count"] == 0
+    advisory = result["metric_advisories"][0]
+    assert advisory["promotion_pattern_count"] == 1
+    assert [item["iri"] for item in advisory["promotion_patterns"]] == [
+        pattern["pattern_iri"]
+    ]
+    assert [action["tool_name"] for action in advisory["suggested_next_actions"]] == [
+        "describe_context_slice",
+        "list_entities",
+        "describe_pattern",
+        "stage_pattern_promotion",
+    ]
+    promotion_action = advisory["suggested_next_actions"][3]
+    promotion_args = promotion_action["arguments"]
+    assert promotion_args["patterns"] == [pattern["pattern_iri"]]
+    assert promotion_args["evidence"] == [shared_evidence]
+    assert promotion_args["anchors"] == [project_metric]
+    assert "rc:ProfileMetricKind" in promotion_args["framings"][0]["content"]
+
+    promoted = stage_pattern_promotion_tool(db, **promotion_args)
+
+    assert len(promoted["staged_revisions"]) == 1
+    assert promoted["staged_revisions"][0]["validation_conforms"] is True
+
+
 def test_stage_profile_map_updates_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:

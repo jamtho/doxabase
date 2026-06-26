@@ -795,6 +795,8 @@ advisory.value_lang
 advisory.advisory_status
 advisory.definition_found
 advisory.definition
+advisory.promotion_patterns
+advisory.promotion_pattern_count
 advisory.recommendation
 advisory.rationale
 advisory.suggested_next_actions
@@ -804,7 +806,11 @@ advisory.suggested_next_calls
 `advisory_status` is `project_metric_undefined`,
 `project_metric_defined`, or `project_metric_definition_ambiguous`.
 Undefined metrics point suggested actions at context loading and nearby ontology
-metric lookup. Defined metrics point at
+metric lookup. If an undefined metric also has a same-evidence pattern that
+names the metric as a target or map implication, the advisory includes
+`promotion_patterns` and adds `describe_pattern` plus a reviewable
+`stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
+Defined metrics point at
 `describe_resource(..., graph="ontology")` for the existing definition;
 ambiguous metrics point at both the existing definition and nearby metric
 lookup. Use `metric_advisory_count` and `metric_advisory_status_counts` for

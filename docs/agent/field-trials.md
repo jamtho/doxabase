@@ -805,6 +805,11 @@ few useful gaps:
   An end-to-end profile-bundle retest found staging itself should hand off to
   the read-only apply check; staging responses now suggest
   `check_staged_revision_apply` when a grouped revision is created.
+  A broader workflow trial found undefined metric advisories still left agents
+  to bridge manually from metric review to pattern promotion. When a
+  same-evidence pattern names the metric as a target or map implication, metric
+  advisories now name `promotion_patterns` and suggest a reviewable
+  `stage_pattern_promotion` ontology skeleton.
 - A resource-revision stress trial confirmed `list_resource_revisions` handles
   anchors, exact patch roles, pagination after filtering, restage chains, and
   applied-source patch mentions, but found two import/repair edges. Applied

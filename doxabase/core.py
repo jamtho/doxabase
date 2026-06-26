@@ -1583,6 +1583,8 @@ class ProfileMetricVocabularyAdvisory:
     advisory_status: str
     definition_found: bool
     definition: ResourceSummary | None
+    promotion_patterns: list[ResourceSummary]
+    promotion_pattern_count: int
     recommendation: str
     rationale: str
     suggested_next_actions: list[SuggestedNextAction]
@@ -10539,9 +10541,19 @@ class DoxaBase:
                     advisory_status = "project_metric_definition_ambiguous"
                 else:
                     advisory_status = "project_metric_undefined"
+                promotion_pattern_iris = (
+                    self._profile_metric_promotion_pattern_iris(
+                        metric_iri=metric_iri,
+                        evidence_iri=evidence_iri,
+                    )
+                    if advisory_status == "project_metric_undefined"
+                    else []
+                )
                 suggested_next_actions = self._profile_metric_advisory_actions(
                     metric_iri=metric_iri,
                     advisory_status=advisory_status,
+                    promotion_pattern_iris=promotion_pattern_iris,
+                    evidence_iri=evidence_iri,
                 )
                 advisories.append(
                     ProfileMetricVocabularyAdvisory(
@@ -10555,6 +10567,11 @@ class DoxaBase:
                         advisory_status=advisory_status,
                         definition_found=definition_found,
                         definition=definition,
+                        promotion_patterns=self._resource_summaries(
+                            self._lookup_graphs(["patterns"]),
+                            promotion_pattern_iris,
+                        ),
+                        promotion_pattern_count=len(promotion_pattern_iris),
                         recommendation="review_metric_vocabulary_before_reuse",
                         rationale=(
                             "Project-specific profile metric IRIs are valid "
@@ -10575,8 +10592,11 @@ class DoxaBase:
         *,
         metric_iri: str,
         advisory_status: str,
+        promotion_pattern_iris: list[str] | None = None,
+        evidence_iri: str | None = None,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
+        promotion_pattern_values = list(promotion_pattern_iris or [])
 
         def add_action(
             tool_name: str,
@@ -10633,7 +10653,106 @@ class DoxaBase:
                 ),
                 action_label="List nearby metric vocabulary",
             )
+        if advisory_status == "project_metric_undefined" and promotion_pattern_values:
+            for pattern_iri in promotion_pattern_values[:3]:
+                add_action(
+                    "describe_pattern",
+                    {"iri": pattern_iri},
+                    (
+                        "Inspect the same-evidence pattern before promoting this "
+                        "project metric into ontology vocabulary."
+                    ),
+                    action_label="Inspect metric promotion pattern",
+                )
+            add_action(
+                "stage_pattern_promotion",
+                self._profile_metric_promotion_skeleton_arguments(
+                    metric_iri=metric_iri,
+                    pattern_iris=promotion_pattern_values,
+                    evidence_iri=evidence_iri,
+                ),
+                (
+                    "Stage a reviewable ontology skeleton for this project metric "
+                    "only after checking that the same-evidence pattern captures "
+                    "its calculation, unit, and comparison semantics."
+                ),
+                action_label="Stage metric vocabulary skeleton",
+            )
         return actions
+
+    def _profile_metric_promotion_pattern_iris(
+        self,
+        *,
+        metric_iri: str,
+        evidence_iri: str,
+    ) -> list[str]:
+        pattern_graphs = ["patterns"]
+        same_evidence = set(self._subjects(pattern_graphs, "rc:evidence", evidence_iri))
+        if not same_evidence:
+            return []
+        metric_related = set(
+            self._subjects(pattern_graphs, "rc:patternTarget", metric_iri)
+        )
+        metric_related.update(
+            self._subjects(pattern_graphs, "rc:mapImplication", metric_iri)
+        )
+        return sorted(same_evidence & metric_related)
+
+    def _profile_metric_promotion_skeleton_arguments(
+        self,
+        *,
+        metric_iri: str,
+        pattern_iris: list[str],
+        evidence_iri: str | None,
+    ) -> dict[str, Any]:
+        metric_label = self._local_name(metric_iri) or metric_iri
+        content = (
+            "@prefix rc: <https://richcanopy.org/ns/rc#> .\n"
+            "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\n"
+            f"<{metric_iri}> a rc:ProfileMetricKind ;\n"
+            f"    rdfs:label {Literal(metric_label).n3()} ;\n"
+            "    rdfs:comment "
+            + Literal(
+                "Project-specific profile metric observed in profile evidence; "
+                "review and sharpen its calculation, unit, and comparison "
+                "semantics before applying this vocabulary definition."
+            ).n3()
+            + " ."
+        )
+        arguments: dict[str, Any] = {
+            "patterns": pattern_iris,
+            "summary": f"Define {metric_label} profile metric",
+            "intent": (
+                "Stage project ontology vocabulary for a profile metric that "
+                "already has same-evidence pattern support."
+            ),
+            "rationale": (
+                "The metric advisory found an undefined project-specific profile "
+                "metric and an existing pattern tied to the same evidence. Keep "
+                "this as a staged ontology proposal until calculation, unit, and "
+                "comparison semantics have been reviewed."
+            ),
+            "framings": [
+                {
+                    "label": "Profile metric kind definition",
+                    "graph": "ontology",
+                    "content": content,
+                    "review_note": (
+                        "Generated as a metric-vocabulary promotion skeleton from "
+                        "draft_profile_map_updates; review wording before applying."
+                    ),
+                    "review_recommendation": (
+                        "Apply only after the metric calculation, unit, and "
+                        "comparison semantics are explicit enough for reuse."
+                    ),
+                }
+            ],
+            "anchors": [metric_iri],
+            "validation_scope": "all",
+        }
+        if evidence_iri is not None:
+            arguments["evidence"] = [evidence_iri]
+        return arguments
 
     def _profile_handoff_note(
         self,

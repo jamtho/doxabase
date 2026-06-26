@@ -250,9 +250,13 @@ arguments for accepted map-helper updates, plus `metric_advisories` for
 project-specific metric kinds that should be defined before reuse. Sampled
 zero-null profiles are intentionally not promoted into non-null map
 recommendations. Metric advisory rows include `advisory_status`,
-`definition_found`, optional `definition`, and structured
+`definition_found`, optional `definition`, `promotion_patterns`, and structured
 `suggested_next_actions` so agents can inspect existing ontology definitions or
-nearby metric vocabulary before recording claims/patterns/promotions. The draft
+nearby metric vocabulary before recording claims/patterns/promotions. When an
+undefined metric has a same-evidence pattern naming it as a target or map
+implication, the advisory also suggests `describe_pattern` and a reviewable
+`stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
+The draft
 also includes `recommendation_count`, `metric_advisory_count`,
 `metric_advisory_status_counts`, and top-level `suggested_next_actions` /
 `suggested_next_calls` for quick routing. Recommendation rows carry
