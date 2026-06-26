@@ -54,7 +54,10 @@ When arriving cold, use this route before reading every reference doc.
    `relation_identifier` plus `connection_reference` over treating
    `candidate_path` as a file URI.
 9. Call `doxabase.describe_context_slice` when you need a route-explained slice
-   around a dataset, pattern, or lore thread.
+   around a dataset, pattern, or lore thread. Use `profile="dataset_brief"` for
+   dataset/table/profile/metric handoffs, `profile="pattern_brief"` for pattern
+   handoffs, and `profile="deep_lore"` when revision/history links or broader
+   lore may matter.
 10. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
    `doxabase.describe_pattern` when the map points to synthesized lore.
 11. Use the smallest write helper that fits the work, then validate before

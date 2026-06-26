@@ -1303,7 +1303,9 @@ still carries the automatic decision, while `selected_candidate_index`,
 `allow_context_blocked_candidate` describe the actual draft selection.
 If `unselected_ready_candidate_indexes` is non-empty, another direct-ready
 candidate exists and agents should consider whether to rerun with explicit
-`candidate_index`.
+`candidate_index`. The returned list order is not an authoring-preference
+contract; `candidate_index` is a response-local pointer, so inspect the candidate
+cards before treating one ready path or relation as intended.
 `storage_access_iri` must identify exactly one query target candidate; when one
 storage access has multiple candidate paths, the error includes compact
 candidate snippets and callers should rerun with `candidate_index`.
@@ -2344,7 +2346,10 @@ Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `review_then_apply`, `inspect_no_effective_change`,
 `inspect_applied_revision`, `inspect_current_successor`,
 `restage_against_current_graph`, `inspect_patch_conflict`, or
-`inspect_validation_results`.
+`inspect_validation_results`. A mechanically ready restaged successor whose
+source failed staged-time validation uses
+`inspect_restaged_source_validation_failure`; inspect/export it and stage a
+repaired or alternative candidate before applying.
 `review_recommended=True` means the caller should
 review the staged revision before the next mutation or replacement. For `ready` checks that
 means review before applying; for count/digest-drift `conflict` checks it means
@@ -2356,11 +2361,14 @@ applying. `blocking_reasons` uses compact values such as `target_count_drift`,
 `no_effective_patch_triples`, `superseded_by_restage`, or `already_applied`.
 `next_action` is the compact queue route for the checked revision, using the
 same `RevisionNextAction` shape as list/export rows. Prefer it for automation
-after reading the full check: ready rows route to `apply_after_review`, stale
-count/digest drift routes to `restage_after_review`, validation and patch
+after reading the full check: ordinary ready rows route to `apply_after_review`,
+stale count/digest drift routes to `restage_after_review`, validation and patch
 conflicts route to `repair_or_replace`, and already-applied rows route to
-`inspect_already_applied`. No-op and superseded-by-restage rows usually route
-to informational inspection queues. When `validation_conforms is None`, read
+`inspect_already_applied`. A ready restaged successor with
+`decision == "inspect_restaged_source_validation_failure"` also routes to
+`repair_or_replace`, because current graph state may have supplied semantics
+that the original framing omitted. No-op and superseded-by-restage rows usually
+route to informational inspection queues. When `validation_conforms is None`, read
 `validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
 `already_applied`.
@@ -2673,7 +2681,11 @@ the source row's stored staged-time validation signal. The `current_*`
 validation fields give the same stored staged-time signal for
 `current_revision_iri`, which can differ after a real restage creates a
 successor. These are separate from live `status_after` and
-`blocking_reasons_after`.
+`blocking_reasons_after`. If a restaged successor is mechanically ready only
+after current graph state fills a source validation gap, `decision_after`
+becomes `inspect_restaged_source_validation_failure` and
+`next_action_after.queue` is `repair_or_replace` rather than
+`apply_after_review`.
 `stale_resolution_state_after == "restaged_successor_stale_unresolved"` means a
 skipped already-handled source points to a current successor that is itself
 stale; inspect or restage `current_revision_iri` before applying anything.

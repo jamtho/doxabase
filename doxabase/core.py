@@ -15134,6 +15134,17 @@ class DoxaBase:
                     "a removal+addition patch or stage_map_assertion_change "
                     "replacement instead of restaging the same patch again."
                 )
+            if (
+                current_check.decision
+                == "inspect_restaged_source_validation_failure"
+            ):
+                note = (
+                    note
+                    + " The current revision is mechanically ready, but its "
+                    "source failed staged-time validation; inspect source "
+                    "validation diagnostics and repair or replace the framing "
+                    "before applying."
+                )
             items.append(
                 StagedGraphRevisionBatchRestageItem(
                     source_revision_iri=source.iri,
@@ -15223,6 +15234,8 @@ class DoxaBase:
         self,
         check: StagedRevisionApplyCheck,
     ) -> str:
+        if check.decision == "inspect_restaged_source_validation_failure":
+            return check.decision
         if "patch_conflict" in check.blocking_reasons:
             return "patch_conflict"
         if check.status == "conflict":
@@ -15994,6 +16007,21 @@ class DoxaBase:
         semantic_risk_level, semantic_risk_reasons = (
             self._staged_revision_semantic_risk(staged)
         )
+        restaged_source_validation_warning = (
+            self._restaged_source_validation_warning(staged)
+        )
+        if restaged_source_validation_warning is not None:
+            semantic_risk_reasons = list(
+                dict.fromkeys(
+                    [
+                        *semantic_risk_reasons,
+                        restaged_source_validation_warning,
+                    ]
+                )
+            )
+            semantic_risk_level = (
+                "high" if semantic_risk_level != "none" else "attention"
+            )
         snapshot_drifts = self._staged_revision_snapshot_drifts(
             staged,
             changed_graphs,
@@ -16072,6 +16100,9 @@ class DoxaBase:
                     self._staged_apply_check_recommended_resolution(
                         status=status,
                         blocking_reasons=blocking_reasons,
+                        restaged_source_validation_warning=(
+                            restaged_source_validation_warning
+                        ),
                     )
                 ),
                 already_applied_by=existing_applied[0],
@@ -16319,10 +16350,16 @@ class DoxaBase:
                 else None
             ),
             snapshot_drifts=snapshot_drifts,
+            restaged_source_validation_warning=(
+                restaged_source_validation_warning
+            ),
         )
         decision = self._staged_apply_check_decision(
             status,
             blocking_reasons=blocking_reasons,
+            restaged_source_validation_warning=(
+                restaged_source_validation_warning
+            ),
         )
         next_action = self._revision_next_action(
             staged.iri,
@@ -16356,6 +16393,9 @@ class DoxaBase:
             recommended_resolution=self._staged_apply_check_recommended_resolution(
                 status=status,
                 blocking_reasons=blocking_reasons,
+                restaged_source_validation_warning=(
+                    restaged_source_validation_warning
+                ),
             ),
             already_applied_by=None,
             changed_graphs=changed_graphs,
@@ -16384,6 +16424,31 @@ class DoxaBase:
             check=check,
             parsed_patches=parsed_patches,
             preview_graphs=preview_graphs,
+        )
+
+    def _restaged_source_validation_warning(
+        self,
+        staged: StagedGraphRevisionDescription,
+    ) -> str | None:
+        if staged.restaged_from is None:
+            return None
+        source = self.describe_staged_revision(staged.restaged_from.iri)
+        source_status = self._staged_validation_status(
+            conforms=source.validation_conforms,
+            result_count=source.validation_result_count,
+        )
+        if source_status != "failed":
+            return None
+        result_text = (
+            f" with {source.validation_result_count} result(s)"
+            if source.validation_result_count is not None
+            else ""
+        )
+        return (
+            "The restaged source failed staged-time validation"
+            f"{result_text}; current validation may pass because intervening "
+            "graph state supplied semantics that the source framing originally "
+            "omitted."
         )
 
     def _staged_revision_semantic_risk(
@@ -16842,7 +16907,10 @@ class DoxaBase:
         status: str,
         *,
         blocking_reasons: list[str] | None = None,
+        restaged_source_validation_warning: str | None = None,
     ) -> str:
+        if status == "ready" and restaged_source_validation_warning is not None:
+            return "inspect_restaged_source_validation_failure"
         if status == "conflict" and blocking_reasons is not None:
             if not self._staged_apply_check_is_restageable_conflict(
                 blocking_reasons
@@ -16945,7 +17013,14 @@ class DoxaBase:
         *,
         status: str,
         blocking_reasons: list[str],
+        restaged_source_validation_warning: str | None = None,
     ) -> str | None:
+        if status == "ready" and restaged_source_validation_warning is not None:
+            return (
+                f"{restaged_source_validation_warning} Inspect the source "
+                "validation diagnostics and stage a repaired or alternative "
+                "candidate before applying this restaged successor."
+            )
         if status == "ready":
             return (
                 "Review the staged revision, impacts, validation preview, and any "
@@ -17015,6 +17090,7 @@ class DoxaBase:
         restaged_by: str | None,
         current_restaged_by: str | None,
         snapshot_drifts: list[StagedGraphSnapshotDrift] | None = None,
+        restaged_source_validation_warning: str | None = None,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
 
@@ -17036,7 +17112,33 @@ class DoxaBase:
                 )
             )
 
-        if status == "ready":
+        if status == "ready" and restaged_source_validation_warning is not None:
+            add_action(
+                "describe_staged_revision",
+                {"iri": staged_revision_iri},
+                (
+                    f"{restaged_source_validation_warning} Inspect the "
+                    "restaged successor and its source validation diagnostics "
+                    "before deciding whether a repaired candidate is needed."
+                ),
+                action_label="Inspect restaged validation history",
+            )
+            add_action(
+                "export_staged_revision",
+                {
+                    "iri": staged_revision_iri,
+                    "path": self._suggested_review_export_path(
+                        "staged-revision-restaged-validation-history",
+                        [staged_revision_iri],
+                    ),
+                },
+                (
+                    "Write a Markdown review bundle that preserves the current "
+                    "ready check alongside the source validation-failure history."
+                ),
+                action_label="Export restaged validation bundle",
+            )
+        elif status == "ready":
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
@@ -17316,6 +17418,15 @@ class DoxaBase:
                 "current successor instead of applying this row."
             )
             selected_action = find_action(action_label=label)
+        elif apply_decision == "inspect_restaged_source_validation_failure":
+            action_type = "repair_or_replace"
+            queue = "repair_or_replace"
+            label = "Repair or replace"
+            reason = (
+                "Inspect the restaged source validation diagnostics, then stage "
+                "a repaired or alternative candidate before applying this row."
+            )
+            selected_action = find_action(tool_name="describe_staged_revision")
         elif apply_decision == "review_then_apply" or apply_status == "ready":
             action_type = "apply_after_review"
             queue = "apply_after_review"
@@ -17692,6 +17803,7 @@ class DoxaBase:
             elif summary.apply_decision in {
                 "inspect_validation_results",
                 "inspect_patch_conflict",
+                "inspect_restaged_source_validation_failure",
             }:
                 recommend_repair(summary.revision_iri)
             else:

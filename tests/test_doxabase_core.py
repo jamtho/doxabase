@@ -4115,6 +4115,131 @@ def test_batch_restage_items_report_validation_failed_successor_status(
     assert batch.bundle_summary.recommended_repair_review_iris == [successor_iri]
 
 
+def test_restage_from_staged_validation_failure_routes_to_repair_when_current_state_fills_gap(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    scope = "https://example.test/project#DispatchTemporalScope"
+    clock = "https://example.test/project#dispatch_events__event_local_time"
+    timezone = "https://example.test/project#dispatch_events__timezone_hint"
+    db.import_turtle(
+        """
+        @prefix ft: <https://example.test/project/systematisation#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ft:TemporalInterpretationScope a rdfs:Class ;
+            rdfs:label "Temporal interpretation scope" .
+
+        ft:clockColumn a rdf:Property ;
+            rdfs:label "clock column" .
+
+        ft:timezoneEvidenceColumn a rdf:Property ;
+            rdfs:label "timezone evidence column" .
+        """,
+        graph="ontology",
+    )
+    db.import_turtle(
+        """
+        @prefix ft: <https://example.test/project/systematisation#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+        ft:TemporalInterpretationScopeShape a sh:NodeShape ;
+            sh:targetClass ft:TemporalInterpretationScope ;
+            sh:property [
+                sh:path ft:timezoneEvidenceColumn ;
+                sh:minCount 1 ;
+                sh:nodeKind sh:IRI ;
+                sh:message "Temporal scopes must name timezone evidence."
+            ] .
+        """,
+        graph="shapes",
+    )
+    source = db.stage_graph_revision(
+        summary="Stage incomplete temporal scope",
+        rationale=(
+            "Regression test: this source failed staged-time validation because "
+            "the framing omitted timezone evidence."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ft: <https://example.test/project/systematisation#> .
+
+                    <{scope}> a ft:TemporalInterpretationScope ;
+                        ft:clockColumn <{clock}> .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    assert source.validation_conforms is False
+    db.import_turtle(
+        f"""
+        @prefix ft: <https://example.test/project/systematisation#> .
+
+        <{scope}> ft:timezoneEvidenceColumn <{timezone}> .
+        """,
+        graph="map",
+    )
+    stale_check = db.check_staged_revision_apply(source.revision_iri)
+    assert stale_check.status == "conflict"
+    assert stale_check.blocking_reasons == ["target_count_drift"]
+
+    restaged = db.restage_staged_revision(source.revision_iri)
+    check = db.check_staged_revision_apply(restaged.revision_iri)
+
+    assert restaged.validation_conforms is True
+    assert check.status == "ready"
+    assert check.can_apply is True
+    assert check.validation_conforms is True
+    assert check.decision == "inspect_restaged_source_validation_failure"
+    assert check.next_action is not None
+    assert check.next_action.action_type == "repair_or_replace"
+    assert check.next_action.queue == "repair_or_replace"
+    assert check.next_action.tool_name == "describe_staged_revision"
+    assert not any(
+        action.tool_name == "apply_staged_revision"
+        for action in check.suggested_next_actions
+    )
+    warning = (
+        "The restaged source failed staged-time validation with 1 result(s)"
+    )
+    assert any(warning in reason for reason in check.semantic_risk_reasons)
+    assert check.recommended_resolution is not None
+    assert warning in check.recommended_resolution
+
+    batch = db.restage_staged_revisions([restaged.revision_iri], dry_run=True)
+    assert batch.items[0].action == "skipped_not_restageable"
+    assert batch.items[0].not_restageable_reason == (
+        "inspect_restaged_source_validation_failure"
+    )
+    assert batch.items[0].next_action_after is not None
+    assert batch.items[0].next_action_after.queue == "repair_or_replace"
+    assert "source failed staged-time validation" in batch.items[0].note
+
+    export = db.export_staged_revisions(
+        [source.revision_iri, restaged.revision_iri],
+        tmp_path / "restaged-source-validation-review.md",
+    )
+    restaged_summary = export.revision_summaries[1]
+    assert restaged_summary.apply_status == "ready"
+    assert restaged_summary.apply_decision == (
+        "inspect_restaged_source_validation_failure"
+    )
+    assert restaged_summary.next_action is not None
+    assert restaged_summary.next_action.queue == "repair_or_replace"
+    assert export.bundle_summary.next_action_queue == {
+        "informational": [source.revision_iri],
+        "repair_or_replace": [restaged.revision_iri],
+    }
+    assert export.bundle_summary.recommended_apply_or_restage_review_iris == []
+    assert export.bundle_summary.recommended_repair_review_iris == [
+        restaged.revision_iri
+    ]
+
+
 def test_batch_restage_marks_stale_current_successor_as_unresolved(
     tmp_path: Path,
 ) -> None:

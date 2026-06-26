@@ -32,6 +32,9 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    the selected candidate has peer ready candidates; inspect
    `query_target_candidates` and rerun with explicit `candidate_index` when a
    different route is intended.
+   Candidate order is not an authoring-preference contract. Treat
+   `candidate_index` as a pointer into the returned list, not proof that the
+   first ready relation/path is the preferred one.
 3. `scan.uri_template` is for file/object scans.
 4. `scan.relation_identifier` and `scan.connection_reference` are for
    database-backed storage handoffs; do not treat the candidate path as a file

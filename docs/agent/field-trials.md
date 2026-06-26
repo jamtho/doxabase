@@ -951,6 +951,17 @@ few useful gaps:
   `metric_advisory_suggested_next_actions` lane, plus
   `metric_vocabulary_review_required`, so queue-following agents do not mistake
   a staged map patch for resolved project metric vocabulary.
+- A query-planning trial confirmed the relation/path snippet split works for
+  ambiguous database candidates and explicit context-blocked selections. The
+  remaining gotcha is RDF-shaped candidate order: multiple ready candidates are
+  not an authoring-preference list. Treat `candidate_index` as a pointer into the
+  returned response and inspect `unselected_ready_candidate_indexes` before
+  deciding which ready relation or path to draft.
+- Staged-revision recovery trials found that a source framing that failed
+  staged-time validation can later restage as mechanically ready if current graph
+  state supplies the missing semantics. Apply checks now preserve that history
+  with `decision="inspect_restaged_source_validation_failure"` and route the
+  successor through `repair_or_replace` instead of `apply_after_review`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

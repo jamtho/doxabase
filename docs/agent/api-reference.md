@@ -332,7 +332,9 @@ gate and show the distinction through
 the explicit selection audit fields. It also reports `candidate_count`,
 `ready_candidate_indexes`, and `unselected_ready_candidate_indexes`; when the
 last list is non-empty, the automatic or explicit selection has peer ready
-candidates worth reviewing before execution.
+candidates worth reviewing before execution. Candidate order is not an
+authoring-preference contract; use `candidate_index` as a response-local pointer
+after inspecting the returned candidate cards.
 The response includes a scan hint such as `read_parquet`, the candidate
 URI/path template for file/object storage, database relation fields for
 database-backed storage, parsed placeholder names in `required_bindings`,
@@ -920,6 +922,10 @@ validation status, semantic risk, and a top-level `can_apply` flag. Read
 applied event, review validation diagnostics, or restage after conflicts.
 `superseded_by_restage` means the staged source already has a refreshed
 successor; inspect that successor instead of applying the old source.
+`inspect_restaged_source_validation_failure` means a restaged successor is
+mechanically ready, but its source failed staged-time validation and current
+graph state may be filling the semantic gap; inspect/export it and stage a
+repair or alternative before applying.
 For `ready` checks with `semantic_risk_level` of `attention` or `high`, the
 apply action is labelled `Apply only after semantic review`. For conflict
 checks, the review action includes `include_current_apply_check=True` so the
