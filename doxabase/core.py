@@ -25485,6 +25485,13 @@ class DoxaBase:
             )
         expanded = self.expand_iri(text)
         if "://" not in expanded and not expanded.startswith("urn:") and ":" not in text:
+            if name == "compression_codec":
+                raise DoxaBaseError(
+                    f"{name} values must be IRIs or CURIEs, not plain names: "
+                    f"{value!r}. Use a canonical compression CURIE such as "
+                    "'rc:ZstdCompression', 'rc:SnappyCompression', or "
+                    "'rc:GzipCompression', or a full project IRI."
+                )
             raise DoxaBaseError(
                 f"{name} values must be IRIs or CURIEs, not plain names: "
                 f"{value!r}. Use a CURIE such as 'rc:Moderate' or 'rc:Varchar', "

@@ -174,6 +174,11 @@ created during that run, not as an apply queue. Each item's `status_after`,
 describe `current_revision_iri` after the batch decision; use
 `next_action_after` and `suggested_next_actions_after` for the concrete
 post-batch route, then use `check_staged_revision_apply()` before each apply.
+Scripts should drive follow-up calls from `next_action_after.arguments["iri"]`
+when present, or `current_revision_iri` otherwise. `restaged_revision_iri` is
+only populated for a batch item that created a successor in that batch. For a
+single `restage_staged_revision()` response, `revision_iri` is the newly created
+current successor.
 Each item also carries `source_staged_validation_status` /
 `source_validation_result_count` and `current_staged_validation_status` /
 `current_validation_result_count`, so a dry-run consumer can see stored

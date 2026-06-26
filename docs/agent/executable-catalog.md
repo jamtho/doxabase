@@ -172,7 +172,7 @@ db.record_map_storage_access(
 db.record_map_physical_layout(
     layout,
     file_format="rc:Parquet",
-    compression_codec="rc:Zstd",
+    compression_codec="rc:ZstdCompression",
     datasets=[table],
     layout_verification_status="rc:CandidateLayout",
 )

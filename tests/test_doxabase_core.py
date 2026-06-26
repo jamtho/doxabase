@@ -9177,6 +9177,14 @@ def test_map_helpers_do_not_duplicate_column_links(tmp_path: Path) -> None:
             id="layout-file-format",
         ),
         pytest.param(
+            lambda db: db.record_map_physical_layout(
+                "https://example.test/project#messages_layout",
+                compression_codec="zstd",
+            ),
+            "compression_codec.*rc:ZstdCompression",
+            id="layout-compression-codec",
+        ),
+        pytest.param(
             lambda db: db.record_map_partition_scheme(
                 "https://example.test/project#messages_partitioning",
                 partition_columns=["the date column"],

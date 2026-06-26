@@ -2626,6 +2626,11 @@ is still the stale source. Use `next_action_after` as the compact route for
 `current_revision_iri`, and read `suggested_next_actions_after` when a script
 needs concrete follow-up calls without joining back through
 `list_graph_revisions`.
+For batch-restage automation, prefer `next_action_after.arguments["iri"]` when
+present, or `current_revision_iri` otherwise. `restaged_revision_iri` is only
+populated for items whose current batch call created a new successor. In the
+single-revision restage response, `revision_iri` is the newly created current
+successor.
 `source_staged_validation_status` and `source_validation_result_count` preserve
 the source row's stored staged-time validation signal. The `current_*`
 validation fields give the same stored staged-time signal for

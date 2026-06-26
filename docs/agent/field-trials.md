@@ -896,6 +896,15 @@ few useful gaps:
   for current map context, observation context, pattern synthesis, evidence
   support, revision history, vocabulary context, mixed context, or
   referenced-only objects.
+- A physical-metadata authoring trial confirmed `compression_codec="zstd"` is a
+  plain-name error, not a reason to accept arbitrary bare codec strings. The
+  executable-catalog example now uses canonical `rc:ZstdCompression`, and the
+  `compression_codec` preflight message suggests compression-specific CURIEs.
+- A staged recovery route trial found single restage and batch restage naming
+  routeable, provided scripts follow the structured action arguments. Docs now
+  say to use `next_action_after.arguments["iri"]` or `current_revision_iri`
+  after batch restage, while single restage `revision_iri` is the created
+  successor.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
