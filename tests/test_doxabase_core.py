@@ -7410,6 +7410,64 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     assert explicit_bad_plan.handoff_kind == "metadata_review_required"
 
 
+def test_database_storage_does_not_treat_dataset_template_as_relation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    dataset_template = "events/current/*.parquet"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_database_storage",
+        label="Events database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-prod",
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        path_templates=[dataset_template],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    target = context.query_target_candidates[0]
+    assert target.template_source == "dataset"
+    assert target.candidate_path is None
+    assert target.relation_identifier is None
+    assert target.connection_reference == "analytics-prod"
+    assert target.composition == "unresolved"
+    assert target.candidate_path_status == "unresolved"
+    assert [reason.code for reason in target.direct_review_reasons] == [
+        "database_relation_template_source_mismatch"
+    ]
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template_source == "dataset"
+    assert plan.scan.uri_template is None
+    assert plan.scan.relation_identifier is None
+    assert plan.scan.connection_reference == "analytics-prod"
+    assert plan.review_gate.blocking_reason_codes == [
+        "database_relation_template_source_mismatch"
+    ]
+    assert plan.handoff_kind == "metadata_review_required"
+
+
 @pytest.mark.parametrize("location_kind", [None, "directory", "prefix", "connection"])
 def test_describe_query_context_demotes_non_object_root_only_location(
     tmp_path: Path,

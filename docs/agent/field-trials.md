@@ -794,6 +794,9 @@ few useful gaps:
   Database relations now come only from storage-access-owned templates;
   dataset/partition templates paired with database storage are review-only
   candidates with `database_relation_template_source_mismatch`.
+  A retest confirmed the guard holds for dataset-owned and partition-owned
+  templates and that MCP payloads preserve the mismatch details and absent
+  relation fields.
 - A staged workflow trial found batch-restage rows made agents join back to
   revision listings to route the current post-batch successor. Batch items now
   carry `next_action_after` and `suggested_next_actions_after` for their

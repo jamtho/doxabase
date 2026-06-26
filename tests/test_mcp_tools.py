@@ -61,6 +61,8 @@ from doxabase.mcp_tools import (
     validate_graph_tool,
 )
 
+RC = "https://richcanopy.org/ns/rc#"
+
 
 @pytest.mark.anyio
 async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
@@ -2075,6 +2077,71 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["review_gate"]["binding_values_required"] is False
     assert result["review_gate"]["ready_for_execution_attempt"] is False
     assert result["handoff_kind"] == "database_relation_handoff"
+
+
+def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    dataset_template = "orders/current/*.parquet"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_database_storage",
+        label="Orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=[dataset_template],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = describe_query_context_tool(db, iri=dataset)
+    plan = draft_query_plan_tool(db, iri=dataset)
+
+    issue = next(
+        issue
+        for issue in context["issues"]
+        if issue["code"] == "database_relation_template_source_mismatch"
+    )
+    assert issue["details"] == {
+        "template": dataset_template,
+        "template_source": "dataset",
+        "template_source_resource_iri": dataset,
+        "storage_access_iri": storage.iri,
+        "storage_protocol_iri": RC + "DatabaseStorage",
+        "allowed_relation_template_sources": ["storage_access"],
+    }
+    target = context["query_target_candidates"][0]
+    assert target["candidate_path"] is None
+    assert target["relation_identifier"] is None
+    assert target["connection_reference"] == "warehouse-prod"
+    assert target["candidate_path_status"] == "unresolved"
+    assert target["direct_review_reasons"][0]["code"] == (
+        "database_relation_template_source_mismatch"
+    )
+    assert plan["selected_candidate"]["template_source"] == "dataset"
+    assert plan["scan"]["uri_template"] is None
+    assert plan["scan"]["relation_identifier"] is None
+    assert plan["scan"]["connection_reference"] == "warehouse-prod"
+    assert plan["review_gate"]["blocking_reason_codes"] == [
+        "database_relation_template_source_mismatch"
+    ]
+    assert plan["handoff_kind"] == "metadata_review_required"
 
 
 def test_describe_query_context_tool_matches_python_target_candidates(
