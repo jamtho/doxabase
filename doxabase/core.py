@@ -17949,6 +17949,7 @@ class DoxaBase:
             suggested_next_actions = self._staged_apply_check_next_actions(
                 staged.iri,
                 status=status,
+                staged=staged,
                 semantic_risk_level=semantic_risk_level,
                 blocking_reasons=["already_applied"],
                 already_applied_by=existing_applied[0],
@@ -18247,6 +18248,7 @@ class DoxaBase:
         suggested_next_actions = self._staged_apply_check_next_actions(
             staged.iri,
             status=status,
+            staged=staged,
             semantic_risk_level=semantic_risk_level,
             blocking_reasons=blocking_reasons,
             already_applied_by=None,
@@ -18258,7 +18260,9 @@ class DoxaBase:
                 if staged.current_restaged_by is not None
                 else None
             ),
+            patch_checks=patch_checks,
             snapshot_drifts=snapshot_drifts,
+            validation_scope=validation_scope_value,
             restaged_source_validation_warning=(
                 restaged_source_validation_warning
             ),
@@ -18997,12 +19001,15 @@ class DoxaBase:
         staged_revision_iri: str,
         *,
         status: str,
+        staged: StagedGraphRevisionDescription | None = None,
         semantic_risk_level: str = "none",
         blocking_reasons: list[str] | None = None,
         already_applied_by: str | None,
         restaged_by: str | None,
         current_restaged_by: str | None,
+        patch_checks: list[StagedPatchApplyCheck] | None = None,
         snapshot_drifts: list[StagedGraphSnapshotDrift] | None = None,
+        validation_scope: str | None = None,
         restaged_source_validation_warning: str | None = None,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
@@ -19201,6 +19208,18 @@ class DoxaBase:
                     ),
                     action_label="Import snapshot bundle if available",
                 )
+            same_slot_replacement_action = (
+                self._staged_same_slot_replacement_action(
+                    staged,
+                    patch_checks=patch_checks or [],
+                    snapshot_drifts=snapshot_drifts or [],
+                    validation_scope=validation_scope,
+                )
+                if is_restageable_conflict and restaged_by is None
+                else None
+            )
+            if same_slot_replacement_action is not None:
+                actions.append(same_slot_replacement_action)
             if restaged_by is None and is_restageable_conflict:
                 add_action(
                     "restage_staged_revision",
@@ -19259,6 +19278,142 @@ class DoxaBase:
             )
         return actions
 
+    def _staged_same_slot_replacement_action(
+        self,
+        staged: StagedGraphRevisionDescription | None,
+        *,
+        patch_checks: list[StagedPatchApplyCheck],
+        snapshot_drifts: list[StagedGraphSnapshotDrift],
+        validation_scope: str | None,
+    ) -> SuggestedNextAction | None:
+        if staged is None:
+            return None
+        if (
+            staged.applied_by is not None
+            or staged.restaged_by is not None
+            or staged.current_restaged_by is not None
+        ):
+            return None
+
+        candidate = self._single_map_assertion_candidate(staged)
+        if candidate is None:
+            return None
+        (
+            subject,
+            predicate,
+            object_value,
+            object_kind,
+            object_datatype,
+            object_lang,
+            change_kind,
+        ) = candidate
+        if change_kind != "add" or object_value is None:
+            return None
+        if predicate not in {self.expand_iri("rc:rowSemantics")}:
+            return None
+
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        if len(staged.patches) != 1 or len(patch_checks) != 1:
+            return None
+        patch = staged.patches[0]
+        patch_check = patch_checks[0]
+        if (
+            patch.target_graph != "map"
+            or patch.operation != addition_operation
+            or patch.triple_count != 1
+            or patch_check.target_graph != "map"
+            or patch_check.operation != addition_operation
+            or patch_check.triple_count != 1
+            or patch_check.already_present_triples != 0
+            or patch_check.already_absent_triples != 1
+        ):
+            return None
+
+        drift = next(
+            (
+                item
+                for item in snapshot_drifts
+                if item.graph_role == "map"
+                and item.exact_changed_triples_available
+                and item.exact_changed_triples_included
+            ),
+            None,
+        )
+        if drift is None:
+            return None
+
+        same_slot_added = [
+            triple
+            for triple in drift.triples_added_since_snapshot
+            if triple.subject == subject
+            and triple.predicate == predicate
+            and not self._graph_triple_object_matches_assertion_candidate(
+                triple,
+                object_value=object_value,
+                object_kind=object_kind,
+                object_datatype=object_datatype,
+                object_lang=object_lang,
+            )
+        ]
+        if not same_slot_added:
+            return None
+
+        rationale = (
+            "Exact snapshot drift shows the current map now has a different "
+            "row-semantics value for this same dataset. Stage a replacement "
+            "successor that preserves restage provenance instead of replaying "
+            "the stale add as-is."
+        )
+        arguments: dict[str, Any] = {
+            "subject": subject,
+            "predicate": predicate,
+            "object": object_value,
+            "rationale": rationale,
+            "change_kind": "replace",
+            "graph": "map",
+            "object_kind": object_kind,
+            "restages_revision": staged.iri,
+            "validation_scope": validation_scope or "all",
+        }
+        if object_datatype is not None:
+            arguments["object_datatype"] = object_datatype
+        if object_lang is not None:
+            arguments["object_lang"] = object_lang
+        reason = (
+            "Exact snapshot rows show a different current value for the same "
+            "single-valued row-semantics slot. Stage a reviewable replacement "
+            "successor instead of a raw restage that would add a competing "
+            "row-semantics value."
+        )
+        return SuggestedNextAction(
+            action_label="Stage same-slot replacement",
+            tool_name="stage_map_assertion_change",
+            mcp_tool_name="doxabase.stage_map_assertion_change",
+            arguments=arguments,
+            reason=reason,
+            call=self._suggested_call_string(
+                "stage_map_assertion_change",
+                arguments,
+            ),
+        )
+
+    @staticmethod
+    def _graph_triple_object_matches_assertion_candidate(
+        triple: GraphTripleDescription,
+        *,
+        object_value: str,
+        object_kind: str,
+        object_datatype: str | None,
+        object_lang: str | None,
+    ) -> bool:
+        normalized_kind = "uri" if object_kind == "iri" else object_kind
+        return (
+            triple.object == object_value
+            and triple.object_kind == normalized_kind
+            and triple.datatype == object_datatype
+            and triple.lang == object_lang
+        )
+
     def _revision_next_action(
         self,
         revision_iri: str,
@@ -19286,6 +19441,18 @@ class DoxaBase:
                 if action_label is not None and action.action_label == action_label:
                     return action
             return suggested_next_actions[0] if suggested_next_actions else None
+
+        def find_exact_action(
+            *,
+            tool_name: str | None = None,
+            action_label: str | None = None,
+        ) -> SuggestedNextAction | None:
+            for action in suggested_next_actions:
+                if tool_name is not None and action.tool_name == tool_name:
+                    return action
+                if action_label is not None and action.action_label == action_label:
+                    return action
+            return None
 
         action_type = "inspect_staged_revision"
         queue = "informational"
@@ -19372,6 +19539,18 @@ class DoxaBase:
                 "candidate instead of applying this row."
             )
             selected_action = find_action(tool_name="describe_staged_revision")
+        elif (
+            apply_decision == "restage_against_current_graph"
+            or apply_status == "conflict"
+        ) and find_exact_action(tool_name="stage_map_assertion_change") is not None:
+            action_type = "repair_or_replace"
+            queue = "repair_or_replace"
+            label = "Stage same-slot replacement"
+            reason = (
+                "Exact snapshot drift shows this stale proposal should be "
+                "reviewed as a replacement of a current same-slot value."
+            )
+            selected_action = find_exact_action(tool_name="stage_map_assertion_change")
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"

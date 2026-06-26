@@ -731,6 +731,14 @@ few useful gaps:
   `stage_map_assertion_change` for typed boolean/decimal replacements and exact
   language-tagged removals. Exact remove panels now prefer the matched graph
   triple for `removed_value`, preserving datatype or language tag context.
+- A stale row-semantics replacement trial showed that raw restage can turn a
+  stale single-triple `rc:rowSemantics` add into a validation failure when the
+  current map has since added a different row-semantics value for the same
+  dataset. Apply checks now use exact snapshot rows to detect that narrow
+  same-slot case and suggest
+  `stage_map_assertion_change(change_kind="replace", restages_revision=...)`,
+  routing compact `next_action` to `repair_or_replace` while leaving ordinary
+  count/digest drift on the restage route.
 - A controlled replacement/import trial confirmed same-count
   `replace_graph_triples`, revision metadata, default/workflow export
   boundaries, and revision-seed deep-lore expansion. It reinforced the current

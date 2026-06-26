@@ -3656,6 +3656,112 @@ def test_stage_map_assertion_change_can_repair_stale_assertion_successor(
     assert repair.staged_revision.revision_iri not in current_work_iris
 
 
+def test_stale_row_semantics_add_suggests_same_slot_replacement(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Model Orders as snapshot rows",
+        rationale="Original row-grain proposal before an intervening map edit.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics rc:SnapshotRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.record_map_dataset(orders, row_semantics="rc:EventRow")
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.decision == "restage_against_current_graph"
+    assert check.next_action is not None
+    assert check.next_action.action_type == "repair_or_replace"
+    assert check.next_action.queue == "repair_or_replace"
+    assert check.next_action.tool_name == "stage_map_assertion_change"
+    action_tools = [action.tool_name for action in check.suggested_next_actions]
+    assert action_tools.index("stage_map_assertion_change") < action_tools.index(
+        "restage_staged_revision"
+    )
+    action = next(
+        action
+        for action in check.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+    )
+    assert action.action_label == "Stage same-slot replacement"
+    assert action.arguments["subject"] == orders
+    assert action.arguments["predicate"] == RC + "rowSemantics"
+    assert action.arguments["object"] == RC + "SnapshotRow"
+    assert action.arguments["object_kind"] == "iri"
+    assert action.arguments["change_kind"] == "replace"
+    assert action.arguments["graph"] == "map"
+    assert action.arguments["restages_revision"] == source.revision_iri
+    assert action.arguments["validation_scope"] == "all"
+
+    repair = db.stage_map_assertion_change(**action.arguments)
+    assert repair.staged_revision.restaged_from == source.revision_iri
+    assert [value.object for value in repair.current_values_before] == [
+        RC + "EventRow"
+    ]
+    repair_check = db.check_staged_revision_apply(
+        repair.staged_revision.revision_iri
+    )
+    assert repair_check.status == "ready"
+
+
+def test_stale_column_same_slot_drift_keeps_restage_route(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Add staged orders column",
+        rationale="A multi-valued column link should not be inferred as replacement.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:hasColumn ex:StagedColumn .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders rc:hasColumn ex:CurrentColumn .
+        """,
+        graph="map",
+    )
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.action_type == "restage_after_review"
+    assert check.next_action.tool_name == "restage_staged_revision"
+    assert not any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in check.suggested_next_actions
+    )
+
+
 def test_stage_map_assertion_change_replaces_row_semantics_cleanly(
     tmp_path: Path,
 ) -> None:
