@@ -561,7 +561,10 @@ few useful gaps:
   `direct_review_required` before concluding the local route itself is bad.
   Follow-up trials led to explicit `draft_query_plan` selectors and
   `allow_context_blocked_candidate=True`, so agents can draft a direct-clean
-  route while preserving the sibling-blocker audit trail.
+  route while preserving the sibling-blocker audit trail. A selection retest
+  found automatic drafts were too quiet when multiple ready candidates existed;
+  `source_context` now reports ready and unselected-ready candidate indexes so
+  agents know when to rerun with explicit `candidate_index`.
 - A query storage-metadata matrix trial covered local file/object roots,
   directory roots, S3 bucket/prefix/template combinations, HTTPS roots, and
   database-backed table-like storage. It confirmed MCP/Python parity and

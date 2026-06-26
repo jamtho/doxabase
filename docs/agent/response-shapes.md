@@ -1189,9 +1189,13 @@ By default, `plan.selected_candidate` is the candidate named by
 `query_target_decision.candidate_index`. Callers may override it with
 `candidate_index` or `storage_access_iri`; `source_context.query_target_decision`
 still carries the automatic decision, while `selected_candidate_index`,
-`selection_mode`, `requested_candidate_index`,
+`candidate_count`, `ready_candidate_indexes`,
+`unselected_ready_candidate_indexes`, `selection_mode`, `requested_candidate_index`,
 `requested_storage_access_iri`, `selection_status`, `selection_note`, and
 `allow_context_blocked_candidate` describe the actual draft selection.
+If `unselected_ready_candidate_indexes` is non-empty, another direct-ready
+candidate exists and agents should consider whether to rerun with explicit
+`candidate_index`.
 `storage_access_iri` must identify exactly one query target candidate; use
 `candidate_index` when one storage access has multiple candidate paths.
 `plan.scan` gives a best-effort scan

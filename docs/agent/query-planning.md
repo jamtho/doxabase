@@ -23,18 +23,22 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 1. `handoff_kind` is the compact machine-readable route. Use it for first-pass
    client dispatch, then read `review_gate`, `scan`, `binding_requirements`,
    and `storage_environment` for the details behind that route.
-2. `scan.uri_template` is for file/object scans.
-3. `scan.relation_identifier` and `scan.connection_reference` are for
+2. Read `source_context.unselected_ready_candidate_indexes`. If it is non-empty,
+   the selected candidate has peer ready candidates; inspect
+   `query_target_candidates` and rerun with explicit `candidate_index` when a
+   different route is intended.
+3. `scan.uri_template` is for file/object scans.
+4. `scan.relation_identifier` and `scan.connection_reference` are for
    database-backed storage handoffs; do not treat the candidate path as a file
    URI in that case.
-4. `required_bindings` and `binding_requirements` still need runtime values.
+5. `required_bindings` and `binding_requirements` still need runtime values.
    `review_gate.binding_values_required=True` and
    `handoff_kind="binding_values_required"` make that case explicit.
-5. `review_gate.executable_without_review` says graph metadata has no recorded
+6. `review_gate.executable_without_review` says graph metadata has no recorded
    review blocker for the selected candidate.
-6. `storage_environment.runtime_resolution_required` says endpoint, credential,
+7. `storage_environment.runtime_resolution_required` says endpoint, credential,
    region, or equivalent runtime context still needs resolving.
-7. `review_gate.ready_for_execution_attempt` is the stricter handoff boolean:
+8. `review_gate.ready_for_execution_attempt` is the stricter handoff boolean:
    it is true only when the review gate is clear, runtime resolution is not
    required, and no required binding placeholders remain in the selected
    template.

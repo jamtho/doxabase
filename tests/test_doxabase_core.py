@@ -6590,6 +6590,20 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
+    automatic_plan = db.draft_query_plan(dataset)
+
+    assert automatic_plan.source_context.selected_candidate_index == 0
+    assert automatic_plan.source_context.candidate_count == 2
+    assert automatic_plan.source_context.ready_candidate_indexes == [0, 1]
+    assert automatic_plan.source_context.unselected_ready_candidate_indexes == [1]
+
+    explicit_plan = db.draft_query_plan(dataset, candidate_index=1)
+
+    assert explicit_plan.source_context.selected_candidate_index == 1
+    assert explicit_plan.source_context.candidate_count == 2
+    assert explicit_plan.source_context.ready_candidate_indexes == [0, 1]
+    assert explicit_plan.source_context.unselected_ready_candidate_indexes == [0]
+
     with pytest.raises(DoxaBaseError, match="either candidate_index or"):
         db.draft_query_plan(
             dataset,

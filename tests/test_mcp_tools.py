@@ -1865,6 +1865,9 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     }
     assert result["source_context"]["readiness"] == "needs_review"
     assert result["source_context"]["selected_candidate_index"] == 0
+    assert result["source_context"]["candidate_count"] == 1
+    assert result["source_context"]["ready_candidate_indexes"] == []
+    assert result["source_context"]["unselected_ready_candidate_indexes"] == []
     assert result["selected_candidate"]["template_source"] == "partition_scheme"
     assert result["scan"]["function"] == "read_parquet"
     assert result["scan"]["uri_template"] == (

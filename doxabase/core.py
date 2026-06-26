@@ -1161,6 +1161,9 @@ class DraftQueryPlanSourceContext:
     readiness_note: str
     query_target_decision: QueryTargetDecision
     selected_candidate_index: int | None
+    candidate_count: int = 0
+    ready_candidate_indexes: list[int] = field(default_factory=list)
+    unselected_ready_candidate_indexes: list[int] = field(default_factory=list)
     selection_mode: str = "automatic"
     requested_candidate_index: int | None = None
     requested_storage_access_iri: str | None = None
@@ -7056,6 +7059,9 @@ class DoxaBase:
             allow_context_blocked_candidate=allow_context_blocked_candidate,
             context_blocked_candidate_used=context_blocked_candidate_used,
         )
+        ready_candidate_indexes = self._draft_query_plan_ready_candidate_indexes(
+            context.query_target_candidates
+        )
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
@@ -7077,6 +7083,13 @@ class DoxaBase:
                 readiness_note=context.readiness_note,
                 query_target_decision=context.query_target_decision,
                 selected_candidate_index=selected_candidate_index,
+                candidate_count=len(context.query_target_candidates),
+                ready_candidate_indexes=ready_candidate_indexes,
+                unselected_ready_candidate_indexes=[
+                    index
+                    for index in ready_candidate_indexes
+                    if index != selected_candidate_index
+                ],
                 selection_mode=selection_mode,
                 requested_candidate_index=candidate_index,
                 requested_storage_access_iri=requested_storage_access_iri,
@@ -7108,6 +7121,17 @@ class DoxaBase:
                 ),
             ],
         )
+
+    @staticmethod
+    def _draft_query_plan_ready_candidate_indexes(
+        candidates: list[QueryTargetCandidate],
+    ) -> list[int]:
+        return [
+            index
+            for index, candidate in enumerate(candidates)
+            if candidate.candidate_path_status == "ready"
+            and not candidate.direct_review_required
+        ]
 
     def _draft_query_plan_select_candidate(
         self,
