@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS_DIR = ROOT / "docs" / "agent"
@@ -139,30 +141,55 @@ DOCS: tuple[AgentDoc, ...] = (
 )
 
 
-def list_agent_docs() -> list[dict[str, str]]:
-    return [
-        {
-            "id": doc.id,
-            "title": doc.title,
-            "description": doc.description,
-        }
-        for doc in DOCS
-    ]
+def list_agent_docs() -> list[dict[str, Any]]:
+    docs: list[dict[str, Any]] = []
+    for doc in DOCS:
+        text = doc.path.read_text(encoding="utf-8")
+        docs.append(
+            {
+                "id": doc.id,
+                "title": doc.title,
+                "description": doc.description,
+                "size_chars": len(text),
+                "sections": _doc_sections(text),
+            }
+        )
+    return docs
 
 
-def get_agent_doc(doc_id: str, *, max_chars: int = 12000) -> dict[str, str | bool | int]:
+def get_agent_doc(
+    doc_id: str,
+    *,
+    max_chars: int = 12000,
+    start_char: int = 0,
+    section: str | None = None,
+) -> dict[str, Any]:
+    if max_chars <= 0:
+        raise ValueError("max_chars must be positive")
     doc = _doc_by_id(doc_id)
     text = doc.path.read_text(encoding="utf-8")
-    truncated = len(text) > max_chars
-    if truncated:
-        text = text[:max_chars]
+    sections = _doc_sections(text)
+    selected_section: dict[str, Any] | None = None
+    readable_end = len(text)
+    if section is not None:
+        selected_section = _find_doc_section(section, sections)
+        start_char = selected_section["start_char"]
+        readable_end = selected_section["end_char"]
+    start_char = max(0, min(start_char, len(text)))
+    end_char = min(readable_end, start_char + max_chars)
+    truncated = end_char < readable_end
     return {
         "id": doc.id,
         "title": doc.title,
         "description": doc.description,
-        "content": text,
+        "content": text[start_char:end_char],
         "truncated": truncated,
+        "start_char": start_char,
+        "end_char": end_char,
+        "total_chars": len(text),
         "max_chars": max_chars,
+        "selected_section": selected_section,
+        "sections": sections,
     }
 
 
@@ -172,3 +199,61 @@ def _doc_by_id(doc_id: str) -> AgentDoc:
             return doc
     available = ", ".join(doc.id for doc in DOCS)
     raise KeyError(f"Unknown doc_id '{doc_id}'. Available docs: {available}")
+
+
+def _doc_sections(text: str) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+    slug_counts: dict[str, int] = {}
+    in_fence = False
+    offset = 0
+    for line_number, line in enumerate(text.splitlines(keepends=True), start=1):
+        stripped = line.strip()
+        if stripped.startswith(("```", "~~~")):
+            in_fence = not in_fence
+        if not in_fence:
+            match = re.match(r"^(#{1,6})\s+(.+?)\s*#*\s*$", line.rstrip("\n"))
+            if match is not None:
+                heading = match.group(2).strip()
+                section = {
+                    "heading": heading,
+                    "level": len(match.group(1)),
+                    "anchor": _heading_anchor(heading, slug_counts),
+                    "line": line_number,
+                    "start_char": offset,
+                    "end_char": len(text),
+                }
+                while (
+                    sections
+                    and sections[-1]["end_char"] == len(text)
+                    and sections[-1]["level"] >= section["level"]
+                ):
+                    sections[-1]["end_char"] = offset
+                sections.append(section)
+        offset += len(line)
+    return sections
+
+
+def _heading_anchor(heading: str, slug_counts: dict[str, int]) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", heading.lower()).strip("-")
+    base = slug or "section"
+    count = slug_counts.get(base, 0)
+    slug_counts[base] = count + 1
+    if count == 0:
+        return base
+    return f"{base}-{count}"
+
+
+def _find_doc_section(
+    section: str,
+    sections: list[dict[str, Any]],
+) -> dict[str, Any]:
+    needle = section.strip()
+    normalized_anchor = re.sub(r"[^a-z0-9]+", "-", needle.lower()).strip("-")
+    normalized_heading = needle.lower()
+    for item in sections:
+        if item["anchor"] == normalized_anchor:
+            return item
+        if item["heading"].lower() == normalized_heading:
+            return item
+    available = ", ".join(item["anchor"] for item in sections)
+    raise KeyError(f"Unknown section '{section}'. Available sections: {available}")

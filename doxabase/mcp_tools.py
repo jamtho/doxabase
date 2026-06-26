@@ -18,8 +18,18 @@ def list_docs_tool() -> dict[str, Any]:
     return {"docs": list_agent_docs()}
 
 
-def get_doc_tool(doc_id: str, max_chars: int = 12000) -> dict[str, Any]:
-    return get_agent_doc(doc_id, max_chars=max_chars)
+def get_doc_tool(
+    doc_id: str,
+    max_chars: int = 12000,
+    start_char: int = 0,
+    section: str | None = None,
+) -> dict[str, Any]:
+    return get_agent_doc(
+        doc_id,
+        max_chars=max_chars,
+        start_char=start_char,
+        section=section,
+    )
 
 
 def graph_overview_tool(db: DoxaBase, limit: int = 100) -> dict[str, Any]:

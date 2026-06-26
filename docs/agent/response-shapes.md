@@ -26,9 +26,41 @@ Python API when you are running a local scratch capsule script.
 ```python
 {
     "docs": [
-        {"id": "start_here", "title": "Start Here", "description": "..."},
+        {
+            "id": "start_here",
+            "title": "Start Here",
+            "description": "...",
+            "size_chars": 8123,
+            "sections": [
+                {
+                    "heading": "First Ten Minutes",
+                    "level": 2,
+                    "anchor": "first-ten-minutes",
+                    "line": 21,
+                    "start_char": 912,
+                    "end_char": 3350,
+                },
+                ...
+            ],
+        },
         ...
     ]
+}
+```
+
+`get_doc_tool(doc_id, section="...", max_chars=...)` returns one bounded slice:
+
+```python
+{
+    "id": "response_shapes",
+    "content": "## Profile Helper Records\n...",
+    "truncated": True,
+    "start_char": 18342,
+    "end_char": 30342,
+    "total_chars": 111000,
+    "max_chars": 12000,
+    "selected_section": {"anchor": "profile-helper-records", ...},
+    "sections": [...],
 }
 ```
 
@@ -843,10 +875,12 @@ same for all siblings.
 Use `recommendation_count` and top-level `suggested_next_actions` for first-pass
 machine routing. Drafts with recommendations include a
 `stage_profile_map_updates` action whose `accepted_recommendation_indexes`
-defaults to `representative_recommendation_indexes`: one index per duplicate
-group in draft order. Pass only the indexes actually accepted after reviewing
-sample scope and modelling intent; include duplicate sibling indexes only when
-they need distinct review treatment.
+defaults to the representative indexes whose recommendation rows have
+`default_stageable=True`. Sampled row-count recommendations can still appear in
+`representative_recommendation_indexes` for review, but the default staging
+action omits them unless the caller explicitly opts in. Pass only the indexes
+actually accepted after reviewing sample scope and modelling intent; include
+duplicate sibling indexes only when they need distinct review treatment.
 When `draft.recommendations` is empty and `metric_advisory_count > 0`, the
 draft is advisory-only. The top-level suggested actions are the deduped advisory
 actions for vocabulary/context review; do not call `stage_profile_map_updates`
@@ -1394,7 +1428,9 @@ or by suffix. These matches are best-effort handoff hints, not inferred runtime
 binding values. `candidate_column_match_status` is `none`, `single`, or
 `ambiguous` for non-partition templates and `not_applicable` for
 partition-owned bindings; ambiguous rows require review before choosing any
-source column. `plan.storage_environment`
+source column, even when individual matches have high confidence. Match
+`confidence` describes one candidate row; `candidate_column_match_status`
+summarizes the whole hint set. `plan.storage_environment`
 carries non-secret storage hints such as bucket, endpoint profile, credential
 reference, path-style access, and DuckDB-shaped settings inferred directly from
 graph metadata.

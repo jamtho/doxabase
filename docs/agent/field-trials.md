@@ -993,11 +993,23 @@ few useful gaps:
   skips them. Draft recommendation rows now expose `default_stageable` and
   `default_skip_reason` so agents can see default staging guardrails before
   calling `stage_profile_map_updates`.
+- A follow-up profile trial found sampled-only drafts still advertised a
+  default staging action that would become a no-op. The top-level
+  `stage_profile_map_updates` action now includes only representative rows with
+  `default_stageable=True`; sampled row-count overrides must be explicit.
 - A staged-revision recovery trial followed
   `post_apply_recheck_revisions[].next_action.arguments["iri"]` into
   `restage_staged_revision`, checked the successor, applied it, and ended with
   no current staged work. The product route was adequate; regression coverage now
   locks that autonomous recovery path.
+- A staged-revision list-routing trial confirmed full revision lists can show
+  historical handled rows as `application_status="conflict"`. Treat
+  `is_current_staged_work=False` with
+  `stale_resolution_state="stale_handled_by_restage"` as informational, and use
+  `current_staged_work_only=True` for mutation queues.
+- A docs retrieval trial found large MCP docs hid deep sections behind the
+  default prefix. Doc listings now expose section headings and `get_doc` accepts
+  `section` or `start_char` for bounded navigation.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

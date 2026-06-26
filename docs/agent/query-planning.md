@@ -50,7 +50,9 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    exactly or by suffix. `candidate_column_match_status` says whether those
    hints are absent, singular, or ambiguous. These fields help humans and agents
    find likely source columns; they do not supply execution-time values, and
-   ambiguous rows need review before choosing any source column.
+   ambiguous rows need review before choosing any source column. Treat
+   `confidence` as a per-match score; `candidate_column_match_status` summarizes
+   the whole binding.
 6. `review_gate.executable_without_review` says graph metadata has no recorded
    review blocker for the selected candidate.
 7. `storage_environment.runtime_resolution_required` says endpoint, credential,

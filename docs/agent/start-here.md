@@ -67,7 +67,9 @@ If the MCP docs tools are not exposed in the current session, follow the same
 route by reading the matching files in `docs/agent/` directly.
 
 If you are scripting directly against the Python API, read `response_shapes`
-before assuming returned field names.
+before assuming returned field names. Large docs expose section headings through
+`doxabase.list_docs`; use `doxabase.get_doc(section="...")` or `start_char` to
+jump past the default prefix.
 
 ## If You Are Resuming After Compaction
 

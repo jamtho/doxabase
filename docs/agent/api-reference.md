@@ -424,9 +424,11 @@ get a reviewable `stage_pattern_promotion` skeleton for an ontology
 `rc:ProfileMetricKind`.
 If `recommendation_count > 0`, review the draft and use the top-level
 `stage_profile_map_updates` action as a starting point. Its
-`accepted_recommendation_indexes` defaults to
-`representative_recommendation_indexes`, one index per duplicate group, so agents
-do not have to stage duplicate siblings just to preserve observation support. If
+`accepted_recommendation_indexes` defaults to the representative indexes whose
+rows have `default_stageable=True`, so agents do not have to stage duplicate
+siblings just to preserve observation support or accidentally stage sampled
+row-count rows. Sampled row-count representatives remain in
+`representative_recommendation_indexes` for explicit review/override. If
 `recommendation_count == 0 and metric_advisory_count > 0`, treat the draft as
 advisory-only: follow the top-level advisory suggested actions and do not call
 `stage_profile_map_updates`, because advisory rows are not map-update

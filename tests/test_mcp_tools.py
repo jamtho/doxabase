@@ -28,6 +28,7 @@ from doxabase.mcp_tools import (
     export_staged_revision_tool,
     export_staged_revisions_tool,
     export_trig_tool,
+    get_doc_tool,
     graph_overview_tool,
     import_revision_snapshots_tool,
     list_docs_tool,
@@ -128,12 +129,38 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
 def test_doc_tools_return_json_like_payloads() -> None:
     result = list_docs_tool()
     doc_ids = {doc["id"] for doc in result["docs"]}
+    response_shapes_doc = next(
+        doc for doc in result["docs"] if doc["id"] == "response_shapes"
+    )
 
     assert result["docs"][0]["id"] == "start_here"
     assert "start_here" in doc_ids
     assert "overview" in doc_ids
     assert "graph_roles" in doc_ids
     assert "response_shapes" in doc_ids
+    assert response_shapes_doc["size_chars"] > 0
+    assert {
+        section["anchor"]
+        for section in response_shapes_doc["sections"]
+    } >= {"profile-helper-records", "staged-revisions"}
+
+    section = get_doc_tool(
+        "response_shapes",
+        section="Profile Helper Records",
+        max_chars=300,
+    )
+    assert section["selected_section"]["anchor"] == "profile-helper-records"
+    assert section["start_char"] == section["selected_section"]["start_char"]
+    assert section["content"].startswith("## Profile Helper Records")
+    assert section["truncated"] is True
+
+    offset = get_doc_tool(
+        "response_shapes",
+        start_char=section["end_char"],
+        max_chars=120,
+    )
+    assert offset["start_char"] == section["end_char"]
+    assert len(offset["content"]) <= 120
 
 
 def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:

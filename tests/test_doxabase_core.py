@@ -13585,6 +13585,12 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     assert nullable_recommendation.kind == "column_nullable"
     assert nullable_recommendation.default_stageable is True
     assert nullable_recommendation.default_skip_reason is None
+    assert draft.suggested_next_actions[0].tool_name == "stage_profile_map_updates"
+    assert draft.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+        "accepted_recommendation_indexes": [1],
+    }
 
     staged = db.stage_profile_map_updates(
         dataset,
@@ -13629,6 +13635,50 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     assert override.status_counts == {"staged": 1, "skipped": 0, "not_selected": 1}
     assert override.staged_revision is not None
     assert override.staged_revision.validation_conforms is True
+
+
+def test_draft_profile_map_updates_omits_sampled_only_default_stage_action(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersPartitionSampleEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    for index in range(2):
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary=f"Orders sampled profile {index}.",
+            evidence_summary="Synthetic partition sample profile.",
+            evidence_sources=[f"test://orders-partition-sample-profile/{index}"],
+            shared_evidence_iri=evidence,
+            sample_size=40,
+            sample_scope="Sampled partition rows; not the full Orders table.",
+            sample_method="DuckDB sampled partition profile.",
+            row_count=40,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+        )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 2
+    assert draft.representative_recommendation_indexes == [0]
+    assert all(
+        recommendation.default_stageable is False
+        for recommendation in draft.recommendations
+    )
+    assert {
+        recommendation.duplicate_count
+        for recommendation in draft.recommendations
+    } == {2}
+    assert draft.suggested_next_actions == []
+    assert draft.suggested_next_calls == []
 
 
 def test_draft_profile_map_updates_skips_sampled_zero_null_promotion(

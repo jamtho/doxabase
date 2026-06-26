@@ -82,10 +82,20 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         return list_docs_tool()
 
     @server.tool(name="doxabase.get_doc")
-    def get_doc(doc_id: str, max_chars: int = 12000) -> dict[str, Any]:
-        """Return one agent-facing markdown doc by ID."""
+    def get_doc(
+        doc_id: str,
+        max_chars: int = 12000,
+        start_char: int = 0,
+        section: str | None = None,
+    ) -> dict[str, Any]:
+        """Return one agent-facing markdown doc by ID, offset, or section."""
 
-        return get_doc_tool(doc_id, max_chars=max_chars)
+        return get_doc_tool(
+            doc_id,
+            max_chars=max_chars,
+            start_char=start_char,
+            section=section,
+        )
 
     @server.tool(name="doxabase.graph_overview")
     def graph_overview(limit: int = 100) -> dict[str, Any]:

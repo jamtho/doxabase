@@ -6,12 +6,15 @@ The MCP server is intentionally thin. It exposes the current Python API plus sho
 
 `doxabase.list_docs`
 
-Returns available agent docs with IDs, titles, and descriptions.
+Returns available agent docs with IDs, titles, descriptions, character sizes,
+and section headings.
 
 `doxabase.get_doc`
 
-Returns one markdown doc by ID. Use `max_chars` to bound output. Start with
-`doc_id="start_here"` when arriving cold or resuming after compaction.
+Returns one markdown doc by ID. Use `max_chars` to bound output, `start_char`
+to continue a truncated document, or `section` to jump to a heading/anchor.
+Start with `doc_id="start_here"` when arriving cold or resuming after
+compaction.
 
 ## Capsule Inspection
 
@@ -111,6 +114,9 @@ the live staged work queue, excluding applied sources and stale rows already
 handled by restage. Non-current rows include `not_current_staged_work_reason`,
 such as
 `already_applied_source`, `superseded_by_restage`, or `applied_event_record`.
+Do not route full-list `application_status="conflict"` rows directly: a handled
+stale original can still be historically conflicted while
+`is_current_staged_work=False` and `stale_resolution_state="stale_handled_by_restage"`.
 Status, stale-state, and current-work filters automatically compute apply
 checks. `staged_validation_status="failed"` filters stored staged-time
 validation, while `application_status="validation_failed"` filters the current
@@ -267,9 +273,10 @@ Recommendation rows carry `recommendation_index`, `default_stageable`,
 duplicate-group fields too.
 If `recommendation_count > 0`, review the draft and use the top-level
 `stage_profile_map_updates` action as a starting point. Its accepted indexes
-default to `representative_recommendation_indexes`, one index per duplicate
-group. Read `default_stageable` first: sampled row-count recommendations remain
-review candidates but are skipped by default unless
+default to the representative indexes whose rows have `default_stageable=True`.
+Sampled row-count recommendations remain review candidates in
+`representative_recommendation_indexes`, but they are omitted from the default
+staging action unless the caller explicitly opts in with
 `allow_sampled_row_count_updates=true`. If
 `recommendation_count == 0 and metric_advisory_count > 0`, handle the result as
 advisory-only: follow top-level advisory suggested actions and do not call
@@ -360,7 +367,9 @@ hints. Non-partition dataset/storage templates may include
 `candidate_column_matches` when placeholder names match dataset columns; use
 them as best-effort handoff hints, not runtime binding values.
 `candidate_column_match_status` marks the hint set as `none`, `single`, or
-`ambiguous`; review ambiguous rows before choosing any source column. Top-level
+`ambiguous`; review ambiguous rows before choosing any source column, even when
+individual matches have `confidence="high"`. Confidence is per match, while the
+status summarizes the whole hint set. Top-level
 `handoff_kind` gives a compact machine-readable route, such as
 `metadata_review_required`, `context_review_required`,
 `runtime_resolution_required`, `database_relation_handoff`,

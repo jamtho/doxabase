@@ -7113,13 +7113,20 @@ class DoxaBase:
         representative_recommendation_indexes = (
             self._profile_update_representative_indexes(recommendations)
         )
+        default_stageable_representative_indexes = [
+            index
+            for index in representative_recommendation_indexes
+            if recommendations[index].default_stageable
+        ]
         metric_advisory_status_counts = (
             self._profile_metric_advisory_status_counts(metric_advisories)
         )
         suggested_next_actions = self._profile_map_update_draft_actions(
             dataset_iri=dataset_value,
             evidence_iri=evidence_value,
-            representative_recommendation_indexes=representative_recommendation_indexes,
+            default_stageable_representative_indexes=(
+                default_stageable_representative_indexes
+            ),
             metric_advisories=metric_advisories,
         )
         return ProfileMapUpdateDraft(
@@ -7391,16 +7398,16 @@ class DoxaBase:
         *,
         dataset_iri: str,
         evidence_iri: str,
-        representative_recommendation_indexes: list[int],
+        default_stageable_representative_indexes: list[int],
         metric_advisories: list[ProfileMetricVocabularyAdvisory],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
-        if representative_recommendation_indexes:
+        if default_stageable_representative_indexes:
             arguments = {
                 "dataset_iri": dataset_iri,
                 "evidence_iri": evidence_iri,
                 "accepted_recommendation_indexes": (
-                    representative_recommendation_indexes
+                    default_stageable_representative_indexes
                 ),
             }
             actions.append(
@@ -7410,9 +7417,11 @@ class DoxaBase:
                     mcp_tool_name="doxabase.stage_profile_map_updates",
                     arguments=arguments,
                     reason=(
-                        "Review recommendation rows, sample scope, evidence, "
-                        "and metric advisories; then pass only accepted indexes "
-                        "to stage_profile_map_updates."
+                        "Review recommendation rows, sample scope, default "
+                        "staging guardrails, evidence, and metric advisories; "
+                        "then pass accepted default-stageable indexes to "
+                        "stage_profile_map_updates. Sampled row-count updates "
+                        "require an explicit override."
                     ),
                     call=self._suggested_call_string(
                         "stage_profile_map_updates",
