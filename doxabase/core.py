@@ -18792,6 +18792,7 @@ class DoxaBase:
             PREFIXES["owl"] + "Class",
             PREFIXES["rdf"] + "Property",
             PREFIXES["rc"] + "Dataset",
+            PREFIXES["rc"] + "Table",
             PREFIXES["rc"] + "Field",
             PREFIXES["rc"] + "PhysicalLayout",
             PREFIXES["rc"] + "StorageAccess",

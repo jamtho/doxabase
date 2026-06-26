@@ -891,7 +891,7 @@ different value for the same subject and predicate. In that case
 compact `next_action` routes to `repair_or_replace`; execute it only after
 reviewing the row-grain semantics.
 `broad_patch_object_overlap` is the weak object-overlap label for shared
-class/type vocabulary such as `rc:Dataset`. Anchor overlap means exact drift
+class/type vocabulary such as `rc:Dataset` or `rc:Table`. Anchor overlap means exact drift
 touched a resource the staged revision named as review context. Older revisions may report
 `exact_changed_triples_available=False` when they predate snapshot row storage.
 Suggested actions are ordered review-first, so inspect/export suggestions

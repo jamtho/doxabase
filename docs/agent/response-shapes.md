@@ -2688,7 +2688,7 @@ values include `no_patch_subject_overlap`, `patch_subject_overlap`,
 `broad_patch_object_overlap`, `patch_object_and_anchor_overlap`,
 `revision_anchor_overlap`, `unknown_no_exact_diff`, and
 `unknown_no_patch_terms`. Predicate and object overlap can be broad, for example
-`rdf:type` or `rc:Dataset`; `broad_patch_object_overlap` marks the weak case
+`rdf:type`, `rc:Dataset`, or `rc:Table`; `broad_patch_object_overlap` marks the weak case
 where the only patch-object overlap is broad vocabulary such as shared
 class/type terms. Anchor overlap means drift touched one of the staged
 revision's review anchors even if the staged patch subjects were untouched. A digest

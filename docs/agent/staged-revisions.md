@@ -556,7 +556,7 @@ arrays unless `drift_detail="exact"` is requested.
 Treat `no_patch_subject_overlap` as "probably unrelated but still stale", not
 as permission to apply without review. Predicate and object overlap can be
 broad; `broad_patch_object_overlap` is the weak object-overlap label for shared
-class/type vocabulary such as `rc:Dataset`. Anchor overlap means the drift
+class/type vocabulary such as `rc:Dataset` or `rc:Table`. Anchor overlap means the drift
 touched a resource the staged revision named as review context. Older revisions can still report
 `exact_changed_triples_available=False` if they were recorded before snapshot
 row storage existed. `snapshot_drifts` also gives staged/current graph content

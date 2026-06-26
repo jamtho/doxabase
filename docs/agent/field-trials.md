@@ -448,8 +448,9 @@ few useful gaps:
   default and requires `include_triples=True` for capped changed-triple arrays.
 - A staged-drift readability trial showed that `patch_object_overlap` can sound
   stronger than it is when the only object overlap is broad vocabulary such as
-  `rc:Dataset`. Apply checks now use `broad_patch_object_overlap` for that weak
-  case while preserving stronger object/anchor overlap labels. A validation
+  `rc:Dataset` or `rc:Table`. Apply checks now use
+  `broad_patch_object_overlap` for that weak case while preserving stronger
+  object/anchor overlap labels. A validation
   wording check found no need to rename API fields or Markdown headings:
   `validation_results` remains the JSON field, and docs clarify that prose
   "diagnostics" means those same SHACL result records.

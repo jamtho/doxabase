@@ -2755,6 +2755,47 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
         db.describe_dataset("https://example.test/project#Messages")
 
 
+def test_table_type_overlap_is_broad_snapshot_drift_relevance(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table shell",
+        rationale="Messages should become durable table context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Table .
+                """,
+            }
+        ],
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:OtherMessages a rc:Table .
+        """,
+        graph="map",
+    )
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+
+    assert check.status == "conflict"
+    assert len(check.snapshot_drifts) == 1
+    drift = check.snapshot_drifts[0]
+    assert drift.drift_relevance == "broad_patch_object_overlap"
+    assert drift.patch_overlap_subjects == []
+    assert str(RDF.type) in drift.patch_overlap_predicates
+    assert drift.patch_overlap_objects == [RC + "Table"]
+    assert "only staged patch object overlap is broad vocabulary" in drift.note
+
+
 def test_apply_check_reports_same_count_snapshot_digest_drift(
     tmp_path: Path,
 ) -> None:

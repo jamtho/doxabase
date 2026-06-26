@@ -1011,7 +1011,7 @@ patch-predicate, patch-object, or revision-anchor overlaps.
 `no_patch_subject_overlap` is useful triage context, not semantic approval to
 apply. Predicate and object overlap can be broad; `broad_patch_object_overlap`
 marks weak object overlap through shared class/type vocabulary such as
-`rc:Dataset`. Anchor overlap means exact drift touched a resource the staged
+`rc:Dataset` or `rc:Table`. Anchor overlap means exact drift touched a resource the staged
 proposal named as review context. Older revisions may report
 `exact_changed_triples_available=False` if no snapshot rows were stored.
 Suggested actions are ordered review-first; mutation calls come after
