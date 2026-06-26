@@ -1826,6 +1826,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     diff = db.describe_applied_revision_diff(result.applied_revision_iri)
     assert diff.applied_revision_iri == result.applied_revision_iri
     assert diff.staged_revision_iri == staged.revision_iri
+    assert diff.snapshot_evidence.status == "history_plus_snapshot_rows"
+    assert diff.snapshot_evidence.exact_snapshot_graph_roles == ["map"]
+    assert diff.source_snapshot_evidence.status == "history_plus_snapshot_rows"
+    assert diff.source_snapshot_evidence.exact_snapshot_graph_roles == ["map"]
     assert diff.changed_graphs == ["map"]
     assert len(diff.graph_diffs) == 1
     map_diff = diff.graph_diffs[0]
@@ -1878,10 +1882,28 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert imported_status_before_snapshots.status == "history_only_count_digest"
     assert imported_status_before_snapshots.rdf_snapshot_graph_roles == ["map"]
     assert imported_status_before_snapshots.stored_snapshot_graph_roles == []
+    assert [
+        action.tool_name
+        for action in imported_status_before_snapshots.suggested_next_actions
+    ] == ["import_revision_snapshots"]
     imported_diff_before_snapshots = round_trip.describe_applied_revision_diff(
         result.applied_revision_iri,
         include_triples=True,
     )
+    assert (
+        imported_diff_before_snapshots.snapshot_evidence.status
+        == "history_only_count_digest"
+    )
+    assert (
+        imported_diff_before_snapshots.source_snapshot_evidence.status
+        == "history_only_count_digest"
+    )
+    assert [
+        action.tool_name
+        for action in (
+            imported_diff_before_snapshots.snapshot_evidence.suggested_next_actions
+        )
+    ] == ["import_revision_snapshots"]
     assert (
         imported_diff_before_snapshots.graph_diffs[0].exact_changed_triples_available
         is False
@@ -1929,7 +1951,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert orphan_status.status == "snapshot_rows_without_history"
     assert orphan_status.orphan_snapshot_row_graph_roles == ["map"]
-    with pytest.raises(DoxaBaseError, match="was not found in history"):
+    assert [action.tool_name for action in orphan_status.suggested_next_actions] == [
+        "import_trig"
+    ]
+    with pytest.raises(DoxaBaseError, match="Snapshot rows exist"):
         workflow_round_trip.describe_applied_revision_diff(
             result.applied_revision_iri
         )
@@ -2011,6 +2036,53 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied_export.bundle_summary.recommended_applied_inspection_iris == [
         staged.revision_iri
     ]
+
+
+def test_stale_project_import_suggests_snapshot_json_before_restaging(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftDataset",
+        label="Drift Dataset",
+        is_table=True,
+    )
+
+    project_path = tmp_path / "project.trig"
+    db.export_trig(project_path, graphs="project")
+    round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
+    round_trip.import_trig(project_path)
+
+    check = round_trip.check_staged_revision_apply(staged.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.blocking_reasons == ["target_count_drift"]
+    assert check.snapshot_drifts
+    assert check.snapshot_drifts[0].exact_changed_triples_available is False
+    assert [action.tool_name for action in check.suggested_next_actions] == [
+        "describe_staged_revision",
+        "export_staged_revision",
+        "import_revision_snapshots",
+        "restage_staged_revision",
+    ]
+    assert check.suggested_next_actions[2].action_label == (
+        "Import snapshot bundle if available"
+    )
 
 
 def test_import_revision_snapshots_validates_bundle_before_writing(

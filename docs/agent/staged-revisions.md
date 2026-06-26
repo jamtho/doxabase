@@ -504,7 +504,11 @@ changes. Markdown exports show compact display values in the exact-drift tables;
 use the API payload's raw fields when a follow-up graph edit needs exact RDF
 terms.
 Suggested actions are ordered review-first; apply or restage calls come after
-inspection/export suggestions.
+inspection/export suggestions. If stale drift has count/digest evidence but
+`exact_changed_triples_available=False`, the suggested actions can include
+`import_revision_snapshots` before restage; follow that action when a companion
+snapshot JSON bundle is available so drift relevance can be classified with
+exact triples.
 
 This is not a full merge system. A harmless unrelated graph change can still
 show up as a conflict because the guards compare staged graph state with current

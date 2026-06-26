@@ -736,7 +736,12 @@ few useful gaps:
   JSON creates an orphan state: SQLite snapshot rows import successfully, but
   normal revision helpers cannot use them without RDF `history` records.
   `describe_revision_snapshot_evidence` now classifies history-only,
-  history-plus-rows, missing-history, and rows-without-history cases.
+  history-plus-rows, missing-history, and rows-without-history cases. A later
+  recovery retest showed project-only RDF imports left stale checks and applied
+  diffs with useful prose but no machine-readable recovery route. Snapshot
+  evidence now carries structured import actions, applied diffs expose applied
+  and source snapshot evidence, and stale checks with missing exact drift rows
+  suggest importing the companion snapshot JSON before restaging.
 - A lineage/version-boundary trial confirmed restage/apply chains are
   recoverable from existing list/detail/diff calls, but resource-centric history
   remains scattered, especially for unanchored staged patch touches. Consider a

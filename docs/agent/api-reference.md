@@ -866,12 +866,17 @@ revision. It compares the staged source's before snapshots with the applied
 event's after snapshots for changed graphs and returns exact added/removed
 counts when snapshot rows are available. Changed-triple arrays are omitted by
 default; pass `include_triples=True` to include them, capped by `max_triples`.
+The response includes `snapshot_evidence` for the applied event and
+`source_snapshot_evidence` for the staged source; when exact rows are missing,
+their structured suggested actions point at `import_revision_snapshots`.
 It is a narrow applied-event inspection helper, not general historical graph
 browsing. RDF `export_trig()`/`import_trig()` preserves the graph snapshot
 metadata in `history`, but exact snapshot rows require an
 `export_revision_snapshots()` / `import_revision_snapshots()` JSON bundle.
 Call `describe_revision_snapshot_evidence()` when imported capsules behave
-surprisingly; snapshot JSON alone is not a standalone revision manifest.
+surprisingly; it now carries structured import actions for missing snapshot rows
+or missing project/history RDF. Snapshot JSON alone is not a standalone revision
+manifest.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted
 staged revision's existing patch payloads, recomputing before/after counts and

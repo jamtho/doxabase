@@ -1726,6 +1726,8 @@ max_triples=500)` returns `AppliedRevisionDiffDescription`:
 ```python
 diff.applied_revision_iri
 diff.staged_revision_iri
+diff.snapshot_evidence
+diff.source_snapshot_evidence
 diff.changed_graphs
 diff.include_triples
 diff.max_triples
@@ -1757,7 +1759,11 @@ graph_diff.note
 
 This helper only works for applied staged revision events. It compares the
 staged source's stored before-snapshot rows with the applied event's stored
-after-snapshot rows for changed graphs. The default response keeps exact
+after-snapshot rows for changed graphs. `snapshot_evidence` describes the
+applied event's after-snapshot recovery state; `source_snapshot_evidence`
+describes the staged source's before-snapshot recovery state. Read their
+`suggested_next_actions` before parsing graph-diff notes when exact rows are
+missing. The default response keeps exact
 added/removed counts but omits changed-triple arrays. Pass
 `include_triples=True` when an agent needs raw triples; `max_triples` caps each
 added/removed array and truncation flags say whether arrays were shortened.
@@ -1777,6 +1783,8 @@ snapshot_evidence.exact_snapshot_graph_roles
 snapshot_evidence.missing_snapshot_row_graph_roles
 snapshot_evidence.orphan_snapshot_row_graph_roles
 snapshot_evidence.note
+snapshot_evidence.suggested_next_actions
+snapshot_evidence.suggested_next_calls
 ```
 
 Status values are `history_missing`, `history_only_count_digest`,
@@ -1784,7 +1792,9 @@ Status values are `history_missing`, `history_only_count_digest`,
 RDF and snapshot JSON imports to decide whether exact applied diffs or stale
 drift triples can be reconstructed. Snapshot rows without matching RDF history
 records are orphan review artifacts; import a project/history RDF bundle before
-using normal revision helpers.
+using normal revision helpers. When exact rows are missing, suggested actions
+point at `import_revision_snapshots`; when snapshot rows are orphaned, they
+point at `import_trig` for the project/history RDF bundle.
 
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
 returns `RevisionSnapshotBundleExportRecord`:

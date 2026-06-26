@@ -99,7 +99,9 @@ revision recovery state is unclear. It classifies `history_missing`,
 `snapshot_rows_without_history`. The last state means snapshot JSON was imported
 but the matching RDF history records are absent; this commonly happens after a
 workflow-only RDF handoff, and normal revision helpers still need a project or
-history RDF import.
+history RDF import. The status includes structured `suggested_next_actions`:
+missing exact rows point at `import_revision_snapshots`, and orphan snapshot
+rows point at `import_trig` for the project/history RDF.
 
 ## Revision List Triage
 
@@ -361,6 +363,10 @@ default response omits those arrays to keep MCP payloads small.
 Read the per-graph `triples_added_count` and `triples_removed_count`, not only
 the before/after graph counts. A replacement can keep the same triple count
 while still adding and removing exact triples.
+The response carries `snapshot_evidence` for the applied event and
+`source_snapshot_evidence` for the staged source. If either says
+`history_only_count_digest`, import the companion revision snapshot JSON before
+assuming the graph-diff note is the full recovery context.
 
 This is still provenance browsing, not durable graph-version browsing. The
 applied event gives counts and content digests; `applied_source` gives compact

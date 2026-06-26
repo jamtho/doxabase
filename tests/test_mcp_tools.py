@@ -1356,6 +1356,10 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     diff = describe_applied_revision_diff_tool(db, result["applied_revision_iri"])
     assert diff["applied_revision_iri"] == result["applied_revision_iri"]
     assert diff["staged_revision_iri"] == staged["revision_iri"]
+    assert diff["snapshot_evidence"]["status"] == "history_plus_snapshot_rows"
+    assert diff["source_snapshot_evidence"]["status"] == (
+        "history_plus_snapshot_rows"
+    )
     assert diff["changed_graphs"] == ["map"]
     assert diff["graph_diffs"][0]["graph_role"] == "map"
     assert diff["graph_diffs"][0]["before_triple_count"] == 0
@@ -1395,11 +1399,20 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         result["applied_revision_iri"],
     )
     assert snapshot_status_before_import["status"] == "history_only_count_digest"
+    assert snapshot_status_before_import["suggested_next_actions"][0][
+        "tool_name"
+    ] == "import_revision_snapshots"
     imported_diff_before_snapshots = describe_applied_revision_diff_tool(
         round_trip,
         result["applied_revision_iri"],
         include_triples=True,
     )
+    assert imported_diff_before_snapshots["snapshot_evidence"]["status"] == (
+        "history_only_count_digest"
+    )
+    assert imported_diff_before_snapshots["snapshot_evidence"][
+        "suggested_next_actions"
+    ][0]["tool_name"] == "import_revision_snapshots"
     assert (
         imported_diff_before_snapshots["graph_diffs"][0][
             "exact_changed_triples_available"

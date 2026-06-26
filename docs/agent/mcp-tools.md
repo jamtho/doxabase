@@ -86,6 +86,9 @@ the full revision detail to exist. Status values are `history_missing`,
 `snapshot_rows_without_history`. Use this after RDF/snapshot imports to detect
 whether exact changed triples are available, only count/digest RDF snapshots
 survived, or snapshot JSON was imported without the matching `history` graph.
+The response includes structured `suggested_next_actions`: missing exact rows
+point at `doxabase.import_revision_snapshots`, and orphan snapshot rows point at
+`doxabase.import_trig` for the missing project/history RDF.
 
 `doxabase.list_graph_revisions`
 
@@ -732,7 +735,9 @@ exact added/removed counts when snapshot rows are available. Changed-triple
 arrays are omitted by default; pass `include_triples=true` to include them, with
 `max_triples` capping each added/removed array. Use this after
 `describe_graph_revision()` when an agent needs the actual triples changed by an
-applied staged revision; use
+applied staged revision. The response includes `snapshot_evidence` for the
+applied event and `source_snapshot_evidence` for the staged source, so agents
+can follow import-snapshot recovery actions without parsing graph-diff notes; use
 `describe_staged_revision()` for patch payloads, validation diagnostics,
 impacts, and judgement context.
 

@@ -378,6 +378,8 @@ class AppliedRevisionGraphSnapshotDiff:
 class AppliedRevisionDiffDescription:
     applied_revision_iri: str
     staged_revision_iri: str
+    snapshot_evidence: RevisionSnapshotEvidenceStatus
+    source_snapshot_evidence: RevisionSnapshotEvidenceStatus
     changed_graphs: list[str]
     include_triples: bool
     max_triples: int
@@ -649,6 +651,8 @@ class RevisionSnapshotEvidenceStatus:
     missing_snapshot_row_graph_roles: list[str]
     orphan_snapshot_row_graph_roles: list[str]
     note: str
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -2693,7 +2697,10 @@ class DoxaBase:
         lookup_graphs = self._lookup_graphs(data_graphs)
         if not self._subject_exists(revision_iri, data_graphs):
             graph_label = graph if graph is not None else "all graphs"
-            raise DoxaBaseError(f"Graph revision '{iri}' was not found in {graph_label}")
+            hint = self._missing_revision_snapshot_storage_hint(revision_iri)
+            raise DoxaBaseError(
+                f"Graph revision '{iri}' was not found in {graph_label}{hint}"
+            )
         if self.expand_iri("rc:GraphRevision") not in self._types_from_graphs(
             data_graphs,
             revision_iri,
@@ -2869,6 +2876,12 @@ class DoxaBase:
                     f"{', '.join(orphan_snapshot_row_graph_roles)}."
                 )
 
+        suggested_next_actions = self._revision_snapshot_evidence_next_actions(
+            status=status,
+            revision_iri=revision_iri,
+            missing_snapshot_row_graph_roles=missing_snapshot_row_graph_roles,
+            orphan_snapshot_row_graph_roles=orphan_snapshot_row_graph_roles,
+        )
         return RevisionSnapshotEvidenceStatus(
             revision_iri=revision_iri,
             status=status,
@@ -2879,6 +2892,77 @@ class DoxaBase:
             missing_snapshot_row_graph_roles=missing_snapshot_row_graph_roles,
             orphan_snapshot_row_graph_roles=orphan_snapshot_row_graph_roles,
             note=note,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+        )
+
+    def _revision_snapshot_evidence_next_actions(
+        self,
+        *,
+        status: str,
+        revision_iri: str,
+        missing_snapshot_row_graph_roles: list[str],
+        orphan_snapshot_row_graph_roles: list[str],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+
+        def add_action(
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+            *,
+            action_label: str,
+        ) -> None:
+            actions.append(
+                SuggestedNextAction(
+                    action_label=action_label,
+                    tool_name=tool_name,
+                    mcp_tool_name=f"doxabase.{tool_name}",
+                    arguments=arguments,
+                    reason=reason,
+                    call=self._suggested_call_string(tool_name, arguments),
+                )
+            )
+
+        if status == "history_only_count_digest" or missing_snapshot_row_graph_roles:
+            add_action(
+                "import_revision_snapshots",
+                {"path": "/tmp/revision-snapshots.json"},
+                (
+                    "RDF history metadata is present for "
+                    f"'{revision_iri}', but exact snapshot rows are missing for "
+                    "one or more graph roles. Import the companion snapshot JSON "
+                    "bundle before relying on exact applied-diff or stale-drift "
+                    "triple inspection."
+                ),
+                action_label="Import snapshot bundle if available",
+            )
+        if status == "snapshot_rows_without_history" or (
+            orphan_snapshot_row_graph_roles and status != "history_plus_snapshot_rows"
+        ):
+            add_action(
+                "import_trig",
+                {"path": "/tmp/project.trig"},
+                (
+                    "Snapshot rows exist for this revision, but the RDF history "
+                    "record is missing. Import the project/history RDF bundle "
+                    "before using normal revision helpers."
+                ),
+                action_label="Import project/history RDF bundle",
+            )
+        return actions
+
+    def _missing_revision_snapshot_storage_hint(self, revision_iri: str) -> str:
+        stored_graph_roles = self._graph_snapshot_storage_graph_roles(revision_iri)
+        if not stored_graph_roles:
+            return ""
+        return (
+            ". Snapshot rows exist for this revision IRI in graph roles "
+            f"{stored_graph_roles}, but the RDF history record is missing. "
+            "Import the project/history RDF bundle before using normal revision "
+            "helpers; workflow RDF exports do not include history."
         )
 
     def describe_applied_revision_diff(
@@ -2891,6 +2975,7 @@ class DoxaBase:
     ) -> AppliedRevisionDiffDescription:
         if max_triples < 1:
             raise DoxaBaseError("max_triples must be at least 1")
+        data_graphs = self._expand_graphs([graph] if graph else None)
         applied = self.describe_graph_revision(iri, graph=graph)
         staged_revision_iri = applied.applies_staged_revision
         if staged_revision_iri is None:
@@ -2911,6 +2996,14 @@ class DoxaBase:
         return AppliedRevisionDiffDescription(
             applied_revision_iri=applied.iri,
             staged_revision_iri=staged_revision_iri,
+            snapshot_evidence=self._revision_snapshot_evidence_status(
+                applied.iri,
+                data_graphs,
+            ),
+            source_snapshot_evidence=self._revision_snapshot_evidence_status(
+                staged_revision_iri,
+                data_graphs,
+            ),
             changed_graphs=graph_roles,
             include_triples=include_triples,
             max_triples=max_triples,
@@ -3862,8 +3955,9 @@ class DoxaBase:
         lookup_graphs = self._lookup_graphs(data_graphs)
         if not self._subject_exists(revision_iri, data_graphs):
             graph_label = graph if graph is not None else "all graphs"
+            hint = self._missing_revision_snapshot_storage_hint(revision_iri)
             raise DoxaBaseError(
-                f"Staged graph revision '{iri}' was not found in {graph_label}"
+                f"Staged graph revision '{iri}' was not found in {graph_label}{hint}"
             )
         if self.expand_iri("rc:GraphRevision") not in self._types_from_graphs(
             data_graphs,
@@ -14598,6 +14692,7 @@ class DoxaBase:
                 if staged.current_restaged_by is not None
                 else None
             ),
+            snapshot_drifts=snapshot_drifts,
         )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
@@ -15263,6 +15358,7 @@ class DoxaBase:
         already_applied_by: str | None,
         restaged_by: str | None,
         current_restaged_by: str | None,
+        snapshot_drifts: list[StagedGraphSnapshotDrift] | None = None,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
 
@@ -15392,6 +15488,22 @@ class DoxaBase:
                 "Write a review bundle that captures the blocked staged proposal.",
                 action_label="Export conflict bundle",
             )
+            if is_restageable_conflict and any(
+                not drift.exact_changed_triples_available
+                for drift in snapshot_drifts or []
+            ):
+                add_action(
+                    "import_revision_snapshots",
+                    {"path": "/tmp/revision-snapshots.json"},
+                    (
+                        "Exact drift triples are unavailable for one or more "
+                        "changed graphs. If this capsule came from an RDF "
+                        "handoff, import the companion revision snapshot JSON "
+                        "before deciding whether the stale patch should be "
+                        "restaged."
+                    ),
+                    action_label="Import snapshot bundle if available",
+                )
             if restaged_by is None and is_restageable_conflict:
                 add_action(
                     "restage_staged_revision",
