@@ -309,7 +309,9 @@ selects the candidate identified by `query_target_decision.candidate_index` by
 default. Pass `candidate_index` or `storage_access_iri` to select an explicit
 candidate; pass `allow_context_blocked_candidate=True` only when that selected
 candidate has no direct warning/error and stale sibling metadata should not
-block this handoff. `source_context` preserves both the automatic decision and
+block this handoff. If `storage_access_iri` matches multiple candidate paths,
+use the returned candidate snippets to rerun with `candidate_index`.
+`source_context` preserves both the automatic decision and
 the explicit selection audit fields. It also reports `candidate_count`,
 `ready_candidate_indexes`, and `unselected_ready_candidate_indexes`; when the
 last list is non-empty, the automatic or explicit selection has peer ready

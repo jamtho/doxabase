@@ -7181,9 +7181,17 @@ class DoxaBase:
                 )
             if len(matches) > 1:
                 indexes = ", ".join(str(index) for index, _candidate in matches)
+                snippets = "; ".join(
+                    self._draft_query_plan_candidate_selection_snippet(
+                        index,
+                        candidate,
+                    )
+                    for index, candidate in matches
+                )
                 raise DoxaBaseError(
                     "storage_access_iri matched multiple query target candidates "
-                    f"({indexes}); pass candidate_index for an exact selection."
+                    f"({indexes}): {snippets}. Pass candidate_index for an "
+                    "exact selection."
                 )
             selected_index, selected_candidate = matches[0]
             return (
@@ -7222,6 +7230,36 @@ class DoxaBase:
             "Automatic query_target_decision did not select a candidate.",
             None,
         )
+
+    def _draft_query_plan_candidate_selection_snippet(
+        self,
+        index: int,
+        candidate: QueryTargetCandidate,
+    ) -> str:
+        source_label = candidate.source_resource.label or self._local_name(
+            candidate.source_resource.iri
+        )
+        storage_label = None
+        if candidate.storage_access is not None:
+            storage_label = candidate.storage_access.label or self._local_name(
+                candidate.storage_access.iri
+            )
+        path_or_relation = (
+            candidate.candidate_path
+            or candidate.relation_identifier
+            or candidate.connection_reference
+            or candidate.template
+        )
+        parts = [
+            f"candidate {index}",
+            f"path={path_or_relation!r}",
+            f"template_source={candidate.template_source}",
+            f"source={source_label!r}",
+            f"status={candidate.candidate_path_status}",
+        ]
+        if storage_label is not None:
+            parts.append(f"storage={storage_label!r}")
+        return " ".join(parts)
 
     def _draft_query_plan_effective_candidate(
         self,

@@ -1196,8 +1196,9 @@ still carries the automatic decision, while `selected_candidate_index`,
 If `unselected_ready_candidate_indexes` is non-empty, another direct-ready
 candidate exists and agents should consider whether to rerun with explicit
 `candidate_index`.
-`storage_access_iri` must identify exactly one query target candidate; use
-`candidate_index` when one storage access has multiple candidate paths.
+`storage_access_iri` must identify exactly one query target candidate; when one
+storage access has multiple candidate paths, the error includes compact
+candidate snippets and callers should rerun with `candidate_index`.
 `plan.scan` gives a best-effort scan
 function such as `read_parquet`, a URI/path template for file/object storage,
 file format, compression, and the selected candidate path status. For

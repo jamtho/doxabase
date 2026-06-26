@@ -6619,8 +6619,16 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
             dataset,
             storage_access_iri="https://example.test/project#missing_storage",
         )
-    with pytest.raises(DoxaBaseError, match="matched multiple"):
+    with pytest.raises(DoxaBaseError, match="matched multiple") as excinfo:
         db.draft_query_plan(dataset, storage_access_iri=storage.iri)
+    error = str(excinfo.value)
+    assert "candidate 0 path=" in error
+    assert "candidate 1 path=" in error
+    assert "/warehouse/orders/current/dt={date}.parquet" in error
+    assert "/warehouse/orders/archive/dt={date}.parquet" in error
+    assert "template_source=storage_access" in error
+    assert "storage='Orders local access'" in error
+    assert "Pass candidate_index for an exact selection." in error
 
 
 def test_describe_query_context_warns_on_protocol_location_mismatch(

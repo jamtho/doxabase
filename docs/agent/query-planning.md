@@ -55,6 +55,10 @@ selection mode, and the review gate reports whether a context-blocked candidate
 was used. Only use this switch when `direct_review_required` is false for the
 selected candidate; direct blockers still keep the plan review-gated.
 
+When `storage_access_iri` matches multiple candidate paths, the error includes
+compact candidate snippets. Choose from those snippets and rerun with
+`candidate_index`; the storage selector must identify exactly one candidate.
+
 ## Common Cases
 
 Local file/object candidates can be ready for an execution attempt when the
