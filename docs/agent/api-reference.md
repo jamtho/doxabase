@@ -279,7 +279,10 @@ preserve template provenance and compose best-effort file/object paths from
 storage roots or bucket/prefix facts without resolving endpoint profiles or
 credential references. For database-backed storage, candidates keep the relation
 as `candidate_path` and expose `relation_identifier` plus
-`connection_reference` instead of a joined file-like path. Candidate
+`connection_reference` instead of a joined file-like path when the relation
+comes from a storage-access-owned template. Dataset or partition file paths
+paired with database storage stay review-only with
+`database_relation_template_source_mismatch` and no relation identifier. Candidate
 `review_reasons` can include overall-context blockers
 from sibling metadata as well as protocol/location warnings, for example
 S3-compatible access without endpoint/credential/region cues, non-S3 access
@@ -344,7 +347,9 @@ generic review-draft shape today, so expect `scan.function=None` and review
 gating rather than executable SQL; `scan.uri_template` is intentionally absent
 there, and `scan.relation_identifier` plus `scan.connection_reference` carry
 the recorded database handoff for review. These scan fields mirror the selected
-candidate's database-specific fields. The `scan` card carries dataset-level
+candidate's database-specific fields; if the selected database candidate came
+from a dataset or partition path, `scan.relation_identifier` is absent and the
+plan stays metadata-review-required. The `scan` card carries dataset-level
 verification status/notes and template lineage/source verification fields so
 agents can see, for example, that a dataset-owned path was verified by listing
 or that an aggregate table's path came from a shared partition scheme and is

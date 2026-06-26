@@ -788,6 +788,11 @@ few useful gaps:
   omitted-match risk when unanchored patch-only matches may have been filtered
   out. Treat unreadable revision counts as distinct pre-pagination source or
   staged revisions, and `omitted_match_risk` as a coarse absence-risk signal.
+- A priority query-planning trial found database storage could accidentally
+  compose dataset or partition file templates into `relation_identifier`.
+  Database relations now come only from storage-access-owned templates;
+  dataset/partition templates paired with database storage are review-only
+  candidates with `database_relation_template_source_mismatch`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

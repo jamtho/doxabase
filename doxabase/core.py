@@ -7974,9 +7974,13 @@ class DoxaBase:
                 storage_access is not None
                 and self._is_database_storage(storage_access.storage_protocol)
             )
+            database_relation_template_source_mismatch = (
+                database_storage
+                and template_source not in {"storage_access", "storage_access_location"}
+            )
             relation_identifier = (
                 template.strip() or None
-                if database_storage and template_source != "storage_access_location"
+                if database_storage and template_source == "storage_access"
                 else None
             )
             connection_reference = (
@@ -7999,13 +8003,17 @@ class DoxaBase:
                         else "unresolved"
                     )
             elif database_storage:
-                candidate_path = relation_identifier
-                if candidate_path is None:
+                if database_relation_template_source_mismatch:
+                    candidate_path = None
                     composition = "unresolved"
-                elif connection_reference:
-                    composition = "database_connection_and_relation"
                 else:
-                    composition = "database_relation"
+                    candidate_path = relation_identifier
+                    if candidate_path is None:
+                        composition = "unresolved"
+                    elif connection_reference:
+                        composition = "database_connection_and_relation"
+                    else:
+                        composition = "database_relation"
             else:
                 candidate_path, composition = self._query_candidate_path(
                     template,
@@ -8021,6 +8029,27 @@ class DoxaBase:
                 storage_access is not None
                 and template_source != "storage_access_location"
             ):
+                relation_source_issue = (
+                    self._query_database_relation_template_source_issue(
+                        template=template,
+                        template_source=template_source,
+                        source_resource=source_resource,
+                        storage_access=storage_access,
+                    )
+                )
+                if relation_source_issue is not None and not any(
+                    reason.code == relation_source_issue.code
+                    and (
+                        reason.resource.iri if reason.resource is not None else None
+                    )
+                    == (
+                        relation_source_issue.resource.iri
+                        if relation_source_issue.resource is not None
+                        else None
+                    )
+                    for reason in review_reasons
+                ):
+                    review_reasons.append(relation_source_issue)
                 candidate_metadata_issue = self._query_candidate_metadata_issue(
                     template=template,
                     source_resource=source_resource,
@@ -8338,6 +8367,44 @@ class DoxaBase:
             if reason.code == "query_context_has_other_blockers"
         ]
 
+    def _query_database_relation_template_source_issue(
+        self,
+        *,
+        template: str,
+        template_source: str,
+        source_resource: ResourceSummary,
+        storage_access: StorageAccessDescription,
+    ) -> QueryPlanningIssue | None:
+        if not self._is_database_storage(storage_access.storage_protocol):
+            return None
+        if template_source in {"storage_access", "storage_access_location"}:
+            return None
+        source_label = source_resource.label or source_resource.iri
+        return QueryPlanningIssue(
+            code="database_relation_template_source_mismatch",
+            severity="warning",
+            message=(
+                "Database storage candidate uses a path template from "
+                f"{source_label}; dataset and partition path templates are "
+                "file/object locations, not database relation identifiers. "
+                "Record the database relation as a storage-access path_template "
+                "before database handoff."
+            ),
+            resource=self._summary_from_description(storage_access),
+            details={
+                "template": template,
+                "template_source": template_source,
+                "template_source_resource_iri": source_resource.iri,
+                "storage_access_iri": storage_access.iri,
+                "storage_protocol_iri": (
+                    storage_access.storage_protocol.iri
+                    if storage_access.storage_protocol is not None
+                    else None
+                ),
+                "allowed_relation_template_sources": ["storage_access"],
+            },
+        )
+
     def _query_candidate_metadata_issue(
         self,
         *,
@@ -8389,12 +8456,13 @@ class DoxaBase:
         if not dataset.storage_accesses:
             return []
 
-        template_sources: list[tuple[str, ResourceSummary]] = [
-            (template, dataset_summary) for template in direct_path_templates
+        template_sources: list[tuple[str, str, ResourceSummary]] = [
+            (template, "dataset", dataset_summary) for template in direct_path_templates
         ]
         template_sources.extend(
             (
                 partition.path_template,
+                "partition_scheme",
                 self._summary_from_description(partition),
             )
             for partition in dataset.partition_schemes
@@ -8403,7 +8471,17 @@ class DoxaBase:
 
         issues: list[QueryPlanningIssue] = []
         for storage_access in dataset.storage_accesses:
-            for template, source_resource in template_sources:
+            for template, template_source, source_resource in template_sources:
+                relation_source_issue = (
+                    self._query_database_relation_template_source_issue(
+                        template=template,
+                        template_source=template_source,
+                        source_resource=source_resource,
+                        storage_access=storage_access,
+                    )
+                )
+                if relation_source_issue is not None:
+                    issues.append(relation_source_issue)
                 issue = self._query_candidate_metadata_issue(
                     template=template,
                     source_resource=source_resource,
@@ -8574,6 +8652,8 @@ class DoxaBase:
         return review_reasons
 
     def _is_candidate_metadata_issue(self, issue: QueryPlanningIssue) -> bool:
+        if issue.code == "database_relation_template_source_mismatch":
+            return True
         return (
             issue.code == "storage_protocol_location_mismatch"
             and issue.message.startswith(

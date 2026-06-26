@@ -30,7 +30,8 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 3. `scan.uri_template` is for file/object scans.
 4. `scan.relation_identifier` and `scan.connection_reference` are for
    database-backed storage handoffs; do not treat the candidate path as a file
-   URI in that case.
+   URI in that case. Relation identifiers come from storage-access-owned
+   templates, not dataset or partition file paths.
 5. `required_bindings` and `binding_requirements` still need runtime values.
    `review_gate.binding_values_required=True` and
    `handoff_kind="binding_values_required"` make that case explicit.
@@ -83,6 +84,11 @@ be metadata-ready in `describe_query_context()` while
 generic DuckDB file-scan function is not inferred. Use
 `relation_identifier` and `connection_reference` as the handoff, then verify the
 database connection outside DoxaBase.
+For database storage, only a storage-access-owned path template is treated as a
+relation identifier. Dataset or partition path templates paired with database
+storage are review-only inventory cards with
+`database_relation_template_source_mismatch`; record the schema/table/relation
+on the storage access before using a database handoff.
 
 If `runtime_resolution_required=False` for bare database storage, read the note
 before treating it as reachable. The boolean only says there is no recorded

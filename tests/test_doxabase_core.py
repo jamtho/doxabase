@@ -7257,6 +7257,129 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
     assert plan.handoff_kind == "database_relation_handoff"
 
 
+def test_database_storage_does_not_treat_partition_template_as_relation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    partition_template = "events/dt={date}/region={region}/*.parquet"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_database_storage",
+        label="Events database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-prod",
+        path_templates=["mart.events"],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    partition = db.record_map_partition_scheme(
+        "https://example.test/project#events_partition_scheme",
+        label="Events file partitioning",
+        path_template=partition_template,
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    issue = next(
+        issue
+        for issue in context.issues
+        if issue.code == "database_relation_template_source_mismatch"
+    )
+    assert issue.resource is not None
+    assert issue.resource.iri == storage.iri
+    assert issue.details == {
+        "template": partition_template,
+        "template_source": "partition_scheme",
+        "template_source_resource_iri": partition.iri,
+        "storage_access_iri": storage.iri,
+        "storage_protocol_iri": RC + "DatabaseStorage",
+        "allowed_relation_template_sources": ["storage_access"],
+    }
+    partition_target_index, partition_target = next(
+        (index, target)
+        for index, target in enumerate(context.query_target_candidates)
+        if target.template_source == "partition_scheme"
+    )
+    assert partition_target.source_resource.iri == partition.iri
+    assert partition_target.storage_access is not None
+    assert partition_target.storage_access.iri == storage.iri
+    assert partition_target.template == partition_template
+    assert partition_target.candidate_path is None
+    assert partition_target.relation_identifier is None
+    assert partition_target.connection_reference == "analytics-prod"
+    assert partition_target.composition == "unresolved"
+    assert partition_target.candidate_path_status == "unresolved"
+    assert partition_target.direct_review_required is True
+    assert [reason.code for reason in partition_target.direct_review_reasons] == [
+        "database_relation_template_source_mismatch"
+    ]
+
+    relation_target_index, relation_target = next(
+        (index, target)
+        for index, target in enumerate(context.query_target_candidates)
+        if target.template_source == "storage_access"
+    )
+    assert relation_target.source_resource.iri == storage.iri
+    assert relation_target.candidate_path == "mart.events"
+    assert relation_target.relation_identifier == "mart.events"
+    assert relation_target.connection_reference == "analytics-prod"
+    assert relation_target.composition == "database_connection_and_relation"
+    assert relation_target.candidate_path_status == "ready"
+    assert relation_target.review_required is False
+    assert relation_target.direct_review_required is False
+    assert context.query_target_decision.candidate_index == relation_target_index
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template_source == "storage_access"
+    assert plan.scan.relation_identifier == "mart.events"
+    assert plan.scan.uri_template is None
+    assert plan.review_gate.all_issue_codes == [
+        "database_relation_template_source_mismatch"
+    ]
+    assert "query_context_has_other_blockers" in plan.review_gate.blocking_reason_codes
+    assert partition_template not in {
+        plan.selected_candidate.candidate_path,
+        plan.scan.relation_identifier,
+    }
+
+    explicit_bad_plan = db.draft_query_plan(
+        dataset,
+        candidate_index=partition_target_index,
+    )
+
+    assert explicit_bad_plan.selected_candidate is not None
+    assert explicit_bad_plan.selected_candidate.template_source == "partition_scheme"
+    assert explicit_bad_plan.selected_candidate.relation_identifier is None
+    assert explicit_bad_plan.scan.relation_identifier is None
+    assert explicit_bad_plan.scan.connection_reference == "analytics-prod"
+    assert explicit_bad_plan.scan.candidate_path_status == "unresolved"
+    assert explicit_bad_plan.review_gate.status == "candidate_needs_review"
+    assert explicit_bad_plan.review_gate.blocking_reason_codes == [
+        "database_relation_template_source_mismatch"
+    ]
+    assert explicit_bad_plan.handoff_kind == "metadata_review_required"
+
+
 @pytest.mark.parametrize("location_kind", [None, "directory", "prefix", "connection"])
 def test_describe_query_context_demotes_non_object_root_only_location(
     tmp_path: Path,

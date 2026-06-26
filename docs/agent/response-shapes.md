@@ -1072,7 +1072,11 @@ for callers that need a safer handoff than raw `path_templates` plus
 from physical query-planning issues that apply to the candidate. For
 database-backed storage, `candidate_path` is the relation-like planning target
 rather than a joined connection path; read `relation_identifier` and
-`connection_reference` for the explicit database handoff. These cards do not
+`connection_reference` for the explicit database handoff. Only
+storage-access-owned templates become database relation identifiers; dataset
+or partition templates paired with database storage remain review-only
+inventory and carry `database_relation_template_source_mismatch` instead of a
+`relation_identifier`. These cards do not
 resolve credentials, endpoint profiles, or executable SQL. `review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
 requires review before executable use. `direct_review_reasons` excludes the
@@ -1157,7 +1161,9 @@ failed.
 `details` is optional structured context for selected issue kinds. For example,
 protocol/location mismatches include storage fields and mismatch reasons, while
 `query_context_has_other_blockers` includes excluded blocker counts, codes, and
-resource IRIs.
+resource IRIs. `database_relation_template_source_mismatch` includes the
+template, template source, source resource IRI, storage access IRI, and the
+allowed relation-template source list.
 
 Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and
@@ -1219,8 +1225,12 @@ file format, compression, and the selected candidate path status. For
 database-backed storage, `scan.uri_template` is intentionally absent;
 `scan.relation_identifier` and `scan.connection_reference` carry the graph's
 relation/connection handoff for review rather than executable SQL and should
-match the selected candidate's database fields. The scan card also carries the
-dataset-level
+match the selected candidate's database fields. If a database candidate came
+from a dataset or partition file path, `scan.relation_identifier` stays absent
+and the selected candidate is review-gated with
+`database_relation_template_source_mismatch`; record the relation on the
+storage access before treating it as a database handoff. The scan card also
+carries the dataset-level
 `dataset_verification_status` / `dataset_verification_note`, and repeats path
 lineage fields from the selected candidate: `template_source`,
 `template_source_resource`, `template_source_verification_status`,
@@ -1273,7 +1283,9 @@ Database-backed storage currently uses this generic review-draft shape too;
 expect `scan.function=None` and `scan_function_not_inferred` until a
 database-query-specific plan mode exists. Those plans use
 `handoff_kind="database_relation_handoff"` when the recorded relation is the
-right thing to pass to a database-aware runtime rather than a file scan.
+right thing to pass to a database-aware runtime rather than a file scan. A
+dataset or partition path under database storage is not a recorded relation and
+should stay `metadata_review_required`.
 `executable_without_review=true` means DoxaBase found no recorded
 physical-metadata blocker for the selected candidate. It is not a runtime
 credential/object-existence guarantee.
