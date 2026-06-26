@@ -1298,6 +1298,10 @@ context-blocked selection changed the handoff gate. When
 warning/error, sibling-only context blockers can be excluded from the selected
 handoff while remaining visible in `issues`, the automatic decision, and
 `context_blocking_reason_codes`.
+For sibling candidate-metadata blockers, use an explicit `candidate_index` or
+`storage_access_iri` with that allowance. A selectorless automatic draft may
+still report `context_blocked_candidate_allowed=True`, but if
+`context_blocked_candidate_used=False` the context gate remains active.
 Interpret the two allowance booleans together: `allowed=false` / `used=false`
 means no allowance was requested; `allowed=true` / `used=true` means the selected
 candidate was made direct-clean by excluding sibling-only blockers;

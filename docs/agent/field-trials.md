@@ -820,6 +820,19 @@ few useful gaps:
   `application_status`, `next_action`, `suggested_next_actions`, and
   `suggested_next_calls` on each post-apply recheck row, so automation can
   restage/repair/inspect without joining back to revision listings first.
+- A mixed local/database query-planning retest confirmed explicit
+  `candidate_index` plus `allow_context_blocked_candidate=True` now routes a
+  direct-clean local partition candidate to `binding_values_required` while
+  preserving sibling database-template mismatch audit fields. The same trial
+  showed selectorless automatic calls with the allowance can be misread:
+  agents should pair the allowance with an explicit selector when the blocker is
+  sibling candidate metadata.
+- A profile-update staging trial confirmed accepted draft indexes can still be
+  skipped by guardrails. In a sampled profile run, accepting a sampled row-count
+  replacement and two column recommendations staged only the column updates by
+  default; read `status_counts`, `staged_recommendation_indexes`, and
+  `skipped_recommendation_indexes` before assuming every accepted index became a
+  patch.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

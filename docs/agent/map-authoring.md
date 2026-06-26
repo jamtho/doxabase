@@ -96,6 +96,21 @@ default unless `allow_sampled_row_count_updates=True` is supplied because the
 sample scope is the durable population. Metric advisories are vocabulary-review
 prompts, not automatic map facts.
 
+Typical mixed staging after a sampled profile run:
+
+```python
+staged = db.stage_profile_map_updates(
+    dataset,
+    evidence,
+    accepted_recommendation_indexes=[0, 1, 2],
+)
+assert 0 in staged.skipped_recommendation_indexes
+assert staged.status_counts["staged"] == 2
+```
+
+Here recommendation `0` is a sampled row-count update, while `1` and `2` are
+accepted column updates that still become one reviewable staged revision.
+
 ## Example
 
 ```python

@@ -312,8 +312,13 @@ Returns a non-executed, review-gated physical plan draft over
 the candidate named by `query_target_decision.candidate_index` by default. Pass
 `candidate_index` or `storage_access_iri` for an explicit selection, and use
 `allow_context_blocked_candidate=true` only when the selected candidate is
-direct-clean but sibling metadata still blocks the whole context. If
-`storage_access_iri` matches multiple candidate paths, rerun with
+direct-clean but sibling metadata still blocks the whole context. When the
+blocker comes only from sibling candidate metadata, pair the allowance with
+an explicit `candidate_index` or `storage_access_iri`; selectorless automatic
+drafts keep the context review gate and report
+`context_blocked_candidate_allowed=true` /
+`context_blocked_candidate_used=false`. If `storage_access_iri` matches
+multiple candidate paths, rerun with
 `candidate_index` using the returned candidate snippets. `source_context`
 also reports `candidate_count`, `ready_candidate_indexes`, and
 `unselected_ready_candidate_indexes` so automatic plans reveal peer ready

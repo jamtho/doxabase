@@ -119,7 +119,9 @@ agent runtime decides how profile X resolves.
    partition metadata blocks the context, pass `candidate_index` or
    `storage_access_iri` with `allow_context_blocked_candidate=True` to draft the
    selected route while preserving the automatic decision and context blocker
-   audit fields.
+   audit fields. A selectorless automatic call with that flag records the
+   allowance but keeps the context review gate when the blocker belongs to
+   sibling candidate metadata.
    Read `plan.scan.dataset_verification_note`, `plan.scan.template_lineage`,
    and the scan source verification fields before trusting a path. In the AIS
    fixture, `DailyIndex` currently shares the broadcast partition template and

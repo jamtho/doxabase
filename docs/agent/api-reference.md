@@ -318,6 +318,11 @@ candidate; pass `allow_context_blocked_candidate=True` only when that selected
 candidate has no direct warning/error and stale sibling metadata should not
 block this handoff. If `storage_access_iri` matches multiple candidate paths,
 use the returned candidate snippets to rerun with `candidate_index`.
+When sibling candidate-metadata blockers are the reason for the allowance, pass
+an explicit selector too; selectorless automatic drafts keep the context review
+gate and show the distinction through
+`context_blocked_candidate_allowed=True` /
+`context_blocked_candidate_used=False`.
 `source_context` preserves both the automatic decision and
 the explicit selection audit fields. It also reports `candidate_count`,
 `ready_candidate_indexes`, and `unselected_ready_candidate_indexes`; when the
