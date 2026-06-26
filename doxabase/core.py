@@ -891,6 +891,7 @@ class GraphRevisionList:
     stale_resolution_state: str | None
     current_staged_work_only: bool
     returned_application_status_counts: dict[str, int]
+    returned_current_staged_work_application_status_counts: dict[str, int]
     returned_stale_resolution_state_counts: dict[str, int]
     returned_staged_validation_status_counts: dict[str, int]
     next_action_queue: dict[str, list[str]]
@@ -2908,6 +2909,12 @@ class DoxaBase:
             revision_iri,
             "rc:appliesStagedRevision",
         )
+        patch_iris = self._objects(data_graphs, revision_iri, "rc:hasGraphPatch")
+        patches = [
+            self._describe_staged_graph_patch(patch_iri, data_graphs)
+            for patch_iri in patch_iris
+        ]
+        patches.sort(key=self._staged_patch_sort_key)
 
         return GraphRevisionDescription(
             iri=revision_iri,
@@ -2952,6 +2959,7 @@ class DoxaBase:
             validation_results=self._graph_revision_validation_results(
                 revision_iri,
                 data_graphs,
+                patches=patches,
             ),
             graph_snapshots=snapshots,
             snapshot_evidence=self._revision_snapshot_evidence_status(
@@ -3685,6 +3693,9 @@ class DoxaBase:
             reverse=True,
         )
         sliced_items = items[offset : offset + limit]
+        returned_current_staged_work_items = [
+            item for item in sliced_items if item.is_current_staged_work
+        ]
         return GraphRevisionList(
             revisions=sliced_items,
             count=len(items),
@@ -3699,6 +3710,12 @@ class DoxaBase:
             returned_application_status_counts=self._graph_revision_list_counts(
                 sliced_items,
                 "application_status",
+            ),
+            returned_current_staged_work_application_status_counts=(
+                self._graph_revision_list_counts(
+                    returned_current_staged_work_items,
+                    "application_status",
+                )
             ),
             returned_stale_resolution_state_counts=self._graph_revision_list_counts(
                 sliced_items,
@@ -4805,6 +4822,7 @@ class DoxaBase:
             validation_results=self._graph_revision_validation_results(
                 revision_iri,
                 data_graphs,
+                patches=patches,
             ),
             graph_snapshots=snapshots,
             patches=patches,
@@ -15952,6 +15970,34 @@ class DoxaBase:
             validation_scope,
             preview_graphs=preview_graphs,
         )
+        patch_descriptions = [
+            StagedGraphPatchDescription(
+                iri=patch_record.patch_iri,
+                operation=patch_record.operation,
+                operation_label=self._label_for_resource(patch_record.operation),
+                target_graph=patch_record.target_graph,
+                format=patch_record.format,
+                patch_role=patch_record.patch_role,
+                patch_role_label=self._label_for_resource(patch_record.patch_role),
+                sequence_index=patch_record.sequence_index,
+                triple_count=patch_record.triple_count,
+                before_triple_count=patch_record.before_triple_count,
+                after_triple_count=patch_record.after_triple_count,
+                content=str(patch["content"]),
+            )
+            for patch, patch_record in zip(
+                parsed_patches,
+                patch_records,
+                strict=True,
+            )
+        ]
+        validation = replace(
+            validation,
+            results=self._enrich_staged_row_semantics_validation_hints(
+                validation.results,
+                patches=patch_descriptions,
+            ),
+        )
         revision_subject = (
             self._required_iri("revision_iri", revision_iri)
             if revision_iri is not None
@@ -17686,7 +17732,10 @@ class DoxaBase:
             )
             validation_conforms = validation.conforms
             validation_result_count = validation.result_count
-            validation_results = validation.results
+            validation_results = self._enrich_staged_row_semantics_validation_hints(
+                validation.results,
+                patches=[patch for patch, _ in parsed_patches],
+            )
 
         has_effective_patch_triples = (triples_to_add + triples_to_remove) > 0
         can_apply = (
@@ -23790,6 +23839,7 @@ class DoxaBase:
             messages=messages,
             hint=self._validation_diagnostic_hint(
                 result_path=result_path,
+                source_constraint_component=source_constraint_component,
                 messages=messages,
             ),
         )
@@ -23798,11 +23848,23 @@ class DoxaBase:
         self,
         *,
         result_path: str | None,
+        source_constraint_component: str | None,
         messages: Iterable[str],
     ) -> str | None:
         if result_path == self.expand_iri("rc:rowSemantics") or any(
             "rowSemantics" in message for message in messages
         ):
+            if (
+                source_constraint_component
+                == PREFIXES["sh"] + "MaxCountConstraintComponent"
+            ):
+                return (
+                    "Keep exactly one of rc:EventRow, rc:SnapshotRow, "
+                    "rc:AggregateRow, or rc:DimensionRow for rc:rowSemantics. "
+                    "When changing an existing row-grain framing, use a "
+                    "removal+addition patch or stage_map_assertion_change "
+                    "replacement rather than adding a second value."
+                )
             return (
                 "Use one of rc:EventRow, rc:SnapshotRow, rc:AggregateRow, or "
                 "rc:DimensionRow for rc:rowSemantics; put prose row-grain "
@@ -23810,6 +23872,157 @@ class DoxaBase:
                 "or patterns."
             )
         return None
+
+    def _enrich_staged_row_semantics_validation_hints(
+        self,
+        diagnostics: list[ValidationDiagnostic],
+        *,
+        patches: list[StagedGraphPatchDescription],
+    ) -> list[ValidationDiagnostic]:
+        if not diagnostics or not patches:
+            return diagnostics
+        row_semantics = self.expand_iri("rc:rowSemantics")
+        max_count_component = PREFIXES["sh"] + "MaxCountConstraintComponent"
+        focus_nodes = {
+            diagnostic.focus_node
+            for diagnostic in diagnostics
+            if diagnostic.focus_node is not None
+            and diagnostic.result_path == row_semantics
+            and diagnostic.source_constraint_component == max_count_component
+        }
+        if not focus_nodes:
+            return diagnostics
+
+        added_values, removed_values, target_graphs = (
+            self._staged_row_semantics_patch_value_context(
+                patches,
+                focus_nodes=focus_nodes,
+            )
+        )
+        if not added_values and not removed_values:
+            return diagnostics
+        current_values = self._current_row_semantics_values(
+            focus_nodes=focus_nodes,
+            target_graphs=target_graphs,
+        )
+        enriched: list[ValidationDiagnostic] = []
+        for diagnostic in diagnostics:
+            if (
+                diagnostic.focus_node is None
+                or diagnostic.result_path != row_semantics
+                or diagnostic.source_constraint_component != max_count_component
+            ):
+                enriched.append(diagnostic)
+                continue
+            hint = self._staged_row_semantics_max_count_hint(
+                current_values=current_values.get(diagnostic.focus_node, set()),
+                added_values=added_values.get(diagnostic.focus_node, set()),
+                removed_values=removed_values.get(diagnostic.focus_node, set()),
+            )
+            enriched.append(replace(diagnostic, hint=hint or diagnostic.hint))
+        return enriched
+
+    def _staged_row_semantics_patch_value_context(
+        self,
+        patches: list[StagedGraphPatchDescription],
+        *,
+        focus_nodes: set[str],
+    ) -> tuple[dict[str, set[str]], dict[str, set[str]], set[str]]:
+        row_semantics = URIRef(self.expand_iri("rc:rowSemantics"))
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        added_values: dict[str, set[str]] = {}
+        removed_values: dict[str, set[str]] = {}
+        target_graphs: set[str] = set()
+        for patch in patches:
+            try:
+                target_graph = self._required_staged_patch_target_graph(patch)
+                operation = self._required_staged_patch_field(
+                    patch,
+                    "operation",
+                    patch.operation,
+                )
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                continue
+            target_graphs.add(target_graph)
+            if operation == addition_operation:
+                value_bucket = added_values
+            elif operation == removal_operation:
+                value_bucket = removed_values
+            else:
+                continue
+            for subject, _, value in patch_graph.triples((None, row_semantics, None)):
+                subject_iri = str(subject)
+                if subject_iri not in focus_nodes:
+                    continue
+                value_bucket.setdefault(subject_iri, set()).add(str(value))
+        return added_values, removed_values, target_graphs
+
+    def _current_row_semantics_values(
+        self,
+        *,
+        focus_nodes: set[str],
+        target_graphs: set[str],
+    ) -> dict[str, set[str]]:
+        row_semantics = URIRef(self.expand_iri("rc:rowSemantics"))
+        values_by_focus: dict[str, set[str]] = {focus: set() for focus in focus_nodes}
+        for target_graph in sorted(target_graphs):
+            try:
+                current_graph = self.to_graph([target_graph])
+            except DoxaBaseError:
+                continue
+            for focus_node in focus_nodes:
+                values_by_focus[focus_node].update(
+                    str(value)
+                    for value in current_graph.objects(
+                        URIRef(focus_node),
+                        row_semantics,
+                    )
+                )
+        return values_by_focus
+
+    def _staged_row_semantics_max_count_hint(
+        self,
+        *,
+        current_values: set[str],
+        added_values: set[str],
+        removed_values: set[str],
+    ) -> str | None:
+        if current_values and added_values:
+            return (
+                "rc:rowSemantics allows one value; the current graph already "
+                f"has {self._compact_value_list(current_values)} and this "
+                f"staged patch adds {self._compact_value_list(added_values)}. "
+                "Choose the intended row framing and use a removal+addition "
+                "patch or stage_map_assertion_change replacement if the staged "
+                "value should replace the current value."
+            )
+        if added_values:
+            return (
+                "rc:rowSemantics allows one value; this staged patch adds "
+                f"{self._compact_value_list(added_values)}, but the candidate "
+                "graph has multiple rowSemantics values. Choose one row "
+                "framing and use a removal+addition patch or "
+                "stage_map_assertion_change replacement when changing an "
+                "existing value."
+            )
+        if current_values and removed_values:
+            return (
+                "rc:rowSemantics allows one value; the current graph has "
+                f"{self._compact_value_list(current_values)} and the staged "
+                f"patch removes {self._compact_value_list(removed_values)}, "
+                "but the candidate graph still has multiple rowSemantics "
+                "values. Choose one row framing and repair the staged patch."
+            )
+        return None
+
+    def _compact_value_list(self, values: Iterable[str]) -> str:
+        compact_values = [
+            self._compact_iri(value) or self._local_name(value) or value
+            for value in sorted(values)
+        ]
+        return ", ".join(compact_values)
 
     def _first_report_value(
         self,
@@ -27028,6 +27241,8 @@ class DoxaBase:
         self,
         revision_iri: str,
         graphs: list[str],
+        *,
+        patches: list[StagedGraphPatchDescription] | None = None,
     ) -> list[ValidationDiagnostic]:
         sh = PREFIXES["sh"]
         diagnostics: list[ValidationDiagnostic] = []
@@ -27061,10 +27276,15 @@ class DoxaBase:
                     messages=messages,
                     hint=self._validation_diagnostic_hint(
                         result_path=result_path,
+                        source_constraint_component=source_constraint_component,
                         messages=messages,
                     ),
                 )
             )
+        diagnostics = self._enrich_staged_row_semantics_validation_hints(
+            diagnostics,
+            patches=patches or [],
+        )
         return sorted(diagnostics, key=self._validation_diagnostic_sort_key)
 
     def _mint_iri(self, kind: str) -> str:

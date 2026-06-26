@@ -1036,7 +1036,11 @@ few useful gaps:
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with
   `stale_resolution_state="stale_handled_by_restage"` as informational, and use
-  `current_staged_work_only=True` for mutation queues.
+  `current_staged_work_only=True` for mutation queues. When keeping the full
+  returned history page, read
+  `returned_current_staged_work_application_status_counts` for current-work
+  status and reserve `returned_application_status_counts` for page/history
+  status.
 - A docs retrieval trial found large MCP docs hid deep sections behind the
   default prefix. Doc listings now expose section headings and `get_doc` accepts
   `section` or `start_char` for bounded navigation.

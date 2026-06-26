@@ -958,6 +958,9 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["stale_resolution_state"] is None
     assert result["current_staged_work_only"] is False
     assert result["returned_application_status_counts"] == {"ready": 1}
+    assert result["returned_current_staged_work_application_status_counts"] == {
+        "ready": 1
+    }
     assert result["returned_stale_resolution_state_counts"] == {"ready": 1}
     assert result["returned_staged_validation_status_counts"] == {"conforms": 1}
     assert result["next_action_queue"] == {
@@ -1059,6 +1062,9 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert len(mixed_page["revisions"]) == 1
     assert mixed_page["revisions"][0]["iri"] == sibling["revision_iri"]
     assert mixed_page["returned_application_status_counts"] == {"conflict": 1}
+    assert mixed_page["returned_current_staged_work_application_status_counts"] == {
+        "conflict": 1
+    }
     assert mixed_page["returned_stale_resolution_state_counts"] == {
         "stale_unresolved": 1
     }
@@ -1077,6 +1083,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert second_page["returned_application_status_counts"] == {
         "applied_event": 1
     }
+    assert second_page["returned_current_staged_work_application_status_counts"] == {}
     assert second_page["next_action_queue"] == {
         "inspect_already_applied": [applied["applied_revision_iri"]]
     }

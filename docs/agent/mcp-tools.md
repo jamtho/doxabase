@@ -117,6 +117,10 @@ such as
 Do not route full-list `application_status="conflict"` rows directly: a handled
 stale original can still be historically conflicted while
 `is_current_staged_work=False` and `stale_resolution_state="stale_handled_by_restage"`.
+Response-level `returned_application_status_counts` summarizes the returned
+page, including those historical rows; use
+`returned_current_staged_work_application_status_counts` for the returned-page
+subset where `is_current_staged_work=True`.
 Status, stale-state, and current-work filters automatically compute apply
 checks. `staged_validation_status="failed"` filters stored staged-time
 validation, while `application_status="validation_failed"` filters the current

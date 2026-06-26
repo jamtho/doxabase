@@ -4817,6 +4817,27 @@ def test_same_subject_alternative_restage_routes_max_count_repair(
     assert snapshot_check.next_action.action_type == "repair_or_replace"
     assert snapshot_check.next_action.queue == "repair_or_replace"
     assert "removal+addition" in (snapshot_check.recommended_resolution or "")
+    row_semantics_diagnostic = next(
+        result
+        for result in snapshot_check.validation_results
+        if result.result_path == RC + "rowSemantics"
+    )
+    assert row_semantics_diagnostic.source_constraint_component == (
+        "http://www.w3.org/ns/shacl#MaxCountConstraintComponent"
+    )
+    assert row_semantics_diagnostic.hint is not None
+    assert "rc:EventRow" in row_semantics_diagnostic.hint
+    assert "rc:SnapshotRow" in row_semantics_diagnostic.hint
+    assert "removal+addition" in row_semantics_diagnostic.hint
+    snapshot_description = db.describe_staged_revision(
+        snapshot_successor.revision_iri
+    )
+    stored_diagnostic = next(
+        result
+        for result in snapshot_description.validation_results
+        if result.result_path == RC + "rowSemantics"
+    )
+    assert stored_diagnostic.hint == row_semantics_diagnostic.hint
 
     current_work = db.list_graph_revisions(
         current_staged_work_only=True,
@@ -4889,6 +4910,9 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert staged_listing.staged_validation_status is None
     assert staged_listing.stale_resolution_state is None
     assert staged_listing.current_staged_work_only is False
+    assert staged_listing.returned_current_staged_work_application_status_counts == {
+        "ready": 1
+    }
     assert staged_listing.revisions[0].iri == staged.revision_iri
     assert staged_listing.revisions[0].record_kind == "staged_patch"
     assert staged_listing.revisions[0].is_current_staged_work is True
@@ -4983,6 +5007,10 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
 
     drift_listing = db.list_graph_revisions(include_apply_checks=True)
     assert drift_listing.drift_detail == "summary"
+    assert "conflict" in drift_listing.returned_application_status_counts
+    assert drift_listing.returned_current_staged_work_application_status_counts == {
+        "ready": 1
+    }
     drift_by_iri = {item.iri: item for item in drift_listing.revisions}
     stale_item = drift_by_iri[stale.revision_iri]
     assert stale_item.application_status == "conflict"
@@ -5070,6 +5098,17 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
             counts[value] = counts.get(value, 0) + 1
         return counts
 
+    def current_work_page_counts(field_name: str, page) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in page.revisions:
+            if not item.is_current_staged_work:
+                continue
+            value = getattr(item, field_name)
+            if value is None:
+                continue
+            counts[value] = counts.get(value, 0) + 1
+        return counts
+
     def page_queue(page) -> dict[str, list[str]]:
         queues: dict[str, list[str]] = {}
         for item in page.revisions:
@@ -5097,6 +5136,12 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         "application_status",
         first_page,
     )
+    assert first_page.returned_current_staged_work_application_status_counts == (
+        current_work_page_counts(
+            "application_status",
+            first_page,
+        )
+    )
     assert first_page.returned_stale_resolution_state_counts == page_counts(
         "stale_resolution_state",
         first_page,
@@ -5109,6 +5154,12 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert second_page.returned_application_status_counts == page_counts(
         "application_status",
         second_page,
+    )
+    assert second_page.returned_current_staged_work_application_status_counts == (
+        current_work_page_counts(
+            "application_status",
+            second_page,
+        )
     )
     assert second_page.next_action_queue == page_queue(second_page)
     assert first_page.returned_application_status_counts != (

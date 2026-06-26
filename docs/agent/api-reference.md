@@ -812,7 +812,11 @@ into queues such as `apply_after_review`, `restage_after_review`,
 `repair_or_replace`, `inspect_already_applied`, and `informational`.
 `returned_application_status_counts`, `returned_stale_resolution_state_counts`,
 and `returned_staged_validation_status_counts` summarize the returned page, not
-unseen paginated rows.
+unseen paginated rows. Full lists may therefore include handled historical rows
+such as stale originals with `application_status="conflict"`.
+`returned_current_staged_work_application_status_counts` is also page-scoped, but
+counts only returned rows where `is_current_staged_work=True`; use it for a
+quick live mutation-queue status without losing historical rows from the page.
 Use `record_kind`, `application_status`, `staged_validation_status`, and
 `stale_resolution_state` filters to find rows such as applied events,
 mechanically ready staged proposals, rows with stored staged-time validation

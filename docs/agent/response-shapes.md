@@ -1728,6 +1728,7 @@ revisions.staged_validation_status
 revisions.stale_resolution_state
 revisions.current_staged_work_only
 revisions.returned_application_status_counts
+revisions.returned_current_staged_work_application_status_counts
 revisions.returned_stale_resolution_state_counts
 revisions.returned_staged_validation_status_counts
 revisions.next_action_queue
@@ -1789,7 +1790,11 @@ those fields; `next_action_queue` groups the returned rows by queues such as
 `inspect_already_applied`, and `informational`.
 The `returned_*_counts` dictionaries summarize the returned page, matching
 `next_action_queue`; raise `limit` or paginate when `count > len(revisions)` and
-you need whole-result counts.
+you need whole-result counts. Full pages can include handled historical rows
+such as stale originals with `application_status="conflict"`.
+`returned_current_staged_work_application_status_counts` is the same returned
+page narrowed to rows where `is_current_staged_work=True`, which is useful when a
+dashboard needs the live mutation queue without dropping the history rows.
 When `is_current_staged_work` is false,
 `not_current_staged_work_reason` explains why. Current reason values include
 `already_applied_source`, `superseded_by_restage`, `applied_event_record`,
