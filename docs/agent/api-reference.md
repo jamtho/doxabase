@@ -276,8 +276,9 @@ query attempt, then review caveats before trusting aggregations or
 interpretations. Read `query_target_decision` first: its `candidate_index` is a
 zero-based pointer into the candidate list, and its `status` tells whether that
 candidate is ready, blocked only by sibling context, directly review-only, or
-absent. When a selected candidate is direct-clean but blocked by sibling
-metadata, the suggested `draft_query_plan` action includes the explicit
+absent. `selected_candidate_direct_clean` is true when the selected candidate
+has no direct blocker of its own. When such a selected candidate is blocked by
+sibling metadata, the suggested `draft_query_plan` action includes the explicit
 `candidate_index` and `allow_context_blocked_candidate=True`.
 `query_target_candidates`
 preserve template provenance and compose best-effort file/object paths from

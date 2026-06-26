@@ -6920,6 +6920,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert context.query_target_decision.candidate_path is None
     assert context.query_target_decision.candidate_path_status is None
     assert context.query_target_decision.direct_review_required is None
+    assert context.query_target_decision.selected_candidate_direct_clean is None
     assert context.query_target_decision.reason_codes == []
 
 
@@ -7008,6 +7009,7 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     assert context.query_target_decision.candidate_path == target.candidate_path
     assert context.query_target_decision.candidate_path_status == "ready"
     assert context.query_target_decision.direct_review_required is False
+    assert context.query_target_decision.selected_candidate_direct_clean is True
     assert context.query_target_decision.reason_codes == []
 
     plan = db.draft_query_plan(dataset)
@@ -7118,6 +7120,7 @@ def test_query_target_candidates_surface_global_blockers(
     assert context.query_target_decision.candidate_path == local_target.candidate_path
     assert context.query_target_decision.candidate_path_status == "orientation_only"
     assert context.query_target_decision.direct_review_required is False
+    assert context.query_target_decision.selected_candidate_direct_clean is True
     assert context.query_target_decision.reason_codes == [
         "query_context_has_other_blockers"
     ]
@@ -8241,6 +8244,7 @@ def test_database_root_only_storage_requires_relation_template(
     ]
     assert context.query_target_decision.status == "candidate_needs_review"
     assert context.query_target_decision.candidate_path_status == "orientation_only"
+    assert context.query_target_decision.selected_candidate_direct_clean is False
     assert context.query_target_decision.reason_codes == [
         "database_relation_template_missing"
     ]
@@ -8315,6 +8319,7 @@ def test_describe_query_context_demotes_non_object_root_only_location(
     assert context.query_target_decision.candidate_path == storage_root
     assert context.query_target_decision.candidate_path_status == "orientation_only"
     assert context.query_target_decision.direct_review_required is True
+    assert context.query_target_decision.selected_candidate_direct_clean is False
     assert context.query_target_decision.reason_codes == [
         "storage_location_kind_needs_path_template"
     ]

@@ -1205,6 +1205,7 @@ class QueryTargetDecision:
     candidate_path: str | None
     candidate_path_status: str | None
     direct_review_required: bool | None
+    selected_candidate_direct_clean: bool | None
     reason_codes: list[str]
 
 
@@ -8084,6 +8085,7 @@ class DoxaBase:
                 candidate_path=None,
                 candidate_path_status=None,
                 direct_review_required=None,
+                selected_candidate_direct_clean=None,
                 reason_codes=[],
             )
 
@@ -9048,6 +9050,7 @@ class DoxaBase:
                 candidate_path=None,
                 candidate_path_status=None,
                 direct_review_required=None,
+                selected_candidate_direct_clean=None,
                 reason_codes=[],
             )
 
@@ -9123,6 +9126,7 @@ class DoxaBase:
             candidate_path=candidate.candidate_path,
             candidate_path_status=candidate.candidate_path_status,
             direct_review_required=candidate.direct_review_required,
+            selected_candidate_direct_clean=not candidate.direct_review_required,
             reason_codes=self._query_target_decision_reason_codes(
                 candidate,
                 status=status,

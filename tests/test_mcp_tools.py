@@ -2066,6 +2066,10 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
 
     context = describe_query_context_tool(db, iri=dataset)
     assert context["query_target_decision"]["status"] == "context_blocked"
+    assert (
+        context["query_target_decision"]["selected_candidate_direct_clean"]
+        is True
+    )
     query_action = context["suggested_next_actions"][0]
     assert query_action["tool_name"] == "draft_query_plan"
     assert query_action["action_label"] == (

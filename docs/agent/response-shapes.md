@@ -1096,8 +1096,15 @@ decision.candidate_index
 decision.candidate_path
 decision.candidate_path_status
 decision.direct_review_required
+decision.selected_candidate_direct_clean
 decision.reason_codes
 ```
+
+`selected_candidate_direct_clean` is `true` when the selected candidate has no
+direct warning or error of its own, even if `decision.status` is
+`context_blocked` because sibling or broader context issues still require
+review. Use it as the compact cue that the allowance route in
+`suggested_next_actions` is selecting a direct-clean candidate deliberately.
 
 `query.query_target_candidates` contains derived path/template planning cards
 for callers that need a safer handoff than raw `path_templates` plus

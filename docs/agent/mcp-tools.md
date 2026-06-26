@@ -299,8 +299,9 @@ physical metadata and warnings without the full relationship/pattern handoff in
 `candidate_index` points into `query_target_candidates`. Candidate
 `review_required` includes whole-context blockers; `direct_review_required`
 ignores sibling blockers and shows which target candidates have their own
-storage/path/layout problem. When that selected candidate is direct-clean but
-context-blocked, the suggested `draft_query_plan` action carries
+storage/path/layout problem. `selected_candidate_direct_clean` gives the same
+cue on the selected decision row. When that selected candidate is direct-clean
+but context-blocked, the suggested `draft_query_plan` action carries
 `allow_context_blocked_candidate=true` and the explicit candidate index. For
 database-backed storage, only
 storage-access-owned templates become `relation_identifier` values. Dataset or

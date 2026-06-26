@@ -847,7 +847,11 @@ few useful gaps:
   `review_gate`, but `describe_query_context` needed a structured route into the
   documented allowance path; query contexts now include `suggested_next_actions`
   with explicit `candidate_index` and `allow_context_blocked_candidate=True`
-  when a direct-clean candidate is blocked only by sibling context.
+  when a direct-clean candidate is blocked only by sibling context. A later
+  messy-candidate trial found the route executable but the cue subtle;
+  `query_target_decision.selected_candidate_direct_clean` now marks that the
+  selected candidate has no direct blocker even when the wider context is
+  blocked.
 - A profile-update staging trial confirmed accepted draft indexes can still be
   skipped by guardrails. In a sampled profile run, accepting a sampled row-count
   replacement and two column recommendations staged only the column updates by
