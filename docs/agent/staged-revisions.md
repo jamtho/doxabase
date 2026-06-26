@@ -117,7 +117,11 @@ Use `doxabase.describe_revision_lineage` when you have a staged source,
 restaged successor, or applied event IRI and want the compact restage/apply
 route before deciding whether to inspect patch content. It surfaces the visible
 paired staged/applied row, current/latest revision pointers, alternatives, and
-next action without reading full patches.
+next action without reading full patches. For imported capsules, read lineage
+`warnings` and nested row `snapshot_evidence` before assuming exact diff or
+drift triples are present. Warnings also call out imported oddities such as
+missing applied-source links, non-staged rows inside restage chains, and
+parallel restage successors.
 
 Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
 proposal. The export includes a live `Current Apply Check` section generated at

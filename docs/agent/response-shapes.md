@@ -1906,9 +1906,25 @@ lineage.drift_detail
 non-patch history. `restage_chain_iris` walks from the oldest visible source to
 the latest visible successor for the selected proposal family. When a successor
 has already been applied, `latest_revision_iri` points at the applied event and
-`next_action` prefers the applied-event inspection route. When a successor is
-still live staged work, `current_staged_revision_iri` and `current_revision_iri`
-both name that current row.
+`next_action` prefers the applied-event inspection route; if that route came
+from a derived list-row action, lineage also exposes it as a one-item
+`suggested_next_actions` / `suggested_next_calls` list for simple routers. When
+a successor is still live staged work, `current_staged_revision_iri` and
+`current_revision_iri` both name that current row. `related_revision_iris`
+includes selected, paired, restage-chain, latest/current, alternative,
+applied-event IRIs reachable from alternative staged rows, and every visible
+restage successor for rows in the lineage when imported history contains
+parallel successor links.
+
+`warnings` reports broken restage links and top-level snapshot handoff hazards.
+It also warns when an applied event points to a missing staged source, when a
+restage chain includes a non-staged history/import/export row, or when a source
+has multiple visible restage successors and the current route follows one of
+them. If a selected, paired, latest, or current row has
+`snapshot_evidence.status == "history_only_count_digest"`, import companion
+revision snapshot JSON before expecting exact applied diffs or stale drift
+triples. If a row reports `snapshot_rows_without_history`, import the
+project/history RDF bundle before using normal revision helpers.
 
 Use this helper when the question starts with "what happened to this revision?"
 and is not resource-specific. It is a compact lineage and routing card, not a

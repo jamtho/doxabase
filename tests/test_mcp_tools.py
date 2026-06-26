@@ -1186,6 +1186,9 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         staged["revision_iri"],
     ]
     assert generic_lineage["next_action"]["queue"] == "inspect_already_applied"
+    assert generic_lineage["suggested_next_calls"] == [
+        f"describe_graph_revision(iri='{applied['applied_revision_iri']}')"
+    ]
     assert generic_lineage["warnings"] == []
 
 

@@ -77,7 +77,11 @@ compact review of one revision record instead of generic outgoing triples.
 Use `describe_revision_lineage(revision_iri)` when you already have any staged
 source, restaged successor, or applied event IRI and need the graph-level
 restage/apply chain, current/latest pointers, alternatives, and next route
-without patch payloads.
+without patch payloads. Its `warnings` surface snapshot handoff hazards such as
+RDF-only count/digest history that needs companion snapshot JSON before exact
+diffs or stale drift triples are available, plus imported-history integrity
+hazards such as missing applied sources, non-staged restage-chain rows, and
+parallel restage successors.
 Graph snapshots include both `triple_count` and a `sha256:<hex>` content digest;
 matching counts alone do not prove two revision contexts are identical.
 Exact staged/apply snapshot rows are SQLite-side review state. RDF
@@ -355,7 +359,13 @@ stale proposals, validation failures, and current mutation-review candidates.
 If your starting point is a single revision IRI and you only need routing
 context, call `describe_revision_lineage()` first. It joins the selected row to
 its visible staged/applied pair, restage chain, alternatives, latest row, and
-next action without requiring a resource IRI or large patch payload.
+next action without requiring a resource IRI or large patch payload. Read
+`related_revision_iris` when an alternative branch may already have an applied
+event, and read `warnings` before assuming exact snapshot-backed diffs are
+available in an imported capsule.
+When `staged_revision_iri` is `None` on an applied event lineage, read
+`warnings`: the applied event may point to a staged source that is absent from
+the visible history graph.
 
 A cold recovery script usually follows this order:
 

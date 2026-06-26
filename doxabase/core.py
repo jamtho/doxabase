@@ -3793,18 +3793,38 @@ class DoxaBase:
                 f"{self._missing_revision_snapshot_storage_hint(revision_iri)}"
             )
 
-        seed = selected
-        if (
-            selected.record_kind == "applied_event"
-            and selected.applies_staged_revision is not None
-            and selected.applies_staged_revision in by_iri
-        ):
-            seed = by_iri[selected.applies_staged_revision]
+        seed: GraphRevisionListItem | None = selected
+        warnings: list[str] = []
+        if selected.record_kind == "applied_event":
+            if selected.applies_staged_revision is None:
+                seed = None
+                warnings.append(
+                    f"Applied revision event '{selected.iri}' does not name a "
+                    "staged source revision."
+                )
+            elif selected.applies_staged_revision in by_iri:
+                seed = by_iri[selected.applies_staged_revision]
+            else:
+                seed = None
+                warnings.append(
+                    f"Applied revision event '{selected.iri}' points to "
+                    "missing staged source "
+                    f"'{selected.applies_staged_revision}'."
+                )
 
-        restage_chain, warnings = self._revision_lineage_restage_chain(
-            seed,
-            by_iri,
-        )
+        if selected.applied_by is not None and selected.applied_by not in by_iri:
+            warnings.append(
+                f"Staged revision '{selected.iri}' points to missing applied "
+                f"event '{selected.applied_by}'."
+            )
+
+        restage_chain: list[GraphRevisionListItem] = []
+        if seed is not None:
+            restage_chain, chain_warnings = self._revision_lineage_restage_chain(
+                seed,
+                by_iri,
+            )
+            warnings.extend(chain_warnings)
         current_staged_revision = next(
             (
                 item
@@ -3831,7 +3851,9 @@ class DoxaBase:
             or chain_applied_revision
             or (selected if selected.record_kind == "applied_event" else None)
         )
-        staged_revision = direct_staged_revision or seed
+        staged_revision = direct_staged_revision or (
+            seed if seed is not None and seed.record_kind == "staged_patch" else None
+        )
         paired_revision = None
         if selected.record_kind == "applied_event":
             paired_revision = direct_staged_revision
@@ -3845,11 +3867,25 @@ class DoxaBase:
         else:
             latest_revision = restage_chain[-1] if restage_chain else selected
         next_action = latest_revision.next_action
-        suggested_next_actions = latest_revision.suggested_next_actions
+        suggested_next_actions = list(latest_revision.suggested_next_actions)
+        if not suggested_next_actions:
+            derived_action = self._suggested_action_from_revision_next_action(
+                next_action,
+            )
+            if derived_action is not None:
+                suggested_next_actions = [derived_action]
         alternative_revision_iris = self._revision_lineage_alternative_revision_iris(
             selected=selected,
             restage_chain=restage_chain,
             by_iri=by_iri,
+        )
+        warnings.extend(
+            self._revision_lineage_snapshot_warnings(
+                selected=selected,
+                paired=paired_revision,
+                latest=latest_revision,
+                current_staged_revision=current_staged_revision,
+            )
         )
         return RevisionLineageDescription(
             selected_revision=selected,
@@ -3890,6 +3926,12 @@ class DoxaBase:
                 staged_revision=staged_revision,
                 latest_revision=latest_revision,
                 alternative_revision_iris=alternative_revision_iris,
+                alternative_revisions=[
+                    by_iri[iri]
+                    for iri in alternative_revision_iris
+                    if iri in by_iri
+                ],
+                by_iri=by_iri,
             ),
             next_action=next_action,
             suggested_next_actions=suggested_next_actions,
@@ -3944,6 +3986,24 @@ class DoxaBase:
             current = by_iri[current.restaged_by]
             chain.append(current)
             seen.add(current.iri)
+        for item in chain:
+            if item.record_kind != "staged_patch":
+                warnings.append(
+                    "Restage lineage includes non-staged revision "
+                    f"'{item.iri}' with record_kind='{item.record_kind}'."
+                )
+            successors = self._revision_lineage_visible_restage_successors(
+                item,
+                by_iri,
+            )
+            if len(successors) > 1:
+                followed = item.restaged_by or successors[0].iri
+                warnings.append(
+                    "Restage lineage has multiple visible successors for "
+                    f"'{item.iri}': "
+                    f"{', '.join(successor.iri for successor in successors)}. "
+                    f"The current route follows '{followed}'."
+                )
         return chain, warnings
 
     @staticmethod
@@ -4004,6 +4064,8 @@ class DoxaBase:
         staged_revision: GraphRevisionListItem | None,
         latest_revision: GraphRevisionListItem,
         alternative_revision_iris: list[str],
+        alternative_revisions: list[GraphRevisionListItem],
+        by_iri: dict[str, GraphRevisionListItem],
     ) -> list[str]:
         values: list[str | None] = [
             selected.iri,
@@ -4029,7 +4091,41 @@ class DoxaBase:
                     item.current_alternative_to,
                 ]
             )
+        for item in alternative_revisions:
+            values.extend(
+                [
+                    item.applied_by,
+                    item.applies_staged_revision,
+                    item.restaged_from,
+                    item.restaged_by,
+                    item.current_restaged_by,
+                    item.alternative_to,
+                    item.current_alternative_to,
+                ]
+            )
+        for item in [selected, *restage_chain, *alternative_revisions]:
+            values.extend(
+                successor.iri
+                for successor in DoxaBase._revision_lineage_visible_restage_successors(
+                    item,
+                    by_iri,
+                )
+            )
         return [value for value in dict.fromkeys(values) if value is not None]
+
+    @staticmethod
+    def _revision_lineage_visible_restage_successors(
+        source: GraphRevisionListItem,
+        by_iri: dict[str, GraphRevisionListItem],
+    ) -> list[GraphRevisionListItem]:
+        return sorted(
+            (
+                item
+                for item in by_iri.values()
+                if item.restaged_from == source.iri
+            ),
+            key=lambda item: item.iri,
+        )
 
     @staticmethod
     def _revision_lineage_alternative_revision_iris(
@@ -4051,6 +4147,77 @@ class DoxaBase:
             ):
                 values.append(item.iri)
         return [value for value in dict.fromkeys(values) if value is not None]
+
+    @staticmethod
+    def _suggested_action_from_revision_next_action(
+        next_action: RevisionNextAction | None,
+    ) -> SuggestedNextAction | None:
+        if (
+            next_action is None
+            or next_action.tool_name is None
+            or next_action.mcp_tool_name is None
+            or next_action.call is None
+        ):
+            return None
+        return SuggestedNextAction(
+            action_label=next_action.action_label,
+            tool_name=next_action.tool_name,
+            mcp_tool_name=next_action.mcp_tool_name,
+            arguments=next_action.arguments,
+            reason=next_action.reason,
+            call=next_action.call,
+        )
+
+    @staticmethod
+    def _revision_lineage_snapshot_warnings(
+        *,
+        selected: GraphRevisionListItem,
+        paired: GraphRevisionListItem | None,
+        latest: GraphRevisionListItem,
+        current_staged_revision: GraphRevisionListItem | None,
+    ) -> list[str]:
+        rows = [
+            ("selected", selected),
+            ("paired", paired),
+            ("latest", latest),
+            ("current", current_staged_revision),
+        ]
+        warnings: list[str] = []
+        seen: set[tuple[str, str]] = set()
+        for role, row in rows:
+            if row is None:
+                continue
+            status = row.snapshot_evidence.status
+            if status == "history_plus_snapshot_rows":
+                continue
+            key = (row.iri, status)
+            if key in seen:
+                continue
+            seen.add(key)
+            if status == "history_only_count_digest":
+                evidence_label = (
+                    "RDF count/digest snapshot metadata"
+                    if row.snapshot_evidence.rdf_snapshot_graph_roles
+                    else "RDF history metadata"
+                )
+                warnings.append(
+                    f"{role} revision '{row.iri}' has {evidence_label} but "
+                    "no stored snapshot rows; import a "
+                    "companion revision snapshot JSON bundle before expecting "
+                    "exact applied diffs or stale drift triples."
+                )
+            elif status == "snapshot_rows_without_history":
+                warnings.append(
+                    f"{role} revision '{row.iri}' has stored snapshot rows but "
+                    "no visible RDF history record; import the project/history "
+                    "RDF bundle before using normal revision helpers."
+                )
+            elif status == "history_missing":
+                warnings.append(
+                    f"{role} revision '{row.iri}' has no visible RDF history "
+                    "record or stored snapshot rows."
+                )
+        return warnings
 
     def list_resource_revisions(
         self,

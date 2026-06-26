@@ -1923,6 +1923,23 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         "path_is_placeholder": True,
     }
     assert "real handoff path" in snapshot_action.reason
+    imported_graph_lineage_before_snapshots = round_trip.describe_revision_lineage(
+        result.applied_revision_iri
+    )
+    assert imported_graph_lineage_before_snapshots.selected_role == "applied_event"
+    assert [
+        item.snapshot_evidence.status
+        for item in [
+            imported_graph_lineage_before_snapshots.selected_revision,
+            imported_graph_lineage_before_snapshots.paired_revision,
+        ]
+        if item is not None
+    ] == ["history_only_count_digest", "history_only_count_digest"]
+    assert len(imported_graph_lineage_before_snapshots.warnings) == 2
+    assert all(
+        "import a companion revision snapshot JSON bundle" in warning
+        for warning in imported_graph_lineage_before_snapshots.warnings
+    )
     imported_diff_before_snapshots = round_trip.describe_applied_revision_diff(
         result.applied_revision_iri,
         include_triples=True,
@@ -1965,6 +1982,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     assert imported_status_after_snapshots.status == "history_plus_snapshot_rows"
     assert imported_status_after_snapshots.exact_snapshot_graph_roles == ["map"]
+    imported_graph_lineage_after_snapshots = round_trip.describe_revision_lineage(
+        result.applied_revision_iri
+    )
+    assert imported_graph_lineage_after_snapshots.warnings == []
     imported_exact_diff = round_trip.describe_applied_revision_diff(
         result.applied_revision_iri,
         include_triples=True,
@@ -5519,6 +5540,12 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     assert second_restaged.revision_iri in source_lineage.alternative_revision_iris
     assert source_lineage.next_action is not None
     assert source_lineage.next_action.queue == "inspect_already_applied"
+    assert source_lineage.suggested_next_calls == [
+        (
+            "describe_graph_revision(iri='"
+            f"{applied.applied_revision_iri}')"
+        )
+    ]
     assert source_lineage.warnings == []
 
     staged_lineage = db.describe_revision_lineage(first_restaged.revision_iri)
@@ -5540,6 +5567,12 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
         first.revision_iri,
         first_restaged.revision_iri,
     ]
+    assert applied_lineage.suggested_next_calls == [
+        (
+            "describe_graph_revision(iri='"
+            f"{applied.applied_revision_iri}')"
+        )
+    ]
 
     active_lineage = db.describe_revision_lineage(second_restaged.revision_iri)
 
@@ -5554,6 +5587,120 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
         second.revision_iri,
         second_restaged.revision_iri,
     ]
+    assert applied.applied_revision_iri in active_lineage.related_revision_iris
+
+
+def test_describe_revision_lineage_warns_about_imported_odd_history(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    source_iri = "https://example.test/project#ambiguous-source"
+    successor_a_iri = "https://example.test/project#ambiguous-a-successor"
+    successor_z_iri = "https://example.test/project#ambiguous-z-successor"
+    manual_iri = "https://example.test/project#manual-restage-note"
+    missing_source_iri = "https://example.test/project#missing-applied-source"
+    applied_iri = "https://example.test/project#applied-event-missing-source"
+
+    source = db.stage_graph_revision(
+        summary="Source proposal",
+        rationale="Keep an imported-lineage source available.",
+        revision_iri=source_iri,
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:SourceDataset a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    successor_a = db.stage_graph_revision(
+        summary="First successor",
+        rationale="Caller-authored restage successor A.",
+        revision_iri=successor_a_iri,
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:SuccessorA a rc:Dataset .
+                """,
+            }
+        ],
+        restages_revision=source.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+    db.import_turtle(
+        f"""
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        <{successor_z_iri}> a rc:GraphRevision ;
+            rc:summary "Imported parallel successor" ;
+            rc:revisionType rc:StagedRevision ;
+            rc:hasGraphPatch ex:ambiguousZPatch ;
+            rc:restagesRevision <{source.revision_iri}> ;
+            rc:createdAt "2026-06-01T10:02:00Z" .
+
+        ex:ambiguousZPatch a rc:GraphPatch .
+
+        <{manual_iri}> a rc:GraphRevision ;
+            rc:summary "Manual restage note" ;
+            rc:revisionType rc:ManualRevision ;
+            rc:restagesRevision <{successor_a.revision_iri}> ;
+            rc:createdAt "2026-06-01T10:03:00Z" .
+
+        <{applied_iri}> a rc:GraphRevision ;
+            rc:summary "Applied event missing source" ;
+            rc:revisionType rc:AppliedStagedRevision ;
+            rc:appliesStagedRevision <{missing_source_iri}> ;
+            rc:createdAt "2026-06-01T10:04:00Z" .
+        """,
+        graph="history",
+    )
+
+    source_lineage = db.describe_revision_lineage(source.revision_iri)
+
+    assert source_lineage.restage_chain_iris == [
+        source.revision_iri,
+        successor_a.revision_iri,
+        manual_iri,
+    ]
+    assert {
+        successor_a.revision_iri,
+        successor_z_iri,
+        manual_iri,
+    }.issubset(set(source_lineage.related_revision_iris))
+    assert any(
+        "multiple visible successors" in warning
+        and successor_a.revision_iri in warning
+        and successor_z_iri in warning
+        for warning in source_lineage.warnings
+    )
+    assert any(
+        "non-staged revision" in warning
+        and manual_iri in warning
+        and "history_record" in warning
+        for warning in source_lineage.warnings
+    )
+
+    missing_source_lineage = db.describe_revision_lineage(applied_iri)
+
+    assert missing_source_lineage.selected_role == "applied_event"
+    assert missing_source_lineage.applied_revision_iri == applied_iri
+    assert missing_source_lineage.staged_revision_iri is None
+    assert missing_source_lineage.restage_chain_iris == []
+    assert any(
+        "points to missing staged source" in warning
+        and missing_source_iri in warning
+        for warning in missing_source_lineage.warnings
+    )
 
 
 def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(

@@ -1101,6 +1101,21 @@ few useful gaps:
   graph-level lineage card with selected/pair roles, restage chain, alternatives,
   current/latest pointers, warnings, and next-action routing while leaving patch
   content and applied diffs to the existing focused helpers.
+- Follow-up lineage trials confirmed the helper routes normal restage/apply
+  recovery and RDF-only import boundaries, but agents expected one consistent
+  suggested-call field and an obvious signal when exact snapshot rows were
+  absent. Lineage now derives a suggested action from `next_action` when the
+  latest row has no list/check suggestions, includes applied events reached from
+  alternative staged rows in `related_revision_iris`, and warns at top level
+  when selected/paired/latest/current rows only have count/digest history or
+  orphan snapshot rows.
+- An imported odd-history lineage trial found manually authored
+  `rc:restagesRevision` links could put non-staged records into restage chains,
+  parallel restage successors were silently collapsed to the lexically first
+  route, and applied events with missing staged sources mislabeled themselves as
+  the staged revision. Lineage now warns for those integrity hazards, includes
+  all visible parallel successors in `related_revision_iris`, and leaves
+  `staged_revision_iri=None` when an applied event's source is absent.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

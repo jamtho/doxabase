@@ -839,7 +839,10 @@ applied and staged revision IRIs, restage chain, alternatives, related revision
 IRIs, latest/current pointers, warnings, and next-action routing. Use it when
 the question starts from a revision IRI rather than a resource IRI. It is
 read-only and does not include patch payloads or arbitrary graph-version
-snapshots; use staged, applied-diff, or snapshot helpers for those.
+snapshots; use staged, applied-diff, or snapshot helpers for those. Exact diff
+availability still comes from the nested row `snapshot_evidence`, but lineage
+warnings call out count/digest-only or orphan snapshot states so agents do not
+miss import-recovery work.
 `list_resource_revisions(resource_iri)` returns revision rows that explicitly
 touch one resource through `rc:revisionAnchor`, exact subject/predicate/object
 URI mentions in staged patch payloads, or an applied event whose staged source

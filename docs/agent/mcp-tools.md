@@ -139,8 +139,16 @@ response includes the selected list row, selected role, visible paired
 staged/applied row, applied and staged revision IRIs, current staged successor
 when one is still live, latest applied/current revision, restage chain IRIs,
 alternative revision IRIs, related revision IRIs, warnings for broken lineage,
-and next-action routing from the latest row. It is a read-only routing helper,
-not a diff browser; call `describe_staged_revision` for patch content and
+and next-action routing from the latest row. Related IRIs also include applied
+events reachable from alternative staged rows when those alternatives have
+already been applied, plus every visible restage successor when imported history
+has ambiguous parallel successors. Top-level warnings report missing restage or
+applied-source links, non-staged rows inside a restage chain, parallel restage
+successors where the current route chose one branch, and snapshot handoff gaps.
+When list rows expose only RDF history/count/digest metadata, warnings remind
+callers to import companion revision snapshot JSON before expecting exact
+applied diffs or stale drift triples. It is a read-only routing helper, not a
+diff browser; call `describe_staged_revision` for patch content and
 `describe_applied_revision_diff` for stored before/after diffs.
 
 `doxabase.list_resource_revisions`
