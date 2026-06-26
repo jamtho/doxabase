@@ -411,6 +411,9 @@ context.pattern_contexts
 context.warnings
 ```
 
+`seed_iris` is the input argument name. The returned field is `seeds` in Python
+and `result["seeds"]` in MCP payloads.
+
 `route_counts` is keyed by route id. `route_legend` is a list of rows, not a
 dict; callers can build a dict keyed by `route` if that is more convenient.
 Each `route_legend[]` item has:
@@ -1635,6 +1638,9 @@ resource_revisions.include_apply_checks
 resource_revisions.drift_detail
 resource_revisions.next_action_queue
 ```
+
+The row collection is `revisions`, not `items`. Each row then wraps the normal
+revision-list row under `revision`.
 
 Each `resource_revisions.revisions[]` item wraps a normal
 `GraphRevisionListItem` under `revision` and adds resource-match context:
