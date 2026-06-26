@@ -218,7 +218,10 @@ to review or the remaining patch-conflict candidate to repair. In real batch
 runs, `current_revision_by_source` is recomputed after the whole batch, so a
 requested stale ancestor maps to the latest successor even when the batch also
 restaged an intermediate successor. Item-level `current_revision_iri` still
-describes the route observed while that row was processed.
+describes the route observed while that row was processed. For automation after
+mixed batches, prefer `bundle_summary.next_action_queue` or the final top-level
+`current_revision_by_source`; treat item `next_action_after` as row-local
+explanation.
 After applying one ready alternative, sibling alternatives may become stale or
 conflicted because the applied candidate changed the same graph roles. Preserve
 their original staged validation diagnostics in your review: a stale live check

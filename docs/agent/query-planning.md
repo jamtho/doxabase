@@ -28,6 +28,10 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 1. `handoff_kind` is the compact machine-readable route. Use it for first-pass
    client dispatch, then read `review_gate`, `scan`, `binding_requirements`,
    and `storage_environment` for the details behind that route.
+   Do not treat `handoff_kind` alone as execution permission:
+   `database_relation_handoff` means the selected route is a relation/connection
+   handoff, while `review_gate.ready_for_execution_attempt` is the strict gate
+   for any execution attempt.
 2. Read `source_context.unselected_ready_candidate_indexes`. If it is non-empty,
    the selected candidate has peer ready candidates; inspect
    `query_target_candidates` and rerun with explicit `candidate_index` when a
@@ -49,14 +53,16 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `handoff_kind="binding_values_required"` make that case explicit. When a
    selected template comes from partition metadata, binding rows may include
    `partition_scheme`, `partition_column`, and `partition_granularity` as
-   handoff hints. Dataset-owned and storage-access-owned templates may include
-   `candidate_column_matches` when placeholder names match dataset columns
-   exactly or by suffix. `candidate_column_match_status` says whether those
-   hints are absent, singular, or ambiguous. These fields help humans and agents
-   find likely source columns; they do not supply execution-time values, and
-   ambiguous rows need review before choosing any source column. Treat
-   `confidence` as a per-match score; `candidate_column_match_status` summarizes
-   the whole binding.
+   handoff hints; the granularity describes the partition scheme, not
+   necessarily the individual placeholder. Dataset-owned and
+   storage-access-owned templates may include `candidate_column_matches` when
+   placeholder names match dataset columns exactly or by suffix.
+   `candidate_column_match_status` says whether those hints are absent,
+   singular, or ambiguous. These fields help humans and agents find likely
+   source columns; they do not supply execution-time values, and ambiguous rows
+   need review before choosing any source column. Treat `confidence` as a
+   per-match score; `candidate_column_match_status` summarizes the whole
+   binding.
 7. `review_gate.executable_without_review` says graph metadata has no recorded
    review blocker for the selected candidate.
 8. `storage_environment.runtime_resolution_required` says endpoint, credential,

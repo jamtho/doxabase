@@ -7192,6 +7192,8 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     assert date_binding.partition_granularity is not None
     assert date_binding.partition_granularity.iri == RC + "Daily"
     assert "likely partition column date" in date_binding.derivation_note
+    assert "partition scheme granularity" in date_binding.derivation_note
+    assert "partition granularity" not in date_binding.derivation_note
     assert plan.storage_environment.bucket_name == "ais-noaa"
     assert plan.storage_environment.endpoint_profile == "local-minio"
     assert plan.storage_environment.credential_reference == "profile:ais-readonly"
@@ -8776,6 +8778,7 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert date_binding.partition_granularity is not None
     assert date_binding.partition_granularity.iri == RC + "Daily"
     assert "likely partition column event_date" in date_binding.derivation_note
+    assert "partition scheme granularity" in date_binding.derivation_note
     assert allowed_plan.handoff_kind == "binding_values_required"
 
 

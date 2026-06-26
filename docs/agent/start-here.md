@@ -175,6 +175,10 @@ list lags recent code changes, verify the registry in a fresh local Python
 process or start a fresh MCP session before concluding the repo state is wrong.
 Known doc content is read from disk by `doxabase.get_doc`, so file-content edits
 can appear live even when newly registered docs or tools do not.
+If an MCP call reports `user cancelled MCP tool call`, or a read-only Codex CLI
+trial fails before shell reads with a sandbox setup error such as `bwrap`, treat
+that as a tool-execution/environment failure. Do not confuse it with an older
+DoxaBase MCP schema.
 
 Sandboxed sub-agents may not have access to the user's uv cache. Do not rely on
 `uv run` inside a sub-agent trial unless the trial is explicitly testing the

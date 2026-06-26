@@ -51,6 +51,10 @@ Codex-bound MCP server sessions are long-running Python processes. They may keep
 the old `agent_docs.DOCS` registry and decorated tool set until a fresh MCP
 session starts. Cross-check with a fresh local Python process before treating a
 stale `doxabase.list_docs` or missing tool as evidence that the commit failed.
+Distinguish stale sessions from calls that never executed: `user cancelled MCP
+tool call` and sandbox setup failures such as a `bwrap` namespace error are
+execution-environment failures, not evidence that the DoxaBase MCP schema or
+docs registry is old.
 
 When running a trial through Codex sub-agents, keep the harness explicit:
 
@@ -1016,11 +1020,29 @@ few useful gaps:
   signatures now produce `ambiguous_physical_layout`, block execution-readiness,
   and leave `scan.function` unset until the intended layout is modeled or
   selected.
+- A follow-up query-planning handoff trial confirmed ambiguous layouts,
+  candidate selection errors, S3 runtime blockers, and database relation cards
+  route conservatively. It also clarified that downstream agents must gate any
+  execution attempt on `review_gate.ready_for_execution_attempt`, not
+  `handoff_kind` alone; partition binding notes now say the recorded
+  granularity belongs to the partition scheme.
+- A follow-up docs-navigation trial confirmed fresh agents can use doc sizes,
+  section anchors, `get_doc(section=...)`, and offset slices with
+  `selected_section`. Its remaining friction was environmental: cancelled MCP
+  calls and read-only `bwrap` sandbox setup failures should be diagnosed as
+  tool-execution failures, not stale DoxaBase schemas.
 - A longer staged-lineage trial found batch restage top-level
   `current_revision_by_source` could point a stale ancestor at an intermediate
   successor that the same batch later restaged. Real batch runs now recompute
   the top-level current map after processing the whole batch; row
   `current_revision_iri` still records the route observed for that item.
+- A profile/systematisation trial confirmed representative default staging,
+  duplicate support preservation, metric advisory routing, and pattern-promotion
+  skeletons work together. It also found type findings are easy to over-expect:
+  profile-recorded `physical_type` / `value_type` facts are structured only when
+  the profile call updates the map column, so observation-only type
+  interpretations should be preserved through patterns or staged
+  systematisation/promotion instead of waiting for profile-map draft rows.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

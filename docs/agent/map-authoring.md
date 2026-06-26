@@ -84,6 +84,12 @@ same review row, accept one representative index unless the siblings need
 different modelling judgement. The draft's top-level staging action starts from
 the representative indexes whose rows are `default_stageable`; sampled row-count
 representatives stay visible for review but require an explicit override call.
+Profile type findings are not currently drafted as `stage_profile_map_updates`
+recommendations. `physical_type` and `value_type` become structured map facts
+only when the profile helper writes the map column, for example with
+`update_map_column=True`. Otherwise preserve the interpretation through a
+pattern plus `stage_systematisation` / `stage_pattern_promotion`, or use direct
+map or staged assertion helpers when the type change is safe and intended.
 
 Use `stage_profile_map_updates(..., accepted_recommendation_indexes=[...])` when
 accepted profile-derived changes should be reviewed before apply. It stages one

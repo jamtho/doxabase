@@ -264,6 +264,11 @@ nearby metric vocabulary before recording claims/patterns/promotions. When an
 undefined metric has a same-evidence pattern naming it as a target or map
 implication, the advisory also suggests `describe_pattern` and a reviewable
 `stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
+Type findings are not profile-map draft recommendations today. `physical_type`
+and `value_type` become structured map facts when the profile helper is called
+with `update_map_column=true`; otherwise preserve the interpretation with a
+pattern plus `stage_systematisation` / `stage_pattern_promotion`, or use direct
+map/staged assertion helpers when immediate map mutation is intended.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `metric_advisory_status_counts`, and top-level
@@ -366,7 +371,8 @@ when DoxaBase has not inferred derivation or runtime values. When the selected
 template comes from partition metadata, binding rows also carry
 `binding_kind="partition_template_placeholder"` plus optional
 `partition_scheme`, `partition_column`, and `partition_granularity` handoff
-hints. Non-partition dataset/storage templates may include
+hints; the granularity describes the partition scheme rather than necessarily
+the individual placeholder. Non-partition dataset/storage templates may include
 `candidate_column_matches` when placeholder names match dataset columns; use
 them as best-effort handoff hints, not runtime binding values.
 `candidate_column_match_status` marks the hint set as `none`, `single`, or
@@ -389,6 +395,9 @@ and context blocking codes.
 `executable_without_review=true` means the selected graph metadata has no
 review blocker; `ready_for_execution_attempt=true` also requires no recorded
 runtime resolution and no required binding placeholders to remain.
+Use `ready_for_execution_attempt`, not `handoff_kind` alone, as the gate for
+any execution attempt; `database_relation_handoff` means the selected route is a
+relation/connection handoff, not that execution is safe.
 Database-backed storage still uses this generic
 review-draft shape today, so expect `scan.function=None` and review gating
 rather than executable SQL; read `scan.relation_identifier` and

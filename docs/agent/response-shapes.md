@@ -832,6 +832,13 @@ project-specific profile
 metric IRIs observed in the run and recommend vocabulary review before reusable
 comparison or map policy. Each advisory includes:
 
+Profile type findings are not draft/stage recommendations today.
+`physical_type` and `value_type` become structured map facts only when the
+profile recording call updates the map column. If the profile was recorded as
+observation-only, preserve type interpretations through a pattern plus
+`stage_systematisation` / `stage_pattern_promotion`, or use direct map/staged
+assertion helpers when the type fact is ready.
+
 ```python
 advisory.profile_observation_iri
 advisory.evidence_iri
@@ -1424,7 +1431,9 @@ Path-template placeholders still report `derivation_status="not_inferred"`.
 When the selected template comes from a partition scheme, `binding_kind` is
 `partition_template_placeholder`, `partition_scheme` names that source, and
 matching placeholders may carry `partition_column` and
-`partition_granularity`. These fields are planning hints for parameter handoff;
+`partition_granularity`. The granularity describes the partition scheme rather
+than necessarily the individual placeholder. These fields are planning hints for
+parameter handoff;
 non-partition dataset/storage templates may carry `candidate_column_matches`
 when a placeholder matches dataset column names, labels, or local IRIs exactly
 or by suffix. These matches are best-effort handoff hints, not inferred runtime
@@ -2755,12 +2764,15 @@ handled rows it is the latest known successor; in dry-run would-restage rows it
 is still the stale source. In real batch runs, top-level
 `current_revision_by_source` is recomputed after the whole batch, so stale
 ancestors map to the latest successor even when an intermediate successor was
-also processed. Use `next_action_after` as the row-level compact route for
-`current_revision_iri`, and read `suggested_next_actions_after` when a script
-needs concrete follow-up calls without joining back through
+also processed. Use `next_action_after` as row-local explanation for
+`current_revision_iri`; for automation after a mixed batch, route from
+`bundle_summary.next_action_queue` or top-level `current_revision_by_source`
+before following per-item next actions. Read `suggested_next_actions_after`
+when a script needs concrete follow-up calls without joining back through
 `list_graph_revisions`.
-For batch-restage automation, prefer `next_action_after.arguments["iri"]` when
-present, or `current_revision_iri` otherwise. `restaged_revision_iri` is only
+For single-row or per-item batch-restage automation, prefer
+`next_action_after.arguments["iri"]` when present, or `current_revision_iri`
+otherwise. `restaged_revision_iri` is only
 populated for items whose current batch call created a new successor. In the
 single-revision restage response, `revision_iri` is the newly created current
 successor.

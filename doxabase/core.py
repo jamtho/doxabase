@@ -8894,7 +8894,7 @@ class DoxaBase:
             )
         if partition.granularity is not None:
             details.append(
-                "partition granularity "
+                "partition scheme granularity "
                 f"{partition.granularity.label or partition.granularity.iri}"
             )
         if not details:

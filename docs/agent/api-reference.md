@@ -422,6 +422,12 @@ carry `advisory_status`, `definition_found`, optional `definition`,
 same-evidence pattern that names the metric as a target or map implication also
 get a reviewable `stage_pattern_promotion` skeleton for an ontology
 `rc:ProfileMetricKind`.
+Type findings are outside the current draft/stage recommendation set:
+`physical_type` and `value_type` become structured map facts when the profile
+recording call updates the map column, but observation-only profile records do
+not later produce type recommendations. Preserve those interpretations through
+patterns and `stage_systematisation` / `stage_pattern_promotion`, or use direct
+map/staged assertion helpers when the type fact is ready.
 If `recommendation_count > 0`, review the draft and use the top-level
 `stage_profile_map_updates` action as a starting point. Its
 `accepted_recommendation_indexes` defaults to the representative indexes whose
