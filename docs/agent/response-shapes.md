@@ -1510,7 +1510,8 @@ graph metadata.
 credential references must be resolved, or when selected S3-compatible access is
 review-gated because endpoint/credential/region metadata is not yet recorded.
 `plan.review_gate` keeps the query-target decision status,
-`blocking_reason_codes`, `all_issue_codes`, the legacy alias `reason_codes`,
+`blocking_reason_codes`, `execution_attempt_blocking_reason_codes`,
+`all_issue_codes`, the legacy alias `reason_codes`,
 `executable_without_review`, `runtime_resolution_required`,
 `binding_values_required`, and
 `ready_for_execution_attempt`. Treat the plan as review-required whenever
@@ -1519,6 +1520,11 @@ plan handoff: they may include decision reasons,
 `query_context_has_other_blockers` when the selected candidate is clean but
 sibling metadata blocks the overall context, or `scan_function_not_inferred`
 when DuckDB has no file-scan function for the selected storage/layout shape.
+`execution_attempt_blocking_reason_codes` starts with those review blockers and
+also includes non-review execution-attempt blockers such as
+`runtime_resolution_required` and `binding_values_required`, so downstream
+automation does not have to merge booleans and review codes before routing a
+false `ready_for_execution_attempt`.
 `review_gate.selection_overridden`, `context_blocked_candidate_allowed`,
 `context_blocked_candidate_used`, `direct_blocking_reason_codes`, and
 `context_blocking_reason_codes` explain whether an explicit or allowed
@@ -1552,11 +1558,13 @@ credential/object-existence guarantee.
 when the review gate is clear, `runtime_resolution_required` is false, and
 `binding_values_required` is false.
 For consumer routing, check `ready_for_execution_attempt` first. If it is false
-but relation fields are present, hand those to a database-aware review/runtime
-route before generic runtime-resolution work. Then route unresolved storage
-environment, required bindings, and remaining issue codes. Empty
-`blocking_reason_codes` or `executable_without_review=True` must not be treated
-as execution permission.
+but `scan.relation_identifier` is present, hand it to a database-aware
+review/runtime route before generic runtime-resolution work. A
+`connection_reference` without a relation identifier is repair/review context,
+not a database relation handoff. Then route
+`execution_attempt_blocking_reason_codes`, unresolved storage environment,
+required bindings, and remaining issue codes. Empty `blocking_reason_codes` or
+`executable_without_review=True` must not be treated as execution permission.
 
 Each caveat in `dataset.caveats` has:
 

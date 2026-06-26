@@ -7312,6 +7312,9 @@ def test_draft_query_plan_carries_dataset_template_verification(
     assert plan.review_gate.executable_without_review is True
     assert plan.review_gate.binding_values_required is True
     assert plan.review_gate.ready_for_execution_attempt is False
+    assert plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "binding_values_required",
+    ]
 
 
 def test_draft_query_plan_hints_storage_template_placeholder_columns(
@@ -7607,6 +7610,10 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     assert plan.review_gate.executable_without_review is True
     assert plan.review_gate.runtime_resolution_required is True
     assert plan.review_gate.ready_for_execution_attempt is False
+    assert plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "runtime_resolution_required",
+        "binding_values_required",
+    ]
 
 
 def test_query_target_candidates_surface_global_blockers(
@@ -7791,6 +7798,9 @@ def test_query_target_candidates_surface_global_blockers(
     assert allowed_plan.review_gate.executable_without_review is True
     assert allowed_plan.review_gate.binding_values_required is True
     assert allowed_plan.review_gate.ready_for_execution_attempt is False
+    assert allowed_plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "binding_values_required",
+    ]
     assert allowed_plan.handoff_kind == "binding_values_required"
 
     storage_selected_plan = db.draft_query_plan(
@@ -8513,6 +8523,10 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
     assert plan.review_gate.executable_without_review is False
     assert plan.review_gate.ready_for_execution_attempt is False
     assert plan.review_gate.blocking_reason_codes == ["scan_function_not_inferred"]
+    assert plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "scan_function_not_inferred",
+        "runtime_resolution_required",
+    ]
     assert plan.review_gate.reason_codes == ["scan_function_not_inferred"]
     assert plan.handoff_kind == "database_relation_handoff"
 

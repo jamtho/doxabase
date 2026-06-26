@@ -1344,6 +1344,7 @@ class DraftQueryPlanReviewGate:
     direct_review_required: bool | None
     candidate_path_status: str | None
     blocking_reason_codes: list[str]
+    execution_attempt_blocking_reason_codes: list[str]
     all_issue_codes: list[str]
     reason_codes: list[str]
     review_note: str
@@ -9265,6 +9266,15 @@ class DoxaBase:
         binding_values_required = any(
             binding.required for binding in binding_requirements
         )
+        execution_attempt_blocking_reason_codes = (
+            self._draft_query_plan_execution_attempt_blocking_reason_codes(
+                blocking_reason_codes=blocking_reason_codes,
+                runtime_resolution_required=(
+                    storage_environment.runtime_resolution_required
+                ),
+                binding_values_required=binding_values_required,
+            )
+        )
         direct_blocking_reason_codes = self._query_issue_codes(
             self._query_target_blocking_reasons(
                 selected_candidate.direct_review_reasons
@@ -9295,6 +9305,9 @@ class DoxaBase:
             direct_review_required=selected_decision.direct_review_required,
             candidate_path_status=selected_decision.candidate_path_status,
             blocking_reason_codes=blocking_reason_codes,
+            execution_attempt_blocking_reason_codes=(
+                execution_attempt_blocking_reason_codes
+            ),
             all_issue_codes=self._query_issue_codes(context.issues),
             reason_codes=blocking_reason_codes,
             review_note=(
@@ -9310,6 +9323,20 @@ class DoxaBase:
             direct_blocking_reason_codes=direct_blocking_reason_codes,
             context_blocking_reason_codes=context_blocking_reason_codes,
         )
+
+    @staticmethod
+    def _draft_query_plan_execution_attempt_blocking_reason_codes(
+        *,
+        blocking_reason_codes: list[str],
+        runtime_resolution_required: bool,
+        binding_values_required: bool,
+    ) -> list[str]:
+        codes = list(blocking_reason_codes)
+        if runtime_resolution_required:
+            codes.append("runtime_resolution_required")
+        if binding_values_required:
+            codes.append("binding_values_required")
+        return list(dict.fromkeys(codes))
 
     def _draft_query_plan_blocking_reason_codes(
         self,

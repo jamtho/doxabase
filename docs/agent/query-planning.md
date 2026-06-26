@@ -40,10 +40,11 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `candidate_index` as a pointer into the returned list, not proof that the
    first ready relation/path is the preferred one.
 3. `scan.uri_template` is for file/object scans.
-4. `scan.relation_identifier` and `scan.connection_reference` are for
-   database-backed storage handoffs; do not treat the candidate path as a file
-   URI in that case. Relation identifiers come from storage-access-owned
-   templates, not dataset or partition file paths.
+4. `scan.relation_identifier` is the database-backed storage handoff; do not
+   treat the candidate path as a file URI in that case. Relation identifiers
+   come from storage-access-owned templates, not dataset or partition file paths.
+   `scan.connection_reference` without `scan.relation_identifier` is
+   repair/review context, not a database relation handoff.
 5. `scan.function` is only a hint when the physical layout is unambiguous. If a
    dataset links multiple distinct file formats or compression codecs,
    `ambiguous_physical_layout` blocks execution-readiness and leaves the scan
@@ -74,17 +75,22 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `review_gate.blocking_reason_codes` can add
    `query_context_has_other_blockers` when the selected candidate is clean but
    the broader query context is not.
+   `review_gate.execution_attempt_blocking_reason_codes` folds in non-review
+   execution blockers such as runtime resolution and missing binding values, so
+   it is the better machine-routing list when this boolean is false.
 
 For downstream consumers, keep the routing order simple:
 
 1. If `review_gate.ready_for_execution_attempt` is true, and the plan still
    matches the intended client/runtime, a non-executing handoff may become an
    execution-attempt candidate.
-2. Otherwise, if `scan.relation_identifier` or `scan.connection_reference` is
-   present, route it as a database relation handoff before generic runtime
-   resolution. The relation can be useful even when execution is not ready.
-3. Otherwise, route `storage_environment.runtime_resolution_required`,
-   `review_gate.binding_values_required`, and then remaining
+2. Otherwise, if `scan.relation_identifier` is present, route it as a database
+   relation handoff before generic runtime resolution. The relation can be
+   useful even when execution is not ready. A `scan.connection_reference` without
+   a relation is repair/review context.
+3. Otherwise, route `review_gate.execution_attempt_blocking_reason_codes`, then
+   `storage_environment.runtime_resolution_required`,
+   `review_gate.binding_values_required`, and remaining
    `blocking_reason_codes` / `all_issue_codes`. Empty blocking codes or
    `executable_without_review=True` do not override a false
    `ready_for_execution_attempt`.

@@ -2246,6 +2246,9 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
         "query_context_has_other_blockers"
     ]
     assert result["review_gate"]["blocking_reason_codes"] == []
+    assert result["review_gate"]["execution_attempt_blocking_reason_codes"] == [
+        "binding_values_required"
+    ]
     assert result["handoff_kind"] == "binding_values_required"
     date_binding = result["binding_requirements"][0]
     assert date_binding["name"] == "date"

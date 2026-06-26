@@ -591,6 +591,14 @@ few useful gaps:
   query target candidates plus `plan.scan` now expose database-shaped
   `relation_identifier` and `connection_reference` fields instead of a
   file-like joined connection path.
+- A follow-up database/query-handoff trial confirmed
+  `ready_for_execution_attempt` is the only execution-attempt gate:
+  `executable_without_review=true` can still require runtime resolution or
+  binding values. Downstream routing should use
+  `review_gate.execution_attempt_blocking_reason_codes` when the ready gate is
+  false. For database handoffs, only `scan.relation_identifier` means a relation
+  can be passed onward; `scan.connection_reference` without a relation identifier
+  is repair/review context for mismatched or incomplete storage metadata.
 - A claim-reconsideration slice trial confirmed lifecycle mechanics and pattern
   routes work, but showed that column-only seeds were too narrow for column
   lore. `describe_context_slice` now treats mapped `rc:Column` seeds as valid
