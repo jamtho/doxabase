@@ -675,7 +675,11 @@ few useful gaps:
   `handoff_entrypoints.map_column_iris` sounded like all mapped profiled
   columns but only listed columns whose map facts were written by the bundle;
   bundles now also expose `updated_map_column_iris` and
-  `mapped_profiled_column_iris`.
+  `mapped_profiled_column_iris`. A later mixed-run handoff trial confirmed
+  two profiler runs on one dataset can leave `shared_evidence_iris` empty while
+  `profile_run_candidates` still routes each run to `describe_profile_run`;
+  `handoff_entrypoints.suggested_next_actions` should execute directly, including
+  observation-only bundles that have no `describe_dataset` route.
 - A validation-repair JSON trial confirmed validation-failed, patch-conflict,
   and ready staged revisions stay separated in JSON-like apply checks, grouped
   queues, suggested actions, and dry-run restage classifications. No code change

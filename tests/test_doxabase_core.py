@@ -11965,6 +11965,166 @@ def test_profile_bundle_handoff_distinguishes_existing_map_context_without_snaps
     assert context_slice.route_counts["observed_profile_metric"] == 2
 
 
+def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/handoff-trial#"
+    mixed = f"{base}MixedOrders"
+    amount = f"{base}MixedOrdersAmount"
+    run_a = f"{base}MixedOrdersProfileRunA"
+    run_b = f"{base}MixedOrdersProfileRunB"
+    shadow = f"{base}ShadowEvents"
+    shadow_run = f"{base}ShadowEventsObservationOnlyRun"
+
+    def run_handoff_actions(actions) -> None:
+        for action in actions:
+            if action.tool_name == "describe_dataset":
+                db.describe_dataset(**action.arguments)
+            elif action.tool_name == "describe_profile_run":
+                db.describe_profile_run(**action.arguments)
+            elif action.tool_name == "describe_context_slice":
+                db.describe_context_slice(**action.arguments)
+            else:
+                raise AssertionError(f"Unexpected action {action.tool_name!r}")
+
+    run_a_bundle = db.record_profile_bundle(
+        mixed,
+        dataset_summary="Mixed orders run A profile.",
+        observed_at="2026-06-01T00:00:00Z",
+        evidence_summary="Mixed orders profile run A.",
+        evidence_sources=["test://mixed-orders/run-a"],
+        shared_evidence_iri=run_a,
+        row_count=1000,
+        map_label="Mixed Orders",
+        is_table=True,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": amount,
+                "column_name": "amount",
+                "summary": "Run A amount values were profiled.",
+                "null_count": 0,
+                "update_map_column": True,
+                "physical_type": "rc:Decimal",
+                "nullable": False,
+            },
+            *(
+                {
+                    "column_iri": f"{base}MixedOrdersRunAExtra{index}",
+                    "column_name": f"run_a_extra_{index}",
+                    "summary": f"Run A extra column {index} was profiled.",
+                    "distinct_count": index + 1,
+                }
+                for index in range(4)
+            ),
+        ],
+    )
+    run_b_bundle = db.record_profile_bundle(
+        mixed,
+        dataset_summary="Mixed orders run B profile over existing map context.",
+        observed_at="2026-06-02T00:00:00Z",
+        evidence_summary="Mixed orders profile run B.",
+        evidence_sources=["test://mixed-orders/run-b"],
+        shared_evidence_iri=run_b,
+        row_count=1200,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": amount,
+                "column_name": "amount",
+                "summary": "Run B amount values were profiled without map writes.",
+                "null_count": 1,
+            },
+            *(
+                {
+                    "column_iri": f"{base}MixedOrdersRunBExtra{index}",
+                    "column_name": f"run_b_extra_{index}",
+                    "summary": f"Run B extra column {index} was profiled.",
+                    "distinct_count": index + 2,
+                }
+                for index in range(3)
+            ),
+        ],
+    )
+    shadow_bundle = db.record_profile_bundle(
+        shadow,
+        dataset_summary="Shadow events profile stayed observation-only.",
+        observed_at="2026-06-03T00:00:00Z",
+        evidence_summary="Shadow events observation-only run.",
+        evidence_sources=["test://shadow-events/profile"],
+        shared_evidence_iri=shadow_run,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": f"{base}ShadowEventsKind",
+                "column_name": "kind",
+                "summary": "Shadow event kind was profiled.",
+            },
+            {
+                "column_iri": f"{base}ShadowEventsPayload",
+                "column_name": "payload",
+                "summary": "Shadow event payload was profiled.",
+            },
+        ],
+    )
+
+    assert run_a_bundle.handoff_entrypoints.updated_map_column_iris == [amount]
+    assert run_a_bundle.handoff_entrypoints.mapped_profiled_column_iris == [amount]
+    assert run_b_bundle.handoff_entrypoints.updated_map_column_iris == []
+    assert run_b_bundle.handoff_entrypoints.map_column_iris == []
+    assert run_b_bundle.handoff_entrypoints.mapped_profiled_column_iris == [amount]
+    assert shadow_bundle.handoff_entrypoints.dataset_describe_available is False
+    assert [
+        action.tool_name
+        for action in shadow_bundle.handoff_entrypoints.suggested_next_actions
+    ] == ["describe_profile_run", "describe_context_slice"]
+
+    all_actions = [
+        *run_a_bundle.handoff_entrypoints.suggested_next_actions,
+        *run_b_bundle.handoff_entrypoints.suggested_next_actions,
+        *shadow_bundle.handoff_entrypoints.suggested_next_actions,
+    ]
+    assert len(all_actions) == 10
+    run_handoff_actions(all_actions)
+
+    description = db.describe_dataset(mixed)
+    summary = description.profile_summary
+    assert summary.total_profile_count == 11
+    assert summary.returned_profile_count == 9
+    assert summary.omitted_profile_count == 2
+    assert summary.shared_evidence_iris == []
+    candidates = {
+        candidate.evidence_iri: candidate
+        for candidate in summary.profile_run_candidates
+    }
+    assert set(candidates) == {run_a, run_b}
+    assert candidates[run_b].returned_profile_count == 5
+    assert candidates[run_a].returned_profile_count == 4
+    assert all(
+        candidate.shared_by_all_returned_profiles is False
+        for candidate in candidates.values()
+    )
+
+    run_a_full = db.describe_profile_run(mixed, run_a)
+    run_b_full = db.describe_profile_run(mixed, run_b)
+    shadow_full = db.describe_profile_run(shadow, shadow_run)
+    assert run_a_full.returned_profile_count == 6
+    assert run_b_full.returned_profile_count == 5
+    assert shadow_full.returned_profile_count == 3
+    assert set(run_a_full.profile_observation_iris) == set(
+        run_a_bundle.handoff_entrypoints.profile_observation_iris
+    )
+    assert set(run_b_full.profile_observation_iris) == set(
+        run_b_bundle.handoff_entrypoints.profile_observation_iris
+    )
+    assert set(shadow_full.profile_observation_iris) == set(
+        shadow_bundle.handoff_entrypoints.profile_observation_iris
+    )
+
+
 def test_draft_profile_map_updates_surfaces_review_candidates(
     tmp_path: Path,
 ) -> None:
