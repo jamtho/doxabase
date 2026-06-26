@@ -7556,6 +7556,117 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     assert explicit_bad_plan.handoff_kind == "metadata_review_required"
 
 
+def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#MixedEvents"
+    dataset_template = "events/current/*.parquet"
+    partition_template = "events/dt={date}/*.parquet"
+    database_storage = db.record_map_storage_access(
+        "https://example.test/project#mixed_events_database_storage",
+        label="Mixed events database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-prod",
+        path_templates=["mart.mixed_events"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    local_storage = db.record_map_storage_access(
+        "https://example.test/project#mixed_events_local_storage",
+        label="Mixed events local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "lake"),
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#mixed_events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    partition = db.record_map_partition_scheme(
+        "https://example.test/project#mixed_events_partition_scheme",
+        label="Mixed events file partitioning",
+        path_template=partition_template,
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Mixed events",
+        is_table=True,
+        path_templates=[dataset_template],
+        storage_accesses=[database_storage.iri, local_storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert context.query_target_decision.status == "ready"
+    assert {
+        issue.code for issue in context.issues
+    } == {"database_relation_template_source_mismatch"}
+    local_partition_index, local_partition = next(
+        (index, target)
+        for index, target in enumerate(context.query_target_candidates)
+        if target.template_source == "partition_scheme"
+        and target.storage_access is not None
+        and target.storage_access.iri == local_storage.iri
+    )
+    assert local_partition.source_resource.iri == partition.iri
+    assert local_partition.candidate_path_status == "ready"
+    assert local_partition.direct_review_required is False
+    assert local_partition.review_reasons == []
+
+    blocked_plan = db.draft_query_plan(
+        dataset,
+        candidate_index=local_partition_index,
+    )
+
+    assert blocked_plan.handoff_kind == "context_review_required"
+    assert blocked_plan.review_gate.context_blocked_candidate_used is False
+    assert blocked_plan.review_gate.context_blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert blocked_plan.review_gate.blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+
+    allowed_plan = db.draft_query_plan(
+        dataset,
+        candidate_index=local_partition_index,
+        allow_context_blocked_candidate=True,
+    )
+
+    assert allowed_plan.selected_candidate is not None
+    assert allowed_plan.selected_candidate.storage_access is not None
+    assert allowed_plan.selected_candidate.storage_access.iri == local_storage.iri
+    assert allowed_plan.selected_candidate.template_source == "partition_scheme"
+    assert allowed_plan.selected_candidate.candidate_path_status == "ready"
+    assert allowed_plan.selected_candidate.review_required is False
+    assert allowed_plan.source_context.selected_candidate_index == local_partition_index
+    assert allowed_plan.source_context.selection_mode == "candidate_index"
+    assert allowed_plan.source_context.allow_context_blocked_candidate is True
+    assert allowed_plan.review_gate.context_blocked_candidate_allowed is True
+    assert allowed_plan.review_gate.context_blocked_candidate_used is True
+    assert allowed_plan.review_gate.direct_blocking_reason_codes == []
+    assert allowed_plan.review_gate.context_blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert allowed_plan.review_gate.all_issue_codes == [
+        "database_relation_template_source_mismatch"
+    ]
+    assert allowed_plan.review_gate.blocking_reason_codes == []
+    assert allowed_plan.review_gate.executable_without_review is True
+    assert allowed_plan.review_gate.binding_values_required is True
+    assert allowed_plan.review_gate.ready_for_execution_attempt is False
+    assert allowed_plan.required_bindings == ["date"]
+    assert allowed_plan.handoff_kind == "binding_values_required"
+
+
 def test_database_storage_does_not_treat_dataset_template_as_relation(
     tmp_path: Path,
 ) -> None:

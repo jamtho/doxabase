@@ -7586,11 +7586,15 @@ class DoxaBase:
             storage_access_iri=storage_access_iri,
         )
         original_selected_candidate = selected_candidate
-        selected_candidate, context_blocked_candidate_used = (
-            self._draft_query_plan_effective_candidate(
-                selected_candidate,
-                allow_context_blocked_candidate=allow_context_blocked_candidate,
-            )
+        (
+            selected_candidate,
+            context_blocked_candidate_used,
+            context_blocking_reasons,
+        ) = self._draft_query_plan_effective_candidate(
+            context,
+            selected_candidate,
+            selection_mode=selection_mode,
+            allow_context_blocked_candidate=allow_context_blocked_candidate,
         )
         selected_decision = self._draft_query_plan_selected_decision(
             context,
@@ -7631,6 +7635,7 @@ class DoxaBase:
             selection_overridden=selection_mode != "automatic",
             allow_context_blocked_candidate=allow_context_blocked_candidate,
             context_blocked_candidate_used=context_blocked_candidate_used,
+            context_blocking_reasons=context_blocking_reasons,
         )
         ready_candidate_indexes = self._draft_query_plan_ready_candidate_indexes(
             context.query_target_candidates
@@ -7836,41 +7841,111 @@ class DoxaBase:
 
     def _draft_query_plan_effective_candidate(
         self,
+        context: QueryPlanningContext,
         selected_candidate: QueryTargetCandidate | None,
         *,
+        selection_mode: str,
         allow_context_blocked_candidate: bool,
-    ) -> tuple[QueryTargetCandidate | None, bool]:
+    ) -> tuple[QueryTargetCandidate | None, bool, list[QueryPlanningIssue]]:
         if selected_candidate is None:
-            return None, False
+            return None, False, []
         context_blockers = self._query_target_context_blocking_reasons(
             selected_candidate.review_reasons
         )
+        sibling_metadata_blockers = (
+            self._draft_query_plan_sibling_candidate_metadata_context_blockers(
+                context,
+                selected_candidate,
+            )
+        )
+        context_blocking_reasons = list(context_blockers)
+        if not context_blocking_reasons and sibling_metadata_blockers:
+            context_blocking_reasons = [
+                self._draft_query_plan_sibling_context_blocker_issue(
+                    context,
+                    sibling_metadata_blockers,
+                )
+            ]
         if (
             not allow_context_blocked_candidate
-            or not context_blockers
             or selected_candidate.direct_review_required
         ):
-            return selected_candidate, False
+            return selected_candidate, False, context_blocking_reasons
 
-        direct_review_reasons = list(selected_candidate.direct_review_reasons)
-        direct_review_required = any(
-            reason.severity in {"error", "warning"}
-            for reason in direct_review_reasons
-        )
-        review_required = direct_review_required
-        return (
-            replace(
-                selected_candidate,
-                review_required=review_required,
-                review_reasons=direct_review_reasons,
-                direct_review_required=direct_review_required,
-                candidate_path_status=self._query_candidate_path_status(
-                    selected_candidate.candidate_path,
+        if context_blockers:
+            direct_review_reasons = list(selected_candidate.direct_review_reasons)
+            direct_review_required = any(
+                reason.severity in {"error", "warning"}
+                for reason in direct_review_reasons
+            )
+            review_required = direct_review_required
+            return (
+                replace(
+                    selected_candidate,
                     review_required=review_required,
                     review_reasons=direct_review_reasons,
+                    direct_review_required=direct_review_required,
+                    candidate_path_status=self._query_candidate_path_status(
+                        selected_candidate.candidate_path,
+                        review_required=review_required,
+                        review_reasons=direct_review_reasons,
+                    ),
                 ),
+                True,
+                context_blocking_reasons,
+            )
+
+        if selection_mode != "automatic" and sibling_metadata_blockers:
+            return selected_candidate, True, context_blocking_reasons
+
+        return selected_candidate, False, context_blocking_reasons
+
+    def _draft_query_plan_sibling_candidate_metadata_context_blockers(
+        self,
+        context: QueryPlanningContext,
+        selected_candidate: QueryTargetCandidate,
+    ) -> list[QueryPlanningIssue]:
+        if (
+            context.readiness == "ready_for_query_planning"
+            or selected_candidate.direct_review_required
+            or selected_candidate.candidate_path_status != "ready"
+        ):
+            return []
+        blockers = self._query_target_blocking_reasons(context.issues)
+        if not blockers or not all(
+            self._is_candidate_metadata_issue(issue) for issue in blockers
+        ):
+            return []
+        return blockers
+
+    def _draft_query_plan_sibling_context_blocker_issue(
+        self,
+        context: QueryPlanningContext,
+        blockers: list[QueryPlanningIssue],
+    ) -> QueryPlanningIssue:
+        resource_iris = [
+            issue.resource.iri
+            for issue in blockers
+            if issue.resource is not None
+        ]
+        return QueryPlanningIssue(
+            code="query_context_has_other_blockers",
+            severity=(
+                "error"
+                if any(issue.severity == "error" for issue in blockers)
+                else "warning"
             ),
-            True,
+            message=(
+                "Overall query context has candidate-metadata blocker(s) on "
+                "other query target candidates; inspect context.issues before "
+                "executing this candidate."
+            ),
+            resource=context.dataset,
+            details={
+                "excluded_blocker_count": len(blockers),
+                "excluded_blocker_codes": self._query_issue_codes(blockers),
+                "excluded_blocker_resource_iris": list(dict.fromkeys(resource_iris)),
+            },
         )
 
     def _draft_query_plan_selected_decision(
@@ -8316,6 +8391,7 @@ class DoxaBase:
         selection_overridden: bool,
         allow_context_blocked_candidate: bool,
         context_blocked_candidate_used: bool,
+        context_blocking_reasons: list[QueryPlanningIssue],
     ) -> DraftQueryPlanReviewGate:
         blocking_reason_codes = self._draft_query_plan_blocking_reason_codes(
             context,
@@ -8345,7 +8421,8 @@ class DoxaBase:
             )
         )
         context_blocking_reason_codes = self._query_issue_codes(
-            self._query_target_context_blocking_reasons(
+            context_blocking_reasons
+            or self._query_target_context_blocking_reasons(
                 original_selected_candidate.review_reasons
                 if original_selected_candidate is not None
                 else []
