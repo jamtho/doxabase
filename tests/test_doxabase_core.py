@@ -4755,6 +4755,84 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert current_work.count == 0
 
 
+def test_same_subject_alternative_restage_routes_max_count_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    event_framing = db.stage_graph_revision(
+        summary="Model Orders as event rows",
+        rationale="First alternative for row-grain review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Dataset, rc:Table ;
+                        rc:rowSemantics rc:EventRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+        validation_scope="all",
+    )
+    snapshot_framing = db.stage_graph_revision(
+        summary="Model Orders as snapshot rows",
+        rationale="Competing same-subject row-grain alternative.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Dataset, rc:Table ;
+                        rc:rowSemantics rc:SnapshotRow .
+                """,
+            }
+        ],
+        alternative_to=event_framing.revision_iri,
+        revision_anchors=[orders],
+        validation_scope="all",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftDataset",
+        label="Drift dataset",
+    )
+
+    event_successor = db.restage_staged_revision(event_framing.revision_iri)
+    db.apply_staged_revision(event_successor.revision_iri)
+    snapshot_successor = db.restage_staged_revision(snapshot_framing.revision_iri)
+
+    snapshot_check = db.check_staged_revision_apply(
+        snapshot_successor.revision_iri
+    )
+    assert snapshot_check.status == "validation_failed"
+    assert snapshot_check.decision == "inspect_validation_results"
+    assert snapshot_check.can_apply is False
+    assert snapshot_check.blocking_reasons == ["validation_failed"]
+    assert snapshot_check.next_action is not None
+    assert snapshot_check.next_action.action_type == "repair_or_replace"
+    assert snapshot_check.next_action.queue == "repair_or_replace"
+    assert "removal+addition" in (snapshot_check.recommended_resolution or "")
+
+    current_work = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+
+    assert current_work.count == 1
+    assert current_work.revisions[0].iri == snapshot_successor.revision_iri
+    assert current_work.next_action_queue == {
+        "repair_or_replace": [snapshot_successor.revision_iri]
+    }
+    assert current_work.returned_application_status_counts == {
+        "validation_failed": 1
+    }
+
+
 def test_restage_staged_revision_rejects_non_conflicted_revision(
     tmp_path: Path,
 ) -> None:

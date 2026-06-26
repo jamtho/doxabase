@@ -1027,6 +1027,11 @@ few useful gaps:
   `restage_staged_revision`, checked the successor, applied it, and ended with
   no current staged work. The product route was adequate; regression coverage now
   locks that autonomous recovery path.
+- A same-subject staged-alternative trial confirmed that applying one
+  `rc:rowSemantics` framing can make the competing framing restage into a
+  `validation_failed` max-count repair queue rather than an apply queue. Treat
+  that as correct: the repair should be a replacement/removal+addition, and
+  `current_staged_work_only=True` should show only the active repair item.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with
