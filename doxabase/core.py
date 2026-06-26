@@ -12254,6 +12254,25 @@ class DoxaBase:
                     ")"
                 ),
             )
+        if dataset_describe_available and profile_run_available:
+            add_action(
+                "draft_profile_map_updates",
+                {
+                    "dataset_iri": dataset_iri,
+                    "evidence_iri": profile_run_evidence_iri,
+                },
+                (
+                    "Draft reviewable map update recommendations from this "
+                    "profile run before deciding which findings should become "
+                    "durable map facts."
+                ),
+                action_label="Draft profile map updates",
+                call=(
+                    "draft_profile_map_updates("
+                    f"{dataset_iri!r}, {profile_run_evidence_iri!r}"
+                    ")"
+                ),
+            )
         if dataset_describe_available:
             add_action(
                 "describe_context_slice",

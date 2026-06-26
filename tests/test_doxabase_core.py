@@ -11420,6 +11420,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     ] == [
         "describe_dataset",
         "describe_profile_run",
+        "draft_profile_map_updates",
         "describe_context_slice",
         "describe_context_slice",
     ]
@@ -11427,6 +11428,10 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
         "iri": dataset
     }
     assert result.handoff_entrypoints.suggested_next_actions[1].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": shared_evidence,
+    }
+    assert result.handoff_entrypoints.suggested_next_actions[2].arguments == {
         "dataset_iri": dataset,
         "evidence_iri": shared_evidence,
     }
@@ -11439,6 +11444,9 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     )
     assert result.handoff_entrypoints.suggested_next_calls[1] == (
         f"describe_profile_run('{dataset}', '{shared_evidence}')"
+    )
+    assert result.handoff_entrypoints.suggested_next_calls[2] == (
+        f"draft_profile_map_updates('{dataset}', '{shared_evidence}')"
     )
     assert result.handoff_entrypoints.suggested_next_calls[-1] == (
         f"describe_context_slice({profile_observation_iris!r}, "
@@ -11950,6 +11958,9 @@ def test_profile_bundle_handoff_distinguishes_existing_map_context_without_snaps
         f"describe_dataset('{dataset}')",
         f"describe_profile_run('{dataset}', '{shared_evidence}')",
     ]
+    assert bundle.handoff_entrypoints.suggested_next_calls[2] == (
+        f"draft_profile_map_updates('{dataset}', '{shared_evidence}')"
+    )
     assert "already existed" in bundle.handoff_entrypoints.handoff_note
     assert "did not write dataset map facts" in bundle.handoff_entrypoints.handoff_note
     assert "row-count snapshot" in bundle.handoff_entrypoints.handoff_note
@@ -11992,6 +12003,8 @@ def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
                 db.describe_dataset(**action.arguments)
             elif action.tool_name == "describe_profile_run":
                 db.describe_profile_run(**action.arguments)
+            elif action.tool_name == "draft_profile_map_updates":
+                db.draft_profile_map_updates(**action.arguments)
             elif action.tool_name == "describe_context_slice":
                 db.describe_context_slice(**action.arguments)
             else:
@@ -12096,7 +12109,7 @@ def test_profile_bundle_mixed_run_handoff_actions_route_without_guessing(
         *run_b_bundle.handoff_entrypoints.suggested_next_actions,
         *shadow_bundle.handoff_entrypoints.suggested_next_actions,
     ]
-    assert len(all_actions) == 10
+    assert len(all_actions) == 12
     run_handoff_actions(all_actions)
 
     description = db.describe_dataset(mixed)

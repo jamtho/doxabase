@@ -679,7 +679,10 @@ few useful gaps:
   two profiler runs on one dataset can leave `shared_evidence_iris` empty while
   `profile_run_candidates` still routes each run to `describe_profile_run`;
   `handoff_entrypoints.suggested_next_actions` should execute directly, including
-  observation-only bundles that have no `describe_dataset` route.
+  observation-only bundles that have no `describe_dataset` route. A profile-map
+  update trial then showed the bundle handoff should route directly into
+  `draft_profile_map_updates` when both map context and a shared evidence run
+  are available.
 - A validation-repair JSON trial confirmed validation-failed, patch-conflict,
   and ready staged revisions stay separated in JSON-like apply checks, grouped
   queues, suggested actions, and dry-run restage classifications. No code change

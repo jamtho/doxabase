@@ -560,7 +560,9 @@ profiled with `update_map_column=False`.
 Use `suggested_next_actions` for structured handoff routing; it carries the
 same `SuggestedNextAction` shape used elsewhere, usually starting with
 `describe_dataset` when map context exists, `describe_profile_run` when shared
-evidence is available, and profile-observation-seeded `describe_context_slice`.
+evidence is available, `draft_profile_map_updates` when both map context and a
+profile run are available, and profile-observation-seeded
+`describe_context_slice`.
 `suggested_next_calls` remains as a compatibility list of display call strings.
 
 Copyable bundle shape:

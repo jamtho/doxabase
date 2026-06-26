@@ -468,7 +468,9 @@ still override that with its own `evidence_iri`.
 The returned bundle includes `shared_evidence_iri` at top level for quick
 run-level checks and `handoff_entrypoints` with profile observation seeds,
 availability flags, structured `suggested_next_actions`, and compatibility
-`suggested_next_calls` for the next agent.
+`suggested_next_calls` for the next agent. When both map dataset context and a
+shared evidence run are available, handoff actions include
+`draft_profile_map_updates` before context-slice routes.
 In `handoff_entrypoints`, prefer `updated_map_column_iris` for columns whose map
 facts were written by this bundle call, and `mapped_profiled_column_iris` for
 all bundled column profiles that are mapped after the call. `map_column_iris`
