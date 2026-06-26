@@ -405,13 +405,16 @@ Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and
 `profile_row_count` so agents can review whether the profile was a full scan,
-sample, or ambiguous run before applying helper arguments. It does not mutate
-or stage graph changes, and it skips sampled zero-null promotions. Metric
-advisories carry `advisory_status`, `definition_found`, optional `definition`,
-`promotion_patterns`, and structured `suggested_next_actions` for
-ontology/context review. Undefined metrics with a same-evidence pattern that
-names the metric as a target or map implication also get a reviewable
-`stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
+sample, or ambiguous run before applying helper arguments. They also carry
+duplicate-group metadata so repeated same-evidence observations can be reviewed
+as one representative row without losing sibling support. It does not mutate or
+stage graph changes, and it skips sampled zero-null promotions. Metric advisories
+carry `advisory_status`, `definition_found`, optional `definition`,
+`promotion_patterns`, duplicate-group metadata, and structured
+`suggested_next_actions` for ontology/context review. Undefined metrics with a
+same-evidence pattern that names the metric as a target or map implication also
+get a reviewable `stage_pattern_promotion` skeleton for an ontology
+`rc:ProfileMetricKind`.
 If `recommendation_count > 0`, review the draft and use the top-level
 `stage_profile_map_updates` action as a starting point, passing only accepted
 indexes. If `recommendation_count == 0 and metric_advisory_count > 0`, treat
@@ -442,7 +445,9 @@ stored in the staged revision review note. Pass `supporting_claims`,
 already have synthesized claim/pattern rationale; caller anchors are merged with
 the automatic dataset and recommendation anchors. These support links are
 recorded only when at least one accepted recommendation creates a staged
-revision.
+revision. When one accepted recommendation represents a duplicate group, all
+grouped `duplicate_profile_observation_iris` are preserved as staged-revision
+support observations.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

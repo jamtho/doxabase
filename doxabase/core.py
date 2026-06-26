@@ -1577,6 +1577,10 @@ class ProfileMapUpdateRecommendation:
     helper_name: str
     helper_arguments: dict[str, Any]
     rationale: str
+    duplicate_group_key: str = ""
+    duplicate_count: int = 1
+    duplicate_recommendation_indexes: list[int] = field(default_factory=list)
+    duplicate_profile_observation_iris: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -1597,6 +1601,10 @@ class ProfileMetricVocabularyAdvisory:
     rationale: str
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    duplicate_group_key: str = ""
+    duplicate_count: int = 1
+    duplicate_advisory_indexes: list[int] = field(default_factory=list)
+    duplicate_profile_observation_iris: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -7078,6 +7086,9 @@ class DoxaBase:
             all_profiles,
             evidence_value,
         )
+        recommendations = self._with_profile_update_duplicate_metadata(
+            recommendations
+        )
         metric_advisory_status_counts = (
             self._profile_metric_advisory_status_counts(metric_advisories)
         )
@@ -7183,8 +7194,9 @@ class DoxaBase:
                     )
                     status = "staged"
                     staged_indexes.append(index)
-                    support_observations.append(
-                        recommendation.profile_observation_iri
+                    support_observations.extend(
+                        recommendation.duplicate_profile_observation_iris
+                        or [recommendation.profile_observation_iri]
                     )
                     for anchor in self._profile_update_revision_anchors(
                         recommendation,
@@ -7388,6 +7400,63 @@ class DoxaBase:
             self._profile_metric_advisory_suggested_actions(metric_advisories)
         )
         return actions
+
+    def _with_profile_update_duplicate_metadata(
+        self,
+        recommendations: list[ProfileMapUpdateRecommendation],
+    ) -> list[ProfileMapUpdateRecommendation]:
+        groups: dict[str, list[ProfileMapUpdateRecommendation]] = {}
+        for recommendation in recommendations:
+            groups.setdefault(
+                self._profile_update_duplicate_group_key(recommendation),
+                [],
+            ).append(recommendation)
+
+        annotated: list[ProfileMapUpdateRecommendation] = []
+        for recommendation in recommendations:
+            group_key = self._profile_update_duplicate_group_key(recommendation)
+            group = groups[group_key]
+            annotated.append(
+                replace(
+                    recommendation,
+                    duplicate_group_key=group_key,
+                    duplicate_count=len(group),
+                    duplicate_recommendation_indexes=[
+                        item.recommendation_index for item in group
+                    ],
+                    duplicate_profile_observation_iris=list(
+                        dict.fromkeys(item.profile_observation_iri for item in group)
+                    ),
+                )
+            )
+        return annotated
+
+    @staticmethod
+    def _profile_update_duplicate_group_key(
+        recommendation: ProfileMapUpdateRecommendation,
+    ) -> str:
+        payload = {
+            "kind": recommendation.kind,
+            "action": recommendation.action,
+            "resource_iri": recommendation.resource.iri,
+            "predicate": recommendation.predicate,
+            "current_value": recommendation.current_value,
+            "observed_value": recommendation.observed_value,
+            "observed_count": recommendation.observed_count,
+            "sample_size": recommendation.sample_size,
+            "sample_scope": recommendation.sample_scope,
+            "sample_method": recommendation.sample_method,
+            "profile_row_count": recommendation.profile_row_count,
+            "evidence_iri": recommendation.evidence_iri,
+            "basis": recommendation.basis,
+            "confidence": recommendation.confidence,
+            "helper_name": recommendation.helper_name,
+            "helper_arguments": recommendation.helper_arguments,
+        }
+        digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:12]
+        return f"profile-map-update:{digest}"
 
     @staticmethod
     def _profile_metric_advisory_suggested_actions(
@@ -10655,7 +10724,63 @@ class DoxaBase:
                         ],
                     )
                 )
-        return advisories
+        return self._with_profile_metric_advisory_duplicate_metadata(advisories)
+
+    def _with_profile_metric_advisory_duplicate_metadata(
+        self,
+        advisories: list[ProfileMetricVocabularyAdvisory],
+    ) -> list[ProfileMetricVocabularyAdvisory]:
+        groups: dict[str, list[tuple[int, ProfileMetricVocabularyAdvisory]]] = {}
+        for index, advisory in enumerate(advisories):
+            groups.setdefault(
+                self._profile_metric_advisory_duplicate_group_key(advisory),
+                [],
+            ).append((index, advisory))
+
+        annotated: list[ProfileMetricVocabularyAdvisory] = []
+        for advisory in advisories:
+            group_key = self._profile_metric_advisory_duplicate_group_key(advisory)
+            group = groups[group_key]
+            annotated.append(
+                replace(
+                    advisory,
+                    duplicate_group_key=group_key,
+                    duplicate_count=len(group),
+                    duplicate_advisory_indexes=[
+                        group_index for group_index, _ in group
+                    ],
+                    duplicate_profile_observation_iris=list(
+                        dict.fromkeys(
+                            item.profile_observation_iri for _, item in group
+                        )
+                    ),
+                )
+            )
+        return annotated
+
+    @staticmethod
+    def _profile_metric_advisory_duplicate_group_key(
+        advisory: ProfileMetricVocabularyAdvisory,
+    ) -> str:
+        payload = {
+            "evidence_iri": advisory.evidence_iri,
+            "metric_iri": advisory.metric.iri,
+            "target_iri": advisory.target.iri if advisory.target else None,
+            "value": advisory.value,
+            "value_datatype": advisory.value_datatype,
+            "value_lang": advisory.value_lang,
+            "advisory_status": advisory.advisory_status,
+            "definition_found": advisory.definition_found,
+            "definition_iri": advisory.definition.iri if advisory.definition else None,
+            "promotion_pattern_iris": [
+                pattern.iri for pattern in advisory.promotion_patterns
+            ],
+            "recommendation": advisory.recommendation,
+        }
+        digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:12]
+        return f"profile-metric-advisory:{digest}"
 
     def _profile_metric_advisory_actions(
         self,

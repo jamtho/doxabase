@@ -966,6 +966,12 @@ few useful gaps:
   counts but `list_graph_revisions` required scripts to recompute them from row
   data. Revision lists now expose returned-page application, stale-resolution,
   and staged-validation status counts alongside `next_action_queue`.
+- A repeated profile-bundle trial found that accepting one representative
+  profile-map recommendation staged the same RDF patch as accepting all duplicate
+  rows, but lost sibling profile-observation support. Profile map drafts now
+  expose duplicate groups for recommendations and metric advisories, and
+  representative staging preserves all grouped observation support on the staged
+  revision.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -12574,6 +12574,140 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     }
 
 
+def test_profile_map_update_duplicate_groups_preserve_representative_support(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Payments"
+    status_column = "https://example.test/project#PaymentsStatus"
+    settlement_column = "https://example.test/project#PaymentsSettlementMethod"
+    evidence = "https://example.test/project#PaymentsProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessRatio"
+
+    db.record_map_dataset(
+        dataset,
+        label="Payments",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        nullable=False,
+    )
+
+    def record_repeated_profile() -> None:
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary="Payments were profiled with a full-table scan.",
+            evidence_summary="Repeated profile run over Payments.",
+            evidence_sources=["test://payments-profile"],
+            shared_evidence_iri=evidence,
+            sample_size=12,
+            sample_scope="All rows in the test Payments table.",
+            sample_method="DuckDB full-table aggregate profile.",
+            row_count=12,
+            update_map_snapshot=False,
+            profile_metrics=[
+                {
+                    "metric": project_metric,
+                    "value": "0.90",
+                    "datatype": "xsd:decimal",
+                }
+            ],
+            column_defaults={"update_map_column": False},
+            column_profiles=[
+                {
+                    "column_iri": status_column,
+                    "column_name": "status",
+                    "summary": "Status had nulls in the full scan.",
+                    "null_count": 2,
+                },
+                {
+                    "column_iri": settlement_column,
+                    "column_name": "settlement_method",
+                    "summary": "Settlement method was observed but is unmapped.",
+                },
+            ],
+        )
+
+    record_repeated_profile()
+    record_repeated_profile()
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 6
+    recommendation_groups = {}
+    for recommendation in draft.recommendations:
+        recommendation_groups.setdefault(
+            recommendation.duplicate_group_key,
+            [],
+        ).append(recommendation)
+    assert sorted(len(group) for group in recommendation_groups.values()) == [
+        2,
+        2,
+        2,
+    ]
+    assert {
+        group[0].kind for group in recommendation_groups.values()
+    } == {
+        "dataset_row_count_snapshot",
+        "column_nullable",
+        "unmapped_profiled_column",
+    }
+    for group_key, group in recommendation_groups.items():
+        indexes = [recommendation.recommendation_index for recommendation in group]
+        observations = [
+            recommendation.profile_observation_iri for recommendation in group
+        ]
+        assert group_key.startswith("profile-map-update:")
+        for recommendation in group:
+            assert recommendation.duplicate_group_key == group_key
+            assert recommendation.duplicate_count == 2
+            assert recommendation.duplicate_recommendation_indexes == indexes
+            assert set(recommendation.duplicate_profile_observation_iris) == set(
+                observations
+            )
+
+    assert draft.metric_advisory_count == 2
+    metric_group_key = draft.metric_advisories[0].duplicate_group_key
+    metric_observations = {
+        advisory.profile_observation_iri for advisory in draft.metric_advisories
+    }
+    for advisory in draft.metric_advisories:
+        assert advisory.duplicate_group_key == metric_group_key
+        assert advisory.duplicate_group_key.startswith("profile-metric-advisory:")
+        assert advisory.duplicate_count == 2
+        assert advisory.duplicate_advisory_indexes == [0, 1]
+        assert set(advisory.duplicate_profile_observation_iris) == metric_observations
+
+    representative_indexes = sorted(
+        group[0].recommendation_index for group in recommendation_groups.values()
+    )
+    expected_support = {
+        observation_iri
+        for index in representative_indexes
+        for observation_iri in draft.recommendations[
+            index
+        ].duplicate_profile_observation_iris
+    }
+
+    staged = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=representative_indexes,
+    )
+
+    assert staged.staged_recommendation_indexes == representative_indexes
+    assert staged.status_counts == {"staged": 3, "skipped": 0, "not_selected": 3}
+    assert staged.staged_revision is not None
+    described = db.describe_staged_revision(staged.staged_revision.revision_iri)
+    described_support = {item.iri for item in described.supporting_observations}
+    assert described_support == expected_support
+    assert len(described_support) == 6
+
+
 def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
     tmp_path: Path,
 ) -> None:

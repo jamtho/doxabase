@@ -3275,6 +3275,14 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         "DuckDB full-table profile."
     )
     assert result["recommendations"][0]["profile_row_count"] == 10
+    assert result["recommendations"][0]["duplicate_group_key"].startswith(
+        "profile-map-update:"
+    )
+    assert result["recommendations"][0]["duplicate_count"] == 1
+    assert result["recommendations"][0]["duplicate_recommendation_indexes"] == [0]
+    assert result["recommendations"][0]["duplicate_profile_observation_iris"] == [
+        result["recommendations"][0]["profile_observation_iri"]
+    ]
     assert result["recommendations"][1]["helper_arguments"]["nullable"] is True
     assert result["metric_advisory_count"] == 1
     assert result["metric_advisory_status_counts"] == {
@@ -3285,6 +3293,14 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         "project_metric_undefined"
     )
     assert result["metric_advisories"][0]["definition_found"] is False
+    assert result["metric_advisories"][0]["duplicate_group_key"].startswith(
+        "profile-metric-advisory:"
+    )
+    assert result["metric_advisories"][0]["duplicate_count"] == 1
+    assert result["metric_advisories"][0]["duplicate_advisory_indexes"] == [0]
+    assert result["metric_advisories"][0]["duplicate_profile_observation_iris"] == [
+        result["metric_advisories"][0]["profile_observation_iri"]
+    ]
     assert result["metric_advisories"][0]["suggested_next_actions"][0][
         "tool_name"
     ] == "describe_context_slice"

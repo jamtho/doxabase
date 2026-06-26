@@ -778,6 +778,10 @@ recommendation.confidence
 recommendation.helper_name
 recommendation.helper_arguments
 recommendation.rationale
+recommendation.duplicate_group_key
+recommendation.duplicate_count
+recommendation.duplicate_recommendation_indexes
+recommendation.duplicate_profile_observation_iris
 ```
 
 Current recommendation kinds cover `dataset_row_count_snapshot`,
@@ -806,6 +810,10 @@ advisory.recommendation
 advisory.rationale
 advisory.suggested_next_actions
 advisory.suggested_next_calls
+advisory.duplicate_group_key
+advisory.duplicate_count
+advisory.duplicate_advisory_indexes
+advisory.duplicate_profile_observation_iris
 ```
 
 `advisory_status` is `project_metric_undefined`,
@@ -820,6 +828,11 @@ Defined metrics point at
 ambiguous metrics point at both the existing definition and nearby metric
 lookup. Use `metric_advisory_count` and `metric_advisory_status_counts` for
 queue routing before reading full advisory rows.
+Duplicate fields are populated for every recommendation and advisory. Count `1`
+means the row is unique in this draft; higher counts mean repeated profile
+observations produced the same review row. Agents can accept one representative
+recommendation index from a duplicate group when the modelling judgement is the
+same for all siblings.
 Use `recommendation_count` and top-level `suggested_next_actions` for first-pass
 machine routing. Drafts with recommendations include a
 `stage_profile_map_updates` action whose `accepted_recommendation_indexes`
@@ -898,7 +911,10 @@ When at least one accepted recommendation passes safety checks,
 before reviewing, exporting, or applying. Use `describe_staged_revision()` to
 inspect preserved profile observation support, caller claim/pattern support,
 revision anchors, and shared evidence because the immediate staging response
-stays compact. Sampled row-count
+stays compact. If an accepted representative belongs to a duplicate group, the
+staged revision preserves all `duplicate_profile_observation_iris` from that
+group as supporting observations even though only the accepted index appears as
+`staged`. Sampled row-count
 recommendations are skipped by default and
 reported in `skipped_recommendation_indexes`; metric advisories stay in
 `metric_advisories` and are not staged as map facts. When

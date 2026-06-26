@@ -78,6 +78,9 @@ When a shared-evidence profile run suggests map changes, call
 `describe_profile_run()` and `draft_profile_map_updates()` before mutating the
 map. The draft rows carry sample scope, confidence, helper arguments, and
 metric advisories so the agent can decide which recommendations to accept.
+Duplicate groups are explicit: when repeated profile observations produce the
+same review row, accept one representative index unless the siblings need
+different modelling judgement.
 
 Use `stage_profile_map_updates(..., accepted_recommendation_indexes=[...])` when
 accepted profile-derived changes should be reviewed before apply. It stages one
@@ -94,6 +97,9 @@ call. Check `status_counts` first, then item reasons.
 When a profile-derived change is backed by synthesized lore, pass
 `supporting_claims`, `supporting_patterns`, or extra `revision_anchors`; these
 links are recorded on the staged revision for later review.
+Representative duplicate staging preserves every grouped profile observation as
+staged-revision support, so accepting one duplicate row does not discard sibling
+evidence.
 
 Use direct map helpers only when immediate mutation is intended. Treat sampled
 row-count recommendations conservatively: the staging helper skips them by
