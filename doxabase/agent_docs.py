@@ -176,6 +176,8 @@ def get_agent_doc(
         start_char = selected_section["start_char"]
         readable_end = selected_section["end_char"]
     start_char = max(0, min(start_char, len(text)))
+    if selected_section is None:
+        selected_section = _containing_doc_section(start_char, sections)
     end_char = min(readable_end, start_char + max_chars)
     truncated = end_char < readable_end
     return {
@@ -257,3 +259,17 @@ def _find_doc_section(
             return item
     available = ", ".join(item["anchor"] for item in sections)
     raise KeyError(f"Unknown section '{section}'. Available sections: {available}")
+
+
+def _containing_doc_section(
+    start_char: int,
+    sections: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    matches = [
+        section
+        for section in sections
+        if section["start_char"] <= start_char < section["end_char"]
+    ]
+    if not matches:
+        return None
+    return max(matches, key=lambda section: section["level"])

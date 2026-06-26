@@ -1310,7 +1310,10 @@ protocol/location mismatches include storage fields and mismatch reasons, while
 `query_context_has_other_blockers` includes excluded blocker counts, codes, and
 resource IRIs. `database_relation_template_source_mismatch` includes the
 template, template source, source resource IRI, storage access IRI, and the
-allowed relation-template source list.
+allowed relation-template source list. `ambiguous_physical_layout` includes the
+distinct file-format/compression signatures and linked layout IRIs; when it is
+present, `draft_query_plan` leaves `scan.function` unset instead of guessing
+from the first layout.
 
 Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and
@@ -2749,7 +2752,10 @@ at the stale source because no current successor exists yet. For all rows, the
 `*_after` fields describe the apply check for `current_revision_iri` after the
 batch decision. In real restage rows that is the new successor; in already
 handled rows it is the latest known successor; in dry-run would-restage rows it
-is still the stale source. Use `next_action_after` as the compact route for
+is still the stale source. In real batch runs, top-level
+`current_revision_by_source` is recomputed after the whole batch, so stale
+ancestors map to the latest successor even when an intermediate successor was
+also processed. Use `next_action_after` as the row-level compact route for
 `current_revision_iri`, and read `suggested_next_actions_after` when a script
 needs concrete follow-up calls without joining back through
 `list_graph_revisions`.

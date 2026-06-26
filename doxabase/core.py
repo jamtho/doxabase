@@ -8458,11 +8458,14 @@ class DoxaBase:
         storage_accesses: list[StorageAccessDescription],
         engine: str,
     ) -> DraftQueryPlanScan:
+        selected_layout = self._unique_physical_layout_for_query_plan(
+            physical_layouts
+        )
         file_format = self._draft_query_plan_resource_label(
-            physical_layouts[0].file_format if physical_layouts else None
+            selected_layout.file_format if selected_layout is not None else None
         )
         compression = self._draft_query_plan_resource_label(
-            physical_layouts[0].compression_codec if physical_layouts else None
+            selected_layout.compression_codec if selected_layout is not None else None
         )
         template_status, template_note = self._draft_query_plan_template_verification(
             selected_candidate,
@@ -8534,6 +8537,17 @@ class DoxaBase:
                 "analysis caveats."
             ),
         )
+
+    def _unique_physical_layout_for_query_plan(
+        self,
+        physical_layouts: list[PhysicalLayoutDescription],
+    ) -> PhysicalLayoutDescription | None:
+        if not physical_layouts:
+            return None
+        signatures = self._physical_layout_signatures(physical_layouts)
+        if len(signatures) != 1:
+            return None
+        return physical_layouts[0]
 
     def _draft_query_plan_template_verification(
         self,
@@ -10250,6 +10264,12 @@ class DoxaBase:
                 "No physical layout resource is linked to the dataset.",
                 dataset_resource,
             )
+        ambiguous_layout_issue = self._ambiguous_physical_layout_issue(
+            dataset.physical_layouts,
+            dataset_resource=dataset_resource,
+        )
+        if ambiguous_layout_issue is not None:
+            issues.append(ambiguous_layout_issue)
         for layout in dataset.physical_layouts:
             layout_resource = self._summary_from_description(layout)
             if layout.file_format is None:
@@ -10286,6 +10306,62 @@ class DoxaBase:
             )
 
         return self._sort_query_planning_issues(issues)
+
+    def _ambiguous_physical_layout_issue(
+        self,
+        physical_layouts: list[PhysicalLayoutDescription],
+        *,
+        dataset_resource: ResourceSummary,
+    ) -> QueryPlanningIssue | None:
+        signatures = self._physical_layout_signatures(physical_layouts)
+        if len(signatures) <= 1:
+            return None
+        signature_details = [
+            {
+                "file_format_iri": signature[0],
+                "compression_codec_iri": signature[1],
+                "layout_iris": [
+                    layout.iri
+                    for layout in layouts
+                ],
+            }
+            for signature, layouts in signatures.items()
+        ]
+        return QueryPlanningIssue(
+            code="ambiguous_physical_layout",
+            severity="warning",
+            message=(
+                "Multiple linked physical layouts declare distinct file formats "
+                "or compression codecs. Select or model the layout that belongs "
+                "to the chosen query target before inferring a scan function."
+            ),
+            resource=dataset_resource,
+            details={
+                "layout_count": len(physical_layouts),
+                "distinct_layout_signature_count": len(signatures),
+                "layout_signatures": signature_details,
+            },
+        )
+
+    @staticmethod
+    def _physical_layout_signatures(
+        physical_layouts: list[PhysicalLayoutDescription],
+    ) -> dict[tuple[str | None, str | None], list[PhysicalLayoutDescription]]:
+        signatures: dict[
+            tuple[str | None, str | None],
+            list[PhysicalLayoutDescription],
+        ] = {}
+        for layout in physical_layouts:
+            signature = (
+                layout.file_format.iri if layout.file_format is not None else None,
+                (
+                    layout.compression_codec.iri
+                    if layout.compression_codec is not None
+                    else None
+                ),
+            )
+            signatures.setdefault(signature, []).append(layout)
+        return signatures
 
     def _sort_query_planning_issues(
         self,
@@ -15529,6 +15605,15 @@ class DoxaBase:
                     note=note,
                 )
             )
+
+        current_revision_by_source = {
+            source_iri: (
+                self._current_restage_successor_iri(source_iri) or source_iri
+            )
+            for source_iri in processed_revision_iris
+        }
+        for current_revision_iri in current_revision_by_source.values():
+            add_review_revision(current_revision_iri)
 
         export_record: StagedGraphRevisionsExportRecord | None = None
         if path is not None:

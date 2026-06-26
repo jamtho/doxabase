@@ -973,7 +973,7 @@ few useful gaps:
   representative staging preserves all grouped observation support on the staged
   revision. A follow-up trial found the default staging action still suggested
   every duplicate sibling; drafts now expose `representative_recommendation_indexes`
-  and use those indexes in the top-level `stage_profile_map_updates` action.
+  so agents can review one index per duplicate group.
 - A no-op successor trial found post-apply recheck routing was correct but less
   self-contained than a direct apply check. Recheck rows now include the live
   `decision` and `blocking_reasons`, so a no-op successor made stale by a sibling
@@ -1010,6 +1010,17 @@ few useful gaps:
 - A docs retrieval trial found large MCP docs hid deep sections behind the
   default prefix. Doc listings now expose section headings and `get_doc` accepts
   `section` or `start_char` for bounded navigation.
+- A query-planning storage-metadata trial found S3/database/runtime metadata
+  handoffs were conservative, but multiple linked physical layouts could make
+  the draft infer a scan function from the first layout. Distinct layout
+  signatures now produce `ambiguous_physical_layout`, block execution-readiness,
+  and leave `scan.function` unset until the intended layout is modeled or
+  selected.
+- A longer staged-lineage trial found batch restage top-level
+  `current_revision_by_source` could point a stale ancestor at an intermediate
+  successor that the same batch later restaged. Real batch runs now recompute
+  the top-level current map after processing the whole batch; row
+  `current_revision_iri` still records the route observed for that item.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

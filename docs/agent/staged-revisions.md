@@ -214,7 +214,11 @@ stale source as skipped and classify its ready successor as not restageable with
 reason `ready`. That does not mean there is no next action. Read
 `current_revision_by_source`, `bundle_summary.ready_restage_successor_revision_iris`,
 and the grouped export's apply/repair review queues to find the active successor
-to review or the remaining patch-conflict candidate to repair.
+to review or the remaining patch-conflict candidate to repair. In real batch
+runs, `current_revision_by_source` is recomputed after the whole batch, so a
+requested stale ancestor maps to the latest successor even when the batch also
+restaged an intermediate successor. Item-level `current_revision_iri` still
+describes the route observed while that row was processed.
 After applying one ready alternative, sibling alternatives may become stale or
 conflicted because the applied candidate changed the same graph roles. Preserve
 their original staged validation diagnostics in your review: a stale live check

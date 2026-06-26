@@ -358,7 +358,10 @@ includes the selected candidate, scan hint such as `read_parquet`, URI/path
 template for file/object storage, database relation fields for database-backed
 storage, parsed `required_bindings`, structured `binding_requirements`,
 non-secret storage environment hints, copied issues and analysis warnings,
-caveats, and a `review_gate`. Binding rows preserve the source text and say
+caveats, and a `review_gate`. Distinct linked physical layouts produce
+`ambiguous_physical_layout`, leave `scan.function` unset, and keep
+`review_gate.ready_for_execution_attempt=false` until the intended layout is
+modeled or selected. Binding rows preserve the source text and say
 when DoxaBase has not inferred derivation or runtime values. When the selected
 template comes from partition metadata, binding rows also carry
 `binding_kind="partition_template_placeholder"` plus optional
@@ -899,6 +902,10 @@ deltas for `current_revision_iri` after the batch decision. Treat
 `current_staged_validation_status` / `current_validation_result_count` as the
 stored staged-time validation signals for the source and current rows; they are
 separate from the live apply status fields.
+In real batch runs, top-level `current_revision_by_source` is recomputed after
+the whole batch, so a requested stale ancestor maps to the latest successor even
+when an intermediate successor was also processed and restaged. Item-level
+`current_revision_iri` remains the route observed while that row was processed.
 `restaged_revision_iris` as a creation list, not an apply queue; use
 `bundle_summary.ready_restage_successor_revision_iris` plus a final apply check
 for candidates to apply. If an already-handled row has

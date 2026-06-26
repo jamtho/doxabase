@@ -4399,6 +4399,66 @@ def test_batch_restage_marks_stale_current_successor_as_unresolved(
     assert batch.bundle_summary.recommended_repair_review_iris == []
 
 
+def test_batch_restage_finalizes_current_revision_chain_mapping(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    original = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#InterveningA",
+        label="Intervening A",
+    )
+    first_successor = db.restage_staged_revision(original.revision_iri)
+    db.record_map_dataset(
+        "https://example.test/project#InterveningB",
+        label="Intervening B",
+    )
+
+    batch = db.restage_staged_revisions(
+        [original.revision_iri, first_successor.revision_iri],
+    )
+    final_successor = batch.restaged_revision_iris[0]
+
+    assert [item.action for item in batch.items] == [
+        "skipped_already_handled",
+        "restaged",
+    ]
+    assert batch.items[0].current_revision_iri == first_successor.revision_iri
+    assert batch.items[0].next_action_after is not None
+    assert batch.items[0].next_action_after.arguments == {
+        "iri": first_successor.revision_iri
+    }
+    assert batch.items[1].current_revision_iri == final_successor
+    assert batch.current_revision_by_source == {
+        original.revision_iri: final_successor,
+        first_successor.revision_iri: final_successor,
+    }
+    assert batch.review_revision_iris == [
+        original.revision_iri,
+        first_successor.revision_iri,
+        final_successor,
+    ]
+    assert batch.bundle_summary.ready_restage_successor_revision_iris == [
+        final_successor
+    ]
+    final_check = db.check_staged_revision_apply(final_successor)
+    assert final_check.status == "ready"
+
+
 def test_restage_chain_routes_to_current_successor(
     tmp_path: Path,
 ) -> None:
@@ -8306,6 +8366,69 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     assert "No endpoint or credential profile is recorded or required" in (
         plan.storage_environment.runtime_resolution_note
     )
+
+
+def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "warehouse"),
+        path_templates=["events/current/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    csv_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    parquet_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[csv_layout.iri, parquet_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    issue = next(
+        issue
+        for issue in context.issues
+        if issue.code == "ambiguous_physical_layout"
+    )
+    assert issue.severity == "warning"
+    assert issue.resource is not None
+    assert issue.resource.iri == dataset
+    assert issue.details is not None
+    assert issue.details["distinct_layout_signature_count"] == 2
+    target = context.query_target_candidates[0]
+    assert target.candidate_path_status == "orientation_only"
+    assert target.direct_review_required is True
+    assert [reason.code for reason in target.direct_review_reasons] == [
+        "ambiguous_physical_layout"
+    ]
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.scan.file_format is None
+    assert plan.scan.compression is None
+    assert plan.scan.function is None
+    assert plan.review_gate.ready_for_execution_attempt is False
+    assert plan.review_gate.blocking_reason_codes == ["ambiguous_physical_layout"]
+    assert plan.handoff_kind == "metadata_review_required"
 
 
 def test_draft_query_plan_review_gates_database_backed_table_without_scan_function(

@@ -161,6 +161,7 @@ def test_doc_tools_return_json_like_payloads() -> None:
     )
     assert offset["start_char"] == section["end_char"]
     assert len(offset["content"]) <= 120
+    assert offset["selected_section"]["anchor"] == "profile-helper-records"
 
 
 def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:

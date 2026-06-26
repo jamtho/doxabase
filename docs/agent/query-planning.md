@@ -40,7 +40,11 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    database-backed storage handoffs; do not treat the candidate path as a file
    URI in that case. Relation identifiers come from storage-access-owned
    templates, not dataset or partition file paths.
-5. `required_bindings` and `binding_requirements` still need runtime values.
+5. `scan.function` is only a hint when the physical layout is unambiguous. If a
+   dataset links multiple distinct file formats or compression codecs,
+   `ambiguous_physical_layout` blocks execution-readiness and leaves the scan
+   function unset until the intended layout is modeled or selected.
+6. `required_bindings` and `binding_requirements` still need runtime values.
    `review_gate.binding_values_required=True` and
    `handoff_kind="binding_values_required"` make that case explicit. When a
    selected template comes from partition metadata, binding rows may include
@@ -53,11 +57,11 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    ambiguous rows need review before choosing any source column. Treat
    `confidence` as a per-match score; `candidate_column_match_status` summarizes
    the whole binding.
-6. `review_gate.executable_without_review` says graph metadata has no recorded
+7. `review_gate.executable_without_review` says graph metadata has no recorded
    review blocker for the selected candidate.
-7. `storage_environment.runtime_resolution_required` says endpoint, credential,
+8. `storage_environment.runtime_resolution_required` says endpoint, credential,
    region, or equivalent runtime context still needs resolving.
-8. `review_gate.ready_for_execution_attempt` is the stricter handoff boolean:
+9. `review_gate.ready_for_execution_attempt` is the stricter handoff boolean:
    it is true only when the review gate is clear, runtime resolution is not
    required, and no required binding placeholders remain in the selected
    template.
