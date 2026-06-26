@@ -1917,6 +1917,12 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         action.tool_name
         for action in imported_status_before_snapshots.suggested_next_actions
     ] == ["import_revision_snapshots"]
+    snapshot_action = imported_status_before_snapshots.suggested_next_actions[0]
+    assert snapshot_action.arguments == {
+        "path": "/tmp/revision-snapshots.json",
+        "path_is_placeholder": True,
+    }
+    assert "real handoff path" in snapshot_action.reason
     imported_diff_before_snapshots = round_trip.describe_applied_revision_diff(
         result.applied_revision_iri,
         include_triples=True,
@@ -2028,6 +2034,11 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert [action.tool_name for action in orphan_status.suggested_next_actions] == [
         "import_trig"
     ]
+    assert orphan_status.suggested_next_actions[0].arguments == {
+        "path": "/tmp/project.trig",
+        "path_is_placeholder": True,
+    }
+    assert "real handoff path" in orphan_status.suggested_next_actions[0].reason
     with pytest.raises(DoxaBaseError, match="Snapshot rows exist"):
         workflow_round_trip.describe_applied_revision_diff(
             result.applied_revision_iri

@@ -2042,7 +2042,9 @@ drift triples can be reconstructed. Snapshot rows without matching RDF history
 records are orphan review artifacts; import a project/history RDF bundle before
 using normal revision helpers. When exact rows are missing, suggested actions
 point at `import_revision_snapshots`; when snapshot rows are orphaned, they
-point at `import_trig` for the project/history RDF bundle.
+point at `import_trig` for the project/history RDF bundle. Import actions use
+placeholder paths and include `path_is_placeholder=True`; substitute the real
+handoff artifact path before executing them.
 
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
 returns `RevisionSnapshotBundleExportRecord`:

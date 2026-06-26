@@ -1454,6 +1454,15 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert snapshot_status_before_import["suggested_next_actions"][0][
         "tool_name"
     ] == "import_revision_snapshots"
+    assert snapshot_status_before_import["suggested_next_actions"][0][
+        "arguments"
+    ] == {
+        "path": "/tmp/revision-snapshots.json",
+        "path_is_placeholder": True,
+    }
+    assert "real handoff path" in snapshot_status_before_import[
+        "suggested_next_actions"
+    ][0]["reason"]
     imported_diff_before_snapshots = describe_applied_revision_diff_tool(
         round_trip,
         result["applied_revision_iri"],

@@ -960,8 +960,9 @@ metadata in `history`, but exact snapshot rows require an
 `export_revision_snapshots()` / `import_revision_snapshots()` JSON bundle.
 Call `describe_revision_snapshot_evidence()` when imported capsules behave
 surprisingly; it now carries structured import actions for missing snapshot rows
-or missing project/history RDF. Snapshot JSON alone is not a standalone revision
-manifest.
+or missing project/history RDF. Those actions mark placeholder paths with
+`path_is_placeholder=True`; replace the path with the actual handoff artifact
+before importing. Snapshot JSON alone is not a standalone revision manifest.
 
 `restage_staged_revision()` creates a fresh staged revision from a conflicted
 staged revision's existing patch payloads, recomputing before/after counts and

@@ -936,6 +936,11 @@ few useful gaps:
   scratch runs. Suggested staged-revision export actions now include
   revision-derived slugs and short hashes in `/tmp` paths; agents can still
   override them with run-directory paths.
+- A revision snapshot handoff trial confirmed RDF-only, snapshot-only, and
+  RDF-plus-snapshot imports route correctly, but snapshot-evidence suggested
+  actions used executable-looking generic paths. Those actions now mark their
+  `path` arguments with `path_is_placeholder=True` and tell agents to substitute
+  the real handoff artifact path before importing.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

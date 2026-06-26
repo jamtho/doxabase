@@ -88,7 +88,9 @@ whether exact changed triples are available, only count/digest RDF snapshots
 survived, or snapshot JSON was imported without the matching `history` graph.
 The response includes structured `suggested_next_actions`: missing exact rows
 point at `doxabase.import_revision_snapshots`, and orphan snapshot rows point at
-`doxabase.import_trig` for the missing project/history RDF.
+`doxabase.import_trig` for the missing project/history RDF. The suggested import
+paths are placeholders marked with `path_is_placeholder=True`; replace them with
+the real handoff artifact path before executing the action.
 
 `doxabase.list_graph_revisions`
 

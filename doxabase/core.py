@@ -3046,13 +3046,16 @@ class DoxaBase:
         if status == "history_only_count_digest" or missing_snapshot_row_graph_roles:
             add_action(
                 "import_revision_snapshots",
-                {"path": "/tmp/revision-snapshots.json"},
+                {
+                    "path": "/tmp/revision-snapshots.json",
+                    "path_is_placeholder": True,
+                },
                 (
                     "RDF history metadata is present for "
                     f"'{revision_iri}', but exact snapshot rows are missing for "
                     "one or more graph roles. Import the companion snapshot JSON "
-                    "bundle before relying on exact applied-diff or stale-drift "
-                    "triple inspection."
+                    "bundle at its real handoff path before relying on exact "
+                    "applied-diff or stale-drift triple inspection."
                 ),
                 action_label="Import snapshot bundle if available",
             )
@@ -3061,11 +3064,11 @@ class DoxaBase:
         ):
             add_action(
                 "import_trig",
-                {"path": "/tmp/project.trig"},
+                {"path": "/tmp/project.trig", "path_is_placeholder": True},
                 (
                     "Snapshot rows exist for this revision, but the RDF history "
-                    "record is missing. Import the project/history RDF bundle "
-                    "before using normal revision helpers."
+                    "record is missing. Import the project/history RDF bundle at "
+                    "its real handoff path before using normal revision helpers."
                 ),
                 action_label="Import project/history RDF bundle",
             )
