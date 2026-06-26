@@ -599,6 +599,12 @@ written there and would make the target snapshot immediately stale. Use
 The immediate staged record also returns its `summary`, `rationale`,
 `review_note`, and `review_recommendation` so scratch logs and wrapper payloads
 do not need a second describe call just to show the proposal headline.
+Pass `restages_revision=<stale_revision_iri>` when this staged patch is a
+caller-authored repaired or rebased successor for stale work. The helper records
+`rc:restagesRevision` / `restaged_from` while preserving the exact new payload
+you provide. If the stale source already has `restaged_by` /
+`current_restaged_by`, inspect or target that current successor instead; the
+helper rejects parallel successors.
 
 `stage_map_assertion_change()` stages a reviewable add/remove/replace for one
 `map` assertion. Pass `subject`, `predicate`, optional `object`, a `rationale`,
@@ -620,6 +626,9 @@ reviewers do not have to interpret legacy `proposed_value` as the value being
 removed. For exact removals, `removed_value` reflects the matched graph triple,
 including datatype or language-tag context. Use it for common assertion changes
 before reaching for generic `stage_graph_revision`.
+It also accepts `restages_revision` for the common case where a stale
+single-assertion candidate should be replaced by a caller-authored add, remove,
+or replace patch instead of mechanically replaying the old payload.
 When testing a changed singleton assertion such as `rc:physicalType`, a
 competing `add` may correctly fail validation while an explicit `replace` stays
 reviewable. After applying any staged assertion, re-run apply checks for sibling
@@ -878,6 +887,10 @@ successor when the stale source already has `restaged_by` /
 immediate return includes `restaged_from`, `restage_reason`, `alternative_to`,
 and `current_restaged_by` fields so handoffs do not need a separate
 `describe_staged_revision()` call just to record restage provenance.
+When the drift review shows the payload itself needs editing, stage the repaired
+payload with `stage_graph_revision(..., restages_revision=...)` or
+`stage_map_assertion_change(..., restages_revision=...)` instead of calling this
+mechanical replay helper.
 
 `restage_staged_revisions()` is the batch recovery helper for larger stale sets.
 It checks each requested staged revision, restages conflicted revisions that do

@@ -485,6 +485,72 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     )["status"] == "ready"
 
 
+def test_stage_graph_revision_tool_records_repaired_restage_successor(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    source = stage_graph_revision_tool(
+        db,
+        summary="Stage old orders label",
+        rationale="Original candidate needs a repaired successor.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Old orders" .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    record_map_dataset_tool(db, iri=orders, label="Current orders", is_table=True)
+
+    repair = stage_graph_revision_tool(
+        db,
+        summary="Repair orders label",
+        rationale="Caller-authored repaired successor.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Preferred orders" .
+                """,
+            }
+        ],
+        removals=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Current orders" .
+                """,
+            }
+        ],
+        restages_revision=source["revision_iri"],
+    )
+
+    assert repair["restaged_from"] == source["revision_iri"]
+    stale_description = describe_staged_revision_tool(db, source["revision_iri"])
+    assert stale_description["restaged_by"]["iri"] == repair["revision_iri"]
+    current_work = list_graph_revisions_tool(
+        db,
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    current_work_iris = {item["iri"] for item in current_work["revisions"]}
+    assert source["revision_iri"] not in current_work_iris
+    assert repair["revision_iri"] in current_work_iris
+
+
 def test_restage_staged_revisions_tool_exports_grouped_review(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

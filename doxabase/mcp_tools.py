@@ -1086,6 +1086,7 @@ def stage_graph_revision_tool(
     revision_anchors: list[str] | None = None,
     evidence: list[str] | None = None,
     alternative_to: str | None = None,
+    restages_revision: str | None = None,
     review_note: str | None = None,
     review_recommendation: str | None = None,
     validation_scope: str = "all",
@@ -1107,6 +1108,7 @@ def stage_graph_revision_tool(
         revision_anchors=revision_anchors,
         evidence=evidence,
         alternative_to=alternative_to,
+        restages_revision=restages_revision,
         review_note=review_note,
         review_recommendation=review_recommendation,
         validation_scope=validation_scope,  # type: ignore[arg-type]
@@ -1187,6 +1189,7 @@ def stage_map_assertion_change_tool(
     revision_anchors: list[str] | None = None,
     evidence: list[str] | None = None,
     alternative_to: str | None = None,
+    restages_revision: str | None = None,
     review_note: str | None = None,
     review_recommendation: str | None = None,
     validation_scope: str = "all",
@@ -1215,6 +1218,7 @@ def stage_map_assertion_change_tool(
         revision_anchors=revision_anchors,
         evidence=evidence,
         alternative_to=alternative_to,
+        restages_revision=restages_revision,
         review_note=review_note,
         review_recommendation=review_recommendation,
         validation_scope=validation_scope,  # type: ignore[arg-type]

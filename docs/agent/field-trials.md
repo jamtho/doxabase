@@ -378,6 +378,11 @@ few useful gaps:
   ordinary `restaged_by` routing and inviting no-op apply noise later. The
   helper now refuses to restage a source that already has a refreshed successor;
   agents should inspect or restage `current_restaged_by` instead.
+  A caller-authored repair trial showed that `alternative_to` was too weak for a
+  repaired successor: it preserved a competing framing, not a replacement for
+  stale work. Staging helpers now accept `restages_revision` so an agent can
+  author a revised patch, record the same restage provenance, and keep successor
+  routing pointed at the repaired candidate.
   A no-op replay trial showed that stale patches can be restaged after another
   route has already realized all or part of the payload. Apply checks now report
   effective add/remove counts, already-present/absent payload triples, and a

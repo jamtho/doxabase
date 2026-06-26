@@ -1491,6 +1491,10 @@ In list rows, relation fields such as `applied_by`,
 `applies_staged_revision`, `alternative_to`, `current_alternative_to`,
 `restaged_from`, `restaged_by`, and `current_restaged_by` are nullable IRI
 strings. They are not nested resource objects.
+`restaged_from` can come from the mechanical restage helpers or from a
+caller-authored staged repair that used `restages_revision`; in both cases,
+route follow-up work by `current_restaged_by` when the stale source has a
+successor.
 
 `db.list_resource_revisions(resource_iri, include_patch_mentions=True,
 include_apply_checks=True)` returns `ResourceRevisionList`:

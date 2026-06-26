@@ -573,6 +573,12 @@ results. The returned staged revision record includes the `summary`,
 scratch logs do not need an immediate describe call for the proposal headline.
 `revision_anchors` can name graph resources the staged proposal is about without
 treating them as evidence or support.
+Use `restages_revision` when the new payload is a caller-authored repaired or
+rebased successor for a stale staged revision. The tool records
+`rc:restagesRevision` / `restaged_from` while keeping the provided additions and
+removals intact. If the stale source already has `restaged_by` /
+`current_restaged_by`, inspect or target that current successor instead; the
+tool rejects parallel successors.
 
 `doxabase.stage_map_assertion_change`
 
@@ -607,6 +613,9 @@ already present on a multi-valued predicate, treat the replace as mainly a
 removal of the other current values and review their support routes before
 applying. It does not apply the change; use `describe_staged_revision` and
 `check_staged_revision_apply` before application.
+Use `restages_revision` here when the repaired successor is itself a single
+assertion add, remove, or replace, especially after a stale single-assertion
+candidate needs a different value or an explicit replacement patch.
 A competing singleton `add`, such as a second `rc:physicalType`, may correctly
 fail validation while a `replace` candidate remains reviewable. Re-run apply
 checks for sibling staged assertions after any successful apply.
@@ -745,6 +754,10 @@ parallel successor; inspect or restage the current successor instead. The
 immediate return includes `restaged_from`, `restage_reason`, `alternative_to`,
 and `current_restaged_by` so the handoff can record provenance without an
 immediate describe call.
+If the old payload needs a human/model-authored repair, use
+`doxabase.stage_graph_revision(..., restages_revision=...)` or
+`doxabase.stage_map_assertion_change(..., restages_revision=...)`; this helper
+is the same-patch replay path.
 
 `doxabase.restage_staged_revisions`
 

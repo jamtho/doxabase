@@ -2490,6 +2490,7 @@ class DoxaBase:
         revision_anchors: Iterable[str] | str | None = None,
         evidence: Iterable[str] | str | None = None,
         alternative_to: str | None = None,
+        restages_revision: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
         validation_scope: TypingLiteral[
@@ -2637,6 +2638,7 @@ class DoxaBase:
                 [item.iri for item in support.related_evidence],
             ),
             alternative_to=alternative_to,
+            restages_revision=restages_revision,
             review_note=merged_review_note,
             review_recommendation=recommendation,
             validation_scope=validation_scope,
@@ -12934,6 +12936,7 @@ class DoxaBase:
         revision_anchors: Iterable[str] | str | None = None,
         evidence: Iterable[str] | str | None = None,
         alternative_to: str | None = None,
+        restages_revision: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
         validation_scope: TypingLiteral[
@@ -13009,6 +13012,14 @@ class DoxaBase:
             if revision_iri is not None
             else self._mint_iri("staged-revision")
         )
+        restages_revision_value = (
+            self._validated_restage_successor_source(
+                restages_revision,
+                new_revision_iri=revision_subject,
+            )
+            if restages_revision is not None
+            else None
+        )
         graph_counts = {
             graph_name: self.triple_count(graph_name)
             for graph_name in changed_graph_values
@@ -13057,6 +13068,14 @@ class DoxaBase:
                     subject,
                     URIRef(self.expand_iri("rc:alternativeTo")),
                     URIRef(self.expand_iri(alternative_to)),
+                )
+            )
+        if restages_revision_value is not None:
+            metadata.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:restagesRevision")),
+                    URIRef(restages_revision_value),
                 )
             )
         for patch, patch_record in zip(parsed_patches, patch_records, strict=True):
@@ -13140,6 +13159,11 @@ class DoxaBase:
             )
 
         extra_triples = self._insert_graph("history", metadata)
+        staged_description = (
+            self.describe_staged_revision(revision_subject)
+            if restages_revision_value is not None
+            else None
+        )
         return StagedGraphRevisionRecord(
             revision_iri=revision_subject,
             revision_type=revision_record.revision_type,
@@ -13161,7 +13185,43 @@ class DoxaBase:
                 if alternative_to is not None
                 else None
             ),
+            restaged_from=restages_revision_value,
+            restage_reason=(
+                staged_description.restage_reason
+                if staged_description is not None
+                else None
+            ),
+            current_restaged_by=(
+                staged_description.current_restaged_by.iri
+                if staged_description is not None
+                and staged_description.current_restaged_by is not None
+                else None
+            ),
         )
+
+    def _validated_restage_successor_source(
+        self,
+        restages_revision: str,
+        *,
+        new_revision_iri: str,
+    ) -> str:
+        source_iri = self._required_iri("restages_revision", restages_revision)
+        if source_iri == new_revision_iri:
+            raise DoxaBaseError("restages_revision cannot point to the new revision")
+        source = self.describe_staged_revision(source_iri)
+        existing_successor = source.current_restaged_by or source.restaged_by
+        if existing_successor is not None:
+            raise DoxaBaseError(
+                "Cannot stage a repaired successor for a staged revision that "
+                "already has a refreshed successor; inspect or target the "
+                f"current successor '{existing_successor.iri}' instead."
+            )
+        if source.applied_by is not None:
+            raise DoxaBaseError(
+                "Cannot stage a repaired successor for a staged revision that "
+                f"has already been applied by '{source.applied_by.iri}'."
+            )
+        return source.iri
 
     def restage_staged_revision(
         self,
@@ -13274,24 +13334,14 @@ class DoxaBase:
             alternative_to=(
                 source.alternative_to.iri if source.alternative_to is not None else None
             ),
+            restages_revision=source.iri,
             review_note=source.review_note,
             review_recommendation=source.review_recommendation,
             validation_scope=validation_scope or source.validation_scope or "all",
         )
-        metadata = Graph()
-        self._bind_prefixes(metadata)
-        metadata.add(
-            (
-                URIRef(staged.revision_iri),
-                URIRef(self.expand_iri("rc:restagesRevision")),
-                URIRef(source.iri),
-            )
-        )
-        extra_triples = self._insert_graph("history", metadata)
         staged_description = self.describe_staged_revision(staged.revision_iri)
         return replace(
             staged,
-            triples=staged.triples + extra_triples,
             alternative_to=(
                 staged_description.alternative_to.iri
                 if staged_description.alternative_to is not None

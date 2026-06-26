@@ -541,6 +541,15 @@ Grouped Markdown mirrors the important `current_alternative_to` case in
 Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and their suggested actions now point agents toward structured
 diagnostics plus a Markdown review export before staging a repaired candidate.
+When the original intent is still live but the payload itself needs a
+caller-authored repair or rebase, stage the repaired patch with
+`restages_revision=<stale_revision_iri>` through `stage_graph_revision` or
+`stage_map_assertion_change`. That records the same `rc:restagesRevision`
+provenance without replaying the old payload. Use `alternative_to` only for a
+competing framing, not for a repaired successor to stale work. If the stale
+source already has `restaged_by` / `current_restaged_by`, target the current
+successor; parallel repaired successors are rejected for the same reason
+parallel mechanical restages are rejected.
 Already-applied revisions should be inspected rather than replayed.
 Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying
@@ -609,7 +618,8 @@ alternatives side by side is expected; staged revisions are cheap memory for
 creative exploration, not a forced march toward one approved answer.
 
 Use `restaged_from` / `rc:restagesRevision` when a staged revision is the same
-patch intent replayed against a newer graph state. This is different from
+patch intent replayed against a newer graph state, or when a caller-authored
+repair intentionally supersedes a stale staged payload. This is different from
 `alternative_to`: alternatives compete as different framings, while restaging
 keeps the older stale proposal as provenance for the refreshed proposal.
 `restaged_by` is the reverse relation on the stale source revision.

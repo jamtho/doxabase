@@ -3121,6 +3121,153 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     )
 
 
+def test_stage_graph_revision_can_record_repaired_restage_successor(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    source = db.stage_graph_revision(
+        summary="Stage old orders label",
+        rationale="Original stale candidate used a label that later proved wrong.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Old orders" .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.record_map_dataset(orders, label="Current orders", is_table=True)
+    assert db.check_staged_revision_apply(source.revision_iri).status == "conflict"
+
+    repair = db.stage_graph_revision(
+        summary="Repair stale orders label",
+        rationale=(
+            "Caller-authored repair for the stale label candidate; replaces "
+            "the current label instead of replaying the old add-only patch."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Preferred orders" .
+                """,
+            }
+        ],
+        removals=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Current orders" .
+                """,
+            }
+        ],
+        restages_revision=source.revision_iri,
+        review_recommendation="Review repaired successor before applying.",
+    )
+
+    assert repair.restaged_from == source.revision_iri
+    assert repair.restage_reason is not None
+    assert "Caller-authored repair" in repair.restage_reason
+    source_description = db.describe_staged_revision(source.revision_iri)
+    assert source_description.restaged_by is not None
+    assert source_description.restaged_by.iri == repair.revision_iri
+    repair_description = db.describe_staged_revision(repair.revision_iri)
+    assert repair_description.restaged_from is not None
+    assert repair_description.restaged_from.iri == source.revision_iri
+    current_work = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    current_work_iris = {item.iri for item in current_work.revisions}
+    assert source.revision_iri not in current_work_iris
+    assert repair.revision_iri in current_work_iris
+    with pytest.raises(DoxaBaseError, match="already has a refreshed successor"):
+        db.stage_graph_revision(
+            summary="Parallel repaired successor",
+            rationale="This would create an ambiguous successor chain.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": """
+                        @prefix ex: <https://example.test/project#> .
+                        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                        ex:Orders rdfs:comment "Parallel repair." .
+                    """,
+                }
+            ],
+            restages_revision=source.revision_iri,
+        )
+
+
+def test_stage_map_assertion_change_can_repair_stale_assertion_successor(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Current orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Stage old orders label",
+        rationale="Original candidate should be repaired as a replacement.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Old orders" .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.record_map_dataset(orders, label="Intervening orders", is_table=True)
+
+    repair = db.stage_map_assertion_change(
+        subject=orders,
+        predicate="http://www.w3.org/2000/01/rdf-schema#label",
+        object="Preferred orders",
+        object_kind="literal",
+        change_kind="replace",
+        rationale="Repair the stale label candidate by replacing the current label.",
+        restages_revision=source.revision_iri,
+    )
+
+    assert repair.staged_revision.restaged_from == source.revision_iri
+    assert repair.staged_revision.restage_reason is not None
+    assert "Repair the stale label candidate" in (
+        repair.staged_revision.restage_reason
+    )
+    source_description = db.describe_staged_revision(source.revision_iri)
+    assert source_description.restaged_by is not None
+    assert (
+        source_description.restaged_by.iri
+        == repair.staged_revision.revision_iri
+    )
+    applied = db.apply_staged_revision(repair.staged_revision.revision_iri)
+    assert applied.applied_revision_iri
+    current_work = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    current_work_iris = {item.iri for item in current_work.revisions}
+    assert source.revision_iri not in current_work_iris
+    assert repair.staged_revision.revision_iri not in current_work_iris
+
+
 def test_restaged_revision_with_realized_addition_reports_noop(
     tmp_path: Path,
 ) -> None:
