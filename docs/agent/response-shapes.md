@@ -802,6 +802,8 @@ draft.type_advisory_count
 draft.type_advisory_status_counts
 draft.suggested_next_actions
 draft.suggested_next_calls
+draft.suggested_next_action_groups
+draft.suggested_next_call_groups
 draft.review_note
 ```
 
@@ -931,8 +933,12 @@ column is map-present. When duplicate type advisories collapse to one top-level
 suggested action set, the representative pattern/staged-assertion actions
 preserve every grouped profile observation in `supporting_observations`.
 
-Use `recommendation_count` and top-level `suggested_next_actions` for first-pass
-machine routing. Drafts with at least one default-stageable representative
+Use `suggested_next_action_groups` for first-pass machine routing. Groups are
+present only when non-empty and currently use `profile_map_updates`,
+`metric_vocabulary_review`, and `profile_type_review`. `suggested_next_call_groups`
+mirrors those groups with display call strings. The flat top-level
+`suggested_next_actions` / `suggested_next_calls` fields remain for compatibility
+and are ordered by those lanes. Drafts with at least one default-stageable representative
 recommendation include a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled
 row-count recommendations can still appear in
@@ -941,9 +947,11 @@ action omits them unless the caller explicitly opts in. Pass only the indexes
 actually accepted after reviewing sample scope and modelling intent; include
 duplicate sibling indexes only when they need distinct review treatment.
 When `draft.recommendations` is empty and either metric or type advisories are
-present, the draft is advisory-only. The top-level suggested actions are the
-deduped advisory actions for vocabulary/context/type review; do not call
-`stage_profile_map_updates` because no-op advisory staging is deferred.
+present, the draft is advisory-only. The grouped and flat suggested actions are
+the deduped advisory actions for vocabulary/context/type review; do not call
+`stage_profile_map_updates` because no-op advisory staging is deferred. When map
+recommendations and advisories coexist, follow the `profile_map_updates` lane for
+accepted map facts, then continue the metric/type review lanes separately.
 
 `db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 returns a `ProfileMapUpdateStagingRecord`:

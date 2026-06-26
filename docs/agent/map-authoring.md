@@ -81,9 +81,12 @@ map. The draft rows carry sample scope, confidence, helper arguments,
 can decide which recommendations to accept.
 Duplicate groups are explicit: when repeated profile observations produce the
 same review row, accept one representative index unless the siblings need
-different modelling judgement. The draft's top-level staging action starts from
-the representative indexes whose rows are `default_stageable`; sampled row-count
-representatives stay visible for review but require an explicit override call.
+different modelling judgement. Prefer the draft's
+`suggested_next_action_groups`: `profile_map_updates` starts from representative
+indexes whose rows are `default_stageable`, while `metric_vocabulary_review` and
+`profile_type_review` keep advisories out of the map-staging batch. Sampled
+row-count representatives stay visible for review but require an explicit
+override call.
 Profile type findings are not accepted `stage_profile_map_updates`
 recommendation indexes. `physical_type` and `value_type` are still persisted on
 profile observations when `update_map_column=False`; `draft_profile_map_updates`
@@ -97,7 +100,7 @@ grouped helper-equivalent map revision, including multi-triple dataset and
 column shells, so applying one accepted profile batch does not create sibling
 staged revisions that immediately drift after the first apply.
 If the draft has no recommendations and metric or type advisories are present,
-handle it as advisory-only: follow the advisory suggested calls for vocabulary,
+handle it as advisory-only: follow the grouped advisory calls for vocabulary,
 context, or type review and do not call `stage_profile_map_updates`. Advisory
 rows are not map-update recommendations, and no-op advisory staging is deferred.
 An accepted index is still routed through guardrails: it may be `staged` or
@@ -114,8 +117,9 @@ Use direct map helpers only when immediate mutation is intended. Treat sampled
 row-count recommendations conservatively: the staging helper skips them by
 default unless `allow_sampled_row_count_updates=True` is supplied because the
 sample scope is the durable population. Draft rows preview that default with
-`default_stageable=False` and a skip reason. Metric advisories are
-vocabulary-review prompts, not automatic map facts; in staging results, follow
+`default_stageable=False` and a skip reason. Metric and type advisories are
+review prompts, not automatic map facts; in draft results, use their grouped
+lanes separately from `profile_map_updates`. In staging results, follow
 `metric_advisory_suggested_next_actions` separately from the map revision's
 `suggested_next_actions`.
 

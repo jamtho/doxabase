@@ -1011,6 +1011,12 @@ few useful gaps:
   default staging action that would become a no-op. The top-level
   `stage_profile_map_updates` action now includes only representative rows with
   `default_stageable=True`; sampled row-count overrides must be explicit.
+- A profile action-queue trial found mixed map, metric, and type follow-ups were
+  mechanically followable but noisy when flattened together. Draft profile-map
+  responses now expose `suggested_next_action_groups` and
+  `suggested_next_call_groups` with separate `profile_map_updates`,
+  `metric_vocabulary_review`, and `profile_type_review` lanes while preserving
+  the flat `suggested_next_actions` compatibility list.
 - A staged-revision recovery trial followed
   `post_apply_recheck_revisions[].next_action.arguments["iri"]` into
   `restage_staged_revision`, checked the successor, applied it, and ended with

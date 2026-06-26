@@ -1670,6 +1670,8 @@ class ProfileMapUpdateDraft:
     type_advisory_status_counts: dict[str, int]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
+    suggested_next_call_groups: dict[str, list[str]]
     review_note: str
 
 
@@ -7259,15 +7261,26 @@ class DoxaBase:
         type_advisory_status_counts = self._profile_type_advisory_status_counts(
             type_advisories
         )
-        suggested_next_actions = self._profile_map_update_draft_actions(
-            dataset_iri=dataset_value,
-            evidence_iri=evidence_value,
-            default_stageable_representative_indexes=(
-                default_stageable_representative_indexes
-            ),
-            metric_advisories=metric_advisories,
-            type_advisories=type_advisories,
+        suggested_next_action_groups = (
+            self._profile_map_update_draft_action_groups(
+                dataset_iri=dataset_value,
+                evidence_iri=evidence_value,
+                default_stageable_representative_indexes=(
+                    default_stageable_representative_indexes
+                ),
+                metric_advisories=metric_advisories,
+                type_advisories=type_advisories,
+            )
         )
+        suggested_next_actions = (
+            self._profile_map_update_draft_actions_from_groups(
+                suggested_next_action_groups
+            )
+        )
+        suggested_next_call_groups = {
+            group: [action.call for action in actions]
+            for group, actions in suggested_next_action_groups.items()
+        }
         return ProfileMapUpdateDraft(
             dataset=profile_run.dataset,
             evidence=profile_run.evidence,
@@ -7287,6 +7300,8 @@ class DoxaBase:
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
             ],
+            suggested_next_action_groups=suggested_next_action_groups,
+            suggested_next_call_groups=suggested_next_call_groups,
             review_note=(
                 "This draft is read-only review context derived from profile "
                 "observations and current map facts. Apply accepted changes "
@@ -7294,6 +7309,50 @@ class DoxaBase:
                 "scope, evidence, caveats, and project modelling intent."
             ),
         )
+
+    def _profile_map_update_draft_action_groups(
+        self,
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+        default_stageable_representative_indexes: list[int],
+        metric_advisories: list[ProfileMetricVocabularyAdvisory],
+        type_advisories: list[ProfileTypeFindingAdvisory],
+    ) -> dict[str, list[SuggestedNextAction]]:
+        groups: dict[str, list[SuggestedNextAction]] = {}
+        profile_map_actions = self._profile_map_update_draft_profile_map_actions(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            default_stageable_representative_indexes=(
+                default_stageable_representative_indexes
+            ),
+        )
+        if profile_map_actions:
+            groups["profile_map_updates"] = profile_map_actions
+        metric_actions = self._profile_metric_advisory_suggested_actions(
+            metric_advisories
+        )
+        if metric_actions:
+            groups["metric_vocabulary_review"] = metric_actions
+        type_actions = self._profile_type_advisory_suggested_actions(
+            type_advisories
+        )
+        if type_actions:
+            groups["profile_type_review"] = type_actions
+        return groups
+
+    @staticmethod
+    def _profile_map_update_draft_actions_from_groups(
+        groups: dict[str, list[SuggestedNextAction]],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        for group_name in (
+            "profile_map_updates",
+            "metric_vocabulary_review",
+            "profile_type_review",
+        ):
+            actions.extend(groups.get(group_name, []))
+        return actions
 
     def stage_profile_map_updates(
         self,
@@ -7554,14 +7613,12 @@ class DoxaBase:
             )
         ]
 
-    def _profile_map_update_draft_actions(
+    def _profile_map_update_draft_profile_map_actions(
         self,
         *,
         dataset_iri: str,
         evidence_iri: str,
         default_stageable_representative_indexes: list[int],
-        metric_advisories: list[ProfileMetricVocabularyAdvisory],
-        type_advisories: list[ProfileTypeFindingAdvisory],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         if default_stageable_representative_indexes:
@@ -7592,12 +7649,6 @@ class DoxaBase:
                 )
             )
 
-        actions.extend(
-            self._profile_metric_advisory_suggested_actions(metric_advisories)
-        )
-        actions.extend(
-            self._profile_type_advisory_suggested_actions(type_advisories)
-        )
         return actions
 
     @staticmethod

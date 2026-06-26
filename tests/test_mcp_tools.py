@@ -3419,6 +3419,28 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["suggested_next_calls"][0].startswith(
         "stage_profile_map_updates("
     )
+    assert list(result["suggested_next_action_groups"]) == [
+        "profile_map_updates",
+        "metric_vocabulary_review",
+        "profile_type_review",
+    ]
+    assert [
+        action["tool_name"]
+        for action in result["suggested_next_action_groups"]["profile_map_updates"]
+    ] == ["stage_profile_map_updates"]
+    assert [
+        action["tool_name"]
+        for action in result["suggested_next_action_groups"][
+            "metric_vocabulary_review"
+        ]
+    ] == ["describe_context_slice", "list_entities"]
+    assert [
+        action["tool_name"]
+        for action in result["suggested_next_action_groups"]["profile_type_review"]
+    ] == ["describe_context_slice", "record_pattern", "stage_map_assertion_change"]
+    assert result["suggested_next_call_groups"]["profile_map_updates"] == [
+        result["suggested_next_calls"][0]
+    ]
     assert result["recommendations"][0]["helper_arguments"] == {
         "iri": table,
         "row_count_snapshot": 10,

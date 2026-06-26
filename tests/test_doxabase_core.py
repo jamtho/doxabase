@@ -12949,6 +12949,27 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         "accepted_recommendation_indexes": [0, 1, 2],
     }
     assert draft.suggested_next_calls[0].startswith("stage_profile_map_updates(")
+    assert list(draft.suggested_next_action_groups) == [
+        "profile_map_updates",
+        "metric_vocabulary_review",
+    ]
+    assert draft.suggested_next_actions == [
+        *draft.suggested_next_action_groups["profile_map_updates"],
+        *draft.suggested_next_action_groups["metric_vocabulary_review"],
+    ]
+    assert [
+        action.tool_name
+        for action in draft.suggested_next_action_groups["profile_map_updates"]
+    ] == ["stage_profile_map_updates"]
+    assert [
+        action.tool_name
+        for action in draft.suggested_next_action_groups[
+            "metric_vocabulary_review"
+        ]
+    ] == ["describe_context_slice", "list_entities"]
+    assert draft.suggested_next_call_groups["profile_map_updates"] == [
+        draft.suggested_next_calls[0]
+    ]
 
     row_count = draft.recommendations[0]
     assert row_count.action == "replace_map_value"
@@ -13121,6 +13142,12 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
         "stage_map_assertion_change",
         "stage_map_assertion_change",
     ]
+    assert list(draft.suggested_next_action_groups) == [
+        "profile_type_review",
+    ]
+    assert draft.suggested_next_actions == (
+        draft.suggested_next_action_groups["profile_type_review"]
+    )
     assert db.validate_graph(scope="all").conforms
 
 
@@ -13192,6 +13219,18 @@ def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
         "describe_context_slice",
         "record_pattern",
     ]
+    assert list(draft.suggested_next_action_groups) == [
+        "profile_map_updates",
+        "profile_type_review",
+    ]
+    assert [
+        action.tool_name
+        for action in draft.suggested_next_action_groups["profile_map_updates"]
+    ] == ["stage_profile_map_updates"]
+    assert [
+        action.tool_name
+        for action in draft.suggested_next_action_groups["profile_type_review"]
+    ] == ["describe_context_slice", "record_pattern"]
 
 
 def test_profile_type_advisory_duplicate_actions_preserve_support(
@@ -14083,6 +14122,8 @@ def test_draft_profile_map_updates_omits_sampled_only_default_stage_action(
     } == {2}
     assert draft.suggested_next_actions == []
     assert draft.suggested_next_calls == []
+    assert draft.suggested_next_action_groups == {}
+    assert draft.suggested_next_call_groups == {}
 
 
 def test_draft_profile_map_updates_skips_sampled_zero_null_promotion(

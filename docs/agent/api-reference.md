@@ -404,8 +404,11 @@ project-specific metric kinds that need vocabulary review. It returns
 updates, `metric_advisories` for project-specific profile metrics,
 `type_advisories` for observed profile type findings, and a `review_note`. It
 also includes `recommendation_count`, metric advisory counts, type advisory
-counts, and top-level `suggested_next_actions` / `suggested_next_calls` for
-quick routing.
+counts, grouped `suggested_next_action_groups` / `suggested_next_call_groups`,
+and flat top-level `suggested_next_actions` / `suggested_next_calls` for
+compatibility. Prefer grouped routing: `profile_map_updates`,
+`metric_vocabulary_review`, and `profile_type_review` are present only when that
+lane has actions.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and
@@ -432,17 +435,20 @@ focused `stage_map_assertion_change` calls before turning type evidence into
 durable map assertions. For unmapped columns, the advisory names related
 `unmapped_profiled_column` recommendation indexes so agents can stage the
 column shell before reviewing type assertions.
-If a top-level `stage_profile_map_updates` action is present, review the draft
-and use that action as a starting point. Its `accepted_recommendation_indexes`
+If the `profile_map_updates` lane has a `stage_profile_map_updates` action,
+review the draft and use that action as a starting point. Its
+`accepted_recommendation_indexes`
 defaults to the representative indexes whose rows have `default_stageable=True`,
 so agents do not have to stage duplicate siblings just to preserve observation
 support or accidentally stage sampled row-count rows. Sampled row-count
 representatives remain in `representative_recommendation_indexes` for explicit
 review/override. If
 `recommendation_count == 0` and either metric or type advisories are present,
-treat the draft as advisory-only: follow the top-level advisory suggested
-actions and do not call `stage_profile_map_updates`, because advisory rows are
-not accepted map-update recommendations.
+treat the draft as advisory-only: follow metric/type review lanes and do not
+call `stage_profile_map_updates`, because advisory rows are not accepted
+map-update recommendations. When recommendations and advisories coexist, stage
+accepted map facts from `profile_map_updates`, then continue
+`metric_vocabulary_review` and `profile_type_review` separately.
 
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped

@@ -18,10 +18,13 @@ compaction, read `start_here` first.
 7. Call `doxabase.describe_profile_run` with a dataset IRI and shared evidence IRI when `describe_dataset().profile_summary.profile_run_candidates` points at a profiler run whose full returned observations matter.
    If `draft_profile_map_updates()` returns no recommendations but
    metric or type advisories are present, treat it as advisory-only and do not
-   call `stage_profile_map_updates`. Follow advisory `suggested_next_actions`;
-   metric advisories may include a reviewable `stage_pattern_promotion`
-   skeleton, while type advisories may include context, pattern, related column
-   shell, or focused `stage_map_assertion_change` routes.
+   call `stage_profile_map_updates`. Prefer
+   `suggested_next_action_groups`: use `profile_map_updates` for accepted map
+   facts, `metric_vocabulary_review` for metric vocabulary, and
+   `profile_type_review` for type evidence. Metric advisories may include a
+   reviewable `stage_pattern_promotion` skeleton, while type advisories may
+   include context, pattern, related column shell, or focused
+   `stage_map_assertion_change` routes.
 8. Call `doxabase.describe_query_context` when the task is physical query planning and you need storage/layout/path/caveat readiness without the full handoff.
 9. Call `doxabase.describe_context_slice` when you need a route-explained subgraph around a dataset, pattern, or lore thread.
    Use `profile="dataset_brief"` for dataset/table/profile/metric handoffs,

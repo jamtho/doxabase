@@ -275,7 +275,10 @@ The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `metric_advisory_status_counts`,
 `type_advisory_count`, `type_advisory_status_counts`, and top-level
-`suggested_next_actions` / `suggested_next_calls` for quick routing.
+`suggested_next_actions` / `suggested_next_calls` for compatibility. Prefer
+`suggested_next_action_groups` / `suggested_next_call_groups` for quick routing;
+non-empty lanes are grouped as `profile_map_updates`,
+`metric_vocabulary_review`, and `profile_type_review`.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
 `default_skip_reason`, and duplicate-group fields; metric and type advisories
 carry duplicate-group fields too.
@@ -287,8 +290,10 @@ row-count recommendations remain review candidates in
 staging action unless the caller explicitly opts in with
 `allow_sampled_row_count_updates=true`. If
 `recommendation_count == 0` and either metric or type advisories are present,
-handle the result as advisory-only: follow top-level advisory suggested actions
-and do not call `doxabase.stage_profile_map_updates`.
+handle the result as advisory-only: follow advisory grouped suggested actions and
+do not call `doxabase.stage_profile_map_updates`. When recommendations and
+advisories coexist, follow `profile_map_updates` for map staging and keep metric
+or type review lanes separate.
 
 `doxabase.stage_profile_map_updates`
 
