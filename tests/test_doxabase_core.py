@@ -5457,6 +5457,105 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert first_page.next_action_queue != full_page.next_action_queue
 
 
+def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first = db.stage_graph_revision(
+        summary="Model order rows as raw events",
+        rationale="Keep the raw event framing available for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderEvents a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    second = db.stage_graph_revision(
+        summary="Model order rows as lifecycle entities",
+        rationale="Keep the lifecycle entity framing available for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrderLifecycles a rc:Dataset .
+                """,
+            }
+        ],
+        alternative_to=first.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftDataset",
+        label="Drift dataset",
+    )
+    first_restaged = db.restage_staged_revision(first.revision_iri)
+    second_restaged = db.restage_staged_revision(second.revision_iri)
+    applied = db.apply_staged_revision(first_restaged.revision_iri)
+
+    source_lineage = db.describe_revision_lineage(first.revision_iri)
+
+    assert source_lineage.selected_role == "restaged_source"
+    assert source_lineage.paired_revision is None
+    assert source_lineage.applied_revision_iri == applied.applied_revision_iri
+    assert source_lineage.staged_revision_iri == first.revision_iri
+    assert source_lineage.current_staged_revision_iri is None
+    assert source_lineage.current_revision_iri is None
+    assert source_lineage.latest_revision_iri == applied.applied_revision_iri
+    assert source_lineage.latest_role == "applied_event"
+    assert source_lineage.restage_chain_iris == [
+        first.revision_iri,
+        first_restaged.revision_iri,
+    ]
+    assert second_restaged.revision_iri in source_lineage.alternative_revision_iris
+    assert source_lineage.next_action is not None
+    assert source_lineage.next_action.queue == "inspect_already_applied"
+    assert source_lineage.warnings == []
+
+    staged_lineage = db.describe_revision_lineage(first_restaged.revision_iri)
+
+    assert staged_lineage.selected_role == "applied_source"
+    assert staged_lineage.paired_revision is not None
+    assert staged_lineage.paired_revision.iri == applied.applied_revision_iri
+    assert staged_lineage.paired_role == "applied_event"
+    assert staged_lineage.staged_revision_iri == first_restaged.revision_iri
+    assert staged_lineage.applied_revision_iri == applied.applied_revision_iri
+
+    applied_lineage = db.describe_revision_lineage(applied.applied_revision_iri)
+
+    assert applied_lineage.selected_role == "applied_event"
+    assert applied_lineage.paired_revision is not None
+    assert applied_lineage.paired_revision.iri == first_restaged.revision_iri
+    assert applied_lineage.paired_role == "applied_source"
+    assert applied_lineage.restage_chain_iris == [
+        first.revision_iri,
+        first_restaged.revision_iri,
+    ]
+
+    active_lineage = db.describe_revision_lineage(second_restaged.revision_iri)
+
+    assert active_lineage.selected_role == "current_staged_revision"
+    assert active_lineage.current_staged_revision_iri == second_restaged.revision_iri
+    assert active_lineage.current_revision_iri == second_restaged.revision_iri
+    assert active_lineage.applied_revision_iri is None
+    assert active_lineage.latest_revision_iri == second_restaged.revision_iri
+    assert active_lineage.next_action is not None
+    assert active_lineage.next_action.queue == "restage_after_review"
+    assert active_lineage.restage_chain_iris == [
+        second.revision_iri,
+        second_restaged.revision_iri,
+    ]
+
+
 def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     tmp_path: Path,
 ) -> None:

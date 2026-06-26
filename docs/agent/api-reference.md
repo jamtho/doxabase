@@ -832,6 +832,14 @@ record.
 Filtering by `application_status` or `stale_resolution_state` automatically
 computes apply checks for patch-backed revisions, as does
 `current_staged_work_only=True`.
+`describe_revision_lineage(revision_iri)` takes one staged source, restaged
+successor, or applied event IRI and returns the compact graph-level relationship
+card around it: selected row/role, paired staged/applied row when visible,
+applied and staged revision IRIs, restage chain, alternatives, related revision
+IRIs, latest/current pointers, warnings, and next-action routing. Use it when
+the question starts from a revision IRI rather than a resource IRI. It is
+read-only and does not include patch payloads or arbitrary graph-version
+snapshots; use staged, applied-diff, or snapshot helpers for those.
 `list_resource_revisions(resource_iri)` returns revision rows that explicitly
 touch one resource through `rc:revisionAnchor`, exact subject/predicate/object
 URI mentions in staged patch payloads, or an applied event whose staged source

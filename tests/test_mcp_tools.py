@@ -17,6 +17,7 @@ from doxabase.mcp_tools import (
     describe_graph_revision_tool,
     describe_pattern_tool,
     describe_query_context_tool,
+    describe_revision_lineage_tool,
     describe_resource_revision_lineage_tool,
     describe_resource_tool,
     describe_revision_snapshot_evidence_tool,
@@ -87,6 +88,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_revision_snapshot_evidence" in tool_names
     assert "doxabase.describe_applied_revision_diff" in tool_names
     assert "doxabase.list_graph_revisions" in tool_names
+    assert "doxabase.describe_revision_lineage" in tool_names
     assert "doxabase.list_resource_revisions" in tool_names
     assert "doxabase.describe_resource_revision_lineage" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
@@ -1164,6 +1166,27 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert lineage["applied_diff"]["graph_diffs"][0]["resource_triples_added"][0][
         "subject"
     ] == orders
+    generic_lineage = describe_revision_lineage_tool(
+        db,
+        iri=applied["applied_revision_iri"],
+    )
+    assert generic_lineage["selected_role"] == "applied_event"
+    assert generic_lineage["selected_revision"]["iri"] == (
+        applied["applied_revision_iri"]
+    )
+    assert generic_lineage["paired_revision"]["iri"] == staged["revision_iri"]
+    assert generic_lineage["paired_role"] == "applied_source"
+    assert generic_lineage["applied_revision_iri"] == applied["applied_revision_iri"]
+    assert generic_lineage["staged_revision_iri"] == staged["revision_iri"]
+    assert generic_lineage["latest_revision_iri"] == applied["applied_revision_iri"]
+    assert generic_lineage["latest_role"] == "applied_event"
+    assert generic_lineage["restage_chain_iris"] == [staged["revision_iri"]]
+    assert generic_lineage["related_revision_iris"] == [
+        applied["applied_revision_iri"],
+        staged["revision_iri"],
+    ]
+    assert generic_lineage["next_action"]["queue"] == "inspect_already_applied"
+    assert generic_lineage["warnings"] == []
 
 
 def test_stage_map_assertion_change_tool_returns_json_like_payload(

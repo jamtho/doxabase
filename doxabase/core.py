@@ -900,6 +900,30 @@ class GraphRevisionList:
 
 
 @dataclass(frozen=True)
+class RevisionLineageDescription:
+    selected_revision: GraphRevisionListItem
+    selected_role: str
+    paired_revision: GraphRevisionListItem | None
+    paired_role: str | None
+    applied_revision_iri: str | None
+    staged_revision_iri: str | None
+    current_staged_revision_iri: str | None
+    current_revision_iri: str | None
+    latest_revision_iri: str | None
+    latest_role: str | None
+    restage_chain: list[GraphRevisionListItem]
+    restage_chain_iris: list[str]
+    alternative_revision_iris: list[str]
+    related_revision_iris: list[str]
+    next_action: RevisionNextAction | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    warnings: list[str]
+    include_apply_checks: bool
+    drift_detail: str
+
+
+@dataclass(frozen=True)
 class ResourceRevisionPatchMention:
     patch_iri: str
     target_graph: str | None
@@ -3744,6 +3768,289 @@ class DoxaBase:
                 continue
             counts[value] = counts.get(value, 0) + 1
         return counts
+
+    def describe_revision_lineage(
+        self,
+        iri: str,
+        *,
+        graph: str | None = "history",
+        include_apply_checks: bool = True,
+        drift_detail: TypingLiteral["summary", "exact"] = "summary",
+    ) -> RevisionLineageDescription:
+        revision_iri = self._required_iri("iri", iri)
+        listing = self.list_graph_revisions(
+            graph=graph,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
+            limit=1_000_000,
+        )
+        by_iri = {item.iri: item for item in listing.revisions}
+        selected = by_iri.get(revision_iri)
+        if selected is None:
+            raise DoxaBaseError(
+                f"Graph revision '{iri}' was not found in "
+                f"{graph if graph is not None else 'all graphs'}"
+                f"{self._missing_revision_snapshot_storage_hint(revision_iri)}"
+            )
+
+        seed = selected
+        if (
+            selected.record_kind == "applied_event"
+            and selected.applies_staged_revision is not None
+            and selected.applies_staged_revision in by_iri
+        ):
+            seed = by_iri[selected.applies_staged_revision]
+
+        restage_chain, warnings = self._revision_lineage_restage_chain(
+            seed,
+            by_iri,
+        )
+        current_staged_revision = next(
+            (
+                item
+                for item in reversed(restage_chain)
+                if item.is_current_staged_work
+            ),
+            None,
+        )
+        direct_applied_revision, direct_staged_revision = (
+            self._revision_lineage_direct_pair(selected, by_iri)
+        )
+        chain_applied_source = self._revision_lineage_applied_source(
+            selected,
+            restage_chain,
+        )
+        chain_applied_revision = (
+            by_iri.get(chain_applied_source.applied_by)
+            if chain_applied_source is not None
+            and chain_applied_source.applied_by is not None
+            else None
+        )
+        applied_revision = (
+            direct_applied_revision
+            or chain_applied_revision
+            or (selected if selected.record_kind == "applied_event" else None)
+        )
+        staged_revision = direct_staged_revision or seed
+        paired_revision = None
+        if selected.record_kind == "applied_event":
+            paired_revision = direct_staged_revision
+        elif selected.applied_by is not None:
+            paired_revision = direct_applied_revision
+
+        if applied_revision is not None:
+            latest_revision = applied_revision
+        elif current_staged_revision is not None:
+            latest_revision = current_staged_revision
+        else:
+            latest_revision = restage_chain[-1] if restage_chain else selected
+        next_action = latest_revision.next_action
+        suggested_next_actions = latest_revision.suggested_next_actions
+        alternative_revision_iris = self._revision_lineage_alternative_revision_iris(
+            selected=selected,
+            restage_chain=restage_chain,
+            by_iri=by_iri,
+        )
+        return RevisionLineageDescription(
+            selected_revision=selected,
+            selected_role=self._revision_lineage_role(selected),
+            paired_revision=paired_revision,
+            paired_role=(
+                self._revision_lineage_role(paired_revision)
+                if paired_revision is not None
+                else None
+            ),
+            applied_revision_iri=(
+                applied_revision.iri if applied_revision is not None else None
+            ),
+            staged_revision_iri=(
+                staged_revision.iri if staged_revision is not None else None
+            ),
+            current_staged_revision_iri=(
+                current_staged_revision.iri
+                if current_staged_revision is not None
+                else None
+            ),
+            current_revision_iri=(
+                current_staged_revision.iri
+                if current_staged_revision is not None
+                else None
+            ),
+            latest_revision_iri=latest_revision.iri,
+            latest_role=self._revision_lineage_role(latest_revision),
+            restage_chain=restage_chain,
+            restage_chain_iris=[item.iri for item in restage_chain],
+            alternative_revision_iris=alternative_revision_iris,
+            related_revision_iris=self._revision_lineage_related_revision_iris(
+                selected=selected,
+                paired=paired_revision,
+                restage_chain=restage_chain,
+                current_staged_revision=current_staged_revision,
+                applied_revision=applied_revision,
+                staged_revision=staged_revision,
+                latest_revision=latest_revision,
+                alternative_revision_iris=alternative_revision_iris,
+            ),
+            next_action=next_action,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+            warnings=warnings,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
+        )
+
+    def _revision_lineage_restage_chain(
+        self,
+        seed: GraphRevisionListItem,
+        by_iri: dict[str, GraphRevisionListItem],
+    ) -> tuple[list[GraphRevisionListItem], list[str]]:
+        ancestors: list[GraphRevisionListItem] = []
+        seen = {seed.iri}
+        warnings: list[str] = []
+        current = seed
+        while current.restaged_from is not None:
+            if current.restaged_from not in by_iri:
+                warnings.append(
+                    "Restage lineage points to missing source "
+                    f"'{current.restaged_from}'."
+                )
+                break
+            if current.restaged_from in seen:
+                warnings.append(
+                    "Restage lineage cycle detected at "
+                    f"'{current.restaged_from}'."
+                )
+                break
+            current = by_iri[current.restaged_from]
+            ancestors.append(current)
+            seen.add(current.iri)
+        chain = list(reversed(ancestors)) + [seed]
+        current = seed
+        while current.restaged_by is not None:
+            if current.restaged_by not in by_iri:
+                warnings.append(
+                    "Restage lineage points to missing successor "
+                    f"'{current.restaged_by}'."
+                )
+                break
+            if current.restaged_by in seen:
+                warnings.append(
+                    "Restage lineage cycle detected at "
+                    f"'{current.restaged_by}'."
+                )
+                break
+            current = by_iri[current.restaged_by]
+            chain.append(current)
+            seen.add(current.iri)
+        return chain, warnings
+
+    @staticmethod
+    def _revision_lineage_direct_pair(
+        selected: GraphRevisionListItem,
+        by_iri: dict[str, GraphRevisionListItem],
+    ) -> tuple[GraphRevisionListItem | None, GraphRevisionListItem | None]:
+        if selected.record_kind == "applied_event":
+            staged = (
+                by_iri.get(selected.applies_staged_revision)
+                if selected.applies_staged_revision is not None
+                else None
+            )
+            return selected, staged
+        if selected.applied_by is not None:
+            return by_iri.get(selected.applied_by), selected
+        if selected.record_kind == "staged_patch":
+            return None, selected
+        return None, None
+
+    @staticmethod
+    def _revision_lineage_applied_source(
+        selected: GraphRevisionListItem,
+        restage_chain: list[GraphRevisionListItem],
+    ) -> GraphRevisionListItem | None:
+        if selected.record_kind == "applied_event":
+            for item in restage_chain:
+                if item.iri == selected.applies_staged_revision:
+                    return item
+            return None
+        for item in reversed(restage_chain):
+            if item.applied_by is not None:
+                return item
+        return selected if selected.applied_by is not None else None
+
+    @staticmethod
+    def _revision_lineage_role(item: GraphRevisionListItem) -> str:
+        if item.record_kind == "applied_event":
+            return "applied_event"
+        if item.applied_by is not None:
+            return "applied_source"
+        if item.current_restaged_by is not None:
+            return "restaged_source"
+        if item.is_current_staged_work:
+            return "current_staged_revision"
+        if item.record_kind == "staged_patch":
+            return "staged_revision"
+        return item.record_kind
+
+    @staticmethod
+    def _revision_lineage_related_revision_iris(
+        *,
+        selected: GraphRevisionListItem,
+        paired: GraphRevisionListItem | None,
+        restage_chain: list[GraphRevisionListItem],
+        current_staged_revision: GraphRevisionListItem | None,
+        applied_revision: GraphRevisionListItem | None,
+        staged_revision: GraphRevisionListItem | None,
+        latest_revision: GraphRevisionListItem,
+        alternative_revision_iris: list[str],
+    ) -> list[str]:
+        values: list[str | None] = [
+            selected.iri,
+            paired.iri if paired is not None else None,
+            *(item.iri for item in restage_chain),
+            current_staged_revision.iri
+            if current_staged_revision is not None
+            else None,
+            applied_revision.iri if applied_revision is not None else None,
+            staged_revision.iri if staged_revision is not None else None,
+            latest_revision.iri,
+            *alternative_revision_iris,
+        ]
+        for item in [selected, *restage_chain]:
+            values.extend(
+                [
+                    item.applied_by,
+                    item.applies_staged_revision,
+                    item.restaged_from,
+                    item.restaged_by,
+                    item.current_restaged_by,
+                    item.alternative_to,
+                    item.current_alternative_to,
+                ]
+            )
+        return [value for value in dict.fromkeys(values) if value is not None]
+
+    @staticmethod
+    def _revision_lineage_alternative_revision_iris(
+        *,
+        selected: GraphRevisionListItem,
+        restage_chain: list[GraphRevisionListItem],
+        by_iri: dict[str, GraphRevisionListItem],
+    ) -> list[str]:
+        seed_iris = {selected.iri, *(item.iri for item in restage_chain)}
+        values: list[str | None] = []
+        for item in [selected, *restage_chain]:
+            values.extend([item.alternative_to, item.current_alternative_to])
+        for item in by_iri.values():
+            if item.iri in seed_iris:
+                continue
+            if (
+                item.alternative_to in seed_iris
+                or item.current_alternative_to in seed_iris
+            ):
+                values.append(item.iri)
+        return [value for value in dict.fromkeys(values) if value is not None]
 
     def list_resource_revisions(
         self,

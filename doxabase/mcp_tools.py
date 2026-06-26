@@ -164,6 +164,23 @@ def list_graph_revisions_tool(
     )
 
 
+def describe_revision_lineage_tool(
+    db: DoxaBase,
+    iri: str,
+    graph: str | None = "history",
+    include_apply_checks: bool = True,
+    drift_detail: str = "summary",
+) -> dict[str, Any]:
+    return to_dict(
+        db.describe_revision_lineage(
+            iri=iri,
+            graph=graph,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,  # type: ignore[arg-type]
+        )
+    )
+
+
 def list_resource_revisions_tool(
     db: DoxaBase,
     resource_iri: str,

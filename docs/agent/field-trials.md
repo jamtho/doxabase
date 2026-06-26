@@ -1094,6 +1094,13 @@ few useful gaps:
   diagnostic framings side by side. Validation on an incomplete shape-backed
   sibling gave useful repair guidance while the repaired sibling stayed
   reviewable.
+- A generic staged-lineage design trial found agents could reconstruct
+  restage/apply chains from list rows, staged details, applied details, and
+  resource lineage, but the join was too much ceremony when the handoff started
+  with only a revision IRI. `describe_revision_lineage` now provides a read-only
+  graph-level lineage card with selected/pair roles, restage chain, alternatives,
+  current/latest pointers, warnings, and next-action routing while leaving patch
+  content and applied diffs to the existing focused helpers.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

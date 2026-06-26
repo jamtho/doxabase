@@ -18,6 +18,7 @@ from doxabase.mcp_tools import (
     describe_pattern_tool,
     describe_profile_run_tool,
     describe_query_context_tool,
+    describe_revision_lineage_tool,
     describe_resource_revision_lineage_tool,
     describe_resource_tool,
     describe_revision_snapshot_evidence_tool,
@@ -348,6 +349,23 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             current_staged_work_only=current_staged_work_only,
             limit=limit,
             offset=offset,
+        )
+
+    @server.tool(name="doxabase.describe_revision_lineage")
+    def describe_revision_lineage(
+        iri: str,
+        graph: str | None = "history",
+        include_apply_checks: bool = True,
+        drift_detail: str = "summary",
+    ) -> dict[str, Any]:
+        """Describe one graph revision's restage/apply lineage."""
+
+        return describe_revision_lineage_tool(
+            db,
+            iri=iri,
+            graph=graph,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
         )
 
     @server.tool(name="doxabase.list_resource_revisions")

@@ -1873,6 +1873,50 @@ caller-authored staged repair that used `restages_revision`; in both cases,
 route follow-up work by `current_restaged_by` when the stale source has a
 successor.
 
+`db.describe_revision_lineage(revision_iri, include_apply_checks=True,
+drift_detail="summary")` returns `RevisionLineageDescription`:
+
+```python
+lineage.selected_revision
+lineage.selected_role
+lineage.paired_revision
+lineage.paired_role
+lineage.applied_revision_iri
+lineage.staged_revision_iri
+lineage.current_staged_revision_iri
+lineage.current_revision_iri
+lineage.latest_revision_iri
+lineage.latest_role
+lineage.restage_chain
+lineage.restage_chain_iris
+lineage.alternative_revision_iris
+lineage.related_revision_iris
+lineage.next_action
+lineage.suggested_next_actions
+lineage.suggested_next_calls
+lineage.warnings
+lineage.include_apply_checks
+lineage.drift_detail
+```
+
+`selected_revision`, `paired_revision`, and `restage_chain[]` are normal
+`GraphRevisionListItem` rows. `selected_role` / `paired_role` values include
+`applied_event`, `applied_source`, `restaged_source`,
+`current_staged_revision`, `staged_revision`, and other record kinds for
+non-patch history. `restage_chain_iris` walks from the oldest visible source to
+the latest visible successor for the selected proposal family. When a successor
+has already been applied, `latest_revision_iri` points at the applied event and
+`next_action` prefers the applied-event inspection route. When a successor is
+still live staged work, `current_staged_revision_iri` and `current_revision_iri`
+both name that current row.
+
+Use this helper when the question starts with "what happened to this revision?"
+and is not resource-specific. It is a compact lineage and routing card, not a
+patch or diff payload. Use `describe_staged_revision()` for staged patch
+content, `describe_applied_revision_diff()` for stored applied before/after
+diffs, and `describe_resource_revision_lineage()` when the route should be
+filtered through one resource.
+
 `db.list_resource_revisions(resource_iri, include_patch_mentions=True,
 include_apply_checks=True)` returns `ResourceRevisionList`:
 

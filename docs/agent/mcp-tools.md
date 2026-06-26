@@ -130,6 +130,19 @@ arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or
 call `check_staged_revision_apply` when you need the actual changed triples.
 
+`doxabase.describe_revision_lineage`
+
+Describes one graph revision's staged/applied lineage by revision IRI. Use it
+when you already have a staged source, restaged successor, or applied event IRI
+and need the compact relationship card without opening patch payloads. The
+response includes the selected list row, selected role, visible paired
+staged/applied row, applied and staged revision IRIs, current staged successor
+when one is still live, latest applied/current revision, restage chain IRIs,
+alternative revision IRIs, related revision IRIs, warnings for broken lineage,
+and next-action routing from the latest row. It is a read-only routing helper,
+not a diff browser; call `describe_staged_revision` for patch content and
+`describe_applied_revision_diff` for stored before/after diffs.
+
 `doxabase.list_resource_revisions`
 
 Lists revisions that explicitly touch one resource. Matches come from

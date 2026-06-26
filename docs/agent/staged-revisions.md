@@ -113,6 +113,11 @@ and you want its live `ready`, `conflict`, `validation_failed`, `noop`, or
 full patch checks and validation result payloads, but includes compact
 `next_action` for queue routing; call `check_staged_revision_apply` for full
 diagnostics.
+Use `doxabase.describe_revision_lineage` when you have a staged source,
+restaged successor, or applied event IRI and want the compact restage/apply
+route before deciding whether to inspect patch content. It surfaces the visible
+paired staged/applied row, current/latest revision pointers, alternatives, and
+next action without reading full patches.
 
 Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
 proposal. The export includes a live `Current Apply Check` section generated at

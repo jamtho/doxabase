@@ -74,6 +74,10 @@ metadata there.
 Use `list_graph_revisions()` when you need to discover staged, applied, or
 historical revision records. Use `describe_graph_revision()` when you want a
 compact review of one revision record instead of generic outgoing triples.
+Use `describe_revision_lineage(revision_iri)` when you already have any staged
+source, restaged successor, or applied event IRI and need the graph-level
+restage/apply chain, current/latest pointers, alternatives, and next route
+without patch payloads.
 Graph snapshots include both `triple_count` and a `sha256:<hex>` content digest;
 matching counts alone do not prove two revision contexts are identical.
 Exact staged/apply snapshot rows are SQLite-side review state. RDF
@@ -348,6 +352,10 @@ diagnostics, impacts, or judgement panels. For a mixed queue, use
 `export_staged_revisions()` or `restage_staged_revisions(path=...)` and read
 `bundle_summary` to separate already-applied inspection targets, unresolved
 stale proposals, validation failures, and current mutation-review candidates.
+If your starting point is a single revision IRI and you only need routing
+context, call `describe_revision_lineage()` first. It joins the selected row to
+its visible staged/applied pair, restage chain, alternatives, latest row, and
+next action without requiring a resource IRI or large patch payload.
 
 A cold recovery script usually follows this order:
 
