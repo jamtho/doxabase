@@ -839,9 +839,10 @@ success it records an `rc:AppliedStagedRevision` history event linked to the
 staged revision. The return payload includes
 `post_apply_recheck_revision_iris` for other current staged revisions sharing
 changed graphs, plus `post_apply_recheck_revisions` rows with each revision's
-`changed_graphs` and `shared_changed_graphs`. Re-run apply checks on those rows
-before further mutation. It is a first apply path, not a full merge/rebase
-workflow.
+`changed_graphs`, `shared_changed_graphs`, fresh `application_status`,
+`next_action`, `suggested_next_actions`, and `suggested_next_calls`. Re-run
+apply checks on those rows before further mutation when other graph changes may
+have happened. It is a first apply path, not a full merge/rebase workflow.
 
 `doxabase.export_staged_revision`
 
@@ -893,7 +894,7 @@ graph that should be re-checked after each apply;
 list for pre-apply grouped-review hazards.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for the same list.
 `apply_staged_revision` returns the post-apply affected-sibling queue for the
-revision that was actually applied.
+revision that was actually applied, including live routing fields on each row.
 Treat
 `recommended_mutation_review_iris` as a broad compatibility queue and prefer the
 narrower apply/restage, repair, or applied-inspection fields when routing

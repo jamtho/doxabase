@@ -1790,14 +1790,19 @@ revisions that share a changed graph with the applied revision.
 item.iri
 item.changed_graphs
 item.shared_changed_graphs
+item.application_status
+item.next_action
+item.suggested_next_actions
+item.suggested_next_calls
 ```
 
-Re-run `check_staged_revision_apply` before acting on those rows; the queue is a
-stale hint, not an apply recommendation. `shared_changed_graphs` explains why
-the row was included after this apply. The list may include repair-only rows
-such as patch conflicts or validation failures that share a changed graph; route
-them through the fresh apply check or grouped `next_action_queue`, not by the
-presence of the recheck IRI alone.
+The routing fields are computed immediately after the apply that created the
+queue. Re-run `check_staged_revision_apply` before mutating if substantial time
+has passed or another graph change has happened. `shared_changed_graphs`
+explains why the row was included after this apply. The list may include
+repair-only rows such as patch conflicts or validation failures that share a
+changed graph; route them through `next_action` or the fresh apply check, not by
+the presence of the recheck IRI alone.
 
 `db.describe_applied_revision_diff(applied_revision_iri, include_triples=False,
 max_triples=500)` returns `AppliedRevisionDiffDescription`:

@@ -803,7 +803,12 @@ few useful gaps:
 - A staged workflow trial found batch-restage rows made agents join back to
   revision listings to route the current post-batch successor. Batch items now
   carry `next_action_after` and `suggested_next_actions_after` for their
-  `current_revision_iri`.
+  `current_revision_iri`. A follow-up apply-loop trial found
+  `post_apply_recheck_revisions` had the affected sibling IRIs but not their
+  live route after the mutation. Apply results now include fresh
+  `application_status`, `next_action`, `suggested_next_actions`, and
+  `suggested_next_calls` on each post-apply recheck row, so automation can
+  restage/repair/inspect without joining back to revision listings first.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

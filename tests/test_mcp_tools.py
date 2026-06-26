@@ -1350,13 +1350,21 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["staged_revision_iri"] == staged["revision_iri"]
     assert result["changed_graphs"] == ["map"]
     assert result["post_apply_recheck_revision_iris"] == [sibling["revision_iri"]]
-    assert result["post_apply_recheck_revisions"] == [
-        {
-            "iri": sibling["revision_iri"],
-            "changed_graphs": ["map"],
-            "shared_changed_graphs": ["map"],
-        }
-    ]
+    assert len(result["post_apply_recheck_revisions"]) == 1
+    recheck = result["post_apply_recheck_revisions"][0]
+    assert recheck["iri"] == sibling["revision_iri"]
+    assert recheck["changed_graphs"] == ["map"]
+    assert recheck["shared_changed_graphs"] == ["map"]
+    assert recheck["application_status"] == "conflict"
+    assert recheck["next_action"]["action_type"] == "restage_after_review"
+    assert recheck["next_action"]["tool_name"] == "restage_staged_revision"
+    assert recheck["next_action"]["arguments"] == {"iri": sibling["revision_iri"]}
+    assert recheck["suggested_next_actions"][-1]["tool_name"] == (
+        "restage_staged_revision"
+    )
+    assert recheck["suggested_next_calls"][-1].startswith(
+        "restage_staged_revision("
+    )
     assert result["patches_applied"] == 1
     assert result["triples_added"] == 3
     assert result["validation_conforms"] is True

@@ -974,8 +974,9 @@ graph-version workflow. The return payload includes
 `post_apply_recheck_revision_iris`, a list of other current staged revisions
 sharing changed graphs that should be rechecked before any further apply, and
 `post_apply_recheck_revisions`, compact rows with each sibling's
-`changed_graphs` plus `shared_changed_graphs` explaining why it is in the
-post-apply queue.
+`changed_graphs`, `shared_changed_graphs`, fresh `application_status`,
+`next_action`, `suggested_next_actions`, and `suggested_next_calls` explaining
+why it is in the post-apply queue and how to route it.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,

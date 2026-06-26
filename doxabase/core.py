@@ -478,6 +478,10 @@ class PostApplyRecheckRevision:
     iri: str
     changed_graphs: list[str]
     shared_changed_graphs: list[str]
+    application_status: str
+    next_action: RevisionNextAction | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -14684,6 +14688,14 @@ class DoxaBase:
             ]
             if not shared_changed_graphs:
                 continue
+            apply_check = self.check_staged_revision_apply(revision_iri)
+            next_action = self._revision_next_action(
+                revision_iri,
+                apply_status=apply_check.status,
+                apply_decision=apply_check.decision,
+                stale_resolution_state=None,
+                suggested_next_actions=apply_check.suggested_next_actions,
+            )
             candidate_rows.append(
                 (
                     self._first_object(data_graphs, revision_iri, "rc:createdAt")
@@ -14695,6 +14707,10 @@ class DoxaBase:
                         iri=revision_iri,
                         changed_graphs=candidate_changed_graphs,
                         shared_changed_graphs=shared_changed_graphs,
+                        application_status=apply_check.status,
+                        next_action=next_action,
+                        suggested_next_actions=apply_check.suggested_next_actions,
+                        suggested_next_calls=apply_check.suggested_next_calls,
                     ),
                 )
             )

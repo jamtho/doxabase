@@ -4347,9 +4347,17 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     result = db.apply_staged_revision(first_restaged.revision_iri)
     assert result.post_apply_recheck_revision_iris == [second_restaged.revision_iri]
     assert len(result.post_apply_recheck_revisions) == 1
-    assert result.post_apply_recheck_revisions[0].iri == second_restaged.revision_iri
-    assert result.post_apply_recheck_revisions[0].changed_graphs == ["map"]
-    assert result.post_apply_recheck_revisions[0].shared_changed_graphs == ["map"]
+    recheck = result.post_apply_recheck_revisions[0]
+    assert recheck.iri == second_restaged.revision_iri
+    assert recheck.changed_graphs == ["map"]
+    assert recheck.shared_changed_graphs == ["map"]
+    assert recheck.application_status == "conflict"
+    assert recheck.next_action is not None
+    assert recheck.next_action.action_type == "restage_after_review"
+    assert recheck.next_action.tool_name == "restage_staged_revision"
+    assert recheck.next_action.arguments == {"iri": second_restaged.revision_iri}
+    assert recheck.suggested_next_actions[-1].tool_name == "restage_staged_revision"
+    assert recheck.suggested_next_calls[-1].startswith("restage_staged_revision(")
     second_check_after_apply = db.check_staged_revision_apply(
         second_restaged.revision_iri
     )

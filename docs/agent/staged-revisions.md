@@ -440,9 +440,11 @@ conservative:
 
 After an apply, treat `post_apply_recheck_revisions` as the affected-sibling
 queue for the mutation that just happened. For each row, inspect
-`shared_changed_graphs`, re-run `check_staged_revision_apply`, export or restage
-conflicts, and discard any grouped readiness from before the apply. The queue is
-a recheck cue, not permission to apply the siblings.
+`shared_changed_graphs`, then use the row's fresh `application_status`,
+`next_action`, `suggested_next_actions`, and `suggested_next_calls` to route the
+next step. Re-run `check_staged_revision_apply` before mutating if substantial
+time has passed or other graph changes have happened. The queue is a recheck
+cue, not permission to apply the siblings.
 
 After application, `describe_graph_revision()` on the applied event exposes
 `applies_staged_revision`, and `describe_staged_revision()` on the staged source
