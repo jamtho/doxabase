@@ -174,6 +174,10 @@ created during that run, not as an apply queue. Each item's `status_after`,
 describe `current_revision_iri` after the batch decision; use
 `next_action_after` and `suggested_next_actions_after` for the concrete
 post-batch route, then use `check_staged_revision_apply()` before each apply.
+Each item also carries `source_staged_validation_status` /
+`source_validation_result_count` and `current_staged_validation_status` /
+`current_validation_result_count`, so a dry-run consumer can see stored
+staged-time validation failures without joining against the grouped summaries.
 After any successful apply,
 discard old grouped readiness and re-check or regenerate the bundle before
 touching remaining candidates. In a mixed batch, a created successor can be

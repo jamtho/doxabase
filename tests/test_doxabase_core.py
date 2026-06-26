@@ -4065,10 +4065,14 @@ def test_batch_restage_items_report_validation_failed_successor_status(
     assert item.restaged_revision_iri == successor_iri
     assert item.current_revision_iri == successor_iri
     assert item.status_before == "conflict"
+    assert item.source_staged_validation_status == "failed"
+    assert item.source_validation_result_count == 1
     assert item.status_after == "validation_failed"
     assert item.decision_after == "inspect_validation_results"
     assert item.stale_resolution_state_after == "restaged_successor_not_ready"
     assert item.blocking_reasons_after == ["validation_failed"]
+    assert item.current_staged_validation_status == "failed"
+    assert item.current_validation_result_count == 1
     assert item.triples_to_add_after > 0
     assert item.triples_to_remove_after == 0
     assert "current revision fails validation" in item.note

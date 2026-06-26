@@ -605,10 +605,14 @@ class StagedGraphRevisionBatchRestageItem:
     decision_before: str
     stale_resolution_state_before: str | None
     blocking_reasons_before: list[str]
+    source_staged_validation_status: str
+    source_validation_result_count: int | None
     status_after: str
     decision_after: str
     stale_resolution_state_after: str | None
     blocking_reasons_after: list[str]
+    current_staged_validation_status: str
+    current_validation_result_count: int | None
     triples_to_add_after: int
     triples_to_remove_after: int
     action: str
@@ -14738,6 +14742,10 @@ class DoxaBase:
 
         for source_iri in processed_revision_iris:
             source = self.describe_staged_revision(source_iri)
+            source_staged_validation_status = self._staged_validation_status(
+                conforms=source.validation_conforms,
+                result_count=source.validation_result_count,
+            )
             check = self.check_staged_revision_apply(
                 source.iri,
                 validation_scope=validation_scope,
@@ -14837,6 +14845,10 @@ class DoxaBase:
             else:
                 current_description = source
                 current_check = check
+            current_staged_validation_status = self._staged_validation_status(
+                conforms=current_description.validation_conforms,
+                result_count=current_description.validation_result_count,
+            )
             current_restaged_from = (
                 current_description.restaged_from.iri
                 if current_description.restaged_from is not None
@@ -14889,10 +14901,20 @@ class DoxaBase:
                     decision_before=check.decision,
                     stale_resolution_state_before=stale_resolution_state,
                     blocking_reasons_before=check.blocking_reasons,
+                    source_staged_validation_status=(
+                        source_staged_validation_status
+                    ),
+                    source_validation_result_count=source.validation_result_count,
                     status_after=current_check.status,
                     decision_after=current_check.decision,
                     stale_resolution_state_after=stale_resolution_state_after,
                     blocking_reasons_after=current_check.blocking_reasons,
+                    current_staged_validation_status=(
+                        current_staged_validation_status
+                    ),
+                    current_validation_result_count=(
+                        current_description.validation_result_count
+                    ),
                     triples_to_add_after=current_check.triples_to_add,
                     triples_to_remove_after=current_check.triples_to_remove,
                     action=action,

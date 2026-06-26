@@ -854,6 +854,10 @@ successor exists yet. For `skipped_not_restageable`, inspect `status_before` and
 rows. Each item also carries `status_after`, `decision_after`,
 `stale_resolution_state_after`, `blocking_reasons_after`, and effective triple
 deltas for `current_revision_iri` after the batch decision. Treat
+`source_staged_validation_status` / `source_validation_result_count` and
+`current_staged_validation_status` / `current_validation_result_count` as the
+stored staged-time validation signals for the source and current rows; they are
+separate from the live apply status fields.
 `restaged_revision_iris` as a creation list, not an apply queue; use
 `bundle_summary.ready_restage_successor_revision_iris` plus a final apply check
 for candidates to apply. If an already-handled row has

@@ -979,7 +979,11 @@ whether a row needs apply, repair, or replacement. Each item also carries
 `status_after`, `decision_after`, `stale_resolution_state_after`,
 `blocking_reasons_after`, and effective triple deltas for `current_revision_iri`
 after the batch decision. `restaged_revision_iris` is only a list of created
-successors, not an apply queue; created successors may still be
+successors, not an apply queue. `source_staged_validation_status` /
+`source_validation_result_count` and `current_staged_validation_status` /
+`current_validation_result_count` preserve stored staged-time validation signals
+for the source and post-batch current rows separately from live apply status;
+created successors may still be
 validation-failed, no-op, or otherwise not ready. Use
 `bundle_summary.ready_restage_successor_revision_iris` plus a final
 `check_staged_revision_apply()` before applying. If an already-handled row has

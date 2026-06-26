@@ -2571,8 +2571,10 @@ batch.export_record
 
 Each `batch.items` row reports `source_revision_iri`, `summary`,
 `status_before`, `decision_before`, `stale_resolution_state_before`,
-`blocking_reasons_before`, `status_after`, `decision_after`,
+`blocking_reasons_before`, `source_staged_validation_status`,
+`source_validation_result_count`, `status_after`, `decision_after`,
 `stale_resolution_state_after`, `blocking_reasons_after`,
+`current_staged_validation_status`, `current_validation_result_count`,
 `triples_to_add_after`, `triples_to_remove_after`, `action`,
 `not_restageable_reason`, `restaged_revision_iri`,
 `restaged_from`, `current_restaged_by`, `current_revision_iri`,
@@ -2594,6 +2596,12 @@ is still the stale source. Use `next_action_after` as the compact route for
 `current_revision_iri`, and read `suggested_next_actions_after` when a script
 needs concrete follow-up calls without joining back through
 `list_graph_revisions`.
+`source_staged_validation_status` and `source_validation_result_count` preserve
+the source row's stored staged-time validation signal. The `current_*`
+validation fields give the same stored staged-time signal for
+`current_revision_iri`, which can differ after a real restage creates a
+successor. These are separate from live `status_after` and
+`blocking_reasons_after`.
 `stale_resolution_state_after == "restaged_successor_stale_unresolved"` means a
 skipped already-handled source points to a current successor that is itself
 stale; inspect or restage `current_revision_iri` before applying anything.

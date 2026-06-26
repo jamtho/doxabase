@@ -690,7 +690,10 @@ few useful gaps:
   from `validation_failed` to `conflict`. `list_graph_revisions` now supports
   `staged_validation_status="failed"` for staged-time validation failures, and
   grouped export summaries expose `staged_validation_failed_revision_iris`
-  beside the live `validation_failed_revision_iris` queue.
+  beside the live `validation_failed_revision_iris` queue. A later masked
+  validation-failure trial showed batch restage item consumers still had to join
+  row state back to summaries; batch items now carry source/current
+  staged-validation status and result counts directly.
 - A conflict/restage queue trial showed that the revision surfaces had enough
   raw signal but made agents join status, stale state, recommendations, and
   suggested actions to choose the next move. Revision lists and grouped exports
