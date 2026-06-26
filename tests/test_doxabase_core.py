@@ -3684,6 +3684,11 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
 
     assert check.status == "conflict"
     assert check.decision == "restage_against_current_graph"
+    assert check.recommended_resolution is not None
+    assert "stage_map_assertion_change replacement" in (
+        check.recommended_resolution
+    )
+    assert "mechanically restaging" in check.recommended_resolution
     assert check.next_action is not None
     assert check.next_action.action_type == "repair_or_replace"
     assert check.next_action.queue == "repair_or_replace"
@@ -3759,6 +3764,80 @@ def test_stale_column_same_slot_drift_keeps_restage_route(
     assert not any(
         action.tool_name == "stage_map_assertion_change"
         for action in check.suggested_next_actions
+    )
+
+
+def test_batch_restage_skips_row_semantics_same_slot_replacement(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Model Orders as snapshot rows",
+        rationale="Original row-grain proposal before an intervening map edit.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics rc:SnapshotRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.record_map_dataset(orders, row_semantics="rc:EventRow")
+
+    dry_run = db.restage_staged_revisions([source.revision_iri], dry_run=True)
+
+    assert dry_run.would_restage_revision_iris == []
+    assert dry_run.restaged_revision_iris == []
+    assert dry_run.skipped_revision_iris == [source.revision_iri]
+    assert dry_run.not_restageable_revision_iris == [source.revision_iri]
+    assert dry_run.not_restageable_revision_iris_by_reason == {
+        "same_slot_replacement": [source.revision_iri]
+    }
+    dry_item = dry_run.items[0]
+    assert dry_item.action == "skipped_not_restageable"
+    assert dry_item.not_restageable_reason == "same_slot_replacement"
+    assert dry_item.status_before == "conflict"
+    assert dry_item.status_after == "conflict"
+    assert dry_item.current_revision_iri == source.revision_iri
+    assert dry_item.restaged_revision_iri is None
+    assert dry_item.next_action_after is not None
+    assert dry_item.next_action_after.queue == "repair_or_replace"
+    assert dry_item.next_action_after.tool_name == "stage_map_assertion_change"
+    assert "repair or replacement" in dry_item.note
+    assert any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in dry_item.suggested_next_actions_after
+    )
+
+    batch = db.restage_staged_revisions([source.revision_iri])
+
+    assert batch.would_restage_revision_iris == []
+    assert batch.restaged_revision_iris == []
+    assert batch.skipped_revision_iris == [source.revision_iri]
+    assert batch.not_restageable_revision_iris_by_reason == {
+        "same_slot_replacement": [source.revision_iri]
+    }
+    assert batch.current_revision_by_source == {
+        source.revision_iri: source.revision_iri
+    }
+    description = db.describe_staged_revision(source.revision_iri)
+    assert description.restaged_by is None
+    assert batch.bundle_summary.next_action_queue == {
+        "repair_or_replace": [source.revision_iri]
+    }
+    assert batch.bundle_summary.recommended_repair_review_iris == [
+        source.revision_iri
+    ]
+    assert (
+        "stage_map_assertion_change replacement"
+        in batch.revision_summaries[0].apply_recommended_resolution
     )
 
 

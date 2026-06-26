@@ -964,6 +964,12 @@ deltas for `current_revision_iri` after the batch decision. Treat
 `current_staged_validation_status` / `current_validation_result_count` as the
 stored staged-time validation signals for the source and current rows; they are
 separate from the live apply status fields.
+Stale row-semantics same-slot conflicts that already carry a
+`stage_map_assertion_change` replacement suggestion are also
+`skipped_not_restageable`, with
+`not_restageable_reason="same_slot_replacement"`; follow
+`next_action_after` / `suggested_next_actions_after` instead of forcing a
+mechanical restage.
 In real batch runs, top-level `current_revision_by_source` is recomputed after
 the whole batch, so a requested stale ancestor maps to the latest successor even
 when an intermediate successor was also processed and restaged. Item-level

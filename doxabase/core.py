@@ -16898,7 +16898,20 @@ class DoxaBase:
                     check.blocking_reasons
                 )
             )
-            if is_restageable_conflict and restaged_by is None:
+            repair_route = (
+                check.next_action
+                if (
+                    check.next_action is not None
+                    and check.next_action.tool_name
+                    == "stage_map_assertion_change"
+                )
+                else None
+            )
+            if (
+                is_restageable_conflict
+                and restaged_by is None
+                and repair_route is None
+            ):
                 if dry_run:
                     would_restage_revision_iris.append(source.iri)
                     action = "would_restage"
@@ -16924,6 +16937,28 @@ class DoxaBase:
                         "Created a refreshed staged revision against current graph "
                         "state; review it before applying."
                     )
+            elif (
+                is_restageable_conflict
+                and restaged_by is None
+                and repair_route is not None
+            ):
+                skipped_revision_iris.append(source.iri)
+                not_restageable_revision_iris.append(source.iri)
+                not_restageable_reason = (
+                    self._batch_restage_not_restageable_reason(check)
+                )
+                not_restageable_revision_iris_by_reason.setdefault(
+                    not_restageable_reason,
+                    [],
+                ).append(source.iri)
+                action = "skipped_not_restageable"
+                note = (
+                    "Skipped because the current apply check recommends repair "
+                    "or replacement instead of mechanical restage "
+                    f"(reason='{not_restageable_reason}', "
+                    f"status='{check.status}', "
+                    f"blocking_reasons={check.blocking_reasons})."
+                )
             elif is_restageable_conflict and restaged_by is not None:
                 skipped_revision_iris.append(source.iri)
                 already_handled_revision_iris.append(source.iri)
@@ -17122,6 +17157,11 @@ class DoxaBase:
         self,
         check: StagedRevisionApplyCheck,
     ) -> str:
+        if (
+            check.next_action is not None
+            and check.next_action.tool_name == "stage_map_assertion_change"
+        ):
+            return "same_slot_replacement"
         if check.decision == "inspect_restaged_source_validation_failure":
             return check.decision
         if "patch_conflict" in check.blocking_reasons:
@@ -18007,6 +18047,7 @@ class DoxaBase:
                     self._staged_apply_check_recommended_resolution(
                         status=status,
                         blocking_reasons=blocking_reasons,
+                        suggested_next_actions=suggested_next_actions,
                         restaged_source_validation_warning=(
                             restaged_source_validation_warning
                         ),
@@ -18310,6 +18351,7 @@ class DoxaBase:
             recommended_resolution=self._staged_apply_check_recommended_resolution(
                 status=status,
                 blocking_reasons=blocking_reasons,
+                suggested_next_actions=suggested_next_actions,
                 restaged_source_validation_warning=(
                     restaged_source_validation_warning
                 ),
@@ -18930,6 +18972,7 @@ class DoxaBase:
         *,
         status: str,
         blocking_reasons: list[str],
+        suggested_next_actions: list[SuggestedNextAction] | None = None,
         restaged_source_validation_warning: str | None = None,
     ) -> str | None:
         if status == "ready" and restaged_source_validation_warning is not None:
@@ -18955,6 +18998,16 @@ class DoxaBase:
             return (
                 "Inspect the current refreshed successor; do not apply this "
                 "superseded staged source."
+            )
+        if status == "conflict" and any(
+            action.tool_name == "stage_map_assertion_change"
+            for action in suggested_next_actions or []
+        ):
+            return (
+                "Exact snapshot drift shows a different current value for the "
+                "same single-valued row-semantics slot. Stage the suggested "
+                "stage_map_assertion_change replacement successor after review "
+                "instead of mechanically restaging the stale add-only patch."
             )
         if (
             "target_count_drift" in blocking_reasons
@@ -19902,7 +19955,12 @@ class DoxaBase:
         def recommend_mutation_by_decision(
             summary: StagedGraphRevisionExportSummary,
         ) -> None:
-            if summary.staged_validation_conforms is False:
+            if (
+                summary.next_action is not None
+                and summary.next_action.queue == "repair_or_replace"
+            ):
+                recommend_repair(summary.revision_iri)
+            elif summary.staged_validation_conforms is False:
                 recommend_repair(summary.revision_iri)
             elif summary.apply_decision in {
                 "review_then_apply",

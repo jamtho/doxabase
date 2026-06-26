@@ -738,7 +738,10 @@ few useful gaps:
   same-slot case and suggest
   `stage_map_assertion_change(change_kind="replace", restages_revision=...)`,
   routing compact `next_action` to `repair_or_replace` while leaving ordinary
-  count/digest drift on the restage route.
+  count/digest drift on the restage route. A follow-up batch trial showed the
+  batch restage helper also needed to respect that route; it now skips those
+  rows with `not_restageable_reason="same_slot_replacement"` instead of creating
+  the mechanically restaged validation-failure successor.
 - A controlled replacement/import trial confirmed same-count
   `replace_graph_triples`, revision metadata, default/workflow export
   boundaries, and revision-seed deep-lore expansion. It reinforced the current
