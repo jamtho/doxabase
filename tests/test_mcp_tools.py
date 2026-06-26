@@ -938,9 +938,17 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     result = list_resource_revisions_tool(db, resource_iri=orders)
 
     assert result["resource"]["iri"] == orders
+    assert result["patch_mention_scan"] == {
+        "status": "complete",
+        "unreadable_patch_count": 0,
+        "unreadable_revision_count": 0,
+        "omitted_match_risk": False,
+    }
     assert result["count"] == 2
     by_iri = {item["revision"]["iri"]: item for item in result["revisions"]}
     assert by_iri[staged["revision_iri"]]["match_types"] == ["patch_subject"]
+    assert by_iri[staged["revision_iri"]]["patch_mentions_incomplete"] is False
+    assert by_iri[staged["revision_iri"]]["patch_mentions_unreadable_count"] == 0
     assert by_iri[staged["revision_iri"]]["patch_mentions"][0][
         "matched_term_roles"
     ] == ["subject"]
@@ -953,6 +961,9 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert by_iri[applied["applied_revision_iri"]]["applied_source_revision_iri"] == (
         staged["revision_iri"]
     )
+    assert by_iri[applied["applied_revision_iri"]][
+        "applied_source_patch_mentions_incomplete"
+    ] is False
 
 
 def test_stage_map_assertion_change_tool_returns_json_like_payload(

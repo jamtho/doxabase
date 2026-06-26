@@ -702,6 +702,12 @@ matched the resource. It filters before pagination and wraps each normal
 `patch_mentions`, `applied_source_revision_iri`, and
 `applied_source_patch_mentions`. Patch mentions are compact role-aware flags,
 not patch content; call `describe_staged_revision()` for the full payload.
+Rows also expose `patch_mentions_incomplete` /
+`applied_source_patch_mentions_incomplete` plus unreadable counts when stored
+patch payloads were missing or unparseable during resource matching. The
+top-level `patch_mention_scan` summarizes complete/incomplete/not-requested
+scan status and flags `omitted_match_risk` when unreadable patch payloads may
+have hidden unanchored patch-only matches.
 `application_status="validation_failed"` means the current replay reached SHACL
 validation and failed. `staged_validation_status="failed"` means the stored
 staged-time validation failed; it still finds rows that later became live

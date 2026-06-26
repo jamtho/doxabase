@@ -4267,6 +4267,10 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
 
     assert listing.resource.iri == orders
     assert listing.include_patch_mentions is True
+    assert listing.patch_mention_scan.status == "complete"
+    assert listing.patch_mention_scan.unreadable_patch_count == 0
+    assert listing.patch_mention_scan.unreadable_revision_count == 0
+    assert listing.patch_mention_scan.omitted_match_risk is False
     assert listing.include_apply_checks is True
     assert listing.count == 3
     by_iri = {item.revision.iri: item for item in listing.revisions}
@@ -4284,6 +4288,8 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert anchored_item.patch_mentions[0].matched_term_roles == ["subject"]
     assert anchored_item.patch_mentions[0].matched_triples == 1
     assert anchored_item.patch_mentions[0].triple_count == 1
+    assert anchored_item.patch_mentions_incomplete is False
+    assert anchored_item.patch_mentions_unreadable_count == 0
     assert anchored_item.revision.application_status == "conflict"
     assert anchored_item.revision.stale_resolution_state == "stale_unresolved"
 
@@ -4300,11 +4306,157 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert applied_item.match_types == ["applied_source_patch_subject"]
     assert applied_item.applied_source_patch_mentions[0].target_graph == "map"
     assert applied_item.applied_source_patch_mentions[0].matched_triples == 1
+    assert applied_item.applied_source_patch_mentions_incomplete is False
+    assert applied_item.applied_source_patch_mentions_unreadable_count == 0
 
     anchor_only = db.list_resource_revisions(orders, include_patch_mentions=False)
+    assert anchor_only.patch_mention_scan.status == "not_requested"
+    assert anchor_only.patch_mention_scan.unreadable_patch_count == 0
+    assert anchor_only.patch_mention_scan.omitted_match_risk is False
     assert anchor_only.count == 1
     assert anchor_only.revisions[0].revision.iri == anchored.revision_iri
     assert anchor_only.revisions[0].match_types == ["revision_anchor"]
+
+
+def test_list_resource_revisions_recovers_imported_applied_source_anchors(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    source_iri = "https://example.test/project#ImportedStagedSource"
+    applied_iri = "https://example.test/project#ImportedAppliedEvent"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    db.record_graph_revision(
+        summary="Imported staged source with anchors only",
+        rationale="Imported handoff preserved anchors but omitted patch payloads.",
+        changed_graphs=["map"],
+        revision_type="rc:StagedRevision",
+        revision_iri=source_iri,
+        revision_anchors=[orders],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    db.import_trig(
+        f"""
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        GRAPH <https://richcanopy.org/graph/history> {{
+            ex:ImportedAppliedEvent a rc:GraphRevision ;
+                rc:revisionType rc:AppliedStagedRevision ;
+                rc:summary "Imported applied event" ;
+                rc:revisionRationale "Applied an imported staged source." ;
+                rc:changedGraph "map" ;
+                rc:createdAt "2026-06-01T10:01:00Z"^^xsd:dateTime ;
+                rc:appliesStagedRevision <{source_iri}> .
+        }}
+        """
+    )
+
+    listing = db.list_resource_revisions(orders)
+
+    assert listing.patch_mention_scan.status == "complete"
+    assert listing.patch_mention_scan.omitted_match_risk is False
+    by_iri = {item.revision.iri: item for item in listing.revisions}
+    assert set(by_iri) == {source_iri, applied_iri}
+    source_item = by_iri[source_iri]
+    assert source_item.revision_anchor_match is True
+    assert source_item.match_types == ["revision_anchor"]
+    applied_item = by_iri[applied_iri]
+    assert applied_item.revision.record_kind == "applied_event"
+    assert applied_item.applied_source_match is True
+    assert applied_item.applied_source_revision_iri == source_iri
+    assert applied_item.match_types == ["applied_source_revision_anchor"]
+    assert applied_item.applied_source_patch_mentions == []
+    assert applied_item.applied_source_patch_mentions_incomplete is False
+    assert applied_item.applied_source_patch_mentions_unreadable_count == 0
+
+    without_patch_mentions = db.list_resource_revisions(
+        orders,
+        include_patch_mentions=False,
+    )
+    assert {
+        item.revision.iri: item.match_types
+        for item in without_patch_mentions.revisions
+    } == {
+        source_iri: ["revision_anchor"],
+        applied_iri: ["applied_source_revision_anchor"],
+    }
+
+
+def test_list_resource_revisions_marks_unreadable_patch_mentions_incomplete(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    staged = db.stage_graph_revision(
+        summary="Malformed anchored patch for Orders",
+        rationale="Anchor keeps the revision discoverable despite bad patch RDF.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Table .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    _corrupt_staged_patch_content(
+        db,
+        staged.patches[0].patch_iri,
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders a rc:Table
+        ex:Other a rc:Dataset .
+        """,
+    )
+    unanchored = db.stage_graph_revision(
+        summary="Malformed unanchored patch for Orders",
+        rationale="Only patch parsing could reveal whether this mentions Orders.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:hasColumn ex:OrdersStatus .
+                """,
+            }
+        ],
+    )
+    _corrupt_staged_patch_content(
+        db,
+        unanchored.patches[0].patch_iri,
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders rc:hasColumn ex:OrdersStatus
+        ex:Other a rc:Dataset .
+        """,
+    )
+
+    listing = db.list_resource_revisions(orders)
+
+    assert listing.patch_mention_scan.status == "incomplete"
+    assert listing.patch_mention_scan.unreadable_patch_count == 2
+    assert listing.patch_mention_scan.unreadable_revision_count == 2
+    assert listing.patch_mention_scan.omitted_match_risk is True
+    assert listing.count == 1
+    item = listing.revisions[0]
+    assert item.revision.iri == staged.revision_iri
+    assert item.match_types == ["revision_anchor"]
+    assert item.patch_mentions == []
+    assert item.patch_mentions_incomplete is True
+    assert item.patch_mentions_unreadable_count == 1
 
 
 def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:

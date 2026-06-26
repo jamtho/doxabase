@@ -871,6 +871,21 @@ class ResourceRevisionPatchMention:
 
 
 @dataclass(frozen=True)
+class _ResourceRevisionPatchMentionScan:
+    mentions: list[ResourceRevisionPatchMention]
+    unreadable_patch_count: int
+    unreadable_patch_iris: list[str]
+
+
+@dataclass(frozen=True)
+class ResourceRevisionPatchMentionScanSummary:
+    status: str
+    unreadable_patch_count: int
+    unreadable_revision_count: int
+    omitted_match_risk: bool
+
+
+@dataclass(frozen=True)
 class ResourceRevisionListItem:
     revision: GraphRevisionListItem
     match_types: list[str]
@@ -879,7 +894,11 @@ class ResourceRevisionListItem:
     applied_source_match: bool
     applied_source_revision_iri: str | None
     patch_mentions: list[ResourceRevisionPatchMention]
+    patch_mentions_incomplete: bool
+    patch_mentions_unreadable_count: int
     applied_source_patch_mentions: list[ResourceRevisionPatchMention]
+    applied_source_patch_mentions_incomplete: bool
+    applied_source_patch_mentions_unreadable_count: int
 
 
 @dataclass(frozen=True)
@@ -890,6 +909,7 @@ class ResourceRevisionList:
     limit: int
     offset: int
     include_patch_mentions: bool
+    patch_mention_scan: ResourceRevisionPatchMentionScanSummary
     include_apply_checks: bool
     drift_detail: str
     next_action_queue: dict[str, list[str]]
@@ -3409,6 +3429,9 @@ class DoxaBase:
         )
         matched: list[ResourceRevisionListItem] = []
         staged_cache: dict[str, StagedGraphRevisionDescription | None] = {}
+        unreadable_patch_iris: set[str] = set()
+        unreadable_revision_iris: set[str] = set()
+        omitted_match_risk = False
         for item in all_revisions.revisions:
             match_types: list[str] = []
             revision_anchor_match = resource_value in self._objects(
@@ -3420,6 +3443,7 @@ class DoxaBase:
                 match_types.append("revision_anchor")
 
             patch_mentions: list[ResourceRevisionPatchMention] = []
+            patch_mentions_unreadable_count = 0
             if include_patch_mentions and item.has_patch_payload:
                 staged = self._cached_staged_revision(
                     item.iri,
@@ -3427,10 +3451,19 @@ class DoxaBase:
                     cache=staged_cache,
                 )
                 if staged is not None:
-                    patch_mentions = self._resource_revision_patch_mentions(
+                    patch_scan = self._resource_revision_patch_mentions(
                         staged,
                         resource_value,
                     )
+                    patch_mentions = patch_scan.mentions
+                    patch_mentions_unreadable_count = (
+                        patch_scan.unreadable_patch_count
+                    )
+                    if patch_scan.unreadable_patch_iris:
+                        unreadable_patch_iris.update(
+                            patch_scan.unreadable_patch_iris
+                        )
+                        unreadable_revision_iris.add(item.iri)
                     match_types.extend(
                         self._resource_revision_patch_match_types(
                             patch_mentions,
@@ -3440,6 +3473,7 @@ class DoxaBase:
 
             applied_source_revision_iri = item.applies_staged_revision
             applied_source_patch_mentions: list[ResourceRevisionPatchMention] = []
+            applied_source_patch_mentions_unreadable_count = 0
             applied_source_match = False
             if applied_source_revision_iri is not None:
                 staged = self._cached_staged_revision(
@@ -3451,16 +3485,22 @@ class DoxaBase:
                     source_anchor_match = resource_value in {
                         anchor.iri for anchor in staged.revision_anchors
                     }
-                    if source_anchor_match:
-                        applied_source_match = True
-                        match_types.append("applied_source_revision_anchor")
                     if include_patch_mentions:
-                        applied_source_patch_mentions = (
-                            self._resource_revision_patch_mentions(
-                                staged,
-                                resource_value,
-                            )
+                        applied_source_scan = self._resource_revision_patch_mentions(
+                            staged,
+                            resource_value,
                         )
+                        applied_source_patch_mentions = (
+                            applied_source_scan.mentions
+                        )
+                        applied_source_patch_mentions_unreadable_count = (
+                            applied_source_scan.unreadable_patch_count
+                        )
+                        if applied_source_scan.unreadable_patch_iris:
+                            unreadable_patch_iris.update(
+                                applied_source_scan.unreadable_patch_iris
+                            )
+                            unreadable_revision_iris.add(applied_source_revision_iri)
                         if applied_source_patch_mentions:
                             applied_source_match = True
                             match_types.extend(
@@ -3469,6 +3509,15 @@ class DoxaBase:
                                     prefix="applied_source_patch",
                                 )
                             )
+                else:
+                    source_anchor_match = resource_value in self._objects(
+                        data_graphs,
+                        applied_source_revision_iri,
+                        "rc:revisionAnchor",
+                    )
+                if source_anchor_match:
+                    applied_source_match = True
+                    match_types.append("applied_source_revision_anchor")
 
             match_types = list(dict.fromkeys(match_types))
             patch_mention_match = bool(patch_mentions)
@@ -3477,6 +3526,11 @@ class DoxaBase:
                 and not patch_mention_match
                 and not applied_source_match
             ):
+                if (
+                    patch_mentions_unreadable_count > 0
+                    or applied_source_patch_mentions_unreadable_count > 0
+                ):
+                    omitted_match_risk = True
                 continue
             matched.append(
                 ResourceRevisionListItem(
@@ -3487,7 +3541,15 @@ class DoxaBase:
                     applied_source_match=applied_source_match,
                     applied_source_revision_iri=applied_source_revision_iri,
                     patch_mentions=patch_mentions,
+                    patch_mentions_incomplete=patch_mentions_unreadable_count > 0,
+                    patch_mentions_unreadable_count=patch_mentions_unreadable_count,
                     applied_source_patch_mentions=applied_source_patch_mentions,
+                    applied_source_patch_mentions_incomplete=(
+                        applied_source_patch_mentions_unreadable_count > 0
+                    ),
+                    applied_source_patch_mentions_unreadable_count=(
+                        applied_source_patch_mentions_unreadable_count
+                    ),
                 )
             )
 
@@ -3499,6 +3561,24 @@ class DoxaBase:
             limit=limit,
             offset=offset,
             include_patch_mentions=include_patch_mentions,
+            patch_mention_scan=ResourceRevisionPatchMentionScanSummary(
+                status=(
+                    "not_requested"
+                    if not include_patch_mentions
+                    else "incomplete"
+                    if unreadable_patch_iris
+                    else "complete"
+                ),
+                unreadable_patch_count=(
+                    len(unreadable_patch_iris) if include_patch_mentions else 0
+                ),
+                unreadable_revision_count=(
+                    len(unreadable_revision_iris) if include_patch_mentions else 0
+                ),
+                omitted_match_risk=(
+                    omitted_match_risk if include_patch_mentions else False
+                ),
+            ),
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
             next_action_queue=self._revision_next_action_queue(
@@ -3524,15 +3604,18 @@ class DoxaBase:
         self,
         staged: StagedGraphRevisionDescription,
         resource_iri: str,
-    ) -> list[ResourceRevisionPatchMention]:
+    ) -> _ResourceRevisionPatchMentionScan:
         mentions: list[ResourceRevisionPatchMention] = []
+        unreadable_patch_iris: list[str] = []
         role_order = ("subject", "predicate", "object")
         for patch in staged.patches:
             if patch.content is None:
+                unreadable_patch_iris.append(patch.iri)
                 continue
             try:
                 patch_graph = self._parse_staged_patch_description(patch)
             except DoxaBaseError:
+                unreadable_patch_iris.append(patch.iri)
                 continue
             matched_roles: set[str] = set()
             matched_triples = 0
@@ -3566,7 +3649,11 @@ class DoxaBase:
                         triple_count=patch.triple_count,
                     )
                 )
-        return mentions
+        return _ResourceRevisionPatchMentionScan(
+            mentions=mentions,
+            unreadable_patch_count=len(unreadable_patch_iris),
+            unreadable_patch_iris=unreadable_patch_iris,
+        )
 
     @staticmethod
     def _resource_revision_patch_match_types(

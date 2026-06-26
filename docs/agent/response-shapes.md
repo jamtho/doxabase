@@ -1476,6 +1476,7 @@ resource_revisions.count
 resource_revisions.limit
 resource_revisions.offset
 resource_revisions.include_patch_mentions
+resource_revisions.patch_mention_scan
 resource_revisions.include_apply_checks
 resource_revisions.drift_detail
 resource_revisions.next_action_queue
@@ -1492,7 +1493,21 @@ item.patch_mention_match
 item.applied_source_match
 item.applied_source_revision_iri
 item.patch_mentions
+item.patch_mentions_incomplete
+item.patch_mentions_unreadable_count
 item.applied_source_patch_mentions
+item.applied_source_patch_mentions_incomplete
+item.applied_source_patch_mentions_unreadable_count
+```
+
+`patch_mention_scan` summarizes whether patch payload scanning was complete
+across all candidate revisions before pagination:
+
+```python
+resource_revisions.patch_mention_scan.status  # complete, incomplete, not_requested
+resource_revisions.patch_mention_scan.unreadable_patch_count
+resource_revisions.patch_mention_scan.unreadable_revision_count
+resource_revisions.patch_mention_scan.omitted_match_risk
 ```
 
 `match_types` values include `revision_anchor`, `patch_subject`,
@@ -1513,6 +1528,13 @@ mention.matched_term_roles
 mention.matched_triples
 mention.triple_count
 ```
+
+When an incompleteness flag is true, one or more stored patch payloads were
+missing or unparseable while scanning for exact resource mentions. If top-level
+`omitted_match_risk` is true, unanchored patch-only matches may have been
+filtered out because their patch payloads could not be read. Treat empty patch
+mention arrays as "no readable matching mention found", not proof that the patch
+did not touch the resource.
 
 Use this helper when the question is "what revisions touched this resource?"
 It filters before pagination and matches exact expanded RDF terms in staged
