@@ -850,10 +850,13 @@ few useful gaps:
   preserving sibling database-template mismatch audit fields. The same trial
   showed selectorless automatic calls with the allowance can be misread:
   agents should pair the allowance with an explicit selector when the blocker is
-  sibling candidate metadata. A follow-up binding trial showed that raw
-  placeholders such as `{date}` were too detached from partition lore; draft
-  plan binding rows now include partition scheme, likely partition column, and
-  granularity hints when the selected template carries that metadata. A retest
+  sibling candidate metadata. A later retest found selectorless allowance could
+  still clear one direct-clean automatic route; `draft_query_plan` now keeps the
+  context review gate active unless the allowance is paired with an explicit
+  `candidate_index` or `storage_access_iri`. A follow-up binding trial showed
+  that raw placeholders such as `{date}` were too detached from partition lore;
+  draft plan binding rows now include partition scheme, likely partition column,
+  and granularity hints when the selected template carries that metadata. A retest
   showed `draft_query_plan` was routeable enough through `handoff_kind` and
   `review_gate`, but `describe_query_context` needed a structured route into the
   documented allowance path; query contexts now include `suggested_next_actions`

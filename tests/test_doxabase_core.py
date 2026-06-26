@@ -7188,6 +7188,27 @@ def test_query_target_candidates_surface_global_blockers(
         "excluded_blocker_resource_iris": [stale_storage.iri],
     }
 
+    automatic_allowed_plan = db.draft_query_plan(
+        dataset,
+        allow_context_blocked_candidate=True,
+    )
+    assert automatic_allowed_plan.handoff_kind == "context_review_required"
+    assert automatic_allowed_plan.source_context.selection_mode == "automatic"
+    assert automatic_allowed_plan.source_context.requested_candidate_index is None
+    assert automatic_allowed_plan.source_context.allow_context_blocked_candidate is True
+    assert (
+        automatic_allowed_plan.review_gate.context_blocked_candidate_allowed is True
+    )
+    assert automatic_allowed_plan.review_gate.context_blocked_candidate_used is False
+    assert automatic_allowed_plan.review_gate.selection_overridden is False
+    assert automatic_allowed_plan.review_gate.direct_blocking_reason_codes == []
+    assert automatic_allowed_plan.review_gate.context_blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert automatic_allowed_plan.review_gate.blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+
     allowed_plan = db.draft_query_plan(
         dataset,
         candidate_index=local_index,

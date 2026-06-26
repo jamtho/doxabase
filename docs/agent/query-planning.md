@@ -59,6 +59,10 @@ When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call
 `draft_query_plan(..., candidate_index=..., allow_context_blocked_candidate=True)`
 or `draft_query_plan(..., storage_access_iri=..., allow_context_blocked_candidate=True)`.
+Do not use the allowance selectorless: the automatic selection path keeps the
+context review gate active and reports `context_blocked_candidate_allowed=True`
+with `context_blocked_candidate_used=False` until the caller names an explicit
+candidate.
 The source context keeps the automatic `query_target_decision` plus the explicit
 selection mode, and the review gate reports whether a context-blocked candidate
 was used. Only use this switch when `direct_review_required` is false for the

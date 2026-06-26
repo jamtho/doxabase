@@ -8046,6 +8046,7 @@ class DoxaBase:
         if (
             not allow_context_blocked_candidate
             or selected_candidate.direct_review_required
+            or selection_mode == "automatic"
         ):
             return selected_candidate, False, context_blocking_reasons
 
