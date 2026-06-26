@@ -2574,6 +2574,9 @@ check.semantic_risk_reasons
 check.blocking_reasons
 check.recommended_resolution
 check.already_applied_by
+check.restaged_by
+check.current_restaged_by
+check.stale_resolution_state
 check.changed_graphs
 check.patch_checks
 check.count_drifts
@@ -2594,6 +2597,11 @@ check.suggested_next_calls
 
 `revision_iri` is an alias of `staged_revision_iri` so copied check payloads
 carry the checked resource under the same name used by list and export rows.
+`restaged_by`, `current_restaged_by`, and `stale_resolution_state` mirror the
+revision-list/export routing fields on direct apply checks. A handled stale
+source reports the direct successor in `restaged_by`, the latest known successor
+in `current_restaged_by`, and routes compact `next_action` to inspect that
+successor instead of another mechanical restage.
 
 Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `ready`, `noop`, `already_applied`, `superseded_by_restage`, `conflict`,

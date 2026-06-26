@@ -1059,6 +1059,11 @@ few useful gaps:
   `returned_current_staged_work_application_status_counts` for current-work
   status and reserve `returned_application_status_counts` for page/history
   status.
+- A handled-stale export trial found stale-only review bundles could hide the
+  refreshed successor behind stale-source labels or a restage recommendation.
+  Direct apply checks now expose `restaged_by`, `current_restaged_by`, and
+  `stale_resolution_state`; handled stale rows point compact `next_action` at the
+  current successor, and grouped Markdown includes `Recommended review` rows.
 - A docs retrieval trial found large MCP docs hid deep sections behind the
   default prefix. Doc listings now expose section headings and `get_doc` accepts
   `section` or `start_char` for bounded navigation.

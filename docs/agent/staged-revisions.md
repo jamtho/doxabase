@@ -661,8 +661,9 @@ In scripts, the practical loop is: batch restage, review
 then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the
 next check/export/restage pass.
 Grouped Markdown also includes a `Review Queues` section that mirrors the
-derived next-action buckets plus the compatibility apply/restage, repair,
-applied-inspection, and post-apply recheck buckets from `bundle_summary`.
+top-level recommended-review sets, derived next-action buckets, and the
+compatibility apply/restage, repair, applied-inspection, and post-apply recheck
+buckets from `bundle_summary`.
 When a requested stale source already has a restage chain, batch restage maps it
 to `current_restaged_by` so the review bundle opens the latest known successor.
 The summary also keeps

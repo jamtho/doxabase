@@ -3228,6 +3228,8 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert stale_export_text.index("- Restaged by: ") < stale_export_text.index(
         "## Current Apply Check"
     )
+    assert "already has a refreshed successor" in stale_export_text
+    assert "instead of restaging the source again" in stale_export_text
     export_path = tmp_path / "restaged-review.md"
     db.export_staged_revision(restaged.revision_iri, export_path)
     export_text = export_path.read_text(encoding="utf-8")
@@ -3262,7 +3264,10 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
         stale_summary.apply_recommendation_scope
         == "prior_source_apply_check_context"
     )
-    assert "Restage the proposal" in stale_summary.apply_recommended_resolution
+    assert "already has a refreshed successor" in (
+        stale_summary.apply_recommended_resolution
+    )
+    assert restaged.revision_iri in stale_summary.apply_recommended_resolution
     assert "Handled by refreshed successor" in stale_summary.summary_recommendation
     assert (
         stale_summary.summary_recommendation_source
@@ -3321,6 +3326,7 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert grouped_export.index("## Restage Context") < grouped_export.index(
         "## Revisions"
     )
+    assert "- Recommended review: " in grouped_export
     assert "Handled by refreshed successor; follow Review Queues" in grouped_export
     assert restaged.revision_iri in grouped_export
     assert "prior/source apply-check context:" in grouped_export
@@ -3334,6 +3340,11 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
 
     stale_check_after = db.check_staged_revision_apply(staged.revision_iri)
     assert stale_check_after.status == "conflict"
+    assert stale_check_after.restaged_by == restaged.revision_iri
+    assert stale_check_after.current_restaged_by == restaged.revision_iri
+    assert stale_check_after.stale_resolution_state == "stale_handled_by_restage"
+    assert stale_check_after.next_action is not None
+    assert stale_check_after.next_action.arguments == {"iri": restaged.revision_iri}
     assert not any(
         action.tool_name == "restage_staged_revision"
         for action in stale_check_after.suggested_next_actions
@@ -5594,6 +5605,9 @@ def test_restage_chain_routes_to_current_successor(
 
     original_check = db.check_staged_revision_apply(original.revision_iri)
     assert original_check.status == "conflict"
+    assert original_check.restaged_by == first_successor.revision_iri
+    assert original_check.current_restaged_by == current_successor.revision_iri
+    assert original_check.stale_resolution_state == "stale_handled_by_restage"
     assert original_check.suggested_next_actions[-1].arguments == {
         "iri": current_successor.revision_iri
     }
@@ -5605,6 +5619,10 @@ def test_restage_chain_routes_to_current_successor(
     assert original_check.next_action.arguments == {
         "iri": current_successor.revision_iri
     }
+    assert not any(
+        action.tool_name == "restage_staged_revision"
+        for action in original_check.suggested_next_actions
+    )
 
     listing = db.list_graph_revisions(include_apply_checks=True)
     by_iri = {item.iri: item for item in listing.revisions}
@@ -5634,7 +5652,8 @@ def test_restage_chain_routes_to_current_successor(
     assert "- Restaged by: " in exported
     assert "- Current restaged by: " in exported
     assert "**Inspect current refreshed successor:**" in exported
-    assert "**Review stale source:**" in exported
+    assert "**Inspect handled stale source:**" in exported
+    assert "- Recommended review: " in exported
     assert current_successor.revision_iri in exported
 
     batch = db.restage_staged_revisions(
@@ -6102,7 +6121,10 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     assert stale_item.application_summary is not None
     assert stale_item.application_summary.startswith("Blocked by 1 conflict")
     assert stale_item.application_recommended_resolution is not None
-    assert "Restage the proposal" in stale_item.application_recommended_resolution
+    assert "already has a refreshed successor" in (
+        stale_item.application_recommended_resolution
+    )
+    assert restaged.revision_iri in stale_item.application_recommended_resolution
     assert stale_item.application_validation_skipped_reason == "conflicts_present"
     assert stale_item.application_blocking_reasons == ["target_count_drift"]
     assert stale_item.application_count_drifts[0].target_graph == "map"

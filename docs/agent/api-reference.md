@@ -972,7 +972,8 @@ each apply, and `post_apply_recheck_revision_iris` gives scripts the affected
 revision IRIs for pre-apply grouped-review hazards.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for the same list.
 Grouped Markdown exports include a `Review Queues` section mirroring the
-apply/restage, repair, applied-inspection, and post-apply recheck buckets.
+recommended-review sets, derived next-action buckets, apply/restage, repair,
+applied-inspection, and post-apply recheck buckets.
 Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
 
@@ -998,6 +999,11 @@ checks, the review action includes `include_current_apply_check=True` so the
 next staged-revision inspection reloads the current blocked status.
 The response includes both `staged_revision_iri` and `revision_iri`; the latter
 is a script-friendly alias for copied payloads.
+It also includes `restaged_by`, `current_restaged_by`, and
+`stale_resolution_state` so direct apply checks can route handled stale sources
+the same way revision lists and exports do. When a stale source already has a
+successor, compact `next_action` points at `current_restaged_by` and suggested
+mutations omit another mechanical restage.
 `noop` means replay validates but has no effective graph delta; suggested
 actions point to inspection/export rather than apply. `triples_to_add` and
 `triples_to_remove` are effective deltas for the current preview, and

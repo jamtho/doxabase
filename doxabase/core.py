@@ -417,6 +417,9 @@ class StagedRevisionApplyCheck:
     blocking_reasons: list[str]
     recommended_resolution: str | None
     already_applied_by: str | None
+    restaged_by: str | None
+    current_restaged_by: str | None
+    stale_resolution_state: str | None
     changed_graphs: list[str]
     patch_checks: list[StagedPatchApplyCheck]
     count_drifts: list[StagedGraphCountDrift]
@@ -17996,8 +17999,25 @@ class DoxaBase:
         snapshot_drift_by_graph = {
             drift.graph_role: drift for drift in snapshot_drifts
         }
+        restaged_by_iri = (
+            staged.restaged_by.iri if staged.restaged_by is not None else None
+        )
+        current_restaged_by_iri = (
+            staged.current_restaged_by.iri
+            if staged.current_restaged_by is not None
+            else None
+        )
+        restaged_from_iri = (
+            staged.restaged_from.iri if staged.restaged_from is not None else None
+        )
         if existing_applied:
             status = "already_applied"
+            stale_resolution_state = self._stale_resolution_state(
+                status=status,
+                has_patch_payload=bool(staged.patches),
+                restaged_from=restaged_from_iri,
+                restaged_by=restaged_by_iri,
+            )
             summary = self._staged_apply_check_summary(
                 status=status,
                 conflicts=[
@@ -18018,14 +18038,8 @@ class DoxaBase:
                 semantic_risk_level=semantic_risk_level,
                 blocking_reasons=["already_applied"],
                 already_applied_by=existing_applied[0],
-                restaged_by=(
-                    staged.restaged_by.iri if staged.restaged_by is not None else None
-                ),
-                current_restaged_by=(
-                    staged.current_restaged_by.iri
-                    if staged.current_restaged_by is not None
-                    else None
-                ),
+                restaged_by=restaged_by_iri,
+                current_restaged_by=current_restaged_by_iri,
             )
             blocking_reasons = self._staged_apply_check_blocking_reasons(
                 status=status,
@@ -18039,16 +18053,10 @@ class DoxaBase:
                 staged.iri,
                 apply_status=status,
                 apply_decision=decision,
-                stale_resolution_state=None,
+                stale_resolution_state=stale_resolution_state,
                 suggested_next_actions=suggested_next_actions,
-                restaged_by=(
-                    staged.restaged_by.iri if staged.restaged_by is not None else None
-                ),
-                current_restaged_by=(
-                    staged.current_restaged_by.iri
-                    if staged.current_restaged_by is not None
-                    else None
-                ),
+                restaged_by=restaged_by_iri,
+                current_restaged_by=current_restaged_by_iri,
                 staged_validation_status=self._staged_validation_status(
                     conforms=staged.validation_conforms,
                     result_count=staged.validation_result_count,
@@ -18073,12 +18081,17 @@ class DoxaBase:
                         status=status,
                         blocking_reasons=blocking_reasons,
                         suggested_next_actions=suggested_next_actions,
+                        restaged_by=restaged_by_iri,
+                        current_restaged_by=current_restaged_by_iri,
                         restaged_source_validation_warning=(
                             restaged_source_validation_warning
                         ),
                     )
                 ),
                 already_applied_by=existing_applied[0],
+                restaged_by=restaged_by_iri,
+                current_restaged_by=current_restaged_by_iri,
+                stale_resolution_state=stale_resolution_state,
                 changed_graphs=changed_graphs,
                 patch_checks=[],
                 count_drifts=[],
@@ -18297,6 +18310,12 @@ class DoxaBase:
         if status in {"ready", "noop"} and staged.restaged_by is not None:
             can_apply = False
             status = "superseded_by_restage"
+        stale_resolution_state = self._stale_resolution_state(
+            status=status,
+            has_patch_payload=bool(staged.patches),
+            restaged_from=restaged_from_iri,
+            restaged_by=restaged_by_iri,
+        )
         summary = self._staged_apply_check_summary(
             status=status,
             conflicts=conflicts,
@@ -18318,14 +18337,8 @@ class DoxaBase:
             semantic_risk_level=semantic_risk_level,
             blocking_reasons=blocking_reasons,
             already_applied_by=None,
-            restaged_by=(
-                staged.restaged_by.iri if staged.restaged_by is not None else None
-            ),
-            current_restaged_by=(
-                staged.current_restaged_by.iri
-                if staged.current_restaged_by is not None
-                else None
-            ),
+            restaged_by=restaged_by_iri,
+            current_restaged_by=current_restaged_by_iri,
             patch_checks=patch_checks,
             snapshot_drifts=snapshot_drifts,
             validation_scope=validation_scope_value,
@@ -18344,16 +18357,10 @@ class DoxaBase:
             staged.iri,
             apply_status=status,
             apply_decision=decision,
-            stale_resolution_state=None,
+            stale_resolution_state=stale_resolution_state,
             suggested_next_actions=suggested_next_actions,
-            restaged_by=(
-                staged.restaged_by.iri if staged.restaged_by is not None else None
-            ),
-            current_restaged_by=(
-                staged.current_restaged_by.iri
-                if staged.current_restaged_by is not None
-                else None
-            ),
+            restaged_by=restaged_by_iri,
+            current_restaged_by=current_restaged_by_iri,
             staged_validation_status=self._staged_validation_status(
                 conforms=staged.validation_conforms,
                 result_count=staged.validation_result_count,
@@ -18377,11 +18384,16 @@ class DoxaBase:
                 status=status,
                 blocking_reasons=blocking_reasons,
                 suggested_next_actions=suggested_next_actions,
+                restaged_by=restaged_by_iri,
+                current_restaged_by=current_restaged_by_iri,
                 restaged_source_validation_warning=(
                     restaged_source_validation_warning
                 ),
             ),
             already_applied_by=None,
+            restaged_by=restaged_by_iri,
+            current_restaged_by=current_restaged_by_iri,
+            stale_resolution_state=stale_resolution_state,
             changed_graphs=changed_graphs,
             patch_checks=patch_checks,
             count_drifts=count_drifts,
@@ -19011,6 +19023,8 @@ class DoxaBase:
         status: str,
         blocking_reasons: list[str],
         suggested_next_actions: list[SuggestedNextAction] | None = None,
+        restaged_by: str | None = None,
+        current_restaged_by: str | None = None,
         restaged_source_validation_warning: str | None = None,
     ) -> str | None:
         if status == "ready" and restaged_source_validation_warning is not None:
@@ -19036,6 +19050,12 @@ class DoxaBase:
             return (
                 "Inspect the current refreshed successor; do not apply this "
                 "superseded staged source."
+            )
+        if status == "conflict" and (current_restaged_by or restaged_by):
+            successor_iri = current_restaged_by or restaged_by
+            return (
+                "This stale source already has a refreshed successor. Inspect "
+                f"'{successor_iri}' instead of restaging the source again."
             )
         if status == "conflict" and any(
             action.tool_name == "stage_map_assertion_change"
@@ -19260,7 +19280,20 @@ class DoxaBase:
                 is_restageable_conflict
                 and self._patch_checks_have_no_effective_delta(patch_checks or [])
             )
-            if already_effective_stale:
+            if restaged_by is not None:
+                successor_iri = current_restaged_by or restaged_by
+                review_reason = (
+                    "Inspect this stale source as prior context, then follow the "
+                    f"current refreshed successor '{successor_iri}'."
+                )
+                review_label = "Inspect handled stale source"
+                export_slug = "staged-revision-handled-stale"
+                export_reason = (
+                    "Write a review bundle that captures the handled stale source "
+                    "and points at its refreshed successor."
+                )
+                export_label = "Export handled stale bundle"
+            elif already_effective_stale:
                 review_reason = (
                     "Review the stale source and current graph state; the "
                     "stored patch payload already has no effective delta, so "
@@ -19317,7 +19350,7 @@ class DoxaBase:
             if is_restageable_conflict and any(
                 not drift.exact_changed_triples_available
                 for drift in snapshot_drifts or []
-            ) and not already_effective_stale:
+            ) and not already_effective_stale and restaged_by is None:
                 add_action(
                     "import_revision_snapshots",
                     {"path": "/tmp/revision-snapshots.json"},
@@ -19643,6 +19676,27 @@ class DoxaBase:
                     return action
             return None
 
+        def successor_inspect_action(
+            successor_iri: str,
+            *,
+            action_label: str,
+            reason: str,
+        ) -> SuggestedNextAction:
+            exact_action = find_exact_action(action_label=action_label)
+            if exact_action is not None:
+                return exact_action
+            return SuggestedNextAction(
+                action_label=action_label,
+                tool_name="describe_staged_revision",
+                mcp_tool_name="doxabase.describe_staged_revision",
+                arguments={"iri": successor_iri},
+                reason=reason,
+                call=self._suggested_call_string(
+                    "describe_staged_revision",
+                    {"iri": successor_iri},
+                ),
+            )
+
         action_type = "inspect_staged_revision"
         queue = "informational"
         label = "Inspect staged revision"
@@ -19675,7 +19729,11 @@ class DoxaBase:
                 "This stale source already has a refreshed successor; inspect "
                 "the current successor instead of restaging this row again."
             )
-            selected_action = find_action(action_label=label)
+            selected_action = successor_inspect_action(
+                current_restaged_by or restaged_by or revision_iri,
+                action_label=label,
+                reason=reason,
+            )
         elif (
             apply_decision == "inspect_current_successor"
             or apply_status == "superseded_by_restage"
@@ -19687,7 +19745,11 @@ class DoxaBase:
                 "This staged source has a refreshed successor; inspect the "
                 "current successor instead of applying this row."
             )
-            selected_action = find_action(action_label=label)
+            selected_action = successor_inspect_action(
+                current_restaged_by or restaged_by or revision_iri,
+                action_label=label,
+                reason=reason,
+            )
         elif apply_decision == "inspect_restaged_source_validation_failure":
             action_type = "repair_or_replace"
             queue = "repair_or_replace"
@@ -24084,6 +24146,11 @@ class DoxaBase:
             ("Next action - informational", "informational"),
         ]
         queues = [
+            ("Recommended review", bundle_summary.recommended_review_iris),
+            (
+                "Recommended mutation review",
+                bundle_summary.recommended_mutation_review_iris,
+            ),
             *(
                 (label, bundle_summary.next_action_queue.get(queue, []))
                 for label, queue in next_action_labels

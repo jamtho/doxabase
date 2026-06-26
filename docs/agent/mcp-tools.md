@@ -858,7 +858,9 @@ count-drift and snapshot-digest conflicts, preview validation diagnostics,
 `next_action` is the compact route derived from the status/decision and the
 same action list used by revision-list rows and grouped exports. The response
 includes both `staged_revision_iri` and the alias `revision_iri` for
-script-friendly payload handoffs. Read `status`, `decision`, and `summary` first:
+script-friendly payload handoffs, plus `restaged_by`, `current_restaged_by`, and
+`stale_resolution_state` for the same handled-stale routing used by revision
+lists and exports. Read `status`, `decision`, and `summary` first:
 `ready` means the staged patch replays
 and validates with an effective graph delta, with decision `review_then_apply`;
 `noop` means replay validates but would not change graph triples and uses
@@ -881,6 +883,9 @@ zero effective add/remove delta, compact `next_action` routes to
 suggestions omit mechanical restage. Treat this as "already effective in current
 graph state", not as `already_applied`; there is no applied revision event or
 durable review lineage unless `already_applied` says so.
+When a conflicted stale source already has `restaged_by` /
+`current_restaged_by`, compact `next_action` routes to inspect the current
+successor and suggested mutations omit another restage.
 `snapshot_drifts` records staged/current `sha256:<hex>` digest
 mismatches, including same-count graph changes. For revisions staged with the
 current runtime, it also includes exact triples added to and removed from the
@@ -1077,7 +1082,8 @@ narrower apply/restage, repair, or applied-inspection fields when routing
 automation.
 Grouped Markdown mirrors those buckets in a `Review Queues` section so human
 reviewers do not have to infer the routing from the summary table alone. It also
-mirrors the derived next-action buckets there.
+mirrors the top-level recommended-review sets and derived next-action buckets
+there.
 Bundles with restaged revisions include a `Restage Context` section near the
 top. When a stored alternative target has a restaged successor, grouped
 Markdown includes `Alternative Context` with the current comparison target.

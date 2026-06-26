@@ -513,6 +513,23 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         restage_staged_revision_tool(db, iri=staged["revision_iri"])
     stale_description = describe_staged_revision_tool(db, staged["revision_iri"])
     assert stale_description["restaged_by"]["iri"] == restaged["revision_iri"]
+    stale_check_after = check_staged_revision_apply_tool(
+        db,
+        iri=staged["revision_iri"],
+    )
+    assert stale_check_after["restaged_by"] == restaged["revision_iri"]
+    assert stale_check_after["current_restaged_by"] == restaged["revision_iri"]
+    assert stale_check_after["stale_resolution_state"] == "stale_handled_by_restage"
+    assert stale_check_after["next_action"]["action_type"] == (
+        "inspect_current_successor"
+    )
+    assert stale_check_after["next_action"]["arguments"] == {
+        "iri": restaged["revision_iri"]
+    }
+    assert not any(
+        action["tool_name"] == "restage_staged_revision"
+        for action in stale_check_after["suggested_next_actions"]
+    )
     description = describe_staged_revision_tool(db, restaged["revision_iri"])
     assert description["restaged_from"]["iri"] == staged["revision_iri"]
     assert "prior status conflict" in description["restage_reason"]
@@ -722,6 +739,8 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert "## Review Queues" in export_text
     assert "- Next action - apply after review: " in export_text
     assert "- Next action - informational: " in export_text
+    assert "- Recommended review: " in export_text
+    assert "- Recommended mutation review: " in export_text
     assert "- Apply/restage review: " in export_text
     assert "- Post-apply recheck: " in export_text
     assert "## Restage Context" in export_text
