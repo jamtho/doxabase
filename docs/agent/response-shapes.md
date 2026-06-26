@@ -861,6 +861,9 @@ result.items
 result.metric_advisories
 result.metric_advisory_count
 result.metric_advisory_status_counts
+result.metric_vocabulary_review_required
+result.metric_advisory_suggested_next_actions
+result.metric_advisory_suggested_next_calls
 result.staged_revision
 result.suggested_next_actions
 result.suggested_next_calls
@@ -898,10 +901,13 @@ revision anchors, and shared evidence because the immediate staging response
 stays compact. Sampled row-count
 recommendations are skipped by default and
 reported in `skipped_recommendation_indexes`; metric advisories stay in
-`metric_advisories` and are not staged as map facts. The same advisory count and
-status summary appears in the staging response and staged revision review note,
-so later reviewers can see whether undefined, defined, or ambiguous project
-metric vocabulary was present.
+`metric_advisories` and are not staged as map facts. When
+`metric_vocabulary_review_required` is true,
+`metric_advisory_suggested_next_actions` is the separate vocabulary-review lane;
+follow it in addition to the map revision apply check, not as a replacement for
+the apply check. The same advisory count and status summary appears in the
+staging response and staged revision review note, so later reviewers can see
+whether undefined, defined, or ambiguous project metric vocabulary was present.
 When no accepted recommendation produces a staged patch,
 `result.staged_revision is None` and `suggested_next_actions` is empty.
 An accepted recommendation index can therefore appear under either `staged` or

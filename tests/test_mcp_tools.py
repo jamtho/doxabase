@@ -3446,6 +3446,9 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["metric_advisory_count"] == 0
     assert result["metric_advisory_status_counts"] == {}
     assert result["metric_advisories"] == []
+    assert result["metric_vocabulary_review_required"] is False
+    assert result["metric_advisory_suggested_next_actions"] == []
+    assert result["metric_advisory_suggested_next_calls"] == []
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "check_staged_revision_apply"
     )

@@ -99,7 +99,9 @@ Use direct map helpers only when immediate mutation is intended. Treat sampled
 row-count recommendations conservatively: the staging helper skips them by
 default unless `allow_sampled_row_count_updates=True` is supplied because the
 sample scope is the durable population. Metric advisories are vocabulary-review
-prompts, not automatic map facts.
+prompts, not automatic map facts; in staging results, follow
+`metric_advisory_suggested_next_actions` separately from the map revision's
+`suggested_next_actions`.
 
 Typical mixed staging after a sampled profile run:
 

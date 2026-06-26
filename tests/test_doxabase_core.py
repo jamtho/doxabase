@@ -12734,9 +12734,26 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
         "project_metric_undefined": 1,
     }
     assert staged.metric_advisories[0].metric.iri == project_metric
-    assert "Metric advisories: 1 (project_metric_undefined=1)." in (
-        staged.review_note
+    assert staged.metric_vocabulary_review_required is True
+    assert [
+        action.tool_name
+        for action in staged.metric_advisory_suggested_next_actions
+    ] == [
+        "describe_context_slice",
+        "list_entities",
+    ]
+    assert staged.metric_advisory_suggested_next_actions[0].arguments == {
+        "seed_iris": [project_metric],
+        "profile": "dataset_brief",
+    }
+    assert staged.metric_advisory_suggested_next_calls == [
+        action.call for action in staged.metric_advisory_suggested_next_actions
+    ]
+    review_advisory_summary = (
+        "Metric vocabulary advisories (review separately; not staged as map "
+        "patches): 1 (project_metric_undefined=1)."
     )
+    assert review_advisory_summary in staged.review_note
     assert staged.staged_revision is not None
     assert staged.staged_revision.validation_conforms is True
     assert staged.staged_revision.changed_graphs == ["map"]
@@ -12771,9 +12788,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
         item.profile_observation_iri for item in staged.items
     }
     assert [item.iri for item in described.evidence] == [evidence]
-    assert "Metric advisories: 1 (project_metric_undefined=1)." in (
-        described.review_note or ""
-    )
+    assert review_advisory_summary in (described.review_note or "")
 
     description = db.describe_dataset(dataset)
     assert description.row_count_snapshot == 10

@@ -432,12 +432,15 @@ typed literals. Accepted indexes can still be skipped by safety guardrails,
 especially sampled row-count recommendations by default; set
 `allow_sampled_row_count_updates=True` only when the profile scope is the
 intended durable population. Metric advisories are returned for review but are
-not converted into map patches; their compact summary is also stored in the
-staged revision review note. Pass `supporting_claims`, `supporting_patterns`,
-and `revision_anchors` when profile-derived map changes already have synthesized
-claim/pattern rationale; caller anchors are merged with the automatic dataset
-and recommendation anchors. These support links are recorded only when at least
-one accepted recommendation creates a staged revision.
+not converted into map patches; follow
+`metric_advisory_suggested_next_actions` as a separate vocabulary-review lane
+when `metric_vocabulary_review_required` is true. Their compact summary is also
+stored in the staged revision review note. Pass `supporting_claims`,
+`supporting_patterns`, and `revision_anchors` when profile-derived map changes
+already have synthesized claim/pattern rationale; caller anchors are merged with
+the automatic dataset and recommendation anchors. These support links are
+recorded only when at least one accepted recommendation creates a staged
+revision.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

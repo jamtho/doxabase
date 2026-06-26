@@ -1646,6 +1646,9 @@ class ProfileMapUpdateStagingRecord:
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
     metric_advisory_count: int
     metric_advisory_status_counts: dict[str, int]
+    metric_vocabulary_review_required: bool
+    metric_advisory_suggested_next_actions: list[SuggestedNextAction]
+    metric_advisory_suggested_next_calls: list[str]
     staged_revision: StagedGraphRevisionRecord | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -7239,13 +7242,19 @@ class DoxaBase:
                 ),
                 review_recommendation=(
                     "Review staged profile-derived map changes, especially "
-                    "sample scope and any metric advisories, before applying."
+                    "sample scope, before applying; review any metric "
+                    "vocabulary advisories separately before reusing them."
                 ),
                 validation_scope=validation_scope,
             )
 
         suggested_next_actions = self._profile_update_staging_actions(
             staged_revision,
+        )
+        metric_advisory_suggested_next_actions = (
+            self._profile_metric_advisory_suggested_actions(
+                draft.metric_advisories,
+            )
         )
         return ProfileMapUpdateStagingRecord(
             result_kind="profile_map_update_staging",
@@ -7263,6 +7272,15 @@ class DoxaBase:
             metric_advisories=draft.metric_advisories,
             metric_advisory_count=draft.metric_advisory_count,
             metric_advisory_status_counts=draft.metric_advisory_status_counts,
+            metric_vocabulary_review_required=bool(
+                metric_advisory_suggested_next_actions
+            ),
+            metric_advisory_suggested_next_actions=(
+                metric_advisory_suggested_next_actions
+            ),
+            metric_advisory_suggested_next_calls=[
+                action.call for action in metric_advisory_suggested_next_actions
+            ],
             staged_revision=staged_revision,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
@@ -7338,6 +7356,16 @@ class DoxaBase:
                 )
             )
 
+        actions.extend(
+            self._profile_metric_advisory_suggested_actions(metric_advisories)
+        )
+        return actions
+
+    @staticmethod
+    def _profile_metric_advisory_suggested_actions(
+        metric_advisories: list[ProfileMetricVocabularyAdvisory],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
         seen_actions: set[tuple[str, str]] = set()
         for advisory in metric_advisories:
             for action in advisory.suggested_next_actions:
@@ -7456,7 +7484,8 @@ class DoxaBase:
             "allow_sampled_row_count_updates="
             f"{allow_sampled_row_count_updates}. Review sample scope, evidence, "
             "caveats, and project modelling intent before applying. "
-            f"Metric advisories: {metric_advisory_summary}. Items: {evidence_summary}"
+            "Metric vocabulary advisories (review separately; not staged as map "
+            f"patches): {metric_advisory_summary}. Items: {evidence_summary}"
         )
 
     @staticmethod

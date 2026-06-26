@@ -944,6 +944,13 @@ few useful gaps:
   actions used executable-looking generic paths. Those actions now mark their
   `path` arguments with `path_is_placeholder=True` and tell agents to substitute
   the real handoff artifact path before importing.
+- A profile-map and metric-vocabulary trial found that mixed staging preserved
+  metric advisories, but the top-level next-action lane only showed the staged
+  map apply check. `ProfileMapUpdateStagingRecord` now keeps that map lane in
+  `suggested_next_actions` and exposes a separate
+  `metric_advisory_suggested_next_actions` lane, plus
+  `metric_vocabulary_review_required`, so queue-following agents do not mistake
+  a staged map patch for resolved project metric vocabulary.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
