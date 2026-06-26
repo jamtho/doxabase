@@ -333,7 +333,11 @@ template for file/object storage, database relation fields for database-backed
 storage, parsed `required_bindings`, structured `binding_requirements`,
 non-secret storage environment hints, copied issues and analysis warnings,
 caveats, and a `review_gate`. Binding rows preserve the source text and say
-when DoxaBase has not inferred derivation or runtime values. Top-level
+when DoxaBase has not inferred derivation or runtime values. When the selected
+template comes from partition metadata, binding rows also carry
+`binding_kind="partition_template_placeholder"` plus optional
+`partition_scheme`, `partition_column`, and `partition_granularity` handoff
+hints. Top-level
 `handoff_kind` gives a compact machine-readable route, such as
 `metadata_review_required`, `context_review_required`,
 `runtime_resolution_required`, `database_relation_handoff`,

@@ -6491,6 +6491,28 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     assert plan.binding_requirements[0].required is True
     assert plan.binding_requirements[0].derivation_status == "not_inferred"
     assert "has not inferred" in plan.binding_requirements[0].derivation_note
+    year_binding, date_binding = plan.binding_requirements
+    assert year_binding.binding_kind == "partition_template_placeholder"
+    assert year_binding.partition_scheme is not None
+    assert year_binding.partition_scheme.iri == (
+        "https://richcanopy.org/example/manifest/ais#daily_date_partition"
+    )
+    assert year_binding.partition_column is None
+    assert year_binding.partition_granularity is not None
+    assert year_binding.partition_granularity.iri == RC + "Daily"
+    assert date_binding.binding_kind == "partition_template_placeholder"
+    assert date_binding.partition_scheme is not None
+    assert date_binding.partition_scheme.iri == (
+        "https://richcanopy.org/example/manifest/ais#daily_date_partition"
+    )
+    assert date_binding.partition_column is not None
+    assert date_binding.partition_column.iri == (
+        "https://richcanopy.org/example/manifest/ais#bc_date"
+    )
+    assert date_binding.partition_column.column_name == "date"
+    assert date_binding.partition_granularity is not None
+    assert date_binding.partition_granularity.iri == RC + "Daily"
+    assert "likely partition column date" in date_binding.derivation_note
     assert plan.storage_environment.bucket_name == "ais-noaa"
     assert plan.storage_environment.endpoint_profile == "local-minio"
     assert plan.storage_environment.credential_reference == "profile:ais-readonly"
@@ -7706,10 +7728,17 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
         file_format="rc:Parquet",
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
+    event_date = db.record_map_column(
+        "https://example.test/project#mixed_events__event_date",
+        column_name="event_date",
+        table_iri=dataset,
+    )
     partition = db.record_map_partition_scheme(
         "https://example.test/project#mixed_events_partition_scheme",
         label="Mixed events file partitioning",
         path_template=partition_template,
+        partition_columns=[event_date.iri],
+        granularity="rc:Daily",
         layout_verification_status="rc:VerifiedByQueryLayout",
         datasets=[dataset],
     )
@@ -7720,6 +7749,7 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
         path_templates=[dataset_template],
         storage_accesses=[database_storage.iri, local_storage.iri],
         physical_layouts=[layout.iri],
+        columns=[event_date.iri],
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
@@ -7805,6 +7835,17 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert allowed_plan.review_gate.binding_values_required is True
     assert allowed_plan.review_gate.ready_for_execution_attempt is False
     assert allowed_plan.required_bindings == ["date"]
+    assert len(allowed_plan.binding_requirements) == 1
+    date_binding = allowed_plan.binding_requirements[0]
+    assert date_binding.binding_kind == "partition_template_placeholder"
+    assert date_binding.partition_scheme is not None
+    assert date_binding.partition_scheme.iri == partition.iri
+    assert date_binding.partition_column is not None
+    assert date_binding.partition_column.iri == event_date.iri
+    assert date_binding.partition_column.column_name == "event_date"
+    assert date_binding.partition_granularity is not None
+    assert date_binding.partition_granularity.iri == RC + "Daily"
+    assert "likely partition column event_date" in date_binding.derivation_note
     assert allowed_plan.handoff_kind == "binding_values_required"
 
 

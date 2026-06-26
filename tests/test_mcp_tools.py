@@ -1971,6 +1971,28 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     )
     assert result["binding_requirements"][0]["required"] is True
     assert result["binding_requirements"][0]["derivation_status"] == "not_inferred"
+    assert result["binding_requirements"][0]["binding_kind"] == (
+        "partition_template_placeholder"
+    )
+    assert result["binding_requirements"][0]["partition_scheme"]["iri"] == (
+        "https://richcanopy.org/example/manifest/ais#daily_date_partition"
+    )
+    assert result["binding_requirements"][0]["partition_column"] is None
+    assert result["binding_requirements"][0]["partition_granularity"]["iri"] == (
+        "https://richcanopy.org/ns/rc#Daily"
+    )
+    assert result["binding_requirements"][1]["binding_kind"] == (
+        "partition_template_placeholder"
+    )
+    assert result["binding_requirements"][1]["partition_column"]["iri"] == (
+        "https://richcanopy.org/example/manifest/ais#bc_date"
+    )
+    assert result["binding_requirements"][1]["partition_column"]["column_name"] == (
+        "date"
+    )
+    assert result["binding_requirements"][1]["partition_granularity"]["iri"] == (
+        "https://richcanopy.org/ns/rc#Daily"
+    )
     assert result["storage_environment"]["endpoint_profile"] == "local-minio"
     assert result["storage_environment"]["credential_reference"] == (
         "profile:ais-readonly"

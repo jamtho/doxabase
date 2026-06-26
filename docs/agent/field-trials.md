@@ -826,7 +826,10 @@ few useful gaps:
   preserving sibling database-template mismatch audit fields. The same trial
   showed selectorless automatic calls with the allowance can be misread:
   agents should pair the allowance with an explicit selector when the blocker is
-  sibling candidate metadata.
+  sibling candidate metadata. A follow-up binding trial showed that raw
+  placeholders such as `{date}` were too detached from partition lore; draft
+  plan binding rows now include partition scheme, likely partition column, and
+  granularity hints when the selected template carries that metadata.
 - A profile-update staging trial confirmed accepted draft indexes can still be
   skipped by guardrails. In a sampled profile run, accepting a sampled row-count
   replacement and two column recommendations staged only the column updates by

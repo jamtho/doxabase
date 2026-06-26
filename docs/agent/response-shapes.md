@@ -1271,12 +1271,31 @@ partition template while still being review-gated. `plan.required_bindings` is
 parsed from
 `{placeholders}` in the selected path and remains as a compact compatibility
 list. Prefer `plan.binding_requirements` for handoff work: each row has `name`,
-`source`, `source_text`, `required`, `derivation_status`, and
-`derivation_note`, and currently reports `derivation_status="not_inferred"` for
-path-template placeholders. DoxaBase does not infer binding types,
-dependencies, or runtime values. `plan.storage_environment` carries non-secret
-storage hints such as bucket, endpoint profile, credential reference, path-style
-access, and DuckDB-shaped settings inferred directly from graph metadata.
+`source`, `source_text`, `required`, `derivation_status`, `derivation_note`,
+`binding_kind`, and optional partition hints:
+
+```python
+binding.name
+binding.source
+binding.source_text
+binding.required
+binding.derivation_status
+binding.derivation_note
+binding.binding_kind
+binding.partition_scheme
+binding.partition_column
+binding.partition_granularity
+```
+
+Path-template placeholders still report `derivation_status="not_inferred"`.
+When the selected template comes from a partition scheme, `binding_kind` is
+`partition_template_placeholder`, `partition_scheme` names that source, and
+matching placeholders may carry `partition_column` and
+`partition_granularity`. These fields are planning hints for parameter handoff;
+DoxaBase does not infer execution-time values. `plan.storage_environment`
+carries non-secret storage hints such as bucket, endpoint profile, credential
+reference, path-style access, and DuckDB-shaped settings inferred directly from
+graph metadata.
 `plan.storage_environment.runtime_resolution_required` is true when endpoint or
 credential references must be resolved, or when selected S3-compatible access is
 review-gated because endpoint/credential/region metadata is not yet recorded.

@@ -1263,6 +1263,10 @@ class DraftQueryPlanBinding:
     required: bool
     derivation_status: str
     derivation_note: str
+    binding_kind: str = "path_template_placeholder"
+    partition_scheme: ResourceSummary | None = None
+    partition_column: ResourceSummary | None = None
+    partition_granularity: ResourceSummary | None = None
 
 
 @dataclass(frozen=True)
@@ -7610,7 +7614,8 @@ class DoxaBase:
             selected_candidate,
         )
         binding_requirements = self._draft_query_plan_binding_requirements(
-            selected_candidate
+            selected_candidate,
+            partition_schemes=context.partition_schemes,
         )
         scan = self._draft_query_plan_scan(
             selected_candidate,
@@ -7683,8 +7688,10 @@ class DoxaBase:
             binding_requirements=binding_requirements,
             binding_note=(
                 "Bindings are placeholder names parsed from the selected path "
-                "template. DoxaBase does not infer binding types, derivations, "
-                "or execution-time values."
+                "template. When a selected partition template has matching "
+                "partition metadata, binding rows include the likely partition "
+                "column and granularity; DoxaBase still does not infer "
+                "execution-time values."
             ),
             storage_environment=storage_environment,
             review_gate=review_gate,
@@ -8236,24 +8243,56 @@ class DoxaBase:
     def _draft_query_plan_binding_requirements(
         self,
         selected_candidate: QueryTargetCandidate | None,
+        *,
+        partition_schemes: list[PartitionDescription],
     ) -> list[DraftQueryPlanBinding]:
         if selected_candidate is None:
             return []
         template = self._draft_query_plan_binding_source_text(selected_candidate)
         names = list(dict.fromkeys(re.findall(r"{([^{}]+)}", template or "")))
-        return [
-            DraftQueryPlanBinding(
+        partition = self._draft_query_plan_binding_partition(
+            selected_candidate,
+            partition_schemes,
+        )
+
+        def binding_for(name: str) -> DraftQueryPlanBinding:
+            partition_column = (
+                self._draft_query_plan_partition_column_for_binding(
+                    name,
+                    partition,
+                )
+                if partition is not None
+                else None
+            )
+            return DraftQueryPlanBinding(
                 name=name,
                 source="path_template_placeholder",
                 source_text=template,
                 required=True,
                 derivation_status="not_inferred",
-                derivation_note=(
-                    "Supply this value explicitly or derive it in the runtime "
-                    "query layer after review; DoxaBase has not inferred a "
-                    "type, dependency, or default value for this placeholder."
+                derivation_note=self._draft_query_plan_binding_derivation_note(
+                    name,
+                    partition=partition,
+                    partition_column=partition_column,
+                ),
+                binding_kind=(
+                    "partition_template_placeholder"
+                    if partition is not None
+                    else "path_template_placeholder"
+                ),
+                partition_scheme=(
+                    self._summary_from_description(partition)
+                    if partition is not None
+                    else None
+                ),
+                partition_column=partition_column,
+                partition_granularity=(
+                    partition.granularity if partition is not None else None
                 ),
             )
+
+        return [
+            binding_for(name)
             for name in names
         ]
 
@@ -8262,6 +8301,110 @@ class DoxaBase:
         selected_candidate: QueryTargetCandidate,
     ) -> str | None:
         return selected_candidate.candidate_path or selected_candidate.template
+
+    @staticmethod
+    def _draft_query_plan_binding_partition(
+        selected_candidate: QueryTargetCandidate,
+        partition_schemes: list[PartitionDescription],
+    ) -> PartitionDescription | None:
+        if selected_candidate.template_source == "partition_scheme":
+            for partition in partition_schemes:
+                if partition.iri == selected_candidate.source_resource.iri:
+                    return partition
+            return None
+        matching_partitions = [
+            partition
+            for partition in partition_schemes
+            if partition.path_template is not None
+            and partition.path_template.strip() == selected_candidate.template.strip()
+        ]
+        if len(matching_partitions) == 1:
+            return matching_partitions[0]
+        return None
+
+    def _draft_query_plan_partition_column_for_binding(
+        self,
+        name: str,
+        partition: PartitionDescription,
+    ) -> ResourceSummary | None:
+        placeholder = self._normalized_binding_name(name)
+        if not placeholder:
+            return None
+        exact_matches: list[ResourceSummary] = []
+        suffix_matches: list[ResourceSummary] = []
+        for column in partition.partition_columns:
+            candidate_names = [
+                column.column_name,
+                column.label,
+                self._local_name(column.iri),
+            ]
+            normalized_names = {
+                normalized
+                for value in candidate_names
+                if (normalized := self._normalized_binding_name(value))
+            }
+            if placeholder in normalized_names:
+                exact_matches.append(column)
+            elif any(
+                self._binding_name_has_suffix(normalized, placeholder)
+                for normalized in normalized_names
+            ):
+                suffix_matches.append(column)
+        for matches in (exact_matches, suffix_matches):
+            unique = {column.iri: column for column in matches}
+            if len(unique) == 1:
+                return next(iter(unique.values()))
+        return None
+
+    def _draft_query_plan_binding_derivation_note(
+        self,
+        name: str,
+        *,
+        partition: PartitionDescription | None,
+        partition_column: ResourceSummary | None,
+    ) -> str:
+        base_note = (
+            "Supply this value explicitly or derive it in the runtime query "
+            "layer after review; DoxaBase has not inferred a type, dependency, "
+            "or default value for this placeholder."
+        )
+        if partition is None:
+            return base_note
+        details: list[str] = []
+        if partition_column is not None:
+            partition_column_label = (
+                partition_column.label
+                or partition_column.column_name
+                or partition_column.iri
+            )
+            details.append(
+                f"likely partition column {partition_column_label}"
+            )
+        if partition.granularity is not None:
+            details.append(
+                "partition granularity "
+                f"{partition.granularity.label or partition.granularity.iri}"
+            )
+        if not details:
+            return (
+                f"{base_note} The selected template comes from partition scheme "
+                f"{partition.label or partition.iri}."
+            )
+        return (
+            f"{base_note} The selected template comes from partition scheme "
+            f"{partition.label or partition.iri}; metadata indicates "
+            f"{'; '.join(details)}."
+        )
+
+    @staticmethod
+    def _normalized_binding_name(value: str | None) -> str:
+        if value is None:
+            return ""
+        return re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
+
+    @staticmethod
+    def _binding_name_has_suffix(candidate: str, placeholder: str) -> bool:
+        return bool(candidate and placeholder and candidate.endswith(f"_{placeholder}"))
 
     def _draft_query_plan_storage_environment(
         self,
