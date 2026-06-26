@@ -739,6 +739,14 @@ few useful gaps:
   now uses exact RDF parsing on demand to return anchor matches, role-aware
   patch mention flags, applied-source matches, matched triple counts, and the
   existing revision routing row without a storage migration.
+- A profile recommendation application trial showed that direct
+  `helper_arguments` are smooth for immediate map mutation, but review-gated
+  profile updates need helper-equivalent staged patches. Scalar row-count and
+  nullable recommendations can be expressed as assertion changes, while missing
+  dataset and unmapped column shells require grouped multi-triple patches.
+  `stage_profile_map_updates` now groups accepted draft recommendation indexes
+  into one staged revision, preserves profile observation/evidence support, and
+  skips sampled row-count recommendations by default.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

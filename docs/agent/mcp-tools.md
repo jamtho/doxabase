@@ -229,6 +229,18 @@ project-specific metric kinds that should be defined before reuse. Sampled
 zero-null profiles are intentionally not promoted into non-null map
 recommendations.
 
+`doxabase.stage_profile_map_updates`
+
+Stages accepted `draft_profile_map_updates` recommendation indexes as one
+grouped reviewable `map` revision. Pass `dataset_iri`, `evidence_iri`, and
+`accepted_recommendation_indexes`. The result returns item statuses,
+`staged_recommendation_indexes`, `skipped_recommendation_indexes`,
+`not_selected_recommendation_indexes`, metric advisories, and the staged
+revision when at least one accepted recommendation was staged. The helper uses
+helper-equivalent RDF for dataset and column shells, keeps metric advisories as
+review prompts, and skips sampled row-count recommendations unless
+`allow_sampled_row_count_updates=true`.
+
 `doxabase.describe_query_context`
 
 Returns a compact read-only projection for query planning around one dataset:

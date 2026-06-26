@@ -253,6 +253,35 @@ def draft_profile_map_updates_tool(
     )
 
 
+def stage_profile_map_updates_tool(
+    db: DoxaBase,
+    dataset_iri: str,
+    evidence_iri: str,
+    accepted_recommendation_indexes: list[int],
+    graph: str = "map",
+    allow_sampled_row_count_updates: bool = False,
+    summary: str | None = None,
+    rationale: str | None = None,
+    created_at: str | None = None,
+    created_by: str | None = None,
+    validation_scope: str = "all",
+) -> dict[str, Any]:
+    return to_dict(
+        db.stage_profile_map_updates(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            accepted_recommendation_indexes=accepted_recommendation_indexes,
+            graph=graph,  # type: ignore[arg-type]
+            allow_sampled_row_count_updates=allow_sampled_row_count_updates,
+            summary=summary,
+            rationale=rationale,
+            created_at=created_at,
+            created_by=created_by,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
+        )
+    )
+
+
 def describe_query_context_tool(
     db: DoxaBase,
     iri: str,

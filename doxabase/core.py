@@ -1468,6 +1468,39 @@ class ProfileMapUpdateDraft:
 
 
 @dataclass(frozen=True)
+class ProfileMapUpdateStagingItem:
+    recommendation_index: int
+    kind: str
+    action: str
+    resource: ResourceSummary
+    status: str
+    reason: str | None
+    basis: str
+    confidence: str
+    sample_size: int | None
+    sample_scope: str | None
+    sample_method: str | None
+    profile_observation_iri: str
+
+
+@dataclass(frozen=True)
+class ProfileMapUpdateStagingRecord:
+    dataset: ResourceSummary
+    evidence: EvidenceDescription
+    evidence_iri: str
+    map_dataset_found: bool
+    recommendation_count: int
+    accepted_recommendation_indexes: list[int]
+    staged_recommendation_indexes: list[int]
+    skipped_recommendation_indexes: list[int]
+    not_selected_recommendation_indexes: list[int]
+    items: list[ProfileMapUpdateStagingItem]
+    metric_advisories: list[ProfileMetricVocabularyAdvisory]
+    staged_revision: StagedGraphRevisionRecord | None
+    review_note: str
+
+
+@dataclass(frozen=True)
 class DatasetDescription:
     iri: str
     graph: str | None
@@ -6286,6 +6319,381 @@ class DoxaBase:
                 "scope, evidence, caveats, and project modelling intent."
             ),
         )
+
+    def stage_profile_map_updates(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+        *,
+        accepted_recommendation_indexes: Iterable[int] | None,
+        graph: TypingLiteral["map"] = "map",
+        allow_sampled_row_count_updates: bool = False,
+        summary: str | None = None,
+        rationale: str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ] = "all",
+    ) -> ProfileMapUpdateStagingRecord:
+        if graph != "map":
+            raise DoxaBaseError("stage_profile_map_updates currently targets map only")
+        accepted_indexes = self._profile_update_accepted_indexes(
+            accepted_recommendation_indexes,
+        )
+        draft = self.draft_profile_map_updates(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            graph=graph,
+        )
+        recommendations = draft.recommendations
+        out_of_range = [
+            index for index in accepted_indexes if index >= len(recommendations)
+        ]
+        if out_of_range:
+            raise DoxaBaseError(
+                "accepted_recommendation_indexes out of range: "
+                + ", ".join(str(index) for index in out_of_range)
+            )
+
+        accepted_index_set = set(accepted_indexes)
+        additions_graph = Graph()
+        removals_graph = Graph()
+        self._bind_prefixes(additions_graph)
+        self._bind_prefixes(removals_graph)
+        staged_indexes: list[int] = []
+        skipped_indexes: list[int] = []
+        not_selected_indexes: list[int] = []
+        items: list[ProfileMapUpdateStagingItem] = []
+        support_observations: list[str] = []
+        revision_anchors: list[str] = [draft.dataset.iri]
+
+        for index, recommendation in enumerate(recommendations):
+            status = "not_selected"
+            reason: str | None = "Recommendation index was not accepted by caller."
+            if index in accepted_index_set:
+                reason = self._profile_update_skip_reason(
+                    recommendation,
+                    allow_sampled_row_count_updates=allow_sampled_row_count_updates,
+                )
+                if reason is None:
+                    self._add_profile_update_patch_triples(
+                        recommendation,
+                        dataset_iri=draft.dataset.iri,
+                        map_dataset_found=draft.map_dataset_found,
+                        additions_graph=additions_graph,
+                        removals_graph=removals_graph,
+                    )
+                    status = "staged"
+                    staged_indexes.append(index)
+                    support_observations.append(
+                        recommendation.profile_observation_iri
+                    )
+                    for anchor in self._profile_update_revision_anchors(
+                        recommendation,
+                        dataset_iri=draft.dataset.iri,
+                    ):
+                        revision_anchors.append(anchor)
+                else:
+                    status = "skipped"
+                    skipped_indexes.append(index)
+            else:
+                not_selected_indexes.append(index)
+
+            items.append(
+                ProfileMapUpdateStagingItem(
+                    recommendation_index=index,
+                    kind=recommendation.kind,
+                    action=recommendation.action,
+                    resource=recommendation.resource,
+                    status=status,
+                    reason=reason,
+                    basis=recommendation.basis,
+                    confidence=recommendation.confidence,
+                    sample_size=recommendation.sample_size,
+                    sample_scope=recommendation.sample_scope,
+                    sample_method=recommendation.sample_method,
+                    profile_observation_iri=recommendation.profile_observation_iri,
+                )
+            )
+
+        additions: list[dict[str, str]] = []
+        removals: list[dict[str, str]] = []
+        if len(additions_graph) > 0:
+            additions.append(
+                {
+                    "graph": "map",
+                    "content": additions_graph.serialize(format="turtle").strip(),
+                }
+            )
+        if len(removals_graph) > 0:
+            removals.append(
+                {
+                    "graph": "map",
+                    "content": removals_graph.serialize(format="turtle").strip(),
+                }
+            )
+
+        staged_revision: StagedGraphRevisionRecord | None = None
+        if additions or removals:
+            dataset_label = draft.dataset.label or self._local_name(draft.dataset.iri)
+            staged_revision = self.stage_graph_revision(
+                summary=summary
+                or f"Stage profile map updates for {dataset_label}",
+                rationale=rationale
+                or (
+                    "Accepted profile map-update recommendations from "
+                    "draft_profile_map_updates and grouped them into one "
+                    "reviewable map revision so helper-equivalent shells and "
+                    "scalar updates can be applied together after review."
+                ),
+                additions=additions,
+                removals=removals,
+                created_at=created_at,
+                created_by=created_by,
+                supporting_observations=list(dict.fromkeys(support_observations)),
+                evidence=[draft.evidence_iri],
+                revision_anchors=list(dict.fromkeys(revision_anchors)),
+                review_note=self._profile_update_staging_review_note(
+                    items,
+                    staged_indexes=staged_indexes,
+                    skipped_indexes=skipped_indexes,
+                    allow_sampled_row_count_updates=allow_sampled_row_count_updates,
+                ),
+                review_recommendation=(
+                    "Review staged profile-derived map changes, especially "
+                    "sample scope and any metric advisories, before applying."
+                ),
+                validation_scope=validation_scope,
+            )
+
+        return ProfileMapUpdateStagingRecord(
+            dataset=draft.dataset,
+            evidence=draft.evidence,
+            evidence_iri=draft.evidence_iri,
+            map_dataset_found=draft.map_dataset_found,
+            recommendation_count=len(recommendations),
+            accepted_recommendation_indexes=accepted_indexes,
+            staged_recommendation_indexes=staged_indexes,
+            skipped_recommendation_indexes=skipped_indexes,
+            not_selected_recommendation_indexes=not_selected_indexes,
+            items=items,
+            metric_advisories=draft.metric_advisories,
+            staged_revision=staged_revision,
+            review_note=self._profile_update_staging_review_note(
+                items,
+                staged_indexes=staged_indexes,
+                skipped_indexes=skipped_indexes,
+                allow_sampled_row_count_updates=allow_sampled_row_count_updates,
+            ),
+        )
+
+    def _profile_update_accepted_indexes(
+        self,
+        accepted_recommendation_indexes: Iterable[int] | None,
+    ) -> list[int]:
+        if accepted_recommendation_indexes is None:
+            raise DoxaBaseError(
+                "accepted_recommendation_indexes must name at least one "
+                "accepted draft recommendation"
+            )
+        indexes: list[int] = []
+        for value in accepted_recommendation_indexes:
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise DoxaBaseError(
+                    "accepted_recommendation_indexes values must be integers"
+                )
+            if value < 0:
+                raise DoxaBaseError(
+                    "accepted_recommendation_indexes values must be non-negative"
+                )
+            indexes.append(value)
+        indexes = list(dict.fromkeys(indexes))
+        if not indexes:
+            raise DoxaBaseError(
+                "accepted_recommendation_indexes must name at least one "
+                "accepted draft recommendation"
+            )
+        return indexes
+
+    def _profile_update_skip_reason(
+        self,
+        recommendation: ProfileMapUpdateRecommendation,
+        *,
+        allow_sampled_row_count_updates: bool,
+    ) -> str | None:
+        if (
+            recommendation.kind == "dataset_row_count_snapshot"
+            and recommendation.basis != "full_scan"
+            and not allow_sampled_row_count_updates
+        ):
+            return (
+                "Sampled row-count recommendations are not staged by default; "
+                "set allow_sampled_row_count_updates=True only when the sample "
+                "scope is the intended durable population."
+            )
+        return None
+
+    def _profile_update_revision_anchors(
+        self,
+        recommendation: ProfileMapUpdateRecommendation,
+        *,
+        dataset_iri: str,
+    ) -> list[str]:
+        return list(dict.fromkeys([dataset_iri, recommendation.resource.iri]))
+
+    def _profile_update_staging_review_note(
+        self,
+        items: list[ProfileMapUpdateStagingItem],
+        *,
+        staged_indexes: list[int],
+        skipped_indexes: list[int],
+        allow_sampled_row_count_updates: bool,
+    ) -> str:
+        staged_summary = ", ".join(str(index) for index in staged_indexes) or "none"
+        skipped_summary = ", ".join(str(index) for index in skipped_indexes) or "none"
+        evidence_summary = "; ".join(
+            (
+                f"{item.recommendation_index}:{item.kind}:"
+                f"{item.status}:basis={item.basis}:confidence={item.confidence}"
+            )
+            for item in items
+        )
+        return (
+            "Generated by stage_profile_map_updates. Staged recommendation "
+            f"indexes: {staged_summary}. Skipped accepted indexes: "
+            f"{skipped_summary}. allow_sampled_row_count_updates="
+            f"{allow_sampled_row_count_updates}. Review sample scope, evidence, "
+            "caveats, and project modelling intent before applying. Items: "
+            f"{evidence_summary}"
+        )
+
+    def _add_profile_update_patch_triples(
+        self,
+        recommendation: ProfileMapUpdateRecommendation,
+        *,
+        dataset_iri: str,
+        map_dataset_found: bool,
+        additions_graph: Graph,
+        removals_graph: Graph,
+    ) -> None:
+        if recommendation.kind == "dataset_row_count_snapshot":
+            if not isinstance(recommendation.observed_value, int):
+                raise DoxaBaseError(
+                    "dataset_row_count_snapshot recommendations require an "
+                    "integer observed value"
+                )
+            subject = URIRef(dataset_iri)
+            if map_dataset_found:
+                self._add_profile_update_current_triples_to_graph(
+                    removals_graph,
+                    subject=dataset_iri,
+                    predicate="rc:rowCountSnapshot",
+                )
+            else:
+                additions_graph.add(
+                    (
+                        subject,
+                        RDF.type,
+                        URIRef(self.expand_iri("rc:Dataset")),
+                    )
+                )
+            additions_graph.add(
+                (
+                    subject,
+                    URIRef(self.expand_iri("rc:rowCountSnapshot")),
+                    Literal(recommendation.observed_value, datatype=XSD.integer),
+                )
+            )
+            return
+
+        if recommendation.kind == "column_nullable":
+            if not isinstance(recommendation.observed_value, bool):
+                raise DoxaBaseError(
+                    "column_nullable recommendations require a boolean observed value"
+                )
+            self._add_profile_update_current_triples_to_graph(
+                removals_graph,
+                subject=recommendation.resource.iri,
+                predicate="rc:nullable",
+            )
+            additions_graph.add(
+                (
+                    URIRef(recommendation.resource.iri),
+                    URIRef(self.expand_iri("rc:nullable")),
+                    Literal(recommendation.observed_value, datatype=XSD.boolean),
+                )
+            )
+            return
+
+        if recommendation.kind == "unmapped_profiled_column":
+            column_name = str(recommendation.observed_value).strip()
+            if not column_name:
+                raise DoxaBaseError(
+                    "unmapped_profiled_column recommendations require a column name"
+                )
+            dataset_ref = URIRef(dataset_iri)
+            column_ref = URIRef(recommendation.resource.iri)
+            if not map_dataset_found:
+                additions_graph.add(
+                    (
+                        dataset_ref,
+                        RDF.type,
+                        URIRef(self.expand_iri("rc:Dataset")),
+                    )
+                )
+            additions_graph.add(
+                (
+                    column_ref,
+                    RDF.type,
+                    URIRef(self.expand_iri("rc:Column")),
+                )
+            )
+            additions_graph.add(
+                (
+                    column_ref,
+                    URIRef(self.expand_iri("rc:columnName")),
+                    Literal(column_name),
+                )
+            )
+            additions_graph.add(
+                (
+                    dataset_ref,
+                    URIRef(self.expand_iri("rc:hasColumn")),
+                    column_ref,
+                )
+            )
+            return
+
+        raise DoxaBaseError(
+            f"Unsupported profile map update recommendation kind: {recommendation.kind}"
+        )
+
+    def _add_profile_update_current_triples_to_graph(
+        self,
+        target_graph: Graph,
+        *,
+        subject: str,
+        predicate: str,
+    ) -> None:
+        for triple in self._assertion_triples(
+            ["map"],
+            subject=self.expand_iri(subject),
+            predicate=self.expand_iri(predicate),
+            object_filter=None,
+            limit=1000,
+        ):
+            target_graph.add(
+                (
+                    self._subject_node_from_resource_triple(triple),
+                    URIRef(triple.predicate),
+                    self._object_node_from_resource_triple(triple),
+                )
+            )
 
     def describe_query_context(
         self,

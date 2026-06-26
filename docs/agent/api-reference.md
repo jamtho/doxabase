@@ -367,6 +367,19 @@ evidence IRI, `sample_size`, `sample_scope`, `sample_method`, and
 sample, or ambiguous run before applying helper arguments. It does not mutate
 or stage graph changes, and it skips sampled zero-null promotions.
 
+`stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
+reruns the draft, stages the accepted recommendation indexes as one grouped
+reviewable `map` revision, and returns explicit staged/skipped/not-selected
+item statuses. Use it when profile-derived map changes need review before
+application. The staged patch uses helper-equivalent RDF: missing dataset
+shells get `rdf:type rc:Dataset`, unmapped columns get `rdf:type rc:Column`,
+`rc:columnName`, and `rc:hasColumn`, and scalar row-count/nullability changes
+remove old helper-owned values before adding typed literals. Sampled row-count
+recommendations are skipped by default; set
+`allow_sampled_row_count_updates=True` only when the profile scope is the
+intended durable population. Metric advisories are returned for review but are
+not converted into map patches.
+
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
 dataset/table map context, bounded profile observations/metrics, and linked

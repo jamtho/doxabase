@@ -67,6 +67,25 @@ Use `record_observation` for a single noticing. Use `record_pattern` when
 several noticings or claims explain why a map fact seems right. Then use map
 helpers to systematize the current-best facts.
 
+## Profile-Derived Updates
+
+When a shared-evidence profile run suggests map changes, call
+`describe_profile_run()` and `draft_profile_map_updates()` before mutating the
+map. The draft rows carry sample scope, confidence, helper arguments, and
+metric advisories so the agent can decide which recommendations to accept.
+
+Use `stage_profile_map_updates(..., accepted_recommendation_indexes=[...])` when
+accepted profile-derived changes should be reviewed before apply. It stages one
+grouped helper-equivalent map revision, including multi-triple dataset and
+column shells, so applying one accepted profile batch does not create sibling
+staged revisions that immediately drift after the first apply.
+
+Use direct map helpers only when immediate mutation is intended. Treat sampled
+row-count recommendations conservatively: the staging helper skips them by
+default unless `allow_sampled_row_count_updates=True` is supplied because the
+sample scope is the durable population. Metric advisories are vocabulary-review
+prompts, not automatic map facts.
+
 ## Example
 
 ```python

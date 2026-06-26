@@ -59,6 +59,7 @@ from doxabase.mcp_tools import (
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
     stage_pattern_promotion_tool,
+    stage_profile_map_updates_tool,
     stage_systematisation_tool,
     validate_graph_tool,
 )
@@ -66,7 +67,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence status, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence status, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -146,6 +147,35 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             dataset_iri=dataset_iri,
             evidence_iri=evidence_iri,
             graph=graph,
+        )
+
+    @server.tool(name="doxabase.stage_profile_map_updates")
+    def stage_profile_map_updates(
+        dataset_iri: str,
+        evidence_iri: str,
+        accepted_recommendation_indexes: list[int],
+        graph: str = "map",
+        allow_sampled_row_count_updates: bool = False,
+        summary: str | None = None,
+        rationale: str | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        validation_scope: str = "all",
+    ) -> dict[str, Any]:
+        """Stage accepted profile-map recommendations as one reviewable revision."""
+
+        return stage_profile_map_updates_tool(
+            db,
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            accepted_recommendation_indexes=accepted_recommendation_indexes,
+            graph=graph,
+            allow_sampled_row_count_updates=allow_sampled_row_count_updates,
+            summary=summary,
+            rationale=rationale,
+            created_at=created_at,
+            created_by=created_by,
+            validation_scope=validation_scope,
         )
 
     @server.tool(name="doxabase.describe_query_context")

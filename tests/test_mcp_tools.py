@@ -56,6 +56,7 @@ from doxabase.mcp_tools import (
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
     stage_pattern_promotion_tool,
+    stage_profile_map_updates_tool,
     stage_systematisation_tool,
     validate_graph_tool,
 )
@@ -73,6 +74,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_dataset" in tool_names
     assert "doxabase.describe_profile_run" in tool_names
     assert "doxabase.draft_profile_map_updates" in tool_names
+    assert "doxabase.stage_profile_map_updates" in tool_names
     assert "doxabase.describe_query_context" in tool_names
     assert "doxabase.draft_query_plan" in tool_names
     assert "doxabase.describe_context_slice" in tool_names
@@ -2757,6 +2759,62 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["recommendations"][0]["profile_row_count"] == 10
     assert result["recommendations"][1]["helper_arguments"]["nullable"] is True
     assert result["metric_advisories"] == []
+
+
+def test_stage_profile_map_updates_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(table, label="Orders", is_table=True, row_count_snapshot=8)
+    db.record_map_column(
+        status_column,
+        table_iri=table,
+        column_name="status",
+        nullable=False,
+    )
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        sample_size=10,
+        sample_scope="All rows in the Orders table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=10,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status had nulls in the full scan.",
+                "null_count": 1,
+            }
+        ],
+    )
+
+    result = stage_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        accepted_recommendation_indexes=[0, 1],
+    )
+
+    assert result["dataset"]["iri"] == table
+    assert result["accepted_recommendation_indexes"] == [0, 1]
+    assert result["staged_recommendation_indexes"] == [0, 1]
+    assert result["skipped_recommendation_indexes"] == []
+    assert [item["status"] for item in result["items"]] == ["staged", "staged"]
+    assert result["staged_revision"]["changed_graphs"] == ["map"]
+    assert result["staged_revision"]["validation_conforms"] is True
+    assert result["metric_advisories"] == []
+    assert db.describe_dataset(table).row_count_snapshot == 8
 
 
 def test_describe_dataset_tool_returns_unmapped_column_profiles(

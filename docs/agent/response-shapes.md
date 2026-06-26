@@ -759,6 +759,48 @@ non-null constraint. `metric_advisories[]` rows name project-specific profile
 metric IRIs observed in the run and recommend vocabulary review before reusable
 comparison or map policy.
 
+`db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
+returns a `ProfileMapUpdateStagingRecord`:
+
+```python
+result.dataset
+result.evidence
+result.evidence_iri
+result.map_dataset_found
+result.recommendation_count
+result.accepted_recommendation_indexes
+result.staged_recommendation_indexes
+result.skipped_recommendation_indexes
+result.not_selected_recommendation_indexes
+result.items
+result.metric_advisories
+result.staged_revision
+result.review_note
+```
+
+Each `result.items[]` row is a compact routing record:
+
+```python
+item.recommendation_index
+item.kind
+item.action
+item.resource
+item.status              # staged, skipped, or not_selected
+item.reason
+item.basis
+item.confidence
+item.sample_size
+item.sample_scope
+item.sample_method
+item.profile_observation_iri
+```
+
+When at least one accepted recommendation passes safety checks,
+`result.staged_revision` is a normal `StagedGraphRevisionRecord` for one grouped
+`map` revision. Sampled row-count recommendations are skipped by default and
+reported in `skipped_recommendation_indexes`; metric advisories stay in
+`metric_advisories` and are not staged as map facts.
+
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:
 
