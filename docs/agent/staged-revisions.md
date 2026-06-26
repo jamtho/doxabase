@@ -425,7 +425,9 @@ needs to separate mechanically ready framings from validation failures. The
 suggested actions include a grouped `export_staged_revisions` call and one
 `check_staged_revision_apply` call per staged revision; re-run those checks
 before applying, repairing, or restaging if any graph changes may have happened
-since the draft was created.
+since the draft was created. Suggested export paths include a revision-derived
+slug and short hash so parallel trials do not all point at the same `/tmp`
+filename. Override the path when a run directory should own the artifact.
 
 The staged revision rationale records the systematisation intent, anchors,
 overall rationale, shared-context summary, and framing-specific rationale. The

@@ -15523,7 +15523,10 @@ class DoxaBase:
             "export_staged_revisions",
             {
                 "revision_iris": revision_iris,
-                "path": "/tmp/systematisation-review.md",
+                "path": self._suggested_review_export_path(
+                    "systematisation-review",
+                    revision_iris,
+                ),
             },
             (
                 "Write a grouped Markdown review bundle before choosing among "
@@ -17012,7 +17015,13 @@ class DoxaBase:
             )
             add_action(
                 "export_staged_revision",
-                {"iri": staged_revision_iri, "path": "/tmp/staged-revision-review.md"},
+                {
+                    "iri": staged_revision_iri,
+                    "path": self._suggested_review_export_path(
+                        "staged-revision-review",
+                        [staged_revision_iri],
+                    ),
+                },
                 "Write a Markdown review bundle before applying if review is needed.",
                 action_label="Export review bundle",
             )
@@ -17059,7 +17068,13 @@ class DoxaBase:
             )
             add_action(
                 "export_staged_revision",
-                {"iri": staged_revision_iri, "path": "/tmp/staged-revision-noop.md"},
+                {
+                    "iri": staged_revision_iri,
+                    "path": self._suggested_review_export_path(
+                        "staged-revision-noop",
+                        [staged_revision_iri],
+                    ),
+                },
                 "Write a Markdown review bundle before deciding whether to replace it.",
                 action_label="Export no-op bundle",
             )
@@ -17110,10 +17125,13 @@ class DoxaBase:
                 "export_staged_revision",
                 {
                     "iri": staged_revision_iri,
-                    "path": (
-                        "/tmp/staged-revision-conflict.md"
-                        if is_restageable_conflict
-                        else "/tmp/staged-revision-patch-conflict.md"
+                    "path": self._suggested_review_export_path(
+                        (
+                            "staged-revision-conflict"
+                            if is_restageable_conflict
+                            else "staged-revision-patch-conflict"
+                        ),
+                        [staged_revision_iri],
                     ),
                 },
                 "Write a review bundle that captures the blocked staged proposal.",
@@ -17173,7 +17191,10 @@ class DoxaBase:
                 "export_staged_revision",
                 {
                     "iri": staged_revision_iri,
-                    "path": "/tmp/staged-revision-validation-failed.md",
+                    "path": self._suggested_review_export_path(
+                        "staged-revision-validation-failed",
+                        [staged_revision_iri],
+                    ),
                 },
                 (
                     "Write a review bundle with validation diagnostics before "
@@ -19440,6 +19461,19 @@ class DoxaBase:
             "search": "Search graph",
         }
         return labels.get(tool_name, tool_name.replace("_", " ").title())
+
+    def _suggested_review_export_path(
+        self,
+        path_prefix: str,
+        revision_iris: Iterable[str],
+    ) -> str:
+        values = [str(value) for value in revision_iris]
+        digest_source = "\n".join(values) if values else path_prefix
+        digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:12]
+        label_source = self._local_name(values[0]) if values else None
+        label = re.sub(r"[^A-Za-z0-9]+", "-", label_source or "revision")
+        label = label.strip("-").lower() or "revision"
+        return f"/tmp/{path_prefix}-{label[:40]}-{digest}.md"
 
     def _assertion_support_next_actions(
         self,

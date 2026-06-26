@@ -855,7 +855,9 @@ persisted review/support metadata and exports render it as `Stored Review
 Context`; it is not a replayed panel.
 Restaged exports include a top metadata `Restage headline` before the current
 apply check. Stale original exports include a top metadata `Restaged by` line
-when a refreshed successor already exists.
+when a refreshed successor already exists. Suggested export actions use
+revision-derived `/tmp` filenames with a short hash to reduce collisions; callers
+may override them with run-specific paths.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and

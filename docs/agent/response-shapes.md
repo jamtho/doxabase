@@ -1502,7 +1502,10 @@ derived from the same apply-check summary logic as grouped staged-revision
 exports, so validation-failed framings land in `repair_or_replace` while
 mechanically ready framings land in `apply_after_review`. The suggested actions
 include a grouped `export_staged_revisions` call plus per-revision
-`check_staged_revision_apply` calls for fresh live routing.
+`check_staged_revision_apply` calls for fresh live routing. Suggested export
+paths include a readable revision slug and short hash to reduce collisions
+across concurrent scratch runs; callers can still pass their own run-specific
+path.
 
 Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:
 

@@ -5476,15 +5476,34 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     revision_iris = [revision.revision_iri for revision in draft.staged_revisions]
     assert draft.next_action_queue == {"apply_after_review": revision_iris}
     assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
-    assert draft.suggested_next_actions[0].arguments == {
-        "revision_iris": revision_iris,
-        "path": "/tmp/systematisation-review.md",
-    }
+    assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
+    draft_export_path = draft.suggested_next_actions[0].arguments["path"]
+    assert draft_export_path.startswith("/tmp/systematisation-review-")
+    assert draft_export_path.endswith(".md")
     assert [
         action.arguments
         for action in draft.suggested_next_actions
         if action.tool_name == "check_staged_revision_apply"
     ] == [{"iri": revision_iri} for revision_iri in revision_iris]
+    first_export_path = next(
+        action.arguments["path"]
+        for action in db.check_staged_revision_apply(
+            revision_iris[0],
+        ).suggested_next_actions
+        if action.tool_name == "export_staged_revision"
+    )
+    second_export_path = next(
+        action.arguments["path"]
+        for action in db.check_staged_revision_apply(
+            revision_iris[1],
+        ).suggested_next_actions
+        if action.tool_name == "export_staged_revision"
+    )
+    assert first_export_path.startswith("/tmp/staged-revision-review-")
+    assert second_export_path.startswith("/tmp/staged-revision-review-")
+    assert first_export_path.endswith(".md")
+    assert second_export_path.endswith(".md")
+    assert first_export_path != second_export_path
     assert db.triple_count("ontology") == before_ontology_count
     assert db.triple_count("patterns") == before_patterns_count
 
@@ -5930,6 +5949,10 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     }
     assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
     assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
+    assert draft.suggested_next_actions[0].arguments["path"].startswith(
+        "/tmp/systematisation-review-"
+    )
+    assert draft.suggested_next_actions[0].arguments["path"].endswith(".md")
     assert [
         action.arguments
         for action in draft.suggested_next_actions

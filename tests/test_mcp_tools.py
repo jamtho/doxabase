@@ -1636,10 +1636,13 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "export_staged_revisions"
     )
-    assert result["suggested_next_actions"][0]["arguments"] == {
-        "revision_iris": revision_iris,
-        "path": "/tmp/systematisation-review.md",
-    }
+    assert result["suggested_next_actions"][0]["arguments"]["revision_iris"] == (
+        revision_iris
+    )
+    assert result["suggested_next_actions"][0]["arguments"]["path"].startswith(
+        "/tmp/systematisation-review-"
+    )
+    assert result["suggested_next_actions"][0]["arguments"]["path"].endswith(".md")
     assert [
         action["arguments"]
         for action in result["suggested_next_actions"]
@@ -1759,6 +1762,9 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
     assert result["next_action_queue"] == {"apply_after_review": [revision_iri]}
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "export_staged_revisions"
+    )
+    assert result["suggested_next_actions"][0]["arguments"]["path"].startswith(
+        "/tmp/systematisation-review-"
     )
     assert [
         action["arguments"]

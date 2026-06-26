@@ -930,6 +930,12 @@ few useful gaps:
   lineage used only `current_staged_revision_iri`. It now also exposes
   `current_revision_iri` with the same current staged successor value so scripts
   can share batch-restage current-row handling.
+- A profile-bundle and metric-promotion trial found map-update staging, metric
+  advisories, pattern-supported ontology promotion, and validation all routed
+  correctly, but generic suggested export paths were awkward for concurrent
+  scratch runs. Suggested staged-revision export actions now include
+  revision-derived slugs and short hashes in `/tmp` paths; agents can still
+  override them with run-directory paths.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
