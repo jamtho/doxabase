@@ -35,6 +35,7 @@ from doxabase.mcp_tools import (
     list_docs_tool,
     list_entities_tool,
     list_graph_revisions_tool,
+    list_resource_revisions_tool,
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
@@ -65,7 +66,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, revision snapshot evidence status, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence status, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -287,6 +288,29 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             staged_validation_status=staged_validation_status,
             stale_resolution_state=stale_resolution_state,
             current_staged_work_only=current_staged_work_only,
+            limit=limit,
+            offset=offset,
+        )
+
+    @server.tool(name="doxabase.list_resource_revisions")
+    def list_resource_revisions(
+        resource_iri: str,
+        graph: str | None = "history",
+        include_patch_mentions: bool = True,
+        include_apply_checks: bool = True,
+        drift_detail: str = "summary",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """List revisions anchored to or patch-mentioning one resource."""
+
+        return list_resource_revisions_tool(
+            db,
+            resource_iri=resource_iri,
+            graph=graph,
+            include_patch_mentions=include_patch_mentions,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
             limit=limit,
             offset=offset,
         )

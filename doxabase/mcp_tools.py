@@ -154,6 +154,29 @@ def list_graph_revisions_tool(
     )
 
 
+def list_resource_revisions_tool(
+    db: DoxaBase,
+    resource_iri: str,
+    graph: str | None = "history",
+    include_patch_mentions: bool = True,
+    include_apply_checks: bool = True,
+    drift_detail: str = "summary",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    return to_dict(
+        db.list_resource_revisions(
+            resource_iri=resource_iri,
+            graph=graph,
+            include_patch_mentions=include_patch_mentions,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,  # type: ignore[arg-type]
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+
 def describe_staged_revision_tool(
     db: DoxaBase,
     iri: str,

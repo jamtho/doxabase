@@ -734,6 +734,11 @@ few useful gaps:
   remains scattered, especially for unanchored staged patch touches. Consider a
   future `list_resource_revisions` or lineage helper rather than relying on
   every agent to parse patch payloads by hand.
+- A follow-up resource-revision API trial showed a first useful version should
+  not return full patch content or only patch subjects. `list_resource_revisions`
+  now uses exact RDF parsing on demand to return anchor matches, role-aware
+  patch mention flags, applied-source matches, matched triple counts, and the
+  existing revision routing row without a storage migration.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

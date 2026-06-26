@@ -857,6 +857,45 @@ class GraphRevisionList:
 
 
 @dataclass(frozen=True)
+class ResourceRevisionPatchMention:
+    patch_iri: str
+    target_graph: str | None
+    operation: str | None
+    operation_label: str | None
+    patch_role: str | None
+    patch_role_label: str | None
+    sequence_index: int | None
+    matched_term_roles: list[str]
+    matched_triples: int
+    triple_count: int | None
+
+
+@dataclass(frozen=True)
+class ResourceRevisionListItem:
+    revision: GraphRevisionListItem
+    match_types: list[str]
+    revision_anchor_match: bool
+    patch_mention_match: bool
+    applied_source_match: bool
+    applied_source_revision_iri: str | None
+    patch_mentions: list[ResourceRevisionPatchMention]
+    applied_source_patch_mentions: list[ResourceRevisionPatchMention]
+
+
+@dataclass(frozen=True)
+class ResourceRevisionList:
+    resource: ResourceSummary
+    revisions: list[ResourceRevisionListItem]
+    count: int
+    limit: int
+    offset: int
+    include_patch_mentions: bool
+    include_apply_checks: bool
+    drift_detail: str
+    next_action_queue: dict[str, list[str]]
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionDescription:
     iri: str
     graph: str | None
@@ -3308,6 +3347,206 @@ class DoxaBase:
             ),
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
+        )
+
+    def list_resource_revisions(
+        self,
+        resource_iri: str,
+        *,
+        graph: str | None = "history",
+        include_patch_mentions: bool = True,
+        include_apply_checks: bool = True,
+        drift_detail: TypingLiteral["summary", "exact"] = "summary",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> ResourceRevisionList:
+        if drift_detail not in {"summary", "exact"}:
+            raise DoxaBaseError("drift_detail must be 'summary' or 'exact'")
+        self._ensure_non_negative("limit", limit)
+        self._ensure_non_negative("offset", offset)
+        resource_value = self._required_iri("resource_iri", resource_iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+
+        all_revisions = self.list_graph_revisions(
+            graph=graph,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
+            limit=1_000_000,
+        )
+        matched: list[ResourceRevisionListItem] = []
+        staged_cache: dict[str, StagedGraphRevisionDescription | None] = {}
+        for item in all_revisions.revisions:
+            match_types: list[str] = []
+            revision_anchor_match = resource_value in self._objects(
+                data_graphs,
+                item.iri,
+                "rc:revisionAnchor",
+            )
+            if revision_anchor_match:
+                match_types.append("revision_anchor")
+
+            patch_mentions: list[ResourceRevisionPatchMention] = []
+            if include_patch_mentions and item.has_patch_payload:
+                staged = self._cached_staged_revision(
+                    item.iri,
+                    graph=graph,
+                    cache=staged_cache,
+                )
+                if staged is not None:
+                    patch_mentions = self._resource_revision_patch_mentions(
+                        staged,
+                        resource_value,
+                    )
+                    match_types.extend(
+                        self._resource_revision_patch_match_types(
+                            patch_mentions,
+                            prefix="patch",
+                        )
+                    )
+
+            applied_source_revision_iri = item.applies_staged_revision
+            applied_source_patch_mentions: list[ResourceRevisionPatchMention] = []
+            applied_source_match = False
+            if applied_source_revision_iri is not None:
+                staged = self._cached_staged_revision(
+                    applied_source_revision_iri,
+                    graph=graph,
+                    cache=staged_cache,
+                )
+                if staged is not None:
+                    source_anchor_match = resource_value in {
+                        anchor.iri for anchor in staged.revision_anchors
+                    }
+                    if source_anchor_match:
+                        applied_source_match = True
+                        match_types.append("applied_source_revision_anchor")
+                    if include_patch_mentions:
+                        applied_source_patch_mentions = (
+                            self._resource_revision_patch_mentions(
+                                staged,
+                                resource_value,
+                            )
+                        )
+                        if applied_source_patch_mentions:
+                            applied_source_match = True
+                            match_types.extend(
+                                self._resource_revision_patch_match_types(
+                                    applied_source_patch_mentions,
+                                    prefix="applied_source_patch",
+                                )
+                            )
+
+            match_types = list(dict.fromkeys(match_types))
+            patch_mention_match = bool(patch_mentions)
+            if (
+                not revision_anchor_match
+                and not patch_mention_match
+                and not applied_source_match
+            ):
+                continue
+            matched.append(
+                ResourceRevisionListItem(
+                    revision=item,
+                    match_types=match_types,
+                    revision_anchor_match=revision_anchor_match,
+                    patch_mention_match=patch_mention_match,
+                    applied_source_match=applied_source_match,
+                    applied_source_revision_iri=applied_source_revision_iri,
+                    patch_mentions=patch_mentions,
+                    applied_source_patch_mentions=applied_source_patch_mentions,
+                )
+            )
+
+        sliced = matched[offset : offset + limit]
+        return ResourceRevisionList(
+            resource=self._resource_summary(lookup_graphs, resource_value),
+            revisions=sliced,
+            count=len(matched),
+            limit=limit,
+            offset=offset,
+            include_patch_mentions=include_patch_mentions,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
+            next_action_queue=self._revision_next_action_queue(
+                (item.revision.iri, item.revision.next_action) for item in sliced
+            ),
+        )
+
+    def _cached_staged_revision(
+        self,
+        iri: str,
+        *,
+        graph: str | None,
+        cache: dict[str, StagedGraphRevisionDescription | None],
+    ) -> StagedGraphRevisionDescription | None:
+        if iri not in cache:
+            try:
+                cache[iri] = self.describe_staged_revision(iri, graph=graph)
+            except DoxaBaseError:
+                cache[iri] = None
+        return cache[iri]
+
+    def _resource_revision_patch_mentions(
+        self,
+        staged: StagedGraphRevisionDescription,
+        resource_iri: str,
+    ) -> list[ResourceRevisionPatchMention]:
+        mentions: list[ResourceRevisionPatchMention] = []
+        role_order = ("subject", "predicate", "object")
+        for patch in staged.patches:
+            if patch.content is None:
+                continue
+            try:
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                continue
+            matched_roles: set[str] = set()
+            matched_triples = 0
+            for subject, predicate, object_node in patch_graph:
+                triple_matched = False
+                if str(subject) == resource_iri:
+                    matched_roles.add("subject")
+                    triple_matched = True
+                if str(predicate) == resource_iri:
+                    matched_roles.add("predicate")
+                    triple_matched = True
+                if str(object_node) == resource_iri:
+                    matched_roles.add("object")
+                    triple_matched = True
+                if triple_matched:
+                    matched_triples += 1
+            if matched_roles:
+                mentions.append(
+                    ResourceRevisionPatchMention(
+                        patch_iri=patch.iri,
+                        target_graph=patch.target_graph,
+                        operation=patch.operation,
+                        operation_label=patch.operation_label,
+                        patch_role=patch.patch_role,
+                        patch_role_label=patch.patch_role_label,
+                        sequence_index=patch.sequence_index,
+                        matched_term_roles=[
+                            role for role in role_order if role in matched_roles
+                        ],
+                        matched_triples=matched_triples,
+                        triple_count=patch.triple_count,
+                    )
+                )
+        return mentions
+
+    @staticmethod
+    def _resource_revision_patch_match_types(
+        mentions: list[ResourceRevisionPatchMention],
+        *,
+        prefix: str,
+    ) -> list[str]:
+        return list(
+            dict.fromkeys(
+                f"{prefix}_{role}"
+                for mention in mentions
+                for role in mention.matched_term_roles
+            )
         )
 
     def _current_alternative_to_iri(

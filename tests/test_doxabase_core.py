@@ -4200,6 +4200,113 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     ]
 
 
+def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    other = "https://example.test/project#OtherOrders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+
+    anchored = db.stage_graph_revision(
+        summary="Classify Orders as current table",
+        rationale="Anchor and patch should both mention Orders.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Table .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    unanchored = db.stage_graph_revision(
+        summary="Add Orders stewardship note",
+        rationale="Patch touches Orders without an explicit revision anchor.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Owned by the operations team." .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:01:00Z",
+    )
+    applied = db.apply_staged_revision(
+        unanchored.revision_iri,
+        created_at="2026-06-01T10:02:00Z",
+    )
+    unrelated = db.stage_graph_revision(
+        summary="Add unrelated table",
+        rationale="This proposal should not appear in the Orders resource list.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OtherOrders a rc:Dataset .
+                """,
+            }
+        ],
+        revision_anchors=[other],
+        created_at="2026-06-01T10:03:00Z",
+    )
+
+    listing = db.list_resource_revisions(orders)
+
+    assert listing.resource.iri == orders
+    assert listing.include_patch_mentions is True
+    assert listing.include_apply_checks is True
+    assert listing.count == 3
+    by_iri = {item.revision.iri: item for item in listing.revisions}
+    assert set(by_iri) == {
+        anchored.revision_iri,
+        unanchored.revision_iri,
+        applied.applied_revision_iri,
+    }
+    assert unrelated.revision_iri not in by_iri
+
+    anchored_item = by_iri[anchored.revision_iri]
+    assert anchored_item.revision_anchor_match is True
+    assert anchored_item.patch_mention_match is True
+    assert anchored_item.match_types == ["revision_anchor", "patch_subject"]
+    assert anchored_item.patch_mentions[0].matched_term_roles == ["subject"]
+    assert anchored_item.patch_mentions[0].matched_triples == 1
+    assert anchored_item.patch_mentions[0].triple_count == 1
+    assert anchored_item.revision.application_status == "conflict"
+    assert anchored_item.revision.stale_resolution_state == "stale_unresolved"
+
+    unanchored_item = by_iri[unanchored.revision_iri]
+    assert unanchored_item.revision_anchor_match is False
+    assert unanchored_item.patch_mention_match is True
+    assert unanchored_item.match_types == ["patch_subject"]
+    assert unanchored_item.revision.application_status == "already_applied"
+
+    applied_item = by_iri[applied.applied_revision_iri]
+    assert applied_item.revision.record_kind == "applied_event"
+    assert applied_item.applied_source_match is True
+    assert applied_item.applied_source_revision_iri == unanchored.revision_iri
+    assert applied_item.match_types == ["applied_source_patch_subject"]
+    assert applied_item.applied_source_patch_mentions[0].target_graph == "map"
+    assert applied_item.applied_source_patch_mentions[0].matched_triples == 1
+
+    anchor_only = db.list_resource_revisions(orders, include_patch_mentions=False)
+    assert anchor_only.count == 1
+    assert anchor_only.revisions[0].revision.iri == anchored.revision_iri
+    assert anchor_only.revisions[0].match_types == ["revision_anchor"]
+
+
 def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     staged = db.stage_graph_revision(

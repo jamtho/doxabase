@@ -681,6 +681,14 @@ record.
 Filtering by `application_status` or `stale_resolution_state` automatically
 computes apply checks for patch-backed revisions, as does
 `current_staged_work_only=True`.
+`list_resource_revisions(resource_iri)` returns revision rows that explicitly
+touch one resource through `rc:revisionAnchor`, exact subject/predicate/object
+URI mentions in staged patch payloads, or an applied event whose staged source
+matched the resource. It filters before pagination and wraps each normal
+`list_graph_revisions()` row under `revision`, adding `match_types`,
+`patch_mentions`, `applied_source_revision_iri`, and
+`applied_source_patch_mentions`. Patch mentions are compact role-aware flags,
+not patch content; call `describe_staged_revision()` for the full payload.
 `application_status="validation_failed"` means the current replay reached SHACL
 validation and failed. `staged_validation_status="failed"` means the stored
 staged-time validation failed; it still finds rows that later became live

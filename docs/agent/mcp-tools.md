@@ -115,6 +115,18 @@ arrays from snapshot drift rows, but still includes drift relevance, overlap
 arrays, and added/removed exact-change counts. Set `drift_detail="exact"` or
 call `check_staged_revision_apply` when you need the actual changed triples.
 
+`doxabase.list_resource_revisions`
+
+Lists revisions that explicitly touch one resource. Matches come from
+`rc:revisionAnchor`, exact subject/predicate/object URI mentions in staged patch
+payloads, or an applied event whose staged source matched the resource. The
+response wraps the normal revision list row under `revision` and adds
+`match_types`, `patch_mentions`, `applied_source_revision_iri`, and
+`applied_source_patch_mentions`. Patch mentions are compact flags, not full
+patch content: patch IRI, target graph, operation, role, sequence,
+`matched_term_roles`, `matched_triples`, and total `triple_count`. Use
+`describe_staged_revision` when you need the patch payload itself.
+
 `doxabase.search`
 
 Lexically searches literal RDF claims and URI-valued graph terms, returning

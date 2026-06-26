@@ -345,6 +345,15 @@ Do not call `check_staged_revision_apply()` after application expecting an exact
 before/after diff. It reports `status="already_applied"` and points you toward
 inspection; it does not replay the patch or return drift arrays for the applied
 event.
+
+When the question is resource-centric, start with
+`list_resource_revisions(resource_iri)` instead of scanning the whole history
+queue by hand. It returns revisions that explicitly anchor the resource, staged
+patches whose parsed RDF payload mentions the resource as subject, predicate, or
+object, and applied events whose staged source matched. Patch mention summaries
+are role-aware flags with matched triple counts; call
+`describe_staged_revision()` for full patch content.
+
 Call `describe_applied_revision_diff(applied_iri)` when you need stored
 before/after snapshot counts and digests for an applied staged revision. Pass
 `include_triples=True` when you also need exact changed-triple arrays; the

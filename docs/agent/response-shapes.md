@@ -1424,6 +1424,59 @@ In list rows, relation fields such as `applied_by`,
 `restaged_from`, `restaged_by`, and `current_restaged_by` are nullable IRI
 strings. They are not nested resource objects.
 
+`db.list_resource_revisions(resource_iri, include_patch_mentions=True,
+include_apply_checks=True)` returns `ResourceRevisionList`:
+
+```python
+resource_revisions.resource
+resource_revisions.revisions
+resource_revisions.count
+resource_revisions.limit
+resource_revisions.offset
+resource_revisions.include_patch_mentions
+resource_revisions.include_apply_checks
+resource_revisions.drift_detail
+resource_revisions.next_action_queue
+```
+
+Each `resource_revisions.revisions[]` item wraps a normal
+`GraphRevisionListItem` under `revision` and adds resource-match context:
+
+```python
+item.revision
+item.match_types
+item.revision_anchor_match
+item.patch_mention_match
+item.applied_source_match
+item.applied_source_revision_iri
+item.patch_mentions
+item.applied_source_patch_mentions
+```
+
+`match_types` values include `revision_anchor`, `patch_subject`,
+`patch_predicate`, `patch_object`, `applied_source_revision_anchor`,
+`applied_source_patch_subject`, `applied_source_patch_predicate`, and
+`applied_source_patch_object`. Patch mention rows are compact summaries, not
+patch content:
+
+```python
+mention.patch_iri
+mention.target_graph
+mention.operation
+mention.operation_label
+mention.patch_role
+mention.patch_role_label
+mention.sequence_index
+mention.matched_term_roles
+mention.matched_triples
+mention.triple_count
+```
+
+Use this helper when the question is "what revisions touched this resource?"
+It filters before pagination and matches exact expanded RDF terms in staged
+patch payloads. Use `describe_staged_revision()` when the patch payload itself
+is needed.
+
 `db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
 
 ```python

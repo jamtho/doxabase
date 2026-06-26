@@ -32,6 +32,7 @@ from doxabase.mcp_tools import (
     list_docs_tool,
     list_entities_tool,
     list_graph_revisions_tool,
+    list_resource_revisions_tool,
     load_example_fixtures_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
@@ -80,6 +81,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_revision_snapshot_evidence" in tool_names
     assert "doxabase.describe_applied_revision_diff" in tool_names
     assert "doxabase.list_graph_revisions" in tool_names
+    assert "doxabase.list_resource_revisions" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
     assert "doxabase.check_staged_revision_apply" in tool_names
     assert "doxabase.describe_pattern" in tool_names
@@ -899,6 +901,55 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert (
         staged_patch_result["revisions"][0]["not_current_staged_work_reason"]
         is None
+    )
+
+
+def test_list_resource_revisions_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Add Orders stewardship note",
+        rationale="Patch touches Orders without an explicit revision anchor.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Owned by the operations team." .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    applied = apply_staged_revision_tool(
+        db,
+        staged["revision_iri"],
+        created_at="2026-06-01T10:01:00Z",
+    )
+
+    result = list_resource_revisions_tool(db, resource_iri=orders)
+
+    assert result["resource"]["iri"] == orders
+    assert result["count"] == 2
+    by_iri = {item["revision"]["iri"]: item for item in result["revisions"]}
+    assert by_iri[staged["revision_iri"]]["match_types"] == ["patch_subject"]
+    assert by_iri[staged["revision_iri"]]["patch_mentions"][0][
+        "matched_term_roles"
+    ] == ["subject"]
+    assert by_iri[staged["revision_iri"]]["patch_mentions"][0][
+        "matched_triples"
+    ] == 1
+    assert by_iri[applied["applied_revision_iri"]]["match_types"] == [
+        "applied_source_patch_subject"
+    ]
+    assert by_iri[applied["applied_revision_iri"]]["applied_source_revision_iri"] == (
+        staged["revision_iri"]
     )
 
 
