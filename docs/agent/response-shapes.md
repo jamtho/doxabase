@@ -1701,6 +1701,10 @@ This helper is a compact resource-centric lineage card, not full graph-version
 browsing. It avoids requiring full staged patch payloads for imported applied
 events; inspect `patch_mention_scan` and per-row incomplete flags before
 treating empty patch mention arrays as absence.
+`current_staged_revision_iri` is only populated when the selected row or its
+latest restage successor is still current staged work. Once a successor has been
+applied, the successor and applied event remain discoverable through
+`related_revision_iris` instead of being mislabeled as current staged work.
 
 `db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
 

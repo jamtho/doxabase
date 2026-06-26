@@ -4754,6 +4754,74 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert anchor_only.revisions[0].match_types == ["revision_anchor"]
 
 
+def test_resource_revision_lineage_tracks_current_restage_successor(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    original = db.stage_graph_revision(
+        summary="Classify Orders as dataset",
+        rationale="Exercise resource lineage across restage and apply.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Dataset .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftMaker",
+        label="Drift maker",
+    )
+    restaged = db.restage_staged_revision(
+        original.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+
+    stale_lineage = db.describe_resource_revision_lineage(
+        orders,
+        original.revision_iri,
+    )
+    assert stale_lineage.selected_role == "restaged_source"
+    assert stale_lineage.current_staged_revision_iri == restaged.revision_iri
+    assert stale_lineage.related_revision_iris == [
+        original.revision_iri,
+        restaged.revision_iri,
+    ]
+
+    applied = db.apply_staged_revision(
+        restaged.revision_iri,
+        created_at="2026-06-01T10:02:00Z",
+    )
+    applied_source_lineage = db.describe_resource_revision_lineage(
+        orders,
+        original.revision_iri,
+    )
+    assert applied_source_lineage.selected_role == "restaged_source"
+    assert applied_source_lineage.current_staged_revision_iri is None
+    assert applied_source_lineage.related_revision_iris == [
+        original.revision_iri,
+        applied.applied_revision_iri,
+        restaged.revision_iri,
+    ]
+    applied_event_lineage = db.describe_resource_revision_lineage(
+        orders,
+        applied.applied_revision_iri,
+    )
+    assert applied_event_lineage.related_revision_iris == [
+        applied.applied_revision_iri,
+        restaged.revision_iri,
+        original.revision_iri,
+    ]
+
+
 def test_list_resource_revisions_recovers_imported_applied_source_anchors(
     tmp_path: Path,
 ) -> None:
@@ -4904,6 +4972,14 @@ def test_list_resource_revisions_marks_unreadable_patch_mentions_incomplete(
     assert item.patch_mentions == []
     assert item.patch_mentions_incomplete is True
     assert item.patch_mentions_unreadable_count == 1
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.describe_resource_revision_lineage(orders, unanchored.revision_iri)
+    message = str(excinfo.value)
+    assert "was not found in resource lineage" in message
+    assert "Resource patch mention scan was incomplete" in message
+    assert "unreadable_patch_count=2" in message
+    assert "unreadable_revision_count=2" in message
+    assert "omitted_match_risk=True" in message
 
 
 def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:

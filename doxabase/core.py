@@ -3794,9 +3794,20 @@ class DoxaBase:
         by_iri = {item.revision.iri: item for item in lineage.revisions}
         selected = by_iri.get(revision_value)
         if selected is None:
+            scan = lineage.patch_mention_scan
+            scan_note = ""
+            if scan.status == "incomplete" or scan.omitted_match_risk:
+                scan_note = (
+                    " Resource patch mention scan was "
+                    f"{scan.status}; unreadable_patch_count="
+                    f"{scan.unreadable_patch_count}; "
+                    "unreadable_revision_count="
+                    f"{scan.unreadable_revision_count}; "
+                    f"omitted_match_risk={scan.omitted_match_risk}."
+                )
             raise DoxaBaseError(
                 f"Revision '{revision_iri}' was not found in resource lineage "
-                f"for '{resource_iri}'"
+                f"for '{resource_iri}'.{scan_note}"
             )
 
         applied_revision_iri, staged_revision_iri = (
@@ -3808,13 +3819,14 @@ class DoxaBase:
             else applied_revision_iri
         )
         paired = by_iri.get(paired_iri) if paired_iri is not None else None
-        current_staged_revision_iri = (
-            selected.revision.current_restaged_by
-            or (
-                selected.revision.iri
-                if selected.revision.is_current_staged_work
-                else None
-            )
+        current_staged_revision_iri = self._resource_lineage_current_staged_iri(
+            selected,
+            by_iri,
+        )
+        current_successor = (
+            by_iri.get(selected.revision.current_restaged_by)
+            if selected.revision.current_restaged_by is not None
+            else None
         )
         related_revision_iris = self._resource_lineage_related_revision_iris(
             selected,
@@ -3822,6 +3834,11 @@ class DoxaBase:
             applied_revision_iri=applied_revision_iri,
             staged_revision_iri=staged_revision_iri,
             current_staged_revision_iri=current_staged_revision_iri,
+            current_successor_applied_revision_iri=(
+                current_successor.revision.applied_by
+                if current_successor is not None
+                else None
+            ),
         )
 
         applied_diff_status = "not_applicable"
@@ -3891,6 +3908,21 @@ class DoxaBase:
         )
 
     @staticmethod
+    def _resource_lineage_current_staged_iri(
+        selected: ResourceRevisionListItem,
+        by_iri: dict[str, ResourceRevisionListItem],
+    ) -> str | None:
+        if selected.revision.is_current_staged_work:
+            return selected.revision.iri
+        successor_iri = selected.revision.current_restaged_by
+        if successor_iri is None:
+            return None
+        successor = by_iri.get(successor_iri)
+        if successor is not None and successor.revision.is_current_staged_work:
+            return successor_iri
+        return None
+
+    @staticmethod
     def _resource_revision_applied_pair(
         item: ResourceRevisionListItem,
     ) -> tuple[str | None, str | None]:
@@ -3924,6 +3956,7 @@ class DoxaBase:
         applied_revision_iri: str | None,
         staged_revision_iri: str | None,
         current_staged_revision_iri: str | None,
+        current_successor_applied_revision_iri: str | None,
     ) -> list[str]:
         values = [
             selected.revision.iri,
@@ -3931,9 +3964,13 @@ class DoxaBase:
             applied_revision_iri,
             staged_revision_iri,
             current_staged_revision_iri,
+            current_successor_applied_revision_iri,
             selected.revision.restaged_from,
             selected.revision.restaged_by,
             selected.revision.current_restaged_by,
+            paired.revision.restaged_from if paired is not None else None,
+            paired.revision.restaged_by if paired is not None else None,
+            paired.revision.current_restaged_by if paired is not None else None,
         ]
         return [value for value in dict.fromkeys(values) if value is not None]
 
