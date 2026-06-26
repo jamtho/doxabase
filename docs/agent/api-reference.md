@@ -947,6 +947,8 @@ per-row `next_action`, and suggested next actions. Grouped Markdown and
 `bundle_summary.next_action_queue` expose the same compact next-action buckets
 for routing; the older recommended queues remain for compatibility and broader
 review grouping.
+Duplicate input revision IRIs are normalized to first-seen order before summaries
+and queue counts are built.
 Stale sources that already have `restaged_by` point suggested actions at the
 current refreshed successor instead of another restage. `current_restaged_by`
 follows deeper restage chains while preserving direct `restaged_by` provenance.
@@ -968,8 +970,9 @@ it groups current per-row action hints without requiring callers to join apply
 status, stale state, recommendation source, and suggested action fields by hand.
 `bundle_summary.warnings` calls out sequencing hazards, including grouped
 ready/no-op reviews on the same changed graph that should be re-checked after
-each apply, and `post_apply_recheck_revision_iris` gives scripts the affected
-revision IRIs for pre-apply grouped-review hazards.
+each apply, and source-only bundles whose recommended review target is outside
+the current bundle. `post_apply_recheck_revision_iris` gives scripts the
+affected revision IRIs for pre-apply grouped-review hazards.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for the same list.
 Grouped Markdown exports include a `Review Queues` section mirroring the
 recommended-review sets, derived next-action buckets, apply/restage, repair,

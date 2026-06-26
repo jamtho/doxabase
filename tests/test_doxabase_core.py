@@ -4469,6 +4469,45 @@ def test_restaged_revision_with_realized_addition_reports_noop(
     assert "Inspect already-effective stale source" in exported_text
 
 
+def test_export_staged_revisions_dedupes_duplicate_inputs(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage messages dataset",
+        rationale="Exercise duplicate grouped export routing.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    export = db.export_staged_revisions(
+        [staged.revision_iri, staged.revision_iri],
+        tmp_path / "duplicate-review.md",
+    )
+
+    assert export.revision_iris == [staged.revision_iri]
+    assert [item.revision_iri for item in export.revision_summaries] == [
+        staged.revision_iri
+    ]
+    assert export.bundle_summary.total_revisions == 1
+    assert export.bundle_summary.apply_status_counts == {"ready": 1}
+    assert export.bundle_summary.stale_resolution_state_counts == {"ready": 1}
+    assert export.bundle_summary.next_action_queue == {
+        "apply_after_review": [staged.revision_iri]
+    }
+    assert export.bundle_summary.post_apply_recheck_revision_iris == []
+    assert export.bundle_summary.warnings == []
+
+
 def test_stale_removal_with_target_already_absent_routes_to_inspection(
     tmp_path: Path,
 ) -> None:
@@ -5648,7 +5687,11 @@ def test_restage_chain_routes_to_current_successor(
     assert export.bundle_summary.recommended_review_iris == [
         current_successor.revision_iri
     ]
+    assert len(export.bundle_summary.warnings) == 1
+    assert "outside this bundle" in export.bundle_summary.warnings[0]
+    assert current_successor.revision_iri in export.bundle_summary.warnings[0]
     exported = export_path.read_text(encoding="utf-8")
+    assert "## Bundle Warnings" in exported
     assert "- Restaged by: " in exported
     assert "- Current restaged by: " in exported
     assert "**Inspect current refreshed successor:**" in exported
@@ -10230,6 +10273,12 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert local_partition.candidate_path_status == "ready"
     assert local_partition.direct_review_required is False
     assert local_partition.review_reasons == []
+    assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
+    assert context.suggested_next_actions[0].arguments == {
+        "iri": dataset,
+        "candidate_index": context.query_target_decision.candidate_index,
+        "allow_context_blocked_candidate": True,
+    }
 
     blocked_plan = db.draft_query_plan(
         dataset,
@@ -10673,6 +10722,12 @@ def test_query_target_s3_storage_owned_template_warnings_do_not_bleed(
     ]
     assert plan.review_gate.reason_codes == ["query_context_has_other_blockers"]
     assert plan.handoff_kind == "context_review_required"
+    assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
+    assert context.suggested_next_actions[0].arguments == {
+        "iri": dataset,
+        "candidate_index": context.query_target_decision.candidate_index,
+        "allow_context_blocked_candidate": True,
+    }
 
 
 def test_query_target_candidate_template_warnings_do_not_bleed_to_siblings(

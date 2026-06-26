@@ -65,6 +65,11 @@ When arriving cold, use this route before reading every reference doc.
 
 If the MCP docs tools are not exposed in the current session, follow the same
 route by reading the matching files in `docs/agent/` directly.
+In lazy or deferred tool environments, a documented MCP tool may be available
+only after exact discovery; search for the exact name such as
+`doxabase.describe_dataset` or `doxabase.graph_overview` before assuming it is
+missing. `doxabase.search` searches RDF literals in the capsule, not these agent
+docs; use `list_docs`/`get_doc` or local files for doc search.
 
 If you are scripting directly against the Python API, read `response_shapes`
 before assuming returned field names. Large docs expose section headings through

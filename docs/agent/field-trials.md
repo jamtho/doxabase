@@ -1073,6 +1073,24 @@ few useful gaps:
   signatures now produce `ambiguous_physical_layout`, block execution-readiness,
   and leave `scan.function` unset until the intended layout is modeled or
   selected.
+- A cold-agent MCP-docs trial found lazy/deferred tool discovery can hide named
+  DoxaBase tools until the exact tool name is searched. `start_here` now reminds
+  agents to search exact `doxabase.*` names before assuming a documented tool is
+  unavailable, and clarifies that `doxabase.search` searches capsule RDF rather
+  than agent docs.
+- A grouped staged-export trial found duplicate input IRIs inflated status
+  counts, next-action queues, and post-apply recheck hazards. Grouped exports now
+  normalize revision inputs to first-seen unique order before building summaries.
+- The same export trial found source-only handled-stale bundles could recommend a
+  refreshed successor that was not included in the bundle. Bundle warnings now
+  name recommended review IRIs outside the artifact so agents export or describe
+  the successor before acting.
+- A query-planning sibling-blocker trial found `describe_query_context` could
+  select a direct-clean candidate while overall context stayed review-gated by
+  bad sibling metadata, but the suggested `draft_query_plan` call omitted
+  `allow_context_blocked_candidate=True`. Suggested actions now include the
+  allowance whenever the selected candidate is direct-clean and broader readiness
+  is not `ready_for_query_planning`.
 - A follow-up query-planning handoff trial confirmed ambiguous layouts,
   candidate selection errors, S3 runtime blockers, and database relation cards
   route conservatively. It also clarified that downstream agents must gate any

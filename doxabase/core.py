@@ -8594,6 +8594,7 @@ class DoxaBase:
         suggested_next_actions = self._query_context_next_actions(
             dataset_iri=dataset.iri,
             graph=graph,
+            readiness=readiness,
             decision=query_target_decision,
             candidates=query_target_candidates,
             unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
@@ -8645,6 +8646,7 @@ class DoxaBase:
         *,
         dataset_iri: str,
         graph: str | None,
+        readiness: str,
         decision: QueryTargetDecision,
         candidates: list[QueryTargetCandidate],
         unselected_ready_candidate_indexes: list[int],
@@ -8669,7 +8671,7 @@ class DoxaBase:
             "candidate, then read review_gate, scan, bindings, and issues."
         )
         if (
-            decision.status == "context_blocked"
+            readiness != "ready_for_query_planning"
             and candidate.direct_review_required is False
         ):
             arguments["allow_context_blocked_candidate"] = True
@@ -19933,6 +19935,7 @@ class DoxaBase:
             revision_iris,
             required=True,
         )
+        revision_values = list(dict.fromkeys(revision_values))
         descriptions = [
             self.describe_staged_revision(revision_iri)
             for revision_iri in revision_values
@@ -20257,6 +20260,10 @@ class DoxaBase:
         post_apply_recheck = self._staged_revisions_post_apply_recheck_revision_iris(
             summaries
         )
+        bundled_revision_iris = {summary.revision_iri for summary in summaries}
+        external_recommended_review = [
+            iri for iri in recommended_review if iri not in bundled_revision_iris
+        ]
         return StagedGraphRevisionBundleSummary(
             total_revisions=len(summaries),
             apply_status_counts=apply_status_counts,
@@ -20266,7 +20273,10 @@ class DoxaBase:
             ready_restage_successor_revision_iris=ready_successors,
             post_apply_recheck_revision_iris=post_apply_recheck,
             sequential_apply_recheck_candidate_iris=post_apply_recheck,
-            warnings=self._staged_revisions_bundle_warnings(post_apply_recheck),
+            warnings=self._staged_revisions_bundle_warnings(
+                post_apply_recheck,
+                external_recommended_review_iris=external_recommended_review,
+            ),
             validation_failed_revision_iris=validation_failed,
             staged_validation_failed_revision_iris=staged_validation_failed,
             recommended_review_iris=recommended_review,
@@ -20313,18 +20323,25 @@ class DoxaBase:
     def _staged_revisions_bundle_warnings(
         self,
         post_apply_recheck_revision_iris: list[str],
+        *,
+        external_recommended_review_iris: list[str] | None = None,
     ) -> list[str]:
-        if not post_apply_recheck_revision_iris:
-            return []
-        return [
-            (
+        warnings: list[str] = []
+        if post_apply_recheck_revision_iris:
+            warnings.append(
                 "Ready/no-op staged revisions sharing a changed graph are "
                 "sequential review targets: applying one ready revision can "
                 "change graph state and make sibling ready or no-op revisions "
                 "stale. Re-run check_staged_revision_apply or "
                 "export_staged_revisions after each apply."
             )
-        ]
+        if external_recommended_review_iris:
+            warnings.append(
+                "Recommended review includes revision(s) outside this bundle: "
+                f"{', '.join(external_recommended_review_iris)}. Export or "
+                "describe them before acting on this review bundle."
+            )
+        return warnings
 
     def _staged_revision_impacts(
         self,

@@ -2759,6 +2759,10 @@ export.revision_summaries
 export.bundle_summary
 ```
 
+`export.revision_iris` is normalized to first-seen unique revision IRIs; grouped
+exports do not preserve duplicate input rows or inflate queue counts for repeated
+IRIs.
+
 Each item in `revision_summaries` is a
 `StagedGraphRevisionExportSummary`:
 
@@ -2882,11 +2886,14 @@ validation-failed or patch-conflict rows that need a repaired proposal.
 restage-after-review, repair-or-replace, already-applied inspection, and
 informational buckets without joining status, stale state, and recommendation
 fields manually.
-`warnings` calls out bundle-level sequencing hazards, and
-`post_apply_recheck_revision_iris` lists grouped ready/no-op staged revisions
-sharing a changed graph whose old readiness should be discarded after any
-successful apply. This includes mixed reviews where applying one ready revision
-can make sibling ready or no-op revisions stale. Use
+`warnings` calls out bundle-level sequencing hazards and recommended review IRIs
+that are outside the current bundle. If a source-only handled-stale bundle points
+at an external refreshed successor, export or describe that successor before
+acting. `post_apply_recheck_revision_iris` lists grouped ready/no-op staged
+revisions sharing a changed graph whose old readiness should be discarded after
+any successful apply. This includes mixed reviews where applying one ready
+revision can make sibling ready or no-op revisions stale.
+Use
 `recommended_applied_inspection_iris` for already-applied staged revisions that
 are useful to inspect but should not be applied again.
 

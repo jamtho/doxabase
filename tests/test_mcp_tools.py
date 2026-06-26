@@ -870,13 +870,15 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
 
     export = export_staged_revisions_tool(
         db,
-        revision_iris=[staged["revision_iri"]],
+        revision_iris=[staged["revision_iri"], staged["revision_iri"]],
         path="nested/../bundle.md",
         title="Relative bundle",
     )
 
     expected_path = (tmp_path / "bundle.md").resolve()
     assert export["path"] == str(expected_path)
+    assert export["revision_iris"] == [staged["revision_iri"]]
+    assert len(export["revision_summaries"]) == 1
     assert export["bundle_summary"]["apply_status_counts"] == {"ready": 1}
     assert export["bundle_summary"]["stale_resolution_state_counts"] == {"ready": 1}
     assert export["bundle_summary"]["post_apply_recheck_revision_iris"] == []

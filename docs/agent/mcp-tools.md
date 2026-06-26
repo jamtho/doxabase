@@ -1070,7 +1070,8 @@ and `recommended_applied_inspection_iris`. Prefer
 direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.warnings` calls out
 bundle-level sequencing hazards such as ready/no-op reviews sharing a changed
-graph that should be re-checked after each apply;
+graph that should be re-checked after each apply, plus source-only bundles whose
+recommended review target is outside the current bundle;
 `post_apply_recheck_revision_iris` is the machine-readable affected-revision
 list for pre-apply grouped-review hazards.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for the same list.
