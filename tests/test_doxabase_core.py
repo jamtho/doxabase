@@ -1865,7 +1865,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     db.export_trig(project_path, graphs="project")
     snapshot_export = db.export_revision_snapshots(
         snapshot_path,
-        revision_iris=[staged.revision_iri, result.applied_revision_iri],
+        revision_iris=[result.applied_revision_iri],
     )
     assert snapshot_export.snapshot_count == 2
     assert snapshot_export.quad_count == 3

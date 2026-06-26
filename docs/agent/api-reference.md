@@ -71,9 +71,10 @@ with `export_revision_snapshots()` when exact applied-diff or stale-drift
 triple reconstruction must survive import.
 
 `export_revision_snapshots()` writes a JSON handoff bundle for stored revision
-snapshot rows. Pass `revision_iris=[staged_iri, applied_iri]` to preserve the
-before/after rows needed by one applied staged revision diff, or omit the filter
-to export all stored snapshot rows in the capsule.
+snapshot rows. Pass `revision_iris=[applied_iri]` to preserve the applied
+after-snapshot plus the staged source before-snapshot needed by one applied
+staged revision diff, or omit the filter to export all stored snapshot rows in
+the capsule.
 
 ## Replace Graph Triples
 

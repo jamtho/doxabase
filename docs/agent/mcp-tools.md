@@ -963,9 +963,10 @@ Exports stored SQLite-side revision snapshot rows as JSON. This is separate
 from RDF graph export: TriG preserves revision metadata and graph snapshot
 summaries, while this bundle preserves the exact rows used by
 `doxabase.describe_applied_revision_diff(include_triples=true)`. Filter with
-`revision_iris` and `graph_roles` when a handoff only needs one applied diff.
-The bundle may include historical triples that are no longer current graph
-facts.
+`revision_iris=[applied_iri]` and `graph_roles` when a handoff only needs one
+applied diff; applied-event filters include the staged source snapshot rows
+needed for before/after reconstruction. The bundle may include historical
+triples that are no longer current graph facts.
 
 `doxabase.load_example_fixtures`
 

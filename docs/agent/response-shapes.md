@@ -1895,8 +1895,10 @@ bundle.bytes_written
 
 The JSON bundle is an opt-in companion to RDF exports. It preserves
 SQLite-side snapshot rows used for exact applied diff and stale drift
-inspection; it is not an RDF graph export. It may include historical triples
-that are no longer present in current graph roles.
+inspection; it is not an RDF graph export. If `revision_iris` contains an
+applied staged-revision event, export also includes that event's staged source
+revision snapshots so applied diff reconstruction has both sides. It may
+include historical triples that are no longer present in current graph roles.
 
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:

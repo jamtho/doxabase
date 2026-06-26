@@ -20559,9 +20559,10 @@ class DoxaBase:
             self._required_iri("revision_iris", value)
             for value in self._string_values("revision_iris", revision_iris)
         ]
+        expanded_revisions = self._snapshot_export_revision_iris(revisions)
         roles = self._snapshot_bundle_graph_roles(graph_roles)
         entries = self._graph_snapshot_bundle_entries(
-            revision_iris=revisions or None,
+            revision_iris=expanded_revisions or None,
             graph_roles=roles or None,
         )
         revision_values = list(dict.fromkeys(entry["revision_iri"] for entry in entries))
@@ -20583,6 +20584,23 @@ class DoxaBase:
             quad_count=quad_count,
             bytes_written=bytes_written,
         )
+
+    def _snapshot_export_revision_iris(self, revision_iris: list[str]) -> list[str]:
+        if not revision_iris:
+            return []
+        history_graphs = self._expand_graphs(["history"])
+        expanded: list[str] = []
+        for revision_iri in revision_iris:
+            if revision_iri not in expanded:
+                expanded.append(revision_iri)
+            staged_source_iri = self._first_object(
+                history_graphs,
+                revision_iri,
+                "rc:appliesStagedRevision",
+            )
+            if staged_source_iri is not None and staged_source_iri not in expanded:
+                expanded.append(staged_source_iri)
+        return expanded
 
     def import_revision_snapshots(
         self,

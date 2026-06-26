@@ -91,8 +91,11 @@ exports.
 Snapshot export filters are inclusive and quiet: if a requested revision IRI has
 no stored rows, the export can still be a valid empty bundle. The returned
 `revision_iris` and `graph_roles` list what was actually exported, in storage
-order rather than caller input order. A zero-quad snapshot row can still be
-meaningful, for example the empty before-state of an applied staged revision.
+order rather than caller input order. When a requested revision is an applied
+staged-revision event, the filter also includes its staged source revision so
+the bundle has both before and after rows for exact diff reconstruction. A
+zero-quad snapshot row can still be meaningful, for example the empty
+before-state of an applied staged revision.
 Use `describe_revision_snapshot_evidence(revision_iri)` after imports when the
 revision recovery state is unclear. It classifies `history_missing`,
 `history_only_count_digest`, `history_plus_snapshot_rows`, and

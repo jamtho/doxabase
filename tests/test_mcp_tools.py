@@ -1412,10 +1412,14 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     snapshot_export = export_revision_snapshots_tool(
         db,
         path=str(snapshot_path),
-        revision_iris=[staged["revision_iri"], result["applied_revision_iri"]],
+        revision_iris=[result["applied_revision_iri"]],
     )
     assert snapshot_export["snapshot_count"] == 2
     assert snapshot_export["quad_count"] == 3
+    assert snapshot_export["revision_iris"] == [
+        result["applied_revision_iri"],
+        staged["revision_iri"],
+    ]
 
     round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
     round_trip.import_trig(project_path)

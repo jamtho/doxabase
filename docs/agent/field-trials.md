@@ -708,7 +708,10 @@ few useful gaps:
   but SQLite snapshot rows for exact drift do not. A later version-browsing
   trial added `export_revision_snapshots` / `import_revision_snapshots` as the
   opt-in JSON companion for exact applied-diff or stale-drift triple
-  reconstruction after RDF import.
+  reconstruction after RDF import. A follow-up applied-diff export trial found
+  `revision_iris=[applied_event]` preserved only the after-snapshot; applied
+  event filters now also include the staged source snapshot rows needed for
+  exact before/after diff reconstruction.
 - A four-agent loop after snapshot-bundle publication confirmed the main
   multi-graph handoff path, stale drift/restage/apply queues, query-planning
   readiness split, and awkward profile/systematisation flow. The snapshot trial
