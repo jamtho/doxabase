@@ -165,6 +165,10 @@ just are not current work. This filter also computes apply checks, so the queue
 includes live `application_status`, blocker, and suggested-action fields.
 When inspecting a mixed history list, use `not_current_staged_work_reason` to see
 why a false `is_current_staged_work` row was excluded from that queue.
+If you keep the mixed page, `returned_application_status_counts` still counts
+historical rows such as handled stale conflicts, while
+`returned_current_staged_work_application_status_counts` narrows the same
+returned page to rows where `is_current_staged_work=True`.
 
 For a cold staged-work handoff, a good first pass is:
 
@@ -174,6 +178,8 @@ queue = db.list_graph_revisions(
     include_apply_checks=True,
     drift_detail="summary",
 )
+print(queue.returned_application_status_counts)
+print(queue.returned_current_staged_work_application_status_counts)
 for item in queue.revisions:
     print(
         item.application_status,
@@ -201,7 +207,10 @@ Treat that as a triage queue, not an apply queue. It can include ready mutation
 candidates, validation-failed repair work, no-op rows, and stale refreshed
 successors. Use `application_status="ready"` when you want only mechanically
 ready candidates. Use `application_status="validation_failed"` to find rows
-whose current replay still fails SHACL validation. Use
+whose current replay still fails SHACL validation. The
+`staged_validation_status` filter values are `conforms`, `failed`, and
+`not_recorded`; use `conforms`, not `passed`, for staged-time validation that
+had no failures. Use
 `application_status="superseded_by_restage"` to find sources that would
 otherwise replay but already point at a refreshed successor; inspect the
 successor instead of applying the source. Use

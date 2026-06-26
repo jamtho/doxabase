@@ -3305,6 +3305,79 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     )
 
 
+def test_restage_staged_revision_preserves_patch_sequence(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    addition_operation = db.expand_iri("rc:AdditionPatch")
+    removal_operation = db.expand_iri("rc:RemovalPatch")
+    patch_role = db.expand_iri("rc:FramingPatch")
+
+    def ordered_patch(operation: str, content: str) -> dict:
+        patch_graph = Graph()
+        patch_graph.parse(data=content, format="turtle")
+        return {
+            "patch_iri": db._mint_iri("graph-patch"),
+            "operation": operation,
+            "target_graph": "map",
+            "format": "turtle",
+            "patch_role": patch_role,
+            "content": content,
+            "graph": patch_graph,
+        }
+
+    source = db.stage_graph_revision(
+        summary="Replace Orders label",
+        rationale="Exercise restage replay of a removal-first patch sequence.",
+        validation_scope="all",
+        _ordered_patch_specs=[
+            ordered_patch(
+                removal_operation,
+                """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:Orders rdfs:label "Orders" .
+                """,
+            ),
+            ordered_patch(
+                addition_operation,
+                """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:Orders rdfs:label "Preferred orders" .
+                """,
+            ),
+        ],
+    )
+
+    assert [patch.operation for patch in source.patches] == [
+        removal_operation,
+        addition_operation,
+    ]
+    assert db.check_staged_revision_apply(source.revision_iri).status == "ready"
+    db.record_map_dataset(
+        "https://example.test/project#InterveningDataset",
+        label="Intervening dataset",
+    )
+
+    restaged = db.restage_staged_revision(source.revision_iri)
+
+    assert [patch.operation for patch in restaged.patches] == [
+        removal_operation,
+        addition_operation,
+    ]
+    assert [patch.sequence_index for patch in restaged.patches] == [1, 2]
+    assert restaged.patches[0].before_triple_count == db.triple_count("map")
+    assert restaged.patches[0].after_triple_count == db.triple_count("map") - 1
+    assert restaged.patches[1].before_triple_count == db.triple_count("map") - 1
+    assert restaged.patches[1].after_triple_count == db.triple_count("map")
+    assert db.check_staged_revision_apply(restaged.revision_iri).status == "ready"
+
+
 def test_stage_graph_revision_can_record_repaired_restage_successor(
     tmp_path: Path,
 ) -> None:
@@ -3560,6 +3633,77 @@ def test_stage_map_assertion_change_can_repair_stale_assertion_successor(
     current_work_iris = {item.iri for item in current_work.revisions}
     assert source.revision_iri not in current_work_iris
     assert repair.staged_revision.revision_iri not in current_work_iris
+
+
+def test_stage_map_assertion_change_replaces_row_semantics_cleanly(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        orders,
+        label="Orders",
+        is_table=True,
+        row_semantics="rc:EventRow",
+    )
+
+    change = db.stage_map_assertion_change(
+        subject=orders,
+        predicate="rc:rowSemantics",
+        object="rc:SnapshotRow",
+        change_kind="replace",
+        rationale=(
+            "Follow the validation diagnostic repair route by replacing the "
+            "current row-grain framing."
+        ),
+    )
+
+    assert change.assertion_present_before is False
+    assert [value.object for value in change.current_values_before] == [
+        RC + "EventRow"
+    ]
+    assert "rc:SnapshotRow" in change.additions[0]["content"]
+    assert "rc:EventRow" in change.removals[0]["content"]
+    staged_iri = change.staged_revision.revision_iri
+    description = db.describe_staged_revision(staged_iri)
+    impacts = [impact for impact in description.impacts if impact.impact_type]
+    row_semantics_impacts = [
+        impact
+        for impact in impacts
+        if impact.impact_type == "changed_row_semantics"
+    ]
+    assert len(row_semantics_impacts) == 1
+    assert row_semantics_impacts[0].severity == "attention"
+    assert [value.value for value in row_semantics_impacts[0].removed_values] == [
+        RC + "EventRow"
+    ]
+    assert [value.value for value in row_semantics_impacts[0].added_values] == [
+        RC + "SnapshotRow"
+    ]
+
+    check = db.check_staged_revision_apply(staged_iri)
+    assert check.status == "ready"
+    assert check.can_apply is True
+    assert check.validation_conforms is True
+    assert check.validation_result_count == 0
+    current_work = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    assert current_work.next_action_queue == {"apply_after_review": [staged_iri]}
+
+    applied = db.apply_staged_revision(staged_iri)
+
+    assert applied.triples_added == 1
+    assert applied.triples_removed == 1
+    assert db._objects(["map"], orders, "rc:rowSemantics") == [RC + "SnapshotRow"]
+    assert (
+        db.list_graph_revisions(
+            current_staged_work_only=True,
+            include_apply_checks=True,
+        ).count
+        == 0
+    )
 
 
 def test_restaged_revision_with_realized_addition_reports_noop(

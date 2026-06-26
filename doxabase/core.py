@@ -15909,10 +15909,15 @@ class DoxaBase:
             "shapes",
             "all",
         ] = "all",
+        _ordered_patch_specs: list[dict[str, Any]] | None = None,
     ) -> StagedGraphRevisionRecord:
-        parsed_patches = self._parse_staged_patch_specs(
-            additions=additions,
-            removals=removals,
+        parsed_patches = (
+            list(_ordered_patch_specs)
+            if _ordered_patch_specs is not None
+            else self._parse_staged_patch_specs(
+                additions=additions,
+                removals=removals,
+            )
         )
         if not parsed_patches:
             raise DoxaBaseError("stage_graph_revision requires at least one patch")
@@ -16257,42 +16262,9 @@ class DoxaBase:
                 "candidate for unreplayable patch conflicts."
             )
 
-        addition_operation = self.expand_iri("rc:AdditionPatch")
-        removal_operation = self.expand_iri("rc:RemovalPatch")
-        additions: list[dict[str, str]] = []
-        removals: list[dict[str, str]] = []
-        for patch in source.patches:
-            target_graph = self._required_staged_patch_target_graph(patch)
-            operation = self._required_staged_patch_field(
-                patch,
-                "operation",
-                patch.operation,
-            )
-            patch_format = self._required_staged_patch_field(
-                patch,
-                "format",
-                patch.format,
-            )
-            content = self._required_staged_patch_field(
-                patch,
-                "content",
-                patch.content,
-            )
-            patch_role = patch.patch_role or "rc:FramingPatch"
-            spec = {
-                "graph": target_graph,
-                "format": patch_format,
-                "content": content,
-                "patch_role": patch_role,
-            }
-            if operation == addition_operation:
-                additions.append(spec)
-            elif operation == removal_operation:
-                removals.append(spec)
-            else:
-                raise DoxaBaseError(
-                    f"Cannot restage unsupported patch operation '{operation}'"
-                )
+        ordered_patch_specs = self._ordered_staged_patch_specs_from_descriptions(
+            source.patches
+        )
 
         source_summary = self._restage_source_summary(source.summary) or source.iri
         restage_summary = (
@@ -16308,8 +16280,6 @@ class DoxaBase:
         staged = self.stage_graph_revision(
             summary=restage_summary,
             rationale=restage_rationale,
-            additions=additions,
-            removals=removals,
             stance=source.revision_stance or "rc:CandidateRevision",
             revision_type=source.revision_type or "rc:StagedRevision",
             included_graphs=source.included_graphs,
@@ -16329,6 +16299,7 @@ class DoxaBase:
             review_note=source.review_note,
             review_recommendation=source.review_recommendation,
             validation_scope=validation_scope or source.validation_scope or "all",
+            _ordered_patch_specs=ordered_patch_specs,
         )
         staged_description = self.describe_staged_revision(staged.revision_iri)
         return replace(
@@ -21800,6 +21771,56 @@ class DoxaBase:
                         "graph": patch_graph,
                     }
                 )
+        return parsed
+
+    def _ordered_staged_patch_specs_from_descriptions(
+        self,
+        patches: list[StagedGraphPatchDescription],
+    ) -> list[dict[str, Any]]:
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        parsed: list[dict[str, Any]] = []
+        for patch in patches:
+            operation = self._required_staged_patch_field(
+                patch,
+                "operation",
+                patch.operation,
+            )
+            if operation not in {addition_operation, removal_operation}:
+                raise DoxaBaseError(
+                    f"Cannot restage unsupported patch operation '{operation}'"
+                )
+            target_graph = self._required_staged_patch_target_graph(patch)
+            patch_format = self._required_staged_patch_field(
+                patch,
+                "format",
+                patch.format,
+            )
+            content = self._required_staged_patch_field(
+                patch,
+                "content",
+                patch.content,
+            )
+            patch_role = patch.patch_role or "rc:FramingPatch"
+            patch_role_iri = self.expand_iri(patch_role)
+            if self.expand_iri("rc:GraphPatchRole") not in self._types_from_graphs(
+                self._expand_graphs(["ontology"]),
+                patch_role_iri,
+            ):
+                raise DoxaBaseError(
+                    "patch_role must be an rc:GraphPatchRole declared in base or project ontology"
+                )
+            parsed.append(
+                {
+                    "patch_iri": self._mint_iri("graph-patch"),
+                    "operation": operation,
+                    "target_graph": target_graph,
+                    "format": patch_format,
+                    "patch_role": patch_role_iri,
+                    "content": content,
+                    "graph": self._parse_staged_patch_description(patch),
+                }
+            )
         return parsed
 
     def _parse_staged_patch_description(
