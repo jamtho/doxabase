@@ -7372,8 +7372,9 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     with pytest.raises(DoxaBaseError, match="matched multiple") as excinfo:
         db.draft_query_plan(dataset, storage_access_iri=storage.iri)
     error = str(excinfo.value)
-    assert "candidate 0 path=" in error
-    assert "candidate 1 path=" in error
+    assert "candidate 0" in error
+    assert "candidate_path=" in error
+    assert "candidate 1" in error
     assert "/warehouse/orders/current/dt={date}.parquet" in error
     assert "/warehouse/orders/archive/dt={date}.parquet" in error
     assert "template_source=storage_access" in error
@@ -7952,7 +7953,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
         storage_protocol="rc:DatabaseStorage",
         location_kind="connection",
         storage_root="analytics-prod",
-        path_templates=["mart.events"],
+        path_templates=["mart.events", "mart.events_archive"],
         endpoint_profile="warehouse-prod",
         credential_reference="profile:warehouse-readonly",
         layout_verification_status="rc:VerifiedByQueryLayout",
@@ -8019,6 +8020,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
         (index, target)
         for index, target in enumerate(context.query_target_candidates)
         if target.template_source == "storage_access"
+        and target.relation_identifier == "mart.events"
     )
     assert relation_target.source_resource.iri == storage.iri
     assert relation_target.candidate_path == "mart.events"
@@ -8061,6 +8063,14 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
         "database_relation_template_source_mismatch"
     ]
     assert explicit_bad_plan.handoff_kind == "metadata_review_required"
+
+    with pytest.raises(DoxaBaseError, match="matched multiple") as excinfo:
+        db.draft_query_plan(dataset, storage_access_iri=storage.iri)
+    error = str(excinfo.value)
+    assert "connection_reference='analytics-prod'" in error
+    assert "relation_identifier='mart.events'" in error
+    assert "relation_identifier='mart.events_archive'" in error
+    assert "candidate_path='analytics-prod'" not in error
 
 
 def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(

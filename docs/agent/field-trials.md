@@ -865,7 +865,10 @@ few useful gaps:
   messy-candidate trial found the route executable but the cue subtle;
   `query_target_decision.selected_candidate_direct_clean` now marks that the
   selected candidate has no direct blocker even when the wider context is
-  blocked.
+  blocked. A broader storage-access trial found ambiguous selector errors were
+  useful but collapsed database connection references into `path=...`; candidate
+  snippets now label `candidate_path`, `relation_identifier`,
+  `connection_reference`, and `template` separately.
 - A profile-update staging trial confirmed accepted draft indexes can still be
   skipped by guardrails. In a sampled profile run, accepting a sampled row-count
   replacement and two column recommendations staged only the column updates by

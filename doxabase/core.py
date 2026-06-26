@@ -8004,19 +8004,20 @@ class DoxaBase:
             storage_label = candidate.storage_access.label or self._local_name(
                 candidate.storage_access.iri
             )
-        path_or_relation = (
-            candidate.candidate_path
-            or candidate.relation_identifier
-            or candidate.connection_reference
-            or candidate.template
-        )
         parts = [
             f"candidate {index}",
-            f"path={path_or_relation!r}",
             f"template_source={candidate.template_source}",
             f"source={source_label!r}",
             f"status={candidate.candidate_path_status}",
         ]
+        if candidate.candidate_path is not None:
+            parts.append(f"candidate_path={candidate.candidate_path!r}")
+        if candidate.relation_identifier is not None:
+            parts.append(f"relation_identifier={candidate.relation_identifier!r}")
+        if candidate.connection_reference is not None:
+            parts.append(f"connection_reference={candidate.connection_reference!r}")
+        if candidate.template is not None:
+            parts.append(f"template={candidate.template!r}")
         if storage_label is not None:
             parts.append(f"storage={storage_label!r}")
         return " ".join(parts)
