@@ -811,11 +811,11 @@ suggested actions. The response-level `next_action_queue` groups returned rows
 into queues such as `apply_after_review`, `restage_after_review`,
 `repair_or_replace`, `inspect_already_applied`, and `informational`.
 Most count/digest-drift conflicts stay in `restage_after_review`, but stale
-single-triple adds for curated singleton slots with exact same-slot drift route
-to `repair_or_replace` and include a `stage_map_assertion_change` replacement
-suggestion that preserves `restages_revision`. Current guarded slots are
-`rc:rowSemantics`, column `rc:physicalType`, column `rc:nullable`, and
-data-asset `rc:schemaStability`.
+single-assertion adds or authored replacements for curated singleton slots with
+exact same-slot drift route to `repair_or_replace` and include a
+`stage_map_assertion_change` replacement suggestion that preserves
+`restages_revision`. Current guarded slots are `rc:rowSemantics`, column
+`rc:physicalType`, column `rc:nullable`, and data-asset `rc:schemaStability`.
 `returned_application_status_counts`, `returned_stale_resolution_state_counts`,
 and `returned_staged_validation_status_counts` summarize the returned page, not
 unseen paginated rows. Full lists may therefore include handled historical rows

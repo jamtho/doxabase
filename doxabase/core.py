@@ -19008,7 +19008,7 @@ class DoxaBase:
                 "Exact snapshot drift shows a different current value for the "
                 "same single-valued map assertion slot. Stage the suggested "
                 "stage_map_assertion_change replacement successor after review "
-                "instead of mechanically restaging the stale add-only patch."
+                "instead of mechanically restaging the stale source patch."
             )
         if (
             "target_count_drift" in blocking_reasons
@@ -19440,7 +19440,7 @@ class DoxaBase:
             "Exact snapshot drift shows the current map now has a different "
             f"{replacement_label} value for this same resource. Stage a replacement "
             "successor that preserves restage provenance instead of replaying "
-            "the stale add as-is."
+            "the stale source patch as-is."
         )
         arguments: dict[str, Any] = {
             "subject": subject,
