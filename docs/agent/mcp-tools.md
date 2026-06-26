@@ -905,9 +905,10 @@ staged revision. The return payload includes
 `post_apply_recheck_revision_iris` for other current staged revisions sharing
 changed graphs, plus `post_apply_recheck_revisions` rows with each revision's
 `changed_graphs`, `shared_changed_graphs`, fresh `application_status`,
-`next_action`, `suggested_next_actions`, and `suggested_next_calls`. Re-run
-apply checks on those rows before further mutation when other graph changes may
-have happened. It is a first apply path, not a full merge/rebase workflow.
+`decision`, `blocking_reasons`, `next_action`, `suggested_next_actions`, and
+`suggested_next_calls`. Re-run apply checks on those rows before further
+mutation when other graph changes may have happened. It is a first apply path,
+not a full merge/rebase workflow.
 
 `doxabase.export_staged_revision`
 

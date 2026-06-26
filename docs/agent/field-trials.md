@@ -972,6 +972,11 @@ few useful gaps:
   expose duplicate groups for recommendations and metric advisories, and
   representative staging preserves all grouped observation support on the staged
   revision.
+- A no-op successor trial found post-apply recheck routing was correct but less
+  self-contained than a direct apply check. Recheck rows now include the live
+  `decision` and `blocking_reasons`, so a no-op successor made stale by a sibling
+  apply can be routed to restage without an immediate extra check just to learn
+  why.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

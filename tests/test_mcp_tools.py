@@ -1383,6 +1383,8 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert recheck["changed_graphs"] == ["map"]
     assert recheck["shared_changed_graphs"] == ["map"]
     assert recheck["application_status"] == "conflict"
+    assert recheck["decision"] == "restage_against_current_graph"
+    assert "target_count_drift" in recheck["blocking_reasons"]
     assert recheck["next_action"]["action_type"] == "restage_after_review"
     assert recheck["next_action"]["tool_name"] == "restage_staged_revision"
     assert recheck["next_action"]["arguments"] == {"iri": sibling["revision_iri"]}

@@ -501,6 +501,8 @@ class PostApplyRecheckRevision:
     changed_graphs: list[str]
     shared_changed_graphs: list[str]
     application_status: str
+    decision: str
+    blocking_reasons: list[str]
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -16118,6 +16120,8 @@ class DoxaBase:
                         changed_graphs=candidate_changed_graphs,
                         shared_changed_graphs=shared_changed_graphs,
                         application_status=apply_check.status,
+                        decision=apply_check.decision,
+                        blocking_reasons=apply_check.blocking_reasons,
                         next_action=next_action,
                         suggested_next_actions=apply_check.suggested_next_actions,
                         suggested_next_calls=apply_check.suggested_next_calls,

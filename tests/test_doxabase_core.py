@@ -3636,6 +3636,77 @@ def test_restaged_revision_with_realized_addition_reports_noop(
     assert "no_effective_patch_triples" in exported_text
 
 
+def test_noop_successor_post_apply_recheck_reports_live_decision(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    source = db.stage_graph_revision(
+        summary="Stage messages dataset",
+        rationale="Exercise no-op successor after a sibling apply.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#Messages",
+        label="Messages",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+    noop_successor = db.restage_staged_revision(source.revision_iri)
+    noop_check = db.check_staged_revision_apply(noop_successor.revision_iri)
+    assert noop_check.status == "noop"
+    assert noop_check.decision == "inspect_no_effective_change"
+    assert noop_check.blocking_reasons == ["no_effective_patch_triples"]
+
+    sibling = db.stage_graph_revision(
+        summary="Stage shipments dataset",
+        rationale="Applying this sibling should make the no-op successor stale.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Shipments a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    applied = db.apply_staged_revision(sibling.revision_iri)
+
+    assert noop_successor.revision_iri in applied.post_apply_recheck_revision_iris
+    recheck = next(
+        item
+        for item in applied.post_apply_recheck_revisions
+        if item.iri == noop_successor.revision_iri
+    )
+    assert recheck.application_status == "conflict"
+    assert recheck.decision == "restage_against_current_graph"
+    assert "target_count_drift" in recheck.blocking_reasons
+    assert recheck.next_action is not None
+    assert recheck.next_action.action_type == "restage_after_review"
+    assert recheck.next_action.arguments == {"iri": noop_successor.revision_iri}
+
+    restaged_noop = db.restage_staged_revision(noop_successor.revision_iri)
+    restaged_check = db.check_staged_revision_apply(restaged_noop.revision_iri)
+    assert restaged_check.status == "noop"
+    assert restaged_check.decision == "inspect_no_effective_change"
+    assert restaged_check.blocking_reasons == ["no_effective_patch_triples"]
+
+
 def test_restaged_revision_reports_effective_delta_for_mixed_addition(
     tmp_path: Path,
 ) -> None:
@@ -4591,6 +4662,8 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert recheck.changed_graphs == ["map"]
     assert recheck.shared_changed_graphs == ["map"]
     assert recheck.application_status == "conflict"
+    assert recheck.decision == "restage_against_current_graph"
+    assert "target_count_drift" in recheck.blocking_reasons
     assert recheck.next_action is not None
     assert recheck.next_action.action_type == "restage_after_review"
     assert recheck.next_action.tool_name == "restage_staged_revision"

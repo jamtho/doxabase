@@ -1985,6 +1985,8 @@ item.iri
 item.changed_graphs
 item.shared_changed_graphs
 item.application_status
+item.decision
+item.blocking_reasons
 item.next_action
 item.suggested_next_actions
 item.suggested_next_calls
@@ -1995,8 +1997,8 @@ queue. Re-run `check_staged_revision_apply` before mutating if substantial time
 has passed or another graph change has happened. `shared_changed_graphs`
 explains why the row was included after this apply. The list may include
 repair-only rows such as patch conflicts or validation failures that share a
-changed graph; route them through `next_action` or the fresh apply check, not by
-the presence of the recheck IRI alone.
+changed graph; route them through `decision`, `blocking_reasons`, `next_action`,
+or the fresh apply check, not by the presence of the recheck IRI alone.
 
 `db.describe_applied_revision_diff(applied_revision_iri, include_triples=False,
 max_triples=500)` returns `AppliedRevisionDiffDescription`:
