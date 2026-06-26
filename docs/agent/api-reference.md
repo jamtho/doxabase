@@ -453,7 +453,11 @@ profile list.
 Use `resources[].routes`, `route_counts`, `dataset_contexts`, and
 `pattern_contexts` as the reading path before raw `triples`. The response also
 includes `reading_order` and a filtered `route_legend` so cold agents can follow
-the intended reading protocol without rediscovering route meanings. Set
+the intended reading protocol without rediscovering route meanings.
+`resources[].surface_role` is a compact first-pass cue for whether a resource is
+current map context, observation context, pattern synthesis, evidence support,
+revision history, vocabulary context, mixed context, or only referenced by the
+slice. Set
 `include_trig=True` when an agent needs importable TriG text for review or a
 scratch capsule. `max_triples` only truncates raw triples/TriG; top-level
 resources, routes, and structured contexts continue to describe the full

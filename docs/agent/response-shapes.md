@@ -457,10 +457,18 @@ resource.label
 resource.description
 resource.types
 resource.graphs
+resource.surface_role
 resource.referenced_only
 resource.primary_route
 resource.routes
 ```
+
+`surface_role` is a compact graph-role cue for first-pass reading. Current
+values are `current_map_context`, `observation_context`, `pattern_synthesis`,
+`evidence_support`, `revision_history`, `vocabulary_context`, `mixed_context`,
+and `referenced_only`. Use it to separate current map/model context from
+point-in-time observations, pattern synthesis, evidence, revision metadata, and
+plain object references before inspecting raw triples.
 
 `referenced_only=True` means the resource is mentioned by returned context but
 was not itself expanded into full resource detail in the slice. Do not treat that

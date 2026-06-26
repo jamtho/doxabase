@@ -881,6 +881,13 @@ few useful gaps:
   `schema_stability="rc:EvolvingSchema"` was syntactically accepted before
   failing SHACL; map helpers now preflight known schema-stability and
   layout-verification terms before writing map triples.
+- A mixed retrieval handoff trial over map context, profile observations,
+  claims, patterns, and revision history found the route clear but the raw
+  `describe_context_slice` resource rows still made agents infer trust from
+  graph lists. Context-slice resources now include `surface_role`, a compact cue
+  for current map context, observation context, pattern synthesis, evidence
+  support, revision history, vocabulary context, mixed context, or
+  referenced-only objects.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

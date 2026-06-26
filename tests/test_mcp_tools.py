@@ -2699,6 +2699,11 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     assert result["omitted_triple_count"] > 0
     assert result["triples"][0]["subject"] == seed_iri
     assert result["trig"] is None
+    resources_by_iri = {resource["iri"]: resource for resource in result["resources"]}
+    assert resources_by_iri[seed_iri]["surface_role"] == "current_map_context"
+    assert resources_by_iri[pattern["pattern_iri"]]["surface_role"] == (
+        "pattern_synthesis"
+    )
     assert any(
         resource["iri"]
         == "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots"

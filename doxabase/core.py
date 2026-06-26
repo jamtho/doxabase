@@ -2094,6 +2094,7 @@ class ContextSliceResource:
     description: str | None
     types: list[str]
     graphs: list[str]
+    surface_role: str
     referenced_only: bool
     primary_route: ContextSliceRoute
     routes: list[ContextSliceRoute]
@@ -6004,10 +6005,33 @@ class DoxaBase:
             description=summary.description,
             types=self._types_from_graphs(lookup_graphs, iri),
             graphs=graphs,
+            surface_role=self._context_slice_surface_role(graphs),
             referenced_only=not graphs,
             primary_route=sorted_routes[0],
             routes=sorted_routes,
         )
+
+    @staticmethod
+    def _context_slice_surface_role(graphs: Iterable[str]) -> str:
+        role_by_graph = {
+            "base_ontology": "vocabulary_context",
+            "ontology": "vocabulary_context",
+            "map": "current_map_context",
+            "observations": "observation_context",
+            "patterns": "pattern_synthesis",
+            "evidence": "evidence_support",
+            "history": "revision_history",
+        }
+        roles = {
+            role_by_graph[graph]
+            for graph in graphs
+            if graph in role_by_graph
+        }
+        if not roles:
+            return "referenced_only"
+        if len(roles) == 1:
+            return next(iter(roles))
+        return "mixed_context"
 
     def _context_slice_resource_order(
         self,

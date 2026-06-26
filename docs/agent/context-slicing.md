@@ -61,10 +61,13 @@ Useful fields:
 - `reading_order`: a short static protocol for reading a slice: seeds,
   warnings, structured contexts including `seed_profile_observations`, routes,
   resources, then raw RDF when needed.
-- `resources`: selected resources with labels, descriptions, types, graphs, and
-  route reasons. `primary_route` is the highest-priority inclusion reason;
-  `referenced_only=true` means the resource was selected as an object/reference
-  but has no subject triples in the selected graphs.
+- `resources`: selected resources with labels, descriptions, types, graphs,
+  `surface_role`, and route reasons. `primary_route` is the highest-priority
+  inclusion reason. `surface_role` is the quick trust cue: current map context,
+  observation context, pattern synthesis, evidence support, revision history,
+  vocabulary context, mixed context, or a referenced-only object. `referenced_only=true`
+  means the resource was selected as an object/reference but has no subject
+  triples in the selected graphs.
 - `route_legend`: list of route legend rows for the route names present in this
   slice, including `route`, `route_label`, `meaning`, `priority`, and `count`.
   Build a dict keyed by `route` if that is more convenient.

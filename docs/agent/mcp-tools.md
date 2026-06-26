@@ -387,6 +387,9 @@ restage, and alternative links. `seed_profile_observations` preserves structured
 profile summaries selected by those profile/metric seeds even when the same row
 is older than the bounded dataset profile list. Read `resources[].routes` and `route_counts` before
 raw triples; those fields explain why each resource entered the slice.
+Read `resources[].surface_role` as the compact trust cue for whether a resource
+is current map context, observation context, pattern synthesis, evidence support,
+revision history, vocabulary context, mixed context, or a referenced-only object.
 `reading_order` and `route_legend` provide the static reading protocol and
 meanings for the routes present in the response. Set `include_trig=true` when
 you need importable TriG text, and raise

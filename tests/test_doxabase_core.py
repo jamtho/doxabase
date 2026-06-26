@@ -9546,8 +9546,14 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
     assert claim_result.claim_iri in resources
     assert claim_result.evidence_iri in resources
     assert resources[messages].referenced_only is False
+    assert resources[messages].surface_role == "current_map_context"
     assert resources[messages].primary_route.route == "seed"
     assert any(route.route == "seed" for route in resources[messages].routes)
+    assert resources[doc_id].surface_role == "current_map_context"
+    assert resources[RC + "CandidateLayout"].surface_role == "vocabulary_context"
+    assert resources[pattern_result.pattern_iri].surface_role == "pattern_synthesis"
+    assert resources[claim_result.claim_iri].surface_role == "observation_context"
+    assert resources[claim_result.evidence_iri].surface_role == "evidence_support"
     assert any(route.route == "dataset_column" for route in resources[doc_id].routes)
     assert any(
         route.route == "layout_verification_status"
@@ -9663,6 +9669,7 @@ def test_describe_context_slice_includes_profile_observations_and_metrics(
     assert value_frequency_iri in resources
     assert metric_kind in resources
     assert resources[metric_kind].referenced_only is True
+    assert resources[metric_kind].surface_role == "referenced_only"
     assert dataset_profile.observation.evidence_iri in resources
     assert context_slice.route_counts["dataset_profile_observation"] == 1
     assert context_slice.route_counts["column_profile_observation"] == 1
