@@ -1368,6 +1368,12 @@ binding.binding_kind
 binding.partition_scheme
 binding.partition_column
 binding.partition_granularity
+binding.candidate_column_matches
+binding.candidate_column_matches[].column
+binding.candidate_column_matches[].match_kind
+binding.candidate_column_matches[].matched_field
+binding.candidate_column_matches[].matched_value
+binding.candidate_column_matches[].confidence
 ```
 
 Path-template placeholders still report `derivation_status="not_inferred"`.
@@ -1375,7 +1381,10 @@ When the selected template comes from a partition scheme, `binding_kind` is
 `partition_template_placeholder`, `partition_scheme` names that source, and
 matching placeholders may carry `partition_column` and
 `partition_granularity`. These fields are planning hints for parameter handoff;
-DoxaBase does not infer execution-time values. `plan.storage_environment`
+non-partition dataset/storage templates may carry `candidate_column_matches`
+when a placeholder matches dataset column names, labels, or local IRIs exactly
+or by suffix. These matches are best-effort handoff hints, not inferred runtime
+binding values. `plan.storage_environment`
 carries non-secret storage hints such as bucket, endpoint profile, credential
 reference, path-style access, and DuckDB-shaped settings inferred directly from
 graph metadata.

@@ -2167,6 +2167,13 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
         physical_layouts=[layout.iri],
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
+    date_column = "https://example.test/project#orders__event_date"
+    db.record_map_column(
+        date_column,
+        table_iri=dataset,
+        column_name="event_date",
+        physical_type="rc:Date",
+    )
 
     context = describe_query_context_tool(db, iri=dataset)
     assert context["query_target_decision"]["status"] == "context_blocked"
@@ -2212,6 +2219,18 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     ]
     assert result["review_gate"]["blocking_reason_codes"] == []
     assert result["handoff_kind"] == "binding_values_required"
+    date_binding = result["binding_requirements"][0]
+    assert date_binding["name"] == "date"
+    assert date_binding["candidate_column_matches"][0]["column"]["iri"] == (
+        date_column
+    )
+    assert date_binding["candidate_column_matches"][0]["column"]["column_name"] == (
+        "event_date"
+    )
+    assert date_binding["candidate_column_matches"][0]["match_kind"] == (
+        "suffix_name"
+    )
+    assert date_binding["candidate_column_matches"][0]["confidence"] == "medium"
 
 
 def test_draft_query_plan_tool_returns_database_relation_handoff(

@@ -348,7 +348,9 @@ draft: `no_query_target`, `metadata_review_required`,
 When a selected template comes from partition metadata, binding requirements
 include partition handoff hints (`binding_kind`, `partition_scheme`,
 `partition_column`, and `partition_granularity`) while still requiring caller
-runtime values.
+runtime values. Non-partition dataset/storage templates may include
+`candidate_column_matches` when placeholder names match dataset columns; these
+are best-effort handoff hints, not inferred runtime values.
 Binding rows identify the placeholder source text and explicitly report when
 DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 `blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`

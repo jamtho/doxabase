@@ -1300,6 +1300,18 @@ class DraftQueryPlanBinding:
     partition_scheme: ResourceSummary | None = None
     partition_column: ResourceSummary | None = None
     partition_granularity: ResourceSummary | None = None
+    candidate_column_matches: list[DraftQueryPlanBindingColumnMatch] = field(
+        default_factory=list
+    )
+
+
+@dataclass(frozen=True)
+class DraftQueryPlanBindingColumnMatch:
+    column: ResourceSummary
+    match_kind: str
+    matched_field: str
+    matched_value: str
+    confidence: str
 
 
 @dataclass(frozen=True)
@@ -7938,6 +7950,7 @@ class DoxaBase:
         )
         binding_requirements = self._draft_query_plan_binding_requirements(
             selected_candidate,
+            columns=context.columns,
             partition_schemes=context.partition_schemes,
         )
         scan = self._draft_query_plan_scan(
@@ -8013,8 +8026,9 @@ class DoxaBase:
                 "Bindings are placeholder names parsed from the selected path "
                 "template. When a selected partition template has matching "
                 "partition metadata, binding rows include the likely partition "
-                "column and granularity; DoxaBase still does not infer "
-                "execution-time values."
+                "column and granularity. Non-partition templates may carry "
+                "best-effort candidate column matches by placeholder name; "
+                "DoxaBase still does not infer execution-time values."
             ),
             storage_environment=storage_environment,
             review_gate=review_gate,
@@ -8570,6 +8584,7 @@ class DoxaBase:
         self,
         selected_candidate: QueryTargetCandidate | None,
         *,
+        columns: list[ColumnDescription],
         partition_schemes: list[PartitionDescription],
     ) -> list[DraftQueryPlanBinding]:
         if selected_candidate is None:
@@ -8590,6 +8605,14 @@ class DoxaBase:
                 if partition is not None
                 else None
             )
+            candidate_column_matches = (
+                []
+                if partition is not None
+                else self._draft_query_plan_column_matches_for_binding(
+                    name,
+                    columns,
+                )
+            )
             return DraftQueryPlanBinding(
                 name=name,
                 source="path_template_placeholder",
@@ -8600,6 +8623,7 @@ class DoxaBase:
                     name,
                     partition=partition,
                     partition_column=partition_column,
+                    candidate_column_matches=candidate_column_matches,
                 ),
                 binding_kind=(
                     "partition_template_placeholder"
@@ -8615,6 +8639,7 @@ class DoxaBase:
                 partition_granularity=(
                     partition.granularity if partition is not None else None
                 ),
+                candidate_column_matches=candidate_column_matches,
             )
 
         return [
@@ -8646,6 +8671,77 @@ class DoxaBase:
         ]
         if len(matching_partitions) == 1:
             return matching_partitions[0]
+        return None
+
+    def _draft_query_plan_column_matches_for_binding(
+        self,
+        name: str,
+        columns: list[ColumnDescription],
+    ) -> list[DraftQueryPlanBindingColumnMatch]:
+        placeholder = self._normalized_binding_name(name)
+        if not placeholder:
+            return []
+        exact_matches: list[DraftQueryPlanBindingColumnMatch] = []
+        suffix_matches: list[DraftQueryPlanBindingColumnMatch] = []
+        for column in columns:
+            candidates = [
+                ("column_name", column.column_name),
+                ("label", column.label),
+                ("local_name", self._local_name(column.iri)),
+            ]
+            exact = self._first_binding_column_match(
+                placeholder,
+                column,
+                candidates,
+                match_kind="exact_name",
+                confidence="high",
+            )
+            if exact is not None:
+                exact_matches.append(exact)
+                continue
+            suffix = self._first_binding_column_match(
+                placeholder,
+                column,
+                candidates,
+                match_kind="suffix_name",
+                confidence="medium",
+            )
+            if suffix is not None:
+                suffix_matches.append(suffix)
+        return exact_matches or suffix_matches
+
+    def _first_binding_column_match(
+        self,
+        placeholder: str,
+        column: ColumnDescription,
+        candidates: list[tuple[str, str | None]],
+        *,
+        match_kind: str,
+        confidence: str,
+    ) -> DraftQueryPlanBindingColumnMatch | None:
+        for matched_field, matched_value in candidates:
+            normalized = self._normalized_binding_name(matched_value)
+            if not normalized:
+                continue
+            if match_kind == "exact_name":
+                matched = normalized == placeholder
+            else:
+                matched = self._binding_name_has_suffix(normalized, placeholder)
+            if matched and matched_value is not None:
+                return DraftQueryPlanBindingColumnMatch(
+                    column=ResourceSummary(
+                        iri=column.iri,
+                        label=column.label
+                        or column.column_name
+                        or self._local_name(column.iri),
+                        description=column.description,
+                        column_name=column.column_name,
+                    ),
+                    match_kind=match_kind,
+                    matched_field=matched_field,
+                    matched_value=matched_value,
+                    confidence=confidence,
+                )
         return None
 
     def _draft_query_plan_partition_column_for_binding(
@@ -8688,6 +8784,7 @@ class DoxaBase:
         *,
         partition: PartitionDescription | None,
         partition_column: ResourceSummary | None,
+        candidate_column_matches: list[DraftQueryPlanBindingColumnMatch],
     ) -> str:
         base_note = (
             "Supply this value explicitly or derive it in the runtime query "
@@ -8695,6 +8792,18 @@ class DoxaBase:
             "or default value for this placeholder."
         )
         if partition is None:
+            if candidate_column_matches:
+                match_names = ", ".join(
+                    match.column.label
+                    or match.column.column_name
+                    or match.column.iri
+                    for match in candidate_column_matches
+                )
+                return (
+                    f"{base_note} Candidate column hint(s): {match_names}. "
+                    "These are best-effort placeholder/name matches, not "
+                    "inferred runtime binding values."
+                )
             return base_note
         details: list[str] = []
         if partition_column is not None:

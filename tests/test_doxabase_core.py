@@ -7190,10 +7190,97 @@ def test_draft_query_plan_carries_dataset_template_verification(
     assert plan.scan.template_lineage is not None
     assert "dataset Local events" in plan.scan.template_lineage
     assert verification_note in plan.scan.template_lineage
+    date_column = "https://example.test/project#local_events__event_date"
+    db.record_map_column(
+        date_column,
+        table_iri=dataset,
+        column_name="event_date",
+        physical_type="rc:Date",
+    )
+    plan = db.draft_query_plan(dataset)
+    date_binding = plan.binding_requirements[0]
+    assert date_binding.name == "date"
+    assert len(date_binding.candidate_column_matches) == 1
+    date_match = date_binding.candidate_column_matches[0]
+    assert date_match.column.iri == date_column
+    assert date_match.column.column_name == "event_date"
+    assert date_match.match_kind == "suffix_name"
+    assert date_match.matched_field == "column_name"
+    assert date_match.matched_value == "event_date"
+    assert date_match.confidence == "medium"
+    assert "Candidate column hint(s): event_date" in date_binding.derivation_note
     assert plan.handoff_kind == "binding_values_required"
     assert plan.review_gate.executable_without_review is True
     assert plan.review_gate.binding_values_required is True
     assert plan.review_gate.ready_for_execution_attempt is False
+
+
+def test_draft_query_plan_hints_storage_template_placeholder_columns(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#HourlyEvents"
+    event_date = "https://example.test/project#hourly_events__event_date"
+    event_hour = "https://example.test/project#hourly_events__event_hour"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#hourly_events_storage",
+        label="Hourly events storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        location_kind="directory",
+        path_templates=[
+            "events/event_date={event_date}/event_hour={event_hour}/*.parquet"
+        ],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#hourly_events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Hourly events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_map_column(
+        event_date,
+        table_iri=dataset,
+        column_name="event_date",
+        physical_type="rc:Date",
+    )
+    db.record_map_column(
+        event_hour,
+        table_iri=dataset,
+        column_name="event_hour",
+        physical_type="rc:Integer",
+    )
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template_source == "storage_access"
+    assert plan.handoff_kind == "binding_values_required"
+    assert plan.required_bindings == ["event_date", "event_hour"]
+    matches_by_name = {
+        binding.name: binding.candidate_column_matches
+        for binding in plan.binding_requirements
+    }
+    assert [match.column.iri for match in matches_by_name["event_date"]] == [
+        event_date
+    ]
+    assert matches_by_name["event_date"][0].match_kind == "exact_name"
+    assert matches_by_name["event_date"][0].confidence == "high"
+    assert [match.column.iri for match in matches_by_name["event_hour"]] == [
+        event_hour
+    ]
+    assert matches_by_name["event_hour"][0].match_kind == "exact_name"
+    assert "Candidate column hint(s): event_date" in (
+        plan.binding_requirements[0].derivation_note
+    )
 
 
 def test_draft_query_plan_scan_surfaces_inherited_path_lineage(

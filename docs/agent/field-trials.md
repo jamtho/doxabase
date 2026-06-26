@@ -979,6 +979,11 @@ few useful gaps:
   `decision` and `blocking_reasons`, so a no-op successor made stale by a sibling
   apply can be routed to restage without an immediate extra check just to learn
   why.
+- A query-planning storage-access trial found partition-owned path templates gave
+  useful binding hints, while dataset/storage-access-owned placeholders made
+  agents infer likely source columns from names. Non-partition binding rows now
+  include best-effort `candidate_column_matches` with match kind and confidence;
+  these are handoff hints, not inferred runtime binding values.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

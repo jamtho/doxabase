@@ -45,7 +45,10 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `handoff_kind="binding_values_required"` make that case explicit. When a
    selected template comes from partition metadata, binding rows may include
    `partition_scheme`, `partition_column`, and `partition_granularity` as
-   handoff hints; they do not supply execution-time values.
+   handoff hints. Dataset-owned and storage-access-owned templates may include
+   `candidate_column_matches` when placeholder names match dataset columns
+   exactly or by suffix. These fields help humans and agents find likely source
+   columns; they do not supply execution-time values.
 6. `review_gate.executable_without_review` says graph metadata has no recorded
    review blocker for the selected candidate.
 7. `storage_environment.runtime_resolution_required` says endpoint, credential,
