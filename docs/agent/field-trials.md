@@ -171,7 +171,9 @@ that does not fit neatly into current helper templates. The agent should be
 allowed to propose a new project vocabulary term, an ontology extension, or
 several alternative RDF framings. Treat it as a failure if the workflow pushes
 the agent to choose only familiar map facts when a deeper graph concept would be
-more natural.
+more natural. Include a deliberately incomplete shape-backed framing beside a
+repaired sibling when the trial can support it; that checks whether validation
+guides repair without forcing the agent into a single modelling template.
 
 ## Report Sections
 
@@ -1026,6 +1028,12 @@ few useful gaps:
   execution attempt on `review_gate.ready_for_execution_attempt`, not
   `handoff_kind` alone; partition binding notes now say the recorded
   granularity belongs to the partition scheme.
+- A downstream query-plan consumer trial confirmed the fields are sufficient for
+  a careful non-executing router, but easy to misuse if clients treat
+  `executable_without_review`, empty `blocking_reason_codes`, or
+  `database_relation_handoff` as execution permission. Consumer recipes now
+  route first on `ready_for_execution_attempt`, then database relation handoff,
+  runtime resolution, binding values, and remaining issue codes.
 - A follow-up docs-navigation trial confirmed fresh agents can use doc sizes,
   section anchors, `get_doc(section=...)`, and offset slices with
   `selected_section`. Its remaining friction was environmental: cancelled MCP
@@ -1039,10 +1047,15 @@ few useful gaps:
 - A profile/systematisation trial confirmed representative default staging,
   duplicate support preservation, metric advisory routing, and pattern-promotion
   skeletons work together. It also found type findings are easy to over-expect:
-  profile-recorded `physical_type` / `value_type` facts are structured only when
-  the profile call updates the map column, so observation-only type
-  interpretations should be preserved through patterns or staged
-  systematisation/promotion instead of waiting for profile-map draft rows.
+  profile-recorded `physical_type` / `value_type` facts should not become
+  current map facts without review. Observation-only type findings are now
+  persisted on profile observations and surfaced as profile-map type advisories;
+  follow those review actions before recording or staging map type assertions.
+- A systematisation/pattern-promotion trial confirmed grouped exports preserve
+  pattern-first, ontology-first, concrete map, and intentionally invalid
+  diagnostic framings side by side. Validation on an incomplete shape-backed
+  sibling gave useful repair guidance while the repaired sibling stayed
+  reviewable.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

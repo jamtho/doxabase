@@ -139,7 +139,9 @@ single point-in-time noticing.
 
 Use `doxabase.record_column_profile` when a column-level profile should also
 update current-best map column metadata, such as nullability or physical type,
-or preserve a linked pattern synthesis.
+or preserve a linked pattern synthesis. If `update_map_column=false`, supplied
+`physical_type` and `value_type` values are still stored as observed profile
+evidence and can later surface as profile-map type advisories.
 
 Use `doxabase.record_profile_bundle` when one profiling pass produced a
 dataset-level summary and several column-level summaries. The bundle helper
@@ -331,6 +333,9 @@ undefined metric already has a same-evidence pattern naming it as a
 `pattern_target` or `map_implication`, the advisory also names
 `promotion_patterns` and suggests a reviewable `stage_pattern_promotion`
 skeleton for an ontology definition.
+`draft_profile_map_updates().type_advisories[]` similarly points from observed
+profile `physical_type` / `value_type` evidence toward context loading,
+pattern recording, or focused staged map assertions after review.
 
 ```python
 metric = "https://example.test/project#FreshnessLagP95Seconds"

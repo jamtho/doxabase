@@ -809,6 +809,16 @@ rc:observedColumnName a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "The source-level column name supplied with an observed column, useful when the column is not yet a current map column." .
 
+rc:observedPhysicalType a rdf:Property ;
+    rdfs:domain rc:ProfileObservation ;
+    rdfs:range rc:PhysicalType ;
+    rdfs:comment "A physical type observed during profiling. This is profile evidence, not a current map assertion." .
+
+rc:observedValueType a rdf:Property ;
+    rdfs:domain rc:ProfileObservation ;
+    rdfs:range rc:ValueType ;
+    rdfs:comment "A value type interpretation observed during profiling. This is profile evidence, not a current map assertion." .
+
 rc:sampleSize a rdf:Property ;
     rdfs:domain rc:Observation ;
     rdfs:range xsd:integer ;

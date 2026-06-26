@@ -1103,6 +1103,8 @@ class ProfileObservationSummary:
     observed_asset: ResourceSummary | None
     observed_column: ResourceSummary | None
     observed_column_name: str | None
+    observed_physical_type: ResourceSummary | None
+    observed_value_type: ResourceSummary | None
     sample_size: int | None
     sample_scope: str | None
     sample_method: str | None
@@ -1625,6 +1627,28 @@ class ProfileMetricVocabularyAdvisory:
 
 
 @dataclass(frozen=True)
+class ProfileTypeFindingAdvisory:
+    profile_observation_iri: str
+    evidence_iri: str
+    observed_column: ResourceSummary
+    observed_column_name: str | None
+    observed_physical_type: ResourceSummary | None
+    observed_value_type: ResourceSummary | None
+    map_column_found: bool
+    current_physical_type: ResourceSummary | None
+    current_value_type: ResourceSummary | None
+    advisory_status: str
+    recommendation: str
+    rationale: str
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    duplicate_group_key: str = ""
+    duplicate_count: int = 1
+    duplicate_advisory_indexes: list[int] = field(default_factory=list)
+    duplicate_profile_observation_iris: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class ProfileMapUpdateDraft:
     dataset: ResourceSummary
     evidence: EvidenceDescription
@@ -1637,6 +1661,9 @@ class ProfileMapUpdateDraft:
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
     metric_advisory_count: int
     metric_advisory_status_counts: dict[str, int]
+    type_advisories: list[ProfileTypeFindingAdvisory]
+    type_advisory_count: int
+    type_advisory_status_counts: dict[str, int]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     review_note: str
@@ -1678,6 +1705,12 @@ class ProfileMapUpdateStagingRecord:
     metric_vocabulary_review_required: bool
     metric_advisory_suggested_next_actions: list[SuggestedNextAction]
     metric_advisory_suggested_next_calls: list[str]
+    type_advisories: list[ProfileTypeFindingAdvisory]
+    type_advisory_count: int
+    type_advisory_status_counts: dict[str, int]
+    type_review_required: bool
+    type_advisory_suggested_next_actions: list[SuggestedNextAction]
+    type_advisory_suggested_next_calls: list[str]
     staged_revision: StagedGraphRevisionRecord | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -7084,13 +7117,13 @@ class DoxaBase:
                     rationale=(
                         "The profile run observed a column that is not mapped "
                         "as a current column. The draft only proposes a column "
-                        "shell because profile observations do not carry "
-                        "helper-owned physical_type or value_type facts."
+                        "shell because observed type findings need separate "
+                        "semantic review before becoming map type facts."
                         if map_dataset_found
                         else "No current map dataset was found; this draft "
                         "proposes only a thin column shell under the profiled "
-                        "asset because profile observations do not carry "
-                        "helper-owned table, physical_type, or value_type facts."
+                        "asset because observed type findings need separate "
+                        "semantic review before becoming map type facts."
                     ),
                 )
             )
@@ -7103,6 +7136,11 @@ class DoxaBase:
         metric_advisories = self._profile_metric_vocabulary_advisories(
             all_profiles,
             evidence_value,
+        )
+        type_advisories = self._profile_type_finding_advisories(
+            all_profiles,
+            evidence_value,
+            columns_by_iri=columns_by_iri,
         )
         recommendations = self._with_profile_update_default_staging_metadata(
             recommendations
@@ -7121,6 +7159,9 @@ class DoxaBase:
         metric_advisory_status_counts = (
             self._profile_metric_advisory_status_counts(metric_advisories)
         )
+        type_advisory_status_counts = self._profile_type_advisory_status_counts(
+            type_advisories
+        )
         suggested_next_actions = self._profile_map_update_draft_actions(
             dataset_iri=dataset_value,
             evidence_iri=evidence_value,
@@ -7128,6 +7169,7 @@ class DoxaBase:
                 default_stageable_representative_indexes
             ),
             metric_advisories=metric_advisories,
+            type_advisories=type_advisories,
         )
         return ProfileMapUpdateDraft(
             dataset=profile_run.dataset,
@@ -7141,6 +7183,9 @@ class DoxaBase:
             metric_advisories=metric_advisories,
             metric_advisory_count=len(metric_advisories),
             metric_advisory_status_counts=metric_advisory_status_counts,
+            type_advisories=type_advisories,
+            type_advisory_count=len(type_advisories),
+            type_advisory_status_counts=type_advisory_status_counts,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
@@ -7310,6 +7355,8 @@ class DoxaBase:
                     metric_advisory_status_counts=(
                         draft.metric_advisory_status_counts
                     ),
+                    type_advisory_count=draft.type_advisory_count,
+                    type_advisory_status_counts=draft.type_advisory_status_counts,
                     allow_sampled_row_count_updates=allow_sampled_row_count_updates,
                 ),
                 review_recommendation=(
@@ -7326,6 +7373,11 @@ class DoxaBase:
         metric_advisory_suggested_next_actions = (
             self._profile_metric_advisory_suggested_actions(
                 draft.metric_advisories,
+            )
+        )
+        type_advisory_suggested_next_actions = (
+            self._profile_type_advisory_suggested_actions(
+                draft.type_advisories,
             )
         )
         return ProfileMapUpdateStagingRecord(
@@ -7353,6 +7405,16 @@ class DoxaBase:
             metric_advisory_suggested_next_calls=[
                 action.call for action in metric_advisory_suggested_next_actions
             ],
+            type_advisories=draft.type_advisories,
+            type_advisory_count=draft.type_advisory_count,
+            type_advisory_status_counts=draft.type_advisory_status_counts,
+            type_review_required=bool(type_advisory_suggested_next_actions),
+            type_advisory_suggested_next_actions=(
+                type_advisory_suggested_next_actions
+            ),
+            type_advisory_suggested_next_calls=[
+                action.call for action in type_advisory_suggested_next_actions
+            ],
             staged_revision=staged_revision,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
@@ -7365,6 +7427,8 @@ class DoxaBase:
                 status_counts=status_counts,
                 metric_advisory_count=draft.metric_advisory_count,
                 metric_advisory_status_counts=draft.metric_advisory_status_counts,
+                type_advisory_count=draft.type_advisory_count,
+                type_advisory_status_counts=draft.type_advisory_status_counts,
                 allow_sampled_row_count_updates=allow_sampled_row_count_updates,
             ),
         )
@@ -7400,6 +7464,7 @@ class DoxaBase:
         evidence_iri: str,
         default_stageable_representative_indexes: list[int],
         metric_advisories: list[ProfileMetricVocabularyAdvisory],
+        type_advisories: list[ProfileTypeFindingAdvisory],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         if default_stageable_representative_indexes:
@@ -7432,6 +7497,9 @@ class DoxaBase:
 
         actions.extend(
             self._profile_metric_advisory_suggested_actions(metric_advisories)
+        )
+        actions.extend(
+            self._profile_type_advisory_suggested_actions(type_advisories)
         )
         return actions
 
@@ -7591,6 +7659,17 @@ class DoxaBase:
             )
         return counts
 
+    @staticmethod
+    def _profile_type_advisory_status_counts(
+        advisories: Iterable[ProfileTypeFindingAdvisory],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for advisory in advisories:
+            counts[advisory.advisory_status] = (
+                counts.get(advisory.advisory_status, 0) + 1
+            )
+        return counts
+
     def _profile_update_skip_reason(
         self,
         recommendation: ProfileMapUpdateRecommendation,
@@ -7626,6 +7705,8 @@ class DoxaBase:
         status_counts: dict[str, int],
         metric_advisory_count: int,
         metric_advisory_status_counts: dict[str, int],
+        type_advisory_count: int,
+        type_advisory_status_counts: dict[str, int],
         allow_sampled_row_count_updates: bool,
     ) -> str:
         staged_summary = ", ".join(str(index) for index in staged_indexes) or "none"
@@ -7636,6 +7717,10 @@ class DoxaBase:
         metric_advisory_summary = self._profile_metric_advisory_review_summary(
             metric_advisory_count,
             metric_advisory_status_counts,
+        )
+        type_advisory_summary = self._profile_type_advisory_review_summary(
+            type_advisory_count,
+            type_advisory_status_counts,
         )
         evidence_summary = "; ".join(
             (
@@ -7652,11 +7737,25 @@ class DoxaBase:
             f"{allow_sampled_row_count_updates}. Review sample scope, evidence, "
             "caveats, and project modelling intent before applying. "
             "Metric vocabulary advisories (review separately; not staged as map "
-            f"patches): {metric_advisory_summary}. Items: {evidence_summary}"
+            f"patches): {metric_advisory_summary}. Profile type advisories "
+            "(review separately; not staged as map patches): "
+            f"{type_advisory_summary}. Items: {evidence_summary}"
         )
 
     @staticmethod
     def _profile_metric_advisory_review_summary(
+        advisory_count: int,
+        status_counts: dict[str, int],
+    ) -> str:
+        if advisory_count == 0:
+            return "none"
+        status_summary = ", ".join(
+            f"{status}={count}" for status, count in status_counts.items()
+        )
+        return f"{advisory_count} ({status_summary})"
+
+    @staticmethod
+    def _profile_type_advisory_review_summary(
         advisory_count: int,
         status_counts: dict[str, int],
     ) -> str:
@@ -10926,6 +11025,426 @@ class DoxaBase:
             or profile.observed_column.iri.rsplit("#", 1)[-1].rsplit("/", 1)[-1]
         )
 
+    def _profile_type_finding_advisories(
+        self,
+        profiles: list[ProfileObservationSummary],
+        evidence_iri: str,
+        *,
+        columns_by_iri: dict[str, ColumnDescription],
+    ) -> list[ProfileTypeFindingAdvisory]:
+        advisories: list[ProfileTypeFindingAdvisory] = []
+        for profile in profiles:
+            if profile.observed_column is None:
+                continue
+            if (
+                profile.observed_physical_type is None
+                and profile.observed_value_type is None
+            ):
+                continue
+            column = columns_by_iri.get(profile.observed_column.iri)
+            current_physical_type = column.physical_type if column is not None else None
+            current_value_type = column.value_type if column is not None else None
+            if column is not None and self._profile_type_finding_matches_current_map(
+                profile,
+                current_physical_type=current_physical_type,
+                current_value_type=current_value_type,
+            ):
+                continue
+            advisory_status = self._profile_type_advisory_status(
+                profile,
+                map_column_found=column is not None,
+                current_physical_type=current_physical_type,
+                current_value_type=current_value_type,
+            )
+            suggested_next_actions = self._profile_type_advisory_actions(
+                profile=profile,
+                evidence_iri=evidence_iri,
+                advisory_status=advisory_status,
+                map_column_found=column is not None,
+                current_physical_type=current_physical_type,
+                current_value_type=current_value_type,
+            )
+            advisories.append(
+                ProfileTypeFindingAdvisory(
+                    profile_observation_iri=profile.iri,
+                    evidence_iri=evidence_iri,
+                    observed_column=profile.observed_column,
+                    observed_column_name=profile.observed_column_name,
+                    observed_physical_type=profile.observed_physical_type,
+                    observed_value_type=profile.observed_value_type,
+                    map_column_found=column is not None,
+                    current_physical_type=current_physical_type,
+                    current_value_type=current_value_type,
+                    advisory_status=advisory_status,
+                    recommendation="review_profile_type_finding_before_map_update",
+                    rationale=self._profile_type_advisory_rationale(
+                        profile,
+                        advisory_status=advisory_status,
+                    ),
+                    suggested_next_actions=suggested_next_actions,
+                    suggested_next_calls=[
+                        action.call for action in suggested_next_actions
+                    ],
+                )
+            )
+        return self._with_profile_type_advisory_duplicate_metadata(advisories)
+
+    @staticmethod
+    def _profile_type_finding_matches_current_map(
+        profile: ProfileObservationSummary,
+        *,
+        current_physical_type: ResourceSummary | None,
+        current_value_type: ResourceSummary | None,
+    ) -> bool:
+        if (
+            profile.observed_physical_type is not None
+            and (
+                current_physical_type is None
+                or current_physical_type.iri != profile.observed_physical_type.iri
+            )
+        ):
+            return False
+        if (
+            profile.observed_value_type is not None
+            and (
+                current_value_type is None
+                or current_value_type.iri != profile.observed_value_type.iri
+            )
+        ):
+            return False
+        return True
+
+    def _profile_type_advisory_status(
+        self,
+        profile: ProfileObservationSummary,
+        *,
+        map_column_found: bool,
+        current_physical_type: ResourceSummary | None,
+        current_value_type: ResourceSummary | None,
+    ) -> str:
+        if not map_column_found:
+            return "type_finding_unmapped_column"
+        conflicts = False
+        missing = False
+        if profile.observed_physical_type is not None:
+            if current_physical_type is None:
+                missing = True
+            elif current_physical_type.iri != profile.observed_physical_type.iri:
+                conflicts = True
+        if profile.observed_value_type is not None:
+            if current_value_type is None:
+                missing = True
+            elif current_value_type.iri != profile.observed_value_type.iri:
+                conflicts = True
+        if conflicts:
+            return "type_finding_conflicts_current_map"
+        if missing:
+            return "type_finding_missing_map_type"
+        return "type_finding_needs_review"
+
+    def _with_profile_type_advisory_duplicate_metadata(
+        self,
+        advisories: list[ProfileTypeFindingAdvisory],
+    ) -> list[ProfileTypeFindingAdvisory]:
+        groups: dict[str, list[tuple[int, ProfileTypeFindingAdvisory]]] = {}
+        for index, advisory in enumerate(advisories):
+            groups.setdefault(
+                self._profile_type_advisory_duplicate_group_key(advisory),
+                [],
+            ).append((index, advisory))
+
+        annotated: list[ProfileTypeFindingAdvisory] = []
+        for advisory in advisories:
+            group_key = self._profile_type_advisory_duplicate_group_key(advisory)
+            group = groups[group_key]
+            annotated.append(
+                replace(
+                    advisory,
+                    duplicate_group_key=group_key,
+                    duplicate_count=len(group),
+                    duplicate_advisory_indexes=[
+                        group_index for group_index, _ in group
+                    ],
+                    duplicate_profile_observation_iris=list(
+                        dict.fromkeys(
+                            item.profile_observation_iri for _, item in group
+                        )
+                    ),
+                )
+            )
+        return annotated
+
+    @staticmethod
+    def _profile_type_advisory_duplicate_group_key(
+        advisory: ProfileTypeFindingAdvisory,
+    ) -> str:
+        payload = {
+            "evidence_iri": advisory.evidence_iri,
+            "observed_column_iri": advisory.observed_column.iri,
+            "observed_column_name": advisory.observed_column_name,
+            "observed_physical_type_iri": (
+                advisory.observed_physical_type.iri
+                if advisory.observed_physical_type is not None
+                else None
+            ),
+            "observed_value_type_iri": (
+                advisory.observed_value_type.iri
+                if advisory.observed_value_type is not None
+                else None
+            ),
+            "map_column_found": advisory.map_column_found,
+            "current_physical_type_iri": (
+                advisory.current_physical_type.iri
+                if advisory.current_physical_type is not None
+                else None
+            ),
+            "current_value_type_iri": (
+                advisory.current_value_type.iri
+                if advisory.current_value_type is not None
+                else None
+            ),
+            "advisory_status": advisory.advisory_status,
+        }
+        digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:12]
+        return f"profile-type-advisory:{digest}"
+
+    @staticmethod
+    def _profile_type_advisory_suggested_actions(
+        advisories: list[ProfileTypeFindingAdvisory],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        seen_actions: set[tuple[str, str]] = set()
+        for advisory in advisories:
+            for action in advisory.suggested_next_actions:
+                key = (action.tool_name, action.call)
+                if key in seen_actions:
+                    continue
+                seen_actions.add(key)
+                actions.append(action)
+        return actions
+
+    def _profile_type_advisory_actions(
+        self,
+        *,
+        profile: ProfileObservationSummary,
+        evidence_iri: str,
+        advisory_status: str,
+        map_column_found: bool,
+        current_physical_type: ResourceSummary | None,
+        current_value_type: ResourceSummary | None,
+    ) -> list[SuggestedNextAction]:
+        assert profile.observed_column is not None
+        actions: list[SuggestedNextAction] = []
+
+        def add_action(
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+            *,
+            action_label: str,
+        ) -> None:
+            actions.append(
+                SuggestedNextAction(
+                    action_label=action_label,
+                    tool_name=tool_name,
+                    mcp_tool_name=f"doxabase.{tool_name}",
+                    arguments=arguments,
+                    reason=reason,
+                    call=self._suggested_call_string(tool_name, arguments),
+                )
+            )
+
+        seed_iris = [
+            profile.iri,
+            profile.observed_column.iri,
+            *(
+                [profile.observed_physical_type.iri]
+                if profile.observed_physical_type is not None
+                else []
+            ),
+            *(
+                [profile.observed_value_type.iri]
+                if profile.observed_value_type is not None
+                else []
+            ),
+        ]
+        add_action(
+            "describe_context_slice",
+            {
+                "seed_iris": list(dict.fromkeys(seed_iris)),
+                "profile": "dataset_brief",
+            },
+            (
+                "Load bounded lore around the profile observation, column, and "
+                "observed type resources before turning the type finding into "
+                "a current map assertion."
+            ),
+            action_label="Inspect profile type context",
+        )
+        column_label = (
+            profile.observed_column.label
+            or profile.observed_column.column_name
+            or profile.observed_column_name
+            or profile.observed_column.iri
+        )
+        add_action(
+            "record_pattern",
+            {
+                "summary": f"Review profiled type for {column_label}",
+                "pattern_text": (
+                    f"Profile evidence observed type information for {column_label}. "
+                    "Treat it as interpretation evidence until reviewed against "
+                    "current map context and value-type semantics."
+                ),
+                "rationale": (
+                    "Profile type findings are evidence, not automatic map "
+                    "updates. Preserve the judgement before staging a map "
+                    "assertion or systematisation."
+                ),
+                "pattern_targets": [profile.observed_column.iri],
+                "supporting_observations": [profile.iri],
+                "evidence_iri": evidence_iri,
+                "map_implications": list(dict.fromkeys(seed_iris[1:])),
+            },
+            (
+                "Record a synthesis if this type finding needs semantic review "
+                "before becoming a durable map assertion."
+            ),
+            action_label="Record type-finding pattern",
+        )
+
+        if map_column_found:
+            if (
+                profile.observed_physical_type is not None
+                and (
+                    current_physical_type is None
+                    or current_physical_type.iri
+                    != profile.observed_physical_type.iri
+                )
+            ):
+                add_action(
+                    "stage_map_assertion_change",
+                    self._profile_type_assertion_action_arguments(
+                        profile=profile,
+                        evidence_iri=evidence_iri,
+                        predicate="rc:physicalType",
+                        object_iri=profile.observed_physical_type.iri,
+                        advisory_status=advisory_status,
+                    ),
+                    (
+                        "Stage a reviewable physical-type assertion only after "
+                        "checking the profile evidence and value-type context."
+                    ),
+                    action_label="Stage physical type assertion",
+                )
+            if (
+                profile.observed_value_type is not None
+                and (
+                    current_value_type is None
+                    or current_value_type.iri != profile.observed_value_type.iri
+                )
+            ):
+                add_action(
+                    "stage_map_assertion_change",
+                    self._profile_type_assertion_action_arguments(
+                        profile=profile,
+                        evidence_iri=evidence_iri,
+                        predicate="rc:valueType",
+                        object_iri=profile.observed_value_type.iri,
+                        advisory_status=advisory_status,
+                    ),
+                    (
+                        "Stage a reviewable value-type assertion only after "
+                        "checking the profile evidence and domain semantics."
+                    ),
+                    action_label="Stage value type assertion",
+                )
+        return actions
+
+    def _profile_type_assertion_action_arguments(
+        self,
+        *,
+        profile: ProfileObservationSummary,
+        evidence_iri: str,
+        predicate: str,
+        object_iri: str,
+        advisory_status: str,
+    ) -> dict[str, Any]:
+        assert profile.observed_column is not None
+        column_label = (
+            profile.observed_column.label
+            or profile.observed_column.column_name
+            or profile.observed_column_name
+            or profile.observed_column.iri
+        )
+        return {
+            "subject": profile.observed_column.iri,
+            "predicate": predicate,
+            "object": object_iri,
+            "object_kind": "iri",
+            "change_kind": "replace",
+            "rationale": (
+                f"Profile observation {profile.iri} recorded {predicate} "
+                f"{object_iri} for {column_label}. Treat this as a candidate "
+                "map assertion and review current context before applying."
+            ),
+            "supporting_observations": [profile.iri],
+            "evidence": [evidence_iri],
+            "revision_anchors": [profile.observed_column.iri, object_iri],
+            "review_note": (
+                "Generated from a profile type-finding advisory; profile type "
+                "findings are evidence, not automatic map updates."
+            ),
+            "review_recommendation": (
+                "Apply only if the profile evidence and current map/value-type "
+                f"context support replacing or recording this assertion "
+                f"(advisory_status={advisory_status})."
+            ),
+            "validation_scope": "all",
+        }
+
+    @staticmethod
+    def _profile_type_advisory_rationale(
+        profile: ProfileObservationSummary,
+        *,
+        advisory_status: str,
+    ) -> str:
+        if profile.observed_column is not None:
+            column_label = (
+                profile.observed_column.label
+                or profile.observed_column.column_name
+                or profile.observed_column_name
+                or profile.observed_column.iri
+            )
+        else:
+            column_label = "the observed column"
+        if advisory_status == "type_finding_unmapped_column":
+            return (
+                f"The profile observed type information for {column_label}, "
+                "but the column is not a current map column. Preserve or stage "
+                "the interpretation with a column shell or systematisation "
+                "before recording current map type facts."
+            )
+        if advisory_status == "type_finding_conflicts_current_map":
+            return (
+                f"The profile observed type information for {column_label} that "
+                "differs from current map type facts. Review semantic risk and "
+                "value-type context before replacing current assertions."
+            )
+        if advisory_status == "type_finding_missing_map_type":
+            return (
+                f"The profile observed type information for {column_label} where "
+                "the current map lacks one or more corresponding type facts. "
+                "Review before recording them as durable map context."
+            )
+        return (
+            f"The profile observed type information for {column_label}. Review "
+            "the profile evidence and modelling intent before recording map "
+            "type facts."
+        )
+
     def _profile_metric_vocabulary_advisories(
         self,
         profiles: list[ProfileObservationSummary],
@@ -11280,6 +11799,16 @@ class DoxaBase:
             observation_iri,
             "rc:observedColumnName",
         )
+        observed_physical_type = self._first_object(
+            observation_graphs,
+            observation_iri,
+            "rc:observedPhysicalType",
+        )
+        observed_value_type = self._first_object(
+            observation_graphs,
+            observation_iri,
+            "rc:observedValueType",
+        )
         return ProfileObservationSummary(
             iri=observation_iri,
             summary=self._first_object(observation_graphs, observation_iri, "rc:summary"),
@@ -11308,6 +11837,14 @@ class DoxaBase:
                 else None
             ),
             observed_column_name=observed_column_name,
+            observed_physical_type=self._optional_resource_summary(
+                lookup_graphs,
+                observed_physical_type,
+            ),
+            observed_value_type=self._optional_resource_summary(
+                lookup_graphs,
+                observed_value_type,
+            ),
             sample_size=self._int_object(
                 observation_graphs,
                 observation_iri,
@@ -11476,6 +12013,8 @@ class DoxaBase:
         distinct_count: int | None = None,
         value_frequencies: Iterable[Mapping[str, Any]] | None = None,
         profile_metrics: Iterable[Mapping[str, Any]] | None = None,
+        observed_physical_type: str | None = None,
+        observed_value_type: str | None = None,
         observation_iri: str | None = None,
         evidence_iri: str | None = None,
     ) -> ObservationRecord:
@@ -11500,6 +12039,29 @@ class DoxaBase:
             value_frequencies
         )
         profile_metric_values = self._profile_metric_values(profile_metrics)
+        observed_physical_type_ref = (
+            self._resource_ref("observed_physical_type", observed_physical_type)
+            if observed_physical_type is not None
+            else None
+        )
+        observed_value_type_ref = (
+            self._resource_ref("observed_value_type", observed_value_type)
+            if observed_value_type is not None
+            else None
+        )
+        if (
+            observed_physical_type_ref is not None
+            or observed_value_type_ref is not None
+        ):
+            if observation_type != "profile":
+                raise DoxaBaseError(
+                    "observed_physical_type and observed_value_type require "
+                    "observation_type='profile'"
+                )
+            if observed_column is None:
+                raise DoxaBaseError(
+                    "observed type findings require observed_column"
+                )
 
         evidence_source_values = (
             [evidence_sources]
@@ -11565,6 +12127,22 @@ class DoxaBase:
                     observation_subject,
                     URIRef(self.expand_iri("rc:observedColumnName")),
                     Literal(column_name_value),
+                )
+            )
+        if observed_physical_type_ref is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedPhysicalType")),
+                    observed_physical_type_ref,
+                )
+            )
+        if observed_value_type_ref is not None:
+            observation_graph.add(
+                (
+                    observation_subject,
+                    URIRef(self.expand_iri("rc:observedValueType")),
+                    observed_value_type_ref,
                 )
             )
         if observed_by is not None:
@@ -12512,6 +13090,8 @@ class DoxaBase:
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
             profile_metrics=profile_metrics,
+            observed_physical_type=physical_type,
+            observed_value_type=value_type,
             observation_iri=observation_iri,
             evidence_iri=evidence_iri,
         )
@@ -13113,6 +13693,16 @@ class DoxaBase:
             raise DoxaBaseError(
                 f"column_profiles[{index}].evidence_sources must contain strings"
             )
+        if column_kwargs.get("physical_type") is not None:
+            self._resource_ref(
+                f"column_profiles[{index}].physical_type",
+                column_kwargs["physical_type"],
+            )
+        if column_kwargs.get("value_type") is not None:
+            self._resource_ref(
+                f"column_profiles[{index}].value_type",
+                column_kwargs["value_type"],
+            )
 
         should_update_map = column_kwargs.get("update_map_column", True) and (
             table_value is not None
@@ -13123,16 +13713,6 @@ class DoxaBase:
             or column_kwargs.get("nullable") is not None
         )
         if should_update_map:
-            if column_kwargs.get("physical_type") is not None:
-                self._resource_ref(
-                    f"column_profiles[{index}].physical_type",
-                    column_kwargs["physical_type"],
-                )
-            if column_kwargs.get("value_type") is not None:
-                self._resource_ref(
-                    f"column_profiles[{index}].value_type",
-                    column_kwargs["value_type"],
-                )
             if table_value is not None:
                 self._resource_ref(
                     f"column_profiles[{index}].table_iri",

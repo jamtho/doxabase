@@ -783,6 +783,9 @@ draft.representative_recommendation_indexes
 draft.metric_advisories
 draft.metric_advisory_count
 draft.metric_advisory_status_counts
+draft.type_advisories
+draft.type_advisory_count
+draft.type_advisory_status_counts
 draft.suggested_next_actions
 draft.suggested_next_calls
 draft.review_note
@@ -828,16 +831,9 @@ non-null constraint. `default_stageable` and `default_skip_reason` preview what
 `stage_profile_map_updates` will do with default options; sampled row-count
 recommendations remain review candidates but are skipped by default unless
 `allow_sampled_row_count_updates=True`. `metric_advisories[]` rows name
-project-specific profile
-metric IRIs observed in the run and recommend vocabulary review before reusable
-comparison or map policy. Each advisory includes:
-
-Profile type findings are not draft/stage recommendations today.
-`physical_type` and `value_type` become structured map facts only when the
-profile recording call updates the map column. If the profile was recorded as
-observation-only, preserve type interpretations through a pattern plus
-`stage_systematisation` / `stage_pattern_promotion`, or use direct map/staged
-assertion helpers when the type fact is ready.
+project-specific profile metric IRIs observed in the run and recommend
+vocabulary review before reusable comparison or map policy. Each advisory
+includes:
 
 ```python
 advisory.profile_observation_iri
@@ -879,6 +875,40 @@ means the row is unique in this draft; higher counts mean repeated profile
 observations produced the same review row. Agents can accept one representative
 recommendation index from a duplicate group when the modelling judgement is the
 same for all siblings.
+
+`type_advisories[]` rows surface observation-only `physical_type` and
+`value_type` findings. They are not accepted recommendation indexes and are not
+staged automatically; follow their suggested actions to inspect context, record
+a type-finding pattern, or stage a focused map assertion after review. Each row
+includes:
+
+```python
+advisory.profile_observation_iri
+advisory.evidence_iri
+advisory.observed_column
+advisory.observed_column_name
+advisory.observed_physical_type
+advisory.observed_value_type
+advisory.map_column_found
+advisory.current_physical_type
+advisory.current_value_type
+advisory.advisory_status
+advisory.recommendation
+advisory.rationale
+advisory.suggested_next_actions
+advisory.suggested_next_calls
+advisory.duplicate_group_key
+advisory.duplicate_count
+advisory.duplicate_advisory_indexes
+advisory.duplicate_profile_observation_iris
+```
+
+`advisory_status` is `type_finding_unmapped_column`,
+`type_finding_conflicts_current_map`, `type_finding_missing_map_type`, or
+`type_finding_needs_review`. Use `type_advisory_count` and
+`type_advisory_status_counts` for queue routing before reading full advisory
+rows.
+
 Use `recommendation_count` and top-level `suggested_next_actions` for first-pass
 machine routing. Drafts with recommendations include a
 `stage_profile_map_updates` action whose `accepted_recommendation_indexes`
@@ -888,10 +918,10 @@ defaults to the representative indexes whose recommendation rows have
 action omits them unless the caller explicitly opts in. Pass only the indexes
 actually accepted after reviewing sample scope and modelling intent; include
 duplicate sibling indexes only when they need distinct review treatment.
-When `draft.recommendations` is empty and `metric_advisory_count > 0`, the
-draft is advisory-only. The top-level suggested actions are the deduped advisory
-actions for vocabulary/context review; do not call `stage_profile_map_updates`
-because no-op advisory staging is deferred.
+When `draft.recommendations` is empty and either metric or type advisories are
+present, the draft is advisory-only. The top-level suggested actions are the
+deduped advisory actions for vocabulary/context/type review; do not call
+`stage_profile_map_updates` because no-op advisory staging is deferred.
 
 `db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 returns a `ProfileMapUpdateStagingRecord`:
@@ -927,6 +957,12 @@ result.metric_advisory_status_counts
 result.metric_vocabulary_review_required
 result.metric_advisory_suggested_next_actions
 result.metric_advisory_suggested_next_calls
+result.type_advisories
+result.type_advisory_count
+result.type_advisory_status_counts
+result.type_review_required
+result.type_advisory_suggested_next_actions
+result.type_advisory_suggested_next_calls
 result.staged_revision
 result.suggested_next_actions
 result.suggested_next_calls
@@ -1046,6 +1082,8 @@ profile.observed_by
 profile.observed_asset
 profile.observed_column
 profile.observed_column_name
+profile.observed_physical_type
+profile.observed_value_type
 profile.sample_size
 profile.sample_scope
 profile.sample_method
@@ -1491,6 +1529,12 @@ credential/object-existence guarantee.
 `ready_for_execution_attempt` is the stricter handoff boolean: it is true only
 when the review gate is clear, `runtime_resolution_required` is false, and
 `binding_values_required` is false.
+For consumer routing, check `ready_for_execution_attempt` first. If it is false
+but relation fields are present, hand those to a database-aware review/runtime
+route before generic runtime-resolution work. Then route unresolved storage
+environment, required bindings, and remaining issue codes. Empty
+`blocking_reason_codes` or `executable_without_review=True` must not be treated
+as execution permission.
 
 Each caveat in `dataset.caveats` has:
 

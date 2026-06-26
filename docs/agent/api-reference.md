@@ -401,10 +401,11 @@ after `describe_profile_run` when profile evidence suggests row-count snapshot
 drift, mapped-column nullability changes, unmapped profiled columns, or
 project-specific metric kinds that need vocabulary review. It returns
 `recommendations` with `helper_name`/`helper_arguments` for accepted map-helper
-updates, `metric_advisories` for project-specific profile metrics, and a
-`review_note`. It also includes `recommendation_count`,
-`metric_advisory_count`, `metric_advisory_status_counts`, and top-level
-`suggested_next_actions` / `suggested_next_calls` for quick routing.
+updates, `metric_advisories` for project-specific profile metrics,
+`type_advisories` for observed profile type findings, and a `review_note`. It
+also includes `recommendation_count`, metric advisory counts, type advisory
+counts, and top-level `suggested_next_actions` / `suggested_next_calls` for
+quick routing.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and
@@ -422,12 +423,13 @@ carry `advisory_status`, `definition_found`, optional `definition`,
 same-evidence pattern that names the metric as a target or map implication also
 get a reviewable `stage_pattern_promotion` skeleton for an ontology
 `rc:ProfileMetricKind`.
-Type findings are outside the current draft/stage recommendation set:
-`physical_type` and `value_type` become structured map facts when the profile
-recording call updates the map column, but observation-only profile records do
-not later produce type recommendations. Preserve those interpretations through
-patterns and `stage_systematisation` / `stage_pattern_promotion`, or use direct
-map/staged assertion helpers when the type fact is ready.
+Type findings are outside the accepted recommendation-index set:
+`physical_type` and `value_type` are persisted on profile observations as
+observed evidence, and observation-only profile records now produce
+`type_advisories` when they differ from or fill gaps in current map column
+facts. Follow those advisories for context loading, pattern recording, or
+focused `stage_map_assertion_change` calls before turning type evidence into
+durable map assertions.
 If `recommendation_count > 0`, review the draft and use the top-level
 `stage_profile_map_updates` action as a starting point. Its
 `accepted_recommendation_indexes` defaults to the representative indexes whose
@@ -435,17 +437,17 @@ rows have `default_stageable=True`, so agents do not have to stage duplicate
 siblings just to preserve observation support or accidentally stage sampled
 row-count rows. Sampled row-count representatives remain in
 `representative_recommendation_indexes` for explicit review/override. If
-`recommendation_count == 0 and metric_advisory_count > 0`, treat the draft as
-advisory-only: follow the top-level advisory suggested actions and do not call
-`stage_profile_map_updates`, because advisory rows are not map-update
-recommendations.
+`recommendation_count == 0` and either metric or type advisories are present,
+treat the draft as advisory-only: follow the top-level advisory suggested
+actions and do not call `stage_profile_map_updates`, because advisory rows are
+not accepted map-update recommendations.
 
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped
 reviewable `map` revision, and returns explicit staged/skipped/not-selected
-item statuses plus `status_counts`, `metric_advisory_count`, and
-`metric_advisory_status_counts`. Use it when profile-derived map changes need
-review before application. When staging creates a revision, follow
+item statuses plus `status_counts`, metric advisory counts, and type advisory
+counts. Use it when profile-derived map changes need review before application.
+When staging creates a revision, follow
 `suggested_next_actions` to `check_staged_revision_apply` before reviewing,
 exporting, or applying it. The staged patch uses helper-equivalent RDF:
 missing dataset shells get `rdf:type rc:Dataset`, unmapped columns get
@@ -504,7 +506,9 @@ graph. Include `evidence_sources` or a source span when you need validation-clea
 evidence; `evidence_summary` alone is descriptive prose. When
 `observed_column` names a column that is not yet in the map,
 `observed_column_name` can preserve the source-level column name without
-promoting the column into current map state.
+promoting the column into current map state. For `observation_type="profile"`,
+`observed_physical_type` and `observed_value_type` preserve type findings as
+evidence without asserting them as current map facts.
 
 `record_dataset_profile()` records a profile observation for one dataset and can
 also update the map row-count snapshot and write an agent-authored profile

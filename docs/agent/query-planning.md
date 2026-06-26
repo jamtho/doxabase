@@ -75,6 +75,22 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `query_context_has_other_blockers` when the selected candidate is clean but
    the broader query context is not.
 
+For downstream consumers, keep the routing order simple:
+
+1. If `review_gate.ready_for_execution_attempt` is true, and the plan still
+   matches the intended client/runtime, a non-executing handoff may become an
+   execution-attempt candidate.
+2. Otherwise, if `scan.relation_identifier` or `scan.connection_reference` is
+   present, route it as a database relation handoff before generic runtime
+   resolution. The relation can be useful even when execution is not ready.
+3. Otherwise, route `storage_environment.runtime_resolution_required`,
+   `review_gate.binding_values_required`, and then remaining
+   `blocking_reason_codes` / `all_issue_codes`. Empty blocking codes or
+   `executable_without_review=True` do not override a false
+   `ready_for_execution_attempt`.
+4. Treat `binding_requirements`, partition hints, and candidate column matches
+   as review hints. They do not supply runtime values.
+
 When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call
 `draft_query_plan(..., candidate_index=..., allow_context_blocked_candidate=True)`

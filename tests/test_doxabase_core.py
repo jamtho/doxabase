@@ -75,9 +75,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1163
+    assert graphs["base_ontology"].triple_count == 1171
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1194
+    assert graphs["base_shapes"].triple_count == 1204
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -12987,6 +12987,106 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         status_column: False,
         amount_column: False,
     }
+
+
+def test_draft_profile_map_updates_surfaces_profile_type_advisories(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#OrderStatusCode"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.replace_graph_triples(
+        "ontology",
+        additions=f"""
+            @prefix rc: <https://richcanopy.org/ns/rc#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            <{status_value_type}> a rc:ValueType ;
+                rdfs:label "Order status code" .
+        """,
+        allow_count_change=True,
+    )
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled without changing the map.",
+        evidence_summary="Synthetic type-finding profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+
+    profile_run = db.describe_profile_run(dataset, evidence)
+    profile = profile_run.mapped_column_profile_observations[0]
+    assert profile.observed_physical_type is not None
+    assert profile.observed_physical_type.iri == RC + "Integer"
+    assert profile.observed_value_type is not None
+    assert profile.observed_value_type.iri == status_value_type
+
+    description = db.describe_dataset(dataset)
+    column = description.columns[0]
+    assert column.physical_type is not None
+    assert column.physical_type.iri == RC + "Varchar"
+    assert column.value_type is None
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 0
+    assert draft.metric_advisory_count == 0
+    assert draft.type_advisory_count == 1
+    assert draft.type_advisory_status_counts == {
+        "type_finding_conflicts_current_map": 1,
+    }
+    advisory = draft.type_advisories[0]
+    assert advisory.profile_observation_iri == profile.iri
+    assert advisory.observed_column.iri == status_column
+    assert advisory.observed_physical_type is not None
+    assert advisory.observed_physical_type.iri == RC + "Integer"
+    assert advisory.observed_value_type is not None
+    assert advisory.observed_value_type.iri == status_value_type
+    assert advisory.map_column_found is True
+    assert advisory.current_physical_type is not None
+    assert advisory.current_physical_type.iri == RC + "Varchar"
+    assert advisory.current_value_type is None
+    assert advisory.recommendation == "review_profile_type_finding_before_map_update"
+    assert [action.tool_name for action in advisory.suggested_next_actions] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_map_assertion_change",
+        "stage_map_assertion_change",
+    ]
+    assert [
+        action.arguments["predicate"]
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+    ] == ["rc:physicalType", "rc:valueType"]
+    assert [action.tool_name for action in draft.suggested_next_actions] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_map_assertion_change",
+        "stage_map_assertion_change",
+    ]
+    assert db.validate_graph(scope="all").conforms
 
 
 def test_profile_map_update_duplicate_groups_preserve_representative_support(

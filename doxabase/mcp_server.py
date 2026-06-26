@@ -456,6 +456,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         distinct_count: int | None = None,
         value_frequencies: list[dict[str, Any]] | None = None,
         profile_metrics: list[dict[str, Any]] | None = None,
+        observed_physical_type: str | None = None,
+        observed_value_type: str | None = None,
     ) -> dict[str, Any]:
         """Record a structured observation, optionally linked to evidence."""
 
@@ -478,6 +480,8 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
             profile_metrics=profile_metrics,
+            observed_physical_type=observed_physical_type,
+            observed_value_type=observed_value_type,
         )
 
     @server.tool(name="doxabase.record_claim_observation")

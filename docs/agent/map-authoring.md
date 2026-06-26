@@ -84,22 +84,22 @@ same review row, accept one representative index unless the siblings need
 different modelling judgement. The draft's top-level staging action starts from
 the representative indexes whose rows are `default_stageable`; sampled row-count
 representatives stay visible for review but require an explicit override call.
-Profile type findings are not currently drafted as `stage_profile_map_updates`
-recommendations. `physical_type` and `value_type` become structured map facts
-only when the profile helper writes the map column, for example with
-`update_map_column=True`. Otherwise preserve the interpretation through a
-pattern plus `stage_systematisation` / `stage_pattern_promotion`, or use direct
-map or staged assertion helpers when the type change is safe and intended.
+Profile type findings are not accepted `stage_profile_map_updates`
+recommendation indexes. `physical_type` and `value_type` are still persisted on
+profile observations when `update_map_column=False`; `draft_profile_map_updates`
+surfaces them as `type_advisories` with context, pattern, and focused staged
+assertion suggestions. Review those advisories before turning type evidence into
+current map facts.
 
 Use `stage_profile_map_updates(..., accepted_recommendation_indexes=[...])` when
 accepted profile-derived changes should be reviewed before apply. It stages one
 grouped helper-equivalent map revision, including multi-triple dataset and
 column shells, so applying one accepted profile batch does not create sibling
 staged revisions that immediately drift after the first apply.
-If the draft has no recommendations and `metric_advisory_count > 0`, handle it
-as advisory-only: follow the advisory suggested calls for vocabulary/context
-review and do not call `stage_profile_map_updates`. Advisory rows are not
-map-update recommendations, and no-op advisory staging is deferred.
+If the draft has no recommendations and metric or type advisories are present,
+handle it as advisory-only: follow the advisory suggested calls for vocabulary,
+context, or type review and do not call `stage_profile_map_updates`. Advisory
+rows are not map-update recommendations, and no-op advisory staging is deferred.
 An accepted index is still routed through guardrails: it may be `staged` or
 `skipped`, while `not_selected` means the draft row was not accepted for that
 call. Check `status_counts` first, then item reasons.

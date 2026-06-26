@@ -367,6 +367,25 @@ patches whose parsed RDF payload mentions the resource as subject, predicate, or
 object, and applied events whose staged source matched. Patch mention summaries
 are role-aware flags with matched triple counts; call
 `describe_staged_revision()` for full patch content.
+Use the full provenance recipe when an autonomous agent needs to answer "what
+changed this resource, why, and what review action remains?":
+
+1. Call `list_resource_revisions(resource_iri, include_patch_mentions=True,
+   include_apply_checks=True, drift_detail="summary")`.
+2. Inspect `match_types`, patch mention flags, `revision.application_status`,
+   `revision.stale_resolution_state`, `revision.next_action`, and the top-level
+   `next_action_queue` before opening large payloads.
+3. Open the relevant row with
+   `describe_resource_revision_lineage(resource_iri, revision_iri,
+   include_applied_diff=True)`.
+4. Switch to `drift_detail="exact"` or a focused apply check before restaging
+   stale work where exact drift matters.
+5. After RDF-only handoff imports, call
+   `describe_revision_snapshot_evidence()` or read applied-diff
+   `snapshot_evidence` before assuming exact before/after triples are present.
+6. For helper-owned single-valued fields, prefer replacement-style staged
+   patches over additive annotations when validation says the helper-created
+   resource already has a max-count value.
 Use `describe_resource_revision_lineage(resource_iri, revision_iri)` after that
 when one row needs a compact handoff card. It pairs applied events with their
 staged source when visible, carries the selected row's next action, and can

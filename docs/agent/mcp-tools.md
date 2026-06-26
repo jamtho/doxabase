@@ -264,18 +264,19 @@ nearby metric vocabulary before recording claims/patterns/promotions. When an
 undefined metric has a same-evidence pattern naming it as a target or map
 implication, the advisory also suggests `describe_pattern` and a reviewable
 `stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
-Type findings are not profile-map draft recommendations today. `physical_type`
-and `value_type` become structured map facts when the profile helper is called
-with `update_map_column=true`; otherwise preserve the interpretation with a
-pattern plus `stage_systematisation` / `stage_pattern_promotion`, or use direct
-map/staged assertion helpers when immediate map mutation is intended.
+Type findings are not accepted profile-map recommendation indexes.
+`physical_type` and `value_type` are persisted on profile observations as
+observed evidence; when they differ from or fill gaps in current map column
+facts, the draft returns `type_advisories` with context, pattern, and focused
+`stage_map_assertion_change` suggested actions for review.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
-`metric_advisory_count`, `metric_advisory_status_counts`, and top-level
+`metric_advisory_count`, `metric_advisory_status_counts`,
+`type_advisory_count`, `type_advisory_status_counts`, and top-level
 `suggested_next_actions` / `suggested_next_calls` for quick routing.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
-`default_skip_reason`, and duplicate-group fields; metric advisories carry
-duplicate-group fields too.
+`default_skip_reason`, and duplicate-group fields; metric and type advisories
+carry duplicate-group fields too.
 If `recommendation_count > 0`, review the draft and use the top-level
 `stage_profile_map_updates` action as a starting point. Its accepted indexes
 default to the representative indexes whose rows have `default_stageable=True`.
@@ -283,9 +284,9 @@ Sampled row-count recommendations remain review candidates in
 `representative_recommendation_indexes`, but they are omitted from the default
 staging action unless the caller explicitly opts in with
 `allow_sampled_row_count_updates=true`. If
-`recommendation_count == 0 and metric_advisory_count > 0`, handle the result as
-advisory-only: follow top-level advisory suggested actions and do not call
-`doxabase.stage_profile_map_updates`.
+`recommendation_count == 0` and either metric or type advisories are present,
+handle the result as advisory-only: follow top-level advisory suggested actions
+and do not call `doxabase.stage_profile_map_updates`.
 
 `doxabase.stage_profile_map_updates`
 
@@ -294,13 +295,13 @@ grouped reviewable `map` revision. Pass `dataset_iri`, `evidence_iri`, and
 `accepted_recommendation_indexes`. The result returns item statuses,
 `staged_recommendation_indexes`, `skipped_recommendation_indexes`,
 `not_selected_recommendation_indexes`, `status_counts`, metric advisories,
-`metric_advisory_count`, `metric_advisory_status_counts`, and the staged
-revision when at least one accepted recommendation was staged. When a staged
+type advisories, their status counts, and the staged revision when at least one
+accepted recommendation was staged. When a staged
 revision is created, `suggested_next_actions` points to
 `check_staged_revision_apply` for the read-only pre-apply check. The helper uses
 helper-equivalent RDF for dataset and column shells, keeps metric advisories as
-review prompts in the response and staged revision review note, preserves every
-grouped profile observation when one duplicate representative is accepted, and skips
+review prompts, keeps type advisories separate from staged map patches,
+preserves every grouped profile observation when one duplicate representative is accepted, and skips
 accepted sampled row-count
 recommendations unless
 `allow_sampled_row_count_updates=true`. Optional `supporting_claims`,
@@ -398,6 +399,11 @@ runtime resolution and no required binding placeholders to remain.
 Use `ready_for_execution_attempt`, not `handoff_kind` alone, as the gate for
 any execution attempt; `database_relation_handoff` means the selected route is a
 relation/connection handoff, not that execution is safe.
+If `ready_for_execution_attempt=false`, route relation fields before generic
+runtime resolution, then route `runtime_resolution_required`,
+`binding_values_required`, and remaining issue codes. Empty
+`blocking_reason_codes` and `executable_without_review=true` do not make a plan
+execution-ready.
 Database-backed storage still uses this generic
 review-draft shape today, so expect `scan.function=None` and review gating
 rather than executable SQL; read `scan.relation_identifier` and
@@ -451,7 +457,9 @@ that should remain available to later agents. For validation-clean evidence,
 include `evidence_sources`; `evidence_summary` alone is descriptive prose, not a
 source identity. When `observed_column` names a column that is not yet in the
 map, `observed_column_name` can preserve the source-level column name without
-promoting the column into current map state.
+promoting the column into current map state. For `observation_type="profile"`,
+`observed_physical_type` and `observed_value_type` preserve type findings as
+evidence without asserting them as current map facts.
 
 `doxabase.record_dataset_profile`
 

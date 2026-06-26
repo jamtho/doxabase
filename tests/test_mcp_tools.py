@@ -2974,6 +2974,52 @@ def test_record_observation_tool_returns_json_like_payload(tmp_path: Path) -> No
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
+def test_record_observation_tool_accepts_profile_type_findings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    column = "https://example.test/project#OrdersStatus"
+    value_type = "https://example.test/project#OrderStatusCode"
+    record_map_dataset_tool(db, dataset, label="Orders", is_table=True)
+    replace_graph_triples_tool(
+        db,
+        graph="ontology",
+        additions=f"""
+            @prefix rc: <https://richcanopy.org/ns/rc#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            <{value_type}> a rc:ValueType ;
+                rdfs:label "Order status code" .
+        """,
+        allow_count_change=True,
+    )
+
+    result = record_observation_tool(
+        db,
+        summary="MCP helper wrote a profile type finding.",
+        observation_type="profile",
+        observed_asset=dataset,
+        observed_column=column,
+        observed_column_name="status",
+        observed_physical_type="rc:Integer",
+        observed_value_type=value_type,
+        evidence_summary="Synthetic profile type evidence.",
+        evidence_sources=["tests/test_mcp_tools.py"],
+    )
+
+    profile_run = describe_profile_run_tool(
+        db,
+        dataset_iri=dataset,
+        evidence_iri=result["evidence_iri"],
+    )
+    profile = profile_run["unmapped_column_profile_observations"][0]
+    assert profile["iri"] == result["observation_iri"]
+    assert profile["observed_physical_type"]["iri"] == RC + "Integer"
+    assert profile["observed_value_type"]["iri"] == value_type
+    assert validate_graph_tool(db, scope="all")["conforms"] is True
+
+
 def test_record_dataset_profile_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     dataset = "https://example.test/project#Messages"
@@ -3332,6 +3378,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
                 "column_name": "status",
                 "summary": "Status had nulls in the full scan.",
                 "null_count": 1,
+                "physical_type": "rc:Varchar",
             }
         ],
     )
@@ -3412,6 +3459,18 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         result["metric_advisories"][0]["profile_observation_iri"]
     ]
     assert result["metric_advisories"][0]["suggested_next_actions"][0][
+        "tool_name"
+    ] == "describe_context_slice"
+    assert result["type_advisory_count"] == 1
+    assert result["type_advisory_status_counts"] == {
+        "type_finding_missing_map_type": 1,
+    }
+    assert result["type_advisories"][0]["observed_column"]["iri"] == status_column
+    assert result["type_advisories"][0]["observed_physical_type"]["iri"] == (
+        RC + "Varchar"
+    )
+    assert result["type_advisories"][0]["current_physical_type"] is None
+    assert result["type_advisories"][0]["suggested_next_actions"][0][
         "tool_name"
     ] == "describe_context_slice"
 
@@ -3579,6 +3638,12 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["metric_vocabulary_review_required"] is False
     assert result["metric_advisory_suggested_next_actions"] == []
     assert result["metric_advisory_suggested_next_calls"] == []
+    assert result["type_advisory_count"] == 0
+    assert result["type_advisory_status_counts"] == {}
+    assert result["type_advisories"] == []
+    assert result["type_review_required"] is False
+    assert result["type_advisory_suggested_next_actions"] == []
+    assert result["type_advisory_suggested_next_calls"] == []
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "check_staged_revision_apply"
     )

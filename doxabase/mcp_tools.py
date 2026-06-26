@@ -390,6 +390,8 @@ def record_observation_tool(
     distinct_count: int | None = None,
     value_frequencies: list[dict[str, Any]] | None = None,
     profile_metrics: list[dict[str, Any]] | None = None,
+    observed_physical_type: str | None = None,
+    observed_value_type: str | None = None,
 ) -> dict[str, Any]:
     result = db.record_observation(
         summary=summary,
@@ -409,6 +411,8 @@ def record_observation_tool(
         distinct_count=distinct_count,
         value_frequencies=value_frequencies,
         profile_metrics=profile_metrics,
+        observed_physical_type=observed_physical_type,
+        observed_value_type=observed_value_type,
     )
     return to_dict(result)
 

@@ -650,6 +650,18 @@ rc:ProfileObservationShape a sh:NodeShape ;
         sh:message "distinctCount must be a non-negative integer." ;
     ] ;
     sh:property [
+        sh:path rc:observedPhysicalType ;
+        sh:maxCount 1 ;
+        sh:class rc:PhysicalType ;
+        sh:message "observedPhysicalType must be an rc:PhysicalType." ;
+    ] ;
+    sh:property [
+        sh:path rc:observedValueType ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "observedValueType should point to a named value-type resource." ;
+    ] ;
+    sh:property [
         sh:path rc:observedValueFrequency ;
         sh:nodeKind sh:IRI ;
         sh:class rc:ObservedValueFrequency ;
