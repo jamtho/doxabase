@@ -3882,6 +3882,190 @@ def test_batch_restage_skips_row_semantics_same_slot_replacement(
     )
 
 
+def test_column_physical_type_same_slot_drift_suggests_replacement(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    column = "https://example.test/project#orders__amount"
+    db.record_map_column(column, column_name="amount")
+    source = db.stage_graph_revision(
+        summary="Model amount as double",
+        rationale="Original physical-type proposal before an intervening map edit.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:orders__amount rc:physicalType rc:Double .
+                """,
+            }
+        ],
+        revision_anchors=[column],
+    )
+    db.record_map_column(column, column_name="amount", physical_type="rc:Varchar")
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.queue == "repair_or_replace"
+    assert check.next_action.tool_name == "stage_map_assertion_change"
+    assert check.recommended_resolution is not None
+    assert "same single-valued map assertion slot" in check.recommended_resolution
+    action = next(
+        action
+        for action in check.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+    )
+    assert action.arguments["subject"] == column
+    assert action.arguments["predicate"] == RC + "physicalType"
+    assert action.arguments["object"] == RC + "Double"
+    assert action.arguments["object_kind"] == "iri"
+    assert "physical type" in action.reason
+
+    repair = db.stage_map_assertion_change(**action.arguments)
+    assert db.check_staged_revision_apply(
+        repair.staged_revision.revision_iri
+    ).status == "ready"
+
+
+def test_column_nullable_same_slot_drift_preserves_boolean_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    column = "https://example.test/project#orders__status"
+    db.record_map_column(column, column_name="status")
+    source = db.stage_graph_revision(
+        summary="Model status as nullable",
+        rationale="Original nullable proposal before an intervening map edit.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:orders__status rc:nullable true .
+                """,
+            }
+        ],
+        revision_anchors=[column],
+    )
+    db.record_map_column(column, column_name="status", nullable=False)
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.queue == "repair_or_replace"
+    action = next(
+        action
+        for action in check.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+    )
+    assert action.arguments["predicate"] == RC + "nullable"
+    assert action.arguments["object"] == "true"
+    assert action.arguments["object_kind"] == "literal"
+    assert action.arguments["object_datatype"] == str(XSD.boolean)
+    assert "nullable" in action.reason
+
+    repair = db.stage_map_assertion_change(**action.arguments)
+    assert db.check_staged_revision_apply(
+        repair.staged_revision.revision_iri
+    ).status == "ready"
+
+
+def test_schema_stability_same_slot_drift_suggests_replacement(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Model Orders as fixed schema",
+        rationale="Original schema-stability proposal before an intervening edit.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:schemaStability rc:FixedSchema .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.record_map_dataset(orders, schema_stability="rc:VariableSchema")
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.queue == "repair_or_replace"
+    action = next(
+        action
+        for action in check.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+    )
+    assert action.arguments["subject"] == orders
+    assert action.arguments["predicate"] == RC + "schemaStability"
+    assert action.arguments["object"] == RC + "FixedSchema"
+    assert action.arguments["object_kind"] == "iri"
+    assert "schema stability" in action.reason
+
+    dry_run = db.restage_staged_revisions([source.revision_iri], dry_run=True)
+    assert dry_run.not_restageable_revision_iris_by_reason == {
+        "same_slot_replacement": [source.revision_iri]
+    }
+
+
+def test_physical_type_same_slot_requires_column_subject(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Stage impossible dataset physical type",
+        rationale="Guard physical type replacement suggestions to columns.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:physicalType rc:Double .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders rc:physicalType rc:Varchar .
+        """,
+        graph="map",
+    )
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.queue == "restage_after_review"
+    assert not any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in check.suggested_next_actions
+    )
+
+
 def test_stage_map_assertion_change_replaces_row_semantics_cleanly(
     tmp_path: Path,
 ) -> None:

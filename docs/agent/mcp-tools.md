@@ -883,13 +883,14 @@ target graph since the stored snapshot. It also includes `drift_relevance`,
 and `revision_anchor_overlap` so agents can separate "no staged patch subject
 changed" from stronger overlaps. Predicate and object overlap can be broad, so
 they are review hints rather than apply decisions.
-One narrow exception to the usual restage route is a stale single-triple
-`rc:rowSemantics` add where exact snapshot rows show the current map added a
-different value for the same subject and predicate. In that case
-`suggested_next_actions` includes `stage_map_assertion_change` with
-`change_kind="replace"` and `restages_revision` set to the stale source, and
-compact `next_action` routes to `repair_or_replace`; execute it only after
-reviewing the row-grain semantics.
+One narrow exception to the usual restage route is a stale single-triple add for
+a curated singleton map slot where exact snapshot rows show the current map
+added a different value for the same subject and predicate. Current guarded
+slots are `rc:rowSemantics`, column `rc:physicalType`, column `rc:nullable`, and
+data-asset `rc:schemaStability`. In those cases `suggested_next_actions`
+includes `stage_map_assertion_change` with `change_kind="replace"` and
+`restages_revision` set to the stale source, and compact `next_action` routes to
+`repair_or_replace`; execute it only after reviewing the semantics.
 `broad_patch_object_overlap` is the weak object-overlap label for shared
 class/type vocabulary such as `rc:Dataset` or `rc:Table`. Anchor overlap means exact drift
 touched a resource the staged revision named as review context. Older revisions may report

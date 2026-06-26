@@ -19006,7 +19006,7 @@ class DoxaBase:
         ):
             return (
                 "Exact snapshot drift shows a different current value for the "
-                "same single-valued row-semantics slot. Stage the suggested "
+                "same single-valued map assertion slot. Stage the suggested "
                 "stage_map_assertion_change replacement successor after review "
                 "instead of mechanically restaging the stale add-only patch."
             )
@@ -19363,7 +19363,11 @@ class DoxaBase:
         ) = candidate
         if change_kind != "add" or object_value is None:
             return None
-        if predicate not in {self.expand_iri("rc:rowSemantics")}:
+        replacement_label = self._staged_same_slot_replacement_label(
+            subject,
+            predicate,
+        )
+        if replacement_label is None:
             return None
 
         addition_operation = self.expand_iri("rc:AdditionPatch")
@@ -19414,7 +19418,7 @@ class DoxaBase:
 
         rationale = (
             "Exact snapshot drift shows the current map now has a different "
-            "row-semantics value for this same dataset. Stage a replacement "
+            f"{replacement_label} value for this same resource. Stage a replacement "
             "successor that preserves restage provenance instead of replaying "
             "the stale add as-is."
         )
@@ -19435,9 +19439,9 @@ class DoxaBase:
             arguments["object_lang"] = object_lang
         reason = (
             "Exact snapshot rows show a different current value for the same "
-            "single-valued row-semantics slot. Stage a reviewable replacement "
+            f"single-valued {replacement_label} slot. Stage a reviewable replacement "
             "successor instead of a raw restage that would add a competing "
-            "row-semantics value."
+            f"{replacement_label} value."
         )
         return SuggestedNextAction(
             action_label="Stage same-slot replacement",
@@ -19450,6 +19454,43 @@ class DoxaBase:
                 arguments,
             ),
         )
+
+    def _staged_same_slot_replacement_label(
+        self,
+        subject: str,
+        predicate: str,
+    ) -> str | None:
+        rules_without_type_guard = {
+            self.expand_iri("rc:rowSemantics"): "row-semantics",
+        }
+        if predicate in rules_without_type_guard:
+            return rules_without_type_guard[predicate]
+
+        subject_types = set(self._types_from_graphs(["map"], subject))
+        column_rules = {
+            self.expand_iri("rc:physicalType"): "physical type",
+            self.expand_iri("rc:nullable"): "nullable",
+        }
+        if (
+            predicate in column_rules
+            and self.expand_iri("rc:Column") in subject_types
+        ):
+            return column_rules[predicate]
+
+        asset_types = {
+            self.expand_iri("rc:DataAsset"),
+            self.expand_iri("rc:Dataset"),
+            self.expand_iri("rc:Table"),
+            self.expand_iri("rc:Database"),
+            self.expand_iri("rc:DataFile"),
+            self.expand_iri("rc:DataFrame"),
+        }
+        if (
+            predicate == self.expand_iri("rc:schemaStability")
+            and subject_types & asset_types
+        ):
+            return "schema stability"
+        return None
 
     @staticmethod
     def _graph_triple_object_matches_assertion_candidate(

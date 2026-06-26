@@ -742,7 +742,11 @@ few useful gaps:
   count/digest drift on the restage route. A follow-up batch trial showed the
   batch restage helper also needed to respect that route; it now skips those
   rows with `not_restageable_reason="same_slot_replacement"` instead of creating
-  the mechanically restaged validation-failure successor.
+  the mechanically restaged validation-failure successor. A guarded singleton
+  expansion trial then confirmed the same repair route for column
+  `rc:physicalType`, column `rc:nullable` with typed boolean payloads, and
+  data-asset `rc:schemaStability`, while keeping `rdfs:label` and
+  `rc:rowCountSnapshot` out of automatic replacement routing.
 - A controlled replacement/import trial confirmed same-count
   `replace_graph_triples`, revision metadata, default/workflow export
   boundaries, and revision-seed deep-lore expansion. It reinforced the current
