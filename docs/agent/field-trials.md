@@ -962,6 +962,10 @@ few useful gaps:
   state supplies the missing semantics. Apply checks now preserve that history
   with `decision="inspect_restaged_source_validation_failure"` and route the
   successor through `repair_or_replace` instead of `apply_after_review`.
+- A staged-revision recovery trial found grouped exports had useful status
+  counts but `list_graph_revisions` required scripts to recompute them from row
+  data. Revision lists now expose returned-page application, stale-resolution,
+  and staged-validation status counts alongside `next_action_queue`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

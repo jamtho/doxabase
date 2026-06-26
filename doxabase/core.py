@@ -888,6 +888,9 @@ class GraphRevisionList:
     staged_validation_status: str | None
     stale_resolution_state: str | None
     current_staged_work_only: bool
+    returned_application_status_counts: dict[str, int]
+    returned_stale_resolution_state_counts: dict[str, int]
+    returned_staged_validation_status_counts: dict[str, int]
     next_action_queue: dict[str, list[str]]
     include_apply_checks: bool
     drift_detail: str
@@ -3626,12 +3629,37 @@ class DoxaBase:
             staged_validation_status=staged_validation_status_filter,
             stale_resolution_state=stale_resolution_state_filter,
             current_staged_work_only=current_staged_work_only,
+            returned_application_status_counts=self._graph_revision_list_counts(
+                sliced_items,
+                "application_status",
+            ),
+            returned_stale_resolution_state_counts=self._graph_revision_list_counts(
+                sliced_items,
+                "stale_resolution_state",
+            ),
+            returned_staged_validation_status_counts=self._graph_revision_list_counts(
+                sliced_items,
+                "staged_validation_status",
+            ),
             next_action_queue=self._revision_next_action_queue(
                 (item.iri, item.next_action) for item in sliced_items
             ),
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
         )
+
+    @staticmethod
+    def _graph_revision_list_counts(
+        items: Iterable[GraphRevisionListItem],
+        field_name: str,
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in items:
+            value = getattr(item, field_name)
+            if value is None:
+                continue
+            counts[value] = counts.get(value, 0) + 1
+        return counts
 
     def list_resource_revisions(
         self,

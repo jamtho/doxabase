@@ -929,6 +929,9 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["staged_validation_status"] is None
     assert result["stale_resolution_state"] is None
     assert result["current_staged_work_only"] is False
+    assert result["returned_application_status_counts"] == {"ready": 1}
+    assert result["returned_stale_resolution_state_counts"] == {"ready": 1}
+    assert result["returned_staged_validation_status_counts"] == {"conforms": 1}
     assert result["next_action_queue"] == {
         "apply_after_review": [staged["revision_iri"]]
     }
@@ -964,6 +967,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
 
     assert ready_result["include_apply_checks"] is True
     assert ready_result["application_status"] == "ready"
+    assert ready_result["returned_application_status_counts"] == {"ready": 1}
     assert ready_result["count"] == 1
     assert ready_result["revisions"][0]["iri"] == staged["revision_iri"]
 

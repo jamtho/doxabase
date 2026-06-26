@@ -1552,6 +1552,9 @@ revisions.application_status
 revisions.staged_validation_status
 revisions.stale_resolution_state
 revisions.current_staged_work_only
+revisions.returned_application_status_counts
+revisions.returned_stale_resolution_state_counts
+revisions.returned_staged_validation_status_counts
 revisions.next_action_queue
 revisions.include_apply_checks
 revisions.drift_detail
@@ -1609,6 +1612,9 @@ and suggested actions. `next_action` is a compact routing hint derived from
 those fields; `next_action_queue` groups the returned rows by queues such as
 `apply_after_review`, `restage_after_review`, `repair_or_replace`,
 `inspect_already_applied`, and `informational`.
+The `returned_*_counts` dictionaries summarize the returned page, matching
+`next_action_queue`; raise `limit` or paginate when `count > len(revisions)` and
+you need whole-result counts.
 When `is_current_staged_work` is false,
 `not_current_staged_work_reason` explains why. Current reason values include
 `already_applied_source`, `superseded_by_restage`, `applied_event_record`,

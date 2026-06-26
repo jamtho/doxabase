@@ -4238,6 +4238,26 @@ def test_restage_from_staged_validation_failure_routes_to_repair_when_current_st
     assert export.bundle_summary.recommended_repair_review_iris == [
         restaged.revision_iri
     ]
+    listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        include_apply_checks=True,
+    )
+    assert listing.returned_application_status_counts == {
+        "conflict": 1,
+        "ready": 1,
+    }
+    assert listing.returned_stale_resolution_state_counts == {
+        "stale_handled_by_restage": 1,
+        "restaged_successor_ready": 1,
+    }
+    assert listing.returned_staged_validation_status_counts == {
+        "failed": 1,
+        "conforms": 1,
+    }
+    assert listing.next_action_queue == {
+        "informational": [source.revision_iri],
+        "repair_or_replace": [restaged.revision_iri],
+    }
 
 
 def test_batch_restage_marks_stale_current_successor_as_unresolved(

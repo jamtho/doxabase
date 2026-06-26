@@ -771,6 +771,9 @@ advisory route derived from status, stale/restage state, and the structured
 suggested actions. The response-level `next_action_queue` groups returned rows
 into queues such as `apply_after_review`, `restage_after_review`,
 `repair_or_replace`, `inspect_already_applied`, and `informational`.
+`returned_application_status_counts`, `returned_stale_resolution_state_counts`,
+and `returned_staged_validation_status_counts` summarize the returned page, not
+unseen paginated rows.
 Use `record_kind`, `application_status`, `staged_validation_status`, and
 `stale_resolution_state` filters to find rows such as applied events,
 mechanically ready staged proposals, rows with stored staged-time validation
