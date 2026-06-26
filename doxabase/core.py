@@ -1236,6 +1236,8 @@ class QueryPlanningContext:
     path_templates: list[str]
     query_target_decision: QueryTargetDecision
     query_target_candidates: list[QueryTargetCandidate]
+    ready_candidate_indexes: list[int]
+    unselected_ready_candidate_indexes: list[int]
     physical_layouts: list[PhysicalLayoutDescription]
     storage_accesses: list[StorageAccessDescription]
     partition_schemes: list[PartitionDescription]
@@ -7637,7 +7639,8 @@ class DoxaBase:
                     arguments=arguments,
                     reason=(
                         "Review recommendation rows, sample scope, default "
-                        "staging guardrails, evidence, and metric advisories; "
+                        "staging guardrails, evidence, and metric/type advisory "
+                        "lanes; "
                         "then pass accepted default-stageable indexes to "
                         "stage_profile_map_updates. Sampled row-count updates "
                         "require an explicit override."
@@ -8069,11 +8072,20 @@ class DoxaBase:
             issues=issues,
         )
         query_target_decision = self._query_target_decision(query_target_candidates)
+        ready_candidate_indexes = self._query_ready_candidate_indexes(
+            query_target_candidates
+        )
+        unselected_ready_candidate_indexes = [
+            index
+            for index in ready_candidate_indexes
+            if index != query_target_decision.candidate_index
+        ]
         suggested_next_actions = self._query_context_next_actions(
             dataset_iri=dataset.iri,
             graph=graph,
             decision=query_target_decision,
             candidates=query_target_candidates,
+            unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
         )
         return QueryPlanningContext(
             dataset=dataset_summary,
@@ -8104,6 +8116,8 @@ class DoxaBase:
             path_templates=dataset.path_templates,
             query_target_decision=query_target_decision,
             query_target_candidates=query_target_candidates,
+            ready_candidate_indexes=ready_candidate_indexes,
+            unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
             physical_layouts=dataset.physical_layouts,
             storage_accesses=dataset.storage_accesses,
             partition_schemes=dataset.partition_schemes,
@@ -8122,6 +8136,7 @@ class DoxaBase:
         graph: str | None,
         decision: QueryTargetDecision,
         candidates: list[QueryTargetCandidate],
+        unselected_ready_candidate_indexes: list[int],
     ) -> list[SuggestedNextAction]:
         if (
             decision.candidate_index is None
@@ -8169,6 +8184,15 @@ class DoxaBase:
                 "resolution requirements, and analysis caveats before any "
                 "execution attempt."
             )
+            if unselected_ready_candidate_indexes:
+                peers = ", ".join(
+                    str(index) for index in unselected_ready_candidate_indexes
+                )
+                reason = (
+                    f"{reason} Other direct-ready candidate indexes exist "
+                    f"({peers}); inspect query_target_candidates and rerun with "
+                    "an explicit candidate_index if another route is intended."
+                )
 
         return [
             SuggestedNextAction(
@@ -8261,7 +8285,7 @@ class DoxaBase:
             context_blocked_candidate_used=context_blocked_candidate_used,
             context_blocking_reasons=context_blocking_reasons,
         )
-        ready_candidate_indexes = self._draft_query_plan_ready_candidate_indexes(
+        ready_candidate_indexes = self._query_ready_candidate_indexes(
             context.query_target_candidates
         )
         return DraftQueryPlan(
@@ -8328,7 +8352,7 @@ class DoxaBase:
         )
 
     @staticmethod
-    def _draft_query_plan_ready_candidate_indexes(
+    def _query_ready_candidate_indexes(
         candidates: list[QueryTargetCandidate],
     ) -> list[int]:
         return [

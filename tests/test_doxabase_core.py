@@ -7863,6 +7863,15 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
+    context = db.describe_query_context(dataset)
+
+    assert context.query_target_decision.candidate_index == 0
+    assert context.ready_candidate_indexes == [0, 1]
+    assert context.unselected_ready_candidate_indexes == [1]
+    assert "Other direct-ready candidate indexes exist (1)" in (
+        context.suggested_next_actions[0].reason
+    )
+
     automatic_plan = db.draft_query_plan(dataset)
 
     assert automatic_plan.source_context.selected_candidate_index == 0

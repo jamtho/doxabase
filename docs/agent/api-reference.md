@@ -269,8 +269,9 @@ physical metadata, `analysis_warnings` for caveats that matter after a query
 can be planned, planning notes, columns, path templates, physical layouts,
 derived `query_target_decision` and `query_target_candidates`, dataset/layout
 verification status and note, storage access descriptions, partition schemes,
-direct/upstream caveats, and structured `suggested_next_actions` for drafting
-the selected route. It does not generate SQL or resolve credentials;
+direct/upstream caveats, `ready_candidate_indexes`,
+`unselected_ready_candidate_indexes`, and structured `suggested_next_actions`
+for drafting the selected route. It does not generate SQL or resolve credentials;
 use it to decide whether the graph has enough non-secret physical context for a
 query attempt, then review caveats before trusting aggregations or
 interpretations. Read `query_target_decision` first: its `candidate_index` is a
@@ -280,6 +281,9 @@ absent. `selected_candidate_direct_clean` is true when the selected candidate
 has no direct blocker of its own. When such a selected candidate is blocked by
 sibling metadata, the suggested `draft_query_plan` action includes the explicit
 `candidate_index` and `allow_context_blocked_candidate=True`.
+`unselected_ready_candidate_indexes` names peer direct-ready candidates before a
+draft is requested; inspect those cards and pass an explicit `candidate_index`
+when candidate order selected a different route than intended.
 `query_target_candidates`
 preserve template provenance and compose best-effort file/object paths from
 storage roots or bucket/prefix facts without resolving endpoint profiles or

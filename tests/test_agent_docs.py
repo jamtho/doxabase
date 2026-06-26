@@ -21,6 +21,7 @@ def test_list_agent_docs_contains_operational_docs() -> None:
     assert "lexical_search" in doc_ids
     assert "context_slicing" in doc_ids
     assert "executable_catalog" in doc_ids
+    assert "query_planning" in doc_ids
     assert "field_trials" in doc_ids
 
 

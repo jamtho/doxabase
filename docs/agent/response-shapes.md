@@ -1220,6 +1220,8 @@ query.columns
 query.path_templates
 query.query_target_decision
 query.query_target_candidates
+query.ready_candidate_indexes
+query.unselected_ready_candidate_indexes
 query.physical_layouts
 query.storage_accesses
 query.partition_schemes
@@ -1258,6 +1260,11 @@ info-only notes.
 into `draft_query_plan`. In a context-blocked but direct-clean candidate case,
 it includes `candidate_index` and `allow_context_blocked_candidate=True` so a
 script can draft the selected route while keeping the context issues visible.
+`ready_candidate_indexes` lists direct-ready candidates at the context stage;
+`unselected_ready_candidate_indexes` is the same list excluding
+`query_target_decision.candidate_index`. When it is non-empty, another ready
+path or relation exists and the caller should inspect candidate cards before
+treating the automatic index as intended.
 `suggested_next_calls` is the compatibility display-call list.
 
 Each query target decision has:

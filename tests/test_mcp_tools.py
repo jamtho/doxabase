@@ -2399,6 +2399,12 @@ def test_describe_query_context_tool_matches_python_target_candidates(
         assert tool_payload["query_target_decision"] == python_payload[
             "query_target_decision"
         ]
+        assert tool_payload["ready_candidate_indexes"] == python_payload[
+            "ready_candidate_indexes"
+        ]
+        assert tool_payload["unselected_ready_candidate_indexes"] == python_payload[
+            "unselected_ready_candidate_indexes"
+        ]
 
 
 def test_describe_query_context_tool_warns_on_complete_s3_template_without_resolution(

@@ -1002,6 +1002,11 @@ few useful gaps:
   matches were visible only by list length. Binding rows now expose
   `candidate_column_match_status` so ambiguous column hints are explicit and
   review-gated.
+- A mixed-storage query-planning trial found `draft_query_plan.source_context`
+  exposed peer ready candidates, but `describe_query_context` did not. Query
+  contexts now carry `ready_candidate_indexes` and
+  `unselected_ready_candidate_indexes`, and ready suggested actions mention peer
+  ready candidates before automation follows response-local candidate order.
 - A profile recommendation trial found sampled row-count recommendations were
   present in `representative_recommendation_indexes` even though default staging
   skips them. Draft recommendation rows now expose `default_stageable` and

@@ -11,15 +11,18 @@ Start with `describe_query_context(dataset_iri)`:
 1. `query_target_decision` chooses the candidate. Its `candidate_index` points
    into `query_target_candidates`, and `status` routes the selected target's
    direct state: ready, review-only, blocked, or absent.
-2. `query_target_candidates` explain the physical path, relation, template
+2. Read `unselected_ready_candidate_indexes`. If it is non-empty, the selected
+   candidate has peer ready candidates; inspect `query_target_candidates` and
+   pass an explicit `candidate_index` when a different route is intended.
+3. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
-3. Always compare `readiness` and `issues` with the selected candidate. Broader
+4. Always compare `readiness` and `issues` with the selected candidate. Broader
    context blockers, including sibling storage facts, can make the whole
    context review-required even when `query_target_decision.status == "ready"`
    for a direct-clean selected candidate.
    `query_target_decision.selected_candidate_direct_clean` is the compact
    boolean for "the selected candidate itself has no direct blocker."
-4. Use `suggested_next_actions` when scripting the next step. In the
+5. Use `suggested_next_actions` when scripting the next step. In the
    context-blocked direct-clean case it gives a `draft_query_plan` call with the
    explicit `candidate_index` and `allow_context_blocked_candidate=True`.
 
@@ -32,10 +35,8 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `database_relation_handoff` means the selected route is a relation/connection
    handoff, while `review_gate.ready_for_execution_attempt` is the strict gate
    for any execution attempt.
-2. Read `source_context.unselected_ready_candidate_indexes`. If it is non-empty,
-   the selected candidate has peer ready candidates; inspect
-   `query_target_candidates` and rerun with explicit `candidate_index` when a
-   different route is intended.
+2. Read `source_context.unselected_ready_candidate_indexes`. It mirrors the
+   context-level peer-ready route after applying any explicit selection.
    Candidate order is not an authoring-preference contract. Treat
    `candidate_index` as a pointer into the returned list, not proof that the
    first ready relation/path is the preferred one.
