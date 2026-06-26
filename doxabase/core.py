@@ -1026,6 +1026,8 @@ class ResourceRevisionLineageDescription:
     staged_revision_iri: str | None
     current_staged_revision_iri: str | None
     current_revision_iri: str | None
+    restage_chain_iris: list[str]
+    alternative_revision_iris: list[str]
     related_revision_iris: list[str]
     patch_mention_scan: ResourceRevisionPatchMentionScanSummary
     next_action: RevisionNextAction | None
@@ -4472,6 +4474,12 @@ class DoxaBase:
             if current_successor is not None
             else None
         )
+        graph_lineage = self.describe_revision_lineage(
+            revision_value,
+            graph=graph,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
+        )
         related_revision_iris = self._resource_lineage_related_revision_iris(
             selected,
             paired,
@@ -4480,6 +4488,9 @@ class DoxaBase:
             current_staged_revision_iri=current_staged_revision_iri,
             current_successor_applied_revision_iri=(
                 current_successor_applied_revision_iri
+            ),
+            graph_lineage_related_revision_iris=(
+                graph_lineage.related_revision_iris
             ),
         )
         lineage_next_action, lineage_suggested_next_actions = (
@@ -4548,6 +4559,8 @@ class DoxaBase:
             staged_revision_iri=staged_revision_iri,
             current_staged_revision_iri=current_staged_revision_iri,
             current_revision_iri=current_staged_revision_iri,
+            restage_chain_iris=graph_lineage.restage_chain_iris,
+            alternative_revision_iris=graph_lineage.alternative_revision_iris,
             related_revision_iris=related_revision_iris,
             patch_mention_scan=lineage.patch_mention_scan,
             next_action=lineage_next_action,
@@ -4689,6 +4702,7 @@ class DoxaBase:
         staged_revision_iri: str | None,
         current_staged_revision_iri: str | None,
         current_successor_applied_revision_iri: str | None,
+        graph_lineage_related_revision_iris: list[str],
     ) -> list[str]:
         values = [
             selected.revision.iri,
@@ -4703,6 +4717,7 @@ class DoxaBase:
             paired.revision.restaged_from if paired is not None else None,
             paired.revision.restaged_by if paired is not None else None,
             paired.revision.current_restaged_by if paired is not None else None,
+            *graph_lineage_related_revision_iris,
         ]
         return [value for value in dict.fromkeys(values) if value is not None]
 

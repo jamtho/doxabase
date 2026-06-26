@@ -1116,6 +1116,12 @@ few useful gaps:
   the staged revision. Lineage now warns for those integrity hazards, includes
   all visible parallel successors in `related_revision_iris`, and leaves
   `staged_revision_iri=None` when an applied event's source is absent.
+- A resource-first import recovery trial confirmed history-bearing imports route
+  applied/source pairs and resource-filtered diffs well, but a one-row resource
+  lineage card still hid sibling alternatives unless the caller made a separate
+  generic lineage call. Resource lineage now mirrors graph lineage
+  `restage_chain_iris` and `alternative_revision_iris`, and merges generic
+  related revision IRIs into its local resource route.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

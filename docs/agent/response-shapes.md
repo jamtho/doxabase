@@ -2031,6 +2031,8 @@ lineage.applied_revision_iri
 lineage.staged_revision_iri
 lineage.current_staged_revision_iri
 lineage.current_revision_iri
+lineage.restage_chain_iris
+lineage.alternative_revision_iris
 lineage.related_revision_iris
 lineage.patch_mention_scan
 lineage.next_action
@@ -2074,6 +2076,10 @@ still current staged work. Once a successor has been applied, the successor and
 applied event remain discoverable through `related_revision_iris` instead of
 being mislabeled as current staged work; the lineage `next_action` prefers
 inspecting the applied event in that case.
+`restage_chain_iris` and `alternative_revision_iris` mirror the graph-level
+lineage helper for the selected revision, so resource-first callers can see
+sibling alternatives without a second generic lineage call. `related_revision_iris`
+merges the local resource staged/applied route with the generic lineage family.
 
 `db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
 

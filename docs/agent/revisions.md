@@ -416,8 +416,11 @@ changed this resource, why, and what review action remains?":
 Use `describe_resource_revision_lineage(resource_iri, revision_iri)` after that
 when one row needs a compact handoff card. It pairs applied events with their
 staged source when visible, carries the selected row's next action, and can
-summarize exact applied-diff triples filtered to the resource. It is a
-resource-centric helper, not full graph-version browsing. Its
+summarize exact applied-diff triples filtered to the resource. It also exposes
+the selected revision family's `restage_chain_iris` and
+`alternative_revision_iris` so resource-first workflows can notice sibling
+alternatives. It is a resource-centric helper, not full graph-version browsing.
+Its
 `current_staged_revision_iri` names only still-current staged work, and
 `current_revision_iri` is the same value under the batch-restage current-row
 name. If a restage successor has already been applied, follow

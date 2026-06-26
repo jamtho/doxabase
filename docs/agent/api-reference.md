@@ -865,6 +865,9 @@ row, visible paired staged/applied row, related revision IRIs, selected next
 action, patch scan status, and optional resource-filtered applied diff summary.
 `current_revision_iri` mirrors `current_staged_revision_iri` when the lineage row
 or restage successor is still current staged work, matching batch-restage naming.
+It also carries graph-level `restage_chain_iris` and
+`alternative_revision_iris`, so a resource-first handoff can see sibling
+alternatives without a separate generic lineage call.
 It is not a full graph-version browser and does not replace
 `describe_staged_revision()` when patch content is needed.
 `application_status="validation_failed"` means the current replay reached SHACL

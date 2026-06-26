@@ -173,9 +173,10 @@ role, sequence, `matched_term_roles`, `matched_triples`, and total
 Describes one `resource_iri` / `revision_iri` match from
 `list_resource_revisions` and adds immediate staged/applied context. Use it when
 a resource revision row needs a compact lineage card: selected row, paired
-staged/applied row when visible, `related_revision_iris`, selected next action,
-and the same patch scan status used by `list_resource_revisions`. When an
-applied event is linked, the response can include a resource-filtered applied
+staged/applied row when visible, graph-level `restage_chain_iris`,
+`alternative_revision_iris`, merged `related_revision_iris`, selected next
+action, and the same patch scan status used by `list_resource_revisions`. When
+an applied event is linked, the response can include a resource-filtered applied
 diff summary with exact added/removed triples for that resource. This is not
 full graph-version browsing; call `describe_staged_revision` when patch content
 is needed. RDF-only imports can preserve resource route and staged/applied
