@@ -383,6 +383,9 @@ few useful gaps:
   stale work. Staging helpers now accept `restages_revision` so an agent can
   author a revised patch, record the same restage provenance, and keep successor
   routing pointed at the repaired candidate.
+  A retread found a ready source could also be caller-superseded, but direct
+  apply checks still suggested applying the old source. Such sources now report
+  `status="superseded_by_restage"` and point at the current successor instead.
   A no-op replay trial showed that stale patches can be restaged after another
   route has already realized all or part of the payload. Apply checks now report
   effective add/remove counts, already-present/absent payload triples, and a

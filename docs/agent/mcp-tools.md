@@ -702,7 +702,8 @@ digests drifted since staging and can usually be restaged; `conflict` with
 `patch_conflict` means the stored patch is unreplayable and uses decision
 `inspect_patch_conflict`; `validation_failed` means patch counts replay but
 SHACL diagnostics need inspection; `already_applied` means an applied revision
-event exists. When validation did not run,
+event exists; `superseded_by_restage` means this source already has a refreshed
+successor and uses decision `inspect_current_successor`. When validation did not run,
 `validation_skipped_reason` explains why. `count_drifts` records
 expected/current graph counts and deltas for count conflicts, plus whether the
 staged patch triples themselves are currently present, absent, or mixed in the

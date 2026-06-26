@@ -453,9 +453,11 @@ any patch target graph has drifted from its recorded `beforeTripleCount` or
 staging-time graph digest, the preview count for each patch, preview validation
 diagnostics, `status`, `summary`, and structured `suggested_next_actions`. Read
 `status` and `summary` first. Current statuses are `ready`, `noop`,
-`already_applied`, `conflict`, `validation_failed`, and `not_ready`. `decision`
+`already_applied`, `superseded_by_restage`, `conflict`,
+`validation_failed`, and `not_ready`. `decision`
 is the compact branch hint: `review_then_apply`,
 `inspect_no_effective_change`, `inspect_applied_revision`,
+`inspect_current_successor`,
 `restage_against_current_graph`, `inspect_patch_conflict`,
 `inspect_validation_results`, or
 `inspect_staged_revision`. `review_recommended=True` means the staged revision
@@ -554,6 +556,11 @@ competing framing, not for a repaired successor to stale work. If the stale
 source already has `restaged_by` / `current_restaged_by`, target the current
 successor; parallel repaired successors are rejected for the same reason
 parallel mechanical restages are rejected.
+If a caller-authored successor supersedes a source that would otherwise still
+replay cleanly, direct apply checks on the source return
+`status="superseded_by_restage"`, `can_apply=False`, and an
+inspect-current-successor action. Apply the current successor after review, not
+the old source.
 Already-applied revisions should be inspected rather than replayed.
 Batch restage is also review-first: it prepares refreshed staged revisions and a
 bundle summary, but applying remains an explicit separate step because applying

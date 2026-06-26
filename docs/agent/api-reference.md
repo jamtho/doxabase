@@ -832,6 +832,8 @@ validation status, semantic risk, and a top-level `can_apply` flag. Read
 `recommended_resolution`, `count_drifts`, `snapshot_drifts`, and
 `suggested_next_actions` to decide whether to review then apply, inspect an
 applied event, review validation diagnostics, or restage after conflicts.
+`superseded_by_restage` means the staged source already has a refreshed
+successor; inspect that successor instead of applying the old source.
 For `ready` checks with `semantic_risk_level` of `attention` or `high`, the
 apply action is labelled `Apply only after semantic review`. For conflict
 checks, the review action includes `include_current_apply_check=True` so the

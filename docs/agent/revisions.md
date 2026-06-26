@@ -193,6 +193,9 @@ candidates, validation-failed repair work, no-op rows, and stale refreshed
 successors. Use `application_status="ready"` when you want only mechanically
 ready candidates. Use `application_status="validation_failed"` to find rows
 whose current replay still fails SHACL validation. Use
+`application_status="superseded_by_restage"` to find sources that would
+otherwise replay but already point at a refreshed successor; inspect the
+successor instead of applying the source. Use
 `staged_validation_status="failed"` to find rows whose stored staged-time
 preview failed validation, even if later graph drift now makes the live
 `application_status` a conflict. Use `stale_resolution_state="stale_unresolved"`

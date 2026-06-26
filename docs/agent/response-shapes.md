@@ -1439,8 +1439,9 @@ for item in revisions.revisions:
 ```
 
 For staged rows, expect `record_kind == "staged_patch"` and an apply-check
-status such as `ready`, `conflict`, `noop`, `validation_failed`, or
-`already_applied`. For applied staged revision events, expect
+status such as `ready`, `conflict`, `noop`, `validation_failed`,
+`superseded_by_restage`, or `already_applied`. For applied staged revision
+events, expect
 `record_kind == "applied_event"` and `application_status == "applied_event"`.
 
 First-read triage fields:
@@ -2070,11 +2071,12 @@ check.suggested_next_calls
 carry the checked resource under the same name used by list and export rows.
 
 Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
-`ready`, `noop`, `already_applied`, `conflict`, `validation_failed`, and
-`not_ready`. `decision` is the stable branch hint, for example
+`ready`, `noop`, `already_applied`, `superseded_by_restage`, `conflict`,
+`validation_failed`, and `not_ready`. `decision` is the stable branch hint, for example
 `review_then_apply`, `inspect_no_effective_change`,
-`inspect_applied_revision`, `restage_against_current_graph`,
-`inspect_patch_conflict`, or `inspect_validation_results`.
+`inspect_applied_revision`, `inspect_current_successor`,
+`restage_against_current_graph`, `inspect_patch_conflict`, or
+`inspect_validation_results`.
 `review_recommended=True` means the caller should
 review the staged revision before the next mutation or replacement. For `ready` checks that
 means review before applying; for count/digest-drift `conflict` checks it means
@@ -2083,7 +2085,7 @@ before staging a repaired or alternative candidate. `noop` means replay
 validates but would not change graph triples; inspect or replace it instead of
 applying. `blocking_reasons` uses compact values such as `target_count_drift`,
 `target_digest_drift`, `patch_conflict`, `validation_failed`,
-`no_effective_patch_triples`, or `already_applied`. When
+`no_effective_patch_triples`, `superseded_by_restage`, or `already_applied`. When
 `validation_conforms is None`, read `validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
 `already_applied`.
@@ -2298,10 +2300,11 @@ bundle.next_action_queue
 ```
 
 Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
-still need restaging. `stale_handled_by_restage` means the source is stale but
-already points to a refreshed successor. `restaged_successor_ready` marks a
-ready refreshed proposal. `restaged_successor_noop` marks a refreshed proposal
-whose replay validates but has no effective graph delta.
+still need restaging. `stale_handled_by_restage` means the source already
+points to a refreshed successor, including stale sources and mechanically ready
+sources that were caller-superseded. `restaged_successor_ready` marks a ready
+refreshed proposal. `restaged_successor_noop` marks a refreshed proposal whose
+replay validates but has no effective graph delta.
 `restaged_successor_stale_unresolved` marks a refreshed successor that has
 itself become stale again and needs restaging or replacement. The bundle's
 `recommended_review_iris` de-duplicates the current review set in bundle order,

@@ -3284,6 +3284,76 @@ def test_stage_graph_revision_can_record_repaired_restage_successor(
         )
 
 
+def test_ready_restage_source_apply_check_redirects_to_successor(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    source = db.stage_graph_revision(
+        summary="Stage old orders label",
+        rationale="Original candidate is still mechanically ready.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Old orders" .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    repair = db.stage_graph_revision(
+        summary="Supersede ready source",
+        rationale="Caller-authored successor should become the active candidate.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:label "Preferred orders" .
+                """,
+            }
+        ],
+        restages_revision=source.revision_iri,
+    )
+
+    source_check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert source_check.can_apply is False
+    assert source_check.status == "superseded_by_restage"
+    assert source_check.decision == "inspect_current_successor"
+    assert source_check.blocking_reasons == ["superseded_by_restage"]
+    assert source_check.validation_conforms is True
+    assert source_check.suggested_next_actions[0].tool_name == (
+        "describe_staged_revision"
+    )
+    assert source_check.suggested_next_actions[0].action_label == (
+        "Inspect current refreshed successor"
+    )
+    assert source_check.suggested_next_actions[0].arguments == {
+        "iri": repair.revision_iri
+    }
+    with pytest.raises(DoxaBaseError, match="refreshed successor"):
+        db.apply_staged_revision(source.revision_iri)
+
+    described_source = db.describe_staged_revision(
+        source.revision_iri,
+        include_current_apply_check=True,
+    )
+    assert described_source.current_apply_check is not None
+    assert described_source.current_apply_check.status == "superseded_by_restage"
+    listing = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    assert [item.iri for item in listing.revisions] == [repair.revision_iri]
+
+
 def test_stage_map_assertion_change_can_repair_stale_assertion_successor(
     tmp_path: Path,
 ) -> None:

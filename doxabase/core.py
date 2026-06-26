@@ -3831,6 +3831,8 @@ class DoxaBase:
                 if restaged_by is not None
                 else "stale_unresolved"
             )
+        if status == "superseded_by_restage":
+            return "stale_handled_by_restage"
         if restaged_from is not None:
             if status == "ready":
                 return "restaged_successor_ready"
@@ -14192,6 +14194,11 @@ class DoxaBase:
             raise DoxaBaseError(
                 "Staged revision cannot be applied: " + "; ".join(check.conflicts)
             )
+        if check.status == "superseded_by_restage":
+            raise DoxaBaseError(
+                "Staged revision cannot be applied because it has a refreshed "
+                "successor; inspect the current successor instead."
+            )
         if check.validation_conforms is False and not allow_validation_failure:
             raise DoxaBaseError(
                 "Applying staged revision would fail validation; inspect "
@@ -14664,6 +14671,9 @@ class DoxaBase:
             validation_conforms=validation_conforms,
             has_effective_patch_triples=has_effective_patch_triples,
         )
+        if status in {"ready", "noop"} and staged.restaged_by is not None:
+            can_apply = False
+            status = "superseded_by_restage"
         summary = self._staged_apply_check_summary(
             status=status,
             conflicts=conflicts,
@@ -15175,6 +15185,11 @@ class DoxaBase:
             )
         if status == "already_applied":
             return f"Already applied by {already_applied_by}."
+        if status == "superseded_by_restage":
+            return (
+                "Superseded by a refreshed successor; inspect the current "
+                "successor instead of applying this staged source."
+            )
         if status == "conflict":
             first_conflict = conflicts[0] if conflicts else "(unknown conflict)"
             return (
@@ -15204,6 +15219,7 @@ class DoxaBase:
             "ready": "review_then_apply",
             "noop": "inspect_no_effective_change",
             "already_applied": "inspect_applied_revision",
+            "superseded_by_restage": "inspect_current_successor",
             "conflict": "restage_against_current_graph",
             "validation_failed": "inspect_validation_results",
         }
@@ -15258,6 +15274,8 @@ class DoxaBase:
             return ["no_effective_patch_triples"]
         if status == "already_applied":
             return ["already_applied"]
+        if status == "superseded_by_restage":
+            return ["superseded_by_restage"]
         if status == "conflict":
             reasons = []
             if any(
@@ -15308,6 +15326,11 @@ class DoxaBase:
             )
         if status == "already_applied":
             return "Inspect the applied revision event; do not apply this staged revision again."
+        if status == "superseded_by_restage":
+            return (
+                "Inspect the current refreshed successor; do not apply this "
+                "superseded staged source."
+            )
         if (
             "target_count_drift" in blocking_reasons
             and "target_digest_drift" in blocking_reasons
@@ -15415,6 +15438,17 @@ class DoxaBase:
                 {"iri": staged_revision_iri},
                 apply_reason,
                 action_label=apply_label,
+            )
+        elif status == "superseded_by_restage":
+            successor_iri = current_restaged_by or restaged_by
+            add_action(
+                "describe_staged_revision",
+                {"iri": successor_iri or staged_revision_iri},
+                (
+                    "This staged source already has a refreshed successor; "
+                    "inspect the current successor instead of applying this row."
+                ),
+                action_label="Inspect current refreshed successor",
             )
         elif status == "noop":
             add_action(
