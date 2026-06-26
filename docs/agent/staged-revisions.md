@@ -57,6 +57,23 @@ result = stage_graph_revision_tool(
 )
 ```
 
+For table row grain, `rc:rowSemantics` is controlled vocabulary, not prose.
+Use one of `rc:EventRow`, `rc:SnapshotRow`, `rc:AggregateRow`, or
+`rc:DimensionRow`, and put row-grain explanation in `rdfs:comment`,
+description, caveats, observations, or patterns:
+
+```turtle
+@prefix ex: <https://example.test/project#> .
+@prefix rc: <https://richcanopy.org/ns/rc#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:Orders a rc:Dataset, rc:Table ;
+    rdfs:label "Orders" ;
+    rdfs:comment "One row per order event in the source system." ;
+    rc:rowSemantics rc:EventRow ;
+    rc:schemaStability rc:FixedSchema .
+```
+
 For a single `map` subject/predicate assertion, prefer
 `doxabase.stage_map_assertion_change`. It calls `describe_assertion_support`,
 generates the Turtle patch payloads, links related lore and anchors, and returns

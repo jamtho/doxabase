@@ -145,7 +145,9 @@ and the same patch scan status used by `list_resource_revisions`. When an
 applied event is linked, the response can include a resource-filtered applied
 diff summary with exact added/removed triples for that resource. This is not
 full graph-version browsing; call `describe_staged_revision` when patch content
-is needed.
+is needed. RDF-only imports can preserve resource route and staged/applied
+pairing, but exact resource-level applied diffs need the companion revision
+snapshot JSON import.
 
 `doxabase.search`
 

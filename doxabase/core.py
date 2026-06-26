@@ -253,6 +253,7 @@ class ValidationDiagnostic:
     severity: str | None
     severity_label: str | None
     messages: list[str]
+    hint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -19967,6 +19968,8 @@ class DoxaBase:
                     lines.append(f"- Source shape: `{result.source_shape}`")
                 for message in result.messages:
                     lines.append(f"- Message: {message}")
+                if result.hint is not None:
+                    lines.append(f"- Hint: {result.hint}")
                 lines.append("")
         lines.extend(["", "## Patches", ""])
         for index, patch in enumerate(description.patches, start=1):
@@ -21607,7 +21610,28 @@ class DoxaBase:
             severity=severity,
             severity_label=self._diagnostic_resource_label(severity),
             messages=messages,
+            hint=self._validation_diagnostic_hint(
+                result_path=result_path,
+                messages=messages,
+            ),
         )
+
+    def _validation_diagnostic_hint(
+        self,
+        *,
+        result_path: str | None,
+        messages: Iterable[str],
+    ) -> str | None:
+        if result_path == self.expand_iri("rc:rowSemantics") or any(
+            "rowSemantics" in message for message in messages
+        ):
+            return (
+                "Use one of rc:EventRow, rc:SnapshotRow, rc:AggregateRow, or "
+                "rc:DimensionRow for rc:rowSemantics; put prose row-grain "
+                "details in rdfs:comment, descriptions, caveats, observations, "
+                "or patterns."
+            )
+        return None
 
     def _first_report_value(
         self,
@@ -24840,6 +24864,7 @@ class DoxaBase:
                 sh + "sourceConstraintComponent",
             )
             severity = self._first_object(graphs, result_iri, sh + "resultSeverity")
+            messages = self._objects(graphs, result_iri, sh + "resultMessage")
             diagnostics.append(
                 ValidationDiagnostic(
                     iri=result_iri,
@@ -24855,7 +24880,11 @@ class DoxaBase:
                     ),
                     severity=severity,
                     severity_label=self._diagnostic_resource_label(severity),
-                    messages=self._objects(graphs, result_iri, sh + "resultMessage"),
+                    messages=messages,
+                    hint=self._validation_diagnostic_hint(
+                        result_path=result_path,
+                        messages=messages,
+                    ),
                 )
             )
         return sorted(diagnostics, key=self._validation_diagnostic_sort_key)

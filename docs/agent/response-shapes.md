@@ -1714,6 +1714,10 @@ This helper is a compact resource-centric lineage card, not full graph-version
 browsing. It avoids requiring full staged patch payloads for imported applied
 events; inspect `patch_mention_scan` and per-row incomplete flags before
 treating empty patch mention arrays as absence.
+RDF-only imports are enough for resource route and staged/applied pairing when
+history metadata is present, but exact resource-level applied diffs require the
+companion `export_revision_snapshots()` / `import_revision_snapshots()` JSON
+bundle.
 `current_staged_revision_iri` is only populated when the selected row or its
 latest restage successor is still current staged work. Once a successor has been
 applied, the successor and applied event remain discoverable through
@@ -2246,7 +2250,8 @@ same `RevisionNextAction` shape as list/export rows. Prefer it for automation
 after reading the full check: ready rows route to `apply_after_review`, stale
 count/digest drift routes to `restage_after_review`, validation and patch
 conflicts route to `repair_or_replace`, and already-applied rows route to
-`inspect_already_applied`. When `validation_conforms is None`, read
+`inspect_already_applied`. No-op and superseded-by-restage rows usually route
+to informational inspection queues. When `validation_conforms is None`, read
 `validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
 `already_applied`.
@@ -2593,7 +2598,8 @@ restage pass.
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,
-result path, constraint, severity, value, and messages. In API and MCP JSON,
-these diagnostics are always exposed as `validation_results`; prose that says
+result path, constraint, severity, value, messages, and sometimes a DoxaBase
+`hint` with repair guidance for common mistakes. In API and MCP JSON, these
+diagnostics are always exposed as `validation_results`; prose that says
 "diagnostics" and Markdown sections titled `Validation Results` refer to the
 same SHACL result records.

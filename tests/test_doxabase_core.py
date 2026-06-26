@@ -1881,6 +1881,28 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
 
     round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
     round_trip.import_trig(project_path)
+    imported_lineage_before_snapshots = (
+        round_trip.describe_resource_revision_lineage(
+            "https://example.test/project#Messages",
+            result.applied_revision_iri,
+            include_triples=True,
+        )
+    )
+    assert imported_lineage_before_snapshots.selected_role == "applied_event"
+    assert imported_lineage_before_snapshots.paired_revision is not None
+    assert (
+        imported_lineage_before_snapshots.paired_revision.revision.iri
+        == staged.revision_iri
+    )
+    assert imported_lineage_before_snapshots.paired_role == "applied_source"
+    assert imported_lineage_before_snapshots.applied_diff_status == "unavailable"
+    assert imported_lineage_before_snapshots.applied_diff is not None
+    assert (
+        imported_lineage_before_snapshots.applied_diff.graph_diffs[
+            0
+        ].exact_changed_triples_available
+        is False
+    )
     imported_status_before_snapshots = round_trip.describe_revision_snapshot_evidence(
         result.applied_revision_iri
     )
@@ -1941,6 +1963,23 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert {
         triple.subject
         for triple in imported_exact_diff.graph_diffs[0].triples_added
+    } == {"https://example.test/project#Messages"}
+    imported_lineage_after_snapshots = round_trip.describe_resource_revision_lineage(
+        "https://example.test/project#Messages",
+        result.applied_revision_iri,
+        include_triples=True,
+    )
+    assert imported_lineage_after_snapshots.applied_diff_status == "available"
+    assert imported_lineage_after_snapshots.applied_diff is not None
+    imported_resource_diff = imported_lineage_after_snapshots.applied_diff.graph_diffs[
+        0
+    ]
+    assert imported_resource_diff.exact_changed_triples_available is True
+    assert imported_resource_diff.exact_changed_triples_included is True
+    assert imported_resource_diff.resource_triples_added_count == 3
+    assert imported_resource_diff.resource_triples_removed_count == 0
+    assert {
+        triple.subject for triple in imported_resource_diff.resource_triples_added
     } == {"https://example.test/project#Messages"}
     skipped_import = round_trip.import_revision_snapshots(snapshot_path)
     assert skipped_import.imported_snapshot_count == 0
@@ -5104,6 +5143,73 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
 
     with pytest.raises(DoxaBaseError, match="Applying staged revision would fail"):
         db.apply_staged_revision(staged.revision_iri)
+
+
+def test_staged_row_semantics_validation_hint_guides_clean_recipe(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    bad = db.stage_graph_revision(
+        summary="Stage prose row semantics",
+        rationale="The review payload should explain how to repair row semantics.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders a rc:Dataset, rc:Table ;
+                        rdfs:label "Orders" ;
+                        rc:rowSemantics "one row per order event" .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    check = db.check_staged_revision_apply(bad.revision_iri)
+
+    assert check.status == "validation_failed"
+    assert check.validation_results
+    diagnostic = check.validation_results[0]
+    assert diagnostic.result_path == RC + "rowSemantics"
+    assert diagnostic.hint is not None
+    assert "rc:EventRow" in diagnostic.hint
+    assert "rdfs:comment" in diagnostic.hint
+    description = db.describe_staged_revision(bad.revision_iri)
+    assert description.validation_results[0].hint == diagnostic.hint
+    export_path = tmp_path / "bad-row-semantics.md"
+    db.export_staged_revision(bad.revision_iri, export_path)
+    assert "Hint: Use one of rc:EventRow" in export_path.read_text()
+
+    clean = db.stage_graph_revision(
+        summary="Stage controlled row semantics",
+        rationale="Use controlled row semantics and keep row-grain prose in a comment.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:CleanOrders a rc:Dataset, rc:Table ;
+                        rdfs:label "Clean orders" ;
+                        rdfs:comment "One row per order event." ;
+                        rc:rowSemantics rc:EventRow ;
+                        rc:schemaStability rc:FixedSchema .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    clean_check = db.check_staged_revision_apply(clean.revision_iri)
+
+    assert clean.validation_conforms is True
+    assert clean_check.status == "ready"
 
 
 def test_list_graph_revisions_filters_staged_validation_after_live_conflict(

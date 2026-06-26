@@ -840,6 +840,12 @@ few useful gaps:
   `suggested_next_actions` but no compact `next_action`; apply checks now carry
   that route directly, matching revision lists, grouped exports, batch restage
   items, and post-apply recheck rows.
+- A staged-map recipe trial confirmed `record_map_dataset` rejects prose
+  `row_semantics` early, while generic staged Turtle records validation-failed
+  review objects. Staged validation diagnostics now add a row-semantics hint:
+  use `rc:EventRow`, `rc:SnapshotRow`, `rc:AggregateRow`, or
+  `rc:DimensionRow`, and put prose row-grain details in comments, caveats,
+  observations, or patterns.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
