@@ -5697,6 +5697,248 @@ def test_stage_pattern_promotion_rolls_pattern_support_into_staged_revision(
     }
 
 
+def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/awkward-temporal#"
+    ft = "https://example.test/awkward-temporal/systematisation#"
+    dataset = f"{base}dispatch_events"
+    clock = f"{base}dispatch_events__event_local_time"
+    timezone = f"{base}dispatch_events__source_timezone_hint"
+    normalized = f"{base}dispatch_events__event_utc"
+    partition = f"{base}dispatch_events__ingest_partition_date"
+    temporal_scope = f"{ft}dispatch_event_temporal_scope_v1"
+    caveat = f"{ft}temporal_interpretation_caveat"
+    observation = db.record_observation(
+        "Raw local clock text is not an event instant.",
+        observed_column=clock,
+        evidence_summary=(
+            "Synthetic temporal sample mixed offset-bearing, naive, and "
+            "placeholder local clock values."
+        ),
+        evidence_sources=["test://awkward-temporal-profile"],
+    )
+    claim = db.record_claim_observation(
+        summary="Temporal interpretation needs timezone evidence.",
+        claim_text=(
+            "event_local_time should be preserved as source-local text unless "
+            "source_timezone_hint can support event_utc normalization."
+        ),
+        claim_kind="rc:SchemaClaim",
+        claim_targets=[clock, timezone, normalized],
+        evidence_sources=["test://awkward-temporal-claim"],
+    )
+    pattern = db.record_pattern(
+        summary="Temporal meaning spans raw clock, timezone hint, and UTC.",
+        pattern_text=(
+            "Dispatch event time cannot be represented as a simple column "
+            "helper fact: raw local clock text, timezone evidence, nullable "
+            "normalized UTC, and ingest partition date each carry different "
+            "semantics."
+        ),
+        rationale=(
+            "A durable model needs an explicit interpretation scope or a "
+            "pattern-level caveat, not just a changed physical type."
+        ),
+        pattern_targets=[dataset, clock, timezone, normalized, partition],
+        supporting_observations=[observation.observation_iri],
+        supporting_claims=[claim.claim_iri],
+        evidence_iri=claim.evidence_iri,
+        map_implications=[temporal_scope, caveat],
+    )
+    shared_ontology = """
+    @prefix ft: <https://example.test/awkward-temporal/systematisation#> .
+    @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ft:TemporalInterpretationScope a rdfs:Class ;
+        rdfs:label "Temporal interpretation scope" .
+
+    ft:TemporalInterpretationPattern a rdfs:Class ;
+        rdfs:subClassOf rc:Pattern ;
+        rdfs:label "Temporal interpretation pattern" .
+
+    ft:clockColumn a rdf:Property ;
+        rdfs:label "clock column" .
+
+    ft:timezoneEvidenceColumn a rdf:Property ;
+        rdfs:label "timezone evidence column" .
+
+    ft:normalizedInstantColumn a rdf:Property ;
+        rdfs:label "normalized instant column" .
+
+    ft:partitionColumn a rdf:Property ;
+        rdfs:label "partition column" .
+    """
+    shared_shape = """
+    @prefix ft: <https://example.test/awkward-temporal/systematisation#> .
+    @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+    ft:TemporalInterpretationScopeShape a sh:NodeShape ;
+        sh:targetClass ft:TemporalInterpretationScope ;
+        sh:property [
+            sh:path ft:timezoneEvidenceColumn ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:message "Temporal scopes must name the timezone evidence column."
+        ] .
+    """
+    incomplete_map_framing = f"""
+    @prefix ft: <https://example.test/awkward-temporal/systematisation#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    <{dataset}> a rc:Dataset ;
+        rdfs:label "Dispatch Events" ;
+        rc:hasKnownCaveat <{caveat}> .
+
+    <{caveat}> a rc:KnownCaveat ;
+        rdfs:label "Temporal interpretation caveat" ;
+        rc:caveatDescription "Raw event time, timezone hints, UTC, and partition dates are related but not interchangeable." .
+
+    <{temporal_scope}> a ft:TemporalInterpretationScope ;
+        rdfs:label "Dispatch event temporal scope" ;
+        ft:clockColumn <{clock}> ;
+        ft:normalizedInstantColumn <{normalized}> ;
+        ft:partitionColumn <{partition}> .
+    """
+    repaired_map_framing = f"""
+    @prefix ft: <https://example.test/awkward-temporal/systematisation#> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    <{dataset}> a rc:Dataset ;
+        rdfs:label "Dispatch Events" ;
+        rc:hasKnownCaveat <{caveat}> .
+
+    <{caveat}> a rc:KnownCaveat ;
+        rdfs:label "Temporal interpretation caveat" ;
+        rc:caveatDescription "Raw event time, timezone hints, UTC, and partition dates are related but not interchangeable." .
+
+    <{temporal_scope}> a ft:TemporalInterpretationScope ;
+        rdfs:label "Dispatch event temporal scope" ;
+        ft:clockColumn <{clock}> ;
+        ft:timezoneEvidenceColumn <{timezone}> ;
+        ft:normalizedInstantColumn <{normalized}> ;
+        ft:partitionColumn <{partition}> .
+    """
+    pattern_first_framing = f"""
+    @prefix ft: <https://example.test/awkward-temporal/systematisation#> .
+    @prefix dcterms: <http://purl.org/dc/terms/> .
+    @prefix rc: <https://richcanopy.org/ns/rc#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    ft:temporal_interpretation_pattern
+        a rc:Pattern, ft:TemporalInterpretationPattern ;
+        rdfs:label "Temporal interpretation pattern" ;
+        rc:summary "Temporal meaning spans raw clock, timezone hint, and UTC." ;
+        rc:patternText "Preserve the cross-column temporal judgement without promoting a current-best map scope yet." ;
+        rc:rationale "The pattern framing keeps the semantic caveat visible while map vocabulary is still settling." ;
+        rc:patternTarget <{clock}>, <{timezone}>, <{normalized}>, <{partition}> ;
+        rc:evidence ft:temporal_interpretation_evidence ;
+        rc:patternStability rc:EmergingPattern .
+
+    ft:temporal_interpretation_evidence a rc:Evidence ;
+        rc:summary "Synthetic support for the temporal interpretation pattern." ;
+        dcterms:source "tests/test_doxabase_core.py" .
+    """
+
+    draft = db.stage_pattern_promotion(
+        patterns=[pattern.pattern_iri],
+        summary="Promote temporal interpretation alternatives",
+        intent=(
+            "Stage alternative RDF framings for temporal semantics that do not "
+            "fit a simple dataset or column map helper."
+        ),
+        shared_additions=[
+            {"graph": "ontology", "content": shared_ontology},
+            {"graph": "shapes", "content": shared_shape},
+        ],
+        framings=[
+            {
+                "label": "Incomplete map scope without timezone evidence",
+                "graph": "map",
+                "content": incomplete_map_framing,
+                "review_note": (
+                    "Intentionally omits timezoneEvidenceColumn so validation "
+                    "can show the missing semantic dependency."
+                ),
+                "review_recommendation": (
+                    "Do not apply; use this as the repair diagnostic."
+                ),
+            },
+            {
+                "label": "Repaired map scope with timezone evidence",
+                "graph": "map",
+                "content": repaired_map_framing,
+                "review_recommendation": (
+                    "Ready after semantic review; compare with the "
+                    "pattern-first alternative."
+                ),
+            },
+            {
+                "label": "Pattern-first temporal lore",
+                "graph": "patterns",
+                "content": pattern_first_framing,
+                "stance": "rc:AlternativeSystematisation",
+                "review_recommendation": (
+                    "Keep as the primary handoff unless more datasets confirm "
+                    "the scope model."
+                ),
+            },
+        ],
+        validation_scope="all",
+    )
+
+    revision_iris = [revision.revision_iri for revision in draft.staged_revisions]
+    assert [framing.validation_conforms for framing in draft.framings] == [
+        False,
+        True,
+        True,
+    ]
+    assert [framing.validation_result_count for framing in draft.framings] == [
+        1,
+        0,
+        0,
+    ]
+    export_path = tmp_path / "temporal-interpretation-review.md"
+    export = db.export_staged_revisions(
+        revision_iris,
+        export_path,
+        title="Temporal interpretation alternatives",
+    )
+    exported = export_path.read_text(encoding="utf-8")
+
+    assert export.bundle_summary.next_action_queue == {
+        "repair_or_replace": [revision_iris[0]],
+        "apply_after_review": [revision_iris[1], revision_iris[2]],
+    }
+    assert export.bundle_summary.recommended_repair_review_iris == [
+        revision_iris[0]
+    ]
+    assert export.bundle_summary.recommended_apply_or_restage_review_iris == [
+        revision_iris[1],
+        revision_iris[2],
+    ]
+    assert [summary.apply_status for summary in export.revision_summaries] == [
+        "validation_failed",
+        "ready",
+        "ready",
+    ]
+    assert "## Review Queues" in exported
+    assert (
+        "- Next action - apply after review: "
+        f"`{revision_iris[1]}`, `{revision_iris[2]}`"
+    ) in exported
+    assert (
+        f"- Next action - repair or replace: `{revision_iris[0]}`"
+    ) in exported
+    assert f"- Repair review: `{revision_iris[0]}`" in exported
+    assert "Temporal scopes must name the timezone evidence column." in exported
+
+
 def test_stage_systematisation_shared_context_validates_each_framing(
     tmp_path: Path,
 ) -> None:

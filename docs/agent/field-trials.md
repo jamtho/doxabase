@@ -652,7 +652,10 @@ few useful gaps:
   framings. A complete framing applied cleanly, while an intentionally
   incomplete sibling stayed useful as a validation diagnostic. After one ready
   alternative is applied, stale sibling live checks should be read alongside
-  their original staged validation diagnostics.
+  their original staged validation diagnostics. A later awkward-temporal trial
+  exercised one validation-failed map framing plus two ready alternatives and
+  confirmed grouped `next_action_queue` and Markdown `Review Queues` keep repair
+  and apply-after-review work separated.
 - An MCP/Python parity trial compared query context, draft query plans,
   deep-lore slices, staged revision checks/descriptions, dry-run restage, and
   applied diffs across Python and wrapper helpers. All compared payloads were
