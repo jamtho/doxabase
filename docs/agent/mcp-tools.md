@@ -550,7 +550,12 @@ Records or updates a dataset/table resource in the `map` graph. Omit
 typing. Resource-valued links and controls such as `columns`, `caveats`,
 `storage_accesses`, `physical_layouts`, `companion_datasets`, `extra_types`,
 `row_semantics`, `schema_stability`, and `layout_verification_status` expect
-IRIs or CURIEs like `rc:EventRow`, not descriptive prose.
+IRIs or CURIEs like `rc:EventRow`, not descriptive prose. `schema_stability`
+accepts `rc:FixedSchema`, `rc:InferredSchema`, or `rc:VariableSchema`.
+Layout verification status accepts `rc:UnverifiedLayout`,
+`rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
+`rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`, or
+`rc:ContradictedLayout`.
 
 `doxabase.record_map_column`
 

@@ -9214,6 +9214,67 @@ def test_map_helpers_reject_prose_for_resource_fields(
         call(db)
 
 
+@pytest.mark.parametrize(
+    ("call", "match"),
+    [
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                schema_stability="rc:EvolvingSchema",
+            ),
+            "schema_stability must be one of: .*rc:VariableSchema",
+            id="dataset-schema-stability",
+        ),
+        pytest.param(
+            lambda db: db.record_map_dataset(
+                "https://example.test/project#messages",
+                label="Messages",
+                layout_verification_status="rc:VerifiedLayout",
+            ),
+            "layout_verification_status must be one of: .*rc:ContradictedLayout",
+            id="dataset-layout-status",
+        ),
+        pytest.param(
+            lambda db: db.record_map_storage_access(
+                "https://example.test/project#local_access",
+                layout_verification_status="rc:VerifiedLayout",
+            ),
+            "layout_verification_status must be one of: .*rc:ContradictedLayout",
+            id="storage-layout-status",
+        ),
+        pytest.param(
+            lambda db: db.record_map_physical_layout(
+                "https://example.test/project#messages_layout",
+                layout_verification_status="rc:VerifiedLayout",
+            ),
+            "layout_verification_status must be one of: .*rc:ContradictedLayout",
+            id="physical-layout-status",
+        ),
+        pytest.param(
+            lambda db: db.record_map_partition_scheme(
+                "https://example.test/project#messages_partitioning",
+                layout_verification_status="rc:VerifiedLayout",
+            ),
+            "layout_verification_status must be one of: .*rc:ContradictedLayout",
+            id="partition-layout-status",
+        ),
+    ],
+)
+def test_map_helpers_reject_unknown_controlled_values_before_write(
+    tmp_path: Path,
+    call: Callable[[DoxaBase], object],
+    match: str,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_map_count = db.triple_count("map")
+
+    with pytest.raises(DoxaBaseError, match=match):
+        call(db)
+
+    assert db.triple_count("map") == before_map_count
+
+
 def test_map_helper_plain_name_error_suggests_curie(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

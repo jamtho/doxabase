@@ -604,6 +604,11 @@ executable query planning. Resource-valued fields across these helpers expect
 IRIs/CURIEs, not prose: use terms such as `rc:EventRow`, `rc:Parquet`, or
 project IRIs for datasets, columns, caveats, and relationship endpoints. Put
 ordinary explanation in descriptions, notes, observations, or patterns.
+`schema_stability` accepts `rc:FixedSchema`, `rc:InferredSchema`, or
+`rc:VariableSchema`. Layout verification status accepts
+`rc:UnverifiedLayout`, `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
+`rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`, or
+`rc:ContradictedLayout`.
 Supplied same-subject fields replace the helper-owned predicates on the
 resource being recorded, but incoming convenience links such as
 `record_map_caveat(targets=...)`, `record_map_storage_access(datasets=...)`,

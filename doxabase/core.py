@@ -60,6 +60,21 @@ PREFIXES = {
     "xsd": "http://www.w3.org/2001/XMLSchema#",
 }
 
+SCHEMA_STABILITY_LEVELS = (
+    "rc:FixedSchema",
+    "rc:InferredSchema",
+    "rc:VariableSchema",
+)
+
+LAYOUT_VERIFICATION_STATUSES = (
+    "rc:UnverifiedLayout",
+    "rc:GeneratedFromManifestLayout",
+    "rc:CandidateLayout",
+    "rc:VerifiedByListingLayout",
+    "rc:VerifiedByQueryLayout",
+    "rc:ContradictedLayout",
+)
+
 
 def to_jsonable(value: Any) -> Any:
     """Return a JSON-like plain-Python representation of DoxaBase API values."""
@@ -12846,14 +12861,19 @@ class DoxaBase:
             else None
         )
         schema_stability_ref = (
-            self._resource_ref("schema_stability", schema_stability)
+            self._controlled_resource_ref(
+                "schema_stability",
+                schema_stability,
+                SCHEMA_STABILITY_LEVELS,
+            )
             if schema_stability is not None
             else None
         )
         layout_verification_status_ref = (
-            self._resource_ref(
+            self._controlled_resource_ref(
                 "layout_verification_status",
                 layout_verification_status,
+                LAYOUT_VERIFICATION_STATUSES,
             )
             if layout_verification_status is not None
             else None
@@ -13225,9 +13245,10 @@ class DoxaBase:
             else None
         )
         layout_verification_status_ref = (
-            self._resource_ref(
+            self._controlled_resource_ref(
                 "layout_verification_status",
                 layout_verification_status,
+                LAYOUT_VERIFICATION_STATUSES,
             )
             if layout_verification_status is not None
             else None
@@ -13372,9 +13393,10 @@ class DoxaBase:
             else None
         )
         layout_verification_status_ref = (
-            self._resource_ref(
+            self._controlled_resource_ref(
                 "layout_verification_status",
                 layout_verification_status,
+                LAYOUT_VERIFICATION_STATUSES,
             )
             if layout_verification_status is not None
             else None
@@ -13481,9 +13503,10 @@ class DoxaBase:
             else None
         )
         layout_verification_status_ref = (
-            self._resource_ref(
+            self._controlled_resource_ref(
                 "layout_verification_status",
                 layout_verification_status,
+                LAYOUT_VERIFICATION_STATUSES,
             )
             if layout_verification_status is not None
             else None
@@ -25216,6 +25239,20 @@ class DoxaBase:
     def _validate_resource_values(self, name: str, values: Iterable[str]) -> None:
         for value in values:
             self._resource_ref(name, value)
+
+    def _controlled_resource_ref(
+        self,
+        name: str,
+        value: str,
+        allowed_values: Iterable[str],
+    ) -> URIRef:
+        ref = self._resource_ref(name, value)
+        allowed = tuple(allowed_values)
+        allowed_expanded = {self.expand_iri(item) for item in allowed}
+        if str(ref) not in allowed_expanded:
+            allowed_text = ", ".join(allowed)
+            raise DoxaBaseError(f"{name} must be one of: {allowed_text}")
+        return ref
 
     def _resource_ref(self, name: str, value: str) -> URIRef:
         text = value.strip()

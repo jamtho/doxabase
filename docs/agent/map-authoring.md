@@ -49,6 +49,11 @@ descriptive prose. Pass terms such as `rc:EventRow`, `rc:FixedSchema`,
 `rc:Parquet`, or a project IRI for columns, datasets, caveats, storage access,
 and relationship endpoints. Put ordinary explanation in `description`,
 `layout_verification_note`, caveat text, observations, or patterns.
+`schema_stability` accepts `rc:FixedSchema`, `rc:InferredSchema`, or
+`rc:VariableSchema`. `layout_verification_status` accepts
+`rc:UnverifiedLayout`, `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
+`rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`, or
+`rc:ContradictedLayout`.
 For partition schemes, `granularity` is SHACL-checked against
 `rc:Daily`, `rc:Hourly`, `rc:Monthly`, and `rc:ByValue`; use a project term
 only after extending the project shapes accordingly.

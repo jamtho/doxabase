@@ -863,7 +863,10 @@ few useful gaps:
   review objects. Staged validation diagnostics now add a row-semantics hint:
   use `rc:EventRow`, `rc:SnapshotRow`, `rc:AggregateRow`, or
   `rc:DimensionRow`, and put prose row-grain details in comments, caveats,
-  observations, or patterns.
+  observations, or patterns. A later awkward-temporal trial showed
+  `schema_stability="rc:EvolvingSchema"` was syntactically accepted before
+  failing SHACL; map helpers now preflight known schema-stability and
+  layout-verification terms before writing map triples.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
