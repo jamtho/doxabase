@@ -965,7 +965,7 @@ deltas for `current_revision_iri` after the batch decision. Treat
 `current_staged_validation_status` / `current_validation_result_count` as the
 stored staged-time validation signals for the source and current rows; they are
 separate from the live apply status fields.
-Stale row-semantics same-slot conflicts that already carry a
+Guarded same-slot conflicts that already carry a
 `stage_map_assertion_change` replacement suggestion are also
 `skipped_not_restageable`, with
 `not_restageable_reason="same_slot_replacement"`; follow

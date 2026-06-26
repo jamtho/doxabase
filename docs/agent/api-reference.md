@@ -1075,7 +1075,7 @@ such row carries `not_restageable_reason`, and the batch-level
 `not_restageable_revision_iris_by_reason` groups skipped source IRIs by the same
 compact values. Inspect `status_before` and `decision_before` when deciding
 whether a row needs apply, repair, or replacement.
-Stale row-semantics same-slot conflicts whose apply check already suggests
+Guarded same-slot conflicts whose apply check already suggests
 `stage_map_assertion_change` replacement are skipped with
 `not_restageable_reason="same_slot_replacement"`; use `next_action_after` rather
 than forcing a mechanical restage.

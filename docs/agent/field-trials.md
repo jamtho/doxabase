@@ -746,7 +746,9 @@ few useful gaps:
   expansion trial then confirmed the same repair route for column
   `rc:physicalType`, column `rc:nullable` with typed boolean payloads, and
   data-asset `rc:schemaStability`, while keeping `rdfs:label` and
-  `rc:rowCountSnapshot` out of automatic replacement routing.
+  `rc:rowCountSnapshot` out of automatic replacement routing. A stale authored
+  replacement trial showed the route must also handle source patches that
+  already contain add+remove replacement payloads, not only add-only proposals.
 - A controlled replacement/import trial confirmed same-count
   `replace_graph_triples`, revision metadata, default/workflow export
   boundaries, and revision-seed deep-lore expansion. It reinforced the current

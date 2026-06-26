@@ -3882,6 +3882,58 @@ def test_batch_restage_skips_row_semantics_same_slot_replacement(
     )
 
 
+def test_stale_authored_replacement_suggests_same_slot_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        orders,
+        label="Orders",
+        is_table=True,
+        row_semantics="rc:EventRow",
+    )
+    source = db.stage_map_assertion_change(
+        subject=orders,
+        predicate="rc:rowSemantics",
+        object="rc:SnapshotRow",
+        change_kind="replace",
+        rationale="Original replacement before another map edit.",
+    )
+    db.record_map_dataset(orders, row_semantics="rc:AggregateRow")
+
+    check = db.check_staged_revision_apply(source.staged_revision.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.queue == "repair_or_replace"
+    assert check.next_action.tool_name == "stage_map_assertion_change"
+    action = next(
+        action
+        for action in check.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+    )
+    assert action.arguments["subject"] == orders
+    assert action.arguments["predicate"] == RC + "rowSemantics"
+    assert action.arguments["object"] == RC + "SnapshotRow"
+    assert action.arguments["change_kind"] == "replace"
+    assert action.arguments["restages_revision"] == (
+        source.staged_revision.revision_iri
+    )
+
+    batch = db.restage_staged_revisions(
+        [source.staged_revision.revision_iri],
+        dry_run=True,
+    )
+    assert batch.not_restageable_revision_iris_by_reason == {
+        "same_slot_replacement": [source.staged_revision.revision_iri]
+    }
+    repair = db.stage_map_assertion_change(**action.arguments)
+    assert db.check_staged_revision_apply(
+        repair.staged_revision.revision_iri
+    ).status == "ready"
+
+
 def test_column_physical_type_same_slot_drift_suggests_replacement(
     tmp_path: Path,
 ) -> None:
@@ -4023,34 +4075,95 @@ def test_schema_stability_same_slot_drift_suggests_replacement(
     }
 
 
-def test_physical_type_same_slot_requires_column_subject(
+@pytest.mark.parametrize(
+    ("setup", "subject", "predicate", "staged_object", "current_object"),
+    [
+        (
+            "dataset",
+            "https://example.test/project#Orders",
+            "rc:rowCountSnapshot",
+            "10",
+            "12",
+        ),
+        (
+            "dataset",
+            "https://example.test/project#Orders",
+            "rdfs:label",
+            '"Staged orders"',
+            '"Current orders"',
+        ),
+        (
+            "column",
+            "https://example.test/project#orders__status",
+            "rdfs:label",
+            '"Staged status"',
+            '"Current status"',
+        ),
+        (
+            "column",
+            "https://example.test/project#orders__status",
+            "rc:schemaStability",
+            "rc:FixedSchema",
+            "rc:VariableSchema",
+        ),
+        (
+            "dataset",
+            "https://example.test/project#Orders",
+            "rc:physicalType",
+            "rc:Double",
+            "rc:Varchar",
+        ),
+        (
+            "dataset",
+            "https://example.test/project#Orders",
+            "rc:nullable",
+            "true",
+            "false",
+        ),
+        (
+            "untyped",
+            "https://example.test/project#Untyped",
+            "rc:physicalType",
+            "rc:Double",
+            "rc:Varchar",
+        ),
+    ],
+)
+def test_same_slot_replacement_guarded_negatives_keep_restage_route(
     tmp_path: Path,
+    setup: str,
+    subject: str,
+    predicate: str,
+    staged_object: str,
+    current_object: str,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
-    orders = "https://example.test/project#Orders"
-    db.record_map_dataset(orders, label="Orders", is_table=True)
+    if setup == "dataset":
+        db.record_map_dataset(subject, is_table=True)
+    elif setup == "column":
+        db.record_map_column(subject, column_name="status")
     source = db.stage_graph_revision(
-        summary="Stage impossible dataset physical type",
-        rationale="Guard physical type replacement suggestions to columns.",
+        summary="Stage guarded negative assertion",
+        rationale="This same-slot shape should stay on the restage route.",
         additions=[
             {
                 "graph": "map",
-                "content": """
-                    @prefix ex: <https://example.test/project#> .
+                "content": f"""
                     @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-                    ex:Orders rc:physicalType rc:Double .
+                    <{subject}> {predicate} {staged_object} .
                 """,
             }
         ],
-        revision_anchors=[orders],
+        revision_anchors=[subject],
     )
     db.import_turtle(
-        """
-        @prefix ex: <https://example.test/project#> .
+        f"""
         @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-        ex:Orders rc:physicalType rc:Varchar .
+        <{subject}> {predicate} {current_object} .
         """,
         graph="map",
     )

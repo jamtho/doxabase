@@ -19361,7 +19361,7 @@ class DoxaBase:
             object_lang,
             change_kind,
         ) = candidate
-        if change_kind != "add" or object_value is None:
+        if change_kind not in {"add", "replace"} or object_value is None:
             return None
         replacement_label = self._staged_same_slot_replacement_label(
             subject,
@@ -19371,19 +19371,39 @@ class DoxaBase:
             return None
 
         addition_operation = self.expand_iri("rc:AdditionPatch")
-        if len(staged.patches) != 1 or len(patch_checks) != 1:
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        if len(staged.patches) != len(patch_checks):
             return None
-        patch = staged.patches[0]
-        patch_check = patch_checks[0]
+        patch_operations = [patch.operation for patch in staged.patches]
+        if patch_operations.count(addition_operation) != 1:
+            return None
+        if change_kind == "add" and len(staged.patches) != 1:
+            return None
         if (
-            patch.target_graph != "map"
-            or patch.operation != addition_operation
-            or patch.triple_count != 1
-            or patch_check.target_graph != "map"
-            or patch_check.operation != addition_operation
-            or patch_check.triple_count != 1
-            or patch_check.already_present_triples != 0
-            or patch_check.already_absent_triples != 1
+            change_kind == "replace"
+            and (
+                len(staged.patches) != 2
+                or patch_operations.count(removal_operation) != 1
+            )
+        ):
+            return None
+        addition_check: StagedPatchApplyCheck | None = None
+        for patch, patch_check in zip(staged.patches, patch_checks, strict=True):
+            if (
+                patch.target_graph != "map"
+                or patch.triple_count != 1
+                or patch.operation not in {addition_operation, removal_operation}
+                or patch_check.target_graph != "map"
+                or patch_check.operation != patch.operation
+                or patch_check.triple_count != 1
+            ):
+                return None
+            if patch.operation == addition_operation:
+                addition_check = patch_check
+        if (
+            addition_check is None
+            or addition_check.already_present_triples != 0
+            or addition_check.already_absent_triples != 1
         ):
             return None
 
