@@ -914,6 +914,13 @@ few useful gaps:
   `stage_profile_map_updates` results only by field constellation.
   `ProfileMapUpdateStagingRecord` now carries
   `result_kind="profile_map_update_staging"` as a semantic discriminator.
+- Awkward systematisation and pattern-promotion trials confirmed grouped exports
+  route mixed ready/failed alternatives well, but the initial staging response
+  still made agents discover that route later. `stage_systematisation` and
+  `stage_pattern_promotion` now return `result_kind="systematisation_draft"`,
+  a draft-level `next_action_queue`, a grouped `export_staged_revisions`
+  suggested action, and per-revision `check_staged_revision_apply` suggested
+  actions.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

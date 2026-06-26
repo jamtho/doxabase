@@ -718,7 +718,11 @@ against. Shared patches can include provisional `shapes`; staged shapes are
 active during the preview validation for each framing. The helper records the
 systematisation intent, anchors, rationale, optional review notes and
 recommendations, validation preview, and linked staged revisions; it does not
-decide the ontology design for the agent.
+decide the ontology design for the agent. The result has
+`result_kind="systematisation_draft"`, `next_action_queue`,
+`suggested_next_actions`, and `suggested_next_calls`, so automation can route
+validation-failed framings to repair and ready framings to review/apply checks
+before writing a Markdown bundle.
 
 `doxabase.stage_pattern_promotion`
 
@@ -729,6 +733,7 @@ remain reviewable. The helper does not infer the map shape. It uses the selected
 patterns as `supporting_patterns`, rolls up their supporting observations,
 claims, and evidence, and uses pattern targets plus `map_implication` resources
 as revision anchors before delegating to the staged systematisation workflow.
+It returns the same `systematisation_draft` result shape and routing fields.
 
 `doxabase.describe_staged_revision`
 

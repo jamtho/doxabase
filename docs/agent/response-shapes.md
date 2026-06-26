@@ -1483,13 +1483,26 @@ when you need the resource summaries the claim is about.
 `db.stage_systematisation(...)` returns a `SystematisationDraftRecord`:
 
 ```python
+draft.result_kind
 draft.summary
 draft.intent
 draft.anchors
 draft.warnings
 draft.framings
 draft.staged_revisions
+draft.next_action_queue
+draft.suggested_next_actions
+draft.suggested_next_calls
 ```
+
+`result_kind` is `systematisation_draft`; `stage_pattern_promotion` returns the
+same shape because it delegates to `stage_systematisation`. Use
+`next_action_queue` for first-pass routing immediately after staging. It is
+derived from the same apply-check summary logic as grouped staged-revision
+exports, so validation-failed framings land in `repair_or_replace` while
+mechanically ready framings land in `apply_after_review`. The suggested actions
+include a grouped `export_staged_revisions` call plus per-revision
+`check_staged_revision_apply` calls for fresh live routing.
 
 Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:
 

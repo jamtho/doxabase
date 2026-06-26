@@ -1622,10 +1622,27 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
         ],
     )
 
+    assert result["result_kind"] == "systematisation_draft"
     assert result["summary"] == "Explore identity-ladder modelling"
     assert result["anchors"] == [observation.observation_iri]
     assert len(result["framings"]) == 2
     assert len(result["staged_revisions"]) == 2
+    revision_iris = [
+        revision["revision_iri"] for revision in result["staged_revisions"]
+    ]
+    assert result["next_action_queue"] == {"apply_after_review": revision_iris}
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "export_staged_revisions"
+    )
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "revision_iris": revision_iris,
+        "path": "/tmp/systematisation-review.md",
+    }
+    assert [
+        action["arguments"]
+        for action in result["suggested_next_actions"]
+        if action["tool_name"] == "check_staged_revision_apply"
+    ] == [{"iri": revision_iri} for revision_iri in revision_iris]
     assert result["staged_revisions"][0]["summary"] == (
         "Explore identity-ladder modelling: Pattern first"
     )
@@ -1669,9 +1686,7 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     export_path = tmp_path / "identity-ladder-review.md"
     export = export_staged_revisions_tool(
         db,
-        revision_iris=[
-            revision["revision_iri"] for revision in result["staged_revisions"]
-        ],
+        revision_iris=revision_iris,
         path=str(export_path),
         title="Identity ladder MCP bundle",
         executive_summary="Pattern-first is preferred, but both framings remain useful.",
@@ -1732,17 +1747,28 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
         ],
     )
 
+    assert result["result_kind"] == "systematisation_draft"
     assert result["summary"] == "Promote body_top caveat"
     assert result["intent"] == (
         "Stage one or more graph changes supported by selected patterns."
     )
     assert result["anchors"] == [pattern.pattern_iri, target, implication]
+    revision_iri = result["staged_revisions"][0]["revision_iri"]
+    assert result["next_action_queue"] == {"apply_after_review": [revision_iri]}
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "export_staged_revisions"
+    )
+    assert [
+        action["arguments"]
+        for action in result["suggested_next_actions"]
+        if action["tool_name"] == "check_staged_revision_apply"
+    ] == [{"iri": revision_iri}]
     assert result["framings"][0]["stance"] == (
         "https://richcanopy.org/ns/rc#CandidateRevision"
     )
     staged = describe_staged_revision_tool(
         db,
-        result["staged_revisions"][0]["revision_iri"],
+        revision_iri,
     )
     assert staged["supporting_patterns"][0]["iri"] == pattern.pattern_iri
     assert staged["supporting_observations"][0]["iri"] == observation.observation_iri

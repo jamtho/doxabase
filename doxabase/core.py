@@ -483,12 +483,16 @@ class SystematisationFramingRecord:
 
 @dataclass(frozen=True)
 class SystematisationDraftRecord:
+    result_kind: str
     summary: str
     intent: str
     anchors: list[str]
     warnings: list[str]
     framings: list[SystematisationFramingRecord]
     staged_revisions: list[StagedGraphRevisionRecord]
+    next_action_queue: dict[str, list[str]]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -15450,14 +15454,91 @@ class DoxaBase:
                 )
             )
 
+        next_action_queue, suggested_next_actions = (
+            self._systematisation_draft_routing(staged_revisions)
+        )
         return SystematisationDraftRecord(
+            result_kind="systematisation_draft",
             summary=summary_value,
             intent=intent_value,
             anchors=anchor_values,
             warnings=warnings,
             framings=framing_records,
             staged_revisions=staged_revisions,
+            next_action_queue=next_action_queue,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
         )
+
+    def _systematisation_draft_routing(
+        self,
+        staged_revisions: list[StagedGraphRevisionRecord],
+    ) -> tuple[dict[str, list[str]], list[SuggestedNextAction]]:
+        revision_iris = [revision.revision_iri for revision in staged_revisions]
+        descriptions = [
+            self.describe_staged_revision(revision_iri)
+            for revision_iri in revision_iris
+        ]
+        apply_checks = [
+            self._staged_revision_apply_check_for_export(description)
+            for description in descriptions
+        ]
+        revision_summaries = self._staged_revisions_export_summaries(
+            descriptions,
+            apply_checks=apply_checks,
+        )
+        bundle_summary = self._staged_revisions_bundle_summary(revision_summaries)
+        return (
+            bundle_summary.next_action_queue,
+            self._systematisation_draft_next_actions(revision_iris),
+        )
+
+    def _systematisation_draft_next_actions(
+        self,
+        revision_iris: list[str],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+
+        def add_action(
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+            action_label: str,
+        ) -> None:
+            actions.append(
+                SuggestedNextAction(
+                    action_label=action_label,
+                    tool_name=tool_name,
+                    mcp_tool_name=f"doxabase.{tool_name}",
+                    arguments=arguments,
+                    reason=reason,
+                    call=self._suggested_call_string(tool_name, arguments),
+                )
+            )
+
+        add_action(
+            "export_staged_revisions",
+            {
+                "revision_iris": revision_iris,
+                "path": "/tmp/systematisation-review.md",
+            },
+            (
+                "Write a grouped Markdown review bundle before choosing among "
+                "the staged framings."
+            ),
+            "Export staged framing bundle",
+        )
+        for revision_iri in revision_iris:
+            add_action(
+                "check_staged_revision_apply",
+                {"iri": revision_iri},
+                (
+                    "Recheck live apply status and follow the returned "
+                    "next_action before applying, repairing, or restaging."
+                ),
+                "Check staged revision apply route",
+            )
+        return actions
 
     def stage_pattern_promotion(
         self,

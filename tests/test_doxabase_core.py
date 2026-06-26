@@ -5437,6 +5437,7 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         validation_scope="all",
     )
 
+    assert draft.result_kind == "systematisation_draft"
     assert draft.summary == "Explore identity-ladder modelling"
     assert draft.anchors == [
         observation.observation_iri,
@@ -5469,6 +5470,18 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         "This keeps the bold hunch alive without forcing the map."
     )
     assert draft.framings[1].review_recommendation == "Preferred for now."
+    revision_iris = [revision.revision_iri for revision in draft.staged_revisions]
+    assert draft.next_action_queue == {"apply_after_review": revision_iris}
+    assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
+    assert draft.suggested_next_actions[0].arguments == {
+        "revision_iris": revision_iris,
+        "path": "/tmp/systematisation-review.md",
+    }
+    assert [
+        action.arguments
+        for action in draft.suggested_next_actions
+        if action.tool_name == "check_staged_revision_apply"
+    ] == [{"iri": revision_iri} for revision_iri in revision_iris]
     assert db.triple_count("ontology") == before_ontology_count
     assert db.triple_count("patterns") == before_patterns_count
 
@@ -5897,6 +5910,7 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     )
 
     revision_iris = [revision.revision_iri for revision in draft.staged_revisions]
+    assert draft.result_kind == "systematisation_draft"
     assert [framing.validation_conforms for framing in draft.framings] == [
         False,
         True,
@@ -5907,6 +5921,17 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         0,
         0,
     ]
+    assert draft.next_action_queue == {
+        "repair_or_replace": [revision_iris[0]],
+        "apply_after_review": [revision_iris[1], revision_iris[2]],
+    }
+    assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
+    assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
+    assert [
+        action.arguments
+        for action in draft.suggested_next_actions
+        if action.tool_name == "check_staged_revision_apply"
+    ] == [{"iri": revision_iri} for revision_iri in revision_iris]
     export_path = tmp_path / "temporal-interpretation-review.md"
     export = db.export_staged_revisions(
         revision_iris,

@@ -417,6 +417,16 @@ db.export_staged_revisions(
 )
 ```
 
+The staging result already carries the first routing surface:
+`result.result_kind == "systematisation_draft"`, `result.next_action_queue`,
+`result.suggested_next_actions`, and `result.suggested_next_calls`.
+Use `next_action_queue` before writing an export when an autonomous script only
+needs to separate mechanically ready framings from validation failures. The
+suggested actions include a grouped `export_staged_revisions` call and one
+`check_staged_revision_apply` call per staged revision; re-run those checks
+before applying, repairing, or restaging if any graph changes may have happened
+since the draft was created.
+
 The staged revision rationale records the systematisation intent, anchors,
 overall rationale, shared-context summary, and framing-specific rationale. The
 grouped export also surfaces review notes, recommendations, and diagnostic
