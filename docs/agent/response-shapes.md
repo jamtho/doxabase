@@ -747,6 +747,7 @@ draft.map_dataset_found
 draft.profile_observation_iris
 draft.recommendations
 draft.recommendation_count
+draft.representative_recommendation_indexes
 draft.metric_advisories
 draft.metric_advisory_count
 draft.metric_advisory_status_counts
@@ -836,8 +837,10 @@ same for all siblings.
 Use `recommendation_count` and top-level `suggested_next_actions` for first-pass
 machine routing. Drafts with recommendations include a
 `stage_profile_map_updates` action whose `accepted_recommendation_indexes`
-names every draft recommendation index as a review starting point; pass only the
-indexes actually accepted after reviewing sample scope and modelling intent.
+defaults to `representative_recommendation_indexes`: one index per duplicate
+group in draft order. Pass only the indexes actually accepted after reviewing
+sample scope and modelling intent; include duplicate sibling indexes only when
+they need distinct review treatment.
 When `draft.recommendations` is empty and `metric_advisory_count > 0`, the
 draft is advisory-only. The top-level suggested actions are the deduped advisory
 actions for vocabulary/context review; do not call `stage_profile_map_updates`

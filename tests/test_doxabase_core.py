@@ -12609,6 +12609,7 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert len(draft.profile_observation_iris) == 4
     assert "read-only review context" in draft.review_note
     assert draft.recommendation_count == 3
+    assert draft.representative_recommendation_indexes == [0, 1, 2]
     assert [
         (
             recommendation.recommendation_index,
@@ -12834,6 +12835,12 @@ def test_profile_map_update_duplicate_groups_preserve_representative_support(
     described_support = {item.iri for item in described.supporting_observations}
     assert described_support == expected_support
     assert len(described_support) == 6
+    assert draft.representative_recommendation_indexes == representative_indexes
+    assert draft.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+        "accepted_recommendation_indexes": representative_indexes,
+    }
 
 
 def test_draft_profile_map_updates_reports_defined_project_metric_advisory(

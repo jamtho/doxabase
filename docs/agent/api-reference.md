@@ -416,11 +416,14 @@ same-evidence pattern that names the metric as a target or map implication also
 get a reviewable `stage_pattern_promotion` skeleton for an ontology
 `rc:ProfileMetricKind`.
 If `recommendation_count > 0`, review the draft and use the top-level
-`stage_profile_map_updates` action as a starting point, passing only accepted
-indexes. If `recommendation_count == 0 and metric_advisory_count > 0`, treat
-the draft as advisory-only: follow the top-level advisory suggested actions and
-do not call `stage_profile_map_updates`, because advisory rows are not
-map-update recommendations.
+`stage_profile_map_updates` action as a starting point. Its
+`accepted_recommendation_indexes` defaults to
+`representative_recommendation_indexes`, one index per duplicate group, so agents
+do not have to stage duplicate siblings just to preserve observation support. If
+`recommendation_count == 0 and metric_advisory_count > 0`, treat the draft as
+advisory-only: follow the top-level advisory suggested actions and do not call
+`stage_profile_map_updates`, because advisory rows are not map-update
+recommendations.
 
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped

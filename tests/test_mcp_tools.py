@@ -998,6 +998,61 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
         is None
     )
 
+    sibling = stage_graph_revision_tool(
+        db,
+        summary="Stage threads table",
+        rationale="Threads should be rechecked after sibling map applies.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Threads a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:02:00Z",
+    )
+    applied = apply_staged_revision_tool(
+        db,
+        iri=staged["revision_iri"],
+        created_at="2026-06-01T10:01:00Z",
+    )
+    mixed_page = list_graph_revisions_tool(
+        db,
+        include_apply_checks=True,
+        limit=1,
+        offset=0,
+    )
+
+    assert mixed_page["count"] == 3
+    assert len(mixed_page["revisions"]) == 1
+    assert mixed_page["revisions"][0]["iri"] == sibling["revision_iri"]
+    assert mixed_page["returned_application_status_counts"] == {"conflict": 1}
+    assert mixed_page["returned_stale_resolution_state_counts"] == {
+        "stale_unresolved": 1
+    }
+    assert mixed_page["returned_staged_validation_status_counts"] == {"conforms": 1}
+    assert mixed_page["next_action_queue"] == {
+        "restage_after_review": [sibling["revision_iri"]]
+    }
+    second_page = list_graph_revisions_tool(
+        db,
+        include_apply_checks=True,
+        limit=1,
+        offset=1,
+    )
+    assert second_page["count"] == 3
+    assert second_page["revisions"][0]["iri"] == applied["applied_revision_iri"]
+    assert second_page["returned_application_status_counts"] == {
+        "applied_event": 1
+    }
+    assert second_page["next_action_queue"] == {
+        "inspect_already_applied": [applied["applied_revision_iri"]]
+    }
+
 
 def test_list_resource_revisions_tool_returns_json_like_payload(
     tmp_path: Path,
@@ -3243,6 +3298,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["evidence_iri"] == shared_evidence
     assert result["map_dataset_found"] is True
     assert result["recommendation_count"] == 2
+    assert result["representative_recommendation_indexes"] == [0, 1]
     assert [
         (
             recommendation["recommendation_index"],

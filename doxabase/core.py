@@ -1618,6 +1618,7 @@ class ProfileMapUpdateDraft:
     profile_observation_iris: list[str]
     recommendations: list[ProfileMapUpdateRecommendation]
     recommendation_count: int
+    representative_recommendation_indexes: list[int]
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
     metric_advisory_count: int
     metric_advisory_status_counts: dict[str, int]
@@ -7091,13 +7092,16 @@ class DoxaBase:
         recommendations = self._with_profile_update_duplicate_metadata(
             recommendations
         )
+        representative_recommendation_indexes = (
+            self._profile_update_representative_indexes(recommendations)
+        )
         metric_advisory_status_counts = (
             self._profile_metric_advisory_status_counts(metric_advisories)
         )
         suggested_next_actions = self._profile_map_update_draft_actions(
             dataset_iri=dataset_value,
             evidence_iri=evidence_value,
-            recommendation_count=len(recommendations),
+            representative_recommendation_indexes=representative_recommendation_indexes,
             metric_advisories=metric_advisories,
         )
         return ProfileMapUpdateDraft(
@@ -7108,6 +7112,7 @@ class DoxaBase:
             profile_observation_iris=profile_run.profile_observation_iris,
             recommendations=recommendations,
             recommendation_count=len(recommendations),
+            representative_recommendation_indexes=representative_recommendation_indexes,
             metric_advisories=metric_advisories,
             metric_advisory_count=len(metric_advisories),
             metric_advisory_status_counts=metric_advisory_status_counts,
@@ -7368,16 +7373,16 @@ class DoxaBase:
         *,
         dataset_iri: str,
         evidence_iri: str,
-        recommendation_count: int,
+        representative_recommendation_indexes: list[int],
         metric_advisories: list[ProfileMetricVocabularyAdvisory],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
-        if recommendation_count > 0:
+        if representative_recommendation_indexes:
             arguments = {
                 "dataset_iri": dataset_iri,
                 "evidence_iri": evidence_iri,
-                "accepted_recommendation_indexes": list(
-                    range(recommendation_count)
+                "accepted_recommendation_indexes": (
+                    representative_recommendation_indexes
                 ),
             }
             actions.append(
@@ -7402,6 +7407,23 @@ class DoxaBase:
             self._profile_metric_advisory_suggested_actions(metric_advisories)
         )
         return actions
+
+    @staticmethod
+    def _profile_update_representative_indexes(
+        recommendations: list[ProfileMapUpdateRecommendation],
+    ) -> list[int]:
+        representatives: list[int] = []
+        seen_group_keys: set[str] = set()
+        for recommendation in recommendations:
+            group_key = (
+                recommendation.duplicate_group_key
+                or f"recommendation:{recommendation.recommendation_index}"
+            )
+            if group_key in seen_group_keys:
+                continue
+            seen_group_keys.add(group_key)
+            representatives.append(recommendation.recommendation_index)
+        return representatives
 
     def _with_profile_update_duplicate_metadata(
         self,

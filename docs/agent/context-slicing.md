@@ -31,6 +31,9 @@ or observed metric node seed for a narrower complete handoff.
 The `seed_profile_observations` field preserves structured profile summaries
 selected by profile-observation, observed-profile-metric, or metric-kind seeds
 even when those rows are older than the bounded dataset profile lists.
+For metric-kind seeds, use `seed_profile_observations` to identify the exact
+matching profile rows; `route_counts` and `dataset_contexts` describe broader
+handoff context and repeated inclusion routes, not exact metric match counts.
 
 Dataset and deep-lore slices also understand mapped column seeds. A seed
 `rc:Column` expands to its owning dataset plus claims, patterns, observations,

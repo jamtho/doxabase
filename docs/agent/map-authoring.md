@@ -80,7 +80,8 @@ map. The draft rows carry sample scope, confidence, helper arguments, and
 metric advisories so the agent can decide which recommendations to accept.
 Duplicate groups are explicit: when repeated profile observations produce the
 same review row, accept one representative index unless the siblings need
-different modelling judgement.
+different modelling judgement. The draft's top-level staging action already uses
+`representative_recommendation_indexes` as its accepted-index starting point.
 
 Use `stage_profile_map_updates(..., accepted_recommendation_indexes=[...])` when
 accepted profile-derived changes should be reviewed before apply. It stages one

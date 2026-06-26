@@ -259,16 +259,17 @@ undefined metric has a same-evidence pattern naming it as a target or map
 implication, the advisory also suggests `describe_pattern` and a reviewable
 `stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
 The draft
-also includes `recommendation_count`, `metric_advisory_count`,
-`metric_advisory_status_counts`, and top-level `suggested_next_actions` /
-`suggested_next_calls` for quick routing. Recommendation rows carry
-`recommendation_index`, matching the indexes accepted by
-`doxabase.stage_profile_map_updates`.
+also includes `recommendation_count`, `representative_recommendation_indexes`,
+`metric_advisory_count`, `metric_advisory_status_counts`, and top-level
+`suggested_next_actions` / `suggested_next_calls` for quick routing.
+Recommendation rows carry `recommendation_index` plus duplicate-group fields;
+metric advisories carry duplicate-group fields too.
 If `recommendation_count > 0`, review the draft and use the top-level
-`stage_profile_map_updates` action as a starting point, passing only accepted
-indexes. If `recommendation_count == 0 and metric_advisory_count > 0`, handle
-the result as advisory-only: follow top-level advisory suggested actions and do
-not call `doxabase.stage_profile_map_updates`.
+`stage_profile_map_updates` action as a starting point. Its accepted indexes
+default to `representative_recommendation_indexes`, one index per duplicate
+group. If `recommendation_count == 0 and metric_advisory_count > 0`, handle the
+result as advisory-only: follow top-level advisory suggested actions and do not
+call `doxabase.stage_profile_map_updates`.
 
 `doxabase.stage_profile_map_updates`
 
@@ -282,7 +283,8 @@ revision when at least one accepted recommendation was staged. When a staged
 revision is created, `suggested_next_actions` points to
 `check_staged_revision_apply` for the read-only pre-apply check. The helper uses
 helper-equivalent RDF for dataset and column shells, keeps metric advisories as
-review prompts in the response and staged revision review note, and skips
+review prompts in the response and staged revision review note, preserves every
+grouped profile observation when one duplicate representative is accepted, and skips
 accepted sampled row-count
 recommendations unless
 `allow_sampled_row_count_updates=true`. Optional `supporting_claims`,
