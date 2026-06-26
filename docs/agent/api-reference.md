@@ -349,7 +349,9 @@ there, and `scan.relation_identifier` plus `scan.connection_reference` carry
 the recorded database handoff for review. These scan fields mirror the selected
 candidate's database-specific fields; if the selected database candidate came
 from a dataset or partition path, `scan.relation_identifier` is absent and the
-plan stays metadata-review-required. The `scan` card carries dataset-level
+plan stays metadata-review-required. Root-only database storage without a
+storage-access relation template is also metadata-review-required with
+`database_relation_template_missing`. The `scan` card carries dataset-level
 verification status/notes and template lineage/source verification fields so
 agents can see, for example, that a dataset-owned path was verified by listing
 or that an aggregate table's path came from a shared partition scheme and is

@@ -796,7 +796,10 @@ few useful gaps:
   candidates with `database_relation_template_source_mismatch`.
   A retest confirmed the guard holds for dataset-owned and partition-owned
   templates and that MCP payloads preserve the mismatch details and absent
-  relation fields.
+  relation fields. A root-only database storage trial then found
+  `location_kind="object"` could make a bare database connection look ready;
+  root-only database candidates now carry `database_relation_template_missing`
+  until a storage-access relation template is recorded.
 - A staged workflow trial found batch-restage rows made agents join back to
   revision listings to route the current post-batch successor. Batch items now
   carry `next_action_after` and `suggested_next_actions_after` for their

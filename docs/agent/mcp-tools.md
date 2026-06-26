@@ -284,7 +284,9 @@ storage-access-owned templates become `relation_identifier` values. Dataset or
 partition path templates paired with database storage are review-only
 `database_relation_template_source_mismatch` candidates with no relation
 identifier; record the schema/table/relation on the storage access before using
-a database handoff.
+a database handoff. Root-only database storage without a storage-access
+relation template is also review-only with
+`database_relation_template_missing`, even when `location_kind="object"`.
 
 `doxabase.draft_query_plan`
 

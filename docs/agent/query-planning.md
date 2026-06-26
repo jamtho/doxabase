@@ -88,7 +88,9 @@ For database storage, only a storage-access-owned path template is treated as a
 relation identifier. Dataset or partition path templates paired with database
 storage are review-only inventory cards with
 `database_relation_template_source_mismatch`; record the schema/table/relation
-on the storage access before using a database handoff.
+on the storage access before using a database handoff. Root-only database
+storage without such a template carries `database_relation_template_missing`
+even when `location_kind == "object"`.
 
 If `runtime_resolution_required=False` for bare database storage, read the note
 before treating it as reachable. The boolean only says there is no recorded

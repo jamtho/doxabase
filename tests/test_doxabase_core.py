@@ -7468,6 +7468,77 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
     assert plan.handoff_kind == "metadata_review_required"
 
 
+@pytest.mark.parametrize("location_kind", ["object", "connection"])
+def test_database_root_only_storage_requires_relation_template(
+    tmp_path: Path,
+    location_kind: str,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_database_storage",
+        label="Orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind=location_kind,
+        storage_root="warehouse-prod",
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert context.issues[0].code == "database_relation_template_missing"
+    assert context.issues[0].details == {
+        "storage_access_iri": storage.iri,
+        "storage_protocol_iri": RC + "DatabaseStorage",
+        "storage_root": "warehouse-prod",
+        "location_kind": location_kind,
+        "allowed_relation_template_sources": ["storage_access"],
+    }
+    target = context.query_target_candidates[0]
+    assert target.template_source == "storage_access_location"
+    assert target.location_kind == location_kind
+    assert target.candidate_path == "warehouse-prod"
+    assert target.relation_identifier is None
+    assert target.connection_reference == "warehouse-prod"
+    assert target.composition == "database_connection_as_candidate"
+    assert target.candidate_path_status == "orientation_only"
+    assert target.direct_review_required is True
+    assert [reason.code for reason in target.direct_review_reasons] == [
+        "database_relation_template_missing"
+    ]
+    assert context.query_target_decision.status == "candidate_needs_review"
+    assert context.query_target_decision.candidate_path_status == "orientation_only"
+    assert context.query_target_decision.reason_codes == [
+        "database_relation_template_missing"
+    ]
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.scan.uri_template is None
+    assert plan.scan.relation_identifier is None
+    assert plan.scan.connection_reference == "warehouse-prod"
+    assert plan.review_gate.blocking_reason_codes == [
+        "database_relation_template_missing"
+    ]
+    assert plan.handoff_kind == "metadata_review_required"
+
+
 @pytest.mark.parametrize("location_kind", [None, "directory", "prefix", "connection"])
 def test_describe_query_context_demotes_non_object_root_only_location(
     tmp_path: Path,

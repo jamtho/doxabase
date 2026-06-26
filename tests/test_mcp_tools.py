@@ -2297,6 +2297,74 @@ def test_describe_query_context_tool_surfaces_root_only_targets(
     assert s3_result["query_target_decision"]["reason_codes"] == []
 
 
+def test_describe_query_context_tool_demotes_root_only_database_target(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#warehouse_orders_storage",
+        label="Warehouse orders connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="object",
+        storage_root="warehouse-prod",
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#warehouse_orders_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = describe_query_context_tool(db, iri=dataset)
+    plan = draft_query_plan_tool(db, iri=dataset)
+
+    assert context["readiness"] == "needs_review"
+    assert context["issues"][0]["code"] == "database_relation_template_missing"
+    assert context["issues"][0]["details"] == {
+        "storage_access_iri": storage["iri"],
+        "storage_protocol_iri": RC + "DatabaseStorage",
+        "storage_root": "warehouse-prod",
+        "location_kind": "object",
+        "allowed_relation_template_sources": ["storage_access"],
+    }
+    target = context["query_target_candidates"][0]
+    assert target["template_source"] == "storage_access_location"
+    assert target["composition"] == "database_connection_as_candidate"
+    assert target["location_kind"] == "object"
+    assert target["candidate_path"] == "warehouse-prod"
+    assert target["relation_identifier"] is None
+    assert target["connection_reference"] == "warehouse-prod"
+    assert target["candidate_path_status"] == "orientation_only"
+    assert target["direct_review_reasons"][0]["code"] == (
+        "database_relation_template_missing"
+    )
+    assert context["query_target_decision"]["status"] == "candidate_needs_review"
+    assert context["query_target_decision"]["reason_codes"] == [
+        "database_relation_template_missing"
+    ]
+    assert plan["scan"]["uri_template"] is None
+    assert plan["scan"]["relation_identifier"] is None
+    assert plan["scan"]["connection_reference"] == "warehouse-prod"
+    assert plan["review_gate"]["blocking_reason_codes"] == [
+        "database_relation_template_missing"
+    ]
+    assert plan["handoff_kind"] == "metadata_review_required"
+
+
 def test_describe_query_context_tool_demotes_directory_root_only_target(
     tmp_path: Path,
 ) -> None:

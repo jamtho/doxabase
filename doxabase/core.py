@@ -8520,6 +8520,10 @@ class DoxaBase:
     ) -> QueryPlanningIssue | None:
         if not storage_access.storage_root:
             return None
+        if self._is_database_storage(storage_access.storage_protocol):
+            return self._query_database_relation_template_missing_issue(
+                storage_access
+            )
         if storage_access.location_kind == "object":
             return None
         access_resource = self._summary_from_description(storage_access)
@@ -8542,6 +8546,34 @@ class DoxaBase:
             severity="warning",
             message=message,
             resource=access_resource,
+        )
+
+    def _query_database_relation_template_missing_issue(
+        self,
+        storage_access: StorageAccessDescription,
+    ) -> QueryPlanningIssue:
+        access_resource = self._summary_from_description(storage_access)
+        return QueryPlanningIssue(
+            code="database_relation_template_missing",
+            severity="warning",
+            message=(
+                "Database storage root is the only candidate location, but no "
+                "storage-access path_template records a relation identifier. "
+                "Record the schema, table, or relation as a storage-access "
+                "path_template before database handoff."
+            ),
+            resource=access_resource,
+            details={
+                "storage_access_iri": storage_access.iri,
+                "storage_protocol_iri": (
+                    storage_access.storage_protocol.iri
+                    if storage_access.storage_protocol is not None
+                    else None
+                ),
+                "storage_root": storage_access.storage_root,
+                "location_kind": storage_access.location_kind,
+                "allowed_relation_template_sources": ["storage_access"],
+            },
         )
 
     def _query_candidate_path_status(
