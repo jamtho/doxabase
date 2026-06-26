@@ -177,6 +177,33 @@ def list_resource_revisions_tool(
     )
 
 
+def describe_resource_revision_lineage_tool(
+    db: DoxaBase,
+    resource_iri: str,
+    revision_iri: str,
+    graph: str | None = "history",
+    include_patch_mentions: bool = True,
+    include_apply_checks: bool = True,
+    drift_detail: str = "summary",
+    include_applied_diff: bool = True,
+    include_triples: bool = False,
+    max_triples: int = 100,
+) -> dict[str, Any]:
+    return to_dict(
+        db.describe_resource_revision_lineage(
+            resource_iri=resource_iri,
+            revision_iri=revision_iri,
+            graph=graph,
+            include_patch_mentions=include_patch_mentions,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,  # type: ignore[arg-type]
+            include_applied_diff=include_applied_diff,
+            include_triples=include_triples,
+            max_triples=max_triples,
+        )
+    )
+
+
 def describe_staged_revision_tool(
     db: DoxaBase,
     iri: str,

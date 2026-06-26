@@ -4702,6 +4702,48 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert applied_item.applied_source_patch_mentions[0].matched_triples == 1
     assert applied_item.applied_source_patch_mentions_incomplete is False
     assert applied_item.applied_source_patch_mentions_unreadable_count == 0
+    lineage = db.describe_resource_revision_lineage(
+        orders,
+        applied.applied_revision_iri,
+        include_triples=True,
+    )
+    assert lineage.resource.iri == orders
+    assert lineage.selected_revision.revision.iri == applied.applied_revision_iri
+    assert lineage.selected_role == "applied_event"
+    assert lineage.paired_revision is not None
+    assert lineage.paired_revision.revision.iri == unanchored.revision_iri
+    assert lineage.paired_role == "applied_source"
+    assert lineage.applied_revision_iri == applied.applied_revision_iri
+    assert lineage.staged_revision_iri == unanchored.revision_iri
+    assert lineage.current_staged_revision_iri is None
+    assert lineage.related_revision_iris == [
+        applied.applied_revision_iri,
+        unanchored.revision_iri,
+    ]
+    assert lineage.patch_mention_scan.status == "complete"
+    assert lineage.applied_diff_status == "available"
+    assert lineage.applied_diff is not None
+    assert lineage.applied_diff.changed_graphs == ["map"]
+    assert lineage.applied_diff.include_triples is True
+    map_diff = lineage.applied_diff.graph_diffs[0]
+    assert map_diff.graph_role == "map"
+    assert map_diff.exact_changed_triples_available is True
+    assert map_diff.exact_changed_triples_included is True
+    assert map_diff.resource_triples_added_count == 1
+    assert map_diff.resource_triples_removed_count == 0
+    assert map_diff.resource_triples_added[0].subject == orders
+    assert map_diff.resource_triples_added_truncated is False
+
+    source_lineage = db.describe_resource_revision_lineage(
+        orders,
+        unanchored.revision_iri,
+        include_applied_diff=False,
+    )
+    assert source_lineage.selected_role == "applied_source"
+    assert source_lineage.paired_revision is not None
+    assert source_lineage.paired_revision.revision.iri == applied.applied_revision_iri
+    assert source_lineage.applied_diff_status == "omitted"
+    assert source_lineage.applied_diff is None
 
     anchor_only = db.list_resource_revisions(orders, include_patch_mentions=False)
     assert anchor_only.patch_mention_scan.status == "not_requested"
@@ -4764,6 +4806,17 @@ def test_list_resource_revisions_recovers_imported_applied_source_anchors(
     assert applied_item.applied_source_patch_mentions == []
     assert applied_item.applied_source_patch_mentions_incomplete is False
     assert applied_item.applied_source_patch_mentions_unreadable_count == 0
+    lineage = db.describe_resource_revision_lineage(orders, applied_iri)
+    assert lineage.selected_revision.revision.iri == applied_iri
+    assert lineage.selected_role == "applied_event"
+    assert lineage.paired_revision is not None
+    assert lineage.paired_revision.revision.iri == source_iri
+    assert lineage.paired_role == "applied_source"
+    assert lineage.applied_revision_iri == applied_iri
+    assert lineage.staged_revision_iri == source_iri
+    assert lineage.applied_diff_status == "unavailable"
+    assert lineage.applied_diff is not None
+    assert lineage.applied_diff.graph_diffs[0].exact_changed_triples_available is False
 
     without_patch_mentions = db.list_resource_revisions(
         orders,

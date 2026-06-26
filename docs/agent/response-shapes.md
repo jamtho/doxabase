@@ -1656,6 +1656,52 @@ It filters before pagination and matches exact expanded RDF terms in staged
 patch payloads. Use `describe_staged_revision()` when the patch payload itself
 is needed.
 
+`db.describe_resource_revision_lineage(resource_iri, revision_iri,
+include_applied_diff=True, include_triples=False, max_triples=100)` returns
+`ResourceRevisionLineageDescription`:
+
+```python
+lineage.resource
+lineage.selected_revision
+lineage.selected_role
+lineage.paired_revision
+lineage.paired_role
+lineage.applied_revision_iri
+lineage.staged_revision_iri
+lineage.current_staged_revision_iri
+lineage.related_revision_iris
+lineage.patch_mention_scan
+lineage.next_action
+lineage.suggested_next_actions
+lineage.suggested_next_calls
+lineage.applied_diff_status
+lineage.applied_diff_note
+lineage.applied_diff
+```
+
+`selected_revision` and `paired_revision` are `ResourceRevisionListItem` rows.
+`selected_role` / `paired_role` values include `applied_event`,
+`applied_source`, `restaged_source`, `current_staged_revision`,
+`staged_revision`, and `history_record`. `applied_diff_status` is `available`,
+`unavailable`, `omitted`, or `not_applicable`. When present,
+`applied_diff.graph_diffs[]` contains resource-filtered added/removed counts and
+optional triple arrays:
+
+```python
+graph_diff.graph_role
+graph_diff.exact_changed_triples_available
+graph_diff.exact_changed_triples_included
+graph_diff.resource_triples_added_count
+graph_diff.resource_triples_removed_count
+graph_diff.resource_triples_added
+graph_diff.resource_triples_removed
+```
+
+This helper is a compact resource-centric lineage card, not full graph-version
+browsing. It avoids requiring full staged patch payloads for imported applied
+events; inspect `patch_mention_scan` and per-row incomplete flags before
+treating empty patch mention arrays as absence.
+
 `db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
 
 ```python

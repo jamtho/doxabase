@@ -792,6 +792,11 @@ few useful gaps:
   omitted-match risk when unanchored patch-only matches may have been filtered
   out. Treat unreadable revision counts as distinct pre-pagination source or
   staged revisions, and `omitted_match_risk` as a coarse absence-risk signal.
+  A follow-up lineage trial showed agents still had to join selected resource
+  rows back to paired staged/applied events and applied diffs manually.
+  `describe_resource_revision_lineage` now returns that compact card, including
+  resource-filtered applied diff summaries, while avoiding hard dependencies on
+  full staged patch payloads for imported partial history.
 - A priority query-planning trial found database storage could accidentally
   compose dataset or partition file templates into `relation_identifier`.
   Database relations now come only from storage-access-owned templates;

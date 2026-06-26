@@ -755,6 +755,12 @@ scan status and flags `omitted_match_risk` when unreadable patch payloads may
 have hidden unanchored patch-only matches. Its unreadable revision count is a
 distinct staged/source revision count across the pre-pagination scan, not a
 returned-row count, and `omitted_match_risk` is a coarse absence-risk signal.
+`describe_resource_revision_lineage(resource_iri, revision_iri)` takes one of
+those rows and returns a compact resource-centric lineage card with the selected
+row, visible paired staged/applied row, related revision IRIs, selected next
+action, patch scan status, and optional resource-filtered applied diff summary.
+It is not a full graph-version browser and does not replace
+`describe_staged_revision()` when patch content is needed.
 `application_status="validation_failed"` means the current replay reached SHACL
 validation and failed. `staged_validation_status="failed"` means the stored
 staged-time validation failed; it still finds rows that later became live

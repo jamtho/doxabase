@@ -364,6 +364,11 @@ patches whose parsed RDF payload mentions the resource as subject, predicate, or
 object, and applied events whose staged source matched. Patch mention summaries
 are role-aware flags with matched triple counts; call
 `describe_staged_revision()` for full patch content.
+Use `describe_resource_revision_lineage(resource_iri, revision_iri)` after that
+when one row needs a compact handoff card. It pairs applied events with their
+staged source when visible, carries the selected row's next action, and can
+summarize exact applied-diff triples filtered to the resource. It is a
+resource-centric helper, not full graph-version browsing.
 
 Call `describe_applied_revision_diff(applied_iri)` when you need stored
 before/after snapshot counts and digests for an applied staged revision. Pass

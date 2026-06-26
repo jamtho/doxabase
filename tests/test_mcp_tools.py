@@ -17,6 +17,7 @@ from doxabase.mcp_tools import (
     describe_graph_revision_tool,
     describe_pattern_tool,
     describe_query_context_tool,
+    describe_resource_revision_lineage_tool,
     describe_resource_tool,
     describe_revision_snapshot_evidence_tool,
     describe_staged_revision_tool,
@@ -86,6 +87,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_applied_revision_diff" in tool_names
     assert "doxabase.list_graph_revisions" in tool_names
     assert "doxabase.list_resource_revisions" in tool_names
+    assert "doxabase.describe_resource_revision_lineage" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
     assert "doxabase.check_staged_revision_apply" in tool_names
     assert "doxabase.describe_pattern" in tool_names
@@ -1047,6 +1049,21 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert by_iri[applied["applied_revision_iri"]][
         "applied_source_patch_mentions_incomplete"
     ] is False
+    lineage = describe_resource_revision_lineage_tool(
+        db,
+        resource_iri=orders,
+        revision_iri=applied["applied_revision_iri"],
+        include_triples=True,
+    )
+    assert lineage["selected_role"] == "applied_event"
+    assert lineage["paired_revision"]["revision"]["iri"] == staged["revision_iri"]
+    assert lineage["applied_diff_status"] == "available"
+    assert lineage["applied_diff"]["graph_diffs"][0][
+        "resource_triples_added_count"
+    ] == 1
+    assert lineage["applied_diff"]["graph_diffs"][0]["resource_triples_added"][0][
+        "subject"
+    ] == orders
 
 
 def test_stage_map_assertion_change_tool_returns_json_like_payload(

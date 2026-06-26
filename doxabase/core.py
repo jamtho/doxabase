@@ -927,6 +927,59 @@ class ResourceRevisionList:
 
 
 @dataclass(frozen=True)
+class ResourceAppliedRevisionGraphDiffSummary:
+    graph_role: str
+    before_revision_iri: str
+    after_revision_iri: str
+    before_triple_count: int | None
+    after_triple_count: int | None
+    before_content_digest: str | None
+    after_content_digest: str | None
+    exact_changed_triples_available: bool
+    exact_changed_triples_included: bool
+    resource_triples_added_count: int | None
+    resource_triples_removed_count: int | None
+    resource_triples_added_truncated: bool
+    resource_triples_removed_truncated: bool
+    max_triples: int
+    resource_triples_added: list[GraphTripleDescription]
+    resource_triples_removed: list[GraphTripleDescription]
+    note: str
+
+
+@dataclass(frozen=True)
+class ResourceAppliedRevisionDiffSummary:
+    applied_revision_iri: str
+    staged_revision_iri: str
+    snapshot_evidence: RevisionSnapshotEvidenceStatus
+    source_snapshot_evidence: RevisionSnapshotEvidenceStatus
+    changed_graphs: list[str]
+    include_triples: bool
+    max_triples: int
+    graph_diffs: list[ResourceAppliedRevisionGraphDiffSummary]
+
+
+@dataclass(frozen=True)
+class ResourceRevisionLineageDescription:
+    resource: ResourceSummary
+    selected_revision: ResourceRevisionListItem
+    selected_role: str
+    paired_revision: ResourceRevisionListItem | None
+    paired_role: str | None
+    applied_revision_iri: str | None
+    staged_revision_iri: str | None
+    current_staged_revision_iri: str | None
+    related_revision_iris: list[str]
+    patch_mention_scan: ResourceRevisionPatchMentionScanSummary
+    next_action: RevisionNextAction | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    applied_diff_status: str
+    applied_diff_note: str | None
+    applied_diff: ResourceAppliedRevisionDiffSummary | None
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionDescription:
     iri: str
     graph: str | None
@@ -3711,6 +3764,363 @@ class DoxaBase:
             next_action_queue=self._revision_next_action_queue(
                 (item.revision.iri, item.revision.next_action) for item in sliced
             ),
+        )
+
+    def describe_resource_revision_lineage(
+        self,
+        resource_iri: str,
+        revision_iri: str,
+        *,
+        graph: str | None = "history",
+        include_patch_mentions: bool = True,
+        include_apply_checks: bool = True,
+        drift_detail: TypingLiteral["summary", "exact"] = "summary",
+        include_applied_diff: bool = True,
+        include_triples: bool = False,
+        max_triples: int = 100,
+    ) -> ResourceRevisionLineageDescription:
+        if max_triples < 1:
+            raise DoxaBaseError("max_triples must be at least 1")
+        resource_value = self._required_iri("resource_iri", resource_iri)
+        revision_value = self._required_iri("revision_iri", revision_iri)
+        lineage = self.list_resource_revisions(
+            resource_value,
+            graph=graph,
+            include_patch_mentions=include_patch_mentions,
+            include_apply_checks=include_apply_checks,
+            drift_detail=drift_detail,
+            limit=1_000_000,
+        )
+        by_iri = {item.revision.iri: item for item in lineage.revisions}
+        selected = by_iri.get(revision_value)
+        if selected is None:
+            raise DoxaBaseError(
+                f"Revision '{revision_iri}' was not found in resource lineage "
+                f"for '{resource_iri}'"
+            )
+
+        applied_revision_iri, staged_revision_iri = (
+            self._resource_revision_applied_pair(selected)
+        )
+        paired_iri = (
+            staged_revision_iri
+            if selected.revision.iri == applied_revision_iri
+            else applied_revision_iri
+        )
+        paired = by_iri.get(paired_iri) if paired_iri is not None else None
+        current_staged_revision_iri = (
+            selected.revision.current_restaged_by
+            or (
+                selected.revision.iri
+                if selected.revision.is_current_staged_work
+                else None
+            )
+        )
+        related_revision_iris = self._resource_lineage_related_revision_iris(
+            selected,
+            paired,
+            applied_revision_iri=applied_revision_iri,
+            staged_revision_iri=staged_revision_iri,
+            current_staged_revision_iri=current_staged_revision_iri,
+        )
+
+        applied_diff_status = "not_applicable"
+        applied_diff_note: str | None = (
+            "No applied staged-revision event is linked to this resource revision."
+        )
+        applied_diff: ResourceAppliedRevisionDiffSummary | None = None
+        if applied_revision_iri is not None and staged_revision_iri is not None:
+            if include_applied_diff:
+                applied_diff = self._resource_applied_revision_diff_summary(
+                    resource_iri=resource_value,
+                    applied_revision_iri=applied_revision_iri,
+                    staged_revision_iri=staged_revision_iri,
+                    graph=graph,
+                    include_triples=include_triples,
+                    max_triples=max_triples,
+                    applied_item=(
+                        selected
+                        if selected.revision.iri == applied_revision_iri
+                        else paired
+                    ),
+                )
+                applied_diff_status = (
+                    "available"
+                    if any(
+                        diff.exact_changed_triples_available
+                        for diff in applied_diff.graph_diffs
+                    )
+                    else "unavailable"
+                )
+                applied_diff_note = (
+                    "Resource-filtered applied diff summary is available."
+                    if applied_diff_status == "available"
+                    else (
+                        "Applied event is linked, but exact before/after "
+                        "snapshot rows are unavailable for the changed graphs."
+                    )
+                )
+            else:
+                applied_diff_status = "omitted"
+                applied_diff_note = (
+                    "Applied event is linked, but applied diff summary was "
+                    "omitted by request."
+                )
+
+        return ResourceRevisionLineageDescription(
+            resource=lineage.resource,
+            selected_revision=selected,
+            selected_role=self._resource_revision_lineage_role(selected),
+            paired_revision=paired,
+            paired_role=(
+                self._resource_revision_lineage_role(paired)
+                if paired is not None
+                else None
+            ),
+            applied_revision_iri=applied_revision_iri,
+            staged_revision_iri=staged_revision_iri,
+            current_staged_revision_iri=current_staged_revision_iri,
+            related_revision_iris=related_revision_iris,
+            patch_mention_scan=lineage.patch_mention_scan,
+            next_action=selected.revision.next_action,
+            suggested_next_actions=selected.revision.suggested_next_actions,
+            suggested_next_calls=selected.revision.suggested_next_calls,
+            applied_diff_status=applied_diff_status,
+            applied_diff_note=applied_diff_note,
+            applied_diff=applied_diff,
+        )
+
+    @staticmethod
+    def _resource_revision_applied_pair(
+        item: ResourceRevisionListItem,
+    ) -> tuple[str | None, str | None]:
+        if item.revision.record_kind == "applied_event":
+            return item.revision.iri, item.applied_source_revision_iri
+        if item.revision.applied_by is not None:
+            return item.revision.applied_by, item.revision.iri
+        if item.revision.record_kind == "staged_patch":
+            return None, item.revision.iri
+        return None, None
+
+    @staticmethod
+    def _resource_revision_lineage_role(item: ResourceRevisionListItem) -> str:
+        if item.revision.record_kind == "applied_event":
+            return "applied_event"
+        if item.revision.applied_by is not None:
+            return "applied_source"
+        if item.revision.current_restaged_by is not None:
+            return "restaged_source"
+        if item.revision.is_current_staged_work:
+            return "current_staged_revision"
+        if item.revision.record_kind == "staged_patch":
+            return "staged_revision"
+        return "history_record"
+
+    @staticmethod
+    def _resource_lineage_related_revision_iris(
+        selected: ResourceRevisionListItem,
+        paired: ResourceRevisionListItem | None,
+        *,
+        applied_revision_iri: str | None,
+        staged_revision_iri: str | None,
+        current_staged_revision_iri: str | None,
+    ) -> list[str]:
+        values = [
+            selected.revision.iri,
+            paired.revision.iri if paired is not None else None,
+            applied_revision_iri,
+            staged_revision_iri,
+            current_staged_revision_iri,
+            selected.revision.restaged_from,
+            selected.revision.restaged_by,
+            selected.revision.current_restaged_by,
+        ]
+        return [value for value in dict.fromkeys(values) if value is not None]
+
+    def _resource_applied_revision_diff_summary(
+        self,
+        *,
+        resource_iri: str,
+        applied_revision_iri: str,
+        staged_revision_iri: str,
+        graph: str | None,
+        include_triples: bool,
+        max_triples: int,
+        applied_item: ResourceRevisionListItem | None,
+    ) -> ResourceAppliedRevisionDiffSummary:
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        before_snapshots = {
+            snapshot.graph_role: snapshot
+            for snapshot in self._graph_revision_snapshots(
+                staged_revision_iri,
+                data_graphs,
+            )
+        }
+        after_snapshots = {
+            snapshot.graph_role: snapshot
+            for snapshot in self._graph_revision_snapshots(
+                applied_revision_iri,
+                data_graphs,
+            )
+        }
+        changed_graphs = (
+            list(applied_item.revision.changed_graphs)
+            if applied_item is not None
+            else self._objects(data_graphs, applied_revision_iri, "rc:changedGraph")
+        )
+        if not changed_graphs:
+            changed_graphs = sorted(set(before_snapshots) | set(after_snapshots))
+        return ResourceAppliedRevisionDiffSummary(
+            applied_revision_iri=applied_revision_iri,
+            staged_revision_iri=staged_revision_iri,
+            snapshot_evidence=self._revision_snapshot_evidence_status(
+                applied_revision_iri,
+                data_graphs,
+            ),
+            source_snapshot_evidence=self._revision_snapshot_evidence_status(
+                staged_revision_iri,
+                data_graphs,
+            ),
+            changed_graphs=changed_graphs,
+            include_triples=include_triples,
+            max_triples=max_triples,
+            graph_diffs=[
+                self._resource_applied_revision_graph_diff_summary(
+                    resource_iri=resource_iri,
+                    graph_role=graph_role,
+                    before_revision_iri=staged_revision_iri,
+                    after_revision_iri=applied_revision_iri,
+                    before_snapshot=before_snapshots.get(graph_role),
+                    after_snapshot=after_snapshots.get(graph_role),
+                    include_triples=include_triples,
+                    max_triples=max_triples,
+                )
+                for graph_role in changed_graphs
+            ],
+        )
+
+    def _resource_applied_revision_graph_diff_summary(
+        self,
+        *,
+        resource_iri: str,
+        graph_role: str,
+        before_revision_iri: str,
+        after_revision_iri: str,
+        before_snapshot: GraphSnapshotDescription | None,
+        after_snapshot: GraphSnapshotDescription | None,
+        include_triples: bool,
+        max_triples: int,
+    ) -> ResourceAppliedRevisionGraphDiffSummary:
+        exact_available = self._graph_snapshot_storage_exists(
+            before_revision_iri,
+            graph_role,
+        ) and self._graph_snapshot_storage_exists(after_revision_iri, graph_role)
+        resource_added_rows: list[GraphStorageRow] = []
+        resource_removed_rows: list[GraphStorageRow] = []
+        if exact_available:
+            before_rows = set(
+                self._graph_snapshot_storage_rows(before_revision_iri, graph_role)
+            )
+            after_rows = set(
+                self._graph_snapshot_storage_rows(after_revision_iri, graph_role)
+            )
+            resource_added_rows = [
+                row
+                for row in self._sort_graph_storage_rows(after_rows - before_rows)
+                if self._graph_storage_row_mentions_resource(row, resource_iri)
+            ]
+            resource_removed_rows = [
+                row
+                for row in self._sort_graph_storage_rows(before_rows - after_rows)
+                if self._graph_storage_row_mentions_resource(row, resource_iri)
+            ]
+
+        added_count = len(resource_added_rows) if exact_available else None
+        removed_count = len(resource_removed_rows) if exact_available else None
+        added_truncated = bool(
+            exact_available
+            and added_count is not None
+            and added_count > max_triples
+        )
+        removed_truncated = bool(
+            exact_available
+            and removed_count is not None
+            and removed_count > max_triples
+        )
+        triples_included = exact_available and include_triples
+        if exact_available:
+            if include_triples:
+                note = (
+                    "Resource-filtered exact before/after snapshot triples are "
+                    "included from stored revision snapshot rows."
+                )
+                if added_truncated or removed_truncated:
+                    note = (
+                        "Resource-filtered exact before/after snapshot triples "
+                        "are included up to max_triples per added/removed array."
+                    )
+            else:
+                note = (
+                    "Resource-filtered exact before/after snapshot triple counts "
+                    "are available; pass include_triples=True to include arrays."
+                )
+        else:
+            note = self._missing_applied_snapshot_rows_note(
+                before_snapshot=before_snapshot,
+                after_snapshot=after_snapshot,
+            )
+
+        return ResourceAppliedRevisionGraphDiffSummary(
+            graph_role=graph_role,
+            before_revision_iri=before_revision_iri,
+            after_revision_iri=after_revision_iri,
+            before_triple_count=(
+                before_snapshot.triple_count if before_snapshot is not None else None
+            ),
+            after_triple_count=(
+                after_snapshot.triple_count if after_snapshot is not None else None
+            ),
+            before_content_digest=(
+                before_snapshot.content_digest if before_snapshot is not None else None
+            ),
+            after_content_digest=(
+                after_snapshot.content_digest if after_snapshot is not None else None
+            ),
+            exact_changed_triples_available=exact_available,
+            exact_changed_triples_included=triples_included,
+            resource_triples_added_count=added_count,
+            resource_triples_removed_count=removed_count,
+            resource_triples_added_truncated=added_truncated,
+            resource_triples_removed_truncated=removed_truncated,
+            max_triples=max_triples,
+            resource_triples_added=(
+                [
+                    self._graph_triple_description(row)
+                    for row in resource_added_rows[:max_triples]
+                ]
+                if triples_included
+                else []
+            ),
+            resource_triples_removed=(
+                [
+                    self._graph_triple_description(row)
+                    for row in resource_removed_rows[:max_triples]
+                ]
+                if triples_included
+                else []
+            ),
+            note=note,
+        )
+
+    @staticmethod
+    def _graph_storage_row_mentions_resource(
+        row: GraphStorageRow,
+        resource_iri: str,
+    ) -> bool:
+        return (
+            row[0] == resource_iri
+            or row[2] == resource_iri
+            or (row[4] == "uri" and row[3] == resource_iri)
         )
 
     def _cached_staged_revision(
