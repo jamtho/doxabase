@@ -371,8 +371,10 @@ drift, mapped-column nullability changes, unmapped profiled columns, or
 project-specific metric kinds that need vocabulary review. It returns
 `recommendations` with `helper_name`/`helper_arguments` for accepted map-helper
 updates, `metric_advisories` for project-specific profile metrics, and a
-`review_note`. Recommendation rows carry the source profile observation IRI,
-evidence IRI, `sample_size`, `sample_scope`, `sample_method`, and
+`review_note`. It also includes `metric_advisory_count` and
+`metric_advisory_status_counts` for quick routing. Recommendation rows carry the
+source profile observation IRI, evidence IRI, `sample_size`, `sample_scope`,
+`sample_method`, and
 `profile_row_count` so agents can review whether the profile was a full scan,
 sample, or ambiguous run before applying helper arguments. It does not mutate
 or stage graph changes, and it skips sampled zero-null promotions. Metric
@@ -382,8 +384,9 @@ and structured `suggested_next_actions` for ontology/context review.
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped
 reviewable `map` revision, and returns explicit staged/skipped/not-selected
-item statuses plus `status_counts`. Use it when profile-derived map changes
-need review before application. The staged patch uses helper-equivalent RDF:
+item statuses plus `status_counts`, `metric_advisory_count`, and
+`metric_advisory_status_counts`. Use it when profile-derived map changes need
+review before application. The staged patch uses helper-equivalent RDF:
 missing dataset shells get `rdf:type rc:Dataset`, unmapped columns get
 `rdf:type rc:Column`, `rc:columnName`, and `rc:hasColumn`, and scalar
 row-count/nullability changes remove old helper-owned values before adding
@@ -391,7 +394,8 @@ typed literals. Accepted indexes can still be skipped by safety guardrails,
 especially sampled row-count recommendations by default; set
 `allow_sampled_row_count_updates=True` only when the profile scope is the
 intended durable population. Metric advisories are returned for review but are
-not converted into map patches.
+not converted into map patches; their compact summary is also stored in the
+staged revision review note.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

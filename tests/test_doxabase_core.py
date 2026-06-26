@@ -10938,6 +10938,10 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     }
 
     assert len(draft.metric_advisories) == 1
+    assert draft.metric_advisory_count == 1
+    assert draft.metric_advisory_status_counts == {
+        "project_metric_undefined": 1,
+    }
     metric_advisory = draft.metric_advisories[0]
     assert metric_advisory.metric.iri == project_metric
     assert metric_advisory.advisory_status == "project_metric_undefined"
@@ -11013,6 +11017,10 @@ def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
 
     assert draft.recommendations == []
     assert len(draft.metric_advisories) == 1
+    assert draft.metric_advisory_count == 1
+    assert draft.metric_advisory_status_counts == {
+        "project_metric_defined": 1,
+    }
     advisory = draft.metric_advisories[0]
     assert advisory.advisory_status == "project_metric_defined"
     assert advisory.definition_found is True
@@ -11029,6 +11037,71 @@ def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
     }
 
 
+def test_draft_profile_map_updates_routes_ambiguous_project_metric_advisory(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    db.replace_graph_triples(
+        "ontology",
+        additions=f"""
+            @prefix metric: <https://example.test/project#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            <{project_metric}> a metric:Metric ;
+                rdfs:label "Completeness score" ;
+                rdfs:comment "Share of records with complete required fields." .
+        """,
+        allow_count_change=True,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with an ambiguously typed project metric.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        row_count=100,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.metric_advisory_count == 1
+    assert draft.metric_advisory_status_counts == {
+        "project_metric_definition_ambiguous": 1,
+    }
+    advisory = draft.metric_advisories[0]
+    assert advisory.advisory_status == "project_metric_definition_ambiguous"
+    assert advisory.definition_found is True
+    assert advisory.definition is not None
+    assert advisory.definition.iri == project_metric
+    assert [action.tool_name for action in advisory.suggested_next_actions] == [
+        "describe_context_slice",
+        "describe_resource",
+        "list_entities",
+    ]
+    assert advisory.suggested_next_actions[1].arguments == {
+        "iri": project_metric,
+        "graph": "ontology",
+    }
+
+
 def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     tmp_path: Path,
 ) -> None:
@@ -11037,6 +11110,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     status_column = "https://example.test/project#PaymentsStatus"
     settlement_column = "https://example.test/project#PaymentsSettlementMethod"
     evidence = "https://example.test/project#PaymentsProfileRunEvidence"
+    project_metric = "https://example.test/project#PaymentsFreshnessScore"
 
     db.record_map_dataset(
         dataset,
@@ -11061,6 +11135,13 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
         sample_method="DuckDB full-table aggregate profile.",
         row_count=12,
         update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.93",
+                "datatype": "xsd:decimal",
+            }
+        ],
         column_defaults={"update_map_column": False},
         column_profiles=[
             {
@@ -11088,7 +11169,14 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.not_selected_recommendation_indexes == []
     assert staged.status_counts == {"staged": 3, "skipped": 0, "not_selected": 0}
     assert [item.status for item in staged.items] == ["staged", "staged", "staged"]
-    assert staged.metric_advisories == []
+    assert staged.metric_advisory_count == 1
+    assert staged.metric_advisory_status_counts == {
+        "project_metric_undefined": 1,
+    }
+    assert staged.metric_advisories[0].metric.iri == project_metric
+    assert "Metric advisories: 1 (project_metric_undefined=1)." in (
+        staged.review_note
+    )
     assert staged.staged_revision is not None
     assert staged.staged_revision.validation_conforms is True
     assert staged.staged_revision.changed_graphs == ["map"]
@@ -11111,6 +11199,9 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
         item.profile_observation_iri for item in staged.items
     }
     assert [item.iri for item in described.evidence] == [evidence]
+    assert "Metric advisories: 1 (project_metric_undefined=1)." in (
+        described.review_note or ""
+    )
 
     description = db.describe_dataset(dataset)
     assert description.row_count_snapshot == 10

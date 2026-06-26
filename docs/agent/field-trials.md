@@ -771,7 +771,10 @@ few useful gaps:
   A profile-advisory routing trial showed map-update recommendation rows were
   routeable, but metric advisories were prose-only and could not distinguish
   defined from undefined project metrics. Metric advisories now carry
-  `advisory_status`, definition state, and structured next actions.
+  `advisory_status`, definition state, and structured next actions. A retest
+  showed agents also need queue-level counts, so draft/staging responses now
+  expose `metric_advisory_count` and `metric_advisory_status_counts`; staging
+  review notes preserve the same summary for later reviewers.
 - A resource-revision stress trial confirmed `list_resource_revisions` handles
   anchors, exact patch roles, pagination after filtering, restage chains, and
   applied-source patch mentions, but found two import/repair edges. Applied

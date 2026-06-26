@@ -1508,6 +1508,8 @@ class ProfileMapUpdateDraft:
     profile_observation_iris: list[str]
     recommendations: list[ProfileMapUpdateRecommendation]
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
+    metric_advisory_count: int
+    metric_advisory_status_counts: dict[str, int]
     review_note: str
 
 
@@ -1541,6 +1543,8 @@ class ProfileMapUpdateStagingRecord:
     status_counts: dict[str, int]
     items: list[ProfileMapUpdateStagingItem]
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
+    metric_advisory_count: int
+    metric_advisory_status_counts: dict[str, int]
     staged_revision: StagedGraphRevisionRecord | None
     review_note: str
 
@@ -6510,6 +6514,9 @@ class DoxaBase:
             all_profiles,
             evidence_value,
         )
+        metric_advisory_status_counts = (
+            self._profile_metric_advisory_status_counts(metric_advisories)
+        )
         return ProfileMapUpdateDraft(
             dataset=profile_run.dataset,
             evidence=profile_run.evidence,
@@ -6518,6 +6525,8 @@ class DoxaBase:
             profile_observation_iris=profile_run.profile_observation_iris,
             recommendations=recommendations,
             metric_advisories=metric_advisories,
+            metric_advisory_count=len(metric_advisories),
+            metric_advisory_status_counts=metric_advisory_status_counts,
             review_note=(
                 "This draft is read-only review context derived from profile "
                 "observations and current map facts. Apply accepted changes "
@@ -6670,6 +6679,10 @@ class DoxaBase:
                     staged_indexes=staged_indexes,
                     skipped_indexes=skipped_indexes,
                     status_counts=status_counts,
+                    metric_advisory_count=draft.metric_advisory_count,
+                    metric_advisory_status_counts=(
+                        draft.metric_advisory_status_counts
+                    ),
                     allow_sampled_row_count_updates=allow_sampled_row_count_updates,
                 ),
                 review_recommendation=(
@@ -6692,12 +6705,16 @@ class DoxaBase:
             status_counts=status_counts,
             items=items,
             metric_advisories=draft.metric_advisories,
+            metric_advisory_count=draft.metric_advisory_count,
+            metric_advisory_status_counts=draft.metric_advisory_status_counts,
             staged_revision=staged_revision,
             review_note=self._profile_update_staging_review_note(
                 items,
                 staged_indexes=staged_indexes,
                 skipped_indexes=skipped_indexes,
                 status_counts=status_counts,
+                metric_advisory_count=draft.metric_advisory_count,
+                metric_advisory_status_counts=draft.metric_advisory_status_counts,
                 allow_sampled_row_count_updates=allow_sampled_row_count_updates,
             ),
         )
@@ -6739,6 +6756,17 @@ class DoxaBase:
             counts[item.status] = counts.get(item.status, 0) + 1
         return counts
 
+    @staticmethod
+    def _profile_metric_advisory_status_counts(
+        advisories: Iterable[ProfileMetricVocabularyAdvisory],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for advisory in advisories:
+            counts[advisory.advisory_status] = (
+                counts.get(advisory.advisory_status, 0) + 1
+            )
+        return counts
+
     def _profile_update_skip_reason(
         self,
         recommendation: ProfileMapUpdateRecommendation,
@@ -6772,12 +6800,18 @@ class DoxaBase:
         staged_indexes: list[int],
         skipped_indexes: list[int],
         status_counts: dict[str, int],
+        metric_advisory_count: int,
+        metric_advisory_status_counts: dict[str, int],
         allow_sampled_row_count_updates: bool,
     ) -> str:
         staged_summary = ", ".join(str(index) for index in staged_indexes) or "none"
         skipped_summary = ", ".join(str(index) for index in skipped_indexes) or "none"
         status_summary = ", ".join(
             f"{status}={count}" for status, count in status_counts.items()
+        )
+        metric_advisory_summary = self._profile_metric_advisory_review_summary(
+            metric_advisory_count,
+            metric_advisory_status_counts,
         )
         evidence_summary = "; ".join(
             (
@@ -6792,9 +6826,21 @@ class DoxaBase:
             f"{skipped_summary}. Status counts: {status_summary}. "
             "allow_sampled_row_count_updates="
             f"{allow_sampled_row_count_updates}. Review sample scope, evidence, "
-            "caveats, and project modelling intent before applying. Items: "
-            f"{evidence_summary}"
+            "caveats, and project modelling intent before applying. "
+            f"Metric advisories: {metric_advisory_summary}. Items: {evidence_summary}"
         )
+
+    @staticmethod
+    def _profile_metric_advisory_review_summary(
+        advisory_count: int,
+        status_counts: dict[str, int],
+    ) -> str:
+        if advisory_count == 0:
+            return "none"
+        status_summary = ", ".join(
+            f"{status}={count}" for status, count in status_counts.items()
+        )
+        return f"{advisory_count} ({status_summary})"
 
     def _add_profile_update_patch_triples(
         self,
@@ -9535,17 +9581,21 @@ class DoxaBase:
             ),
             action_label="Inspect metric context",
         )
-        if advisory_status == "project_metric_defined":
+        if advisory_status in {
+            "project_metric_defined",
+            "project_metric_definition_ambiguous",
+        }:
             add_action(
                 "describe_resource",
                 {"iri": metric_iri, "graph": "ontology"},
                 (
                     "Inspect the existing project ontology definition before "
-                    "using this metric in durable comparisons or map policy."
+                    "using or repairing this metric in durable comparisons or "
+                    "map policy."
                 ),
                 action_label="Inspect metric definition",
             )
-        else:
+        if advisory_status != "project_metric_defined":
             add_action(
                 "list_entities",
                 {

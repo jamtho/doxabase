@@ -723,6 +723,8 @@ draft.map_dataset_found
 draft.profile_observation_iris
 draft.recommendations
 draft.metric_advisories
+draft.metric_advisory_count
+draft.metric_advisory_status_counts
 draft.review_note
 ```
 
@@ -778,9 +780,12 @@ advisory.suggested_next_calls
 
 `advisory_status` is `project_metric_undefined`,
 `project_metric_defined`, or `project_metric_definition_ambiguous`.
-Undefined or ambiguous metrics point suggested actions at context loading and
-nearby ontology metric lookup. Defined metrics also point at
-`describe_resource(..., graph="ontology")` for the existing definition.
+Undefined metrics point suggested actions at context loading and nearby ontology
+metric lookup. Defined metrics point at
+`describe_resource(..., graph="ontology")` for the existing definition;
+ambiguous metrics point at both the existing definition and nearby metric
+lookup. Use `metric_advisory_count` and `metric_advisory_status_counts` for
+queue routing before reading full advisory rows.
 
 `db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 returns a `ProfileMapUpdateStagingRecord`:
@@ -798,6 +803,8 @@ result.not_selected_recommendation_indexes
 result.status_counts
 result.items
 result.metric_advisories
+result.metric_advisory_count
+result.metric_advisory_status_counts
 result.staged_revision
 result.review_note
 ```
@@ -823,7 +830,10 @@ When at least one accepted recommendation passes safety checks,
 `result.staged_revision` is a normal `StagedGraphRevisionRecord` for one grouped
 `map` revision. Sampled row-count recommendations are skipped by default and
 reported in `skipped_recommendation_indexes`; metric advisories stay in
-`metric_advisories` and are not staged as map facts.
+`metric_advisories` and are not staged as map facts. The same advisory count and
+status summary appears in the staging response and staged revision review note,
+so later reviewers can see whether undefined, defined, or ambiguous project
+metric vocabulary was present.
 An accepted recommendation index can therefore appear under either `staged` or
 `skipped`; `not_selected` only means the draft recommendation was not accepted
 for this staging call. Use `status_counts` for quick routing summaries before

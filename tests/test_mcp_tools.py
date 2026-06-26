@@ -2923,6 +2923,10 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     )
     assert result["recommendations"][0]["profile_row_count"] == 10
     assert result["recommendations"][1]["helper_arguments"]["nullable"] is True
+    assert result["metric_advisory_count"] == 1
+    assert result["metric_advisory_status_counts"] == {
+        "project_metric_undefined": 1,
+    }
     assert result["metric_advisories"][0]["metric"]["iri"] == project_metric
     assert result["metric_advisories"][0]["advisory_status"] == (
         "project_metric_undefined"
@@ -2990,6 +2994,8 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert [item["status"] for item in result["items"]] == ["staged", "staged"]
     assert result["staged_revision"]["changed_graphs"] == ["map"]
     assert result["staged_revision"]["validation_conforms"] is True
+    assert result["metric_advisory_count"] == 0
+    assert result["metric_advisory_status_counts"] == {}
     assert result["metric_advisories"] == []
     assert db.describe_dataset(table).row_count_snapshot == 8
 

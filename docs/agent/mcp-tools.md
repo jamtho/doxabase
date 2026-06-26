@@ -238,7 +238,9 @@ zero-null profiles are intentionally not promoted into non-null map
 recommendations. Metric advisory rows include `advisory_status`,
 `definition_found`, optional `definition`, and structured
 `suggested_next_actions` so agents can inspect existing ontology definitions or
-nearby metric vocabulary before recording claims/patterns/promotions.
+nearby metric vocabulary before recording claims/patterns/promotions. The draft
+also includes `metric_advisory_count` and `metric_advisory_status_counts` for
+quick routing.
 
 `doxabase.stage_profile_map_updates`
 
@@ -246,10 +248,12 @@ Stages accepted `draft_profile_map_updates` recommendation indexes as one
 grouped reviewable `map` revision. Pass `dataset_iri`, `evidence_iri`, and
 `accepted_recommendation_indexes`. The result returns item statuses,
 `staged_recommendation_indexes`, `skipped_recommendation_indexes`,
-`not_selected_recommendation_indexes`, `status_counts`, metric advisories, and
-the staged revision when at least one accepted recommendation was staged. The
-helper uses helper-equivalent RDF for dataset and column shells, keeps metric
-advisories as review prompts, and skips accepted sampled row-count
+`not_selected_recommendation_indexes`, `status_counts`, metric advisories,
+`metric_advisory_count`, `metric_advisory_status_counts`, and the staged
+revision when at least one accepted recommendation was staged. The helper uses
+helper-equivalent RDF for dataset and column shells, keeps metric advisories as
+review prompts in the response and staged revision review note, and skips
+accepted sampled row-count
 recommendations unless
 `allow_sampled_row_count_updates=true`.
 
