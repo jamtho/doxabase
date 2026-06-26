@@ -597,13 +597,18 @@ inspection set without recomputing those buckets. Prefer
 by derived next action (`apply_after_review`, `restage_after_review`,
 `repair_or_replace`, `inspect_already_applied`, and `informational`) without
 requiring the agent to join status, stale state, and recommendation fields.
+Treat `next_action` as the compact route for the row, not as permission to run a
+mutating tool immediately. For review-first automation, follow
+`suggested_next_actions` / `suggested_next_calls` in order; ready and stale rows
+usually put inspect/export calls before the apply or restage mutation.
 When a restaged successor is mechanically ready only because current graph state
 filled a source validation gap, its decision is
 `inspect_restaged_source_validation_failure` and its compact queue is
 `repair_or_replace`, not `apply_after_review`. When a row has
 `staged_validation_conforms=False` or a failed `staged_validation_status`,
-preserve that repair signal even if the live apply check now reports count or
-digest drift.
+the compact route remains `repair_or_replace` even if the live apply check now
+reports count or digest drift; inspect stored validation diagnostics before
+restaging.
 Grouped Markdown mirrors the important `current_alternative_to` case in
 `Alternative Context` when a stored alternative target has been restaged.
 Restaging is for count or digest drift conflicts; validation failures still need
@@ -636,7 +641,9 @@ grouped-review hazard lists. After the actual mutation, prefer the
 siblings. The recheck list can include repair-only rows such as patch conflicts
 or validation failures when they share changed graphs, so route by the fresh
 check/export `next_action_queue` rather than by the recheck list alone. In
-scripts, the practical loop is: batch restage, review
+post-apply recheck rows, a sibling that failed staged-time validation still
+routes to `repair_or_replace` even when the live replay now reports conflict.
+In scripts, the practical loop is: batch restage, review
 `ready_restage_successor_revision_iris`, apply at most one ready successor,
 then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the
 next check/export/restage pass.

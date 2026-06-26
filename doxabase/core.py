@@ -3636,6 +3636,7 @@ class DoxaBase:
                 restaged_by=restaged_by,
                 current_restaged_by=current_restaged_by,
                 record_kind=item_record_kind,
+                staged_validation_status=item_staged_validation_status,
             )
             items.append(
                 GraphRevisionListItem(
@@ -16991,6 +16992,7 @@ class DoxaBase:
                 stale_resolution_state=stale_resolution_state_after,
                 suggested_next_actions=suggested_next_actions_after,
                 restaged_by=current_direct_restaged_by,
+                staged_validation_status=current_staged_validation_status,
             )
             if (
                 action == "skipped_already_handled"
@@ -17838,6 +17840,18 @@ class DoxaBase:
                 apply_decision=apply_check.decision,
                 stale_resolution_state=None,
                 suggested_next_actions=apply_check.suggested_next_actions,
+                staged_validation_status=self._staged_validation_status(
+                    conforms=self._bool_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:validationConforms",
+                    ),
+                    result_count=self._int_object(
+                        data_graphs,
+                        revision_iri,
+                        "rc:validationResultCount",
+                    ),
+                ),
             )
             candidate_rows.append(
                 (
@@ -17968,6 +17982,10 @@ class DoxaBase:
                     staged.current_restaged_by.iri
                     if staged.current_restaged_by is not None
                     else None
+                ),
+                staged_validation_status=self._staged_validation_status(
+                    conforms=staged.validation_conforms,
+                    result_count=staged.validation_result_count,
                 ),
             )
             check = StagedRevisionApplyCheck(
@@ -18265,6 +18283,10 @@ class DoxaBase:
                 staged.current_restaged_by.iri
                 if staged.current_restaged_by is not None
                 else None
+            ),
+            staged_validation_status=self._staged_validation_status(
+                conforms=staged.validation_conforms,
+                result_count=staged.validation_result_count,
             ),
         )
         check = StagedRevisionApplyCheck(
@@ -19248,6 +19270,7 @@ class DoxaBase:
         restaged_by: str | None = None,
         current_restaged_by: str | None = None,
         record_kind: str | None = None,
+        staged_validation_status: str | None = None,
     ) -> RevisionNextAction | None:
         if apply_status is None and not suggested_next_actions:
             return None
@@ -19316,6 +19339,16 @@ class DoxaBase:
             reason = (
                 "Inspect the restaged source validation diagnostics, then stage "
                 "a repaired or alternative candidate before applying this row."
+            )
+            selected_action = find_action(tool_name="describe_staged_revision")
+        elif staged_validation_status == "failed":
+            action_type = "repair_or_replace"
+            queue = "repair_or_replace"
+            label = "Repair or replace"
+            reason = (
+                "Stored staged-time validation failed; inspect diagnostics, then "
+                "stage a repaired or alternative candidate before restaging or "
+                "applying this row."
             )
             selected_action = find_action(tool_name="describe_staged_revision")
         elif apply_decision == "review_then_apply" or apply_status == "ready":
@@ -19561,6 +19594,10 @@ class DoxaBase:
                 suggested_next_actions=suggested_next_actions,
                 restaged_by=restaged_by,
                 current_restaged_by=current_restaged_by,
+                staged_validation_status=self._staged_validation_status(
+                    conforms=description.validation_conforms,
+                    result_count=description.validation_result_count,
+                ),
             )
             summaries.append(
                 StagedGraphRevisionExportSummary(
@@ -19686,7 +19723,9 @@ class DoxaBase:
         def recommend_mutation_by_decision(
             summary: StagedGraphRevisionExportSummary,
         ) -> None:
-            if summary.apply_decision in {
+            if summary.staged_validation_conforms is False:
+                recommend_repair(summary.revision_iri)
+            elif summary.apply_decision in {
                 "review_then_apply",
                 "restage_against_current_graph",
             }:

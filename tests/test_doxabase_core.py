@@ -3885,6 +3885,65 @@ def test_noop_successor_post_apply_recheck_reports_live_decision(
     assert restaged_check.blocking_reasons == ["no_effective_patch_triples"]
 
 
+def test_post_apply_recheck_preserves_staged_validation_repair_signal(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    invalid = db.stage_graph_revision(
+        summary="Invalid row semantics",
+        rationale="Staged-time validation failure should survive later drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Dataset, rc:Table ;
+                        rc:rowSemantics rc:EventRow, rc:SnapshotRow .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    ready = db.stage_graph_revision(
+        summary="Ready sibling",
+        rationale="Applying this sibling will make the invalid row stale.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Shipments a rc:Dataset .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    invalid_check = db.check_staged_revision_apply(invalid.revision_iri)
+
+    assert invalid_check.status == "validation_failed"
+    assert invalid_check.next_action is not None
+    assert invalid_check.next_action.queue == "repair_or_replace"
+
+    applied = db.apply_staged_revision(ready.revision_iri)
+    recheck = next(
+        item
+        for item in applied.post_apply_recheck_revisions
+        if item.iri == invalid.revision_iri
+    )
+
+    assert recheck.application_status == "conflict"
+    assert recheck.decision == "restage_against_current_graph"
+    assert recheck.next_action is not None
+    assert recheck.next_action.action_type == "repair_or_replace"
+    assert recheck.next_action.queue == "repair_or_replace"
+    assert recheck.next_action.tool_name == "describe_staged_revision"
+
+
 def test_restaged_revision_reports_effective_delta_for_mixed_addition(
     tmp_path: Path,
 ) -> None:
@@ -6371,6 +6430,10 @@ def test_list_graph_revisions_filters_staged_validation_after_live_conflict(
     assert conflict_row.application_status == "conflict"
     assert conflict_row.stale_resolution_state == "stale_unresolved"
     assert conflict_row.application_validation_skipped_reason == "conflicts_present"
+    assert conflict_row.next_action is not None
+    assert conflict_row.next_action.action_type == "repair_or_replace"
+    assert conflict_row.next_action.queue == "repair_or_replace"
+    assert conflict_row.next_action.tool_name == "describe_staged_revision"
 
     export = db.export_staged_revisions(
         [staged.revision_iri],
@@ -6381,6 +6444,12 @@ def test_list_graph_revisions_filters_staged_validation_after_live_conflict(
     assert export.bundle_summary.staged_validation_failed_revision_iris == [
         staged.revision_iri
     ]
+    assert export.bundle_summary.recommended_repair_review_iris == [
+        staged.revision_iri
+    ]
+    assert export.bundle_summary.next_action_queue == {
+        "repair_or_replace": [staged.revision_iri]
+    }
 
 
 def test_stage_graph_revision_rejects_immutable_seed_targets(tmp_path: Path) -> None:

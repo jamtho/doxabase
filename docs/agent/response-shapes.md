@@ -2622,11 +2622,16 @@ conflicts route to `repair_or_replace`, and already-applied rows route to
 `inspect_already_applied`. A ready restaged successor with
 `decision == "inspect_restaged_source_validation_failure"` also routes to
 `repair_or_replace`, because current graph state may have supplied semantics
-that the original framing omitted. No-op and superseded-by-restage rows usually
-route to informational inspection queues. When `validation_conforms is None`, read
+that the original framing omitted. Rows with failed staged-time validation also
+route to `repair_or_replace` even if later graph drift makes the live apply
+check report `conflict`. No-op and superseded-by-restage rows usually route to
+informational inspection queues. When `validation_conforms is None`, read
 `validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
 `already_applied`.
+`next_action.tool_name` names the compact route target and can be mutating for
+ready or stale rows; review-first scripts should execute
+`suggested_next_actions` in order instead of blindly calling `next_action`.
 For `patch_conflict`, inspect `patch_checks[].conflict` before mutating; it
 means the stored patch cannot currently be replayed, not merely that the target
 graph count or digest drifted. Suggested actions for `patch_conflict` omit
@@ -2947,6 +2952,8 @@ after current graph state fills a source validation gap, `decision_after`
 becomes `inspect_restaged_source_validation_failure` and
 `next_action_after.queue` is `repair_or_replace` rather than
 `apply_after_review`.
+Rows with failed staged-time validation keep a `repair_or_replace` compact route
+even when later drift makes `status_after` a live conflict.
 `stale_resolution_state_after == "restaged_successor_stale_unresolved"` means a
 skipped already-handled source points to a current successor that is itself
 stale; inspect or restage `current_revision_iri` before applying anything.

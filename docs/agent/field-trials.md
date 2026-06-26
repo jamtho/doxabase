@@ -1122,6 +1122,14 @@ few useful gaps:
   generic lineage call. Resource lineage now mirrors graph lineage
   `restage_chain_iris` and `alternative_revision_iris`, and merges generic
   related revision IRIs into its local resource route.
+- A mixed staged-work queue trial confirmed current-work queues classify ready,
+  stale, validation-failed, and already-applied rows correctly, but found that
+  staged-time validation failures could drift into live `conflict` and lose
+  their repair route in compact next actions and grouped repair lists. Compact
+  routing now preserves failed staged-validation rows as `repair_or_replace`,
+  including post-apply recheck rows, and docs clarify that
+  `suggested_next_actions` are the review-first sequence while `next_action` is
+  the row route.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
