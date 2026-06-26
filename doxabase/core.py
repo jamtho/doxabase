@@ -1521,6 +1521,7 @@ class ProfileRunDescription:
 
 @dataclass(frozen=True)
 class ProfileMapUpdateRecommendation:
+    recommendation_index: int
     kind: str
     action: str
     resource: ResourceSummary
@@ -1567,9 +1568,12 @@ class ProfileMapUpdateDraft:
     map_dataset_found: bool
     profile_observation_iris: list[str]
     recommendations: list[ProfileMapUpdateRecommendation]
+    recommendation_count: int
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
     metric_advisory_count: int
     metric_advisory_status_counts: dict[str, int]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
     review_note: str
 
 
@@ -3807,7 +3811,9 @@ class DoxaBase:
                 )
             raise DoxaBaseError(
                 f"Revision '{revision_iri}' was not found in resource lineage "
-                f"for '{resource_iri}'.{scan_note}"
+                f"for '{resource_iri}'"
+                f"{self._missing_revision_snapshot_storage_hint(revision_value)}."
+                f"{scan_note}"
             )
 
         applied_revision_iri, staged_revision_iri = (
@@ -6830,6 +6836,7 @@ class DoxaBase:
             )
             recommendations.append(
                 ProfileMapUpdateRecommendation(
+                    recommendation_index=len(recommendations),
                     kind="dataset_row_count_snapshot",
                     action=action,
                     resource=profile_run.dataset,
@@ -6882,6 +6889,7 @@ class DoxaBase:
             )
             recommendations.append(
                 ProfileMapUpdateRecommendation(
+                    recommendation_index=len(recommendations),
                     kind="column_nullable",
                     action=action,
                     resource=profile.observed_column,
@@ -6924,6 +6932,7 @@ class DoxaBase:
             basis = self._profile_observation_basis(profile)
             recommendations.append(
                 ProfileMapUpdateRecommendation(
+                    recommendation_index=len(recommendations),
                     kind="unmapped_profiled_column",
                     action="add_map_column_shell",
                     resource=profile.observed_column,
@@ -6971,6 +6980,12 @@ class DoxaBase:
         metric_advisory_status_counts = (
             self._profile_metric_advisory_status_counts(metric_advisories)
         )
+        suggested_next_actions = self._profile_map_update_draft_actions(
+            dataset_iri=dataset_value,
+            evidence_iri=evidence_value,
+            recommendation_count=len(recommendations),
+            metric_advisories=metric_advisories,
+        )
         return ProfileMapUpdateDraft(
             dataset=profile_run.dataset,
             evidence=profile_run.evidence,
@@ -6978,9 +6993,14 @@ class DoxaBase:
             map_dataset_found=map_dataset_found,
             profile_observation_iris=profile_run.profile_observation_iris,
             recommendations=recommendations,
+            recommendation_count=len(recommendations),
             metric_advisories=metric_advisories,
             metric_advisory_count=len(metric_advisories),
             metric_advisory_status_counts=metric_advisory_status_counts,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
             review_note=(
                 "This draft is read-only review context derived from profile "
                 "observations and current map facts. Apply accepted changes "
@@ -7180,6 +7200,51 @@ class DoxaBase:
                 allow_sampled_row_count_updates=allow_sampled_row_count_updates,
             ),
         )
+
+    def _profile_map_update_draft_actions(
+        self,
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+        recommendation_count: int,
+        metric_advisories: list[ProfileMetricVocabularyAdvisory],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        if recommendation_count > 0:
+            arguments = {
+                "dataset_iri": dataset_iri,
+                "evidence_iri": evidence_iri,
+                "accepted_recommendation_indexes": list(
+                    range(recommendation_count)
+                ),
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Review and stage profile map updates",
+                    tool_name="stage_profile_map_updates",
+                    mcp_tool_name="doxabase.stage_profile_map_updates",
+                    arguments=arguments,
+                    reason=(
+                        "Review recommendation rows, sample scope, evidence, "
+                        "and metric advisories; then pass only accepted indexes "
+                        "to stage_profile_map_updates."
+                    ),
+                    call=self._suggested_call_string(
+                        "stage_profile_map_updates",
+                        arguments,
+                    ),
+                )
+            )
+
+        seen_actions: set[tuple[str, str]] = set()
+        for advisory in metric_advisories:
+            for action in advisory.suggested_next_actions:
+                key = (action.tool_name, action.call)
+                if key in seen_actions:
+                    continue
+                seen_actions.add(key)
+                actions.append(action)
+        return actions
 
     def _profile_update_accepted_indexes(
         self,

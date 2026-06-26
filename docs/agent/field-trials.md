@@ -782,7 +782,10 @@ few useful gaps:
   `advisory_status`, definition state, and structured next actions. A retest
   showed agents also need queue-level counts, so draft/staging responses now
   expose `metric_advisory_count` and `metric_advisory_status_counts`; staging
-  review notes preserve the same summary for later reviewers.
+  review notes preserve the same summary for later reviewers. A later profile
+  routing trial found draft responses still made agents infer whether to stage
+  or only inspect metric vocabulary; drafts now carry `recommendation_count`,
+  stable `recommendation_index` values, and top-level suggested actions/calls.
 - A resource-revision stress trial confirmed `list_resource_revisions` handles
   anchors, exact patch roles, pagination after filtering, restage chains, and
   applied-source patch mentions, but found two import/repair edges. Applied

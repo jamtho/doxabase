@@ -2155,6 +2155,15 @@ def test_import_revision_snapshots_validates_bundle_before_writing(
         for action in imported.post_import_snapshot_evidence[0].suggested_next_actions
     ] == ["import_trig"]
     assert valid_db._graph_snapshot_storage_rows(valid_revision, "map")[0][3] == ""
+    with pytest.raises(DoxaBaseError) as lineage_excinfo:
+        valid_db.describe_resource_revision_lineage(
+            "https://example.test/project#Thing",
+            valid_revision,
+        )
+    lineage_message = str(lineage_excinfo.value)
+    assert "was not found in resource lineage" in lineage_message
+    assert "Snapshot rows exist for this revision IRI" in lineage_message
+    assert "Import the project/history RDF bundle" in lineage_message
 
     invalid_kind_db = DoxaBase.create(tmp_path / "invalid-kind.sqlite")
     with pytest.raises(DoxaBaseError, match="object_kind must be one of"):
@@ -11375,14 +11384,28 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert draft.evidence_iri == evidence
     assert len(draft.profile_observation_iris) == 4
     assert "read-only review context" in draft.review_note
+    assert draft.recommendation_count == 3
     assert [
-        (recommendation.kind, recommendation.resource.iri)
+        (
+            recommendation.recommendation_index,
+            recommendation.kind,
+            recommendation.resource.iri,
+        )
         for recommendation in draft.recommendations
     ] == [
-        ("dataset_row_count_snapshot", dataset),
-        ("column_nullable", status_column),
-        ("unmapped_profiled_column", settlement_column),
+        (0, "dataset_row_count_snapshot", dataset),
+        (1, "column_nullable", status_column),
+        (2, "unmapped_profiled_column", settlement_column),
     ]
+    assert draft.suggested_next_actions[0].tool_name == (
+        "stage_profile_map_updates"
+    )
+    assert draft.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+        "accepted_recommendation_indexes": [0, 1, 2],
+    }
+    assert draft.suggested_next_calls[0].startswith("stage_profile_map_updates(")
 
     row_count = draft.recommendations[0]
     assert row_count.action == "replace_map_value"
@@ -11502,6 +11525,7 @@ def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
     draft = db.draft_profile_map_updates(dataset, evidence)
 
     assert draft.recommendations == []
+    assert draft.recommendation_count == 0
     assert len(draft.metric_advisories) == 1
     assert draft.metric_advisory_count == 1
     assert draft.metric_advisory_status_counts == {
@@ -11517,6 +11541,11 @@ def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
         "describe_context_slice",
         "describe_resource",
     ]
+    assert [action.tool_name for action in draft.suggested_next_actions] == [
+        "describe_context_slice",
+        "describe_resource",
+    ]
+    assert draft.suggested_next_calls[0].startswith("describe_context_slice(")
     assert advisory.suggested_next_actions[1].arguments == {
         "iri": project_metric,
         "graph": "ontology",
@@ -11978,6 +12007,10 @@ def test_draft_profile_map_updates_skips_sampled_zero_null_promotion(
 
     assert draft.recommendations == []
     assert draft.metric_advisories == []
+    assert draft.recommendation_count == 0
+    assert draft.metric_advisory_count == 0
+    assert draft.suggested_next_actions == []
+    assert draft.suggested_next_calls == []
     description = db.describe_dataset(dataset)
     assert description.columns[0].nullable is True
 

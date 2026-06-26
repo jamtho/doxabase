@@ -382,19 +382,23 @@ drift, mapped-column nullability changes, unmapped profiled columns, or
 project-specific metric kinds that need vocabulary review. It returns
 `recommendations` with `helper_name`/`helper_arguments` for accepted map-helper
 updates, `metric_advisories` for project-specific profile metrics, and a
-`review_note`. It also includes `metric_advisory_count` and
-`metric_advisory_status_counts` for quick routing. Recommendation rows carry the
-source profile observation IRI, evidence IRI, `sample_size`, `sample_scope`,
-`sample_method`, and
+`review_note`. It also includes `recommendation_count`,
+`metric_advisory_count`, `metric_advisory_status_counts`, and top-level
+`suggested_next_actions` / `suggested_next_calls` for quick routing.
+Recommendation rows carry `recommendation_index`, the source profile
+observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
+and
 `profile_row_count` so agents can review whether the profile was a full scan,
 sample, or ambiguous run before applying helper arguments. It does not mutate
 or stage graph changes, and it skips sampled zero-null promotions. Metric
 advisories carry `advisory_status`, `definition_found`, optional `definition`,
 and structured `suggested_next_actions` for ontology/context review.
-If `recommendations` is empty and `metric_advisory_count > 0`, treat the draft
-as advisory-only: follow the advisory suggested actions and do not call
-`stage_profile_map_updates`, because advisory rows are not map-update
-recommendations.
+If `recommendation_count > 0`, review the draft and use the top-level
+`stage_profile_map_updates` action as a starting point, passing only accepted
+indexes. If `recommendation_count == 0 and metric_advisory_count > 0`, treat
+the draft as advisory-only: follow the top-level advisory suggested actions and
+do not call `stage_profile_map_updates`, because advisory rows are not
+map-update recommendations.
 
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped

@@ -722,9 +722,12 @@ draft.evidence_iri
 draft.map_dataset_found
 draft.profile_observation_iris
 draft.recommendations
+draft.recommendation_count
 draft.metric_advisories
 draft.metric_advisory_count
 draft.metric_advisory_status_counts
+draft.suggested_next_actions
+draft.suggested_next_calls
 draft.review_note
 ```
 
@@ -733,6 +736,7 @@ or staged change:
 
 ```python
 recommendation.kind
+recommendation.recommendation_index
 recommendation.action
 recommendation.resource
 recommendation.predicate
@@ -786,10 +790,15 @@ metric lookup. Defined metrics point at
 ambiguous metrics point at both the existing definition and nearby metric
 lookup. Use `metric_advisory_count` and `metric_advisory_status_counts` for
 queue routing before reading full advisory rows.
+Use `recommendation_count` and top-level `suggested_next_actions` for first-pass
+machine routing. Drafts with recommendations include a
+`stage_profile_map_updates` action whose `accepted_recommendation_indexes`
+names every draft recommendation index as a review starting point; pass only the
+indexes actually accepted after reviewing sample scope and modelling intent.
 When `draft.recommendations` is empty and `metric_advisory_count > 0`, the
-draft is advisory-only. Follow advisory suggested actions for vocabulary/context
-review and do not call `stage_profile_map_updates`; no-op advisory staging is
-deferred.
+draft is advisory-only. The top-level suggested actions are the deduped advisory
+actions for vocabulary/context review; do not call `stage_profile_map_updates`
+because no-op advisory staging is deferred.
 
 `db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 returns a `ProfileMapUpdateStagingRecord`:

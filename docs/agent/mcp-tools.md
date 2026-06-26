@@ -251,11 +251,16 @@ recommendations. Metric advisory rows include `advisory_status`,
 `definition_found`, optional `definition`, and structured
 `suggested_next_actions` so agents can inspect existing ontology definitions or
 nearby metric vocabulary before recording claims/patterns/promotions. The draft
-also includes `metric_advisory_count` and `metric_advisory_status_counts` for
-quick routing.
-If `recommendations` is empty and `metric_advisory_count > 0`, handle the result
-as advisory-only: follow advisory suggested actions and do not call
+also includes `recommendation_count`, `metric_advisory_count`,
+`metric_advisory_status_counts`, and top-level `suggested_next_actions` /
+`suggested_next_calls` for quick routing. Recommendation rows carry
+`recommendation_index`, matching the indexes accepted by
 `doxabase.stage_profile_map_updates`.
+If `recommendation_count > 0`, review the draft and use the top-level
+`stage_profile_map_updates` action as a starting point, passing only accepted
+indexes. If `recommendation_count == 0 and metric_advisory_count > 0`, handle
+the result as advisory-only: follow top-level advisory suggested actions and do
+not call `doxabase.stage_profile_map_updates`.
 
 `doxabase.stage_profile_map_updates`
 

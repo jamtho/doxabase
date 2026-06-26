@@ -3104,13 +3104,29 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["dataset"]["iri"] == table
     assert result["evidence_iri"] == shared_evidence
     assert result["map_dataset_found"] is True
+    assert result["recommendation_count"] == 2
     assert [
-        (recommendation["kind"], recommendation["resource"]["iri"])
+        (
+            recommendation["recommendation_index"],
+            recommendation["kind"],
+            recommendation["resource"]["iri"],
+        )
         for recommendation in result["recommendations"]
     ] == [
-        ("dataset_row_count_snapshot", table),
-        ("column_nullable", status_column),
+        (0, "dataset_row_count_snapshot", table),
+        (1, "column_nullable", status_column),
     ]
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "stage_profile_map_updates"
+    )
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "dataset_iri": table,
+        "evidence_iri": shared_evidence,
+        "accepted_recommendation_indexes": [0, 1],
+    }
+    assert result["suggested_next_calls"][0].startswith(
+        "stage_profile_map_updates("
+    )
     assert result["recommendations"][0]["helper_arguments"] == {
         "iri": table,
         "row_count_snapshot": 10,
