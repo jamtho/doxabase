@@ -948,6 +948,10 @@ validation-failed, no-op, or otherwise not ready. Use
 `check_staged_revision_apply()` before applying. If an already-handled row has
 `stale_resolution_state_after="restaged_successor_stale_unresolved"`, its
 current successor is stale too; inspect or restage `current_revision_iri`.
+Each row also carries `next_action_after` and
+`suggested_next_actions_after` for that `current_revision_iri`, so autonomous
+scripts can route the post-batch current revision without a separate listing
+join.
 Each item also carries
 `restaged_from` when its source is itself a refreshed successor. The helper
 deliberately does not apply anything; applying one successor can make sibling

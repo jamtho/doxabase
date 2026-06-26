@@ -793,6 +793,10 @@ few useful gaps:
   Database relations now come only from storage-access-owned templates;
   dataset/partition templates paired with database storage are review-only
   candidates with `database_relation_template_source_mismatch`.
+- A staged workflow trial found batch-restage rows made agents join back to
+  revision listings to route the current post-batch successor. Batch items now
+  carry `next_action_after` and `suggested_next_actions_after` for their
+  `current_revision_iri`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

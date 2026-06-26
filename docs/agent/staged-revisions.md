@@ -154,13 +154,14 @@ classification without creating refreshed successors; unhandled conflicts report
 created during that run, not as an apply queue. Each item's `status_after`,
 `decision_after`, `stale_resolution_state_after`, and `blocking_reasons_after`
 describe `current_revision_iri` after the batch decision; use
-`bundle_summary.ready_restage_successor_revision_iris` plus
-`check_staged_revision_apply()` before each apply. After any successful apply,
+`next_action_after` and `suggested_next_actions_after` for the concrete
+post-batch route, then use `check_staged_revision_apply()` before each apply.
+After any successful apply,
 discard old grouped readiness and re-check or regenerate the bundle before
 touching remaining candidates. In a mixed batch, a created successor can be
 no-op or validation-failed; keep those out of the apply path and route by
-`bundle_summary.next_action_queue` plus the item's `*_after` fields. If a skipped
-already-handled row reports
+`bundle_summary.next_action_queue` plus the item's `next_action_after`. If a
+skipped already-handled row reports
 `stale_resolution_state_after="restaged_successor_stale_unresolved"`, the
 current successor is stale too; inspect or restage `current_revision_iri`.
 If a current or freshly restaged successor reports

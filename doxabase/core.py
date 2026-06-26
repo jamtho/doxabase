@@ -595,6 +595,8 @@ class StagedGraphRevisionBatchRestageItem:
     restaged_revision_iri: str | None
     current_restaged_by: str | None
     current_revision_iri: str
+    next_action_after: RevisionNextAction | None
+    suggested_next_actions_after: list[SuggestedNextAction]
     note: str
 
 
@@ -13906,6 +13908,15 @@ class DoxaBase:
                 restaged_from=current_restaged_from,
                 restaged_by=current_direct_restaged_by,
             )
+            suggested_next_actions_after = current_check.suggested_next_actions
+            next_action_after = self._revision_next_action(
+                current_revision_iri,
+                apply_status=current_check.status,
+                apply_decision=current_check.decision,
+                stale_resolution_state=stale_resolution_state_after,
+                suggested_next_actions=suggested_next_actions_after,
+                restaged_by=current_direct_restaged_by,
+            )
             if (
                 action == "skipped_already_handled"
                 and stale_resolution_state_after
@@ -13945,6 +13956,8 @@ class DoxaBase:
                     restaged_revision_iri=restaged_revision_iri,
                     current_restaged_by=current_restaged_by,
                     current_revision_iri=current_revision_iri,
+                    next_action_after=next_action_after,
+                    suggested_next_actions_after=suggested_next_actions_after,
                     note=note,
                 )
             )

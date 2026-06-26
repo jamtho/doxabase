@@ -2434,7 +2434,8 @@ Each `batch.items` row reports `source_revision_iri`, `summary`,
 `stale_resolution_state_after`, `blocking_reasons_after`,
 `triples_to_add_after`, `triples_to_remove_after`, `action`,
 `not_restageable_reason`, `restaged_revision_iri`,
-`restaged_from`, `current_restaged_by`, `current_revision_iri`, and `note`.
+`restaged_from`, `current_restaged_by`, `current_revision_iri`,
+`next_action_after`, `suggested_next_actions_after`, and `note`.
 `restaged_from` is present when the source item is itself a refreshed successor
 of an older stale proposal. Current actions are
 `restaged`, `would_restage`, `skipped_already_handled`, and
@@ -2448,7 +2449,10 @@ at the stale source because no current successor exists yet. For all rows, the
 `*_after` fields describe the apply check for `current_revision_iri` after the
 batch decision. In real restage rows that is the new successor; in already
 handled rows it is the latest known successor; in dry-run would-restage rows it
-is still the stale source.
+is still the stale source. Use `next_action_after` as the compact route for
+`current_revision_iri`, and read `suggested_next_actions_after` when a script
+needs concrete follow-up calls without joining back through
+`list_graph_revisions`.
 `stale_resolution_state_after == "restaged_successor_stale_unresolved"` means a
 skipped already-handled source points to a current successor that is itself
 stale; inspect or restage `current_revision_iri` before applying anything.

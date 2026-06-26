@@ -611,6 +611,21 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert result["export_record"]["path"] == str(expected_path)
     assert result["items"][0]["action"] == "skipped_already_handled"
     assert result["items"][1]["action"] == "restaged"
+    assert result["items"][0]["next_action_after"]["action_type"] == (
+        "apply_after_review"
+    )
+    assert result["items"][0]["next_action_after"]["arguments"] == {
+        "iri": already_restaged["revision_iri"]
+    }
+    assert result["items"][1]["next_action_after"]["action_type"] == (
+        "apply_after_review"
+    )
+    assert result["items"][1]["next_action_after"]["arguments"] == {
+        "iri": restaged_second
+    }
+    assert result["items"][1]["suggested_next_actions_after"][-1]["tool_name"] == (
+        "apply_staged_revision"
+    )
     assert result["current_revision_by_source"] == {
         first["revision_iri"]: already_restaged["revision_iri"],
         second["revision_iri"]: restaged_second,

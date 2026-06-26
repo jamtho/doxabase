@@ -3700,7 +3700,21 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert batch.items[1].blocking_reasons_after == []
     assert batch.items[1].triples_to_add_after > 0
     assert batch.items[1].triples_to_remove_after == 0
+    assert batch.items[0].next_action_after is not None
+    assert batch.items[0].next_action_after.action_type == "apply_after_review"
+    assert batch.items[0].next_action_after.arguments == {
+        "iri": already_restaged.revision_iri
+    }
+    assert batch.items[1].next_action_after is not None
+    assert batch.items[1].next_action_after.action_type == "apply_after_review"
+    assert batch.items[1].next_action_after.arguments == {"iri": restaged_second}
+    assert batch.items[1].suggested_next_actions_after[-1].tool_name == (
+        "apply_staged_revision"
+    )
     assert batch.items[2].not_restageable_reason == "ready"
+    assert batch.items[2].next_action_after is not None
+    assert batch.items[2].next_action_after.action_type == "apply_after_review"
+    assert batch.items[2].next_action_after.arguments == {"iri": ready.revision_iri}
     assert batch.review_revision_iris == [
         first.revision_iri,
         already_restaged.revision_iri,
@@ -3986,6 +4000,14 @@ def test_batch_restage_items_report_validation_failed_successor_status(
     assert "current revision fails validation" in item.note
     assert "stage a repaired or alternative candidate" in item.note
     assert "stage_map_assertion_change replacement" in item.note
+    assert item.next_action_after is not None
+    assert item.next_action_after.action_type == "repair_or_replace"
+    assert item.next_action_after.queue == "repair_or_replace"
+    assert item.next_action_after.tool_name == "describe_staged_revision"
+    assert item.next_action_after.arguments == {"iri": successor_iri}
+    assert item.suggested_next_actions_after[0].tool_name == (
+        "describe_staged_revision"
+    )
     successor_check = db.check_staged_revision_apply(successor_iri)
     assert successor_check.recommended_resolution is not None
     assert "removal+addition" in successor_check.recommended_resolution
@@ -4043,6 +4065,14 @@ def test_batch_restage_marks_stale_current_successor_as_unresolved(
         "restaged_successor_stale_unresolved"
     )
     assert "current successor is itself stale" in item.note
+    assert item.next_action_after is not None
+    assert item.next_action_after.action_type == "restage_after_review"
+    assert item.next_action_after.queue == "restage_after_review"
+    assert item.next_action_after.tool_name == "restage_staged_revision"
+    assert item.next_action_after.arguments == {"iri": successor.revision_iri}
+    assert item.suggested_next_actions_after[-1].tool_name == (
+        "restage_staged_revision"
+    )
     assert batch.bundle_summary.stale_resolution_state_counts == {
         "stale_handled_by_restage": 1,
         "restaged_successor_stale_unresolved": 1,
