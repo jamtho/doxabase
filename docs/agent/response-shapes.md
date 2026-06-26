@@ -1049,6 +1049,8 @@ query.storage_accesses
 query.partition_schemes
 query.caveats
 query.upstream_caveats
+query.suggested_next_actions
+query.suggested_next_calls
 ```
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
@@ -1076,6 +1078,11 @@ Read `query.query_target_decision` before choosing from
 the warning/error issue codes behind the decision; inspect the selected
 candidate's full `review_reasons` and `direct_review_reasons` for messages and
 info-only notes.
+`suggested_next_actions` gives structured routing from the context inventory
+into `draft_query_plan`. In a context-blocked but direct-clean candidate case,
+it includes `candidate_index` and `allow_context_blocked_candidate=True` so a
+script can draft the selected route while keeping the context issues visible.
+`suggested_next_calls` is the compatibility display-call list.
 
 Each query target decision has:
 

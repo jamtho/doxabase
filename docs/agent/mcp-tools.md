@@ -290,7 +290,8 @@ list for missing, risky, or informational physical metadata, `analysis_warnings`
 for caveats that matter after a query can be planned, planning notes, columns,
 path templates, derived `query_target_decision` and `query_target_candidates`,
 physical layouts, storage access descriptions, partition schemes,
-dataset/layout verification status and note, and caveats. Use it before
+dataset/layout verification status and note, caveats, and structured
+`suggested_next_actions` for drafting the selected route. Use it before
 drafting DuckDB/S3/local-file queries when you need to decide whether graph
 metadata is executable or only useful for orientation, especially when you need
 physical metadata and warnings without the full relationship/pattern handoff in
@@ -298,7 +299,10 @@ physical metadata and warnings without the full relationship/pattern handoff in
 `candidate_index` points into `query_target_candidates`. Candidate
 `review_required` includes whole-context blockers; `direct_review_required`
 ignores sibling blockers and shows which target candidates have their own
-storage/path/layout problem. For database-backed storage, only
+storage/path/layout problem. When that selected candidate is direct-clean but
+context-blocked, the suggested `draft_query_plan` action carries
+`allow_context_blocked_candidate=true` and the explicit candidate index. For
+database-backed storage, only
 storage-access-owned templates become `relation_identifier` values. Dataset or
 partition path templates paired with database storage are review-only
 `database_relation_template_source_mismatch` candidates with no relation

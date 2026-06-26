@@ -17,6 +17,9 @@ Start with `describe_query_context(dataset_iri)`:
    context blockers, including sibling storage facts, can make the whole
    context review-required even when `query_target_decision.status == "ready"`
    for a direct-clean selected candidate.
+4. Use `suggested_next_actions` when scripting the next step. In the
+   context-blocked direct-clean case it gives a `draft_query_plan` call with the
+   explicit `candidate_index` and `allow_context_blocked_candidate=True`.
 
 Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 

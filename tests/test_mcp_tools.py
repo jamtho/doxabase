@@ -2064,6 +2064,20 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
+    context = describe_query_context_tool(db, iri=dataset)
+    assert context["query_target_decision"]["status"] == "context_blocked"
+    query_action = context["suggested_next_actions"][0]
+    assert query_action["tool_name"] == "draft_query_plan"
+    assert query_action["action_label"] == (
+        "Draft direct-clean candidate with context allowance"
+    )
+    assert query_action["arguments"] == {
+        "iri": dataset,
+        "candidate_index": context["query_target_decision"]["candidate_index"],
+        "allow_context_blocked_candidate": True,
+    }
+    assert context["suggested_next_calls"] == [query_action["call"]]
+
     result = draft_query_plan_tool(
         db,
         iri=dataset,

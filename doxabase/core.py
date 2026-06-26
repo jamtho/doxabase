@@ -1209,6 +1209,8 @@ class QueryPlanningContext:
     partition_schemes: list[PartitionDescription]
     caveats: list[CaveatDescription]
     upstream_caveats: list[CaveatDescription]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -7533,6 +7535,13 @@ class DoxaBase:
             direct_path_templates=direct_path_templates,
             issues=issues,
         )
+        query_target_decision = self._query_target_decision(query_target_candidates)
+        suggested_next_actions = self._query_context_next_actions(
+            dataset_iri=dataset.iri,
+            graph=graph,
+            decision=query_target_decision,
+            candidates=query_target_candidates,
+        )
         return QueryPlanningContext(
             dataset=dataset_summary,
             readiness=readiness,
@@ -7560,14 +7569,84 @@ class DoxaBase:
             layout_verification_note=dataset.layout_verification_note,
             columns=dataset.columns,
             path_templates=dataset.path_templates,
-            query_target_decision=self._query_target_decision(query_target_candidates),
+            query_target_decision=query_target_decision,
             query_target_candidates=query_target_candidates,
             physical_layouts=dataset.physical_layouts,
             storage_accesses=dataset.storage_accesses,
             partition_schemes=dataset.partition_schemes,
             caveats=dataset.caveats,
             upstream_caveats=dataset.upstream_caveats,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
         )
+
+    def _query_context_next_actions(
+        self,
+        *,
+        dataset_iri: str,
+        graph: str | None,
+        decision: QueryTargetDecision,
+        candidates: list[QueryTargetCandidate],
+    ) -> list[SuggestedNextAction]:
+        if (
+            decision.candidate_index is None
+            or decision.candidate_index < 0
+            or decision.candidate_index >= len(candidates)
+        ):
+            return []
+        candidate = candidates[decision.candidate_index]
+        arguments: dict[str, Any] = {
+            "iri": dataset_iri,
+            "candidate_index": decision.candidate_index,
+        }
+        if graph is not None and graph != "map":
+            arguments["graph"] = graph
+
+        action_label = "Draft selected query plan"
+        reason = (
+            "Draft a non-executed query plan for the selected query target "
+            "candidate, then read review_gate, scan, bindings, and issues."
+        )
+        if (
+            decision.status == "context_blocked"
+            and candidate.direct_review_required is False
+        ):
+            arguments["allow_context_blocked_candidate"] = True
+            action_label = "Draft direct-clean candidate with context allowance"
+            reason = (
+                "The selected candidate has no direct warning or error, but "
+                "sibling or broader context blockers make the whole context "
+                "review-required. Draft it with an explicit selector and "
+                "allow_context_blocked_candidate=True while preserving the "
+                "context issue audit."
+            )
+        elif decision.status == "candidate_needs_review":
+            action_label = "Draft review-gated query plan"
+            reason = (
+                "Draft a non-executed review plan for this candidate so the "
+                "scan, relation, runtime, and blocking reason fields are "
+                "available before repair or execution."
+            )
+        elif decision.status == "ready":
+            action_label = "Draft ready query plan"
+            reason = (
+                "Draft the selected query target and inspect bindings, runtime "
+                "resolution requirements, and analysis caveats before any "
+                "execution attempt."
+            )
+
+        return [
+            SuggestedNextAction(
+                action_label=action_label,
+                tool_name="draft_query_plan",
+                mcp_tool_name="doxabase.draft_query_plan",
+                arguments=arguments,
+                reason=reason,
+                call=self._suggested_call_string("draft_query_plan", arguments),
+            )
+        ]
 
     def draft_query_plan(
         self,

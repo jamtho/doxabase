@@ -6875,6 +6875,18 @@ def test_query_target_candidates_surface_global_blockers(
     assert context.query_target_decision.reason_codes == [
         "query_context_has_other_blockers"
     ]
+    assert len(context.suggested_next_actions) == 1
+    query_action = context.suggested_next_actions[0]
+    assert query_action.tool_name == "draft_query_plan"
+    assert query_action.action_label == (
+        "Draft direct-clean candidate with context allowance"
+    )
+    assert query_action.arguments == {
+        "iri": dataset,
+        "candidate_index": local_index,
+        "allow_context_blocked_candidate": True,
+    }
+    assert context.suggested_next_calls == [query_action.call]
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "context_review_required"
     assert plan.source_context.selection_mode == "automatic"

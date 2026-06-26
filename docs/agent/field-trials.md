@@ -832,7 +832,12 @@ few useful gaps:
   sibling candidate metadata. A follow-up binding trial showed that raw
   placeholders such as `{date}` were too detached from partition lore; draft
   plan binding rows now include partition scheme, likely partition column, and
-  granularity hints when the selected template carries that metadata.
+  granularity hints when the selected template carries that metadata. A retest
+  showed `draft_query_plan` was routeable enough through `handoff_kind` and
+  `review_gate`, but `describe_query_context` needed a structured route into the
+  documented allowance path; query contexts now include `suggested_next_actions`
+  with explicit `candidate_index` and `allow_context_blocked_candidate=True`
+  when a direct-clean candidate is blocked only by sibling context.
 - A profile-update staging trial confirmed accepted draft indexes can still be
   skipped by guardrails. In a sampled profile run, accepting a sampled row-count
   replacement and two column recommendations staged only the column updates by
