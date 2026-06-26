@@ -96,6 +96,7 @@ rc:nullable a rdf:Property ;
     rdfs:comment "Whether null values are expected or permitted." .
 
 rc:rowSemantics a rdf:Property ;
+    rdfs:label "row semantics" ;
     rdfs:domain rc:DataAsset ;
     rdfs:range rc:RowSemanticsType ;
     rdfs:comment "What each row in a table-like asset represents." .
@@ -262,15 +263,19 @@ rc:RowSemanticsType a rdfs:Class ;
     rdfs:comment "The semantic meaning of a single row." .
 
 rc:EventRow a rc:RowSemanticsType ;
+    rdfs:label "event row" ;
     rdfs:comment "Each row is an independent event or observation." .
 
 rc:SnapshotRow a rc:RowSemanticsType ;
+    rdfs:label "snapshot row" ;
     rdfs:comment "Each row is a point-in-time observation of a recurring entity." .
 
 rc:AggregateRow a rc:RowSemanticsType ;
+    rdfs:label "aggregate row" ;
     rdfs:comment "Each row summarizes a group of source rows." .
 
 rc:DimensionRow a rc:RowSemanticsType ;
+    rdfs:label "dimension row" ;
     rdfs:comment "Each row describes a relatively stable entity or dimension member." .
 
 rc:SchemaStabilityLevel a rdfs:Class ;

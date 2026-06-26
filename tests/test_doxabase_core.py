@@ -75,7 +75,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1171
+    assert graphs["base_ontology"].triple_count == 1176
     assert graphs["base_ontology"].mutable is False
     assert graphs["base_shapes"].triple_count == 1204
     assert graphs["base_shapes"].mutable is False
@@ -3673,13 +3673,26 @@ def test_stage_map_assertion_change_replaces_row_semantics_cleanly(
         if impact.impact_type == "changed_row_semantics"
     ]
     assert len(row_semantics_impacts) == 1
-    assert row_semantics_impacts[0].severity == "attention"
-    assert [value.value for value in row_semantics_impacts[0].removed_values] == [
+    impact = row_semantics_impacts[0]
+    assert impact.severity == "attention"
+    assert impact.predicate_label == "row semantics"
+    assert impact.message == (
+        "Changes row semantics on Orders from event row to snapshot row. "
+        "Review attached lore before assuming the new framing is merely tidier."
+    )
+    assert ".. Review" not in impact.message
+    assert [value.value for value in impact.removed_values] == [
         RC + "EventRow"
     ]
-    assert [value.value for value in row_semantics_impacts[0].added_values] == [
+    assert [value.value_label for value in impact.removed_values] == ["event row"]
+    assert [value.value for value in impact.added_values] == [
         RC + "SnapshotRow"
     ]
+    assert [value.value_label for value in impact.added_values] == ["snapshot row"]
+    assert change.judgement_panel is not None
+    assert change.judgement_panel.headline == (
+        "Replace row semantics on Orders: event row -> snapshot row"
+    )
 
     check = db.check_staged_revision_apply(staged_iri)
     assert check.status == "ready"
@@ -4072,6 +4085,138 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     ready_after_apply = db.check_staged_revision_apply(ready.revision_iri)
     assert ready_after_apply.status == "conflict"
     assert "target_count_drift" in ready_after_apply.blocking_reasons
+
+
+def test_batch_restage_preserves_source_patch_sequences(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    shipments = "https://example.test/project#Shipments"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    db.record_map_dataset(shipments, label="Shipments", is_table=True)
+    addition_operation = db.expand_iri("rc:AdditionPatch")
+    removal_operation = db.expand_iri("rc:RemovalPatch")
+    patch_role = db.expand_iri("rc:FramingPatch")
+
+    def ordered_patch(operation: str, content: str) -> dict:
+        patch_graph = Graph()
+        patch_graph.parse(data=content, format="turtle")
+        return {
+            "patch_iri": db._mint_iri("graph-patch"),
+            "operation": operation,
+            "target_graph": "map",
+            "format": "turtle",
+            "patch_role": patch_role,
+            "content": content,
+            "graph": patch_graph,
+        }
+
+    removal_first = db.stage_graph_revision(
+        summary="Replace Orders label",
+        rationale="Removal-first source should remain removal-first after batch restage.",
+        validation_scope="all",
+        _ordered_patch_specs=[
+            ordered_patch(
+                removal_operation,
+                """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:Orders rdfs:label "Orders" .
+                """,
+            ),
+            ordered_patch(
+                addition_operation,
+                """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:Orders rdfs:label "Preferred orders" .
+                """,
+            ),
+        ],
+    )
+    interleaved = db.stage_graph_revision(
+        summary="Change Shipments label and type",
+        rationale="Interleaved source should preserve all patch positions.",
+        validation_scope="all",
+        _ordered_patch_specs=[
+            ordered_patch(
+                addition_operation,
+                """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                ex:Shipments a rc:SnapshotDataset .
+                """,
+            ),
+            ordered_patch(
+                removal_operation,
+                """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:Shipments rdfs:label "Shipments" .
+                """,
+            ),
+            ordered_patch(
+                addition_operation,
+                """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:Shipments rdfs:label "Daily shipments" .
+                """,
+            ),
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#InterveningDataset",
+        label="Intervening dataset",
+    )
+
+    batch = db.restage_staged_revisions(
+        [removal_first.revision_iri, interleaved.revision_iri]
+    )
+    by_source = batch.restaged_revision_by_source
+    restaged_removal_first = db.describe_staged_revision(
+        by_source[removal_first.revision_iri]
+    )
+    restaged_interleaved = db.describe_staged_revision(
+        by_source[interleaved.revision_iri]
+    )
+
+    assert [item.action for item in batch.items] == ["restaged", "restaged"]
+    assert [patch.operation for patch in restaged_removal_first.patches] == [
+        removal_operation,
+        addition_operation,
+    ]
+    assert [patch.sequence_index for patch in restaged_removal_first.patches] == [
+        1,
+        2,
+    ]
+    assert [patch.operation for patch in restaged_interleaved.patches] == [
+        addition_operation,
+        removal_operation,
+        addition_operation,
+    ]
+    assert [patch.sequence_index for patch in restaged_interleaved.patches] == [
+        1,
+        2,
+        3,
+    ]
+    assert all(item.status_after == "ready" for item in batch.items)
+    assert batch.bundle_summary.next_action_queue == {
+        "apply_after_review": [
+            by_source[removal_first.revision_iri],
+            by_source[interleaved.revision_iri],
+        ],
+        "informational": [
+            removal_first.revision_iri,
+            interleaved.revision_iri,
+        ],
+    }
 
 
 def test_batch_restage_dry_run_reports_plan_without_creating_successors(
