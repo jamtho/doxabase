@@ -6182,6 +6182,142 @@ def test_query_target_candidates_surface_global_blockers(
     ]
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "context_review_required"
+    assert plan.source_context.selection_mode == "automatic"
+    assert plan.source_context.requested_candidate_index is None
+    assert plan.source_context.requested_storage_access_iri is None
+    assert plan.source_context.selection_status == "automatic"
+    assert plan.source_context.allow_context_blocked_candidate is False
+    assert plan.review_gate.selection_overridden is False
+    assert plan.review_gate.context_blocked_candidate_allowed is False
+    assert plan.review_gate.context_blocked_candidate_used is False
+    assert plan.review_gate.direct_blocking_reason_codes == []
+    assert plan.review_gate.context_blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.candidate_path_status == "orientation_only"
+    context_blocker = next(
+        reason
+        for reason in plan.selected_candidate.review_reasons
+        if reason.code == "query_context_has_other_blockers"
+    )
+    assert context_blocker.details == {
+        "excluded_blocker_count": 1,
+        "excluded_blocker_codes": ["contradicted_layout"],
+        "excluded_blocker_resource_iris": [stale_storage.iri],
+    }
+
+    allowed_plan = db.draft_query_plan(
+        dataset,
+        candidate_index=local_index,
+        allow_context_blocked_candidate=True,
+    )
+    assert allowed_plan.source_context.query_target_decision.status == (
+        "context_blocked"
+    )
+    assert allowed_plan.source_context.selected_candidate_index == local_index
+    assert allowed_plan.source_context.selection_mode == "candidate_index"
+    assert allowed_plan.source_context.requested_candidate_index == local_index
+    assert allowed_plan.source_context.selection_status == "matched"
+    assert allowed_plan.source_context.allow_context_blocked_candidate is True
+    assert allowed_plan.selected_candidate is not None
+    assert allowed_plan.selected_candidate.storage_access is not None
+    assert allowed_plan.selected_candidate.storage_access.iri == local_storage.iri
+    assert allowed_plan.selected_candidate.candidate_path_status == "ready"
+    assert allowed_plan.selected_candidate.review_required is False
+    assert allowed_plan.selected_candidate.review_reasons == []
+    assert allowed_plan.scan.candidate_path_status == "ready"
+    assert allowed_plan.review_gate.status == "ready"
+    assert allowed_plan.review_gate.selection_overridden is True
+    assert allowed_plan.review_gate.context_blocked_candidate_allowed is True
+    assert allowed_plan.review_gate.context_blocked_candidate_used is True
+    assert allowed_plan.review_gate.direct_blocking_reason_codes == []
+    assert allowed_plan.review_gate.context_blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert allowed_plan.review_gate.blocking_reason_codes == []
+    assert allowed_plan.review_gate.executable_without_review is True
+    assert allowed_plan.review_gate.binding_values_required is True
+    assert allowed_plan.review_gate.ready_for_execution_attempt is False
+    assert allowed_plan.handoff_kind == "binding_values_required"
+
+    storage_selected_plan = db.draft_query_plan(
+        dataset,
+        storage_access_iri=local_storage.iri,
+        allow_context_blocked_candidate=True,
+    )
+    assert storage_selected_plan.source_context.selection_mode == (
+        "storage_access_iri"
+    )
+    assert storage_selected_plan.source_context.requested_storage_access_iri == (
+        local_storage.iri
+    )
+    assert storage_selected_plan.source_context.selected_candidate_index == local_index
+    assert storage_selected_plan.handoff_kind == "binding_values_required"
+
+    direct_bad_plan = db.draft_query_plan(dataset, candidate_index=stale_index)
+    assert direct_bad_plan.selected_candidate is not None
+    assert direct_bad_plan.selected_candidate.storage_access is not None
+    assert direct_bad_plan.selected_candidate.storage_access.iri == stale_storage.iri
+    assert direct_bad_plan.review_gate.selection_overridden is True
+    assert direct_bad_plan.review_gate.status == "candidate_needs_review"
+    assert direct_bad_plan.review_gate.direct_blocking_reason_codes == [
+        "contradicted_layout",
+        "storage_protocol_location_mismatch",
+    ]
+    assert direct_bad_plan.review_gate.blocking_reason_codes == [
+        "contradicted_layout",
+        "storage_protocol_location_mismatch",
+    ]
+
+
+def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        label="Orders local access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        path_templates=[
+            "orders/current/dt={date}.parquet",
+            "orders/archive/dt={date}.parquet",
+        ],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    with pytest.raises(DoxaBaseError, match="either candidate_index or"):
+        db.draft_query_plan(
+            dataset,
+            candidate_index=0,
+            storage_access_iri=storage.iri,
+        )
+    with pytest.raises(DoxaBaseError, match="candidate_index must point"):
+        db.draft_query_plan(dataset, candidate_index=2)
+    with pytest.raises(DoxaBaseError, match="candidate_index must point"):
+        db.draft_query_plan(dataset, candidate_index=-1)
+    with pytest.raises(DoxaBaseError, match="did not match any"):
+        db.draft_query_plan(
+            dataset,
+            storage_access_iri="https://example.test/project#missing_storage",
+        )
+    with pytest.raises(DoxaBaseError, match="matched multiple"):
+        db.draft_query_plan(dataset, storage_access_iri=storage.iri)
 
 
 def test_describe_query_context_warns_on_protocol_location_mismatch(
@@ -6224,9 +6360,19 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     target = context.query_target_candidates[0]
     assert target.review_required is True
     assert target.candidate_path_status == "orientation_only"
-    assert any(
-        reason.code == "storage_protocol_location_mismatch"
+    mismatch = next(
+        reason
         for reason in target.review_reasons
+        if reason.code == "storage_protocol_location_mismatch"
+    )
+    assert mismatch.details is not None
+    assert mismatch.details["storage_access_iri"] == storage.iri
+    assert mismatch.details["storage_protocol_iri"] == RC + "HTTPSStorage"
+    assert mismatch.details["bucket_name"] == "public"
+    assert mismatch.details["key_prefix"] == "snapshots"
+    assert any(
+        "bucket/prefix" in reason
+        for reason in mismatch.details["mismatch_reasons"]
     )
 
 

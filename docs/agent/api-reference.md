@@ -305,7 +305,12 @@ sibling hints block the overall context.
 
 `draft_query_plan()` returns a non-executed, review-gated physical plan draft
 over `describe_query_context()`. It currently supports `engine="duckdb"` and
-selects the candidate identified by `query_target_decision.candidate_index`.
+selects the candidate identified by `query_target_decision.candidate_index` by
+default. Pass `candidate_index` or `storage_access_iri` to select an explicit
+candidate; pass `allow_context_blocked_candidate=True` only when that selected
+candidate has no direct warning/error and stale sibling metadata should not
+block this handoff. `source_context` preserves both the automatic decision and
+the explicit selection audit fields.
 The response includes a scan hint such as `read_parquet`, the candidate
 URI/path template for file/object storage, database relation fields for
 database-backed storage, parsed placeholder names in `required_bindings`,

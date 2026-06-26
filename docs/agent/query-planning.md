@@ -42,6 +42,15 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `query_context_has_other_blockers` when the selected candidate is clean but
    the broader query context is not.
 
+When a known-good storage route is blocked only by stale or malformed sibling
+metadata, keep `describe_query_context()` as the inventory and call
+`draft_query_plan(..., candidate_index=..., allow_context_blocked_candidate=True)`
+or `draft_query_plan(..., storage_access_iri=..., allow_context_blocked_candidate=True)`.
+The source context keeps the automatic `query_target_decision` plus the explicit
+selection mode, and the review gate reports whether a context-blocked candidate
+was used. Only use this switch when `direct_review_required` is false for the
+selected candidate; direct blockers still keep the plan review-gated.
+
 ## Common Cases
 
 Local file/object candidates can be ready for an execution attempt when the

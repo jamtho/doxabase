@@ -6,7 +6,7 @@ import re
 import sqlite3
 import warnings
 from collections.abc import Mapping as MappingABC
-from dataclasses import dataclass, fields, is_dataclass, replace
+from dataclasses import dataclass, field, fields, is_dataclass, replace
 from difflib import SequenceMatcher
 from datetime import UTC, datetime
 from pathlib import Path
@@ -1082,6 +1082,7 @@ class QueryPlanningIssue:
     message: str
     domain: str = "query_planning"
     resource: ResourceSummary | None = None
+    details: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -1156,6 +1157,12 @@ class DraftQueryPlanSourceContext:
     readiness_note: str
     query_target_decision: QueryTargetDecision
     selected_candidate_index: int | None
+    selection_mode: str = "automatic"
+    requested_candidate_index: int | None = None
+    requested_storage_access_iri: str | None = None
+    selection_status: str = "automatic"
+    selection_note: str = ""
+    allow_context_blocked_candidate: bool = False
 
 
 @dataclass(frozen=True)
@@ -1219,6 +1226,11 @@ class DraftQueryPlanReviewGate:
     all_issue_codes: list[str]
     reason_codes: list[str]
     review_note: str
+    selection_overridden: bool = False
+    context_blocked_candidate_allowed: bool = False
+    context_blocked_candidate_used: bool = False
+    direct_blocking_reason_codes: list[str] = field(default_factory=list)
+    context_blocking_reason_codes: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -6874,17 +6886,39 @@ class DoxaBase:
         *,
         graph: str | None = "map",
         engine: str = "duckdb",
+        candidate_index: int | None = None,
+        storage_access_iri: str | None = None,
+        allow_context_blocked_candidate: bool = False,
     ) -> DraftQueryPlan:
         engine_value = engine.strip().lower()
         if engine_value != "duckdb":
             raise DoxaBaseError("draft_query_plan currently supports engine='duckdb'")
         context = self.describe_query_context(iri=iri, graph=graph)
-        decision = context.query_target_decision
-        selected_candidate = (
-            context.query_target_candidates[decision.candidate_index]
-            if decision.candidate_index is not None
-            and 0 <= decision.candidate_index < len(context.query_target_candidates)
-            else None
+        (
+            selected_candidate_index,
+            selected_candidate,
+            selection_mode,
+            selection_status,
+            selection_note,
+            requested_storage_access_iri,
+        ) = self._draft_query_plan_select_candidate(
+            context,
+            candidate_index=candidate_index,
+            storage_access_iri=storage_access_iri,
+        )
+        original_selected_candidate = selected_candidate
+        selected_candidate, context_blocked_candidate_used = (
+            self._draft_query_plan_effective_candidate(
+                selected_candidate,
+                allow_context_blocked_candidate=allow_context_blocked_candidate,
+            )
+        )
+        selected_decision = self._draft_query_plan_selected_decision(
+            context,
+            selected_candidate,
+            selected_candidate_index=selected_candidate_index,
+            selection_mode=selection_mode,
+            context_blocked_candidate_used=context_blocked_candidate_used,
         )
         storage_access = self._draft_query_plan_storage_access(
             context,
@@ -6910,9 +6944,14 @@ class DoxaBase:
         review_gate = self._draft_query_plan_review_gate(
             context,
             selected_candidate,
+            original_selected_candidate=original_selected_candidate,
+            selected_decision=selected_decision,
             scan=scan,
             storage_environment=storage_environment,
             binding_requirements=binding_requirements,
+            selection_overridden=selection_mode != "automatic",
+            allow_context_blocked_candidate=allow_context_blocked_candidate,
+            context_blocked_candidate_used=context_blocked_candidate_used,
         )
         return DraftQueryPlan(
             helper="draft_query_plan",
@@ -6933,8 +6972,14 @@ class DoxaBase:
                 api="DoxaBase.describe_query_context",
                 readiness=context.readiness,
                 readiness_note=context.readiness_note,
-                query_target_decision=decision,
-                selected_candidate_index=decision.candidate_index,
+                query_target_decision=context.query_target_decision,
+                selected_candidate_index=selected_candidate_index,
+                selection_mode=selection_mode,
+                requested_candidate_index=candidate_index,
+                requested_storage_access_iri=requested_storage_access_iri,
+                selection_status=selection_status,
+                selection_note=selection_note,
+                allow_context_blocked_candidate=allow_context_blocked_candidate,
             ),
             selected_candidate=selected_candidate,
             scan=scan,
@@ -6959,6 +7004,203 @@ class DoxaBase:
                     "runtime settings."
                 ),
             ],
+        )
+
+    def _draft_query_plan_select_candidate(
+        self,
+        context: QueryPlanningContext,
+        *,
+        candidate_index: int | None,
+        storage_access_iri: str | None,
+    ) -> tuple[int | None, QueryTargetCandidate | None, str, str, str, str | None]:
+        if candidate_index is not None and storage_access_iri is not None:
+            raise DoxaBaseError(
+                "Pass either candidate_index or storage_access_iri, not both."
+            )
+
+        if candidate_index is not None:
+            if candidate_index < 0 or candidate_index >= len(
+                context.query_target_candidates
+            ):
+                raise DoxaBaseError(
+                    "candidate_index must point into query_target_candidates; "
+                    f"got {candidate_index} for "
+                    f"{len(context.query_target_candidates)} candidate(s)."
+                )
+            return (
+                candidate_index,
+                context.query_target_candidates[candidate_index],
+                "candidate_index",
+                "matched",
+                f"Caller selected candidate {candidate_index} by candidate_index.",
+                None,
+            )
+
+        if storage_access_iri is not None:
+            storage_access_value = self._required_iri(
+                "storage_access_iri",
+                storage_access_iri,
+            )
+            matches = [
+                (index, candidate)
+                for index, candidate in enumerate(context.query_target_candidates)
+                if candidate.storage_access is not None
+                and candidate.storage_access.iri == storage_access_value
+            ]
+            if not matches:
+                raise DoxaBaseError(
+                    "storage_access_iri did not match any query target "
+                    f"candidate: {storage_access_value}"
+                )
+            if len(matches) > 1:
+                indexes = ", ".join(str(index) for index, _candidate in matches)
+                raise DoxaBaseError(
+                    "storage_access_iri matched multiple query target candidates "
+                    f"({indexes}); pass candidate_index for an exact selection."
+                )
+            selected_index, selected_candidate = matches[0]
+            return (
+                selected_index,
+                selected_candidate,
+                "storage_access_iri",
+                "matched",
+                (
+                    "Caller selected storage_access_iri "
+                    f"{storage_access_value}, matching candidate {selected_index}."
+                ),
+                storage_access_value,
+            )
+
+        decision = context.query_target_decision
+        if (
+            decision.candidate_index is not None
+            and 0 <= decision.candidate_index < len(context.query_target_candidates)
+        ):
+            return (
+                decision.candidate_index,
+                context.query_target_candidates[decision.candidate_index],
+                "automatic",
+                "automatic",
+                (
+                    "Automatic query_target_decision selected candidate "
+                    f"{decision.candidate_index}."
+                ),
+                None,
+            )
+        return (
+            None,
+            None,
+            "automatic",
+            "automatic",
+            "Automatic query_target_decision did not select a candidate.",
+            None,
+        )
+
+    def _draft_query_plan_effective_candidate(
+        self,
+        selected_candidate: QueryTargetCandidate | None,
+        *,
+        allow_context_blocked_candidate: bool,
+    ) -> tuple[QueryTargetCandidate | None, bool]:
+        if selected_candidate is None:
+            return None, False
+        context_blockers = self._query_target_context_blocking_reasons(
+            selected_candidate.review_reasons
+        )
+        if (
+            not allow_context_blocked_candidate
+            or not context_blockers
+            or selected_candidate.direct_review_required
+        ):
+            return selected_candidate, False
+
+        direct_review_reasons = list(selected_candidate.direct_review_reasons)
+        direct_review_required = any(
+            reason.severity in {"error", "warning"}
+            for reason in direct_review_reasons
+        )
+        review_required = direct_review_required
+        return (
+            replace(
+                selected_candidate,
+                review_required=review_required,
+                review_reasons=direct_review_reasons,
+                direct_review_required=direct_review_required,
+                candidate_path_status=self._query_candidate_path_status(
+                    selected_candidate.candidate_path,
+                    review_required=review_required,
+                    review_reasons=direct_review_reasons,
+                ),
+            ),
+            True,
+        )
+
+    def _draft_query_plan_selected_decision(
+        self,
+        context: QueryPlanningContext,
+        selected_candidate: QueryTargetCandidate | None,
+        *,
+        selected_candidate_index: int | None,
+        selection_mode: str,
+        context_blocked_candidate_used: bool,
+    ) -> QueryTargetDecision:
+        if (
+            selection_mode == "automatic"
+            and not context_blocked_candidate_used
+        ):
+            return context.query_target_decision
+        if selected_candidate is None or selected_candidate_index is None:
+            return QueryTargetDecision(
+                status="no_candidate",
+                summary=(
+                    "No query target candidate is available for this "
+                    "draft_query_plan call."
+                ),
+                candidate_index=None,
+                candidate_path=None,
+                candidate_path_status=None,
+                direct_review_required=None,
+                reason_codes=[],
+            )
+
+        if (
+            selected_candidate.candidate_path_status == "ready"
+            and not selected_candidate.review_required
+        ):
+            status = "ready"
+            state_summary = "is ready for query planning"
+        elif (
+            selected_candidate.review_required
+            and not selected_candidate.direct_review_required
+        ):
+            status = "context_blocked"
+            state_summary = (
+                "has no direct warning or error, but broader context has "
+                "blockers"
+            )
+        else:
+            status = "candidate_needs_review"
+            state_summary = "needs review before executable query use"
+
+        selector_summary = (
+            "Automatic selection"
+            if selection_mode == "automatic"
+            else f"Explicit {selection_mode} selection"
+        )
+        if context_blocked_candidate_used:
+            state_summary = (
+                "is treated as direct-clean for this draft because "
+                "allow_context_blocked_candidate=True ignored sibling-only "
+                "context blockers"
+            )
+        return self._query_target_decision_for_candidate(
+            selected_candidate,
+            index=selected_candidate_index,
+            status=status,
+            summary=(
+                f"{selector_summary} chose candidate {selected_candidate_index}, "
+                f"which {state_summary}."
+            ),
         )
 
     @staticmethod
@@ -7328,25 +7570,48 @@ class DoxaBase:
         context: QueryPlanningContext,
         selected_candidate: QueryTargetCandidate | None,
         *,
+        original_selected_candidate: QueryTargetCandidate | None,
+        selected_decision: QueryTargetDecision,
         scan: DraftQueryPlanScan,
         storage_environment: DraftQueryPlanStorageEnvironment,
         binding_requirements: list[DraftQueryPlanBinding],
+        selection_overridden: bool,
+        allow_context_blocked_candidate: bool,
+        context_blocked_candidate_used: bool,
     ) -> DraftQueryPlanReviewGate:
-        decision = context.query_target_decision
         blocking_reason_codes = self._draft_query_plan_blocking_reason_codes(
             context,
             selected_candidate,
+            selected_decision=selected_decision,
             scan=scan,
+            context_blocked_candidate_used=context_blocked_candidate_used,
         )
         executable_without_review = (
-            context.readiness == "ready_for_query_planning"
-            and decision.status == "ready"
-            and decision.candidate_path_status == "ready"
-            and decision.direct_review_required is False
+            (
+                context.readiness == "ready_for_query_planning"
+                or context_blocked_candidate_used
+            )
+            and selected_decision.status == "ready"
+            and selected_decision.candidate_path_status == "ready"
+            and selected_decision.direct_review_required is False
             and not blocking_reason_codes
         )
         binding_values_required = any(
             binding.required for binding in binding_requirements
+        )
+        direct_blocking_reason_codes = self._query_issue_codes(
+            self._query_target_blocking_reasons(
+                selected_candidate.direct_review_reasons
+                if selected_candidate is not None
+                else []
+            )
+        )
+        context_blocking_reason_codes = self._query_issue_codes(
+            self._query_target_context_blocking_reasons(
+                original_selected_candidate.review_reasons
+                if original_selected_candidate is not None
+                else []
+            )
         )
         return DraftQueryPlanReviewGate(
             executable_without_review=executable_without_review,
@@ -7359,9 +7624,9 @@ class DoxaBase:
                 and not storage_environment.runtime_resolution_required
                 and not binding_values_required
             ),
-            status=decision.status,
-            direct_review_required=decision.direct_review_required,
-            candidate_path_status=decision.candidate_path_status,
+            status=selected_decision.status,
+            direct_review_required=selected_decision.direct_review_required,
+            candidate_path_status=selected_decision.candidate_path_status,
             blocking_reason_codes=blocking_reason_codes,
             all_issue_codes=self._query_issue_codes(context.issues),
             reason_codes=blocking_reason_codes,
@@ -7372,6 +7637,11 @@ class DoxaBase:
                 if selected_candidate is not None
                 else "No query target candidate is available."
             ),
+            selection_overridden=selection_overridden,
+            context_blocked_candidate_allowed=allow_context_blocked_candidate,
+            context_blocked_candidate_used=context_blocked_candidate_used,
+            direct_blocking_reason_codes=direct_blocking_reason_codes,
+            context_blocking_reason_codes=context_blocking_reason_codes,
         )
 
     def _draft_query_plan_blocking_reason_codes(
@@ -7379,21 +7649,26 @@ class DoxaBase:
         context: QueryPlanningContext,
         selected_candidate: QueryTargetCandidate | None,
         *,
+        selected_decision: QueryTargetDecision,
         scan: DraftQueryPlanScan,
+        context_blocked_candidate_used: bool,
     ) -> list[str]:
-        decision = context.query_target_decision
-        codes = list(decision.reason_codes)
-        if not codes and context.readiness != "ready_for_query_planning":
+        codes = list(selected_decision.reason_codes)
+        if (
+            not codes
+            and context.readiness != "ready_for_query_planning"
+            and not context_blocked_candidate_used
+        ):
             issue_codes = self._query_blocking_issue_codes(context.issues)
             if selected_candidate is None:
                 codes.extend(issue_codes)
-            elif issue_codes and decision.direct_review_required is False:
+            elif issue_codes and selected_decision.direct_review_required is False:
                 codes.append("query_context_has_other_blockers")
             else:
                 codes.extend(issue_codes)
         if (
             selected_candidate is not None
-            and decision.candidate_path_status == "ready"
+            and selected_decision.candidate_path_status == "ready"
             and scan.function is None
         ):
             codes.append("scan_function_not_inferred")
@@ -7841,6 +8116,16 @@ class DoxaBase:
             if reason.code != "query_context_has_other_blockers"
         ]
 
+    def _query_target_context_blocking_reasons(
+        self,
+        review_reasons: Iterable[QueryPlanningIssue],
+    ) -> list[QueryPlanningIssue]:
+        return [
+            reason
+            for reason in self._query_target_blocking_reasons(review_reasons)
+            if reason.code == "query_context_has_other_blockers"
+        ]
+
     def _query_candidate_metadata_issue(
         self,
         *,
@@ -7866,6 +8151,20 @@ class DoxaBase:
                 "or simplify the template before executable use."
             ),
             resource=self._summary_from_description(storage_access),
+            details={
+                "template": template,
+                "template_source_resource_iri": source_resource.iri,
+                "storage_access_iri": storage_access.iri,
+                "storage_protocol_iri": (
+                    storage_access.storage_protocol.iri
+                    if storage_access.storage_protocol is not None
+                    else None
+                ),
+                "storage_root": storage_access.storage_root,
+                "bucket_name": storage_access.bucket_name,
+                "key_prefix": storage_access.key_prefix,
+                "mismatch_reasons": mismatch_reasons,
+            },
         )
 
     def _query_target_candidate_metadata_issues(
@@ -8029,6 +8328,11 @@ class DoxaBase:
                 if any(issue.severity == "error" for issue in excluded_blockers)
                 else "warning"
             )
+            excluded_resource_iris = [
+                issue.resource.iri
+                for issue in excluded_blockers
+                if issue.resource is not None
+            ]
             review_reasons.append(
                 QueryPlanningIssue(
                     code="query_context_has_other_blockers",
@@ -8044,6 +8348,15 @@ class DoxaBase:
                         label=dataset.label or self._local_name(dataset.iri),
                         description=dataset.description,
                     ),
+                    details={
+                        "excluded_blocker_count": len(excluded_blockers),
+                        "excluded_blocker_codes": self._query_issue_codes(
+                            excluded_blockers
+                        ),
+                        "excluded_blocker_resource_iris": list(
+                            dict.fromkeys(excluded_resource_iris)
+                        ),
+                    },
                 )
             )
         return review_reasons
@@ -8258,6 +8571,7 @@ class DoxaBase:
             severity: str,
             message: str,
             resource: ResourceSummary | None = None,
+            details: dict[str, Any] | None = None,
         ) -> None:
             issues.append(
                 QueryPlanningIssue(
@@ -8265,6 +8579,7 @@ class DoxaBase:
                     severity=severity,
                     message=message,
                     resource=resource,
+                    details=details,
                 )
             )
 
@@ -8335,6 +8650,18 @@ class DoxaBase:
                         "or connection reference before executable use."
                     ),
                     access_resource,
+                    {
+                        "storage_access_iri": access.iri,
+                        "storage_protocol_iri": (
+                            access.storage_protocol.iri
+                            if access.storage_protocol is not None
+                            else None
+                        ),
+                        "storage_root": access.storage_root,
+                        "bucket_name": access.bucket_name,
+                        "key_prefix": access.key_prefix,
+                        "mismatch_reasons": location_mismatch_reasons,
+                    },
                 )
             self._add_layout_status_issue(
                 issues,

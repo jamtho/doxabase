@@ -551,6 +551,9 @@ few useful gaps:
   candidate can remain `orientation_only` because sibling S3 or stale partition
   hints block the overall context; read `query_target_decision.status` and
   `direct_review_required` before concluding the local route itself is bad.
+  Follow-up trials led to explicit `draft_query_plan` selectors and
+  `allow_context_blocked_candidate=True`, so agents can draft a direct-clean
+  route while preserving the sibling-blocker audit trail.
 - A query storage-metadata matrix trial covered local file/object roots,
   directory roots, S3 bucket/prefix/template combinations, HTTPS roots, and
   database-backed table-like storage. It confirmed MCP/Python parity and

@@ -115,6 +115,11 @@ agent runtime decides how profile X resolves.
    it distinguishes review-required drafts, runtime-resolution work, database
    relation handoffs, URI-template binding work, and execution-attempt-ready
    local/file/object drafts.
+   If the automatic candidate is direct-clean but stale sibling storage or
+   partition metadata blocks the context, pass `candidate_index` or
+   `storage_access_iri` with `allow_context_blocked_candidate=True` to draft the
+   selected route while preserving the automatic decision and context blocker
+   audit fields.
    Read `plan.scan.dataset_verification_note`, `plan.scan.template_lineage`,
    and the scan source verification fields before trusting a path. In the AIS
    fixture, `DailyIndex` currently shares the broadcast partition template and

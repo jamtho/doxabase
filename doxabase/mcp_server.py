@@ -192,10 +192,21 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         iri: str,
         graph: str | None = "map",
         engine: str = "duckdb",
+        candidate_index: int | None = None,
+        storage_access_iri: str | None = None,
+        allow_context_blocked_candidate: bool = False,
     ) -> dict[str, Any]:
         """Draft a non-executed, review-gated physical query plan."""
 
-        return draft_query_plan_tool(db, iri=iri, graph=graph, engine=engine)
+        return draft_query_plan_tool(
+            db,
+            iri=iri,
+            graph=graph,
+            engine=engine,
+            candidate_index=candidate_index,
+            storage_access_iri=storage_access_iri,
+            allow_context_blocked_candidate=allow_context_blocked_candidate,
+        )
 
     @server.tool(name="doxabase.describe_context_slice")
     def describe_context_slice(

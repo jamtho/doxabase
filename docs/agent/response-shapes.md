@@ -1109,6 +1109,7 @@ issue.domain
 issue.severity
 issue.message
 issue.resource
+issue.details
 ```
 
 `domain` is `query_planning` for physical metadata readiness issues and
@@ -1116,6 +1117,10 @@ issue.resource
 to `severity`: an `error` in `query_planning` means executable query-planning
 metadata is missing or contradicted, not that profile lore or graph validation
 failed.
+`details` is optional structured context for selected issue kinds. For example,
+protocol/location mismatches include storage fields and mismatch reasons, while
+`query_context_has_other_blockers` includes excluded blocker counts, codes, and
+resource IRIs.
 
 Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and
@@ -1157,8 +1162,16 @@ is a shortcut for routing, not a replacement for reading the underlying fields.
 `binding_values_required` appears when URI-template placeholders still need
 caller-supplied runtime values; in that case
 `review_gate.ready_for_execution_attempt` is false.
-`plan.selected_candidate` is the candidate named by
-`query_target_decision.candidate_index`. `plan.scan` gives a best-effort scan
+By default, `plan.selected_candidate` is the candidate named by
+`query_target_decision.candidate_index`. Callers may override it with
+`candidate_index` or `storage_access_iri`; `source_context.query_target_decision`
+still carries the automatic decision, while `selected_candidate_index`,
+`selection_mode`, `requested_candidate_index`,
+`requested_storage_access_iri`, `selection_status`, `selection_note`, and
+`allow_context_blocked_candidate` describe the actual draft selection.
+`storage_access_iri` must identify exactly one query target candidate; use
+`candidate_index` when one storage access has multiple candidate paths.
+`plan.scan` gives a best-effort scan
 function such as `read_parquet`, a URI/path template for file/object storage,
 file format, compression, and the selected candidate path status. For
 database-backed storage, `scan.uri_template` is intentionally absent;
@@ -1199,6 +1212,14 @@ plan handoff: they may include decision reasons,
 `query_context_has_other_blockers` when the selected candidate is clean but
 sibling metadata blocks the overall context, or `scan_function_not_inferred`
 when DuckDB has no file-scan function for the selected storage/layout shape.
+`review_gate.selection_overridden`, `context_blocked_candidate_allowed`,
+`context_blocked_candidate_used`, `direct_blocking_reason_codes`, and
+`context_blocking_reason_codes` explain whether an explicit or allowed
+context-blocked selection changed the handoff gate. When
+`allow_context_blocked_candidate=True` and the selected candidate has no direct
+warning/error, sibling-only context blockers can be excluded from the selected
+handoff while remaining visible in `issues`, the automatic decision, and
+`context_blocking_reason_codes`.
 Database-backed storage currently uses this generic review-draft shape too;
 expect `scan.function=None` and `scan_function_not_inferred` until a
 database-query-specific plan mode exists. Those plans use

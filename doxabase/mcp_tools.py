@@ -295,8 +295,20 @@ def draft_query_plan_tool(
     iri: str,
     graph: str | None = "map",
     engine: str = "duckdb",
+    candidate_index: int | None = None,
+    storage_access_iri: str | None = None,
+    allow_context_blocked_candidate: bool = False,
 ) -> dict[str, Any]:
-    return to_dict(db.draft_query_plan(iri=iri, graph=graph, engine=engine))
+    return to_dict(
+        db.draft_query_plan(
+            iri=iri,
+            graph=graph,
+            engine=engine,
+            candidate_index=candidate_index,
+            storage_access_iri=storage_access_iri,
+            allow_context_blocked_candidate=allow_context_blocked_candidate,
+        )
+    )
 
 
 def describe_context_slice_tool(

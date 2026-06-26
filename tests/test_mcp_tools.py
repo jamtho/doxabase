@@ -1843,6 +1843,70 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["caveats"]
 
 
+def test_draft_query_plan_tool_accepts_explicit_storage_selection(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    local_storage = db.record_map_storage_access(
+        "https://example.test/project#orders_z_local_storage",
+        label="Orders local access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    stale_storage = db.record_map_storage_access(
+        "https://example.test/project#orders_a_stale_s3_storage",
+        label="Orders stale S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="old-orders",
+        key_prefix="orders",
+        credential_reference="profile:old-orders",
+        layout_verification_status="rc:ContradictedLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=["orders/dt={date}.parquet"],
+        storage_accesses=[local_storage.iri, stale_storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = draft_query_plan_tool(
+        db,
+        iri=dataset,
+        storage_access_iri=local_storage.iri,
+        allow_context_blocked_candidate=True,
+    )
+
+    assert result["source_context"]["query_target_decision"]["status"] == (
+        "context_blocked"
+    )
+    assert result["source_context"]["selection_mode"] == "storage_access_iri"
+    assert result["source_context"]["requested_storage_access_iri"] == (
+        local_storage.iri
+    )
+    assert result["source_context"]["selection_status"] == "matched"
+    assert result["source_context"]["allow_context_blocked_candidate"] is True
+    assert result["selected_candidate"]["storage_access"]["iri"] == local_storage.iri
+    assert result["selected_candidate"]["candidate_path_status"] == "ready"
+    assert result["scan"]["candidate_path_status"] == "ready"
+    assert result["review_gate"]["status"] == "ready"
+    assert result["review_gate"]["context_blocked_candidate_used"] is True
+    assert result["review_gate"]["context_blocking_reason_codes"] == [
+        "query_context_has_other_blockers"
+    ]
+    assert result["review_gate"]["blocking_reason_codes"] == []
+    assert result["handoff_kind"] == "binding_values_required"
+
+
 def test_draft_query_plan_tool_returns_database_relation_handoff(
     tmp_path: Path,
 ) -> None:

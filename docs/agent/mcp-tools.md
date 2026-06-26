@@ -271,7 +271,10 @@ relation-like planning target rather than a joined connection path.
 
 Returns a non-executed, review-gated physical plan draft over
 `describe_query_context`. It currently supports `engine="duckdb"` and selects
-the candidate named by `query_target_decision.candidate_index`. The payload
+the candidate named by `query_target_decision.candidate_index` by default. Pass
+`candidate_index` or `storage_access_iri` for an explicit selection, and use
+`allow_context_blocked_candidate=true` only when the selected candidate is
+direct-clean but sibling metadata still blocks the whole context. The payload
 includes the selected candidate, scan hint such as `read_parquet`, URI/path
 template for file/object storage, database relation fields for database-backed
 storage, parsed `required_bindings`, structured `binding_requirements`,
@@ -288,6 +291,9 @@ alias for blocking reasons, `binding_values_required`, and
 handoff-only blockers such as `query_context_has_other_blockers` for clean
 selected candidates with bad siblings, or `scan_function_not_inferred` when
 DuckDB has no file-scan function for the selected storage/layout shape.
+`source_context` reports selection mode/request/status/note, and `review_gate`
+reports selection override, context-block allowance/use, direct blocking codes,
+and context blocking codes.
 `executable_without_review=true` means the selected graph metadata has no
 review blocker; `ready_for_execution_attempt=true` also requires no recorded
 runtime resolution and no required binding placeholders to remain.
