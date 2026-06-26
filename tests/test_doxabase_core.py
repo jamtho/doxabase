@@ -14784,6 +14784,27 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
         for action in advisory.suggested_next_actions
         if action.tool_name == "stage_map_assertion_change"
     ] == ["rc:physicalType", "rc:valueType"]
+    staged_type_actions = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+    ]
+    assert all(
+        action.arguments["supporting_patterns"] == []
+        for action in staged_type_actions
+    )
+    assert all(
+        "returned pattern_iri" in action.reason
+        for action in staged_type_actions
+    )
+    assert all(
+        "supporting_patterns=[]" in action.call
+        for action in staged_type_actions
+    )
+    assert all(
+        "add its pattern_iri to supporting_patterns" in action.arguments["review_note"]
+        for action in staged_type_actions
+    )
     assert [action.tool_name for action in draft.suggested_next_actions] == [
         "describe_context_slice",
         "record_pattern",

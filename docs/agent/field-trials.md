@@ -1059,6 +1059,11 @@ few useful gaps:
   structured dataset summaries still returned all selected columns. Truncated
   broad slices now warn when structured context remains large and suggest a
   narrower column, profile, metric, or pattern seed.
+- A profile type-review follow-through trial found that optional
+  `record_pattern` synthesis was useful but not obviously carried into later
+  staged assertions. Type-review staging suggestions now include an empty
+  `supporting_patterns` slot and a carry-forward note for the returned
+  `pattern_iri`.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

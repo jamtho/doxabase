@@ -12196,6 +12196,10 @@ class DoxaBase:
             ),
             action_label="Record type-finding pattern",
         )
+        pattern_carry_forward_note = (
+            " If you used the suggested record_pattern action, add its returned "
+            "pattern_iri to supporting_patterns on this staging call."
+        )
 
         if map_column_found:
             if (
@@ -12218,6 +12222,7 @@ class DoxaBase:
                     (
                         "Stage a reviewable physical-type assertion only after "
                         "checking the profile evidence and value-type context."
+                        f"{pattern_carry_forward_note}"
                     ),
                     action_label="Stage physical type assertion",
                 )
@@ -12240,6 +12245,7 @@ class DoxaBase:
                     (
                         "Stage a reviewable value-type assertion only after "
                         "checking the profile evidence and domain semantics."
+                        f"{pattern_carry_forward_note}"
                     ),
                     action_label="Stage value type assertion",
                 )
@@ -12273,11 +12279,14 @@ class DoxaBase:
                 "map assertion and review current context before applying."
             ),
             "supporting_observations": [profile.iri],
+            "supporting_patterns": [],
             "evidence": [evidence_iri],
             "revision_anchors": [profile.observed_column.iri, object_iri],
             "review_note": (
                 "Generated from a profile type-finding advisory; profile type "
-                "findings are evidence, not automatic map updates."
+                "findings are evidence, not automatic map updates. If the "
+                "suggested type-finding pattern was recorded first, add its "
+                "pattern_iri to supporting_patterns before staging."
             ),
             "review_recommendation": (
                 "Apply only if the profile evidence and current map/value-type "

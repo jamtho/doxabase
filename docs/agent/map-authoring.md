@@ -92,7 +92,9 @@ recommendation indexes. `physical_type` and `value_type` are still persisted on
 profile observations when `update_map_column=False`; `draft_profile_map_updates`
 surfaces them as `type_advisories` with context, pattern, and focused staged
 assertion suggestions. Review those advisories before turning type evidence into
-current map facts.
+current map facts. If you follow the suggested `record_pattern` action first,
+copy the returned `pattern_iri` into the following
+`stage_map_assertion_change(..., supporting_patterns=[...])` call.
 
 Use `stage_profile_map_updates(..., accepted_recommendation_indexes=[...])` when
 accepted profile-derived changes should be reviewed before apply. It stages one
