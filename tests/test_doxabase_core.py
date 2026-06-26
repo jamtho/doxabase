@@ -4905,6 +4905,61 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         applied.applied_revision_iri
     ]
 
+    def page_counts(field_name: str, page) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in page.revisions:
+            value = getattr(item, field_name)
+            if value is None:
+                continue
+            counts[value] = counts.get(value, 0) + 1
+        return counts
+
+    def page_queue(page) -> dict[str, list[str]]:
+        queues: dict[str, list[str]] = {}
+        for item in page.revisions:
+            if item.next_action is None:
+                continue
+            queues.setdefault(item.next_action.queue, []).append(item.iri)
+        return queues
+
+    full_page = db.list_graph_revisions(include_apply_checks=True)
+    first_page = db.list_graph_revisions(
+        include_apply_checks=True,
+        limit=2,
+        offset=0,
+    )
+    second_page = db.list_graph_revisions(
+        include_apply_checks=True,
+        limit=2,
+        offset=2,
+    )
+    assert first_page.count == full_page.count
+    assert second_page.count == full_page.count
+    assert len(first_page.revisions) == 2
+    assert len(second_page.revisions) == 2
+    assert first_page.returned_application_status_counts == page_counts(
+        "application_status",
+        first_page,
+    )
+    assert first_page.returned_stale_resolution_state_counts == page_counts(
+        "stale_resolution_state",
+        first_page,
+    )
+    assert first_page.returned_staged_validation_status_counts == page_counts(
+        "staged_validation_status",
+        first_page,
+    )
+    assert first_page.next_action_queue == page_queue(first_page)
+    assert second_page.returned_application_status_counts == page_counts(
+        "application_status",
+        second_page,
+    )
+    assert second_page.next_action_queue == page_queue(second_page)
+    assert first_page.returned_application_status_counts != (
+        full_page.returned_application_status_counts
+    )
+    assert first_page.next_action_queue != full_page.next_action_queue
+
 
 def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     tmp_path: Path,
