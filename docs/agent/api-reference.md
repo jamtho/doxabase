@@ -419,7 +419,9 @@ reruns the draft, stages the accepted recommendation indexes as one grouped
 reviewable `map` revision, and returns explicit staged/skipped/not-selected
 item statuses plus `status_counts`, `metric_advisory_count`, and
 `metric_advisory_status_counts`. Use it when profile-derived map changes need
-review before application. The staged patch uses helper-equivalent RDF:
+review before application. When staging creates a revision, follow
+`suggested_next_actions` to `check_staged_revision_apply` before reviewing,
+exporting, or applying it. The staged patch uses helper-equivalent RDF:
 missing dataset shells get `rdf:type rc:Dataset`, unmapped columns get
 `rdf:type rc:Column`, `rc:columnName`, and `rc:hasColumn`, and scalar
 row-count/nullability changes remove old helper-owned values before adding

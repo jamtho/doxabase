@@ -1639,6 +1639,8 @@ class ProfileMapUpdateStagingRecord:
     metric_advisory_count: int
     metric_advisory_status_counts: dict[str, int]
     staged_revision: StagedGraphRevisionRecord | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
     review_note: str
 
 
@@ -7230,6 +7232,9 @@ class DoxaBase:
                 validation_scope=validation_scope,
             )
 
+        suggested_next_actions = self._profile_update_staging_actions(
+            staged_revision,
+        )
         return ProfileMapUpdateStagingRecord(
             dataset=draft.dataset,
             evidence=draft.evidence,
@@ -7246,6 +7251,10 @@ class DoxaBase:
             metric_advisory_count=draft.metric_advisory_count,
             metric_advisory_status_counts=draft.metric_advisory_status_counts,
             staged_revision=staged_revision,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
             review_note=self._profile_update_staging_review_note(
                 items,
                 staged_indexes=staged_indexes,
@@ -7256,6 +7265,30 @@ class DoxaBase:
                 allow_sampled_row_count_updates=allow_sampled_row_count_updates,
             ),
         )
+
+    def _profile_update_staging_actions(
+        self,
+        staged_revision: StagedGraphRevisionRecord | None,
+    ) -> list[SuggestedNextAction]:
+        if staged_revision is None:
+            return []
+        arguments = {"iri": staged_revision.revision_iri}
+        return [
+            SuggestedNextAction(
+                action_label="Check staged profile map updates",
+                tool_name="check_staged_revision_apply",
+                mcp_tool_name="doxabase.check_staged_revision_apply",
+                arguments=arguments,
+                reason=(
+                    "Run the read-only apply check before reviewing, exporting, "
+                    "or applying the grouped profile-derived map revision."
+                ),
+                call=self._suggested_call_string(
+                    "check_staged_revision_apply",
+                    arguments,
+                ),
+            )
+        ]
 
     def _profile_map_update_draft_actions(
         self,

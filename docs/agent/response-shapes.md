@@ -850,6 +850,8 @@ result.metric_advisories
 result.metric_advisory_count
 result.metric_advisory_status_counts
 result.staged_revision
+result.suggested_next_actions
+result.suggested_next_calls
 result.review_note
 ```
 
@@ -872,15 +874,20 @@ item.profile_observation_iri
 
 When at least one accepted recommendation passes safety checks,
 `result.staged_revision` is a normal `StagedGraphRevisionRecord` for one grouped
-`map` revision. Use `describe_staged_revision()` to inspect preserved profile
-observation support, caller claim/pattern support, revision anchors, and shared
-evidence because the immediate staging response stays compact. Sampled row-count
+`map` revision. `suggested_next_actions` then points to
+`check_staged_revision_apply` for that staged revision; run the read-only check
+before reviewing, exporting, or applying. Use `describe_staged_revision()` to
+inspect preserved profile observation support, caller claim/pattern support,
+revision anchors, and shared evidence because the immediate staging response
+stays compact. Sampled row-count
 recommendations are skipped by default and
 reported in `skipped_recommendation_indexes`; metric advisories stay in
 `metric_advisories` and are not staged as map facts. The same advisory count and
 status summary appears in the staging response and staged revision review note,
 so later reviewers can see whether undefined, defined, or ambiguous project
 metric vocabulary was present.
+When no accepted recommendation produces a staged patch,
+`result.staged_revision is None` and `suggested_next_actions` is empty.
 An accepted recommendation index can therefore appear under either `staged` or
 `skipped`; `not_selected` only means the draft recommendation was not accepted
 for this staging call. Use `status_counts` for quick routing summaries before

@@ -12545,6 +12545,18 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.staged_revision is not None
     assert staged.staged_revision.validation_conforms is True
     assert staged.staged_revision.changed_graphs == ["map"]
+    assert [action.tool_name for action in staged.suggested_next_actions] == [
+        "check_staged_revision_apply"
+    ]
+    assert staged.suggested_next_actions[0].arguments == {
+        "iri": staged.staged_revision.revision_iri
+    }
+    assert staged.suggested_next_actions[0].mcp_tool_name == (
+        "doxabase.check_staged_revision_apply"
+    )
+    assert staged.suggested_next_calls == [
+        f"check_staged_revision_apply(iri={staged.staged_revision.revision_iri!r})"
+    ]
     assert [patch.target_graph for patch in staged.staged_revision.patches] == [
         "map",
         "map",
@@ -12788,6 +12800,8 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     assert staged.not_selected_recommendation_indexes == [1]
     assert staged.status_counts == {"staged": 0, "skipped": 1, "not_selected": 1}
     assert staged.staged_revision is None
+    assert staged.suggested_next_actions == []
+    assert staged.suggested_next_calls == []
     assert staged.items[0].status == "skipped"
     assert staged.items[1].status == "not_selected"
     assert "Sampled row-count recommendations" in (staged.items[0].reason or "")
@@ -12803,6 +12817,9 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     assert mixed.not_selected_recommendation_indexes == []
     assert mixed.status_counts == {"staged": 1, "skipped": 1, "not_selected": 0}
     assert mixed.staged_revision is not None
+    assert mixed.suggested_next_actions[0].tool_name == (
+        "check_staged_revision_apply"
+    )
 
     override = db.stage_profile_map_updates(
         dataset,

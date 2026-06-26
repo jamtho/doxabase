@@ -802,6 +802,9 @@ few useful gaps:
   routing trial found draft responses still made agents infer whether to stage
   or only inspect metric vocabulary; drafts now carry `recommendation_count`,
   stable `recommendation_index` values, and top-level suggested actions/calls.
+  An end-to-end profile-bundle retest found staging itself should hand off to
+  the read-only apply check; staging responses now suggest
+  `check_staged_revision_apply` when a grouped revision is created.
 - A resource-revision stress trial confirmed `list_resource_revisions` handles
   anchors, exact patch roles, pagination after filtering, restage chains, and
   applied-source patch mentions, but found two import/repair edges. Applied

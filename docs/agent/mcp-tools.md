@@ -272,7 +272,9 @@ grouped reviewable `map` revision. Pass `dataset_iri`, `evidence_iri`, and
 `staged_recommendation_indexes`, `skipped_recommendation_indexes`,
 `not_selected_recommendation_indexes`, `status_counts`, metric advisories,
 `metric_advisory_count`, `metric_advisory_status_counts`, and the staged
-revision when at least one accepted recommendation was staged. The helper uses
+revision when at least one accepted recommendation was staged. When a staged
+revision is created, `suggested_next_actions` points to
+`check_staged_revision_apply` for the read-only pre-apply check. The helper uses
 helper-equivalent RDF for dataset and column shells, keeps metric advisories as
 review prompts in the response and staged revision review note, and skips
 accepted sampled row-count

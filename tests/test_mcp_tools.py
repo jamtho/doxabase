@@ -3323,6 +3323,19 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["metric_advisory_count"] == 0
     assert result["metric_advisory_status_counts"] == {}
     assert result["metric_advisories"] == []
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "check_staged_revision_apply"
+    )
+    assert result["suggested_next_actions"][0]["mcp_tool_name"] == (
+        "doxabase.check_staged_revision_apply"
+    )
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "iri": result["staged_revision"]["revision_iri"]
+    }
+    assert result["suggested_next_calls"] == [
+        "check_staged_revision_apply("
+        f"iri={result['staged_revision']['revision_iri']!r})"
+    ]
     described = describe_staged_revision_tool(
         db,
         result["staged_revision"]["revision_iri"],
