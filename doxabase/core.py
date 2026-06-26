@@ -6550,6 +6550,9 @@ class DoxaBase:
         rationale: str | None = None,
         created_at: datetime | str | None = None,
         created_by: str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        supporting_patterns: Iterable[str] | str | None = None,
+        revision_anchors: Iterable[str] | str | None = None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -6588,7 +6591,7 @@ class DoxaBase:
         not_selected_indexes: list[int] = []
         items: list[ProfileMapUpdateStagingItem] = []
         support_observations: list[str] = []
-        revision_anchors: list[str] = [draft.dataset.iri]
+        profile_revision_anchors: list[str] = [draft.dataset.iri]
 
         for index, recommendation in enumerate(recommendations):
             status = "not_selected"
@@ -6615,7 +6618,7 @@ class DoxaBase:
                         recommendation,
                         dataset_iri=draft.dataset.iri,
                     ):
-                        revision_anchors.append(anchor)
+                        profile_revision_anchors.append(anchor)
                 else:
                     status = "skipped"
                     skipped_indexes.append(index)
@@ -6675,8 +6678,13 @@ class DoxaBase:
                 created_at=created_at,
                 created_by=created_by,
                 supporting_observations=list(dict.fromkeys(support_observations)),
+                supporting_claims=self._merge_iri_values(supporting_claims, []),
+                supporting_patterns=self._merge_iri_values(supporting_patterns, []),
                 evidence=[draft.evidence_iri],
-                revision_anchors=list(dict.fromkeys(revision_anchors)),
+                revision_anchors=self._merge_iri_values(
+                    revision_anchors,
+                    profile_revision_anchors,
+                ),
                 review_note=self._profile_update_staging_review_note(
                     items,
                     staged_indexes=staged_indexes,

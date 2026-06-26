@@ -86,6 +86,9 @@ map-update recommendations, and no-op advisory staging is deferred.
 An accepted index is still routed through guardrails: it may be `staged` or
 `skipped`, while `not_selected` means the draft row was not accepted for that
 call. Check `status_counts` first, then item reasons.
+When a profile-derived change is backed by synthesized lore, pass
+`supporting_claims`, `supporting_patterns`, or extra `revision_anchors`; these
+links are recorded on the staged revision for later review.
 
 Use direct map helpers only when immediate mutation is intended. Treat sampled
 row-count recommendations conservatively: the staging helper skips them by

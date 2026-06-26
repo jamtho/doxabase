@@ -3011,12 +3011,32 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
             }
         ],
     )
+    claim = record_claim_observation_tool(
+        db,
+        summary="Orders profile support claim.",
+        claim_text="The profile run supports updating the Orders map facts.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=[table, status_column],
+        evidence_sources=["test://orders-profile-support-claim"],
+    )
+    pattern = record_pattern_tool(
+        db,
+        summary="Orders profile support pattern.",
+        pattern_text="Full profile runs can support grouped map update staging.",
+        rationale="The claim and profile target the same Orders map resources.",
+        pattern_targets=[table],
+        supporting_claims=[claim["claim_iri"]],
+    )
+    extra_anchor = "https://example.test/project#OrdersProfileReview"
 
     result = stage_profile_map_updates_tool(
         db,
         dataset_iri=table,
         evidence_iri=shared_evidence,
         accepted_recommendation_indexes=[0, 1],
+        supporting_claims=[claim["claim_iri"]],
+        supporting_patterns=[pattern["pattern_iri"]],
+        revision_anchors=[extra_anchor, table],
     )
 
     assert result["dataset"]["iri"] == table
@@ -3034,6 +3054,21 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["metric_advisory_count"] == 0
     assert result["metric_advisory_status_counts"] == {}
     assert result["metric_advisories"] == []
+    described = describe_staged_revision_tool(
+        db,
+        result["staged_revision"]["revision_iri"],
+    )
+    assert [item["iri"] for item in described["supporting_claims"]] == [
+        claim["claim_iri"]
+    ]
+    assert [item["iri"] for item in described["supporting_patterns"]] == [
+        pattern["pattern_iri"]
+    ]
+    assert {anchor["iri"] for anchor in described["revision_anchors"]} == {
+        extra_anchor,
+        table,
+        status_column,
+    }
     assert db.describe_dataset(table).row_count_snapshot == 8
 
 

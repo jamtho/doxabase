@@ -264,6 +264,9 @@ def stage_profile_map_updates_tool(
     rationale: str | None = None,
     created_at: str | None = None,
     created_by: str | None = None,
+    supporting_claims: list[str] | None = None,
+    supporting_patterns: list[str] | None = None,
+    revision_anchors: list[str] | None = None,
     validation_scope: str = "all",
 ) -> dict[str, Any]:
     return to_dict(
@@ -277,6 +280,9 @@ def stage_profile_map_updates_tool(
             rationale=rationale,
             created_at=created_at,
             created_by=created_by,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            revision_anchors=revision_anchors,
             validation_scope=validation_scope,  # type: ignore[arg-type]
         )
     )

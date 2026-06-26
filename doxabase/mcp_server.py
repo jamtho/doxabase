@@ -160,6 +160,9 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         rationale: str | None = None,
         created_at: str | None = None,
         created_by: str | None = None,
+        supporting_claims: list[str] | None = None,
+        supporting_patterns: list[str] | None = None,
+        revision_anchors: list[str] | None = None,
         validation_scope: str = "all",
     ) -> dict[str, Any]:
         """Stage accepted profile-map recommendations as one reviewable revision."""
@@ -175,6 +178,9 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             rationale=rationale,
             created_at=created_at,
             created_by=created_by,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            revision_anchors=revision_anchors,
             validation_scope=validation_scope,
         )
 

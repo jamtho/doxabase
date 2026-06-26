@@ -768,10 +768,11 @@ few useful gaps:
   nullable recommendations can be expressed as assertion changes, while missing
   dataset and unmapped column shells require grouped multi-triple patches.
   `stage_profile_map_updates` now groups accepted draft recommendation indexes
-  into one staged revision, preserves profile observation/evidence support, and
-  skips sampled row-count recommendations by default. A follow-up trial showed
-  agents read this most reliably when the response carries `status_counts` and
-  docs say accepted indexes can still route to `skipped`.
+  into one staged revision, preserves profile observation/evidence support, can
+  carry caller claim/pattern support and extra anchors, and skips sampled
+  row-count recommendations by default. A follow-up trial showed agents read
+  this most reliably when the response carries `status_counts` and docs say
+  accepted indexes can still route to `skipped`.
   A profile-advisory routing trial showed map-update recommendation rows were
   routeable, but metric advisories were prose-only and could not distinguish
   defined from undefined project metrics. Metric advisories now carry

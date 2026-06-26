@@ -11442,6 +11442,91 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     }
 
 
+def test_stage_profile_map_updates_preserves_caller_support_metadata(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Payments"
+    status_column = "https://example.test/project#PaymentsStatus"
+    evidence = "https://example.test/project#PaymentsProfileRunEvidence"
+    extra_anchor = "https://example.test/project#PaymentsQualityReview"
+
+    db.record_map_dataset(
+        dataset,
+        label="Payments",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        nullable=False,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Payments were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://payments-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the test Payments table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status had nulls in the full scan.",
+                "null_count": 2,
+            }
+        ],
+    )
+    claim = db.record_claim_observation(
+        summary="Payments profile support claim.",
+        claim_text="The full profile run should update current payment metadata.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=[dataset, status_column],
+        evidence_sources=["test://profile-support-claim"],
+    )
+    pattern = db.record_pattern(
+        summary="Payments profile support pattern.",
+        pattern_text="Repeated full scans are treated as reliable map-update support.",
+        rationale="The claim and profile evidence both point at the same table.",
+        pattern_targets=[dataset],
+        supporting_claims=[claim.claim_iri],
+    )
+
+    staged = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[0, 1],
+        supporting_claims=[claim.claim_iri],
+        supporting_patterns=[pattern.pattern_iri],
+        revision_anchors=[extra_anchor, dataset],
+    )
+
+    assert staged.staged_revision is not None
+    described = db.describe_staged_revision(staged.staged_revision.revision_iri)
+    assert [item.iri for item in described.supporting_claims] == [claim.claim_iri]
+    assert [item.iri for item in described.supporting_patterns] == [
+        pattern.pattern_iri
+    ]
+    assert {item.iri for item in described.supporting_observations} == {
+        item.profile_observation_iri for item in staged.items
+    }
+    assert [item.iri for item in described.evidence] == [evidence]
+    assert {anchor.iri for anchor in described.revision_anchors} == {
+        extra_anchor,
+        dataset,
+        status_column,
+    }
+    validation = db.validate_graph(scope="all")
+    assert validation.conforms, validation.report_text
+
+
 def test_stage_profile_map_updates_stages_thin_shell_for_missing_dataset(
     tmp_path: Path,
 ) -> None:

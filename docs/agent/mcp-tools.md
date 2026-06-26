@@ -258,7 +258,10 @@ helper-equivalent RDF for dataset and column shells, keeps metric advisories as
 review prompts in the response and staged revision review note, and skips
 accepted sampled row-count
 recommendations unless
-`allow_sampled_row_count_updates=true`.
+`allow_sampled_row_count_updates=true`. Optional `supporting_claims`,
+`supporting_patterns`, and `revision_anchors` are passed through to the staged
+revision when at least one recommendation creates a patch; caller anchors are
+merged with the automatic profile-derived anchors.
 
 `doxabase.describe_query_context`
 

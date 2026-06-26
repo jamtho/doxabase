@@ -794,6 +794,18 @@ deferred.
 `db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 returns a `ProfileMapUpdateStagingRecord`:
 
+Optional caller support parameters:
+
+```python
+supporting_claims
+supporting_patterns
+revision_anchors
+```
+
+These links are written only when at least one accepted recommendation produces
+a staged patch. Caller `revision_anchors` are merged with the automatic
+profile-derived dataset/resource anchors.
+
 ```python
 result.dataset
 result.evidence
@@ -832,7 +844,10 @@ item.profile_observation_iri
 
 When at least one accepted recommendation passes safety checks,
 `result.staged_revision` is a normal `StagedGraphRevisionRecord` for one grouped
-`map` revision. Sampled row-count recommendations are skipped by default and
+`map` revision. Use `describe_staged_revision()` to inspect preserved profile
+observation support, caller claim/pattern support, revision anchors, and shared
+evidence because the immediate staging response stays compact. Sampled row-count
+recommendations are skipped by default and
 reported in `skipped_recommendation_indexes`; metric advisories stay in
 `metric_advisories` and are not staged as map facts. The same advisory count and
 status summary appears in the staging response and staged revision review note,
