@@ -97,6 +97,12 @@ Useful fields:
   truncation scope is `triples_only`: resources, route counts, and structured
   contexts still describe the full selected slice.
 
+When `truncated=true`, read `warnings` before assuming the returned payload is
+small. Raw RDF is capped by `max_triples`, but structured contexts still return
+their full selected summaries; wide datasets or very broad seed sets emit a
+warning and should usually be narrowed to a column, profile, metric, or pattern
+seed for a smaller handoff.
+
 Treat a slice as a conversation brief, not a proof of closure. If an important
 resource is absent, use the routes and raw triples to decide whether the profile
 is too narrow, the map lacks a relationship, or the ontology needs a new

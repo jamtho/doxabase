@@ -495,13 +495,17 @@ conservative:
   `rc:appliesStagedRevision`;
 - it returns `post_apply_recheck_revision_iris` and
   `post_apply_recheck_revisions` for other current staged revisions sharing
-  changed graphs that should be rechecked before any further apply.
+  changed graphs or validation dependencies that should be rechecked before any
+  further apply.
 
 After an apply, treat `post_apply_recheck_revisions` as the affected-sibling
 queue for the mutation that just happened. For each row, inspect
-`shared_changed_graphs`, then use the row's fresh `application_status`,
-`decision`, `blocking_reasons`, `next_action`, `suggested_next_actions`, and
-`suggested_next_calls` to route the next step. Re-run
+`recheck_reasons` and `shared_changed_graphs`, then use the row's fresh
+`application_status`, `decision`, `blocking_reasons`, `next_action`,
+`suggested_next_actions`, and `suggested_next_calls` to route the next step.
+`validation_dependency_graph:shapes` means the applied project shape change may
+have changed whether the candidate validates even when its patch target did not
+change. Re-run
 `check_staged_revision_apply` before mutating if substantial time has passed or
 other graph changes have happened. The queue is a recheck cue, not permission to
 apply the siblings.

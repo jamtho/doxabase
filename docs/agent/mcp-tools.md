@@ -1016,12 +1016,12 @@ follow the recorded `rc:patchSequence` order from the original preview. On
 success it records an `rc:AppliedStagedRevision` history event linked to the
 staged revision. The return payload includes
 `post_apply_recheck_revision_iris` for other current staged revisions sharing
-changed graphs, plus `post_apply_recheck_revisions` rows with each revision's
-`changed_graphs`, `shared_changed_graphs`, fresh `application_status`,
-`decision`, `blocking_reasons`, `next_action`, `suggested_next_actions`, and
-`suggested_next_calls`. Re-run apply checks on those rows before further
-mutation when other graph changes may have happened. It is a first apply path,
-not a full merge/rebase workflow.
+changed graphs or validation dependencies, plus `post_apply_recheck_revisions`
+rows with each revision's `changed_graphs`, `shared_changed_graphs`,
+`recheck_reasons`, fresh `application_status`, `decision`, `blocking_reasons`,
+`next_action`, `suggested_next_actions`, and `suggested_next_calls`. Re-run
+apply checks on those rows before further mutation when other graph changes may
+have happened. It is a first apply path, not a full merge/rebase workflow.
 
 `doxabase.export_staged_revision`
 

@@ -2208,13 +2208,15 @@ applied.validation_results
 ```
 
 `post_apply_recheck_revision_iris` lists other current unapplied staged
-revisions that share a changed graph with the applied revision.
+revisions that share a changed graph or validation dependency with the applied
+revision.
 `post_apply_recheck_revisions` carries the same queue as compact rows:
 
 ```python
 item.iri
 item.changed_graphs
 item.shared_changed_graphs
+item.recheck_reasons
 item.application_status
 item.decision
 item.blocking_reasons
@@ -2225,11 +2227,14 @@ item.suggested_next_calls
 
 The routing fields are computed immediately after the apply that created the
 queue. Re-run `check_staged_revision_apply` before mutating if substantial time
-has passed or another graph change has happened. `shared_changed_graphs`
-explains why the row was included after this apply. The list may include
-repair-only rows such as patch conflicts or validation failures that share a
-changed graph; route them through `decision`, `blocking_reasons`, `next_action`,
-or the fresh apply check, not by the presence of the recheck IRI alone.
+has passed or another graph change has happened. `recheck_reasons` explains why
+the row was included after this apply; values include
+`shared_changed_graph:<graph>` and `validation_dependency_graph:<graph>`.
+`shared_changed_graphs` is empty for dependency-only rechecks such as a project
+shape change invalidating a map candidate. The list may include repair-only rows
+such as patch conflicts or validation failures; route them through `decision`,
+`blocking_reasons`, `next_action`, or the fresh apply check, not by the presence
+of the recheck IRI alone.
 
 `db.describe_applied_revision_diff(applied_revision_iri, include_triples=False,
 max_triples=500)` returns `AppliedRevisionDiffDescription`:

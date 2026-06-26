@@ -1050,6 +1050,15 @@ few useful gaps:
   `validation_failed` max-count repair queue rather than an apply queue. Treat
   that as correct: the repair should be a replacement/removal+addition, and
   `current_staged_work_only=True` should show only the active repair item.
+- A validation-dependency staged-revision trial found that applying a project
+  shape could invalidate an otherwise ready map candidate without a shared patch
+  target. Post-apply queues now include validation-dependency rechecks and expose
+  `recheck_reasons` so agents can see whether a row was queued by a shared target
+  graph or by a changed validation dependency such as `shapes`.
+- A wide-context slice trial found that `max_triples` only capped raw RDF, while
+  structured dataset summaries still returned all selected columns. Truncated
+  broad slices now warn when structured context remains large and suggest a
+  narrower column, profile, metric, or pattern seed.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

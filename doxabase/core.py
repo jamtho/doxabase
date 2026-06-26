@@ -503,6 +503,7 @@ class PostApplyRecheckRevision:
     iri: str
     changed_graphs: list[str]
     shared_changed_graphs: list[str]
+    recheck_reasons: list[str]
     application_status: str
     decision: str
     blocking_reasons: list[str]
@@ -6577,6 +6578,13 @@ class DoxaBase:
                 "deep_lore found no claims, patterns, reconsiderations, "
                 "evidence, or revision history beyond map context for these seeds."
             )
+        warnings.extend(
+            self._context_slice_structured_context_warnings(
+                resource_count=len(resources),
+                dataset_contexts=dataset_contexts.values(),
+                truncated=truncated,
+            )
+        )
 
         return ContextSlice(
             profile=profile,
@@ -6610,6 +6618,40 @@ class DoxaBase:
             pattern_contexts=list(pattern_contexts.values()),
             warnings=warnings,
         )
+
+    @staticmethod
+    def _context_slice_structured_context_warnings(
+        *,
+        resource_count: int,
+        dataset_contexts: Iterable[DatasetDescription],
+        truncated: bool,
+    ) -> list[str]:
+        if not truncated:
+            return []
+        wide_datasets = [
+            dataset
+            for dataset in dataset_contexts
+            if len(dataset.columns) >= 50
+        ]
+        if resource_count < 100 and not wide_datasets:
+            return []
+        details: list[str] = []
+        if resource_count >= 100:
+            details.append(f"{resource_count} selected resource(s)")
+        if wide_datasets:
+            dataset_notes = [
+                f"{dataset.label or dataset.iri} has {len(dataset.columns)} column(s)"
+                for dataset in wide_datasets[:3]
+            ]
+            if len(wide_datasets) > 3:
+                dataset_notes.append(f"{len(wide_datasets) - 3} more wide dataset(s)")
+            details.append("; ".join(dataset_notes))
+        return [
+            "Context slice raw RDF was truncated by max_triples, but structured "
+            "contexts are still returned in full "
+            f"({'; '.join(details)}). Use a narrower column, profile, metric, or "
+            "pattern seed for a smaller handoff."
+        ]
 
     def _context_slice_profile_mismatch_warning(
         self,
@@ -17901,7 +17943,27 @@ class DoxaBase:
             shared_changed_graphs = [
                 graph for graph in changed_graphs if graph in candidate_changed_graphs
             ]
-            if not shared_changed_graphs:
+            validation_scope = (
+                self._first_object(data_graphs, revision_iri, "rc:validationScope")
+                or "all"
+            )
+            validation_dependency_graphs = (
+                self._validation_dependency_graphs_for_scope(validation_scope)
+            )
+            validation_dependency_changed_graphs = [
+                graph
+                for graph in changed_graphs
+                if graph in validation_dependency_graphs
+                and graph not in shared_changed_graphs
+            ]
+            recheck_reasons = [
+                *(f"shared_changed_graph:{graph}" for graph in shared_changed_graphs),
+                *(
+                    f"validation_dependency_graph:{graph}"
+                    for graph in validation_dependency_changed_graphs
+                ),
+            ]
+            if not recheck_reasons:
                 continue
             apply_check = self.check_staged_revision_apply(revision_iri)
             next_action = self._revision_next_action(
@@ -17934,6 +17996,7 @@ class DoxaBase:
                         iri=revision_iri,
                         changed_graphs=candidate_changed_graphs,
                         shared_changed_graphs=shared_changed_graphs,
+                        recheck_reasons=recheck_reasons,
                         application_status=apply_check.status,
                         decision=apply_check.decision,
                         blocking_reasons=apply_check.blocking_reasons,
@@ -17945,6 +18008,16 @@ class DoxaBase:
             )
         candidate_rows.sort(key=lambda row: row[:3], reverse=True)
         return [item for _, _, _, item in candidate_rows]
+
+    def _validation_dependency_graphs_for_scope(self, scope: str) -> list[str]:
+        return list(
+            dict.fromkeys(
+                [
+                    *self._graphs_for_validation_scope(scope),
+                    *self._expand_graphs(["shapes"]),
+                ]
+            )
+        )
 
     def _preview_staged_revision_application(
         self,

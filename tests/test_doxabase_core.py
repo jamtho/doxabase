@@ -4704,10 +4704,76 @@ def test_post_apply_recheck_preserves_staged_validation_repair_signal(
 
     assert recheck.application_status == "conflict"
     assert recheck.decision == "restage_against_current_graph"
+    assert recheck.recheck_reasons == ["shared_changed_graph:map"]
     assert recheck.next_action is not None
     assert recheck.next_action.action_type == "repair_or_replace"
     assert recheck.next_action.queue == "repair_or_replace"
     assert recheck.next_action.tool_name == "describe_staged_revision"
+
+
+def test_post_apply_recheck_includes_validation_dependency_drift(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    map_revision = db.stage_graph_revision(
+        summary="Stage unlabeled dataset",
+        rationale="This candidate is ready before the project shape tightens.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Dataset .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    shape_revision = db.stage_graph_revision(
+        summary="Require dataset labels",
+        rationale="Project validation should force map candidates back to review.",
+        additions=[
+            {
+                "graph": "shapes",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+                    @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+                    ex:DatasetLabelShape a sh:NodeShape ;
+                        sh:targetClass rc:Dataset ;
+                        sh:property [
+                            sh:path rdfs:label ;
+                            sh:minCount 1 ;
+                            sh:message "Datasets need labels."
+                        ] .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    assert db.check_staged_revision_apply(map_revision.revision_iri).status == "ready"
+    assert db.check_staged_revision_apply(shape_revision.revision_iri).status == "ready"
+
+    applied = db.apply_staged_revision(shape_revision.revision_iri)
+    recheck = next(
+        item
+        for item in applied.post_apply_recheck_revisions
+        if item.iri == map_revision.revision_iri
+    )
+
+    assert map_revision.revision_iri in applied.post_apply_recheck_revision_iris
+    assert recheck.shared_changed_graphs == []
+    assert recheck.recheck_reasons == ["validation_dependency_graph:shapes"]
+    assert recheck.application_status == "validation_failed"
+    assert recheck.decision == "inspect_validation_results"
+    assert recheck.blocking_reasons == ["validation_failed"]
+    assert recheck.next_action is not None
+    assert recheck.next_action.queue == "repair_or_replace"
 
 
 def test_restaged_revision_reports_effective_delta_for_mixed_addition(
@@ -12750,6 +12816,38 @@ def test_record_claim_reconsideration_links_claim_lifecycle(
     assert [context.iri for context in pattern_context_slice.pattern_contexts] == [
         pattern.pattern_iri
     ]
+
+
+def test_describe_context_slice_warns_on_large_structured_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WideEvents"
+    db.record_map_dataset(dataset, label="Wide events", is_table=True)
+    for index in range(80):
+        db.record_map_column(
+            f"https://example.test/project#WideEventsColumn{index:02d}",
+            table_iri=dataset,
+            column_name=f"column_{index:02d}",
+            physical_type="rc:Varchar",
+        )
+
+    context_slice = db.describe_context_slice(
+        dataset,
+        profile="dataset_brief",
+        max_triples=5,
+    )
+
+    assert context_slice.truncated is True
+    assert context_slice.returned_triple_count == 5
+    assert context_slice.dataset_contexts[0].iri == dataset
+    assert len(context_slice.dataset_contexts[0].columns) == 80
+    assert any(
+        "structured contexts are still returned in full" in warning
+        and "80 column(s)" in warning
+        and "narrower column, profile, metric, or pattern seed" in warning
+        for warning in context_slice.warnings
+    )
 
 
 def test_context_slice_column_seed_expands_claim_reconsideration_lore(
