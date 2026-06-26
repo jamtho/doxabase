@@ -3388,6 +3388,7 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     )
 
     assert result["dataset"]["iri"] == table
+    assert result["result_kind"] == "profile_map_update_staging"
     assert result["accepted_recommendation_indexes"] == [0, 1]
     assert result["staged_recommendation_indexes"] == [0, 1]
     assert result["skipped_recommendation_indexes"] == []

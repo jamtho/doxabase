@@ -479,7 +479,10 @@ run-level checks and `handoff_entrypoints` with profile observation seeds,
 availability flags, structured `suggested_next_actions`, and compatibility
 `suggested_next_calls` for the next agent. When both map dataset context and a
 shared evidence run are available, handoff actions include
-`draft_profile_map_updates` before context-slice routes.
+`draft_profile_map_updates` before context-slice routes. Map-present bundles may
+include two `describe_context_slice` actions: one dataset-seeded map-context
+slice and one profile-observation-seeded run handoff. Read `action_label` and
+`arguments` rather than treating repeated `tool_name` values as duplicates.
 In `handoff_entrypoints`, prefer `updated_map_column_iris` for columns whose map
 facts were written by this bundle call, and `mapped_profiled_column_iris` for
 all bundled column profiles that are mapped after the call. `map_column_iris`

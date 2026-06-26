@@ -571,6 +571,11 @@ same `SuggestedNextAction` shape used elsewhere, usually starting with
 evidence is available, `draft_profile_map_updates` when both map context and a
 profile run are available, and profile-observation-seeded
 `describe_context_slice`.
+Map-present bundles can include two `describe_context_slice` actions. They are
+not duplicates: the dataset-seeded action loads current map/dataset context,
+while the profile-observation-seeded action is the direct profile-run handoff.
+Distinguish them by `action_label` and `arguments`, not just by repeated
+`tool_name`.
 `suggested_next_calls` remains as a compatibility list of display call strings.
 
 Copyable bundle shape:
@@ -841,6 +846,7 @@ a staged patch. Caller `revision_anchors` are merged with the automatic
 profile-derived dataset/resource anchors.
 
 ```python
+result.result_kind
 result.dataset
 result.evidence
 result.evidence_iri
@@ -860,6 +866,10 @@ result.suggested_next_actions
 result.suggested_next_calls
 result.review_note
 ```
+
+`result_kind` is `profile_map_update_staging`; use it as the semantic
+discriminator when automation is handling several staged-revision-producing
+helpers.
 
 Each `result.items[]` row is a compact routing record:
 

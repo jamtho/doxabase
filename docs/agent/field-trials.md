@@ -905,6 +905,15 @@ few useful gaps:
   say to use `next_action_after.arguments["iri"]` or `current_revision_iri`
   after batch restage, while single restage `revision_iri` is the created
   successor.
+- A profile-bundle handoff trial showed two `describe_context_slice` actions in
+  map-present bundles are useful, not accidental duplication: the dataset seed
+  loads current map context, while profile-observation seeds carry the direct
+  run handoff. Docs now tell agents to distinguish them by `action_label` and
+  `arguments`.
+- A profile-map staging shape trial found automation could identify
+  `stage_profile_map_updates` results only by field constellation.
+  `ProfileMapUpdateStagingRecord` now carries
+  `result_kind="profile_map_update_staging"` as a semantic discriminator.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

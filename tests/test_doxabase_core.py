@@ -12630,6 +12630,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
         accepted_recommendation_indexes=[0, 1, 2],
     )
 
+    assert staged.result_kind == "profile_map_update_staging"
     assert staged.staged_recommendation_indexes == [0, 1, 2]
     assert staged.skipped_recommendation_indexes == []
     assert staged.not_selected_recommendation_indexes == []
@@ -12896,6 +12897,7 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
         accepted_recommendation_indexes=[0],
     )
 
+    assert staged.result_kind == "profile_map_update_staging"
     assert staged.staged_recommendation_indexes == []
     assert staged.skipped_recommendation_indexes == [0]
     assert staged.not_selected_recommendation_indexes == [1]

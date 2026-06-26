@@ -1626,6 +1626,7 @@ class ProfileMapUpdateStagingItem:
 
 @dataclass(frozen=True)
 class ProfileMapUpdateStagingRecord:
+    result_kind: str
     dataset: ResourceSummary
     evidence: EvidenceDescription
     evidence_iri: str
@@ -7238,6 +7239,7 @@ class DoxaBase:
             staged_revision,
         )
         return ProfileMapUpdateStagingRecord(
+            result_kind="profile_map_update_staging",
             dataset=draft.dataset,
             evidence=draft.evidence,
             evidence_iri=draft.evidence_iri,
