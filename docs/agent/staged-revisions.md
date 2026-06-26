@@ -110,8 +110,9 @@ was there. They do not make the proposal invalid by themselves.
 Pass `include_current_apply_check=True` when reviewing one staged revision cold
 and you want its live `ready`, `conflict`, `validation_failed`, `noop`, or
 `already_applied` branch beside the patch payload. The embedded summary omits
-full patch checks and validation result payloads; call
-`check_staged_revision_apply` for those diagnostics.
+full patch checks and validation result payloads, but includes compact
+`next_action` for queue routing; call `check_staged_revision_apply` for full
+diagnostics.
 
 Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
 proposal. The export includes a live `Current Apply Check` section generated at

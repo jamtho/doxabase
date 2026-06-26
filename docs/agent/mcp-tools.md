@@ -734,8 +734,8 @@ find them.
 Pass `include_current_apply_check=true` when reviewing one staged revision and
 you need a compact live apply branch beside the patch payload. The nested
 `current_apply_check` includes status, decision, blockers, current validation
-headline, drift summaries, and suggested next actions. It omits full
-`patch_checks`, `conflicts`, and `validation_results`; call
+headline, drift summaries, compact `next_action`, and suggested next actions.
+It omits full `patch_checks`, `conflicts`, and `validation_results`; call
 `check_staged_revision_apply` for those.
 
 `doxabase.check_staged_revision_apply`

@@ -807,8 +807,9 @@ rationale. `applied_by` and `application_status="already_applied"` are present
 when this staged revision already has an applied revision event.
 Pass `include_current_apply_check=True` when a one-revision review needs compact
 live apply status beside the patch payload. `current_apply_check` includes
-status, decision, blockers, validation headline, drift summaries, and suggested
-next actions, but omits full patch checks and validation result payloads.
+status, decision, blockers, validation headline, drift summaries, compact
+`next_action`, and suggested next actions, but omits full patch checks and
+validation result payloads.
 `export_staged_revision()` writes a Markdown review bundle with the current
 apply-check status, diagnostics, and impact review before patch payloads. Stale
 exports include conflict status, count or digest drift, validation-skipped reason, and

@@ -443,6 +443,7 @@ class StagedRevisionApplySummary:
     triples_to_remove: int | None
     count_drifts: list[StagedGraphCountDrift]
     snapshot_drifts: list[StagedGraphSnapshotDrift]
+    next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     error: str | None
@@ -4658,6 +4659,7 @@ class DoxaBase:
                 triples_to_remove=None,
                 count_drifts=[],
                 snapshot_drifts=[],
+                next_action=None,
                 suggested_next_actions=[],
                 suggested_next_calls=[],
                 error=str(exc),
@@ -4684,6 +4686,7 @@ class DoxaBase:
             triples_to_remove=check.triples_to_remove,
             count_drifts=check.count_drifts,
             snapshot_drifts=self._summary_snapshot_drifts(check.snapshot_drifts),
+            next_action=check.next_action,
             suggested_next_actions=check.suggested_next_actions,
             suggested_next_calls=check.suggested_next_calls,
             error=None,

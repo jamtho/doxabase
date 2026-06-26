@@ -842,7 +842,11 @@ few useful gaps:
   direct `check_staged_revision_apply` responses had rich
   `suggested_next_actions` but no compact `next_action`; apply checks now carry
   that route directly, matching revision lists, grouped exports, batch restage
-  items, and post-apply recheck rows.
+  items, and post-apply recheck rows. Later staged-revision and mixed-bundle
+  trials found the same gap in
+  `describe_staged_revision(include_current_apply_check=True)`; the embedded
+  `current_apply_check` summary now carries `next_action` too, so a cold
+  one-revision inspection has the same compact routing surface.
 - A staged-map recipe trial confirmed `record_map_dataset` rejects prose
   `row_semantics` early, while generic staged Turtle records validation-failed
   review objects. Staged validation diagnostics now add a row-semantics hint:

@@ -1534,6 +1534,15 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert staged_description_with_check["current_apply_check"][
         "already_applied_by"
     ] == result["applied_revision_iri"]
+    assert staged_description_with_check["current_apply_check"]["next_action"][
+        "action_type"
+    ] == "inspect_already_applied"
+    assert staged_description_with_check["current_apply_check"]["next_action"][
+        "queue"
+    ] == "inspect_already_applied"
+    assert staged_description_with_check["current_apply_check"]["next_action"][
+        "arguments"
+    ] == {"iri": result["applied_revision_iri"]}
     forbidden_summary_keys = {"patch_checks", "conflicts", "validation_results"}
     assert forbidden_summary_keys.isdisjoint(
         staged_description_with_check["current_apply_check"]

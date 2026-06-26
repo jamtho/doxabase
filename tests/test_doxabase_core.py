@@ -1789,6 +1789,10 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert ready_summary.patches_checked == 1
     assert ready_summary.triples_to_add == 3
     assert ready_summary.triples_to_remove == 0
+    assert ready_summary.next_action is not None
+    assert ready_summary.next_action.action_type == "apply_after_review"
+    assert ready_summary.next_action.queue == "apply_after_review"
+    assert ready_summary.next_action.arguments == {"iri": staged.revision_iri}
     assert ready_summary.error is None
 
     result = db.apply_staged_revision(staged.revision_iri)
@@ -2651,6 +2655,10 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert stale_summary.decision == "restage_against_current_graph"
     assert stale_summary.blocking_reasons == ["target_count_drift"]
     assert stale_summary.validation_skipped_reason == "conflicts_present"
+    assert stale_summary.next_action is not None
+    assert stale_summary.next_action.action_type == "restage_after_review"
+    assert stale_summary.next_action.queue == "restage_after_review"
+    assert stale_summary.next_action.arguments == {"iri": staged.revision_iri}
     assert stale_summary.count_drifts[0].target_graph == "map"
     assert stale_summary.snapshot_drifts[0].exact_changed_triples_available is True
     assert stale_summary.snapshot_drifts[0].exact_changed_triples_included is False
@@ -3440,6 +3448,14 @@ def test_ready_restage_source_apply_check_redirects_to_successor(
     )
     assert described_source.current_apply_check is not None
     assert described_source.current_apply_check.status == "superseded_by_restage"
+    assert described_source.current_apply_check.next_action is not None
+    assert described_source.current_apply_check.next_action.action_type == (
+        "inspect_current_successor"
+    )
+    assert described_source.current_apply_check.next_action.queue == "informational"
+    assert described_source.current_apply_check.next_action.arguments == {
+        "iri": repair.revision_iri
+    }
     listing = db.list_graph_revisions(
         current_staged_work_only=True,
         include_apply_checks=True,
@@ -5097,6 +5113,10 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     assert validation_summary.decision == "inspect_validation_results"
     assert validation_summary.validation_conforms is False
     assert validation_summary.validation_result_count == check.validation_result_count
+    assert validation_summary.next_action is not None
+    assert validation_summary.next_action.action_type == "repair_or_replace"
+    assert validation_summary.next_action.queue == "repair_or_replace"
+    assert validation_summary.next_action.arguments == {"iri": staged.revision_iri}
     assert validation_summary.suggested_next_actions[0].tool_name == (
         "describe_staged_revision"
     )

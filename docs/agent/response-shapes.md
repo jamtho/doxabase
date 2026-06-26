@@ -2113,6 +2113,7 @@ current.triples_to_add
 current.triples_to_remove
 current.count_drifts
 current.snapshot_drifts
+current.next_action
 current.suggested_next_actions
 current.suggested_next_calls
 current.error
@@ -2120,6 +2121,9 @@ current.error
 
 `current.snapshot_drifts` uses summary drift rows: counts, digests, relevance,
 and overlap arrays are present, but exact changed-triple arrays are omitted.
+`current.next_action` is the compact queue route for the live apply branch and
+matches the `RevisionNextAction` shape used by direct apply checks, revision
+lists, grouped exports, and post-apply recheck rows.
 Call `check_staged_revision_apply()` when you need full `patch_checks`,
 `conflicts`, `validation_results`, or exact snapshot drift triples.
 
