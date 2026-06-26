@@ -3005,6 +3005,27 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
         f"describe_dataset('{table}')",
         f"describe_profile_run('{table}', '{shared_evidence}')",
     ]
+    assert [
+        action["tool_name"]
+        for action in result["handoff_entrypoints"]["suggested_next_actions"]
+    ] == [
+        "describe_dataset",
+        "describe_profile_run",
+        "describe_context_slice",
+        "describe_context_slice",
+    ]
+    assert result["handoff_entrypoints"]["suggested_next_actions"][1][
+        "arguments"
+    ] == {
+        "dataset_iri": table,
+        "evidence_iri": shared_evidence,
+    }
+    assert result["handoff_entrypoints"]["suggested_next_actions"][-1][
+        "arguments"
+    ] == {
+        "seed_iris": result["handoff_entrypoints"]["profile_observation_iris"],
+        "profile": "dataset_brief",
+    }
     assert result["handoff_entrypoints"]["suggested_next_calls"][-1] == (
         "describe_context_slice("
         f"{result['handoff_entrypoints']['profile_observation_iris']!r}, "

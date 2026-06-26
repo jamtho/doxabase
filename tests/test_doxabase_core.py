@@ -11091,6 +11091,25 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     ]
     assert result.handoff_entrypoints.dataset_describe_available is True
     assert result.handoff_entrypoints.profile_run_available is True
+    assert [
+        action.tool_name for action in result.handoff_entrypoints.suggested_next_actions
+    ] == [
+        "describe_dataset",
+        "describe_profile_run",
+        "describe_context_slice",
+        "describe_context_slice",
+    ]
+    assert result.handoff_entrypoints.suggested_next_actions[0].arguments == {
+        "iri": dataset
+    }
+    assert result.handoff_entrypoints.suggested_next_actions[1].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": shared_evidence,
+    }
+    assert result.handoff_entrypoints.suggested_next_actions[-1].arguments == {
+        "seed_iris": profile_observation_iris,
+        "profile": "dataset_brief",
+    }
     assert result.handoff_entrypoints.suggested_next_calls[0] == (
         f"describe_dataset('{dataset}')"
     )
@@ -11527,6 +11546,20 @@ def test_describe_profile_run_works_for_observation_only_dataset(
     assert bundle.handoff_entrypoints.suggested_next_calls[0] == (
         f"describe_profile_run('{dataset}', '{shared_evidence}')"
     )
+    assert [
+        action.tool_name for action in bundle.handoff_entrypoints.suggested_next_actions
+    ] == [
+        "describe_profile_run",
+        "describe_context_slice",
+    ]
+    assert bundle.handoff_entrypoints.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": shared_evidence,
+    }
+    assert bundle.handoff_entrypoints.suggested_next_actions[-1].arguments == {
+        "seed_iris": bundle.handoff_entrypoints.profile_observation_iris,
+        "profile": "dataset_brief",
+    }
     assert bundle.handoff_entrypoints.suggested_next_calls[-1] == (
         "describe_context_slice("
         f"{bundle.handoff_entrypoints.profile_observation_iris!r}, "

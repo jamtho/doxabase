@@ -525,7 +525,8 @@ all link to one shared profiler-run `rc:Evidence` resource. A column item can
 override that by supplying its own `evidence_iri`.
 The returned bundle includes `shared_evidence_iri` at top level for quick
 run-level checks and `handoff_entrypoints` with profile observation seeds,
-availability flags, and suggested next calls for the next agent.
+availability flags, structured `suggested_next_actions`, and compatibility
+`suggested_next_calls` for the next agent.
 In `handoff_entrypoints`, `map_column_iris` is a legacy alias for the columns
 whose map facts were written by this bundle call. Prefer
 `updated_map_column_iris` for that meaning, and use

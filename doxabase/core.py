@@ -1712,6 +1712,7 @@ class ProfileBundleHandoffEntryPoints:
     mapped_profiled_column_iris: list[str]
     dataset_describe_available: bool
     profile_run_available: bool
+    suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     handoff_note: str
 
@@ -12101,26 +12102,86 @@ class DoxaBase:
             if self.expand_iri("rc:Column")
             in self._types_from_graphs(map_graphs, column_profile.column_iri)
         ]
-        suggested_next_calls: list[str] = []
+        suggested_next_actions: list[SuggestedNextAction] = []
+
+        def add_action(
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+            *,
+            action_label: str,
+            call: str,
+        ) -> None:
+            suggested_next_actions.append(
+                SuggestedNextAction(
+                    action_label=action_label,
+                    tool_name=tool_name,
+                    mcp_tool_name=f"doxabase.{tool_name}",
+                    arguments=arguments,
+                    reason=reason,
+                    call=call,
+                )
+            )
+
         if dataset_describe_available:
-            suggested_next_calls.append(f"describe_dataset({dataset_iri!r})")
+            add_action(
+                "describe_dataset",
+                {"iri": dataset_iri},
+                (
+                    "Inspect the bounded dataset view with current map facts "
+                    "and returned profile summaries."
+                ),
+                action_label="Describe dataset",
+                call=f"describe_dataset({dataset_iri!r})",
+            )
         if profile_run_available:
-            suggested_next_calls.append(
-                "describe_profile_run("
-                f"{dataset_iri!r}, {profile_run_evidence_iri!r}"
-                ")"
+            add_action(
+                "describe_profile_run",
+                {
+                    "dataset_iri": dataset_iri,
+                    "evidence_iri": profile_run_evidence_iri,
+                },
+                (
+                    "Inspect every returned profile observation linked to the "
+                    "shared evidence run."
+                ),
+                action_label="Describe profile run",
+                call=(
+                    "describe_profile_run("
+                    f"{dataset_iri!r}, {profile_run_evidence_iri!r}"
+                    ")"
+                ),
             )
         if dataset_describe_available:
-            suggested_next_calls.append(
-                "describe_context_slice("
-                f"[{dataset_iri!r}], profile='dataset_brief'"
-                ")"
+            add_action(
+                "describe_context_slice",
+                {"seed_iris": [dataset_iri], "profile": "dataset_brief"},
+                (
+                    "Load route-explained dataset context before deciding "
+                    "which profile findings should become durable map facts."
+                ),
+                action_label="Load dataset context slice",
+                call=(
+                    "describe_context_slice("
+                    f"[{dataset_iri!r}], profile='dataset_brief'"
+                    ")"
+                ),
             )
-        suggested_next_calls.append(
-            "describe_context_slice("
-            f"{profile_observation_iris!r}, profile='dataset_brief'"
-            ")"
+        add_action(
+            "describe_context_slice",
+            {"seed_iris": profile_observation_iris, "profile": "dataset_brief"},
+            (
+                "Load profile-observation-seeded context when map dataset "
+                "context is unavailable or the profile run needs a direct handoff."
+            ),
+            action_label="Load profile context slice",
+            call=(
+                "describe_context_slice("
+                f"{profile_observation_iris!r}, profile='dataset_brief'"
+                ")"
+            ),
         )
+        suggested_next_calls = [action.call for action in suggested_next_actions]
         if dataset_describe_available and profile_run_available:
             if map_dataset_recorded:
                 handoff_note = (
@@ -12172,6 +12233,7 @@ class DoxaBase:
             mapped_profiled_column_iris=mapped_profiled_column_iris,
             dataset_describe_available=dataset_describe_available,
             profile_run_available=profile_run_available,
+            suggested_next_actions=suggested_next_actions,
             suggested_next_calls=suggested_next_calls,
             handoff_note=handoff_note,
         )

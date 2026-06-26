@@ -287,6 +287,9 @@ few useful gaps:
   dataset-profile-only for compatibility, but run-level syntheses are common
   enough to justify `pattern_support_scope="all_profiles"` when the free-text
   pattern should be supported by the dataset and every bundled column profile.
+  A later mixed-run profile trial showed bundle handoff strings were less
+  ergonomic than the structured routes elsewhere; `handoff_entrypoints` now
+  carries `suggested_next_actions` while preserving `suggested_next_calls`.
 - A follow-up shared-evidence trial confirmed that agents can now record one
   profiler-run evidence resource across dataset, mapped-column, and
   unmapped-column profiles. It also showed that quick returned-profile counts

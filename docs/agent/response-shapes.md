@@ -536,6 +536,7 @@ bundle.handoff_entrypoints.updated_map_column_iris
 bundle.handoff_entrypoints.mapped_profiled_column_iris
 bundle.handoff_entrypoints.dataset_describe_available
 bundle.handoff_entrypoints.profile_run_available
+bundle.handoff_entrypoints.suggested_next_actions
 bundle.handoff_entrypoints.suggested_next_calls
 bundle.handoff_entrypoints.handoff_note
 ```
@@ -553,6 +554,11 @@ call; prefer `updated_map_column_iris` for that meaning. Use
 `mapped_profiled_column_iris` when a receiving agent needs every bundled column
 profile that is mapped after the call, including pre-existing mapped columns
 profiled with `update_map_column=False`.
+Use `suggested_next_actions` for structured handoff routing; it carries the
+same `SuggestedNextAction` shape used elsewhere, usually starting with
+`describe_dataset` when map context exists, `describe_profile_run` when shared
+evidence is available, and profile-observation-seeded `describe_context_slice`.
+`suggested_next_calls` remains as a compatibility list of display call strings.
 
 Copyable bundle shape:
 
