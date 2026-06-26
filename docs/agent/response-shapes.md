@@ -772,6 +772,7 @@ result.accepted_recommendation_indexes
 result.staged_recommendation_indexes
 result.skipped_recommendation_indexes
 result.not_selected_recommendation_indexes
+result.status_counts
 result.items
 result.metric_advisories
 result.staged_revision
@@ -800,6 +801,10 @@ When at least one accepted recommendation passes safety checks,
 `map` revision. Sampled row-count recommendations are skipped by default and
 reported in `skipped_recommendation_indexes`; metric advisories stay in
 `metric_advisories` and are not staged as map facts.
+An accepted recommendation index can therefore appear under either `staged` or
+`skipped`; `not_selected` only means the draft recommendation was not accepted
+for this staging call. Use `status_counts` for quick routing summaries before
+reading per-item reasons.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:
@@ -1535,6 +1540,12 @@ missing or unparseable while scanning for exact resource mentions. If top-level
 filtered out because their patch payloads could not be read. Treat empty patch
 mention arrays as "no readable matching mention found", not proof that the patch
 did not touch the resource.
+Top-level unreadable counts summarize the pre-pagination scan:
+`unreadable_revision_count` counts distinct staged or source revisions whose
+patch payloads could not be read, not the number of returned rows. The
+`omitted_match_risk` flag is coarse; it means unreadable unanchored patch-only
+matches may be absent from the filtered list, not that any returned row is known
+to be incomplete.
 
 Use this helper when the question is "what revisions touched this resource?"
 It filters before pagination and matches exact expanded RDF terms in staged

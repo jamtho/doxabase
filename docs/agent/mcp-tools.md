@@ -125,9 +125,11 @@ response wraps the normal revision list row under `revision` and adds
 `applied_source_patch_mentions`. `patch_mention_scan` and per-row incomplete
 flags report missing or unparseable patch payloads; when
 `omitted_match_risk=true`, unanchored patch-only matches may be absent from the
-filtered list. Patch mentions are compact flags, not full patch content: patch
-IRI, target graph, operation, role, sequence, `matched_term_roles`,
-`matched_triples`, and total `triple_count`. Use
+filtered list. Top-level unreadable revision counts are distinct pre-pagination
+source/staged revision counts, not returned-row counts. Patch mentions are
+compact flags, not full patch content: patch IRI, target graph, operation,
+role, sequence, `matched_term_roles`, `matched_triples`, and total
+`triple_count`. Use
 `describe_staged_revision` when you need the patch payload itself.
 
 `doxabase.search`
@@ -238,10 +240,11 @@ Stages accepted `draft_profile_map_updates` recommendation indexes as one
 grouped reviewable `map` revision. Pass `dataset_iri`, `evidence_iri`, and
 `accepted_recommendation_indexes`. The result returns item statuses,
 `staged_recommendation_indexes`, `skipped_recommendation_indexes`,
-`not_selected_recommendation_indexes`, metric advisories, and the staged
-revision when at least one accepted recommendation was staged. The helper uses
-helper-equivalent RDF for dataset and column shells, keeps metric advisories as
-review prompts, and skips sampled row-count recommendations unless
+`not_selected_recommendation_indexes`, `status_counts`, metric advisories, and
+the staged revision when at least one accepted recommendation was staged. The
+helper uses helper-equivalent RDF for dataset and column shells, keeps metric
+advisories as review prompts, and skips accepted sampled row-count
+recommendations unless
 `allow_sampled_row_count_updates=true`.
 
 `doxabase.describe_query_context`

@@ -746,7 +746,9 @@ few useful gaps:
   dataset and unmapped column shells require grouped multi-triple patches.
   `stage_profile_map_updates` now groups accepted draft recommendation indexes
   into one staged revision, preserves profile observation/evidence support, and
-  skips sampled row-count recommendations by default.
+  skips sampled row-count recommendations by default. A follow-up trial showed
+  agents read this most reliably when the response carries `status_counts` and
+  docs say accepted indexes can still route to `skipped`.
 - A resource-revision stress trial confirmed `list_resource_revisions` handles
   anchors, exact patch roles, pagination after filtering, restage chains, and
   applied-source patch mentions, but found two import/repair edges. Applied
@@ -754,7 +756,8 @@ few useful gaps:
   anchors even when imported history lacks the staged source patch payload.
   Patch mention scans now report incomplete/unreadable patch payloads and flag
   omitted-match risk when unanchored patch-only matches may have been filtered
-  out.
+  out. Treat unreadable revision counts as distinct pre-pagination source or
+  staged revisions, and `omitted_match_risk` as a coarse absence-risk signal.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

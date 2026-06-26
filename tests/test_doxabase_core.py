@@ -10553,6 +10553,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.staged_recommendation_indexes == [0, 1, 2]
     assert staged.skipped_recommendation_indexes == []
     assert staged.not_selected_recommendation_indexes == []
+    assert staged.status_counts == {"staged": 3, "skipped": 0, "not_selected": 0}
     assert [item.status for item in staged.items] == ["staged", "staged", "staged"]
     assert staged.metric_advisories == []
     assert staged.staged_revision is not None
@@ -10634,6 +10635,7 @@ def test_stage_profile_map_updates_stages_thin_shell_for_missing_dataset(
 
     assert staged.map_dataset_found is False
     assert staged.staged_recommendation_indexes == [0, 1]
+    assert staged.status_counts == {"staged": 2, "skipped": 0, "not_selected": 0}
     assert staged.staged_revision is not None
     assert staged.staged_revision.validation_conforms is True
     assert len(staged.staged_revision.patches) == 1
@@ -10664,6 +10666,7 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     dataset = "https://example.test/project#Orders"
+    referrer_column = "https://example.test/project#OrdersReferrer"
     evidence = "https://example.test/project#OrdersPartitionSampleEvidence"
 
     db.record_map_dataset(
@@ -10671,6 +10674,12 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
         label="Orders",
         is_table=True,
         row_count_snapshot=100,
+    )
+    db.record_map_column(
+        referrer_column,
+        table_iri=dataset,
+        column_name="referrer",
+        nullable=False,
     )
     db.record_profile_bundle(
         dataset,
@@ -10683,6 +10692,15 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
         sample_method="DuckDB sampled partition profile.",
         row_count=40,
         update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": referrer_column,
+                "column_name": "referrer",
+                "summary": "Referrer had nulls in the sampled partition.",
+                "null_count": 3,
+            }
+        ],
     )
 
     staged = db.stage_profile_map_updates(
@@ -10693,10 +10711,24 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
 
     assert staged.staged_recommendation_indexes == []
     assert staged.skipped_recommendation_indexes == [0]
+    assert staged.not_selected_recommendation_indexes == [1]
+    assert staged.status_counts == {"staged": 0, "skipped": 1, "not_selected": 1}
     assert staged.staged_revision is None
     assert staged.items[0].status == "skipped"
+    assert staged.items[1].status == "not_selected"
     assert "Sampled row-count recommendations" in (staged.items[0].reason or "")
     assert db.describe_dataset(dataset).row_count_snapshot == 100
+
+    mixed = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[0, 1],
+    )
+    assert mixed.staged_recommendation_indexes == [1]
+    assert mixed.skipped_recommendation_indexes == [0]
+    assert mixed.not_selected_recommendation_indexes == []
+    assert mixed.status_counts == {"staged": 1, "skipped": 1, "not_selected": 0}
+    assert mixed.staged_revision is not None
 
     override = db.stage_profile_map_updates(
         dataset,
@@ -10705,6 +10737,7 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
         allow_sampled_row_count_updates=True,
     )
     assert override.staged_recommendation_indexes == [0]
+    assert override.status_counts == {"staged": 1, "skipped": 0, "not_selected": 1}
     assert override.staged_revision is not None
     assert override.staged_revision.validation_conforms is True
 

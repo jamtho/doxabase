@@ -79,6 +79,9 @@ accepted profile-derived changes should be reviewed before apply. It stages one
 grouped helper-equivalent map revision, including multi-triple dataset and
 column shells, so applying one accepted profile batch does not create sibling
 staged revisions that immediately drift after the first apply.
+An accepted index is still routed through guardrails: it may be `staged` or
+`skipped`, while `not_selected` means the draft row was not accepted for that
+call. Check `status_counts` first, then item reasons.
 
 Use direct map helpers only when immediate mutation is intended. Treat sampled
 row-count recommendations conservatively: the staging helper skips them by

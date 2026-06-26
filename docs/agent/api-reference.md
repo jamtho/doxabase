@@ -370,12 +370,13 @@ or stage graph changes, and it skips sampled zero-null promotions.
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped
 reviewable `map` revision, and returns explicit staged/skipped/not-selected
-item statuses. Use it when profile-derived map changes need review before
-application. The staged patch uses helper-equivalent RDF: missing dataset
-shells get `rdf:type rc:Dataset`, unmapped columns get `rdf:type rc:Column`,
-`rc:columnName`, and `rc:hasColumn`, and scalar row-count/nullability changes
-remove old helper-owned values before adding typed literals. Sampled row-count
-recommendations are skipped by default; set
+item statuses plus `status_counts`. Use it when profile-derived map changes
+need review before application. The staged patch uses helper-equivalent RDF:
+missing dataset shells get `rdf:type rc:Dataset`, unmapped columns get
+`rdf:type rc:Column`, `rc:columnName`, and `rc:hasColumn`, and scalar
+row-count/nullability changes remove old helper-owned values before adding
+typed literals. Accepted indexes can still be skipped by safety guardrails,
+especially sampled row-count recommendations by default; set
 `allow_sampled_row_count_updates=True` only when the profile scope is the
 intended durable population. Metric advisories are returned for review but are
 not converted into map patches.
@@ -707,7 +708,9 @@ Rows also expose `patch_mentions_incomplete` /
 patch payloads were missing or unparseable during resource matching. The
 top-level `patch_mention_scan` summarizes complete/incomplete/not-requested
 scan status and flags `omitted_match_risk` when unreadable patch payloads may
-have hidden unanchored patch-only matches.
+have hidden unanchored patch-only matches. Its unreadable revision count is a
+distinct staged/source revision count across the pre-pagination scan, not a
+returned-row count, and `omitted_match_risk` is a coarse absence-risk signal.
 `application_status="validation_failed"` means the current replay reached SHACL
 validation and failed. `staged_validation_status="failed"` means the stored
 staged-time validation failed; it still finds rows that later became live

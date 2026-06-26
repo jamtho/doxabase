@@ -2821,6 +2821,11 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["accepted_recommendation_indexes"] == [0, 1]
     assert result["staged_recommendation_indexes"] == [0, 1]
     assert result["skipped_recommendation_indexes"] == []
+    assert result["status_counts"] == {
+        "staged": 2,
+        "skipped": 0,
+        "not_selected": 0,
+    }
     assert [item["status"] for item in result["items"]] == ["staged", "staged"]
     assert result["staged_revision"]["changed_graphs"] == ["map"]
     assert result["staged_revision"]["validation_conforms"] is True
