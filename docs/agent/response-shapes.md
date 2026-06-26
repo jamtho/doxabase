@@ -1984,7 +1984,8 @@ resource-lineage handoffs use the same current-row name as batch restage items.
 It is only populated when the selected row or its latest restage successor is
 still current staged work. Once a successor has been applied, the successor and
 applied event remain discoverable through `related_revision_iris` instead of
-being mislabeled as current staged work.
+being mislabeled as current staged work; the lineage `next_action` prefers
+inspecting the applied event in that case.
 
 `db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
 

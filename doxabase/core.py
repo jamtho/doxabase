@@ -3971,6 +3971,11 @@ class DoxaBase:
             if selected.revision.current_restaged_by is not None
             else None
         )
+        current_successor_applied_revision_iri = (
+            current_successor.revision.applied_by
+            if current_successor is not None
+            else None
+        )
         related_revision_iris = self._resource_lineage_related_revision_iris(
             selected,
             paired,
@@ -3978,10 +3983,16 @@ class DoxaBase:
             staged_revision_iri=staged_revision_iri,
             current_staged_revision_iri=current_staged_revision_iri,
             current_successor_applied_revision_iri=(
-                current_successor.revision.applied_by
-                if current_successor is not None
-                else None
+                current_successor_applied_revision_iri
             ),
+        )
+        lineage_next_action, lineage_suggested_next_actions = (
+            self._resource_lineage_next_actions(
+                selected,
+                current_successor_applied_revision_iri=(
+                    current_successor_applied_revision_iri
+                ),
+            )
         )
 
         applied_diff_status = "not_applicable"
@@ -4043,12 +4054,93 @@ class DoxaBase:
             current_revision_iri=current_staged_revision_iri,
             related_revision_iris=related_revision_iris,
             patch_mention_scan=lineage.patch_mention_scan,
-            next_action=selected.revision.next_action,
-            suggested_next_actions=selected.revision.suggested_next_actions,
-            suggested_next_calls=selected.revision.suggested_next_calls,
+            next_action=lineage_next_action,
+            suggested_next_actions=lineage_suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in lineage_suggested_next_actions
+            ],
             applied_diff_status=applied_diff_status,
             applied_diff_note=applied_diff_note,
             applied_diff=applied_diff,
+        )
+
+    def _resource_lineage_next_actions(
+        self,
+        selected: ResourceRevisionListItem,
+        *,
+        current_successor_applied_revision_iri: str | None,
+    ) -> tuple[RevisionNextAction | None, list[SuggestedNextAction]]:
+        if (
+            selected.revision.current_restaged_by is None
+            or current_successor_applied_revision_iri is None
+        ):
+            return (
+                selected.revision.next_action,
+                selected.revision.suggested_next_actions,
+            )
+
+        def action(
+            *,
+            action_label: str,
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+        ) -> SuggestedNextAction:
+            return SuggestedNextAction(
+                action_label=action_label,
+                tool_name=tool_name,
+                mcp_tool_name=f"doxabase.{tool_name}",
+                arguments=arguments,
+                reason=reason,
+                call=self._suggested_call_string(tool_name, arguments),
+            )
+
+        preferred_actions = [
+            action(
+                action_label="Inspect applied event",
+                tool_name="describe_graph_revision",
+                arguments={"iri": current_successor_applied_revision_iri},
+                reason=(
+                    "The refreshed successor has already been applied; inspect "
+                    "the applied event before following the stale source or "
+                    "successor hop."
+                ),
+            ),
+            action(
+                action_label="Inspect applied diff",
+                tool_name="describe_applied_revision_diff",
+                arguments={"iri": current_successor_applied_revision_iri},
+                reason=(
+                    "Inspect stored before/after graph snapshot counts and, "
+                    "when needed, exact changed triples for the applied event."
+                ),
+            ),
+        ]
+        combined_actions: list[SuggestedNextAction] = []
+        seen: set[tuple[str, str]] = set()
+        for candidate in [
+            *preferred_actions,
+            *selected.revision.suggested_next_actions,
+        ]:
+            key = (candidate.tool_name, candidate.call)
+            if key in seen:
+                continue
+            seen.add(key)
+            combined_actions.append(candidate)
+        first = preferred_actions[0]
+        return (
+            RevisionNextAction(
+                action_type="inspect_applied_event",
+                queue="inspect_already_applied",
+                action_label=first.action_label,
+                tool_name=first.tool_name,
+                mcp_tool_name=first.mcp_tool_name,
+                arguments=first.arguments,
+                reason=first.reason,
+                call=first.call,
+                source="suggested_next_actions",
+            ),
+            combined_actions,
         )
 
     @staticmethod

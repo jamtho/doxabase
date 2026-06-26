@@ -5259,6 +5259,24 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
         applied.applied_revision_iri,
         restaged.revision_iri,
     ]
+    assert applied_source_lineage.next_action is not None
+    assert applied_source_lineage.next_action.action_type == (
+        "inspect_applied_event"
+    )
+    assert applied_source_lineage.next_action.arguments == {
+        "iri": applied.applied_revision_iri,
+    }
+    assert [
+        action.tool_name for action in applied_source_lineage.suggested_next_actions
+    ][:3] == [
+        "describe_graph_revision",
+        "describe_applied_revision_diff",
+        "describe_staged_revision",
+    ]
+    assert applied_source_lineage.suggested_next_calls[0] == (
+        "describe_graph_revision("
+        f"iri={applied.applied_revision_iri!r})"
+    )
     applied_event_lineage = db.describe_resource_revision_lineage(
         orders,
         applied.applied_revision_iri,

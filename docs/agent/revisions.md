@@ -394,7 +394,9 @@ resource-centric helper, not full graph-version browsing. Its
 `current_staged_revision_iri` names only still-current staged work, and
 `current_revision_iri` is the same value under the batch-restage current-row
 name. If a restage successor has already been applied, follow
-`related_revision_iris` to inspect the successor and applied event.
+the lineage `next_action` / `suggested_next_actions`; they prefer inspecting
+the applied event while keeping the stale source and successor discoverable in
+`related_revision_iris`.
 
 Call `describe_applied_revision_diff(applied_iri)` when you need stored
 before/after snapshot counts and digests for an applied staged revision. Pass
