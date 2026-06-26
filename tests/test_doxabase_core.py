@@ -4675,6 +4675,24 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     )
     assert second_check_after_apply.status == "conflict"
     assert "target_count_drift" in second_check_after_apply.blocking_reasons
+    recovered_second = db.restage_staged_revision(
+        recheck.next_action.arguments["iri"]
+    )
+    recovered_second_check = db.check_staged_revision_apply(
+        recovered_second.revision_iri
+    )
+    assert recovered_second_check.status == "ready"
+    assert recovered_second_check.decision == "review_then_apply"
+
+    second_apply = db.apply_staged_revision(recovered_second.revision_iri)
+
+    assert second_apply.triples_added == 1
+    assert second_apply.post_apply_recheck_revision_iris == []
+    current_work = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    assert current_work.count == 0
 
 
 def test_restage_staged_revision_rejects_non_conflicted_revision(
@@ -7208,6 +7226,7 @@ def test_draft_query_plan_carries_dataset_template_verification(
     assert date_match.matched_field == "column_name"
     assert date_match.matched_value == "event_date"
     assert date_match.confidence == "medium"
+    assert date_binding.candidate_column_match_status == "single"
     assert "Candidate column hint(s): event_date" in date_binding.derivation_note
     assert plan.handoff_kind == "binding_values_required"
     assert plan.review_gate.executable_without_review is True
@@ -7269,18 +7288,72 @@ def test_draft_query_plan_hints_storage_template_placeholder_columns(
         binding.name: binding.candidate_column_matches
         for binding in plan.binding_requirements
     }
+    statuses_by_name = {
+        binding.name: binding.candidate_column_match_status
+        for binding in plan.binding_requirements
+    }
     assert [match.column.iri for match in matches_by_name["event_date"]] == [
         event_date
     ]
     assert matches_by_name["event_date"][0].match_kind == "exact_name"
     assert matches_by_name["event_date"][0].confidence == "high"
+    assert statuses_by_name["event_date"] == "single"
     assert [match.column.iri for match in matches_by_name["event_hour"]] == [
         event_hour
     ]
     assert matches_by_name["event_hour"][0].match_kind == "exact_name"
+    assert statuses_by_name["event_hour"] == "single"
     assert "Candidate column hint(s): event_date" in (
         plan.binding_requirements[0].derivation_note
     )
+
+
+def test_draft_query_plan_marks_ambiguous_binding_column_matches(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#TenantEvents"
+    db.record_map_dataset(
+        dataset,
+        label="Tenant events",
+        is_table=True,
+        path_templates=["events/tenant={tenant}/batch={batch}/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    billing_tenant = "https://example.test/project#tenant_events__billing_tenant"
+    source_tenant = "https://example.test/project#tenant_events__source_tenant"
+    db.record_map_column(
+        billing_tenant,
+        table_iri=dataset,
+        column_name="billing_tenant",
+    )
+    db.record_map_column(
+        source_tenant,
+        table_iri=dataset,
+        column_name="source_tenant",
+    )
+
+    plan = db.draft_query_plan(dataset)
+
+    bindings_by_name = {
+        binding.name: binding
+        for binding in plan.binding_requirements
+    }
+    tenant_binding = bindings_by_name["tenant"]
+    assert tenant_binding.candidate_column_match_status == "ambiguous"
+    assert [match.column.iri for match in tenant_binding.candidate_column_matches] == [
+        billing_tenant,
+        source_tenant,
+    ]
+    assert all(
+        match.match_kind == "suffix_name"
+        for match in tenant_binding.candidate_column_matches
+    )
+    assert "Multiple candidate columns matched this placeholder" in (
+        tenant_binding.derivation_note
+    )
+    assert bindings_by_name["batch"].candidate_column_match_status == "none"
+    assert bindings_by_name["batch"].candidate_column_matches == []
 
 
 def test_draft_query_plan_scan_surfaces_inherited_path_lineage(
@@ -13499,6 +13572,19 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
             }
         ],
     )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    assert draft.representative_recommendation_indexes == [0, 1]
+    row_count_recommendation = draft.recommendations[0]
+    nullable_recommendation = draft.recommendations[1]
+    assert row_count_recommendation.kind == "dataset_row_count_snapshot"
+    assert row_count_recommendation.default_stageable is False
+    assert "Sampled row-count recommendations" in (
+        row_count_recommendation.default_skip_reason or ""
+    )
+    assert nullable_recommendation.kind == "column_nullable"
+    assert nullable_recommendation.default_stageable is True
+    assert nullable_recommendation.default_skip_reason is None
 
     staged = db.stage_profile_map_updates(
         dataset,

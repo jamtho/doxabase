@@ -30,8 +30,8 @@ Prefer the repo virtualenv directly:
 
 Run commands from the repository root:
 
-```text
-/home/james/github.com/jamtho/doxybase
+```bash
+pwd
 ```
 
 Do not rely on `uv run` inside sub-agent trials unless the trial is explicitly
@@ -39,7 +39,7 @@ testing the developer environment. Sandboxed agents may not have access to the
 user's uv cache. If import paths are unclear, set:
 
 ```bash
-PYTHONPATH=/home/james/github.com/jamtho/doxybase
+PYTHONPATH="$(pwd)"
 ```
 
 Create or replace a scratch capsule with `DoxaBase.create(path, overwrite=True)`.
@@ -984,6 +984,20 @@ few useful gaps:
   agents infer likely source columns from names. Non-partition binding rows now
   include best-effort `candidate_column_matches` with match kind and confidence;
   these are handoff hints, not inferred runtime binding values.
+- A follow-up query-planning trial found multiple plausible placeholder/column
+  matches were visible only by list length. Binding rows now expose
+  `candidate_column_match_status` so ambiguous column hints are explicit and
+  review-gated.
+- A profile recommendation trial found sampled row-count recommendations were
+  present in `representative_recommendation_indexes` even though default staging
+  skips them. Draft recommendation rows now expose `default_stageable` and
+  `default_skip_reason` so agents can see default staging guardrails before
+  calling `stage_profile_map_updates`.
+- A staged-revision recovery trial followed
+  `post_apply_recheck_revisions[].next_action.arguments["iri"]` into
+  `restage_staged_revision`, checked the successor, applied it, and ended with
+  no current staged work. The product route was adequate; regression coverage now
+  locks that autonomous recovery path.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

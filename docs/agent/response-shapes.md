@@ -779,6 +779,8 @@ recommendation.confidence
 recommendation.helper_name
 recommendation.helper_arguments
 recommendation.rationale
+recommendation.default_stageable
+recommendation.default_skip_reason
 recommendation.duplicate_group_key
 recommendation.duplicate_count
 recommendation.duplicate_recommendation_indexes
@@ -790,7 +792,11 @@ Current recommendation kinds cover `dataset_row_count_snapshot`,
 from positive-null findings, full-scan zero-null findings, profile row counts,
 and unmapped profiled columns. It intentionally skips sampled zero-null
 promotion because a sample with no nulls does not prove a full-population
-non-null constraint. `metric_advisories[]` rows name project-specific profile
+non-null constraint. `default_stageable` and `default_skip_reason` preview what
+`stage_profile_map_updates` will do with default options; sampled row-count
+recommendations remain review candidates but are skipped by default unless
+`allow_sampled_row_count_updates=True`. `metric_advisories[]` rows name
+project-specific profile
 metric IRIs observed in the run and recommend vocabulary review before reusable
 comparison or map policy. Each advisory includes:
 
@@ -1369,6 +1375,7 @@ binding.partition_scheme
 binding.partition_column
 binding.partition_granularity
 binding.candidate_column_matches
+binding.candidate_column_match_status
 binding.candidate_column_matches[].column
 binding.candidate_column_matches[].match_kind
 binding.candidate_column_matches[].matched_field
@@ -1384,7 +1391,10 @@ matching placeholders may carry `partition_column` and
 non-partition dataset/storage templates may carry `candidate_column_matches`
 when a placeholder matches dataset column names, labels, or local IRIs exactly
 or by suffix. These matches are best-effort handoff hints, not inferred runtime
-binding values. `plan.storage_environment`
+binding values. `candidate_column_match_status` is `none`, `single`, or
+`ambiguous` for non-partition templates and `not_applicable` for
+partition-owned bindings; ambiguous rows require review before choosing any
+source column. `plan.storage_environment`
 carries non-secret storage hints such as bucket, endpoint profile, credential
 reference, path-style access, and DuckDB-shaped settings inferred directly from
 graph metadata.

@@ -76,8 +76,9 @@ helpers to systematize the current-best facts.
 
 When a shared-evidence profile run suggests map changes, call
 `describe_profile_run()` and `draft_profile_map_updates()` before mutating the
-map. The draft rows carry sample scope, confidence, helper arguments, and
-metric advisories so the agent can decide which recommendations to accept.
+map. The draft rows carry sample scope, confidence, helper arguments,
+`default_stageable`, `default_skip_reason`, and metric advisories so the agent
+can decide which recommendations to accept.
 Duplicate groups are explicit: when repeated profile observations produce the
 same review row, accept one representative index unless the siblings need
 different modelling judgement. The draft's top-level staging action already uses
@@ -105,8 +106,9 @@ evidence.
 Use direct map helpers only when immediate mutation is intended. Treat sampled
 row-count recommendations conservatively: the staging helper skips them by
 default unless `allow_sampled_row_count_updates=True` is supplied because the
-sample scope is the durable population. Metric advisories are vocabulary-review
-prompts, not automatic map facts; in staging results, follow
+sample scope is the durable population. Draft rows preview that default with
+`default_stageable=False` and a skip reason. Metric advisories are
+vocabulary-review prompts, not automatic map facts; in staging results, follow
 `metric_advisory_suggested_next_actions` separately from the map revision's
 `suggested_next_actions`.
 

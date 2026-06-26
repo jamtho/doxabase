@@ -156,7 +156,7 @@ For Codex sub-agent field trials, prefer the repo virtualenv directly:
 When running a scratch script from `/tmp` or `.codex-runs/...`, set:
 
 ```bash
-PYTHONPATH=/work/doxybase
+PYTHONPATH="$(pwd)"
 ```
 
 In Python, use `DoxaBase.create(path, overwrite=True)` to create or replace a

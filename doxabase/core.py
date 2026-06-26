@@ -1289,6 +1289,15 @@ class DraftQueryPlanScan:
 
 
 @dataclass(frozen=True)
+class DraftQueryPlanBindingColumnMatch:
+    column: ResourceSummary
+    match_kind: str
+    matched_field: str
+    matched_value: str
+    confidence: str
+
+
+@dataclass(frozen=True)
 class DraftQueryPlanBinding:
     name: str
     source: str
@@ -1303,15 +1312,7 @@ class DraftQueryPlanBinding:
     candidate_column_matches: list[DraftQueryPlanBindingColumnMatch] = field(
         default_factory=list
     )
-
-
-@dataclass(frozen=True)
-class DraftQueryPlanBindingColumnMatch:
-    column: ResourceSummary
-    match_kind: str
-    matched_field: str
-    matched_value: str
-    confidence: str
+    candidate_column_match_status: str = "not_applicable"
 
 
 @dataclass(frozen=True)
@@ -1591,6 +1592,8 @@ class ProfileMapUpdateRecommendation:
     helper_name: str
     helper_arguments: dict[str, Any]
     rationale: str
+    default_stageable: bool = True
+    default_skip_reason: str | None = None
     duplicate_group_key: str = ""
     duplicate_count: int = 1
     duplicate_recommendation_indexes: list[int] = field(default_factory=list)
@@ -7101,6 +7104,9 @@ class DoxaBase:
             all_profiles,
             evidence_value,
         )
+        recommendations = self._with_profile_update_default_staging_metadata(
+            recommendations
+        )
         recommendations = self._with_profile_update_duplicate_metadata(
             recommendations
         )
@@ -7436,6 +7442,25 @@ class DoxaBase:
             seen_group_keys.add(group_key)
             representatives.append(recommendation.recommendation_index)
         return representatives
+
+    def _with_profile_update_default_staging_metadata(
+        self,
+        recommendations: list[ProfileMapUpdateRecommendation],
+    ) -> list[ProfileMapUpdateRecommendation]:
+        annotated: list[ProfileMapUpdateRecommendation] = []
+        for recommendation in recommendations:
+            default_skip_reason = self._profile_update_skip_reason(
+                recommendation,
+                allow_sampled_row_count_updates=False,
+            )
+            annotated.append(
+                replace(
+                    recommendation,
+                    default_stageable=default_skip_reason is None,
+                    default_skip_reason=default_skip_reason,
+                )
+            )
+        return annotated
 
     def _with_profile_update_duplicate_metadata(
         self,
@@ -8613,6 +8638,13 @@ class DoxaBase:
                     columns,
                 )
             )
+            candidate_column_match_status = (
+                "not_applicable"
+                if partition is not None
+                else self._draft_query_plan_column_match_status(
+                    candidate_column_matches
+                )
+            )
             return DraftQueryPlanBinding(
                 name=name,
                 source="path_template_placeholder",
@@ -8624,6 +8656,9 @@ class DoxaBase:
                     partition=partition,
                     partition_column=partition_column,
                     candidate_column_matches=candidate_column_matches,
+                    candidate_column_match_status=(
+                        candidate_column_match_status
+                    ),
                 ),
                 binding_kind=(
                     "partition_template_placeholder"
@@ -8640,6 +8675,7 @@ class DoxaBase:
                     partition.granularity if partition is not None else None
                 ),
                 candidate_column_matches=candidate_column_matches,
+                candidate_column_match_status=candidate_column_match_status,
             )
 
         return [
@@ -8744,6 +8780,16 @@ class DoxaBase:
                 )
         return None
 
+    @staticmethod
+    def _draft_query_plan_column_match_status(
+        candidate_column_matches: list[DraftQueryPlanBindingColumnMatch],
+    ) -> str:
+        if not candidate_column_matches:
+            return "none"
+        if len(candidate_column_matches) == 1:
+            return "single"
+        return "ambiguous"
+
     def _draft_query_plan_partition_column_for_binding(
         self,
         name: str,
@@ -8785,6 +8831,7 @@ class DoxaBase:
         partition: PartitionDescription | None,
         partition_column: ResourceSummary | None,
         candidate_column_matches: list[DraftQueryPlanBindingColumnMatch],
+        candidate_column_match_status: str,
     ) -> str:
         base_note = (
             "Supply this value explicitly or derive it in the runtime query "
@@ -8799,6 +8846,13 @@ class DoxaBase:
                     or match.column.iri
                     for match in candidate_column_matches
                 )
+                if candidate_column_match_status == "ambiguous":
+                    return (
+                        f"{base_note} Candidate column hint(s): {match_names}. "
+                        "Multiple candidate columns matched this placeholder; "
+                        "review which source column, if any, should supply the "
+                        "runtime value."
+                    )
                 return (
                     f"{base_note} Candidate column hint(s): {match_names}. "
                     "These are best-effort placeholder/name matches, not "

@@ -351,6 +351,8 @@ include partition handoff hints (`binding_kind`, `partition_scheme`,
 runtime values. Non-partition dataset/storage templates may include
 `candidate_column_matches` when placeholder names match dataset columns; these
 are best-effort handoff hints, not inferred runtime values.
+`candidate_column_match_status` flags absent, singular, or ambiguous hint sets;
+ambiguous rows need review before choosing any source column.
 Binding rows identify the placeholder source text and explicitly report when
 DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 `blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`
@@ -408,9 +410,12 @@ observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and
 `profile_row_count` so agents can review whether the profile was a full scan,
 sample, or ambiguous run before applying helper arguments. They also carry
-duplicate-group metadata so repeated same-evidence observations can be reviewed
-as one representative row without losing sibling support. It does not mutate or
-stage graph changes, and it skips sampled zero-null promotions. Metric advisories
+`default_stageable`, `default_skip_reason`, and duplicate-group metadata so
+repeated same-evidence observations can be reviewed as one representative row
+without losing sibling support. `default_stageable=False` previews guardrails
+such as sampled row-count recommendations that default staging will skip unless
+the caller opts in. It does not mutate or stage graph changes, and it skips
+sampled zero-null promotions. Metric advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
 `promotion_patterns`, duplicate-group metadata, and structured
 `suggested_next_actions` for ontology/context review. Undefined metrics with a

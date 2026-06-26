@@ -262,14 +262,18 @@ The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `metric_advisory_status_counts`, and top-level
 `suggested_next_actions` / `suggested_next_calls` for quick routing.
-Recommendation rows carry `recommendation_index` plus duplicate-group fields;
-metric advisories carry duplicate-group fields too.
+Recommendation rows carry `recommendation_index`, `default_stageable`,
+`default_skip_reason`, and duplicate-group fields; metric advisories carry
+duplicate-group fields too.
 If `recommendation_count > 0`, review the draft and use the top-level
 `stage_profile_map_updates` action as a starting point. Its accepted indexes
 default to `representative_recommendation_indexes`, one index per duplicate
-group. If `recommendation_count == 0 and metric_advisory_count > 0`, handle the
-result as advisory-only: follow top-level advisory suggested actions and do not
-call `doxabase.stage_profile_map_updates`.
+group. Read `default_stageable` first: sampled row-count recommendations remain
+review candidates but are skipped by default unless
+`allow_sampled_row_count_updates=true`. If
+`recommendation_count == 0 and metric_advisory_count > 0`, handle the result as
+advisory-only: follow top-level advisory suggested actions and do not call
+`doxabase.stage_profile_map_updates`.
 
 `doxabase.stage_profile_map_updates`
 
@@ -354,7 +358,9 @@ template comes from partition metadata, binding rows also carry
 `partition_scheme`, `partition_column`, and `partition_granularity` handoff
 hints. Non-partition dataset/storage templates may include
 `candidate_column_matches` when placeholder names match dataset columns; use
-them as best-effort handoff hints, not runtime binding values. Top-level
+them as best-effort handoff hints, not runtime binding values.
+`candidate_column_match_status` marks the hint set as `none`, `single`, or
+`ambiguous`; review ambiguous rows before choosing any source column. Top-level
 `handoff_kind` gives a compact machine-readable route, such as
 `metadata_review_required`, `context_review_required`,
 `runtime_resolution_required`, `database_relation_handoff`,

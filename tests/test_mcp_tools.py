@@ -2231,6 +2231,7 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
         "suffix_name"
     )
     assert date_binding["candidate_column_matches"][0]["confidence"] == "medium"
+    assert date_binding["candidate_column_match_status"] == "single"
 
 
 def test_draft_query_plan_tool_returns_database_relation_handoff(
@@ -3352,6 +3353,8 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         "DuckDB full-table profile."
     )
     assert result["recommendations"][0]["profile_row_count"] == 10
+    assert result["recommendations"][0]["default_stageable"] is True
+    assert result["recommendations"][0]["default_skip_reason"] is None
     assert result["recommendations"][0]["duplicate_group_key"].startswith(
         "profile-map-update:"
     )
@@ -3361,6 +3364,8 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         result["recommendations"][0]["profile_observation_iri"]
     ]
     assert result["recommendations"][1]["helper_arguments"]["nullable"] is True
+    assert result["recommendations"][1]["default_stageable"] is True
+    assert result["recommendations"][1]["default_skip_reason"] is None
     assert result["metric_advisory_count"] == 1
     assert result["metric_advisory_status_counts"] == {
         "project_metric_undefined": 1,
