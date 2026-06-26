@@ -2217,6 +2217,7 @@ check.validation_results
 check.patches_checked
 check.triples_to_add
 check.triples_to_remove
+check.next_action
 check.suggested_next_actions
 check.suggested_next_calls
 ```
@@ -2239,8 +2240,14 @@ before staging a repaired or alternative candidate. `noop` means replay
 validates but would not change graph triples; inspect or replace it instead of
 applying. `blocking_reasons` uses compact values such as `target_count_drift`,
 `target_digest_drift`, `patch_conflict`, `validation_failed`,
-`no_effective_patch_triples`, `superseded_by_restage`, or `already_applied`. When
-`validation_conforms is None`, read `validation_skipped_reason` before guessing
+`no_effective_patch_triples`, `superseded_by_restage`, or `already_applied`.
+`next_action` is the compact queue route for the checked revision, using the
+same `RevisionNextAction` shape as list/export rows. Prefer it for automation
+after reading the full check: ready rows route to `apply_after_review`, stale
+count/digest drift routes to `restage_after_review`, validation and patch
+conflicts route to `repair_or_replace`, and already-applied rows route to
+`inspect_already_applied`. When `validation_conforms is None`, read
+`validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
 `already_applied`.
 For `patch_conflict`, inspect `patch_checks[].conflict` before mutating; it

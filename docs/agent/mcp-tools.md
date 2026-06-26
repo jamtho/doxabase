@@ -739,10 +739,11 @@ Returns `can_apply`, already-applied state, per-patch current/preview/effective 
 count-drift and snapshot-digest conflicts, preview validation diagnostics,
 `status`, `decision`, `summary`, `review_recommended`, `blocking_reasons`,
 `recommended_resolution`, `validation_skipped_reason`, `count_drifts`,
-`snapshot_drifts`, and
-structured `suggested_next_actions`. The response includes both
-`staged_revision_iri` and the alias `revision_iri` for script-friendly payload
-handoffs. Read `status`, `decision`, and `summary` first:
+`snapshot_drifts`, `next_action`, and structured `suggested_next_actions`.
+`next_action` is the compact route derived from the status/decision and the
+same action list used by revision-list rows and grouped exports. The response
+includes both `staged_revision_iri` and the alias `revision_iri` for
+script-friendly payload handoffs. Read `status`, `decision`, and `summary` first:
 `ready` means the staged patch replays
 and validates with an effective graph delta, with decision `review_then_apply`;
 `noop` means replay validates but would not change graph triples and uses

@@ -833,6 +833,13 @@ few useful gaps:
   default; read `status_counts`, `staged_recommendation_indexes`, and
   `skipped_recommendation_indexes` before assuming every accepted index became a
   patch.
+- A staged-revision recovery retest confirmed conflict detection, batch
+  restage, grouped export routing, apply-one-then-recheck, and applied snapshot
+  diff reconstruction work coherently. It exposed one final routing asymmetry:
+  direct `check_staged_revision_apply` responses had rich
+  `suggested_next_actions` but no compact `next_action`; apply checks now carry
+  that route directly, matching revision lists, grouped exports, batch restage
+  items, and post-apply recheck rows.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

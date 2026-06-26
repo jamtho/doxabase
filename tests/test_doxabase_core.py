@@ -1767,6 +1767,11 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert check.suggested_next_actions[0].arguments == {"iri": staged.revision_iri}
     assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
     assert check.suggested_next_actions[-1].tool_name == "apply_staged_revision"
+    assert check.next_action is not None
+    assert check.next_action.action_type == "apply_after_review"
+    assert check.next_action.queue == "apply_after_review"
+    assert check.next_action.tool_name == "apply_staged_revision"
+    assert check.next_action.arguments == {"iri": staged.revision_iri}
     ready_description = db.describe_staged_revision(staged.revision_iri)
     assert ready_description.current_apply_check is None
     assert ready_description.stored_review_context is None
@@ -2658,6 +2663,11 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.suggested_next_calls[0].startswith("describe_staged_revision(")
     assert check.suggested_next_actions[-1].tool_name == "restage_staged_revision"
     assert check.suggested_next_actions[-1].action_label == "Restage stale source"
+    assert check.next_action is not None
+    assert check.next_action.action_type == "restage_after_review"
+    assert check.next_action.queue == "restage_after_review"
+    assert check.next_action.tool_name == "restage_staged_revision"
+    assert check.next_action.arguments == {"iri": staged.revision_iri}
 
     with pytest.raises(DoxaBaseError, match="Staged revision cannot be applied"):
         db.apply_staged_revision(staged.revision_iri)
@@ -4159,6 +4169,11 @@ def test_restage_chain_routes_to_current_successor(
     assert original_check.suggested_next_actions[-1].action_label == (
         "Inspect current refreshed successor"
     )
+    assert original_check.next_action is not None
+    assert original_check.next_action.action_type == "inspect_current_successor"
+    assert original_check.next_action.arguments == {
+        "iri": current_successor.revision_iri
+    }
 
     listing = db.list_graph_revisions(include_apply_checks=True)
     by_iri = {item.iri: item for item in listing.revisions}

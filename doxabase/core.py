@@ -414,6 +414,7 @@ class StagedRevisionApplyCheck:
     patches_checked: int
     triples_to_add: int
     triples_to_remove: int
+    next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
 
@@ -15380,15 +15381,31 @@ class DoxaBase:
                 status=status,
                 conflicts=[],
             )
+            decision = self._staged_apply_check_decision(
+                status,
+                blocking_reasons=blocking_reasons,
+            )
+            next_action = self._revision_next_action(
+                staged.iri,
+                apply_status=status,
+                apply_decision=decision,
+                stale_resolution_state=None,
+                suggested_next_actions=suggested_next_actions,
+                restaged_by=(
+                    staged.restaged_by.iri if staged.restaged_by is not None else None
+                ),
+                current_restaged_by=(
+                    staged.current_restaged_by.iri
+                    if staged.current_restaged_by is not None
+                    else None
+                ),
+            )
             check = StagedRevisionApplyCheck(
                 staged_revision_iri=staged.iri,
                 revision_iri=staged.iri,
                 can_apply=False,
                 status=status,
-                decision=self._staged_apply_check_decision(
-                    status,
-                    blocking_reasons=blocking_reasons,
-                ),
+                decision=decision,
                 summary=summary,
                 review_recommended=self._staged_apply_check_review_recommended(
                     status,
@@ -15422,6 +15439,7 @@ class DoxaBase:
                 patches_checked=0,
                 triples_to_add=0,
                 triples_to_remove=0,
+                next_action=next_action,
                 suggested_next_actions=suggested_next_actions,
                 suggested_next_calls=[
                     action.call for action in suggested_next_actions
@@ -15648,15 +15666,31 @@ class DoxaBase:
             ),
             snapshot_drifts=snapshot_drifts,
         )
+        decision = self._staged_apply_check_decision(
+            status,
+            blocking_reasons=blocking_reasons,
+        )
+        next_action = self._revision_next_action(
+            staged.iri,
+            apply_status=status,
+            apply_decision=decision,
+            stale_resolution_state=None,
+            suggested_next_actions=suggested_next_actions,
+            restaged_by=(
+                staged.restaged_by.iri if staged.restaged_by is not None else None
+            ),
+            current_restaged_by=(
+                staged.current_restaged_by.iri
+                if staged.current_restaged_by is not None
+                else None
+            ),
+        )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
             revision_iri=staged.iri,
             can_apply=can_apply,
             status=status,
-            decision=self._staged_apply_check_decision(
-                status,
-                blocking_reasons=blocking_reasons,
-            ),
+            decision=decision,
             summary=summary,
             review_recommended=self._staged_apply_check_review_recommended(
                 status,
@@ -15685,6 +15719,7 @@ class DoxaBase:
             patches_checked=len(patch_checks),
             triples_to_add=triples_to_add,
             triples_to_remove=triples_to_remove,
+            next_action=next_action,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
@@ -16595,6 +16630,18 @@ class DoxaBase:
             reason = (
                 "This stale source already has a refreshed successor; inspect "
                 "the current successor instead of restaging this row again."
+            )
+            selected_action = find_action(action_label=label)
+        elif (
+            apply_decision == "inspect_current_successor"
+            or apply_status == "superseded_by_restage"
+        ):
+            action_type = "inspect_current_successor"
+            queue = "informational"
+            label = "Inspect current refreshed successor"
+            reason = (
+                "This staged source has a refreshed successor; inspect the "
+                "current successor instead of applying this row."
             )
             selected_action = find_action(action_label=label)
         elif apply_decision == "review_then_apply" or apply_status == "ready":

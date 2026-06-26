@@ -465,6 +465,10 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert stale_check["suggested_next_actions"][-1]["tool_name"] == (
         "restage_staged_revision"
     )
+    assert stale_check["next_action"]["action_type"] == "restage_after_review"
+    assert stale_check["next_action"]["queue"] == "restage_after_review"
+    assert stale_check["next_action"]["tool_name"] == "restage_staged_revision"
+    assert stale_check["next_action"]["arguments"] == {"iri": staged["revision_iri"]}
 
     restaged = restage_staged_revision_tool(db, iri=staged["revision_iri"])
 
