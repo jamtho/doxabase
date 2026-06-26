@@ -924,6 +924,12 @@ few useful gaps:
   a draft-level `next_action_queue`, a grouped `export_staged_revisions`
   suggested action, and per-revision `check_staged_revision_apply` suggested
   actions.
+- A staged-version recovery trial confirmed post-apply recheck rows, grouped
+  review queues, batch restage `current_revision_iri`, and snapshot lineage are
+  enough for autonomous routing. The remaining friction was naming: resource
+  lineage used only `current_staged_revision_iri`. It now also exposes
+  `current_revision_iri` with the same current staged successor value so scripts
+  can share batch-restage current-row handling.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

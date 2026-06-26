@@ -1773,6 +1773,7 @@ lineage.paired_role
 lineage.applied_revision_iri
 lineage.staged_revision_iri
 lineage.current_staged_revision_iri
+lineage.current_revision_iri
 lineage.related_revision_iris
 lineage.patch_mention_scan
 lineage.next_action
@@ -1809,10 +1810,12 @@ RDF-only imports are enough for resource route and staged/applied pairing when
 history metadata is present, but exact resource-level applied diffs require the
 companion `export_revision_snapshots()` / `import_revision_snapshots()` JSON
 bundle.
-`current_staged_revision_iri` is only populated when the selected row or its
-latest restage successor is still current staged work. Once a successor has been
-applied, the successor and applied event remain discoverable through
-`related_revision_iris` instead of being mislabeled as current staged work.
+`current_revision_iri` is an alias for `current_staged_revision_iri` so
+resource-lineage handoffs use the same current-row name as batch restage items.
+It is only populated when the selected row or its latest restage successor is
+still current staged work. Once a successor has been applied, the successor and
+applied event remain discoverable through `related_revision_iris` instead of
+being mislabeled as current staged work.
 
 `db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
 

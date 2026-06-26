@@ -1061,6 +1061,8 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     )
     assert lineage["selected_role"] == "applied_event"
     assert lineage["paired_revision"]["revision"]["iri"] == staged["revision_iri"]
+    assert lineage["current_staged_revision_iri"] is None
+    assert lineage["current_revision_iri"] is None
     assert lineage["applied_diff_status"] == "available"
     assert lineage["applied_diff"]["graph_diffs"][0][
         "resource_triples_added_count"

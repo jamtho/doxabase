@@ -801,6 +801,8 @@ returned-row count, and `omitted_match_risk` is a coarse absence-risk signal.
 those rows and returns a compact resource-centric lineage card with the selected
 row, visible paired staged/applied row, related revision IRIs, selected next
 action, patch scan status, and optional resource-filtered applied diff summary.
+`current_revision_iri` mirrors `current_staged_revision_iri` when the lineage row
+or restage successor is still current staged work, matching batch-restage naming.
 It is not a full graph-version browser and does not replace
 `describe_staged_revision()` when patch content is needed.
 `application_status="validation_failed"` means the current replay reached SHACL

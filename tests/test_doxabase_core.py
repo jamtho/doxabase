@@ -4799,6 +4799,7 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert lineage.applied_revision_iri == applied.applied_revision_iri
     assert lineage.staged_revision_iri == unanchored.revision_iri
     assert lineage.current_staged_revision_iri is None
+    assert lineage.current_revision_iri is None
     assert lineage.related_revision_iris == [
         applied.applied_revision_iri,
         unanchored.revision_iri,
@@ -4874,6 +4875,7 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     )
     assert stale_lineage.selected_role == "restaged_source"
     assert stale_lineage.current_staged_revision_iri == restaged.revision_iri
+    assert stale_lineage.current_revision_iri == restaged.revision_iri
     assert stale_lineage.related_revision_iris == [
         original.revision_iri,
         restaged.revision_iri,
@@ -4889,6 +4891,7 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     )
     assert applied_source_lineage.selected_role == "restaged_source"
     assert applied_source_lineage.current_staged_revision_iri is None
+    assert applied_source_lineage.current_revision_iri is None
     assert applied_source_lineage.related_revision_iris == [
         original.revision_iri,
         applied.applied_revision_iri,

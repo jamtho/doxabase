@@ -369,9 +369,10 @@ when one row needs a compact handoff card. It pairs applied events with their
 staged source when visible, carries the selected row's next action, and can
 summarize exact applied-diff triples filtered to the resource. It is a
 resource-centric helper, not full graph-version browsing. Its
-`current_staged_revision_iri` names only still-current staged work; if a restage
-successor has already been applied, follow `related_revision_iris` to inspect
-the successor and applied event.
+`current_staged_revision_iri` names only still-current staged work, and
+`current_revision_iri` is the same value under the batch-restage current-row
+name. If a restage successor has already been applied, follow
+`related_revision_iris` to inspect the successor and applied event.
 
 Call `describe_applied_revision_diff(applied_iri)` when you need stored
 before/after snapshot counts and digests for an applied staged revision. Pass

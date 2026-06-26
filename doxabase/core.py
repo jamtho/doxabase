@@ -995,6 +995,7 @@ class ResourceRevisionLineageDescription:
     applied_revision_iri: str | None
     staged_revision_iri: str | None
     current_staged_revision_iri: str | None
+    current_revision_iri: str | None
     related_revision_iris: list[str]
     patch_mention_scan: ResourceRevisionPatchMentionScanSummary
     next_action: RevisionNextAction | None
@@ -3943,6 +3944,7 @@ class DoxaBase:
             applied_revision_iri=applied_revision_iri,
             staged_revision_iri=staged_revision_iri,
             current_staged_revision_iri=current_staged_revision_iri,
+            current_revision_iri=current_staged_revision_iri,
             related_revision_iris=related_revision_iris,
             patch_mention_scan=lineage.patch_mention_scan,
             next_action=selected.revision.next_action,
