@@ -3545,6 +3545,10 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert stale_check_after.restaged_by == restaged.revision_iri
     assert stale_check_after.current_restaged_by == restaged.revision_iri
     assert stale_check_after.stale_resolution_state == "stale_handled_by_restage"
+    assert stale_check_after.summary.startswith(
+        "Handled by restage; inspect successor"
+    )
+    assert restaged.revision_iri in stale_check_after.summary
     assert stale_check_after.next_action is not None
     assert stale_check_after.next_action.arguments == {"iri": restaged.revision_iri}
     assert not any(
@@ -5915,6 +5919,10 @@ def test_restage_chain_routes_to_current_successor(
     assert original_check.restaged_by == first_successor.revision_iri
     assert original_check.current_restaged_by == current_successor.revision_iri
     assert original_check.stale_resolution_state == "stale_handled_by_restage"
+    assert original_check.summary.startswith(
+        "Handled by restage; inspect successor"
+    )
+    assert current_successor.revision_iri in original_check.summary
     assert original_check.suggested_next_actions[-1].arguments == {
         "iri": current_successor.revision_iri
     }
@@ -6430,7 +6438,10 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     stale_item = drift_by_iri[stale.revision_iri]
     assert stale_item.application_status == "conflict"
     assert stale_item.application_summary is not None
-    assert stale_item.application_summary.startswith("Blocked by 1 conflict")
+    assert stale_item.application_summary.startswith(
+        "Handled by restage; inspect successor"
+    )
+    assert restaged.revision_iri in stale_item.application_summary
     assert stale_item.application_recommended_resolution is not None
     assert "already has a refreshed successor" in (
         stale_item.application_recommended_resolution

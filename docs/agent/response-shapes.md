@@ -2621,7 +2621,9 @@ carry the checked resource under the same name used by list and export rows.
 revision-list/export routing fields on direct apply checks. A handled stale
 source reports the direct successor in `restaged_by`, the latest known successor
 in `current_restaged_by`, and routes compact `next_action` to inspect that
-successor instead of another mechanical restage.
+successor instead of another mechanical restage. Its `status` may still be
+`conflict` for historical graph-state drift, but the `summary` headline starts
+with handled-by-restage wording and names the successor.
 
 Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `ready`, `noop`, `already_applied`, `superseded_by_restage`, `conflict`,

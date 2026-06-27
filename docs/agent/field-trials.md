@@ -1129,6 +1129,10 @@ few useful gaps:
   can show different expected counts because each patch records its own staged
   replay point. Count-drift rows now expose `patch_sequence_index` and
   `expected_before_basis`; exports show the same cue.
+- A version-recovery trial found handled stale sources had correct successor
+  routing but summaries still led with generic conflict wording. Direct
+  apply-check summaries now start with handled-by-restage wording when
+  `current_restaged_by` exists, while preserving historical conflict status.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

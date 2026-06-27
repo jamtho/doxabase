@@ -1017,7 +1017,9 @@ It also includes `restaged_by`, `current_restaged_by`, and
 `stale_resolution_state` so direct apply checks can route handled stale sources
 the same way revision lists and exports do. When a stale source already has a
 successor, compact `next_action` points at `current_restaged_by` and suggested
-mutations omit another mechanical restage.
+mutations omit another mechanical restage; the summary headline also starts
+with handled-by-restage wording even though the historical graph-state status
+may remain `conflict`.
 `noop` means replay validates but has no effective graph delta; suggested
 actions point to inspection/export rather than apply. `triples_to_add` and
 `triples_to_remove` are effective deltas for the current preview, and

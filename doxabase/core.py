@@ -18220,6 +18220,8 @@ class DoxaBase:
                 triples_to_add=0,
                 triples_to_remove=0,
                 already_applied_by=existing_applied[0],
+                restaged_by=restaged_by_iri,
+                current_restaged_by=current_restaged_by_iri,
             )
             suggested_next_actions = self._staged_apply_check_next_actions(
                 staged.iri,
@@ -18521,6 +18523,8 @@ class DoxaBase:
             triples_to_add=triples_to_add,
             triples_to_remove=triples_to_remove,
             already_applied_by=None,
+            restaged_by=restaged_by_iri,
+            current_restaged_by=current_restaged_by_iri,
         )
         blocking_reasons = self._staged_apply_check_blocking_reasons(
             status=status,
@@ -19061,6 +19065,8 @@ class DoxaBase:
         triples_to_add: int,
         triples_to_remove: int,
         already_applied_by: str | None,
+        restaged_by: str | None = None,
+        current_restaged_by: str | None = None,
     ) -> str:
         graph_text = ", ".join(changed_graphs) if changed_graphs else "(none)"
         if status == "ready":
@@ -19083,6 +19089,14 @@ class DoxaBase:
             )
         if status == "conflict":
             first_conflict = conflicts[0] if conflicts else "(unknown conflict)"
+            successor_iri = current_restaged_by or restaged_by
+            if successor_iri is not None:
+                return (
+                    "Handled by restage; inspect successor "
+                    f"{successor_iri}. Stale source is still blocked by "
+                    f"{len(conflicts)} conflict(s); first conflict: "
+                    f"{first_conflict}"
+                )
             return (
                 f"Blocked by {len(conflicts)} conflict(s); first conflict: "
                 f"{first_conflict}"
