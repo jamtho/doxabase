@@ -12097,12 +12097,17 @@ def test_record_map_storage_access_rejects_unknown_location_kind(
 
     with pytest.raises(
         DoxaBaseError,
-        match="location_kind must be one of",
-    ):
+    ) as excinfo:
         db.record_map_storage_access(
             "https://example.test/project#orders_local_storage",
-            location_kind="folder-ish",
+            location_kind="local_path",
         )
+    error = str(excinfo.value)
+    assert "location_kind must be one of" in error
+    assert "Do not use 'local_path'" in error
+    assert "storage_protocol='rc:LocalFilesystemStorage'" in error
+    assert "Use 'object'" in error
+    assert "'directory'" in error
 
 
 def test_query_target_storage_owned_template_warnings_do_not_bleed_to_siblings(

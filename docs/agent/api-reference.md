@@ -698,10 +698,13 @@ layout verification belongs to one part of the executable catalog rather than
 to the whole dataset. For storage access, set `location_kind="object"` only when
 `storage_root` names the dataset object/location exactly; use `directory`,
 `prefix`, or `connection` for broader roots and add path templates for
-executable query planning. Resource-valued fields across these helpers expect
-IRIs/CURIEs, not prose: use terms such as `rc:EventRow`, `rc:Parquet`, or
-project IRIs for datasets, columns, caveats, and relationship endpoints. Put
-ordinary explanation in descriptions, notes, observations, or patterns.
+executable query planning. Do not use `location_kind="local_path"`; local
+filesystem belongs in `storage_protocol="rc:LocalFilesystemStorage"` and
+`location_kind` describes the root shape. Resource-valued fields across these
+helpers expect IRIs/CURIEs, not prose: use terms such as `rc:EventRow`,
+`rc:Parquet`, or project IRIs for datasets, columns, caveats, and relationship
+endpoints. Put ordinary explanation in descriptions, notes, observations, or
+patterns.
 For `record_map_partition_scheme`, `redundant_partition_key` is one of those
 resource-valued fields, usually the partition column IRI/CURIE. Keep literal
 placeholder names such as `date` or `event_date` in `path_template`.

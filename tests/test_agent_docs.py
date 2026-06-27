@@ -41,3 +41,17 @@ def test_start_here_names_exact_discovery_tools() -> None:
     assert "doxabase.get_doc" in content
     assert "doxabase.list_entities" in content
     assert "doxabase.describe_context_slice" in content
+
+
+def test_storage_access_docs_distinguish_protocol_from_location_kind() -> None:
+    for doc_id in ("mcp_tools", "executable_catalog"):
+        doc = get_agent_doc(doc_id, max_chars=80_000)
+        content = str(doc["content"])
+
+        assert "local_path" in content
+        assert "storage_protocol" in content
+        assert "rc:LocalFilesystemStorage" in content
+        assert '"object"' in content or "`object`" in content
+        assert '"directory"' in content or "`directory`" in content
+        assert '"prefix"' in content or "`prefix`" in content
+        assert '"connection"' in content or "`connection`" in content

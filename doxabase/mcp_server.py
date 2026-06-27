@@ -959,7 +959,12 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         layout_verification_note: str | None = None,
         datasets: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Record or update non-secret storage access metadata in the map graph."""
+        """Record non-secret storage access metadata.
+
+        location_kind is one of object, directory, prefix, or connection. Use
+        storage_protocol="rc:LocalFilesystemStorage" for local paths; do not use
+        location_kind="local_path".
+        """
 
         return record_map_storage_access_tool(
             db,

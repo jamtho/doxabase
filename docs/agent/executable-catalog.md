@@ -26,9 +26,12 @@ are safe to share with project collaborators:
   S3-compatible object storage, HTTPS, or database-backed.
 - `rc:storageRoot`, `rc:bucketName`, `rc:keyPrefix`, and `rc:pathTemplate`
   describe where data lives.
-- `rc:locationKind` says whether a root names an exact object/location,
-  directory, prefix, or connection. Root-only query targets are executable
+- `rc:locationKind` says whether a root names an exact `object`/location,
+  `directory`, `prefix`, or `connection`. Root-only query targets are executable
   candidates only when this is `object`; broader roots need path templates.
+  Do not use a value such as `local_path`: local filesystem is a
+  `storageProtocol`, while `locationKind` describes the shape of the recorded
+  root.
 - `rc:endpointProfile` names a locally resolved endpoint profile, such as
   `local-minio`.
 - `rc:pathStyleAccess` records an S3-compatible access quirk that query engines

@@ -752,11 +752,15 @@ path templates are checked against the protocol and bucket/prefix metadata, and
 relative templates that already include the recorded key prefix are treated as
 review-only because path composition would duplicate that prefix. A relative
 dataset path template does not make an otherwise rootless storage access ready
-for query planning; record the storage access location as well. When the storage
-root itself is the only candidate dataset location, set `location_kind="object"`
-only if that root names the dataset object/location exactly. Use
-`location_kind="directory"`, `"prefix"`, or `"connection"` for broader roots and
-add a path template before executable use.
+for query planning; record the storage access location as well.
+`location_kind` is a root-shape value, not a protocol value: use exactly one of
+`"object"`, `"directory"`, `"prefix"`, or `"connection"`. Do not use
+`"local_path"`; localness belongs in
+`storage_protocol="rc:LocalFilesystemStorage"`. When the storage root itself is
+the only candidate dataset location, set `location_kind="object"` only if that
+root names the dataset object/location exactly. Use `location_kind="directory"`,
+`"prefix"`, or `"connection"` for broader roots and add a path template before
+executable use.
 
 `doxabase.record_map_physical_layout`
 

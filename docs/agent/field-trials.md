@@ -1451,6 +1451,11 @@ few useful gaps:
   now includes explicit `draft_query_plan(candidate_index=...)` actions for peer
   ready and peer context-blocked direct-clean candidates, including
   `allow_context_blocked_candidate=True` where needed.
+- Storage-access setup trials confirmed `local_path` should stay invalid for
+  `location_kind`: local filesystem belongs in `storage_protocol`, while
+  `location_kind` is only the root shape (`object`, `directory`, `prefix`, or
+  `connection`). Keep errors and docs explicit so agents choose exact file/object
+  roots versus local folders deliberately.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
