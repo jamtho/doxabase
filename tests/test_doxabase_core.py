@@ -17402,6 +17402,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
                 "column_name": "status",
                 "summary": "Status had nulls in the full scan.",
                 "null_count": 2,
+                "physical_type": "rc:Varchar",
             },
             {
                 "column_iri": settlement_column,
@@ -17448,6 +17449,29 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
         "patches): 1 (project_metric_undefined=1)."
     )
     assert review_advisory_summary in staged.review_note
+    assert staged.type_advisory_count == 1
+    assert staged.type_advisory_status_counts == {
+        "type_finding_missing_map_type": 1,
+    }
+    assert staged.type_advisories[0].observed_column.iri == status_column
+    assert staged.type_advisories[0].observed_physical_type is not None
+    assert staged.type_advisories[0].observed_physical_type.iri == f"{RC}Varchar"
+    assert staged.type_review_required is True
+    assert [
+        action.tool_name for action in staged.type_advisory_suggested_next_actions
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_map_assertion_change",
+    ]
+    assert staged.type_advisory_suggested_next_calls == [
+        action.call for action in staged.type_advisory_suggested_next_actions
+    ]
+    type_review_advisory_summary = (
+        "Profile type advisories (review separately; not staged as map "
+        "patches): 1 (type_finding_missing_map_type=1)."
+    )
+    assert type_review_advisory_summary in staged.review_note
     assert staged.staged_revision is not None
     assert staged.staged_revision.validation_conforms is True
     assert staged.staged_revision.changed_graphs == ["map"]

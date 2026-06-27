@@ -4301,6 +4301,7 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
                 "column_name": "status",
                 "summary": "Status had nulls in the full scan.",
                 "null_count": 1,
+                "physical_type": "rc:Varchar",
             }
         ],
     )
@@ -4355,12 +4356,28 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["metric_vocabulary_review_required"] is False
     assert result["metric_advisory_suggested_next_actions"] == []
     assert result["metric_advisory_suggested_next_calls"] == []
-    assert result["type_advisory_count"] == 0
-    assert result["type_advisory_status_counts"] == {}
-    assert result["type_advisories"] == []
-    assert result["type_review_required"] is False
-    assert result["type_advisory_suggested_next_actions"] == []
-    assert result["type_advisory_suggested_next_calls"] == []
+    assert result["type_advisory_count"] == 1
+    assert result["type_advisory_status_counts"] == {
+        "type_finding_missing_map_type": 1,
+    }
+    assert result["type_advisories"][0]["observed_column"]["iri"] == (
+        status_column
+    )
+    assert result["type_advisories"][0]["observed_physical_type"]["iri"] == (
+        RC + "Varchar"
+    )
+    assert result["type_review_required"] is True
+    assert [
+        action["tool_name"]
+        for action in result["type_advisory_suggested_next_actions"]
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_map_assertion_change",
+    ]
+    assert result["type_advisory_suggested_next_calls"] == [
+        action["call"] for action in result["type_advisory_suggested_next_actions"]
+    ]
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "check_staged_revision_apply"
     )

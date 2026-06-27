@@ -1081,6 +1081,11 @@ follow it in addition to the map revision apply check, not as a replacement for
 the apply check. The same advisory count and status summary appears in the
 staging response and staged revision review note, so later reviewers can see
 whether undefined, defined, or ambiguous project metric vocabulary was present.
+When `type_review_required` is true,
+`type_advisory_suggested_next_actions` is the separate profile-type review lane;
+use it to inspect, record support patterns, or stage focused type assertions
+after reviewing the map update. It is not part of the grouped map patch and is
+not a replacement for the staged revision apply check.
 When no accepted recommendation produces a staged patch,
 `result.staged_revision is None` and `suggested_next_actions` is empty.
 An accepted recommendation index can therefore appear under either `staged` or
@@ -1939,6 +1944,9 @@ and suggested actions. `next_action` is a compact routing hint derived from
 those fields; `next_action_queue` groups the returned rows by queues such as
 `apply_after_review`, `restage_after_review`, `repair_or_replace`,
 `inspect_already_applied`, and `informational`.
+It is a routing surface, not a preference order for competing alternatives; use
+row details such as `review_recommendation`, `alternative_to`, and
+`current_alternative_to` when comparing alternative framings.
 The `returned_*_counts` dictionaries summarize the returned page, matching
 `next_action_queue`; raise `limit` or paginate when `count > len(revisions)` and
 you need whole-result counts. Full pages can include handled historical rows
@@ -3276,6 +3284,11 @@ applied.post_apply_recheck_revision_iris
 # Sibling staged revisions sharing changed graphs; re-check or regenerate a
 # grouped review before applying any of them.
 ```
+
+`next_action_queue` groups rows by next move; it is not a preference or
+comparison order for alternative framings. Use `revision_summaries` fields such
+as `review_recommendation`, `alternative_to`, and `current_alternative_to` when
+the relative meaning of ready alternatives matters.
 
 For example, if a batch creates two successors but only one appears in
 `ready_restage_successor_revision_iris`, review/apply only that ready successor.

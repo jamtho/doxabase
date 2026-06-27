@@ -1421,6 +1421,13 @@ few useful gaps:
   snapshot-evidence fields scripts actually route from, and grouped snapshot
   completeness labels should include `partial-extra-rows` for imported bundles
   with extra stored snapshot roles.
+- Profile-to-query and systematisation trials confirmed recent handoffs compose
+  without a behavior fix: staged profile map updates can leave profile metric
+  and type-review lanes for separate follow-up, query context can still route
+  through profile evidence before `draft_query_plan`, and mixed
+  `stage_pattern_promotion` alternatives expose usable routing queues. Treat
+  `next_action_queue` as next-move grouping, not preference order among ready
+  alternatives.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

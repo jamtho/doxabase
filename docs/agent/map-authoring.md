@@ -153,7 +153,8 @@ sample scope is the durable population. Draft rows preview that default with
 review prompts, not automatic map facts; in draft results, use their grouped
 lanes separately from `profile_map_updates`. In staging results, follow
 `metric_advisory_suggested_next_actions` separately from the map revision's
-`suggested_next_actions`.
+`suggested_next_actions`, and follow `type_advisory_suggested_next_actions`
+for type-finding review or focused type assertions.
 
 Typical mixed staging after a sampled profile run:
 

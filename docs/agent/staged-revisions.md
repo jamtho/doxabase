@@ -461,7 +461,11 @@ The staging result already carries the first routing surface:
 `result.suggested_next_actions`, and `result.suggested_next_calls`.
 Use `next_action_queue` before writing an export when an autonomous script only
 needs to separate mechanically ready framings from validation failures. The
-suggested actions include a grouped `export_staged_revisions` call and one
+queue groups rows by next move; it is not a preference or comparison order for
+alternatives. Use `revision_summaries`, `review_recommendation`,
+`alternative_to`, and `current_alternative_to` to understand alternative
+meaning and review order.
+The suggested actions include a grouped `export_staged_revisions` call and one
 `check_staged_revision_apply` call per staged revision; re-run those checks
 before applying, repairing, or restaging if any graph changes may have happened
 since the draft was created. Suggested export paths include a revision-derived
