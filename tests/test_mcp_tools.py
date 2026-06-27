@@ -413,6 +413,7 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert result["validation_conforms"] is True
     assert result["validation_result_count"] == 0
     assert result["patches"][0]["operation"] == "https://richcanopy.org/ns/rc#AdditionPatch"
+    assert result["patches"][0]["count_basis"] == "target_graph_only"
     assert result["patches"][0]["before_triple_count"] == before_map_count
     assert result["patches"][0]["after_triple_count"] == before_map_count + 3
     assert db.triple_count("map") == before_map_count
@@ -420,6 +421,7 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     description = describe_staged_revision_tool(db, result["revision_iri"])
     assert description["revision_stance_label"] == "exploratory hunch"
     assert description["patches"][0]["target_graph"] == "map"
+    assert description["patches"][0]["count_basis"] == "target_graph_only"
     assert "ex:Messages" in description["patches"][0]["content"]
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
@@ -1493,6 +1495,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         "Ready to apply 1 patch(es) across map: +3 triple(s), -0 triple(s)."
     )
     assert check["conflicts"] == []
+    assert check["patch_checks"][0]["count_basis"] == "target_graph_only"
     assert check["patch_checks"][0]["preview_triple_count"] == 3
     assert check["patch_checks"][0]["effective_triples_to_add"] == 3
     assert check["patch_checks"][0]["effective_triples_to_remove"] == 0

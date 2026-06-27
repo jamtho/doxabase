@@ -1156,6 +1156,11 @@ few useful gaps:
   can show different expected counts because each patch records its own staged
   replay point. Count-drift rows now expose `patch_sequence_index` and
   `expected_before_basis`; exports show the same cue.
+- An applied diff/version-browsing trial found staged preview counts for
+  `ontology` and `shapes` include immutable seed context, while applied snapshot
+  evidence remains role-local. Patch rows, apply checks, count drifts, applied
+  source summaries, and exports now expose `count_basis` so agents can compare
+  those counts intentionally.
 - A version-recovery trial found handled stale sources had correct successor
   routing but summaries still led with generic conflict wording. Direct
   apply-check summaries now start with handled-by-restage wording when

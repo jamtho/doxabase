@@ -246,6 +246,7 @@ class StagedGraphPatchRecord:
     patch_iri: str
     operation: str
     target_graph: str
+    count_basis: str
     format: str
     patch_role: str
     sequence_index: int
@@ -298,6 +299,7 @@ class StagedGraphRevisionRecord:
 class StagedPatchApplyCheck:
     patch_iri: str
     target_graph: str | None
+    count_basis: str | None
     operation: str | None
     operation_label: str | None
     patch_role: str | None
@@ -331,6 +333,7 @@ class StagedGraphCountDrift:
     patch_iri: str
     patch_sequence_index: int | None
     target_graph: str
+    count_basis: str
     expected_before_triple_count: int
     expected_before_basis: str
     current_triple_count: int
@@ -734,6 +737,7 @@ class StagedGraphPatchDescription:
     operation: str
     operation_label: str | None
     target_graph: str | None
+    count_basis: str | None
     format: str | None
     patch_role: str | None
     patch_role_label: str | None
@@ -805,6 +809,7 @@ class AppliedStagedRevisionSourcePatchSummary:
     operation: str | None
     operation_label: str | None
     target_graph: str | None
+    count_basis: str | None
     patch_role: str | None
     patch_role_label: str | None
     sequence_index: int | None
@@ -3459,6 +3464,7 @@ class DoxaBase:
                     operation=patch.operation,
                     operation_label=patch.operation_label,
                     target_graph=patch.target_graph,
+                    count_basis=patch.count_basis,
                     patch_role=patch.patch_role,
                     patch_role_label=patch.patch_role_label,
                     sequence_index=patch.sequence_index,
@@ -16761,6 +16767,7 @@ class DoxaBase:
                     patch_iri=str(patch["patch_iri"]),
                     operation=str(patch["operation"]),
                     target_graph=target_graph,
+                    count_basis=self._staged_patch_count_basis(target_graph),
                     format=str(patch["format"]),
                     patch_role=patch_role,
                     sequence_index=sequence_index,
@@ -16780,6 +16787,7 @@ class DoxaBase:
                 operation=patch_record.operation,
                 operation_label=self._label_for_resource(patch_record.operation),
                 target_graph=patch_record.target_graph,
+                count_basis=patch_record.count_basis,
                 format=patch_record.format,
                 patch_role=patch_record.patch_role,
                 patch_role_label=self._label_for_resource(patch_record.patch_role),
@@ -18538,6 +18546,7 @@ class DoxaBase:
 
         for patch in staged.patches:
             target_graph: str | None = None
+            count_basis: str | None = None
             operation: str | None = None
             current_count: int | None = None
             preview_count: int | None = None
@@ -18549,6 +18558,9 @@ class DoxaBase:
             patch_graph: Graph | None = None
             try:
                 target_graph = self._required_staged_patch_target_graph(patch)
+                count_basis = patch.count_basis or self._staged_patch_count_basis(
+                    target_graph
+                )
                 operation = self._required_staged_patch_field(
                     patch,
                     "operation",
@@ -18601,6 +18613,7 @@ class DoxaBase:
                             patch_iri=patch.iri,
                             patch_sequence_index=patch.sequence_index,
                             target_graph=target_graph,
+                            count_basis=count_basis or "unknown",
                             expected_before_triple_count=patch.before_triple_count,
                             expected_before_basis=(
                                 self._count_drift_expected_before_basis(
@@ -18671,6 +18684,12 @@ class DoxaBase:
                 StagedPatchApplyCheck(
                     patch_iri=patch.iri,
                     target_graph=target_graph or patch.target_graph,
+                    count_basis=(
+                        count_basis
+                        or self._staged_patch_count_basis(
+                            target_graph or patch.target_graph
+                        )
+                    ),
                     operation=operation or patch.operation,
                     operation_label=patch.operation_label,
                     patch_role=patch.patch_role,
@@ -19401,6 +19420,16 @@ class DoxaBase:
             f"patch {patch_sequence_index}, after earlier patches in this "
             "revision"
         )
+
+    @staticmethod
+    def _staged_patch_count_basis(target_graph: str | None) -> str | None:
+        if target_graph is None:
+            return None
+        if target_graph == "ontology":
+            return "target_graph_plus_base_ontology"
+        if target_graph == "shapes":
+            return "target_graph_plus_base_shapes"
+        return "target_graph_only"
 
     @staticmethod
     def _patch_checks_have_no_effective_delta(
@@ -23749,6 +23778,7 @@ class DoxaBase:
                     "",
                     f"- IRI: `{patch.iri}`",
                     f"- Target graph: `{patch.target_graph}`",
+                    f"- Count basis: `{patch.count_basis or 'unknown'}`",
                     f"- Format: `{patch.format}`",
                     f"- Role: {patch.patch_role_label or patch.patch_role or 'unknown'}",
                     f"- Sequence: {patch.sequence_index or 'unknown'}",
@@ -23955,10 +23985,10 @@ class DoxaBase:
                     "",
                     (
                         "| Patch | Sequence | Graph | Expected before | "
-                        "Expected basis | Current | Delta | Patch triples | "
+                        "Count basis | Expected basis | Current | Delta | Patch triples | "
                         "Status | Note |"
                     ),
-                    "|---|---:|---|---:|---|---:|---:|---|---|---|",
+                    "|---|---:|---|---:|---|---|---:|---:|---|---|---|",
                 ]
             )
             for drift in check.count_drifts:
@@ -23986,6 +24016,7 @@ class DoxaBase:
                             ),
                             self._markdown_table_cell(drift.target_graph),
                             str(drift.expected_before_triple_count),
+                            self._markdown_table_cell(drift.count_basis),
                             self._markdown_table_cell(
                                 drift.expected_before_basis
                             ),
@@ -24070,11 +24101,11 @@ class DoxaBase:
                     "",
                     (
                         "| Patch | Graph | Operation | Recorded preview before | "
-                        "Current preview before | Recorded preview after | Current preview | "
+                        "Count basis | Current preview before | Recorded preview after | Current preview | "
                         "Effective + | Effective - | Already present | Already absent | "
                         "Mechanically can apply | Conflict |"
                     ),
-                    "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|",
+                    "|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|---|",
                 ]
             )
             for patch in check.patch_checks:
@@ -24092,6 +24123,9 @@ class DoxaBase:
                                 or "(unknown)"
                             ),
                             self._markdown_optional_count(patch.before_triple_count),
+                            self._markdown_table_cell(
+                                patch.count_basis or "unknown"
+                            ),
                             self._markdown_optional_count(patch.current_triple_count),
                             self._markdown_optional_count(patch.after_triple_count),
                             self._markdown_optional_count(patch.preview_triple_count),
@@ -28929,11 +28963,13 @@ class DoxaBase:
     ) -> StagedGraphPatchDescription:
         operation = self._first_object(graphs, patch_iri, "rc:patchOperation")
         patch_role = self._first_object(graphs, patch_iri, "rc:patchRole")
+        target_graph = self._first_object(graphs, patch_iri, "rc:targetGraph")
         return StagedGraphPatchDescription(
             iri=patch_iri,
             operation=operation,
             operation_label=self._label_for_resource(operation),
-            target_graph=self._first_object(graphs, patch_iri, "rc:targetGraph"),
+            target_graph=target_graph,
+            count_basis=self._staged_patch_count_basis(target_graph),
             format=self._first_object(graphs, patch_iri, "rc:patchFormat"),
             patch_role=patch_role,
             patch_role_label=self._label_for_resource(patch_role),

@@ -523,6 +523,13 @@ conservative:
   changed graphs or validation dependencies that should be rechecked before any
   further apply.
 
+Patch previews report `count_basis` anywhere patch rows are exposed. Most
+patches use `target_graph_only`, but `ontology` and `shapes` patches preview
+against the expanded role graph (`target_graph_plus_base_ontology` or
+`target_graph_plus_base_shapes`) because normal reads include immutable seed
+context. Applied revision snapshot rows remain role-local, so compare staged
+preview counts and applied snapshot counts only after checking `count_basis`.
+
 After an apply, treat `post_apply_recheck_revisions` as the affected-sibling
 queue for the mutation that just happened. For each row, inspect
 `recheck_reasons` and `shared_changed_graphs`, then use the row's fresh
@@ -584,11 +591,12 @@ stored target graph that is not exactly one concrete mutable graph role.
 Ordinary restaging is for count/digest drift and may not repair these cases, so
 stage a repaired or alternative candidate when the graph intent is still useful.
 `count_drifts` gives expected/current graph counts and deltas for count drift.
-Read `patch_sequence_index` and `expected_before_basis` when multiple patches
-touch the same graph: later patches use the staged replay count after earlier
-patches, not the original graph snapshot. It can also say whether the staged
-patch triples themselves are currently present, absent, or mixed in the target
-graph. When stored snapshot rows are
+Read `count_basis`, `patch_sequence_index`, and `expected_before_basis` when
+multiple patches or ontology/shape patches are involved: later patches use the
+staged replay count after earlier patches, and ontology/shape counts include
+seed context rather than just mutable project triples. It can also say whether
+the staged patch triples themselves are currently present, absent, or mixed in
+the target graph. When stored snapshot rows are
 available, `snapshot_drifts` carries the exact target graph triples added and
 removed since staging, plus a conservative `drift_relevance` hint and any
 patch-subject, patch-predicate, patch-object, or revision-anchor overlaps.

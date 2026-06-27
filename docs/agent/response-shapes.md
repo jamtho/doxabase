@@ -1766,6 +1766,21 @@ revision.restage_reason
 revision.current_restaged_by
 ```
 
+Each `revision.patches[]` item has:
+
+```python
+patch.patch_iri
+patch.operation
+patch.target_graph
+patch.count_basis
+patch.format
+patch.patch_role
+patch.sequence_index
+patch.triple_count
+patch.before_triple_count
+patch.after_triple_count
+```
+
 `db.list_graph_revisions(...)` returns `GraphRevisionList`:
 
 ```python
@@ -2231,6 +2246,7 @@ Each `applied_source.patches[]` item has:
 patch.operation
 patch.operation_label
 patch.target_graph
+patch.count_basis
 patch.patch_role
 patch.patch_role_label
 patch.sequence_index
@@ -2562,6 +2578,7 @@ patch.iri
 patch.operation
 patch.operation_label
 patch.target_graph
+patch.count_basis
 patch.format
 patch.patch_role
 patch.patch_role_label
@@ -2718,9 +2735,12 @@ do not restage the same patch again; use a removal+addition patch or
 explicit.
 `triples_to_add` and `triples_to_remove` are effective graph deltas for the
 current preview, not raw patch payload sizes. Each `patch_checks[]` row carries
-`effective_triples_to_add`, `effective_triples_to_remove`,
+`count_basis`, `effective_triples_to_add`, `effective_triples_to_remove`,
 `already_present_triples`, and `already_absent_triples` so agents can see
-partial or no-op replay before applying.
+partial or no-op replay before applying. `count_basis` is usually
+`target_graph_only`; ontology and shape previews report
+`target_graph_plus_base_ontology` or `target_graph_plus_base_shapes` because
+their staged preview counts include immutable seed context.
 `count_drifts` gives patch-level count drift context: target graph, patch
 sequence, expected-before count, current count, delta, and whether exact changed
 triples are available. `expected_before_basis` explains whether the expected
@@ -2738,6 +2758,7 @@ Each `count_drifts[]` row uses these exact field names:
 drift.patch_iri
 drift.patch_sequence_index
 drift.target_graph
+drift.count_basis
 drift.expected_before_triple_count
 drift.expected_before_basis
 drift.current_triple_count

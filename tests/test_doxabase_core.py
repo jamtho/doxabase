@@ -628,6 +628,7 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     assert staged.patches[0].patch_role == RC + "FramingPatch"
     assert staged.patches[0].sequence_index == 1
     assert staged.patches[0].triple_count == 3
+    assert staged.patches[0].count_basis == "target_graph_only"
     assert staged.patches[0].before_triple_count == before_map_count
     assert staged.patches[0].after_triple_count == before_map_count + 3
     assert db.triple_count("map") == before_map_count
@@ -638,6 +639,7 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     assert description.validation_conforms is True
     assert description.patches[0].patch_role_label == "framing patch"
     assert description.patches[0].sequence_index == 1
+    assert description.patches[0].count_basis == "target_graph_only"
     assert description.patches[0].content is not None
     assert "ex:Messages" in description.patches[0].content
     overview = db.graph_overview()
@@ -652,6 +654,74 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     export_text = export_path.read_text()
     assert "exploratory hunch" in export_text
     assert "ex:Messages" in export_text
+
+
+def test_stage_graph_revision_exposes_seed_expanded_count_basis(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    staged = db.stage_graph_revision(
+        summary="Stage vocabulary and map anchors",
+        rationale=(
+            "Expose whether staged preview counts are role-local or include "
+            "seed context."
+        ),
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:SeedAwareClass a rdfs:Class ;
+                        rdfs:label "Seed-aware class" .
+                """,
+            },
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:SeedAwareThing rdfs:label "Seed-aware thing" .
+                """,
+            },
+        ],
+        validation_scope="all",
+    )
+
+    patches_by_graph = {patch.target_graph: patch for patch in staged.patches}
+    ontology_patch = patches_by_graph["ontology"]
+    map_patch = patches_by_graph["map"]
+    assert ontology_patch.count_basis == "target_graph_plus_base_ontology"
+    assert map_patch.count_basis == "target_graph_only"
+    assert ontology_patch.before_triple_count == (
+        db.triple_count("base_ontology") + db.triple_count("ontology")
+    )
+    assert map_patch.before_triple_count == db.triple_count("map")
+
+    description = db.describe_staged_revision(staged.revision_iri)
+    description_patches = {patch.target_graph: patch for patch in description.patches}
+    assert (
+        description_patches["ontology"].count_basis
+        == "target_graph_plus_base_ontology"
+    )
+    assert description_patches["map"].count_basis == "target_graph_only"
+
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    check_patches = {patch.target_graph: patch for patch in check.patch_checks}
+    assert (
+        check_patches["ontology"].count_basis
+        == "target_graph_plus_base_ontology"
+    )
+    assert check_patches["map"].count_basis == "target_graph_only"
+
+    export_path = tmp_path / "staged-review.md"
+    db.export_staged_revision(staged.revision_iri, export_path)
+    export_text = export_path.read_text()
+    assert "- Count basis: `target_graph_plus_base_ontology`" in export_text
+    assert "| Count basis |" in export_text
 
 
 def test_stage_graph_revision_parse_errors_include_parser_detail(
@@ -1884,6 +1954,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied.applied_source.revision_stance_label == "candidate revision"
     assert applied.applied_source.patch_count == 1
     assert applied.applied_source.patches[0].target_graph == "map"
+    assert applied.applied_source.patches[0].count_basis == "target_graph_only"
     assert applied.applied_source.patches[0].before_triple_count == 0
     assert applied.applied_source.patches[0].after_triple_count == 3
     assert applied.applied_source.graph_snapshots[0].graph_role == "map"
@@ -2914,6 +2985,7 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert len(check.conflicts) == 1
     assert len(check.count_drifts) == 1
     assert check.count_drifts[0].target_graph == "map"
+    assert check.count_drifts[0].count_basis == "target_graph_only"
     assert check.count_drifts[0].patch_sequence_index == 1
     assert check.count_drifts[0].expected_before_triple_count == 0
     assert check.count_drifts[0].expected_before_basis == (
@@ -2964,6 +3036,7 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert stale_summary.next_action.queue == "restage_after_review"
     assert stale_summary.next_action.arguments == {"iri": staged.revision_iri}
     assert stale_summary.count_drifts[0].target_graph == "map"
+    assert stale_summary.count_drifts[0].count_basis == "target_graph_only"
     assert stale_summary.snapshot_drifts[0].exact_changed_triples_available is True
     assert stale_summary.snapshot_drifts[0].exact_changed_triples_included is False
     assert stale_summary.snapshot_drifts[0].triples_added_since_snapshot == []
@@ -2987,18 +3060,19 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "- Validation skipped: conflicts_present" in export_text
     assert "### Count Drift" in export_text
     assert (
-        "| Patch | Sequence | Graph | Expected before | Expected basis | "
-        "Current | Delta |"
+        "| Patch | Sequence | Graph | Expected before | Count basis | "
+        "Expected basis | Current | Delta |"
     ) in export_text
+    assert "target_graph_only" in export_text
     assert "original staged graph snapshot before patch 1" in export_text
     assert "### Snapshot Drift" in export_text
     assert "#### Snapshot Drift Triples: map" in export_text
     assert "Added since snapshot" in export_text
     assert (
         "| Patch | Graph | Operation | Recorded preview before | "
-        "Current preview before | Recorded preview after | Current preview | "
-        "Effective + | Effective - | Already present | Already absent | "
-        "Mechanically can apply | Conflict |"
+        "Count basis | Current preview before | Recorded preview after | "
+        "Current preview | Effective + | Effective - | Already present | "
+        "Already absent | Mechanically can apply | Conflict |"
     ) in export_text
     assert "| map | 0 |" in export_text
     assert f"| 0 | {db.triple_count('map')} |" in export_text
