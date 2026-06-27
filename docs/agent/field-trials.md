@@ -1207,7 +1207,10 @@ few useful gaps:
   the draft infer a scan function from the first layout. Distinct layout
   signatures now produce `ambiguous_physical_layout`, block execution-readiness,
   and leave `scan.function` unset until the intended layout is modeled or
-  selected.
+  selected. A follow-up mixed local/S3/database mirror trial showed that agents
+  need a per-draft escape hatch before DoxaBase has candidate-scoped layout
+  modeling; `draft_query_plan(physical_layout_iri=...)` now records the reviewed
+  layout choice and clears that layout ambiguity only for the selected draft.
 - A cold-agent MCP-docs trial found lazy/deferred tool discovery can hide named
   DoxaBase tools until the exact tool name is searched. `start_here` now reminds
   agents to search exact `doxabase.*` names before assuming a documented tool is

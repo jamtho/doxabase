@@ -335,9 +335,11 @@ sibling hints block the overall context.
 over `describe_query_context()`. It currently supports `engine="duckdb"` and
 selects the candidate identified by `query_target_decision.candidate_index` by
 default. Pass `candidate_index` or `storage_access_iri` to select an explicit
-candidate; pass `allow_context_blocked_candidate=True` only when that selected
-candidate has no direct warning/error and stale sibling metadata should not
-block this handoff. If `storage_access_iri` matches multiple candidate paths,
+candidate; pass `physical_layout_iri` after reviewing linked physical layouts
+with distinct signatures; pass `allow_context_blocked_candidate=True` only when
+that selected candidate has no direct warning/error and stale sibling metadata
+should not block this handoff. If `storage_access_iri` matches multiple
+candidate paths,
 use the returned candidate snippets to rerun with `candidate_index`.
 When sibling candidate-metadata blockers are the reason for the allowance, pass
 an explicit selector too; selectorless automatic drafts keep the context review

@@ -2698,6 +2698,75 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     assert date_binding["candidate_column_match_status"] == "single"
 
 
+def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#events_local_storage",
+        label="Events local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "warehouse"),
+        path_templates=["events/current/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    csv_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#events_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    parquet_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[csv_layout["iri"], parquet_layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = describe_query_context_tool(db, iri=dataset)
+    automatic = draft_query_plan_tool(db, iri=dataset)
+    selected = draft_query_plan_tool(
+        db,
+        iri=dataset,
+        physical_layout_iri=parquet_layout["iri"],
+    )
+
+    assert context["readiness"] == "needs_review"
+    assert "ambiguous_physical_layout" in {
+        issue["code"] for issue in context["issues"]
+    }
+    assert automatic["scan"]["function"] is None
+    assert automatic["review_gate"]["blocking_reason_codes"] == [
+        "ambiguous_physical_layout"
+    ]
+    assert selected["source_context"]["requested_physical_layout_iri"] == (
+        parquet_layout["iri"]
+    )
+    assert selected["scan"]["physical_layout"]["iri"] == parquet_layout["iri"]
+    assert selected["scan"]["file_format"] == "Parquet"
+    assert selected["scan"]["function"] == "read_parquet"
+    assert selected["scan"]["physical_layout_selection_note"] == (
+        "Caller selected this physical layout for the draft query plan."
+    )
+    assert "ambiguous_physical_layout" not in selected["review_gate"][
+        "blocking_reason_codes"
+    ]
+    assert selected["review_gate"]["ready_for_execution_attempt"] is True
+    assert selected["handoff_kind"] == "execution_attempt_ready"
+
+
 def test_draft_query_plan_tool_returns_database_relation_handoff(
     tmp_path: Path,
 ) -> None:

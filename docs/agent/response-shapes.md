@@ -1422,7 +1422,10 @@ template, template source, source resource IRI, storage access IRI, and the
 allowed relation-template source list. `ambiguous_physical_layout` includes the
 distinct file-format/compression signatures and linked layout IRIs; when it is
 present, `draft_query_plan` leaves `scan.function` unset instead of guessing
-from the first layout.
+from the first layout. After reviewing those layouts, pass
+`physical_layout_iri` to `draft_query_plan` to select one for that draft; the
+source context records the requested layout and the scan card reports the
+selected layout.
 
 Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and
@@ -1466,14 +1469,15 @@ caller-supplied runtime values; in that case
 `review_gate.ready_for_execution_attempt` is false.
 By default, `plan.selected_candidate` is the candidate named by
 `query_target_decision.candidate_index`. Callers may override it with
-`candidate_index` or `storage_access_iri`; `source_context.query_target_decision`
-still carries the automatic decision, while `selected_candidate_index`,
+`candidate_index` or `storage_access_iri`, and may select a reviewed layout
+with `physical_layout_iri`; `source_context.query_target_decision` still
+carries the automatic decision, while `selected_candidate_index`,
 `candidate_count`, `ready_candidate_indexes`,
 `unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
 `unselected_direct_clean_candidate_indexes`, `selection_mode`, `requested_candidate_index`,
-`requested_storage_access_iri`, `selection_status`, `selection_note`, and
-`selected_candidate_note` / `allow_context_blocked_candidate` describe the
-actual draft selection.
+`requested_storage_access_iri`, `requested_physical_layout_iri`,
+`selection_status`, `selection_note`, and `selected_candidate_note` /
+`allow_context_blocked_candidate` describe the actual draft selection.
 `selected_candidate_note` is a compact prose handoff for the selected route. In
 context-blocked direct-clean cases it says which candidate was selected, what
 route kind the draft produced, and which sibling/context blocker codes remain in
@@ -1500,7 +1504,8 @@ from a dataset or partition file path, `scan.relation_identifier` stays absent
 and the selected candidate is review-gated with
 `database_relation_template_source_mismatch`; record the relation on the
 storage access before treating it as a database handoff. The scan card also
-carries the dataset-level
+carries `physical_layout` and `physical_layout_selection_note`, plus the
+dataset-level
 `dataset_verification_status` / `dataset_verification_note`, and repeats path
 lineage fields from the selected candidate: `template_source`,
 `template_source_resource`, `template_source_verification_status`,

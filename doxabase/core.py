@@ -1367,6 +1367,7 @@ class DraftQueryPlanSourceContext:
     selection_mode: str = "automatic"
     requested_candidate_index: int | None = None
     requested_storage_access_iri: str | None = None
+    requested_physical_layout_iri: str | None = None
     selection_status: str = "automatic"
     selection_note: str = ""
     selected_candidate_note: str = ""
@@ -1391,6 +1392,8 @@ class DraftQueryPlanScan:
     template_source_verification_note: str | None
     template_lineage: str | None
     composition: str | None
+    physical_layout: ResourceSummary | None
+    physical_layout_selection_note: str | None
     non_executed_note: str
     execution_attempt_ready: bool = False
     execution_attempt_blocking_reason_codes: list[str] = field(default_factory=list)
@@ -9166,12 +9169,24 @@ class DoxaBase:
         engine: str = "duckdb",
         candidate_index: int | None = None,
         storage_access_iri: str | None = None,
+        physical_layout_iri: str | None = None,
         allow_context_blocked_candidate: bool = False,
     ) -> DraftQueryPlan:
         engine_value = engine.strip().lower()
         if engine_value != "duckdb":
             raise DoxaBaseError("draft_query_plan currently supports engine='duckdb'")
         context = self.describe_query_context(iri=iri, graph=graph)
+        selected_physical_layout, requested_physical_layout_iri = (
+            self._draft_query_plan_selected_physical_layout(
+                context,
+                physical_layout_iri=physical_layout_iri,
+            )
+        )
+        physical_layout_selected = requested_physical_layout_iri is not None
+        effective_issues = self._draft_query_plan_effective_issues(
+            context.issues,
+            physical_layout_selected=physical_layout_selected,
+        )
         (
             selected_candidate_index,
             selected_candidate,
@@ -9183,6 +9198,10 @@ class DoxaBase:
             context,
             candidate_index=candidate_index,
             storage_access_iri=storage_access_iri,
+        )
+        selected_candidate = self._draft_query_plan_effective_layout_candidate(
+            selected_candidate,
+            physical_layout_selected=physical_layout_selected,
         )
         original_selected_candidate = selected_candidate
         (
@@ -9200,6 +9219,9 @@ class DoxaBase:
             selected_candidate,
             selected_candidate_index=selected_candidate_index,
             selection_mode=selection_mode,
+            selection_overridden=(
+                selection_mode != "automatic" or physical_layout_selected
+            ),
             context_blocked_candidate_used=context_blocked_candidate_used,
         )
         storage_access = self._draft_query_plan_storage_access(
@@ -9217,6 +9239,8 @@ class DoxaBase:
             dataset_verification_note=context.layout_verification_note,
             partition_schemes=context.partition_schemes,
             physical_layouts=context.physical_layouts,
+            selected_physical_layout=selected_physical_layout,
+            physical_layout_selected=physical_layout_selected,
             storage_accesses=context.storage_accesses,
             engine=engine_value,
         )
@@ -9231,9 +9255,12 @@ class DoxaBase:
             original_selected_candidate=original_selected_candidate,
             selected_decision=selected_decision,
             scan=scan,
+            issues=effective_issues,
             storage_environment=storage_environment,
             binding_requirements=binding_requirements,
-            selection_overridden=selection_mode != "automatic",
+            selection_overridden=(
+                selection_mode != "automatic" or physical_layout_selected
+            ),
             allow_context_blocked_candidate=allow_context_blocked_candidate,
             context_blocked_candidate_used=context_blocked_candidate_used,
             context_blocking_reasons=context_blocking_reasons,
@@ -9289,6 +9316,7 @@ class DoxaBase:
                 selection_mode=selection_mode,
                 requested_candidate_index=candidate_index,
                 requested_storage_access_iri=requested_storage_access_iri,
+                requested_physical_layout_iri=requested_physical_layout_iri,
                 selection_status=selection_status,
                 selection_note=selection_note,
                 selected_candidate_note=(
@@ -9316,7 +9344,7 @@ class DoxaBase:
             ),
             storage_environment=storage_environment,
             review_gate=review_gate,
-            issues=context.issues,
+            issues=effective_issues,
             analysis_warnings=context.analysis_warnings,
             caveats=context.caveats,
             upstream_caveats=context.upstream_caveats,
@@ -9597,10 +9625,12 @@ class DoxaBase:
         *,
         selected_candidate_index: int | None,
         selection_mode: str,
+        selection_overridden: bool,
         context_blocked_candidate_used: bool,
     ) -> QueryTargetDecision:
         if (
             selection_mode == "automatic"
+            and not selection_overridden
             and not context_blocked_candidate_used
         ):
             return context.query_target_decision
@@ -9755,6 +9785,76 @@ class DoxaBase:
                 return storage_access
         return None
 
+    def _draft_query_plan_selected_physical_layout(
+        self,
+        context: QueryPlanningContext,
+        *,
+        physical_layout_iri: str | None,
+    ) -> tuple[PhysicalLayoutDescription | None, str | None]:
+        if physical_layout_iri is None:
+            return None, None
+        layout_iri = self._required_iri("physical_layout_iri", physical_layout_iri)
+        for layout in context.physical_layouts:
+            if layout.iri == layout_iri:
+                return layout, layout_iri
+        raise DoxaBaseError(
+            "physical_layout_iri did not match any physical layout linked to "
+            f"'{context.dataset.iri}': {layout_iri}"
+        )
+
+    def _draft_query_plan_effective_layout_candidate(
+        self,
+        selected_candidate: QueryTargetCandidate | None,
+        *,
+        physical_layout_selected: bool,
+    ) -> QueryTargetCandidate | None:
+        if selected_candidate is None or not physical_layout_selected:
+            return selected_candidate
+        review_reasons = self._without_query_issue_code(
+            selected_candidate.review_reasons,
+            "ambiguous_physical_layout",
+        )
+        direct_review_reasons = self._without_query_issue_code(
+            selected_candidate.direct_review_reasons,
+            "ambiguous_physical_layout",
+        )
+        review_required = any(
+            reason.severity in {"error", "warning"} for reason in review_reasons
+        )
+        direct_review_required = any(
+            reason.severity in {"error", "warning"}
+            for reason in direct_review_reasons
+        )
+        return replace(
+            selected_candidate,
+            review_required=review_required,
+            review_reasons=review_reasons,
+            direct_review_required=direct_review_required,
+            direct_review_reasons=direct_review_reasons,
+            candidate_path_status=self._query_candidate_path_status(
+                selected_candidate.candidate_path,
+                review_required=review_required,
+                review_reasons=review_reasons,
+            ),
+        )
+
+    def _draft_query_plan_effective_issues(
+        self,
+        issues: list[QueryPlanningIssue],
+        *,
+        physical_layout_selected: bool,
+    ) -> list[QueryPlanningIssue]:
+        if not physical_layout_selected:
+            return issues
+        return self._without_query_issue_code(issues, "ambiguous_physical_layout")
+
+    @staticmethod
+    def _without_query_issue_code(
+        issues: list[QueryPlanningIssue],
+        code: str,
+    ) -> list[QueryPlanningIssue]:
+        return [issue for issue in issues if issue.code != code]
+
     def _draft_query_plan_scan(
         self,
         selected_candidate: QueryTargetCandidate | None,
@@ -9763,11 +9863,13 @@ class DoxaBase:
         dataset_verification_note: str | None,
         partition_schemes: list[PartitionDescription],
         physical_layouts: list[PhysicalLayoutDescription],
+        selected_physical_layout: PhysicalLayoutDescription | None,
+        physical_layout_selected: bool,
         storage_accesses: list[StorageAccessDescription],
         engine: str,
     ) -> DraftQueryPlanScan:
-        selected_layout = self._unique_physical_layout_for_query_plan(
-            physical_layouts
+        selected_layout = selected_physical_layout or (
+            self._unique_physical_layout_for_query_plan(physical_layouts)
         )
         file_format = self._draft_query_plan_resource_label(
             selected_layout.file_format if selected_layout is not None else None
@@ -9838,6 +9940,24 @@ class DoxaBase:
             ),
             composition=(
                 selected_candidate.composition if selected_candidate is not None else None
+            ),
+            physical_layout=(
+                self._summary_from_description(selected_layout)
+                if selected_layout is not None
+                else None
+            ),
+            physical_layout_selection_note=(
+                "Caller selected this physical layout for the draft query plan."
+                if physical_layout_selected
+                else (
+                    "A single linked physical layout signature was selected "
+                    "automatically."
+                    if selected_layout is not None
+                    else (
+                        "No unambiguous physical layout was selected; scan "
+                        "function inference is withheld."
+                    )
+                )
             ),
             non_executed_note=(
                 "Review-only draft; do not run without resolving runtime "
@@ -10351,6 +10471,7 @@ class DoxaBase:
         original_selected_candidate: QueryTargetCandidate | None,
         selected_decision: QueryTargetDecision,
         scan: DraftQueryPlanScan,
+        issues: list[QueryPlanningIssue],
         storage_environment: DraftQueryPlanStorageEnvironment,
         binding_requirements: list[DraftQueryPlanBinding],
         selection_overridden: bool,
@@ -10363,13 +10484,16 @@ class DoxaBase:
             selected_candidate,
             selected_decision=selected_decision,
             scan=scan,
+            issues=issues,
             context_blocked_candidate_used=context_blocked_candidate_used,
         )
+        context_metadata_ready = (
+            context.readiness == "ready_for_query_planning"
+            or context_blocked_candidate_used
+            or not self._query_blocking_issue_codes(issues)
+        )
         executable_without_review = (
-            (
-                context.readiness == "ready_for_query_planning"
-                or context_blocked_candidate_used
-            )
+            context_metadata_ready
             and selected_decision.status == "ready"
             and selected_decision.candidate_path_status == "ready"
             and selected_decision.direct_review_required is False
@@ -10420,7 +10544,7 @@ class DoxaBase:
             execution_attempt_blocking_reason_codes=(
                 execution_attempt_blocking_reason_codes
             ),
-            all_issue_codes=self._query_issue_codes(context.issues),
+            all_issue_codes=self._query_issue_codes(issues),
             reason_codes=blocking_reason_codes,
             review_note=(
                 "This helper drafts a non-executed plan. Review selected "
@@ -10457,6 +10581,7 @@ class DoxaBase:
         *,
         selected_decision: QueryTargetDecision,
         scan: DraftQueryPlanScan,
+        issues: list[QueryPlanningIssue],
         context_blocked_candidate_used: bool,
     ) -> list[str]:
         codes = list(selected_decision.reason_codes)
@@ -10465,7 +10590,7 @@ class DoxaBase:
             and context.readiness != "ready_for_query_planning"
             and not context_blocked_candidate_used
         ):
-            issue_codes = self._query_blocking_issue_codes(context.issues)
+            issue_codes = self._query_blocking_issue_codes(issues)
             if selected_candidate is None:
                 codes.extend(issue_codes)
             elif issue_codes and selected_decision.direct_review_required is False:

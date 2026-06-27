@@ -71,7 +71,10 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 6. `scan.function` is only a hint when the physical layout is unambiguous. If a
    dataset links multiple distinct file formats or compression codecs,
    `ambiguous_physical_layout` blocks execution-readiness and leaves the scan
-   function unset until the intended layout is modeled or selected.
+   function unset. After reviewing the linked layouts, pass
+   `physical_layout_iri` to `draft_query_plan` to select one for that draft; the
+   source context records the requested layout and `scan.physical_layout`
+   records the selected layout.
 7. `required_bindings` and `binding_requirements` still need runtime values.
    `review_gate.binding_values_required=True` and
    `handoff_kind="binding_values_required"` make that case explicit. When a

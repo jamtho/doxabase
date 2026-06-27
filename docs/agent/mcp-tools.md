@@ -416,8 +416,10 @@ relation template is also review-only with
 Returns a non-executed, review-gated physical plan draft over
 `describe_query_context`. It currently supports `engine="duckdb"` and selects
 the candidate named by `query_target_decision.candidate_index` by default. Pass
-`candidate_index` or `storage_access_iri` for an explicit selection, and use
-`allow_context_blocked_candidate=true` only when the selected candidate is
+`candidate_index` or `storage_access_iri` for an explicit route selection, pass
+`physical_layout_iri` after reviewing linked physical layouts with distinct
+signatures, and use `allow_context_blocked_candidate=true` only when the
+selected candidate is
 direct-clean but sibling metadata still blocks the whole context. When the
 blocker comes only from sibling candidate metadata, pair the allowance with
 an explicit `candidate_index` or `storage_access_iri`; selectorless automatic
@@ -445,7 +447,10 @@ environment hints, copied issues and analysis warnings, caveats, and a
 `review_gate`. Distinct linked physical layouts produce
 `ambiguous_physical_layout`, leave `scan.function` unset, and keep
 `review_gate.ready_for_execution_attempt=false` until the intended layout is
-modeled or selected. Binding rows preserve the source text and say
+modeled or selected with `physical_layout_iri`; selected drafts record the
+choice in `source_context.requested_physical_layout_iri`,
+`scan.physical_layout`, and `scan.physical_layout_selection_note`. Binding rows
+preserve the source text and say
 when DoxaBase has not inferred derivation or runtime values. When the selected
 template comes from partition metadata, binding rows also carry
 `binding_kind="partition_template_placeholder"` plus optional

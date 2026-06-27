@@ -376,6 +376,7 @@ def draft_query_plan_tool(
     engine: str = "duckdb",
     candidate_index: int | None = None,
     storage_access_iri: str | None = None,
+    physical_layout_iri: str | None = None,
     allow_context_blocked_candidate: bool = False,
 ) -> dict[str, Any]:
     return to_dict(
@@ -385,6 +386,7 @@ def draft_query_plan_tool(
             engine=engine,
             candidate_index=candidate_index,
             storage_access_iri=storage_access_iri,
+            physical_layout_iri=physical_layout_iri,
             allow_context_blocked_candidate=allow_context_blocked_candidate,
         )
     )

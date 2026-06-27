@@ -10803,9 +10803,45 @@ def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
     assert plan.scan.file_format is None
     assert plan.scan.compression is None
     assert plan.scan.function is None
+    assert plan.scan.physical_layout is None
+    assert "No unambiguous physical layout" in (
+        plan.scan.physical_layout_selection_note or ""
+    )
     assert plan.review_gate.ready_for_execution_attempt is False
     assert plan.review_gate.blocking_reason_codes == ["ambiguous_physical_layout"]
     assert plan.handoff_kind == "metadata_review_required"
+
+    selected_plan = db.draft_query_plan(
+        dataset,
+        physical_layout_iri=parquet_layout.iri,
+    )
+
+    assert selected_plan.source_context.requested_physical_layout_iri == (
+        parquet_layout.iri
+    )
+    assert selected_plan.selected_candidate is not None
+    assert selected_plan.selected_candidate.candidate_path_status == "ready"
+    assert selected_plan.selected_candidate.direct_review_required is False
+    assert selected_plan.scan.physical_layout is not None
+    assert selected_plan.scan.physical_layout.iri == parquet_layout.iri
+    assert selected_plan.scan.physical_layout_selection_note == (
+        "Caller selected this physical layout for the draft query plan."
+    )
+    assert selected_plan.scan.file_format == "Parquet"
+    assert selected_plan.scan.function == "read_parquet"
+    assert "ambiguous_physical_layout" not in (
+        selected_plan.review_gate.blocking_reason_codes
+    )
+    assert "ambiguous_physical_layout" not in selected_plan.review_gate.all_issue_codes
+    assert selected_plan.review_gate.ready_for_execution_attempt is True
+    assert selected_plan.handoff_kind == "execution_attempt_ready"
+    assert selected_plan.issues == []
+
+    with pytest.raises(DoxaBaseError, match="physical_layout_iri did not match"):
+        db.draft_query_plan(
+            dataset,
+            physical_layout_iri="https://example.test/project#missing_layout",
+        )
 
 
 def test_draft_query_plan_review_gates_database_backed_table_without_scan_function(

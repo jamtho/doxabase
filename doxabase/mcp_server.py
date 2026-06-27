@@ -213,6 +213,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         engine: str = "duckdb",
         candidate_index: int | None = None,
         storage_access_iri: str | None = None,
+        physical_layout_iri: str | None = None,
         allow_context_blocked_candidate: bool = False,
     ) -> dict[str, Any]:
         """Draft a non-executed, review-gated physical query plan."""
@@ -224,6 +225,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             engine=engine,
             candidate_index=candidate_index,
             storage_access_iri=storage_access_iri,
+            physical_layout_iri=physical_layout_iri,
             allow_context_blocked_candidate=allow_context_blocked_candidate,
         )
 
