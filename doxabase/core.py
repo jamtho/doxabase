@@ -18326,6 +18326,13 @@ class DoxaBase:
             if restages_revision is not None
             else None
         )
+        effective_alternative_to = alternative_to
+        if effective_alternative_to is None and restages_revision_value is not None:
+            effective_alternative_to = self._first_object(
+                self._expand_graphs(["history"]),
+                restages_revision_value,
+                "rc:alternativeTo",
+            )
         graph_counts = {
             graph_name: self.triple_count(graph_name)
             for graph_name in changed_graph_values
@@ -18368,12 +18375,12 @@ class DoxaBase:
             "rc:reviewRecommendation",
             review_recommendation,
         )
-        if alternative_to is not None:
+        if effective_alternative_to is not None:
             metadata.add(
                 (
                     subject,
                     URIRef(self.expand_iri("rc:alternativeTo")),
-                    URIRef(self.expand_iri(alternative_to)),
+                    URIRef(self.expand_iri(effective_alternative_to)),
                 )
             )
         if restages_revision_value is not None:
@@ -18487,8 +18494,8 @@ class DoxaBase:
             validation_result_count=validation.result_count,
             validation_results=validation.results,
             alternative_to=(
-                self.expand_iri(alternative_to)
-                if alternative_to is not None
+                self.expand_iri(effective_alternative_to)
+                if effective_alternative_to is not None
                 else None
             ),
             restaged_from=restages_revision_value,
@@ -21890,6 +21897,8 @@ class DoxaBase:
             "restages_revision": staged.iri,
             "validation_scope": validation_scope or "all",
         }
+        if staged.alternative_to is not None:
+            arguments["alternative_to"] = staged.alternative_to.iri
         if object_datatype is not None:
             arguments["object_datatype"] = object_datatype
         if object_lang is not None:
@@ -27001,8 +27010,15 @@ class DoxaBase:
         if not any(iris for _, iris in queues):
             return []
         return [
-            f"- {label}: {self._markdown_iri_list(iris)}"
-            for label, iris in queues
+            (
+                "Queue values are returned row IRIs; read each row's "
+                "`next_action.arguments` for the actual follow-up target."
+            ),
+            "",
+            *(
+                f"- {label}: {self._markdown_iri_list(iris)}"
+                for label, iris in queues
+            ),
         ]
 
     def _markdown_iri_list(self, iris: list[str]) -> str:

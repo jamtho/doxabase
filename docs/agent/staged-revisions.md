@@ -725,8 +725,11 @@ When the original intent is still live but the payload itself needs a
 caller-authored repair or rebase, stage the repaired patch with
 `restages_revision=<stale_revision_iri>` through `stage_graph_revision` or
 `stage_map_assertion_change`. That records the same `rc:restagesRevision`
-provenance without replaying the old payload. Use `alternative_to` only for a
-competing framing, not for a repaired successor to stale work. If the stale
+provenance without replaying the old payload. If the source row was already an
+alternative, the repaired successor inherits that `alternative_to` link unless
+the caller supplies a different one, so semantic alternative gates survive
+same-slot replacement repairs. Use `alternative_to` only for a competing
+framing, not for a repaired successor to stale work. If the stale
 source already has `restaged_by` / `current_restaged_by`, target the current
 successor; parallel repaired successors are rejected for the same reason
 parallel mechanical restages are rejected.

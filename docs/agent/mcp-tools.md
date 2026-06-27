@@ -1105,7 +1105,9 @@ immediate describe call.
 If the old payload needs a human/model-authored repair, use
 `doxabase.stage_graph_revision(..., restages_revision=...)` or
 `doxabase.stage_map_assertion_change(..., restages_revision=...)`; this helper
-is the same-patch replay path.
+is the same-patch replay path. Caller-authored repaired successors inherit the
+source row's stored `alternative_to` link unless an explicit replacement is
+supplied.
 
 `doxabase.restage_staged_revisions`
 
@@ -1147,7 +1149,7 @@ Guarded same-slot conflicts that already carry a
 `next_action_after` / `suggested_next_actions_after` instead of forcing a
 mechanical restage. A direct `restage_staged_revision()` call rejects the same
 route; stage the replacement with `restages_revision` so the repaired proposal
-supersedes the stale source.
+supersedes the stale source while preserving any source alternative link.
 Stale conflicts whose patch payload already has no effective delta are likewise
 `skipped_not_restageable`, with
 `not_restageable_reason="already_effective"`; inspect/export the stale source

@@ -4,6 +4,12 @@ Use this as the compact route from map metadata to a query-planning handoff.
 For the fuller model, read `executable_catalog`; for exact field shapes, read
 `response_shapes`.
 
+Before fixture query-planning trials against the active MCP capsule, sanity-check
+`graph_overview.key_counts`. If AIS or Polymarket tables exist but
+`storage_accesses == 0`, treat that capsule as stale or intentionally reduced
+and load the current fixtures into a scratch capsule before drawing product
+conclusions about query-target behavior.
+
 ## Field Precedence
 
 Start with `describe_query_context(dataset_iri)`:

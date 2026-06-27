@@ -3758,6 +3758,10 @@ result path, constraint, severity, value, messages, and sometimes a DoxaBase
 diagnostics are always exposed as `validation_results`; prose that says
 "diagnostics" and Markdown sections titled `Validation Results` refer to the
 same SHACL result records.
+This SHACL `diagnostic.hint` is separate from query-planning
+`issue.details.repair_hint`: query-planning repair actions are reviewed
+`stage_map_assertion_change` templates and may declare required extra arguments
+such as caller-supplied `rationale`.
 
 `validate_graph()` returns a `ValidationResult`:
 

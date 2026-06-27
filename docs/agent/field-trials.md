@@ -1554,11 +1554,21 @@ few useful gaps:
   `response-shapes` doc now has route subheadings for dataset storage, linked
   pattern reasons, query context, draft query plans, staged apply checks, and
   validation diagnostics.
+- A query-planning capsule-staleness retest confirmed the active local MCP
+  capsule can contain AIS/Polymarket tables but no storage access facts while
+  fresh fixture imports have the expected storage metadata. Keep the
+  `graph_overview.key_counts` sanity check in the query-planning path, not only
+  in cold-start/runtime gotchas.
 - A grouped profile-advisory retest confirmed `source_profile_advisory` is
   sufficient for routing duplicate metric/type lanes. It also showed an
   authoring nuance: metric-vocabulary patterns that target the dataset can be
   pulled into profile map patches, so advisory-only metric patterns should
   target or imply the metric IRI instead.
+- A staged-revision routing trial found same-slot replacement suggestions were
+  routeable but could drop the source row's `alternative_to` provenance when a
+  competing alternative target had already been applied. Repaired successors
+  should preserve both `restages_revision` and the source alternative link so
+  the semantic alternative gate remains visible.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -4448,6 +4448,80 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert repair_check.status == "ready"
 
 
+def test_same_slot_replacement_preserves_applied_alternative_gate(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    applied_source = db.stage_graph_revision(
+        summary="Model Orders as event rows",
+        rationale="One row-grain framing under review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics rc:EventRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    stale_alternative = db.stage_graph_revision(
+        summary="Model Orders as snapshot rows",
+        rationale="Competing row-grain framing under review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics rc:SnapshotRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+        alternative_to=applied_source.revision_iri,
+    )
+    db.apply_staged_revision(applied_source.revision_iri)
+
+    check = db.check_staged_revision_apply(stale_alternative.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.routing_decision == "stage_same_slot_replacement"
+    assert check.alternative_gate.status == "alternative_to_applied_source"
+    action = next(
+        action
+        for action in check.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+    )
+    assert action.arguments["restages_revision"] == stale_alternative.revision_iri
+    assert action.arguments["alternative_to"] == applied_source.revision_iri
+
+    repair_arguments = dict(action.arguments)
+    assert repair_arguments.pop("alternative_to") == applied_source.revision_iri
+    repair = db.stage_map_assertion_change(**repair_arguments)
+    assert repair.staged_revision.restaged_from == stale_alternative.revision_iri
+    assert repair.staged_revision.alternative_to == applied_source.revision_iri
+    repair_check = db.check_staged_revision_apply(
+        repair.staged_revision.revision_iri
+    )
+    assert repair_check.status == "ready"
+    assert repair_check.alternative_gate.status == "alternative_to_applied_source"
+    assert repair_check.alternative_gate.semantic_review_required is True
+    assert repair_check.alternative_gate.applied_source_iri == (
+        applied_source.revision_iri
+    )
+    assert repair_check.next_action is not None
+    assert repair_check.next_action.action_label == (
+        "Apply only after semantic review"
+    )
+
+
 def test_stale_column_same_slot_drift_keeps_restage_route(
     tmp_path: Path,
 ) -> None:

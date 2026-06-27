@@ -807,6 +807,7 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     export_text = expected_path.read_text(encoding="utf-8")
     assert "## Bundle Warnings" in export_text
     assert "## Review Queues" in export_text
+    assert "Queue values are returned row IRIs" in export_text
     assert "- Next action - apply after review: " in export_text
     assert "- Next action - informational: " in export_text
     assert "- Recommended review: " in export_text
