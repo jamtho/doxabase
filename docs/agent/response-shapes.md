@@ -1067,6 +1067,9 @@ Treat `partition.partition_columns` as an unordered set of resources unless a
 future response explicitly carries an ordering field. The singular
 `partition.partition_column` is useful for old single-column callers, not for
 inferring authoring order.
+`partition.redundant_partition_key` is a resource summary when present. When
+recording it, pass the redundant partition column IRI/CURIE rather than the
+literal placeholder token from the path template.
 
 Relationship entries under `dataset.relationships[]` include RDF class context
 and helper-style tokens:

@@ -1133,6 +1133,10 @@ few useful gaps:
   routing but summaries still led with generic conflict wording. Direct
   apply-check summaries now start with handled-by-restage wording when
   `current_restaged_by` exists, while preserving historical conflict status.
+- A query-planning metadata trial found `redundant_partition_key` is easy to
+  mistake for a literal path placeholder. It must be a resource reference,
+  usually the partition column IRI/CURIE; placeholder strings stay in
+  `path_template`.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

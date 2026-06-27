@@ -702,9 +702,11 @@ granularity, path template, redundant partition key, and layout verification
 status/notes. Use it when uncertainty belongs to a partition/path template
 rather than to the whole dataset. Use IRIs or CURIEs for partition columns,
 granularity, redundant partition keys, layout verification status, and linked
-datasets. Dataset descriptions expose all partition columns as
-`partition_columns`; the older singular `partition_column` field is retained as
-a first-column compatibility shortcut. Treat `partition_columns` as unordered
+datasets. `redundant_partition_key` is usually the partition column IRI/CURIE,
+not the literal placeholder token from `path_template`. Dataset descriptions
+expose all partition columns as `partition_columns`; the older singular
+`partition_column` field is retained as a first-column compatibility shortcut.
+Treat `partition_columns` as unordered
 unless a future response explicitly carries ordering metadata.
 
 `doxabase.record_map_relationship`

@@ -668,6 +668,9 @@ executable query planning. Resource-valued fields across these helpers expect
 IRIs/CURIEs, not prose: use terms such as `rc:EventRow`, `rc:Parquet`, or
 project IRIs for datasets, columns, caveats, and relationship endpoints. Put
 ordinary explanation in descriptions, notes, observations, or patterns.
+For `record_map_partition_scheme`, `redundant_partition_key` is one of those
+resource-valued fields, usually the partition column IRI/CURIE. Keep literal
+placeholder names such as `date` or `event_date` in `path_template`.
 `schema_stability` accepts `rc:FixedSchema`, `rc:InferredSchema`, or
 `rc:VariableSchema`. Layout verification status accepts
 `rc:UnverifiedLayout`, `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,

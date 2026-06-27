@@ -56,7 +56,10 @@ and relationship endpoints. Put ordinary explanation in `description`,
 `rc:ContradictedLayout`.
 For partition schemes, `granularity` is SHACL-checked against
 `rc:Daily`, `rc:Hourly`, `rc:Monthly`, and `rc:ByValue`; use a project term
-only after extending the project shapes accordingly.
+only after extending the project shapes accordingly. `redundant_partition_key`
+is also a resource-valued field, usually the partition column IRI or CURIE. Do
+not pass the literal template placeholder such as `"event_date"` or `"date"`;
+keep that token in `path_template`.
 
 ## When To Use Map Helpers
 

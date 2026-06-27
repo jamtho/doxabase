@@ -180,6 +180,7 @@ db.record_map_partition_scheme(
     partition,
     path_template="retail/events/event_date={date}/*.parquet",
     partition_columns=[event_date],
+    redundant_partition_key=event_date,
     granularity="rc:Daily",
     datasets=[table],
     layout_verification_status="rc:CandidateLayout",
@@ -226,6 +227,11 @@ print(
     )
 )
 ```
+
+`redundant_partition_key` names a resource, usually the partition column IRI or
+CURIE. The placeholder token stays in `path_template`; do not pass `"date"` or
+`"event_date"` as the redundant key unless you have deliberately minted that as
+a resource identifier.
 
 Tiny direct Python scratch example:
 
