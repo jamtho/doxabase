@@ -20601,6 +20601,21 @@ class DoxaBase:
                 ),
                 action_label="Inspect current refreshed successor",
             )
+            add_action(
+                "export_staged_revision",
+                {
+                    "iri": staged_revision_iri,
+                    "path": self._suggested_review_export_path(
+                        "staged-revision-handled-validation-failure",
+                        [staged_revision_iri],
+                    ),
+                },
+                (
+                    "Write a Markdown diagnostic bundle for this handled failed "
+                    "source while preserving the pointer to its current successor."
+                ),
+                action_label="Export handled validation bundle",
+            )
         elif status == "validation_failed":
             add_action(
                 "describe_staged_revision",

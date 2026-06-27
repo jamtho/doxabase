@@ -98,6 +98,12 @@ assertion suggestions. Review those advisories before turning type evidence into
 current map facts. If you follow the suggested `record_pattern` action first,
 copy the returned `pattern_iri` into the following
 `stage_map_assertion_change(..., supporting_patterns=[...])` call.
+Treat the grouped `profile_type_review` lane as a representative action queue:
+its labels may repeat across advisory groups. For automation, iterate
+`type_advisories[]`, group by `duplicate_group_key` /
+`duplicate_advisory_indexes`, and use each representative advisory's
+`suggested_next_actions` so the column, observed types, and duplicate
+observation support stay clear.
 That staged assertion also merges related assertion-support lore, so the final
 revision may include both the pattern you just recorded and patterns that
 directly target, imply, or claim-support the column or assertion. Same-profile

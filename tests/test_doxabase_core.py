@@ -6176,10 +6176,17 @@ def test_authored_repair_for_staged_validation_failure_can_apply_after_review(
     assert source_check.next_action.arguments == {"iri": repair.revision_iri}
     assert [action.tool_name for action in source_check.suggested_next_actions] == [
         "describe_staged_revision",
+        "export_staged_revision",
     ]
     assert source_check.suggested_next_actions[0].arguments == {
         "iri": repair.revision_iri,
     }
+    assert source_check.suggested_next_actions[1].arguments["iri"] == (
+        source.revision_iri
+    )
+    assert "handled-validation-failure" in (
+        source_check.suggested_next_actions[1].arguments["path"]
+    )
     assert source_check.recommended_resolution is not None
     assert "already has a refreshed successor" in (
         source_check.recommended_resolution
@@ -11263,6 +11270,72 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     )
     assert selected_plan.scan.execution_attempt_ready is False
     assert selected_plan.handoff_kind == "context_review_required"
+
+
+def test_draft_query_plan_layout_selection_preserves_runtime_resolution_gate(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_s3_storage",
+        label="Events S3 access",
+        storage_protocol="rc:S3CompatibleStorage",
+        bucket_name="events-lake",
+        key_prefix="warehouse",
+        endpoint_profile="minio-prod",
+        credential_reference="profile:events-readonly",
+        path_templates=["events/current/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    csv_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    parquet_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[csv_layout.iri, parquet_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert {issue.code for issue in context.issues} == {
+        "ambiguous_physical_layout",
+    }
+
+    selected_plan = db.draft_query_plan(
+        dataset,
+        physical_layout_iri=parquet_layout.iri,
+    )
+
+    assert selected_plan.issues == []
+    assert selected_plan.scan.function == "read_parquet"
+    assert selected_plan.review_gate.status == "ready"
+    assert selected_plan.review_gate.executable_without_review is True
+    assert selected_plan.review_gate.blocking_reason_codes == []
+    assert selected_plan.review_gate.all_issue_codes == []
+    assert selected_plan.review_gate.runtime_resolution_required is True
+    assert selected_plan.storage_environment.runtime_resolution_required is True
+    assert selected_plan.review_gate.ready_for_execution_attempt is False
+    assert selected_plan.scan.execution_attempt_ready is False
+    assert selected_plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "runtime_resolution_required",
+    ]
+    assert selected_plan.scan.execution_attempt_blocking_reason_codes == [
+        "runtime_resolution_required",
+    ]
+    assert selected_plan.handoff_kind == "runtime_resolution_required"
 
 
 def test_draft_query_plan_review_gates_database_backed_table_without_scan_function(
@@ -16451,6 +16524,114 @@ def test_profile_type_advisory_duplicate_actions_preserve_support(
     assert set(top_stage_action.arguments["supporting_observations"]) == (
         type_observations
     )
+
+
+def test_profile_type_review_lane_is_representative_action_queue(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    channel_column = "https://example.test/project#OrdersChannel"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+    )
+    db.record_map_column(
+        channel_column,
+        table_iri=dataset,
+        column_name="channel",
+        physical_type="rc:Varchar",
+    )
+
+    def record_repeated_type_profile() -> None:
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary="Orders were profiled without changing the map.",
+            evidence_summary="Repeated multi-column type-finding profile run.",
+            evidence_sources=["test://orders-profile"],
+            shared_evidence_iri=evidence,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+            column_profiles=[
+                {
+                    "column_iri": status_column,
+                    "column_name": "status",
+                    "summary": "Status looked varchar in the profile.",
+                    "physical_type": "rc:Varchar",
+                },
+                {
+                    "column_iri": channel_column,
+                    "column_name": "channel",
+                    "summary": "Channel looked integer-coded in the profile.",
+                    "physical_type": "rc:Integer",
+                },
+            ],
+        )
+
+    record_repeated_type_profile()
+    record_repeated_type_profile()
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 0
+    assert draft.type_advisory_count == 4
+    assert draft.type_advisory_status_counts == {
+        "type_finding_missing_map_type": 2,
+        "type_finding_conflicts_current_map": 2,
+    }
+    groups: dict[str, list[int]] = {}
+    for index, advisory in enumerate(draft.type_advisories):
+        groups.setdefault(advisory.duplicate_group_key, []).append(index)
+    assert len(groups) == 2
+
+    for group_key, indexes in groups.items():
+        group = [draft.type_advisories[index] for index in indexes]
+        group_observations = {
+            advisory.profile_observation_iri for advisory in group
+        }
+        for advisory in group:
+            assert advisory.duplicate_group_key == group_key
+            assert advisory.duplicate_count == 2
+            assert advisory.duplicate_advisory_indexes == indexes
+            assert set(advisory.duplicate_profile_observation_iris) == (
+                group_observations
+            )
+            assert [
+                action.tool_name for action in advisory.suggested_next_actions
+            ] == [
+                "describe_context_slice",
+                "record_pattern",
+                "stage_map_assertion_change",
+            ]
+            record_action = advisory.suggested_next_actions[1]
+            stage_action = advisory.suggested_next_actions[2]
+            assert set(record_action.arguments["supporting_observations"]) == (
+                group_observations
+            )
+            assert set(stage_action.arguments["supporting_observations"]) == (
+                group_observations
+            )
+
+    profile_type_actions = draft.suggested_next_action_groups["profile_type_review"]
+    profile_type_labels = [action.action_label for action in profile_type_actions]
+    assert profile_type_labels.count("Inspect profile type context") == 2
+    assert profile_type_labels.count("Record type-finding pattern") == 2
+    assert profile_type_labels.count("Stage physical type assertion") == 2
+    assert [
+        action.tool_name for action in profile_type_actions
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_map_assertion_change",
+        "describe_context_slice",
+        "record_pattern",
+        "stage_map_assertion_change",
+    ]
 
 
 def test_profile_map_update_duplicate_groups_preserve_representative_support(

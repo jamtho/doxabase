@@ -106,6 +106,9 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `status="ready"` while `ready_for_execution_attempt` and
    `scan.execution_attempt_ready` remain false because sibling context blockers,
    runtime resolution, or binding placeholders still need review.
+   Runtime-only cases may also have empty `blocking_reason_codes` and
+   `all_issue_codes`; route from `execution_attempt_blocking_reason_codes` when
+   `ready_for_execution_attempt` is false.
    `scan.execution_attempt_ready` mirrors this boolean next to the scan fields
    so clients do not need to leave the scan card to see whether scan hints are
    eligible for an execution attempt.

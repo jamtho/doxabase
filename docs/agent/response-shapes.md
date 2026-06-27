@@ -949,8 +949,14 @@ present only when non-empty and currently use `profile_map_updates`,
 `metric_vocabulary_review`, and `profile_type_review`. `suggested_next_call_groups`
 mirrors those groups with display call strings. The flat top-level
 `suggested_next_actions` / `suggested_next_calls` fields remain for compatibility
-and are ordered by those lanes. Drafts with at least one default-stageable representative
-recommendation include a `stage_profile_map_updates` action whose
+and are ordered by those lanes. `profile_type_review` is a representative action
+queue, not the grouping source; labels such as `Inspect profile type context`
+and `Stage physical type assertion` can repeat across advisory groups. Scripts
+that need per-column grouping should iterate `type_advisories[]` by
+`duplicate_group_key` / `duplicate_advisory_indexes` and use each advisory's
+own `suggested_next_actions`.
+Drafts with at least one default-stageable representative recommendation include
+a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled
 row-count recommendations can still appear in
 `representative_recommendation_indexes` for review, but the default staging
@@ -1601,7 +1607,9 @@ when DuckDB has no file-scan function for the selected storage/layout shape.
 After selecting `physical_layout_iri`, `status` may be `ready` while
 `ready_for_execution_attempt` and `scan.execution_attempt_ready` remain false;
 always route from the stricter execution-attempt fields before attempting a
-scan.
+scan. Runtime-only cases can have empty `blocking_reason_codes` and
+`all_issue_codes`; `execution_attempt_blocking_reason_codes` still names
+`runtime_resolution_required`.
 `execution_attempt_blocking_reason_codes` starts with those review blockers and
 also includes non-review execution-attempt blockers such as
 `runtime_resolution_required` and `binding_values_required`, so downstream
@@ -2773,7 +2781,9 @@ in `current_restaged_by`, and routes compact `next_action` to inspect that
 successor instead of another mechanical restage. Its `status` may still be
 `conflict` for historical graph-state drift or `validation_failed` for old
 failed validation diagnostics, but the `summary` headline starts with
-handled-by-restage wording and names the successor.
+handled-by-restage wording and names the successor. Suggested actions inspect
+the successor first and may include an `export_staged_revision` diagnostic
+bundle for the handled failed source.
 `alternative_gate` is the row-local alternative semantic gate. Its `status` is
 `not_applicable`, `alternative_to_unapplied_source`, or
 `alternative_to_applied_source`; the last status sets

@@ -687,6 +687,8 @@ failure stays in semantic-risk/review text but the ready successor can route to
 `apply_after_review`. A failed source that already has a repaired successor is
 historical diagnostics: direct checks keep `status="validation_failed"` and the
 validation results, but compact `next_action` points to `current_restaged_by`.
+Suggested actions inspect the successor first and can export the failed source
+as a diagnostic bundle when you need to preserve the old validation details.
 When a row without a successor has
 `staged_validation_conforms=False` or a failed `staged_validation_status`,
 the compact route remains `repair_or_replace` even if the live apply check now
