@@ -456,6 +456,11 @@ For a stale-restage-apply handoff between capsules:
 6. Run `import_revision_snapshots(snapshot_path)` and verify
    `post_import_snapshot_evidence` or `describe_revision_snapshot_evidence()`
    reaches `history_plus_snapshot_rows`.
+7. Then use `describe_applied_revision_diff(include_triples=True)` for changed
+   triples, or `describe_revision_graph_snapshot(..., include_triples=True)`
+   for full before/after snapshot contents. Suggested import paths are
+   placeholders when `path_is_placeholder=True`; replace them with real handoff
+   artifact paths.
 
 After the successor is applied, direct routes from the older stale source keep
 `restaged_by` / `current_restaged_by` pointing at the staged successor, but
@@ -463,11 +468,6 @@ After the successor is applied, direct routes from the older stale source keep
 rows can put `next_action.arguments["iri"]` on the applied event. Use lineage
 when you need the full chain; use row-local `next_action` when you just need the
 next inspection call.
-7. Then use `describe_applied_revision_diff(include_triples=True)` for changed
-   triples, or `describe_revision_graph_snapshot(..., include_triples=True)`
-   for full before/after snapshot contents. Suggested import paths are
-   placeholders when `path_is_placeholder=True`; replace them with real handoff
-   artifact paths.
 
 Use the full provenance recipe when an autonomous agent needs to answer "what
 changed this resource, why, and what review action remains?":
