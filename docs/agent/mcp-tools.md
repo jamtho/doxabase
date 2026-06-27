@@ -95,6 +95,18 @@ point at `doxabase.import_revision_snapshots`, and orphan snapshot rows point at
 paths are placeholders marked with `path_is_placeholder=True`; replace them with
 the real handoff artifact path before executing the action.
 
+`doxabase.describe_revision_graph_snapshot`
+
+Returns one revision snapshot for one graph role. It reports the revision-wide
+`snapshot_evidence`, the role-local count/digest, whether exact stored snapshot
+rows are available, and optionally bounded triples with
+`include_triples=true`. Use this when `describe_applied_revision_diff` tells you
+which staged source and applied event form the before/after pair, but you need
+the full stored contents of one side rather than only added/removed triples. If
+only RDF history count/digest metadata is present, the response uses
+`count_basis="rdf_history_graph_snapshot"` and leaves triples empty until a
+companion snapshot JSON bundle is imported.
+
 `doxabase.list_graph_revisions`
 
 Lists `rc:GraphRevision` resources from `history`, newest first. Use

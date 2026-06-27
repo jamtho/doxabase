@@ -18,6 +18,7 @@ from doxabase.mcp_tools import (
     describe_pattern_tool,
     describe_profile_run_tool,
     describe_query_context_tool,
+    describe_revision_graph_snapshot_tool,
     describe_revision_lineage_tool,
     describe_resource_revision_lineage_tool,
     describe_resource_tool,
@@ -69,7 +70,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence status, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -302,6 +303,25 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Classify RDF history and SQLite snapshot-row evidence for a revision."""
 
         return describe_revision_snapshot_evidence_tool(db, iri=iri, graph=graph)
+
+    @server.tool(name="doxabase.describe_revision_graph_snapshot")
+    def describe_revision_graph_snapshot(
+        iri: str,
+        graph_role: str,
+        graph: str | None = "history",
+        include_triples: bool = False,
+        max_triples: int = 500,
+    ) -> dict[str, Any]:
+        """Return one stored revision graph snapshot, optionally with triples."""
+
+        return describe_revision_graph_snapshot_tool(
+            db,
+            iri=iri,
+            graph_role=graph_role,
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=max_triples,
+        )
 
     @server.tool(name="doxabase.describe_applied_revision_diff")
     def describe_applied_revision_diff(

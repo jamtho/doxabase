@@ -17,6 +17,7 @@ from doxabase.mcp_tools import (
     describe_graph_revision_tool,
     describe_pattern_tool,
     describe_query_context_tool,
+    describe_revision_graph_snapshot_tool,
     describe_revision_lineage_tool,
     describe_resource_revision_lineage_tool,
     describe_resource_tool,
@@ -86,6 +87,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
     assert "doxabase.describe_revision_snapshot_evidence" in tool_names
+    assert "doxabase.describe_revision_graph_snapshot" in tool_names
     assert "doxabase.describe_applied_revision_diff" in tool_names
     assert "doxabase.list_graph_revisions" in tool_names
     assert "doxabase.describe_revision_lineage" in tool_names
@@ -1591,6 +1593,28 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         triple["subject"]
         for triple in exact_diff["graph_diffs"][0]["triples_added"]
     } == {"https://example.test/project#Messages"}
+    after_snapshot = describe_revision_graph_snapshot_tool(
+        db,
+        result["applied_revision_iri"],
+        "map",
+        include_triples=True,
+        max_triples=2,
+    )
+    assert after_snapshot["snapshot_evidence"]["status"] == (
+        "history_plus_snapshot_rows"
+    )
+    assert after_snapshot["triple_count"] == 3
+    assert after_snapshot["content_digest"] == description["graph_snapshots"][0][
+        "content_digest"
+    ]
+    assert after_snapshot["count_basis"] == "stored_snapshot_rows"
+    assert after_snapshot["exact_snapshot_available"] is True
+    assert after_snapshot["triples_included"] is True
+    assert after_snapshot["triples_truncated"] is True
+    assert len(after_snapshot["triples"]) == 2
+    assert {triple["subject"] for triple in after_snapshot["triples"]} == {
+        "https://example.test/project#Messages"
+    }
     project_path = tmp_path / "project.trig"
     snapshot_path = tmp_path / "revision-snapshots.json"
     export_trig_tool(db, path=str(project_path), graphs=["project"])
@@ -1642,6 +1666,20 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         ]
         is False
     )
+    rdf_only_snapshot = describe_revision_graph_snapshot_tool(
+        round_trip,
+        result["applied_revision_iri"],
+        "map",
+        include_triples=True,
+    )
+    assert rdf_only_snapshot["snapshot_evidence"]["status"] == (
+        "history_only_count_digest"
+    )
+    assert rdf_only_snapshot["triple_count"] == 3
+    assert rdf_only_snapshot["count_basis"] == "rdf_history_graph_snapshot"
+    assert rdf_only_snapshot["exact_snapshot_available"] is False
+    assert rdf_only_snapshot["triples_included"] is False
+    assert rdf_only_snapshot["triples"] == []
     snapshot_import = import_revision_snapshots_tool(
         round_trip,
         path=str(snapshot_path),
@@ -1689,6 +1727,20 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
         triple["subject"]
         for triple in imported_exact_diff["graph_diffs"][0]["triples_added"]
     } == {"https://example.test/project#Messages"}
+    imported_after_snapshot = describe_revision_graph_snapshot_tool(
+        round_trip,
+        result["applied_revision_iri"],
+        "map",
+        include_triples=True,
+        max_triples=1,
+    )
+    assert imported_after_snapshot["snapshot_evidence"]["status"] == (
+        "history_plus_snapshot_rows"
+    )
+    assert imported_after_snapshot["exact_snapshot_available"] is True
+    assert imported_after_snapshot["triples_included"] is True
+    assert imported_after_snapshot["triples_truncated"] is True
+    assert len(imported_after_snapshot["triples"]) == 1
     staged_description = describe_staged_revision_tool(db, staged["revision_iri"])
     assert staged_description["current_apply_check"] is None
     assert staged_description["application_status"] == "already_applied"

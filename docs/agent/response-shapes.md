@@ -2387,6 +2387,34 @@ added/removed array and truncation flags say whether arrays were shortened.
 Use `describe_staged_revision()` when you need original patch payloads,
 validation diagnostics, impacts, or judgement context.
 
+`db.describe_revision_graph_snapshot(revision_iri, graph_role,
+include_triples=False, max_triples=500)` returns
+`RevisionGraphSnapshotDescription`:
+
+```python
+snapshot.revision_iri
+snapshot.graph_role
+snapshot.snapshot_evidence
+snapshot.triple_count
+snapshot.content_digest
+snapshot.count_basis
+snapshot.stored_at
+snapshot.exact_snapshot_available
+snapshot.include_triples
+snapshot.triples_included
+snapshot.triples_truncated
+snapshot.max_triples
+snapshot.triples
+snapshot.note
+```
+
+Use it for one full stored snapshot role, for example the staged source before
+IRI or applied event after IRI discovered from
+`describe_applied_revision_diff()`. `count_basis` is
+`stored_snapshot_rows`, `rdf_history_graph_snapshot`, or `unavailable`. When
+only RDF history metadata exists, exact triples are not included even if
+`include_triples=True`; import the companion snapshot JSON bundle first.
+
 `db.describe_revision_snapshot_evidence(revision_iri)` returns
 `RevisionSnapshotEvidenceStatus`:
 

@@ -1347,6 +1347,14 @@ few useful gaps:
   lane could miss same-evidence profile-pattern support; default
   `stage_profile_map_updates` suggestions now prefill overlapping
   `supporting_patterns` while keeping metric and type advisories review-only.
+- Further retests found the profile support selector correctly ignores
+  unrelated same-evidence patterns, and query-planning gates around explicit
+  candidate allowance already behave coherently. Applied revision browsing had
+  one remaining ceremony gap: agents could see before/after diffs but not the
+  full contents of one stored snapshot without exporting JSON by hand.
+  `describe_revision_graph_snapshot` now exposes one role-local stored snapshot
+  with bounded triples, while `describe_applied_revision_diff` remains the
+  before/after changed-triple helper.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

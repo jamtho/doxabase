@@ -733,6 +733,24 @@ class RevisionSnapshotEvidenceStatus:
 
 
 @dataclass(frozen=True)
+class RevisionGraphSnapshotDescription:
+    revision_iri: str
+    graph_role: str
+    snapshot_evidence: RevisionSnapshotEvidenceStatus
+    triple_count: int | None
+    content_digest: str | None
+    count_basis: str
+    stored_at: str | None
+    exact_snapshot_available: bool
+    include_triples: bool
+    triples_included: bool
+    triples_truncated: bool
+    max_triples: int
+    triples: list[GraphTripleDescription]
+    note: str
+
+
+@dataclass(frozen=True)
 class StagedGraphPatchDescription:
     iri: str
     operation: str
@@ -3087,6 +3105,107 @@ class DoxaBase:
         data_graphs = self._expand_graphs([graph] if graph else None)
         return self._revision_snapshot_evidence_status(revision_iri, data_graphs)
 
+    def describe_revision_graph_snapshot(
+        self,
+        iri: str,
+        graph_role: str,
+        *,
+        graph: str | None = "history",
+        include_triples: bool = False,
+        max_triples: int = 500,
+    ) -> RevisionGraphSnapshotDescription:
+        if max_triples < 1:
+            raise DoxaBaseError("max_triples must be at least 1")
+        if graph_role not in self._known_graph_names():
+            raise DoxaBaseError(f"Unknown graph role: {graph_role}")
+
+        revision_iri = self.expand_iri(iri)
+        data_graphs = self._expand_graphs([graph] if graph else None)
+        snapshot_evidence = self._revision_snapshot_evidence_status(
+            revision_iri,
+            data_graphs,
+        )
+        rdf_snapshots = {
+            snapshot.graph_role: snapshot
+            for snapshot in self._graph_revision_snapshots(revision_iri, data_graphs)
+        }
+        rdf_snapshot = rdf_snapshots.get(graph_role)
+        stored_metadata = self._graph_snapshot_storage_metadata(
+            revision_iri,
+            graph_role,
+        )
+
+        triples: list[GraphTripleDescription] = []
+        triples_included = False
+        triples_truncated = False
+        stored_at: str | None = None
+        if stored_metadata is not None:
+            triple_count = int(stored_metadata["triple_count"])
+            content_digest = stored_metadata["content_digest"]
+            stored_at = stored_metadata["stored_at"]
+            count_basis = "stored_snapshot_rows"
+            exact_snapshot_available = True
+            if include_triples:
+                rows = self._graph_snapshot_storage_rows(revision_iri, graph_role)
+                triples_included = True
+                triples_truncated = len(rows) > max_triples
+                triples = [
+                    self._graph_triple_description(row)
+                    for row in rows[:max_triples]
+                ]
+                if triples_truncated:
+                    note = (
+                        "Exact stored snapshot rows are included up to "
+                        "max_triples for this revision and graph role."
+                    )
+                else:
+                    note = (
+                        "Exact stored snapshot rows are included for this "
+                        "revision and graph role."
+                    )
+            else:
+                note = (
+                    "Exact stored snapshot rows are available for this revision "
+                    "and graph role; pass include_triples=True to include them."
+                )
+        elif rdf_snapshot is not None:
+            triple_count = rdf_snapshot.triple_count
+            content_digest = rdf_snapshot.content_digest
+            count_basis = "rdf_history_graph_snapshot"
+            exact_snapshot_available = False
+            note = (
+                "RDF history count/digest metadata is present for this revision "
+                "and graph role, but exact stored snapshot rows are absent. "
+                "Import a companion revision snapshot JSON bundle before relying "
+                "on exact snapshot triples."
+            )
+        else:
+            triple_count = None
+            content_digest = None
+            count_basis = "unavailable"
+            exact_snapshot_available = False
+            note = (
+                "No RDF graph snapshot metadata or stored snapshot rows were "
+                "found for this revision and graph role."
+            )
+
+        return RevisionGraphSnapshotDescription(
+            revision_iri=revision_iri,
+            graph_role=graph_role,
+            snapshot_evidence=snapshot_evidence,
+            triple_count=triple_count,
+            content_digest=content_digest,
+            count_basis=count_basis,
+            stored_at=stored_at,
+            exact_snapshot_available=exact_snapshot_available,
+            include_triples=include_triples,
+            triples_included=triples_included,
+            triples_truncated=triples_truncated,
+            max_triples=max_triples,
+            triples=triples,
+            note=note,
+        )
+
     def _revision_snapshot_evidence_status(
         self,
         revision_iri: str,
@@ -4676,9 +4795,16 @@ class DoxaBase:
             selected.revision.current_restaged_by is None
             or current_successor_applied_revision_iri is None
         ):
+            suggested_next_actions = list(selected.revision.suggested_next_actions)
+            if not suggested_next_actions:
+                derived_action = self._suggested_action_from_revision_next_action(
+                    selected.revision.next_action,
+                )
+                if derived_action is not None:
+                    suggested_next_actions = [derived_action]
             return (
                 selected.revision.next_action,
-                selected.revision.suggested_next_actions,
+                suggested_next_actions,
             )
 
         def action(
@@ -27141,6 +27267,27 @@ class DoxaBase:
             (revision_iri, graph_role),
         ).fetchone()
         return row is not None
+
+    def _graph_snapshot_storage_metadata(
+        self,
+        revision_iri: str,
+        graph_role: str,
+    ) -> dict[str, Any] | None:
+        row = self._conn.execute(
+            """
+            SELECT stored_at, triple_count, content_digest
+            FROM graph_snapshot_storage
+            WHERE revision_iri = ? AND graph_role = ?
+            """,
+            (revision_iri, graph_role),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "stored_at": row["stored_at"],
+            "triple_count": int(row["triple_count"]),
+            "content_digest": row["content_digest"],
+        }
 
     def _graph_snapshot_storage_graph_roles(self, revision_iri: str) -> list[str]:
         rows = self._conn.execute(

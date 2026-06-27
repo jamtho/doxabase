@@ -116,6 +116,25 @@ def describe_revision_snapshot_evidence_tool(
     return to_dict(db.describe_revision_snapshot_evidence(iri=iri, graph=graph))
 
 
+def describe_revision_graph_snapshot_tool(
+    db: DoxaBase,
+    iri: str,
+    graph_role: str,
+    graph: str | None = "history",
+    include_triples: bool = False,
+    max_triples: int = 500,
+) -> dict[str, Any]:
+    return to_dict(
+        db.describe_revision_graph_snapshot(
+            iri=iri,
+            graph_role=graph_role,
+            graph=graph,
+            include_triples=include_triples,
+            max_triples=max_triples,
+        )
+    )
+
+
 def describe_applied_revision_diff_tool(
     db: DoxaBase,
     iri: str,

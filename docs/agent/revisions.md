@@ -93,6 +93,11 @@ after the RDF import. Keep the source capsule or explicit before/after exports
 when a downstream agent will only receive an RDF bundle. For controlled
 replacements, record the exact removed/added assertions in the rationale or
 preserve before/after exports when no snapshot bundle is available.
+Use `describe_revision_graph_snapshot(revision_iri, graph_role,
+include_triples=True)` when you need the full stored contents of one revision
+snapshot role. It is narrower than historical graph browsing: pair it with
+`describe_applied_revision_diff()` to discover the staged before IRI and
+applied after IRI, then inspect the specific role snapshots you need.
 Snapshot bundles can contain historical triples that are no longer present in
 current graphs, so treat them as review artifacts with the same care as graph
 exports.

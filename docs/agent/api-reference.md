@@ -1085,6 +1085,12 @@ It is a narrow applied-event inspection helper, not general historical graph
 browsing. RDF `export_trig()`/`import_trig()` preserves the graph snapshot
 metadata in `history`, but exact snapshot rows require an
 `export_revision_snapshots()` / `import_revision_snapshots()` JSON bundle.
+`describe_revision_graph_snapshot(revision_iri, graph_role,
+include_triples=False, max_triples=500)` returns one role-local revision
+snapshot. It is the route for full before/after snapshot contents once another
+helper has identified the staged source IRI or applied event IRI. When exact
+stored rows are missing, it falls back to RDF count/digest metadata and leaves
+triple arrays empty.
 Call `describe_revision_snapshot_evidence()` when imported capsules behave
 surprisingly; it now carries structured import actions for missing snapshot rows
 or missing project/history RDF. Those actions mark placeholder paths with

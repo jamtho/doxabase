@@ -2058,6 +2058,49 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert {triple.subject for triple in exact_map_diff.triples_added} == {
         "https://example.test/project#Messages"
     }
+    before_snapshot = db.describe_revision_graph_snapshot(
+        staged.revision_iri,
+        "map",
+        include_triples=True,
+    )
+    assert before_snapshot.snapshot_evidence.status == "history_plus_snapshot_rows"
+    assert before_snapshot.triple_count == 0
+    assert before_snapshot.content_digest == map_diff.before_content_digest
+    assert before_snapshot.count_basis == "stored_snapshot_rows"
+    assert before_snapshot.exact_snapshot_available is True
+    assert before_snapshot.triples_included is True
+    assert before_snapshot.triples_truncated is False
+    assert before_snapshot.triples == []
+    after_snapshot = db.describe_revision_graph_snapshot(
+        result.applied_revision_iri,
+        "map",
+        include_triples=True,
+        max_triples=2,
+    )
+    assert after_snapshot.snapshot_evidence.status == "history_plus_snapshot_rows"
+    assert after_snapshot.triple_count == 3
+    assert after_snapshot.content_digest == applied.graph_snapshots[0].content_digest
+    assert after_snapshot.count_basis == "stored_snapshot_rows"
+    assert after_snapshot.stored_at is not None
+    assert after_snapshot.exact_snapshot_available is True
+    assert after_snapshot.triples_included is True
+    assert after_snapshot.triples_truncated is True
+    assert after_snapshot.max_triples == 2
+    assert len(after_snapshot.triples) == 2
+    assert {triple.subject for triple in after_snapshot.triples} == {
+        "https://example.test/project#Messages"
+    }
+    with pytest.raises(DoxaBaseError, match="Unknown graph role"):
+        db.describe_revision_graph_snapshot(
+            result.applied_revision_iri,
+            "not_a_graph_role",
+        )
+    with pytest.raises(DoxaBaseError, match="max_triples must be at least 1"):
+        db.describe_revision_graph_snapshot(
+            result.applied_revision_iri,
+            "map",
+            max_triples=0,
+        )
     with pytest.raises(DoxaBaseError) as wrong_resource_excinfo:
         db.describe_resource_revision_lineage(
             "https://example.test/project#UnrelatedResource",
@@ -2164,6 +2207,21 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert "import_revision_snapshots" in (
         imported_diff_before_snapshots.graph_diffs[0].note
     )
+    rdf_only_snapshot = round_trip.describe_revision_graph_snapshot(
+        result.applied_revision_iri,
+        "map",
+        include_triples=True,
+    )
+    assert rdf_only_snapshot.snapshot_evidence.status == "history_only_count_digest"
+    assert rdf_only_snapshot.triple_count == 3
+    assert rdf_only_snapshot.content_digest == applied.graph_snapshots[0].content_digest
+    assert rdf_only_snapshot.count_basis == "rdf_history_graph_snapshot"
+    assert rdf_only_snapshot.exact_snapshot_available is False
+    assert rdf_only_snapshot.triples_included is False
+    assert rdf_only_snapshot.triples == []
+    assert "Import a companion revision snapshot JSON bundle" in (
+        rdf_only_snapshot.note
+    )
 
     snapshot_import = round_trip.import_revision_snapshots(snapshot_path)
     assert snapshot_import.imported_snapshot_count == 2
@@ -2194,6 +2252,19 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         triple.subject
         for triple in imported_exact_diff.graph_diffs[0].triples_added
     } == {"https://example.test/project#Messages"}
+    imported_after_snapshot = round_trip.describe_revision_graph_snapshot(
+        result.applied_revision_iri,
+        "map",
+        include_triples=True,
+        max_triples=1,
+    )
+    assert imported_after_snapshot.snapshot_evidence.status == (
+        "history_plus_snapshot_rows"
+    )
+    assert imported_after_snapshot.exact_snapshot_available is True
+    assert imported_after_snapshot.triples_included is True
+    assert imported_after_snapshot.triples_truncated is True
+    assert len(imported_after_snapshot.triples) == 1
     imported_lineage_after_snapshots = round_trip.describe_resource_revision_lineage(
         "https://example.test/project#Messages",
         result.applied_revision_iri,
@@ -2618,6 +2689,21 @@ def test_import_revision_snapshots_validates_bundle_before_writing(
         for action in imported.post_import_snapshot_evidence[0].suggested_next_actions
     ] == ["import_trig"]
     assert valid_db._graph_snapshot_storage_rows(valid_revision, "map")[0][3] == ""
+    snapshot_only = valid_db.describe_revision_graph_snapshot(
+        valid_revision,
+        "map",
+        include_triples=True,
+    )
+    assert snapshot_only.snapshot_evidence.status == "snapshot_rows_without_history"
+    assert snapshot_only.triple_count == 1
+    assert snapshot_only.content_digest == "sha256:valid"
+    assert snapshot_only.count_basis == "stored_snapshot_rows"
+    assert snapshot_only.exact_snapshot_available is True
+    assert snapshot_only.triples_included is True
+    assert snapshot_only.triples_truncated is False
+    assert len(snapshot_only.triples) == 1
+    assert snapshot_only.triples[0].object == ""
+    assert snapshot_only.triples[0].object_kind == "literal"
     with pytest.raises(DoxaBaseError) as lineage_excinfo:
         valid_db.describe_resource_revision_lineage(
             "https://example.test/project#Thing",
@@ -7395,6 +7481,12 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     ]
     assert applied_event_lineage.latest_revision_iri == applied.applied_revision_iri
     assert applied_event_lineage.latest_role == "applied_event"
+    assert applied_event_lineage.suggested_next_calls == [
+        (
+            "describe_graph_revision("
+            f"iri={applied.applied_revision_iri!r})"
+        )
+    ]
     assert applied_event_lineage.related_revision_iris == [
         applied.applied_revision_iri,
         restaged.revision_iri,
@@ -15381,6 +15473,20 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         evidence_iri=evidence,
         map_implications=[dataset, status_column, settlement_column],
     )
+    unrelated_same_evidence_pattern = db.record_pattern(
+        summary="Refunds profile evidence should stay separate.",
+        pattern_text=(
+            "This pattern intentionally shares the Payments profile evidence "
+            "but targets a different asset and map implication."
+        ),
+        rationale=(
+            "Same evidence alone should not make a pattern supporting context "
+            "for profile-derived Payments map updates."
+        ),
+        pattern_targets=["https://example.test/project#Refunds"],
+        evidence_iri=evidence,
+        map_implications=["https://example.test/project#RefundsReason"],
+    )
 
     draft = db.draft_profile_map_updates(dataset, evidence)
 
@@ -15411,6 +15517,9 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         "accepted_recommendation_indexes": [0, 1, 2],
         "supporting_patterns": [profile_pattern.pattern_iri],
     }
+    assert unrelated_same_evidence_pattern.pattern_iri not in (
+        draft.suggested_next_actions[0].arguments["supporting_patterns"]
+    )
     assert draft.suggested_next_calls[0].startswith("stage_profile_map_updates(")
     assert list(draft.suggested_next_action_groups) == [
         "profile_map_updates",
@@ -15442,6 +15551,9 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     )
     assert {item.iri for item in described_staged.supporting_patterns} == {
         profile_pattern.pattern_iri
+    }
+    assert unrelated_same_evidence_pattern.pattern_iri not in {
+        item.iri for item in described_staged.supporting_patterns
     }
 
     row_count = draft.recommendations[0]
