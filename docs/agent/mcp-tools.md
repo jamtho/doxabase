@@ -396,7 +396,10 @@ representative indexes whose rows have `default_stageable=True`. Sampled
 row-count recommendations remain review candidates in
 `representative_recommendation_indexes`, but they are omitted from the default
 staging action unless the caller explicitly opts in with
-`allow_sampled_row_count_updates=true`. If
+`allow_sampled_row_count_updates=true`. Same-evidence scalar conflicts, such as
+two full-scan row counts for the same dataset or two nullable values for the
+same column, also get `default_stageable=False`; review the observations and
+choose at most one value explicitly. If
 `recommendation_count == 0` and either metric or type advisories are present,
 handle the result as advisory-only: follow advisory grouped suggested actions and
 do not call `doxabase.stage_profile_map_updates`. When recommendations and
@@ -419,7 +422,10 @@ review prompts, keeps type advisories separate from staged map patches,
 preserves every grouped profile observation when one duplicate representative is accepted, and skips
 accepted sampled row-count
 recommendations unless
-`allow_sampled_row_count_updates=true`. Optional `supporting_claims`,
+`allow_sampled_row_count_updates=true`. It also skips accepted scalar
+recommendations when the accepted set contains multiple disagreeing
+same-evidence values for the same map assertion; rerun the call with one chosen
+value after review. Optional `supporting_claims`,
 `supporting_patterns`, and `revision_anchors` are passed through to the staged
 revision when at least one recommendation creates a patch; caller anchors are
 merged with the automatic profile-derived anchors.

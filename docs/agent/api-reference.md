@@ -494,8 +494,10 @@ sample, or ambiguous run before applying helper arguments. They also carry
 repeated same-evidence observations can be reviewed as one representative row
 without losing sibling support. `default_stageable=False` previews guardrails
 such as sampled row-count recommendations that default staging will skip unless
-the caller opts in. It does not mutate or stage graph changes, and it skips
-sampled zero-null promotions. Metric advisories
+the caller opts in, and same-evidence scalar conflicts where profile
+observations propose multiple values for one row-count or nullable assertion.
+It does not mutate or stage graph changes, and it skips sampled zero-null
+promotions. Metric advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
 `promotion_patterns`, `context_patterns`, duplicate-group metadata, and
 structured `suggested_next_actions` for ontology/context review. Undefined or
@@ -523,9 +525,10 @@ review the draft and use that action as a starting point. Its
 `accepted_recommendation_indexes`
 defaults to the representative indexes whose rows have `default_stageable=True`,
 so agents do not have to stage duplicate siblings just to preserve observation
-support or accidentally stage sampled row-count rows. Sampled row-count
-representatives remain in `representative_recommendation_indexes` for explicit
-review/override. If
+support or accidentally stage sampled row-count or conflicting scalar rows.
+Sampled row-count and same-evidence scalar-conflict representatives remain in
+`representative_recommendation_indexes` for explicit review/override; for a
+conflict, choose at most one observed value. If
 `recommendation_count == 0` and either metric or type advisories are present,
 treat the draft as advisory-only: follow metric/type review lanes and do not
 call `stage_profile_map_updates`, because advisory rows are not accepted
@@ -547,7 +550,10 @@ row-count/nullability changes remove old helper-owned values before adding
 typed literals. Accepted indexes can still be skipped by safety guardrails,
 especially sampled row-count recommendations by default; set
 `allow_sampled_row_count_updates=True` only when the profile scope is the
-intended durable population. Metric advisories are returned for review but are
+intended durable population. If the accepted set includes multiple disagreeing
+same-evidence scalar values for one row-count or nullable assertion, those
+conflicting rows are skipped; choose one value explicitly after reviewing the
+profile observations. Metric advisories are returned for review but are
 not converted into map patches; follow
 `metric_advisory_suggested_next_actions` as a separate vocabulary-review lane
 when `metric_vocabulary_review_required` is true. Their compact summary is also

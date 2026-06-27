@@ -92,7 +92,9 @@ different modelling judgement. Prefer the draft's
 indexes whose rows are `default_stageable`, while `metric_vocabulary_review` and
 `profile_type_review` keep advisories out of the map-staging batch. Sampled
 row-count representatives stay visible for review but require an explicit
-override call.
+override call. Same-evidence scalar conflicts stay visible too, but the default
+map-staging action omits them; choose at most one observed row-count or nullable
+value explicitly after reading the supporting profile observations.
 Profile type findings are not accepted `stage_profile_map_updates`
 recommendation indexes. `physical_type` and `value_type` are still persisted on
 profile observations when `update_map_column=False`; `draft_profile_map_updates`
@@ -136,7 +138,10 @@ map recommendations, such as nullability, that should go through
 `profile_map_updates` first.
 An accepted index is still routed through guardrails: it may be `staged` or
 `skipped`, while `not_selected` means the draft row was not accepted for that
-call. Check `status_counts` first, then item reasons.
+call. Accepted sampled row counts can be skipped by default, and accepted
+same-evidence scalar conflicts are skipped when the same call chooses multiple
+values for one row-count or nullable assertion. Check `status_counts` first,
+then item reasons.
 When a profile-derived change is backed by synthesized lore, pass
 `supporting_claims`, `supporting_patterns`, or extra `revision_anchors`; these
 links are recorded on the staged revision for later review.

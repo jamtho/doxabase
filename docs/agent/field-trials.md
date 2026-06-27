@@ -1050,6 +1050,11 @@ few useful gaps:
   default staging action that would become a no-op. The top-level
   `stage_profile_map_updates` action now includes only representative rows with
   `default_stageable=True`; sampled row-count overrides must be explicit.
+- A profile metrics gap trial found same-evidence full-scan profile observations
+  can disagree on scalar map facts, such as dataset row count or column
+  nullability. These recommendations now stay reviewable but are not
+  default-stageable, and `stage_profile_map_updates` skips an accepted conflict
+  set unless the caller chooses one observed value explicitly.
 - A profile action-queue trial found mixed map, metric, and type follow-ups were
   mechanically followable but noisy when flattened together. Draft profile-map
   responses now expose `suggested_next_action_groups` and

@@ -19688,6 +19688,171 @@ def test_profile_map_update_duplicate_groups_preserve_representative_support(
     }
 
 
+def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-conflict#"
+    dataset = f"{base}Tickets"
+    status_column = f"{base}TicketsStatus"
+    risk_column = f"{base}TicketsRiskScore"
+    evidence = f"{base}TicketsProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Tickets",
+        is_table=True,
+        row_count_snapshot=1000,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+    )
+
+    for index, (row_count, status_null_count) in enumerate(
+        (
+            (1200, 0),
+            (1210, 12),
+        )
+    ):
+        column_profiles = [
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status nullability came from the full profile.",
+                "null_count": status_null_count,
+            }
+        ]
+        if index == 0:
+            column_profiles.append(
+                {
+                    "column_iri": risk_column,
+                    "column_name": "risk_score",
+                    "summary": "Risk score was observed but is unmapped.",
+                    "null_count": 0,
+                }
+            )
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary=f"Tickets full profile pass {index}.",
+            evidence_summary="Tickets full profile evidence.",
+            evidence_sources=[f"test://tickets/full/{index}"],
+            shared_evidence_iri=evidence,
+            sample_size=row_count,
+            sample_scope="All rows in the local Tickets table.",
+            sample_method="DuckDB full-table profile.",
+            row_count=row_count,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+            column_profiles=column_profiles,
+        )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    row_count_recommendations = [
+        recommendation
+        for recommendation in draft.recommendations
+        if recommendation.kind == "dataset_row_count_snapshot"
+    ]
+    nullable_recommendations = [
+        recommendation
+        for recommendation in draft.recommendations
+        if recommendation.kind == "column_nullable"
+    ]
+    unmapped_recommendations = [
+        recommendation
+        for recommendation in draft.recommendations
+        if recommendation.kind == "unmapped_profiled_column"
+    ]
+
+    assert {item.observed_value for item in row_count_recommendations} == {
+        1200,
+        1210,
+    }
+    assert {item.observed_value for item in nullable_recommendations} == {
+        False,
+        True,
+    }
+    for recommendation in [
+        *row_count_recommendations,
+        *nullable_recommendations,
+    ]:
+        assert recommendation.default_stageable is False
+        assert (
+            "Same-evidence profile recommendations propose conflicting values"
+            in (recommendation.default_skip_reason or "")
+        )
+    assert len(unmapped_recommendations) == 1
+    assert unmapped_recommendations[0].default_stageable is True
+
+    default_action = draft.suggested_next_action_groups["profile_map_updates"][0]
+    assert default_action.arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+        "accepted_recommendation_indexes": [
+            unmapped_recommendations[0].recommendation_index
+        ],
+    }
+
+    conflicting_scalar_indexes = [
+        recommendation.recommendation_index
+        for recommendation in [
+            *row_count_recommendations,
+            *nullable_recommendations,
+        ]
+    ]
+    conflicting_stage = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=conflicting_scalar_indexes,
+    )
+    assert conflicting_stage.staged_revision is None
+    assert conflicting_stage.status_counts == {
+        "staged": 0,
+        "skipped": 4,
+        "not_selected": 1,
+    }
+    assert conflicting_stage.skipped_recommendation_indexes == (
+        conflicting_scalar_indexes
+    )
+    assert all(
+        "Same-evidence profile recommendations propose conflicting values"
+        in (item.reason or "")
+        for item in conflicting_stage.items
+        if item.status == "skipped"
+    )
+
+    chosen_row_count = row_count_recommendations[0]
+    chosen_nullable = next(
+        recommendation
+        for recommendation in nullable_recommendations
+        if recommendation.observed_value is True
+    )
+    chosen_stage = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[
+            chosen_row_count.recommendation_index,
+            chosen_nullable.recommendation_index,
+        ],
+    )
+
+    assert chosen_stage.staged_recommendation_indexes == [
+        chosen_row_count.recommendation_index,
+        chosen_nullable.recommendation_index,
+    ]
+    assert chosen_stage.status_counts == {
+        "staged": 2,
+        "skipped": 0,
+        "not_selected": 3,
+    }
+    assert chosen_stage.staged_revision is not None
+    assert db.check_staged_revision_apply(
+        chosen_stage.staged_revision.revision_iri
+    ).status == "ready"
+
+
 def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
     tmp_path: Path,
 ) -> None:

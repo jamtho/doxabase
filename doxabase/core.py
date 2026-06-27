@@ -76,6 +76,13 @@ LAYOUT_VERIFICATION_STATUSES = (
     "rc:ContradictedLayout",
 )
 
+PROFILE_SCALAR_MAP_UPDATE_KINDS = frozenset(
+    {
+        "dataset_row_count_snapshot",
+        "column_nullable",
+    }
+)
+
 
 def to_jsonable(value: Any) -> Any:
     """Return a JSON-like plain-Python representation of DoxaBase API values."""
@@ -8908,6 +8915,12 @@ class DoxaBase:
             )
 
         accepted_index_set = set(accepted_indexes)
+        selected_conflict_skip_reasons = (
+            self._profile_update_scalar_conflict_skip_reasons(
+                recommendations,
+                selected_indexes=accepted_index_set,
+            )
+        )
         additions_graph = Graph()
         removals_graph = Graph()
         self._bind_prefixes(additions_graph)
@@ -8927,10 +8940,14 @@ class DoxaBase:
                 or [recommendation.profile_observation_iri]
             )
             if index in accepted_index_set:
-                reason = self._profile_update_skip_reason(
-                    recommendation,
-                    allow_sampled_row_count_updates=allow_sampled_row_count_updates,
-                )
+                reason = selected_conflict_skip_reasons.get(index)
+                if reason is None:
+                    reason = self._profile_update_skip_reason(
+                        recommendation,
+                        allow_sampled_row_count_updates=(
+                            allow_sampled_row_count_updates
+                        ),
+                    )
                 if reason is None:
                     self._add_profile_update_patch_triples(
                         recommendation,
@@ -9158,7 +9175,8 @@ class DoxaBase:
                         "lanes; "
                         "then pass accepted default-stageable indexes to "
                         "stage_profile_map_updates. Sampled row-count updates "
-                        "require an explicit override."
+                        "require an explicit override; same-evidence scalar "
+                        "conflicts require choosing one value explicitly."
                     ),
                     call=self._suggested_call_string(
                         "stage_profile_map_updates",
@@ -9241,16 +9259,94 @@ class DoxaBase:
             representatives.append(index)
         return representatives
 
+    @staticmethod
+    def _profile_update_scalar_value_key(value: Any) -> str:
+        payload = {
+            "type": type(value).__name__,
+            "value": to_jsonable(value),
+        }
+        return json.dumps(payload, sort_keys=True, default=str)
+
+    @staticmethod
+    def _profile_update_scalar_value_label(value: Any) -> str:
+        if isinstance(value, bool):
+            return str(value).lower()
+        if isinstance(value, str):
+            return repr(value)
+        return str(value)
+
+    @staticmethod
+    def _profile_update_scalar_conflict_skip_reasons(
+        recommendations: list[ProfileMapUpdateRecommendation],
+        *,
+        selected_indexes: set[int] | None = None,
+    ) -> dict[int, str]:
+        groups: dict[
+            tuple[str, str, str, str],
+            dict[str, list[ProfileMapUpdateRecommendation]],
+        ] = {}
+        for recommendation in recommendations:
+            if (
+                selected_indexes is not None
+                and recommendation.recommendation_index not in selected_indexes
+            ):
+                continue
+            if recommendation.kind not in PROFILE_SCALAR_MAP_UPDATE_KINDS:
+                continue
+            group_key = (
+                recommendation.evidence_iri,
+                recommendation.resource.iri,
+                recommendation.predicate,
+                recommendation.kind,
+            )
+            value_key = DoxaBase._profile_update_scalar_value_key(
+                recommendation.observed_value
+            )
+            groups.setdefault(group_key, {}).setdefault(value_key, []).append(
+                recommendation
+            )
+
+        skip_reasons: dict[int, str] = {}
+        for (_evidence_iri, resource_iri, predicate, _kind), value_groups in (
+            groups.items()
+        ):
+            if len(value_groups) <= 1:
+                continue
+            value_labels = sorted(
+                DoxaBase._profile_update_scalar_value_label(
+                    group[0].observed_value
+                )
+                for group in value_groups.values()
+            )
+            reason = (
+                "Same-evidence profile recommendations propose conflicting "
+                f"values for scalar map assertion {predicate} on "
+                f"{resource_iri}: {', '.join(value_labels)}. Review the "
+                "profile observations and choose one observed value explicitly "
+                "before staging."
+            )
+            for group in value_groups.values():
+                for recommendation in group:
+                    skip_reasons[recommendation.recommendation_index] = reason
+        return skip_reasons
+
     def _with_profile_update_default_staging_metadata(
         self,
         recommendations: list[ProfileMapUpdateRecommendation],
     ) -> list[ProfileMapUpdateRecommendation]:
+        conflict_skip_reasons = self._profile_update_scalar_conflict_skip_reasons(
+            recommendations
+        )
         annotated: list[ProfileMapUpdateRecommendation] = []
         for recommendation in recommendations:
-            default_skip_reason = self._profile_update_skip_reason(
-                recommendation,
-                allow_sampled_row_count_updates=False,
+            default_skip_reason = conflict_skip_reasons.get(
+                recommendation.recommendation_index
             )
+            if default_skip_reason is None:
+                default_skip_reason = self._profile_update_skip_reason(
+                    recommendation,
+                    allow_sampled_row_count_updates=False,
+                )
             annotated.append(
                 replace(
                     recommendation,

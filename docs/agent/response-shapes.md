@@ -1077,7 +1077,10 @@ promotion because a sample with no nulls does not prove a full-population
 non-null constraint. `default_stageable` and `default_skip_reason` preview what
 `stage_profile_map_updates` will do with default options; sampled row-count
 recommendations remain review candidates but are skipped by default unless
-`allow_sampled_row_count_updates=True`. `metric_advisories[]` rows name
+`allow_sampled_row_count_updates=True`. Same-evidence scalar conflicts, such as
+multiple full-scan row counts for one dataset or multiple nullable values for
+one column, are also non-default-stageable until one value is chosen explicitly.
+`metric_advisories[]` rows name
 project-specific profile metric IRIs observed in the run and recommend
 vocabulary review before reusable comparison or map policy. Each advisory
 includes:
@@ -1247,7 +1250,10 @@ a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled
 row-count recommendations can still appear in
 `representative_recommendation_indexes` for review, but the default staging
-action omits them unless the caller explicitly opts in. When same-evidence
+action omits them unless the caller explicitly opts in. Same-evidence scalar
+conflicts also stay visible for review but are omitted from the default staging
+action; pass at most one chosen value for each row-count or nullable assertion.
+When same-evidence
 profile patterns target or imply the dataset or recommendation resources, the
 suggested staging arguments also include `supporting_patterns` so the staged map
 revision carries the directly relevant synthesis without a second pattern
@@ -1356,7 +1362,10 @@ staged revision preserves all `duplicate_profile_observation_iris` from that
 group as supporting observations even though only the accepted index appears as
 `staged`. Sampled row-count
 recommendations are skipped by default and
-reported in `skipped_recommendation_indexes`; metric advisories stay in
+reported in `skipped_recommendation_indexes`; accepted same-evidence scalar
+conflicts are also skipped when the accepted set contains multiple observed
+values for one row-count or nullable assertion. Choose one value explicitly
+after reviewing the profile observations. Metric advisories stay in
 `metric_advisories` and are not staged as map facts. When
 `metric_vocabulary_review_required` is true,
 `metric_advisory_suggested_next_actions` is the separate vocabulary-review lane;
