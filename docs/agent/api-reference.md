@@ -501,6 +501,10 @@ recorded only when at least one accepted recommendation creates a staged
 revision. When one accepted recommendation represents a duplicate group, all
 grouped `duplicate_profile_observation_iris` are preserved as staged-revision
 support observations.
+Default `stage_profile_map_updates` suggestions only auto-pass same-evidence
+patterns that target or imply the dataset or recommended map resources. Keep
+metric-only and type-only patterns in their advisory lanes unless you explicitly
+want them to support the map patch.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

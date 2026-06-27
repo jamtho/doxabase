@@ -15473,6 +15473,21 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         evidence_iri=evidence,
         map_implications=[dataset, status_column, settlement_column],
     )
+    metric_pattern = db.record_pattern(
+        summary="Payments completeness ratio needs vocabulary.",
+        pattern_text=(
+            "The Payments profile run used a project-specific completeness ratio "
+            "that should be reviewed in the metric vocabulary lane."
+        ),
+        rationale=(
+            "Sharing profile observations should not automatically make a "
+            "metric-vocabulary pattern supporting context for staged map facts."
+        ),
+        pattern_targets=[project_metric],
+        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
+        evidence_iri=evidence,
+        map_implications=[project_metric],
+    )
     unrelated_same_evidence_pattern = db.record_pattern(
         summary="Refunds profile evidence should stay separate.",
         pattern_text=(
@@ -15520,6 +15535,9 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert unrelated_same_evidence_pattern.pattern_iri not in (
         draft.suggested_next_actions[0].arguments["supporting_patterns"]
     )
+    assert metric_pattern.pattern_iri not in (
+        draft.suggested_next_actions[0].arguments["supporting_patterns"]
+    )
     assert draft.suggested_next_calls[0].startswith("stage_profile_map_updates(")
     assert list(draft.suggested_next_action_groups) == [
         "profile_map_updates",
@@ -15538,7 +15556,12 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         for action in draft.suggested_next_action_groups[
             "metric_vocabulary_review"
         ]
-    ] == ["describe_context_slice", "list_entities"]
+    ] == [
+        "describe_context_slice",
+        "list_entities",
+        "describe_pattern",
+        "stage_pattern_promotion",
+    ]
     assert draft.suggested_next_call_groups["profile_map_updates"] == [
         draft.suggested_next_calls[0]
     ]
@@ -15553,6 +15576,9 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         profile_pattern.pattern_iri
     }
     assert unrelated_same_evidence_pattern.pattern_iri not in {
+        item.iri for item in described_staged.supporting_patterns
+    }
+    assert metric_pattern.pattern_iri not in {
         item.iri for item in described_staged.supporting_patterns
     }
 
@@ -15608,6 +15634,11 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert [action.tool_name for action in metric_advisory.suggested_next_actions] == [
         "describe_context_slice",
         "list_entities",
+        "describe_pattern",
+        "stage_pattern_promotion",
+    ]
+    assert [item.iri for item in metric_advisory.promotion_patterns] == [
+        metric_pattern.pattern_iri
     ]
     assert metric_advisory.suggested_next_actions[0].arguments == {
         "seed_iris": [project_metric],

@@ -944,11 +944,13 @@ recommendation include a `stage_profile_map_updates` action whose
 row-count recommendations can still appear in
 `representative_recommendation_indexes` for review, but the default staging
 action omits them unless the caller explicitly opts in. When same-evidence
-profile patterns overlap the profile run, the suggested staging arguments also
-include `supporting_patterns` so the staged map revision carries the synthesis
-without a second pattern lookup. Pass only the indexes actually accepted after
-reviewing sample scope and modelling intent; include duplicate sibling indexes
-only when they need distinct review treatment.
+profile patterns target or imply the dataset or recommendation resources, the
+suggested staging arguments also include `supporting_patterns` so the staged map
+revision carries the directly relevant synthesis without a second pattern
+lookup. Metric-only and type-only profile patterns stay in their advisory lanes
+unless the caller explicitly passes them as support. Pass only the indexes
+actually accepted after reviewing sample scope and modelling intent; include
+duplicate sibling indexes only when they need distinct review treatment.
 When `draft.recommendations` is empty and either metric or type advisories are
 present, the draft is advisory-only. The grouped and flat suggested actions are
 the deduped advisory actions for vocabulary/context/type review; do not call

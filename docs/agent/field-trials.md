@@ -1355,6 +1355,12 @@ few useful gaps:
   `describe_revision_graph_snapshot` now exposes one role-local stored snapshot
   with bounded triples, while `describe_applied_revision_diff` remains the
   before/after changed-triple helper.
+- An awkward profile workflow trial found auto-carrying every same-evidence
+  profile-observation pattern into `stage_profile_map_updates` could pull
+  metric-vocabulary rationale into a map patch. Default profile map staging now
+  auto-passes only same-evidence patterns that target or imply the dataset or
+  recommended map resources; metric-only and type-only patterns stay in their
+  review lanes unless explicitly supplied as support.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

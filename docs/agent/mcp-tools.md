@@ -359,6 +359,10 @@ recommendations unless
 `supporting_patterns`, and `revision_anchors` are passed through to the staged
 revision when at least one recommendation creates a patch; caller anchors are
 merged with the automatic profile-derived anchors.
+Default `stage_profile_map_updates` suggestions only auto-pass same-evidence
+patterns that target or imply the dataset or recommended map resources. Keep
+metric-only and type-only patterns in their advisory lanes unless you explicitly
+want them to support the map patch.
 
 `doxabase.describe_query_context`
 

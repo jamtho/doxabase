@@ -8536,19 +8536,9 @@ class DoxaBase:
         if not same_evidence_patterns:
             return []
 
-        profile_observation_iris = set(profile_run.profile_observation_iris)
         relevant_resource_iris = {profile_run.dataset.iri}
         for recommendation in recommendations:
             relevant_resource_iris.add(recommendation.resource.iri)
-        for profile in [
-            *profile_run.dataset_profile_observations,
-            *profile_run.mapped_column_profile_observations,
-            *profile_run.unmapped_column_profile_observations,
-        ]:
-            if profile.observed_asset is not None:
-                relevant_resource_iris.add(profile.observed_asset.iri)
-            if profile.observed_column is not None:
-                relevant_resource_iris.add(profile.observed_column.iri)
 
         pattern_iris: list[str] = []
         for pattern_iri in sorted(same_evidence_patterns):
@@ -8556,12 +8546,7 @@ class DoxaBase:
                 *self._objects(pattern_graphs, pattern_iri, "rc:patternTarget"),
                 *self._objects(pattern_graphs, pattern_iri, "rc:mapImplication"),
             }
-            pattern_support = set(
-                self._objects(pattern_graphs, pattern_iri, "rc:supportingObservation")
-            )
-            if pattern_resources & relevant_resource_iris or (
-                pattern_support & profile_observation_iris
-            ):
+            if pattern_resources & relevant_resource_iris:
                 pattern_iris.append(pattern_iri)
         return pattern_iris
 
