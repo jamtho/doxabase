@@ -499,9 +499,10 @@ template comes from partition metadata, binding rows also carry
 `binding_kind="partition_template_placeholder"` plus optional
 `partition_scheme`, `partition_column`, and `partition_granularity` handoff
 hints; the granularity describes the partition scheme rather than necessarily
-the individual placeholder. Non-partition dataset/storage templates may include
-`candidate_column_matches` when placeholder names match dataset columns; use
-them as best-effort handoff hints, not runtime binding values.
+the individual placeholder. Placeholders that do not match a declared partition
+column, and ordinary dataset/storage placeholders, may include
+`candidate_column_matches` when placeholder names match dataset columns; use them
+as best-effort handoff hints, not runtime binding values.
 `candidate_column_match_status` marks the hint set as `none`, `single`, or
 `ambiguous`; review ambiguous rows before choosing any source column, even when
 individual matches have `confidence="high"`. Confidence is per match, while the

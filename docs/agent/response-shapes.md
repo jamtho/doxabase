@@ -1693,15 +1693,17 @@ matching placeholders may carry `partition_column` and
 `partition_granularity`. The granularity describes the partition scheme rather
 than necessarily the individual placeholder. These fields are planning hints for
 parameter handoff;
-non-partition dataset/storage templates may carry `candidate_column_matches`
-when a placeholder matches dataset column names, labels, or local IRIs exactly
-or by suffix. These matches are best-effort handoff hints, not inferred runtime
+partition placeholders that do not match a declared partition column, and
+ordinary dataset/storage placeholders, may carry `candidate_column_matches` when
+a placeholder matches dataset column names, labels, or local IRIs exactly or by
+suffix. These matches are best-effort handoff hints, not inferred runtime
 binding values. `candidate_column_match_status` is `none`, `single`, or
-`ambiguous` for non-partition templates and `not_applicable` for
-partition-owned bindings; ambiguous rows require review before choosing any
-source column, even when individual matches have high confidence. Match
-`confidence` describes one candidate row; `candidate_column_match_status`
-summarizes the whole hint set. `plan.storage_environment`
+`ambiguous` for hintable placeholders and `not_applicable` when a partition
+column already matched the placeholder; ambiguous rows require review before
+choosing any source column, even when individual matches have high confidence.
+Match `confidence` describes one candidate row;
+`candidate_column_match_status` summarizes the whole hint set.
+`plan.storage_environment`
 carries non-secret storage hints such as bucket, endpoint profile, credential
 reference, path-style access, and DuckDB-shaped settings inferred directly from
 graph metadata.

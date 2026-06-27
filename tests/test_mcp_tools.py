@@ -2501,6 +2501,8 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["binding_requirements"][0]["partition_granularity"]["iri"] == (
         "https://richcanopy.org/ns/rc#Daily"
     )
+    assert result["binding_requirements"][0]["candidate_column_matches"] == []
+    assert result["binding_requirements"][0]["candidate_column_match_status"] == "none"
     assert result["binding_requirements"][1]["binding_kind"] == (
         "partition_template_placeholder"
     )
@@ -2512,6 +2514,11 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     )
     assert result["binding_requirements"][1]["partition_granularity"]["iri"] == (
         "https://richcanopy.org/ns/rc#Daily"
+    )
+    assert result["binding_requirements"][1]["candidate_column_matches"] == []
+    assert (
+        result["binding_requirements"][1]["candidate_column_match_status"]
+        == "not_applicable"
     )
     assert result["storage_environment"]["endpoint_profile"] == "local-minio"
     assert result["storage_environment"]["credential_reference"] == (

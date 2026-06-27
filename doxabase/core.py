@@ -10573,7 +10573,7 @@ class DoxaBase:
             )
             candidate_column_matches = (
                 []
-                if partition is not None
+                if partition is not None and partition_column is not None
                 else self._draft_query_plan_column_matches_for_binding(
                     name,
                     columns,
@@ -10581,7 +10581,7 @@ class DoxaBase:
             )
             candidate_column_match_status = (
                 "not_applicable"
-                if partition is not None
+                if partition is not None and partition_column is not None
                 else self._draft_query_plan_column_match_status(
                     candidate_column_matches
                 )
@@ -10815,15 +10815,33 @@ class DoxaBase:
                 "partition scheme granularity "
                 f"{partition.granularity.label or partition.granularity.iri}"
             )
+        candidate_note = ""
+        if candidate_column_matches:
+            match_names = ", ".join(
+                match.column.label or match.column.column_name or match.column.iri
+                for match in candidate_column_matches
+            )
+            if candidate_column_match_status == "ambiguous":
+                candidate_note = (
+                    f" Candidate column hint(s): {match_names}. Multiple "
+                    "candidate columns matched this placeholder; review which "
+                    "source column, if any, should supply the runtime value."
+                )
+            else:
+                candidate_note = (
+                    f" Candidate column hint(s): {match_names}. These are "
+                    "best-effort placeholder/name matches, not inferred "
+                    "runtime binding values."
+                )
         if not details:
             return (
                 f"{base_note} The selected template comes from partition scheme "
-                f"{partition.label or partition.iri}."
+                f"{partition.label or partition.iri}.{candidate_note}"
             )
         return (
             f"{base_note} The selected template comes from partition scheme "
             f"{partition.label or partition.iri}; metadata indicates "
-            f"{'; '.join(details)}."
+            f"{'; '.join(details)}.{candidate_note}"
         )
 
     @staticmethod

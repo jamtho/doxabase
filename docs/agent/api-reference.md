@@ -377,7 +377,8 @@ machine-readable route for the draft: `no_query_target`,
 When a selected template comes from partition metadata, binding requirements
 include partition handoff hints (`binding_kind`, `partition_scheme`,
 `partition_column`, and `partition_granularity`) while still requiring caller
-runtime values. Non-partition dataset/storage templates may include
+runtime values. Partition placeholders that do not match a declared partition
+column, and ordinary dataset/storage placeholders, may include
 `candidate_column_matches` when placeholder names match dataset columns; these
 are best-effort handoff hints, not inferred runtime values.
 `candidate_column_match_status` flags absent, singular, or ambiguous hint sets;

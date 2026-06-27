@@ -1507,6 +1507,12 @@ few useful gaps:
   `location_kind` is only the root shape (`object`, `directory`, `prefix`, or
   `connection`). Keep errors and docs explicit so agents choose exact file/object
   roots versus local folders deliberately.
+- Query-planning partition-template trials found agents could miss likely runtime
+  handoff columns when a partition-owned placeholder was not one of the declared
+  partition columns. Draft binding requirements now keep matched partition
+  columns as `candidate_column_match_status="not_applicable"`, but unmatched
+  partition placeholders fall back to the same best-effort column-name hints used
+  for dataset and storage templates.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

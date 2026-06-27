@@ -10010,6 +10010,8 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     assert year_binding.partition_column is None
     assert year_binding.partition_granularity is not None
     assert year_binding.partition_granularity.iri == RC + "Daily"
+    assert year_binding.candidate_column_matches == []
+    assert year_binding.candidate_column_match_status == "none"
     assert date_binding.binding_kind == "partition_template_placeholder"
     assert date_binding.partition_scheme is not None
     assert date_binding.partition_scheme.iri == (
@@ -10022,6 +10024,8 @@ def test_draft_query_plan_returns_review_gated_duckdb_plan(
     assert date_binding.partition_column.column_name == "date"
     assert date_binding.partition_granularity is not None
     assert date_binding.partition_granularity.iri == RC + "Daily"
+    assert date_binding.candidate_column_matches == []
+    assert date_binding.candidate_column_match_status == "not_applicable"
     assert "likely partition column date" in date_binding.derivation_note
     assert "partition scheme granularity" in date_binding.derivation_note
     assert "partition granularity" not in date_binding.derivation_note
@@ -10140,6 +10144,82 @@ def test_draft_query_plan_carries_dataset_template_verification(
     assert plan.scan.execution_attempt_blocking_reason_codes == [
         "binding_values_required",
     ]
+
+
+def test_draft_query_plan_hints_unmatched_partition_placeholders(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#PartitionOwnedEvents"
+    event_date = "https://example.test/project#partition_events__event_date"
+    event_year = "https://example.test/project#partition_events__year"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#partition_events_storage",
+        label="Partition events storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        location_kind="directory",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#partition_events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    partition = db.record_map_partition_scheme(
+        "https://example.test/project#partition_events_daily_partition",
+        path_template="events/year={year}/dt={date}/*.parquet",
+        partition_columns=[event_date],
+        granularity="rc:Daily",
+        datasets=[dataset],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Partition-owned events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_map_column(
+        event_date,
+        table_iri=dataset,
+        column_name="event_date",
+        physical_type="rc:Date",
+    )
+    db.record_map_column(
+        event_year,
+        table_iri=dataset,
+        column_name="year",
+        physical_type="rc:Integer",
+    )
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template_source == "partition_scheme"
+    bindings_by_name = {
+        binding.name: binding for binding in plan.binding_requirements
+    }
+    year_binding = bindings_by_name["year"]
+    assert year_binding.binding_kind == "partition_template_placeholder"
+    assert year_binding.partition_scheme is not None
+    assert year_binding.partition_scheme.iri == partition.iri
+    assert year_binding.partition_column is None
+    assert year_binding.candidate_column_match_status == "single"
+    assert [match.column.iri for match in year_binding.candidate_column_matches] == [
+        event_year
+    ]
+    assert year_binding.candidate_column_matches[0].match_kind == "exact_name"
+    assert year_binding.candidate_column_matches[0].confidence == "high"
+    assert "Candidate column hint(s): year" in year_binding.derivation_note
+
+    date_binding = bindings_by_name["date"]
+    assert date_binding.partition_column is not None
+    assert date_binding.partition_column.iri == event_date
+    assert date_binding.candidate_column_matches == []
+    assert date_binding.candidate_column_match_status == "not_applicable"
 
 
 def test_draft_query_plan_hints_storage_template_placeholder_columns(

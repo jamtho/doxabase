@@ -90,8 +90,9 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    selected template comes from partition metadata, binding rows may include
    `partition_scheme`, `partition_column`, and `partition_granularity` as
    handoff hints; the granularity describes the partition scheme, not
-   necessarily the individual placeholder. Dataset-owned and
-   storage-access-owned templates may include `candidate_column_matches` when
+   necessarily the individual placeholder. When a partition-owned placeholder
+   does not match a declared partition column, or when a dataset/storage-owned
+   placeholder is used, the row may include `candidate_column_matches` when
    placeholder names match dataset columns exactly or by suffix.
    `candidate_column_match_status` says whether those hints are absent,
    singular, or ambiguous. These fields help humans and agents find likely
