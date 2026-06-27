@@ -464,6 +464,13 @@ partition path is review context, not the relation identifier. Root-only
 database storage without a storage-access relation template is also review-only
 with `database_relation_template_missing`, even when `location_kind="object"`;
 read `issues[].details` for the affected storage access.
+When `missing_storage_access` appears, read `issues[].details.repair_hint` for
+reviewed repair templates: record a non-secret storage access and link it to the
+dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing
+storage access. If `issues[].details.fixture_staleness_hint` is present, known
+AIS or Polymarket fixture tables exist but the capsule has zero
+`rc:StorageAccess` resources; treat that as a stale/reduced fixture capsule and
+load fresh fixtures into scratch before judging query-target behavior.
 
 ### doxabase.draft_query_plan
 

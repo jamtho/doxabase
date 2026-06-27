@@ -9421,7 +9421,7 @@ class DoxaBase:
                 "available before repair or execution."
             )
         elif decision.status == "ready":
-            action_label = "Draft ready query plan"
+            action_label = "Draft metadata-ready query plan"
             reason = (
                 "Draft the selected query target and inspect bindings, runtime "
                 "resolution requirements, and analysis caveats before any "
@@ -9478,7 +9478,7 @@ class DoxaBase:
                     "instead of parsing peer indexes from prose."
                 )
             else:
-                peer_label = "Draft peer ready query plan"
+                peer_label = "Draft peer metadata-ready query plan"
                 peer_reason = (
                     "A peer candidate is also direct-ready. Draft this explicit "
                     "candidate_index when candidate review shows this path or "
@@ -12272,6 +12272,10 @@ class DoxaBase:
                 "error",
                 "No storage access resource is linked to the dataset.",
                 dataset_resource,
+                self._missing_storage_access_details(
+                    dataset,
+                    dataset_resource=dataset_resource,
+                ),
             )
         for access in dataset.storage_accesses:
             access_resource = self._summary_from_description(access)
@@ -12388,6 +12392,149 @@ class DoxaBase:
             )
 
         return self._sort_query_planning_issues(issues)
+
+    def _missing_storage_access_details(
+        self,
+        dataset: DatasetDescription,
+        *,
+        dataset_resource: ResourceSummary,
+    ) -> dict[str, Any]:
+        storage_access_count = self._count_type("rc:StorageAccess")
+        details: dict[str, Any] = {
+            "dataset_iri": dataset.iri,
+            "global_storage_access_count": storage_access_count,
+            "repair_hint": {
+                "action_type": "record_or_link_storage_access",
+                "target_dataset_iri": dataset.iri,
+                "actions": [
+                    {
+                        "tool_name": "record_map_storage_access",
+                        "mcp_tool_name": "doxabase.record_map_storage_access",
+                        "action_label": "Record storage access and link dataset",
+                        "reason": (
+                            "Use when review has identified the non-secret "
+                            "storage protocol and location for this dataset."
+                        ),
+                        "required_extra_arguments": [
+                            "iri",
+                            "storage_protocol",
+                            "storage_location",
+                        ],
+                        "arguments_template": {
+                            "iri": "<reviewed storage access IRI>",
+                            "datasets": [dataset.iri],
+                            "storage_protocol": "<reviewed rc:StorageProtocol IRI>",
+                            "storage_root": (
+                                "<reviewed root, URL, bucket URI, or connection>"
+                            ),
+                            "path_templates": [
+                                "<optional storage-owned path or relation template>"
+                            ],
+                        },
+                    },
+                    {
+                        "tool_name": "stage_map_assertion_change",
+                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "action_label": (
+                            "Stage link to an existing storage access"
+                        ),
+                        "reason": (
+                            "Use when a suitable storage access resource already "
+                            "exists and the dataset should link to it after "
+                            "review."
+                        ),
+                        "required_extra_arguments": [
+                            "object",
+                            "rationale",
+                        ],
+                        "arguments_template": {
+                            "subject": dataset.iri,
+                            "predicate": "rc:hasStorageAccess",
+                            "object": "<reviewed existing storage access IRI>",
+                            "object_kind": "iri",
+                            "change_kind": "add",
+                            "rationale": "<reviewed rationale>",
+                            "revision_anchors": [
+                                dataset.iri,
+                                "<reviewed existing storage access IRI>",
+                            ],
+                            "review_note": (
+                                "Generated from missing_storage_access query "
+                                "planning guidance; apply only after confirming "
+                                "the storage access is the intended non-secret "
+                                "route for this dataset."
+                            ),
+                            "validation_scope": "all",
+                        },
+                    },
+                ],
+            },
+        }
+        fixture_hint = self._known_fixture_missing_storage_access_hint(
+            dataset_resource,
+            storage_access_count=storage_access_count,
+        )
+        if fixture_hint is not None:
+            details["fixture_staleness_hint"] = fixture_hint
+        return details
+
+    def _known_fixture_missing_storage_access_hint(
+        self,
+        dataset_resource: ResourceSummary,
+        *,
+        storage_access_count: int,
+    ) -> dict[str, Any] | None:
+        if storage_access_count != 0:
+            return None
+        known_fixtures = [
+            (
+                "AIS",
+                "https://richcanopy.org/example/manifest/ais#",
+                ["DailyBroadcasts", "DailyIndex"],
+            ),
+            (
+                "Polymarket",
+                "https://richcanopy.org/example/manifest/polymarket#",
+                [
+                    "Markets",
+                    "PriceSnapshots",
+                    "TradeEvents",
+                    "OrderBookSnapshots",
+                    "MarketOutcomes",
+                ],
+            ),
+        ]
+        map_graphs = self._expand_graphs(["map"])
+        present_tables: list[str] = []
+        fixture_names: list[str] = []
+        for fixture_name, namespace, local_names in known_fixtures:
+            table_iris = [
+                f"{namespace}{local_name}"
+                for local_name in local_names
+                if self._subject_exists(f"{namespace}{local_name}", map_graphs)
+            ]
+            if table_iris:
+                fixture_names.append(fixture_name)
+                present_tables.extend(table_iris)
+        if not present_tables:
+            return None
+        dataset_matches_known_fixture = any(
+            dataset_resource.iri == table_iri for table_iri in present_tables
+        )
+        return {
+            "hint_type": "known_fixture_tables_without_storage_accesses",
+            "fixture_names": fixture_names,
+            "global_storage_access_count": storage_access_count,
+            "known_fixture_table_iris": present_tables[:10],
+            "dataset_matches_known_fixture": dataset_matches_known_fixture,
+            "message": (
+                "Known AIS or Polymarket fixture tables are present but no "
+                "rc:StorageAccess resources exist in the capsule. Treat this "
+                "capsule as stale or intentionally reduced for query-planning "
+                "trials; load current fixtures into a scratch capsule before "
+                "drawing conclusions about query-target behavior."
+            ),
+        }
 
     def _ambiguous_physical_layout_issue(
         self,

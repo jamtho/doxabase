@@ -10560,6 +10560,25 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "missing_storage_access",
         "missing_physical_layout",
     }
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+    assert missing_storage.details is not None
+    assert missing_storage.details["dataset_iri"] == dataset
+    assert missing_storage.details["global_storage_access_count"] == 0
+    assert missing_storage.details["repair_hint"]["action_type"] == (
+        "record_or_link_storage_access"
+    )
+    repair_actions = missing_storage.details["repair_hint"]["actions"]
+    assert [action["tool_name"] for action in repair_actions] == [
+        "record_map_storage_access",
+        "stage_map_assertion_change",
+    ]
+    assert repair_actions[0]["arguments_template"]["datasets"] == [dataset]
+    assert repair_actions[1]["arguments_template"]["subject"] == dataset
+    assert repair_actions[1]["arguments_template"]["predicate"] == (
+        "rc:hasStorageAccess"
+    )
     assert [issue.severity for issue in context.issues[:2]] == ["error", "error"]
     assert {issue.domain for issue in context.issues} == {"query_planning"}
     assert context.query_target_decision.status == "no_candidate"
@@ -10569,6 +10588,30 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert context.query_target_decision.direct_review_required is None
     assert context.query_target_decision.selected_candidate_direct_clean is None
     assert context.query_target_decision.reason_codes == []
+
+
+def test_describe_query_context_flags_known_fixture_without_storage_access(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    db.record_map_dataset(dataset, label="AIS Daily Broadcast Positions", is_table=True)
+
+    context = db.describe_query_context(dataset)
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+
+    assert missing_storage.details is not None
+    fixture_hint = missing_storage.details["fixture_staleness_hint"]
+    assert fixture_hint["hint_type"] == (
+        "known_fixture_tables_without_storage_accesses"
+    )
+    assert fixture_hint["fixture_names"] == ["AIS"]
+    assert fixture_hint["global_storage_access_count"] == 0
+    assert fixture_hint["dataset_matches_known_fixture"] is True
+    assert dataset in fixture_hint["known_fixture_table_iris"]
+    assert "stale or intentionally reduced" in fixture_hint["message"]
 
 
 def test_describe_query_context_summarizes_fixture_target_candidates(
@@ -11013,8 +11056,8 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
         context.suggested_next_actions[0].reason
     )
     assert [action.action_label for action in context.suggested_next_actions] == [
-        "Draft ready query plan",
-        "Draft peer ready query plan",
+        "Draft metadata-ready query plan",
+        "Draft peer metadata-ready query plan",
     ]
     assert context.suggested_next_actions[1].arguments == {
         "iri": dataset,

@@ -8,7 +8,9 @@ Before fixture query-planning trials against the active MCP capsule, sanity-chec
 `graph_overview.key_counts`. If AIS or Polymarket tables exist but
 `storage_accesses == 0`, treat that capsule as stale or intentionally reduced
 and load the current fixtures into a scratch capsule before drawing product
-conclusions about query-target behavior.
+conclusions about query-target behavior. `describe_query_context` now carries
+the same warning in `missing_storage_access.details.fixture_staleness_hint` when
+known fixture tables are present with no storage access resources.
 
 ## Field Precedence
 
@@ -43,6 +45,10 @@ Start with `describe_query_context(dataset_iri)`:
    for a direct-clean selected candidate.
    `query_target_decision.selected_candidate_direct_clean` is the compact
    boolean for "the selected candidate itself has no direct blocker."
+   When `missing_storage_access` appears, read its `details.repair_hint` before
+   guessing at a path: either record reviewed non-secret storage access metadata
+   and link it to the dataset, or stage a reviewed `rc:hasStorageAccess` link to
+   an existing access resource.
 6. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, the first action inspects the profile evidence; when a
    query target candidate is also available, the draft-query-plan action follows.

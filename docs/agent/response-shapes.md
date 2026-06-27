@@ -1740,7 +1740,15 @@ failed.
 `details` is optional structured context for selected issue kinds. For example,
 protocol/location mismatches include storage fields and mismatch reasons, while
 `query_context_has_other_blockers` includes excluded blocker counts, codes, and
-resource IRIs. `database_relation_template_source_mismatch` includes the
+resource IRIs. `missing_storage_access` includes `dataset_iri`,
+`global_storage_access_count`, a `repair_hint`, and sometimes
+`fixture_staleness_hint`. The repair hint offers reviewed action templates for
+`record_map_storage_access(..., datasets=[...])` or a staged
+`rc:hasStorageAccess` assertion to an existing access resource. A fixture
+staleness hint means known AIS or Polymarket fixture tables are present while
+the capsule has zero `rc:StorageAccess` resources; use a fresh scratch fixture
+load before drawing query-target conclusions.
+`database_relation_template_source_mismatch` includes the
 template, template source, source resource IRI, storage access IRI, storage
 protocol IRI, the allowed relation-template source list, and `repair_hint`.
 The repair hint names the source template, target storage access, reviewed
