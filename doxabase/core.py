@@ -1269,6 +1269,8 @@ class QueryPlanningContext:
     query_target_candidates: list[QueryTargetCandidate]
     ready_candidate_indexes: list[int]
     unselected_ready_candidate_indexes: list[int]
+    direct_clean_candidate_indexes: list[int]
+    unselected_direct_clean_candidate_indexes: list[int]
     physical_layouts: list[PhysicalLayoutDescription]
     storage_accesses: list[StorageAccessDescription]
     partition_schemes: list[PartitionDescription]
@@ -1294,6 +1296,10 @@ class DraftQueryPlanSourceContext:
     candidate_count: int = 0
     ready_candidate_indexes: list[int] = field(default_factory=list)
     unselected_ready_candidate_indexes: list[int] = field(default_factory=list)
+    direct_clean_candidate_indexes: list[int] = field(default_factory=list)
+    unselected_direct_clean_candidate_indexes: list[int] = field(
+        default_factory=list
+    )
     selection_mode: str = "automatic"
     requested_candidate_index: int | None = None
     requested_storage_access_iri: str | None = None
@@ -8633,6 +8639,14 @@ class DoxaBase:
             for index in ready_candidate_indexes
             if index != query_target_decision.candidate_index
         ]
+        direct_clean_candidate_indexes = self._query_direct_clean_candidate_indexes(
+            query_target_candidates
+        )
+        unselected_direct_clean_candidate_indexes = [
+            index
+            for index in direct_clean_candidate_indexes
+            if index != query_target_decision.candidate_index
+        ]
         suggested_next_actions = self._query_context_next_actions(
             dataset_iri=dataset.iri,
             graph=graph,
@@ -8640,6 +8654,9 @@ class DoxaBase:
             decision=query_target_decision,
             candidates=query_target_candidates,
             unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
+            unselected_direct_clean_candidate_indexes=(
+                unselected_direct_clean_candidate_indexes
+            ),
         )
         return QueryPlanningContext(
             dataset=dataset_summary,
@@ -8672,6 +8689,10 @@ class DoxaBase:
             query_target_candidates=query_target_candidates,
             ready_candidate_indexes=ready_candidate_indexes,
             unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
+            direct_clean_candidate_indexes=direct_clean_candidate_indexes,
+            unselected_direct_clean_candidate_indexes=(
+                unselected_direct_clean_candidate_indexes
+            ),
             physical_layouts=dataset.physical_layouts,
             storage_accesses=dataset.storage_accesses,
             partition_schemes=dataset.partition_schemes,
@@ -8692,6 +8713,7 @@ class DoxaBase:
         decision: QueryTargetDecision,
         candidates: list[QueryTargetCandidate],
         unselected_ready_candidate_indexes: list[int],
+        unselected_direct_clean_candidate_indexes: list[int],
     ) -> list[SuggestedNextAction]:
         if (
             decision.candidate_index is None
@@ -8725,6 +8747,17 @@ class DoxaBase:
                 "allow_context_blocked_candidate=True while preserving the "
                 "context issue audit."
             )
+            if unselected_direct_clean_candidate_indexes:
+                peers = ", ".join(
+                    str(index)
+                    for index in unselected_direct_clean_candidate_indexes
+                )
+                reason = (
+                    f"{reason} Other direct-clean candidate indexes exist "
+                    f"({peers}); inspect query_target_candidates and rerun "
+                    "with an explicit candidate_index if another route is "
+                    "intended."
+                )
         elif decision.status == "candidate_needs_review":
             action_label = "Draft review-gated query plan"
             reason = (
@@ -8843,6 +8876,9 @@ class DoxaBase:
         ready_candidate_indexes = self._query_ready_candidate_indexes(
             context.query_target_candidates
         )
+        direct_clean_candidate_indexes = self._query_direct_clean_candidate_indexes(
+            context.query_target_candidates
+        )
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
@@ -8869,6 +8905,12 @@ class DoxaBase:
                 unselected_ready_candidate_indexes=[
                     index
                     for index in ready_candidate_indexes
+                    if index != selected_candidate_index
+                ],
+                direct_clean_candidate_indexes=direct_clean_candidate_indexes,
+                unselected_direct_clean_candidate_indexes=[
+                    index
+                    for index in direct_clean_candidate_indexes
                     if index != selected_candidate_index
                 ],
                 selection_mode=selection_mode,
@@ -8915,6 +8957,16 @@ class DoxaBase:
             for index, candidate in enumerate(candidates)
             if candidate.candidate_path_status == "ready"
             and not candidate.direct_review_required
+        ]
+
+    @staticmethod
+    def _query_direct_clean_candidate_indexes(
+        candidates: list[QueryTargetCandidate],
+    ) -> list[int]:
+        return [
+            index
+            for index, candidate in enumerate(candidates)
+            if not candidate.direct_review_required
         ]
 
     def _draft_query_plan_select_candidate(

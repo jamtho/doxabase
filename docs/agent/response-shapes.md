@@ -1222,6 +1222,8 @@ query.query_target_decision
 query.query_target_candidates
 query.ready_candidate_indexes
 query.unselected_ready_candidate_indexes
+query.direct_clean_candidate_indexes
+query.unselected_direct_clean_candidate_indexes
 query.physical_layouts
 query.storage_accesses
 query.partition_schemes
@@ -1265,6 +1267,12 @@ script can draft the selected route while keeping the context issues visible.
 `query_target_decision.candidate_index`. When it is non-empty, another ready
 path or relation exists and the caller should inspect candidate cards before
 treating the automatic index as intended.
+`direct_clean_candidate_indexes` lists candidates with no direct warning or
+error even when the overall context is blocked by sibling metadata;
+`unselected_direct_clean_candidate_indexes` excludes the selected decision
+candidate. Use these lists when `ready_candidate_indexes` is empty but a
+context-blocked route can be drafted with an explicit selector and
+`allow_context_blocked_candidate=True`.
 `suggested_next_calls` is the compatibility display-call list.
 
 Each query target decision has:
@@ -1442,7 +1450,8 @@ By default, `plan.selected_candidate` is the candidate named by
 `candidate_index` or `storage_access_iri`; `source_context.query_target_decision`
 still carries the automatic decision, while `selected_candidate_index`,
 `candidate_count`, `ready_candidate_indexes`,
-`unselected_ready_candidate_indexes`, `selection_mode`, `requested_candidate_index`,
+`unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
+`unselected_direct_clean_candidate_indexes`, `selection_mode`, `requested_candidate_index`,
 `requested_storage_access_iri`, `selection_status`, `selection_note`, and
 `allow_context_blocked_candidate` describe the actual draft selection.
 If `unselected_ready_candidate_indexes` is non-empty, another direct-ready
@@ -1450,6 +1459,9 @@ candidate exists and agents should consider whether to rerun with explicit
 `candidate_index`. The returned list order is not an authoring-preference
 contract; `candidate_index` is a response-local pointer, so inspect the candidate
 cards before treating one ready path or relation as intended.
+If the source context is globally blocked, use
+`unselected_direct_clean_candidate_indexes` to find peer candidates that lack
+direct blockers but still need review-gated drafting.
 `storage_access_iri` must identify exactly one query target candidate; when one
 storage access has multiple candidate paths, the error includes compact
 candidate snippets and callers should rerun with `candidate_index`.

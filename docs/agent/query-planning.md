@@ -14,6 +14,11 @@ Start with `describe_query_context(dataset_iri)`:
 2. Read `unselected_ready_candidate_indexes`. If it is non-empty, the selected
    candidate has peer ready candidates; inspect `query_target_candidates` and
    pass an explicit `candidate_index` when a different route is intended.
+   When global context blockers are present, `ready_candidate_indexes` may be
+   empty even though some candidates have no direct warning or error. In that
+   case read `direct_clean_candidate_indexes` and
+   `unselected_direct_clean_candidate_indexes` before choosing an explicit
+   candidate with `allow_context_blocked_candidate=True`.
 3. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
 4. Always compare `readiness` and `issues` with the selected candidate. Broader
@@ -37,6 +42,10 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    for any execution attempt.
 2. Read `source_context.unselected_ready_candidate_indexes`. It mirrors the
    context-level peer-ready route after applying any explicit selection.
+   Also read `source_context.unselected_direct_clean_candidate_indexes` when the
+   source context is blocked by sibling metadata; those candidates may be usable
+   for a review-gated draft with an explicit selector even while
+   `ready_candidate_indexes` is empty.
    Candidate order is not an authoring-preference contract. Treat
    `candidate_index` as a pointer into the returned list, not proof that the
    first ready relation/path is the preferred one.

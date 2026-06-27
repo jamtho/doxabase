@@ -352,8 +352,10 @@ path templates, derived `query_target_decision` and `query_target_candidates`,
 physical layouts, storage access descriptions, partition schemes,
 dataset/layout verification status and note, caveats, and structured
 `suggested_next_actions` for drafting the selected route. It also returns
-`ready_candidate_indexes` and `unselected_ready_candidate_indexes` so callers can
-see peer direct-ready routes before drafting. Use it before
+`ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
+`direct_clean_candidate_indexes`, and
+`unselected_direct_clean_candidate_indexes` so callers can see peer strict-ready
+routes and peer direct-clean routes before drafting. Use it before
 drafting DuckDB/S3/local-file queries when you need to decide whether graph
 metadata is executable or only useful for orientation, especially when you need
 physical metadata and warnings without the full relationship/pattern handoff in
@@ -367,7 +369,9 @@ but context-blocked, the suggested `draft_query_plan` action carries
 `allow_context_blocked_candidate=true` and the explicit candidate index. For
 multiple direct-ready candidates, inspect `unselected_ready_candidate_indexes`
 and rerun/draft with an explicit `candidate_index` if candidate order picked the
-wrong route. For
+wrong route. In a globally blocked context, inspect
+`unselected_direct_clean_candidate_indexes` when strict ready indexes are empty
+but another candidate has no direct blocker. For
 database-backed storage, only
 storage-access-owned templates become `relation_identifier` values. Dataset or
 partition path templates paired with database storage are review-only
@@ -393,8 +397,9 @@ drafts keep the context review gate and report
 multiple candidate paths, rerun with
 `candidate_index` using the returned candidate snippets. `source_context`
 also reports `candidate_count`, `ready_candidate_indexes`, and
-`unselected_ready_candidate_indexes` so automatic plans reveal peer ready
-candidates that may deserve explicit selection. Read
+`unselected_ready_candidate_indexes`, plus direct-clean peer indexes, so
+automatic plans reveal peer ready or context-blocked-direct-clean candidates
+that may deserve explicit selection. Read
 `context_blocked_candidate_allowed` with `context_blocked_candidate_used`: if the
 switch was requested but not used, direct blocking codes distinguish already
 ready candidates from candidates that still need review. The payload

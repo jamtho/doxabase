@@ -270,7 +270,8 @@ can be planned, planning notes, columns, path templates, physical layouts,
 derived `query_target_decision` and `query_target_candidates`, dataset/layout
 verification status and note, storage access descriptions, partition schemes,
 direct/upstream caveats, `ready_candidate_indexes`,
-`unselected_ready_candidate_indexes`, and structured `suggested_next_actions`
+`unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
+`unselected_direct_clean_candidate_indexes`, and structured `suggested_next_actions`
 for drafting the selected route. It does not generate SQL or resolve credentials;
 use it to decide whether the graph has enough non-secret physical context for a
 query attempt, then review caveats before trusting aggregations or
@@ -284,6 +285,11 @@ sibling metadata, the suggested `draft_query_plan` action includes the explicit
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
 when candidate order selected a different route than intended.
+When global sibling blockers leave strict ready indexes empty,
+`direct_clean_candidate_indexes` and
+`unselected_direct_clean_candidate_indexes` name candidates with no direct
+warning/error that may still be draftable with an explicit selector and
+`allow_context_blocked_candidate=True`.
 `query_target_candidates`
 preserve template provenance and compose best-effort file/object paths from
 storage roots or bucket/prefix facts without resolving endpoint profiles or
@@ -334,9 +340,11 @@ gate and show the distinction through
 `context_blocked_candidate_used=False`.
 `source_context` preserves both the automatic decision and
 the explicit selection audit fields. It also reports `candidate_count`,
-`ready_candidate_indexes`, and `unselected_ready_candidate_indexes`; when the
-last list is non-empty, the automatic or explicit selection has peer ready
-candidates worth reviewing before execution. Candidate order is not an
+`ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
+`direct_clean_candidate_indexes`, and
+`unselected_direct_clean_candidate_indexes`; when the ready or direct-clean peer
+lists are non-empty, the automatic or explicit selection has peer candidates
+worth reviewing before execution. Candidate order is not an
 authoring-preference contract; use `candidate_index` as a response-local pointer
 after inspecting the returned candidate cards.
 The response includes a scan hint such as `read_parquet`, the candidate

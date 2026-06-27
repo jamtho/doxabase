@@ -9290,6 +9290,13 @@ def test_query_target_candidates_surface_global_blockers(
         storage_root="/warehouse",
         layout_verification_status="rc:VerifiedByListingLayout",
     )
+    archive_storage = db.record_map_storage_access(
+        "https://example.test/project#orders_zz_archive_storage",
+        label="Orders archive local access",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse-archive",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
     stale_storage = db.record_map_storage_access(
         "https://example.test/project#orders_a_stale_s3_storage",
         label="Orders stale S3 access",
@@ -9309,7 +9316,7 @@ def test_query_target_candidates_surface_global_blockers(
         label="Orders",
         is_table=True,
         path_templates=["orders/dt={date}.parquet"],
-        storage_accesses=[local_storage.iri, stale_storage.iri],
+        storage_accesses=[local_storage.iri, archive_storage.iri, stale_storage.iri],
         physical_layouts=[layout.iri],
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
@@ -9328,6 +9335,12 @@ def test_query_target_candidates_surface_global_blockers(
         for target in context.query_target_candidates
         if target.storage_access is not None
         and target.storage_access.iri == local_storage.iri
+    )
+    archive_index = next(
+        index
+        for index, target in enumerate(context.query_target_candidates)
+        if target.storage_access is not None
+        and target.storage_access.iri == archive_storage.iri
     )
     assert local_target.review_required is True
     assert local_target.direct_review_required is False
@@ -9368,6 +9381,13 @@ def test_query_target_candidates_surface_global_blockers(
     assert context.query_target_decision.reason_codes == [
         "query_context_has_other_blockers"
     ]
+    assert context.ready_candidate_indexes == []
+    assert context.unselected_ready_candidate_indexes == []
+    assert context.direct_clean_candidate_indexes == [
+        local_index,
+        archive_index,
+    ]
+    assert context.unselected_direct_clean_candidate_indexes == [archive_index]
     assert len(context.suggested_next_actions) == 1
     query_action = context.suggested_next_actions[0]
     assert query_action.tool_name == "draft_query_plan"
@@ -9379,6 +9399,10 @@ def test_query_target_candidates_surface_global_blockers(
         "candidate_index": local_index,
         "allow_context_blocked_candidate": True,
     }
+    assert (
+        f"Other direct-clean candidate indexes exist ({archive_index})"
+        in query_action.reason
+    )
     assert context.suggested_next_calls == [query_action.call]
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "context_review_required"
@@ -9387,6 +9411,15 @@ def test_query_target_candidates_surface_global_blockers(
     assert plan.source_context.requested_storage_access_iri is None
     assert plan.source_context.selection_status == "automatic"
     assert plan.source_context.allow_context_blocked_candidate is False
+    assert plan.source_context.ready_candidate_indexes == []
+    assert plan.source_context.unselected_ready_candidate_indexes == []
+    assert plan.source_context.direct_clean_candidate_indexes == [
+        local_index,
+        archive_index,
+    ]
+    assert plan.source_context.unselected_direct_clean_candidate_indexes == [
+        archive_index
+    ]
     assert plan.review_gate.selection_overridden is False
     assert plan.review_gate.context_blocked_candidate_allowed is False
     assert plan.review_gate.context_blocked_candidate_used is False
@@ -9441,6 +9474,13 @@ def test_query_target_candidates_surface_global_blockers(
     assert allowed_plan.source_context.requested_candidate_index == local_index
     assert allowed_plan.source_context.selection_status == "matched"
     assert allowed_plan.source_context.allow_context_blocked_candidate is True
+    assert allowed_plan.source_context.direct_clean_candidate_indexes == [
+        local_index,
+        archive_index,
+    ]
+    assert allowed_plan.source_context.unselected_direct_clean_candidate_indexes == [
+        archive_index
+    ]
     assert allowed_plan.selected_candidate is not None
     assert allowed_plan.selected_candidate.storage_access is not None
     assert allowed_plan.selected_candidate.storage_access.iri == local_storage.iri
@@ -9547,6 +9587,10 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert explicit_plan.source_context.candidate_count == 2
     assert explicit_plan.source_context.ready_candidate_indexes == [0, 1]
     assert explicit_plan.source_context.unselected_ready_candidate_indexes == [0]
+    assert explicit_plan.source_context.direct_clean_candidate_indexes == [0, 1]
+    assert explicit_plan.source_context.unselected_direct_clean_candidate_indexes == [
+        0
+    ]
 
     with pytest.raises(DoxaBaseError, match="either candidate_index or"):
         db.draft_query_plan(

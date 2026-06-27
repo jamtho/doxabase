@@ -1083,6 +1083,12 @@ few useful gaps:
   Imports and validation now wrap those failures as `DoxaBaseError`, and Rich
   Canopy graph IRIs must name known roles unless explicitly mapped by
   `graph_map`.
+- A query-planning storage-selection trial found globally blocked contexts can
+  leave `ready_candidate_indexes` empty even when several candidates have no
+  direct warning or error and can be drafted with
+  `allow_context_blocked_candidate=True`. Query context and draft source context
+  now expose direct-clean candidate indexes separately from stricter ready
+  indexes.
 - A cold-start ergonomics trial found broad deferred-tool searches may still
   under-return central route helpers. In lazy environments, search exact MCP
   names such as `doxabase.get_doc`, `doxabase.list_entities`, and

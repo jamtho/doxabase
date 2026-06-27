@@ -2266,6 +2266,12 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
         context["query_target_decision"]["selected_candidate_direct_clean"]
         is True
     )
+    assert context["ready_candidate_indexes"] == []
+    assert context["unselected_ready_candidate_indexes"] == []
+    assert context["direct_clean_candidate_indexes"] == [
+        context["query_target_decision"]["candidate_index"]
+    ]
+    assert context["unselected_direct_clean_candidate_indexes"] == []
     query_action = context["suggested_next_actions"][0]
     assert query_action["tool_name"] == "draft_query_plan"
     assert query_action["action_label"] == (
@@ -2294,6 +2300,12 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     )
     assert result["source_context"]["selection_status"] == "matched"
     assert result["source_context"]["allow_context_blocked_candidate"] is True
+    assert result["source_context"]["ready_candidate_indexes"] == []
+    assert result["source_context"]["unselected_ready_candidate_indexes"] == []
+    assert result["source_context"]["direct_clean_candidate_indexes"] == [
+        result["source_context"]["selected_candidate_index"]
+    ]
+    assert result["source_context"]["unselected_direct_clean_candidate_indexes"] == []
     assert result["selected_candidate"]["storage_access"]["iri"] == local_storage.iri
     assert result["selected_candidate"]["candidate_path_status"] == "ready"
     assert result["scan"]["candidate_path_status"] == "ready"
