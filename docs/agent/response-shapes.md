@@ -3501,7 +3501,9 @@ For `patch_conflict`, inspect `patch_checks[].conflict` before mutating; it
 means the stored patch cannot currently be replayed, not merely that the target
 graph count or digest drifted. Suggested actions for `patch_conflict` omit
 `restage_staged_revision`.
-For `validation_failed`, inspect `validation_results` before staging a repair.
+For `validation_failed`, inspect `validation_results` before staging a repair;
+unhandled rows also suggest `draft_staged_revision_rebase` as a read-only repair
+plan before any mutation.
 If `apply_staged_revision()` raises this status, the exception includes the
 staged revision IRI and an exact `describe_staged_revision(...,
 include_current_apply_check=True)` call.

@@ -23471,6 +23471,19 @@ class DoxaBase:
                 action_label="Export handled validation bundle",
             )
         elif status == "validation_failed":
+            draft_arguments: dict[str, Any] = {"iri": staged_revision_iri}
+            if validation_scope is not None:
+                draft_arguments["validation_scope"] = validation_scope
+            add_action(
+                "draft_staged_revision_rebase",
+                draft_arguments,
+                (
+                    "Draft a read-only repair/rebase plan from this validation "
+                    "failure before hand-authoring a repaired or alternative "
+                    "successor."
+                ),
+                action_label="Draft repair plan",
+            )
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
@@ -23948,7 +23961,10 @@ class DoxaBase:
                 "stage a repaired or alternative candidate before restaging or "
                 "applying this row."
             )
-            selected_action = find_action(tool_name="describe_staged_revision")
+            selected_action = (
+                find_exact_action(tool_name="draft_staged_revision_rebase")
+                or find_action(tool_name="describe_staged_revision")
+            )
         elif apply_decision == "review_then_apply" or apply_status == "ready":
             action_type = "apply_after_review"
             queue = "apply_after_review"
@@ -23969,7 +23985,10 @@ class DoxaBase:
                 "Inspect diagnostics, then stage a repaired or alternative "
                 "candidate instead of applying this row."
             )
-            selected_action = find_action(tool_name="describe_staged_revision")
+            selected_action = (
+                find_exact_action(tool_name="draft_staged_revision_rebase")
+                or find_action(tool_name="describe_staged_revision")
+            )
         elif (
             apply_decision == "restage_against_current_graph"
             or apply_status == "conflict"

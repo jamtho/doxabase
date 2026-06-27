@@ -6413,10 +6413,13 @@ def test_batch_restage_items_report_validation_failed_successor_status(
     assert item.next_action_after is not None
     assert item.next_action_after.action_type == "repair_or_replace"
     assert item.next_action_after.queue == "repair_or_replace"
-    assert item.next_action_after.tool_name == "describe_staged_revision"
-    assert item.next_action_after.arguments == {"iri": successor_iri}
+    assert item.next_action_after.tool_name == "draft_staged_revision_rebase"
+    assert item.next_action_after.arguments == {
+        "iri": successor_iri,
+        "validation_scope": "all",
+    }
     assert item.suggested_next_actions_after[0].tool_name == (
-        "describe_staged_revision"
+        "draft_staged_revision_rebase"
     )
     successor_check = db.check_staged_revision_apply(successor_iri)
     assert successor_check.recommended_resolution is not None
@@ -7466,6 +7469,14 @@ def test_same_subject_alternative_restage_routes_max_count_repair(
     assert snapshot_check.next_action is not None
     assert snapshot_check.next_action.action_type == "repair_or_replace"
     assert snapshot_check.next_action.queue == "repair_or_replace"
+    assert snapshot_check.next_action.tool_name == "draft_staged_revision_rebase"
+    assert snapshot_check.next_action.arguments == {
+        "iri": snapshot_successor.revision_iri,
+        "validation_scope": "all",
+    }
+    assert snapshot_check.suggested_next_actions[0].tool_name == (
+        "draft_staged_revision_rebase"
+    )
     assert "removal+addition" in (snapshot_check.recommended_resolution or "")
     row_semantics_diagnostic = next(
         result
@@ -8991,12 +9002,17 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
         "Patch counts replay cleanly, but preview validation failed with "
         f"{check.validation_result_count} result(s)."
     )
+    assert check.next_action is not None
+    assert check.next_action.queue == "repair_or_replace"
+    assert check.next_action.tool_name == "draft_staged_revision_rebase"
     assert [action.tool_name for action in check.suggested_next_actions] == [
+        "draft_staged_revision_rebase",
         "describe_staged_revision",
         "export_staged_revision",
     ]
-    assert "stage a repaired" in check.suggested_next_actions[0].reason
-    assert "validation-failed" in check.suggested_next_actions[1].arguments["path"]
+    assert "read-only repair/rebase plan" in check.suggested_next_actions[0].reason
+    assert "stage a repaired" in check.suggested_next_actions[1].reason
+    assert "validation-failed" in check.suggested_next_actions[2].arguments["path"]
     description = db.describe_staged_revision(
         staged.revision_iri,
         include_current_apply_check=True,
@@ -9010,9 +9026,12 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     assert validation_summary.next_action is not None
     assert validation_summary.next_action.action_type == "repair_or_replace"
     assert validation_summary.next_action.queue == "repair_or_replace"
-    assert validation_summary.next_action.arguments == {"iri": staged.revision_iri}
+    assert validation_summary.next_action.arguments == {
+        "iri": staged.revision_iri,
+        "validation_scope": "all",
+    }
     assert validation_summary.suggested_next_actions[0].tool_name == (
-        "describe_staged_revision"
+        "draft_staged_revision_rebase"
     )
     assert validation_summary.error is None
 
