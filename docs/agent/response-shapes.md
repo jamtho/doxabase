@@ -88,6 +88,9 @@ Python API when you are running a local scratch capsule script.
 
 There is no top-level `graph_counts` field. Derive graph counts from
 `named_graphs[].triple_count`.
+The Python `db.graph_overview()` object has the same `named_graphs` cards, but
+its `class_counts` and `predicate_counts` are tuple pairs; the MCP helper
+serializes those pairs as dictionaries with `class`/`predicate` and `count`.
 
 `db.replace_graph_triples(...)` returns `GraphTripleReplacementRecord`:
 
@@ -670,8 +673,8 @@ bundle = db.record_profile_bundle(
 
 ## Dataset Description
 
-`db.describe_dataset(table_iri)` returns a `DatasetDescription` with common
-fields:
+`db.describe_dataset(table_iri)` returns a `DatasetDescription`. Common fields
+include:
 
 ```python
 dataset.iri
@@ -701,6 +704,11 @@ dataset.relationships
 dataset.linked_patterns
 dataset.linked_pattern_reasons
 ```
+
+The current full payload also includes provenance and related-dataset handoff
+fields such as `dataset.provenance`, `dataset.transformations`,
+`dataset.related_datasets`, and `dataset.related_dataset_groups`. Treat the list
+above as the common working set, not as an exhaustive whitelist.
 
 Resource-valued dataset fields such as `row_semantics`, `entity_key`, and
 `schema_stability` return resource summaries or IRIs. Use `dataset.description`,
@@ -2775,10 +2783,12 @@ Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `review_then_apply`, `inspect_no_effective_change`,
 `inspect_applied_revision`, `inspect_current_successor`,
 `restage_against_current_graph`, `inspect_patch_conflict`, or
-`inspect_validation_results`. A mechanically ready restaged successor whose
-source failed staged-time validation uses
+`inspect_validation_results`. A mechanically ready same-payload restaged
+successor whose source failed staged-time validation uses
 `inspect_restaged_source_validation_failure`; inspect/export it and stage a
-repaired or alternative candidate before applying.
+repaired or alternative candidate before applying. A revised conforming
+successor can use `review_then_apply` while still carrying the source-failure
+warning.
 `review_recommended=True` means the caller should
 review the staged revision before the next mutation or replacement. For `ready` checks that
 means review before applying; for count/digest-drift `conflict` checks it means
@@ -2796,7 +2806,10 @@ conflicts route to `repair_or_replace`, and already-applied rows route to
 `inspect_already_applied`. A ready restaged successor with
 `decision == "inspect_restaged_source_validation_failure"` also routes to
 `repair_or_replace`, because current graph state may have supplied semantics
-that the original framing omitted. Rows with failed staged-time validation also
+that the original same-payload framing omitted. A caller-authored successor with
+a revised conforming patch payload keeps the source validation warning in
+semantic-risk and review text, but can route to `apply_after_review`. Rows with
+failed staged-time validation also
 route to `repair_or_replace` even if later graph drift makes the live apply
 check report `conflict`. No-op and superseded-by-restage rows usually route to
 informational inspection queues. When `validation_conforms is None`, read
@@ -3164,10 +3177,12 @@ the source row's stored staged-time validation signal. The `current_*`
 validation fields give the same stored staged-time signal for
 `current_revision_iri`, which can differ after a real restage creates a
 successor. These are separate from live `status_after` and
-`blocking_reasons_after`. If a restaged successor is mechanically ready only
-after current graph state fills a source validation gap, `decision_after`
-becomes `inspect_restaged_source_validation_failure` and
+`blocking_reasons_after`. If a same-payload restaged successor is mechanically
+ready only after current graph state fills a source validation gap,
+`decision_after` becomes `inspect_restaged_source_validation_failure` and
 `next_action_after.queue` is `repair_or_replace` rather than
+`apply_after_review`. If the current successor is a revised conforming repair,
+the source-failure warning remains visible but the ready row can route to
 `apply_after_review`.
 Rows with failed staged-time validation keep a `repair_or_replace` compact route
 even when later drift makes `status_after` a live conflict.

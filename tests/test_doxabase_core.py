@@ -6056,6 +6056,117 @@ def test_restage_from_staged_validation_failure_routes_to_repair_when_current_st
     }
 
 
+def test_authored_repair_for_staged_validation_failure_can_apply_after_review(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    scope = "https://example.test/project#DispatchTemporalScope"
+    clock = "https://example.test/project#dispatch_events__event_local_time"
+    timezone = "https://example.test/project#dispatch_events__timezone_hint"
+    db.import_turtle(
+        """
+        @prefix ft: <https://example.test/project/systematisation#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ft:TemporalInterpretationScope a rdfs:Class ;
+            rdfs:label "Temporal interpretation scope" .
+
+        ft:clockColumn a rdf:Property ;
+            rdfs:label "clock column" .
+
+        ft:timezoneEvidenceColumn a rdf:Property ;
+            rdfs:label "timezone evidence column" .
+        """,
+        graph="ontology",
+    )
+    db.import_turtle(
+        """
+        @prefix ft: <https://example.test/project/systematisation#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+        ft:TemporalInterpretationScopeShape a sh:NodeShape ;
+            sh:targetClass ft:TemporalInterpretationScope ;
+            sh:property [
+                sh:path ft:timezoneEvidenceColumn ;
+                sh:minCount 1 ;
+                sh:nodeKind sh:IRI ;
+                sh:message "Temporal scopes must name timezone evidence."
+            ] .
+        """,
+        graph="shapes",
+    )
+    source = db.stage_graph_revision(
+        summary="Stage incomplete temporal scope",
+        rationale=(
+            "Regression test: this source failed staged-time validation because "
+            "the framing omitted timezone evidence."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ft: <https://example.test/project/systematisation#> .
+
+                    <{scope}> a ft:TemporalInterpretationScope ;
+                        ft:clockColumn <{clock}> .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    assert source.validation_conforms is False
+
+    repair = db.stage_graph_revision(
+        summary="Repair temporal scope framing",
+        rationale=(
+            "Caller-authored repair adds the missing timezone evidence named by "
+            "the source validation diagnostics."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ft: <https://example.test/project/systematisation#> .
+
+                    <{scope}> a ft:TemporalInterpretationScope ;
+                        ft:clockColumn <{clock}> ;
+                        ft:timezoneEvidenceColumn <{timezone}> .
+                """,
+            }
+        ],
+        restages_revision=source.revision_iri,
+        validation_scope="all",
+    )
+    assert repair.validation_conforms is True
+
+    check = db.check_staged_revision_apply(repair.revision_iri)
+
+    warning = (
+        "The restaged source failed staged-time validation with 1 result(s)"
+    )
+    assert check.status == "ready"
+    assert check.can_apply is True
+    assert check.validation_conforms is True
+    assert check.decision == "review_then_apply"
+    assert any(warning in reason for reason in check.semantic_risk_reasons)
+    assert check.recommended_resolution is not None
+    assert warning in check.recommended_resolution
+    assert "revised successor payload" in check.recommended_resolution
+    assert check.next_action is not None
+    assert check.next_action.action_type == "apply_after_review"
+    assert check.next_action.queue == "apply_after_review"
+    assert check.next_action.tool_name == "apply_staged_revision"
+    assert any(
+        action.tool_name == "apply_staged_revision"
+        for action in check.suggested_next_actions
+    )
+
+    applied = db.apply_staged_revision(repair.revision_iri)
+    assert applied.staged_revision_iri == repair.revision_iri
+    assert applied.validation_conforms is True
+
+
 def test_batch_restage_marks_stale_current_successor_as_unresolved(
     tmp_path: Path,
 ) -> None:
@@ -15923,6 +16034,7 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     dataset = "https://example.test/project#Orders"
     status_column = "https://example.test/project#OrdersStatus"
     status_value_type = "https://example.test/project#OrderStatusCode"
+    profile_metric_kind = "https://example.test/project#OrdersStatusCompleteness"
     evidence = "https://example.test/project#OrdersProfileRunEvidence"
 
     db.replace_graph_triples(
@@ -15933,6 +16045,9 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
 
             <{status_value_type}> a rc:ValueType ;
                 rdfs:label "Order status code" .
+
+            <{profile_metric_kind}> a rc:ProfileMetricKind ;
+                rdfs:label "Orders status completeness" .
         """,
         allow_count_change=True,
     )
@@ -16045,6 +16160,20 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
         pattern_targets=[status_column],
         evidence_iri=evidence,
     )
+    metric_pattern = db.record_pattern(
+        summary="Orders status profile metric needs vocabulary review.",
+        pattern_text=(
+            "The profile metric attached to Orders.status is useful review "
+            "context but does not directly support a physical type assertion."
+        ),
+        rationale=(
+            "Same-profile observation patterns should remain reachable as "
+            "context without becoming direct staged assertion support."
+        ),
+        pattern_targets=[profile_metric_kind],
+        supporting_observations=[profile.iri],
+        evidence_iri=evidence,
+    )
     physical_type_action = staged_type_actions[0]
     physical_type_arguments = dict(physical_type_action.arguments)
     physical_type_arguments["supporting_patterns"] = [recorded_pattern.pattern_iri]
@@ -16063,6 +16192,9 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     }.issubset(
         {item.iri for item in staged_type_description.supporting_patterns},
     )
+    assert metric_pattern.pattern_iri not in {
+        item.iri for item in staged_type_description.supporting_patterns
+    }
     assert [action.tool_name for action in draft.suggested_next_actions] == [
         "describe_context_slice",
         "record_pattern",

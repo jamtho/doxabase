@@ -2768,6 +2768,50 @@ class DoxaBase:
             ],
         )
 
+    def _assertion_supporting_claim_targets_resource(
+        self,
+        summary: AssertionSupportRouteSummary,
+        target_iris: set[str],
+    ) -> bool:
+        all_graphs = self._expand_graphs(["all"])
+        for matched in summary.matched_resources:
+            claim_targets = set(
+                self._objects(all_graphs, matched.iri, "rc:claimTarget")
+            )
+            if claim_targets & target_iris:
+                return True
+        return False
+
+    def _assertion_auto_supporting_pattern_iris(
+        self,
+        support: AssertionSupportDescription,
+    ) -> list[str]:
+        target_iris = {resource.iri for resource in support.target_resources}
+        summary_by_iri = {
+            summary.resource.iri: summary
+            for summary in support.related_route_summaries
+            if summary.resource_kind == "pattern"
+        }
+        direct_route_types = {"target_resource", "pattern_target", "map_implication"}
+        selected: list[str] = []
+        for pattern in support.related_patterns:
+            summary = summary_by_iri.get(pattern.iri)
+            if summary is None:
+                continue
+            route_types = set(summary.route_types)
+            if route_types & direct_route_types:
+                selected.append(pattern.iri)
+                continue
+            if (
+                "supporting_claim" in route_types
+                and self._assertion_supporting_claim_targets_resource(
+                    summary,
+                    target_iris,
+                )
+            ):
+                selected.append(pattern.iri)
+        return list(dict.fromkeys(selected))
+
     def stage_map_assertion_change(
         self,
         subject: str,
@@ -2933,7 +2977,7 @@ class DoxaBase:
             ),
             supporting_patterns=self._merge_iri_values(
                 supporting_patterns,
-                [item.iri for item in support.related_patterns],
+                self._assertion_auto_supporting_pattern_iris(support),
             ),
             revision_anchors=anchors,
             evidence=self._merge_iri_values(
@@ -18940,9 +18984,20 @@ class DoxaBase:
         semantic_risk_level, semantic_risk_reasons = (
             self._staged_revision_semantic_risk(staged)
         )
-        restaged_source_validation_warning = (
-            self._restaged_source_validation_warning(staged)
-        )
+        (
+            restaged_source_validation_warning,
+            restaged_successor_reuses_source_patch_payload,
+        ) = self._restaged_source_validation_context(staged)
+        if restaged_source_validation_warning is not None and not (
+            restaged_successor_reuses_source_patch_payload
+        ):
+            semantic_risk_reasons = [
+                *semantic_risk_reasons,
+                (
+                    "The staged successor revises a source that failed "
+                    "staged-time validation."
+                ),
+            ]
         if restaged_source_validation_warning is not None:
             semantic_risk_reasons = list(
                 dict.fromkeys(
@@ -19330,12 +19385,18 @@ class DoxaBase:
             restaged_source_validation_warning=(
                 restaged_source_validation_warning
             ),
+            restaged_successor_reuses_source_patch_payload=(
+                restaged_successor_reuses_source_patch_payload
+            ),
         )
         decision = self._staged_apply_check_decision(
             status,
             blocking_reasons=blocking_reasons,
             restaged_source_validation_warning=(
                 restaged_source_validation_warning
+            ),
+            restaged_successor_reuses_source_patch_payload=(
+                restaged_successor_reuses_source_patch_payload
             ),
         )
         next_action = self._revision_next_action(
@@ -19374,6 +19435,9 @@ class DoxaBase:
                 restaged_source_validation_warning=(
                     restaged_source_validation_warning
                 ),
+                restaged_successor_reuses_source_patch_payload=(
+                    restaged_successor_reuses_source_patch_payload
+                ),
             ),
             already_applied_by=None,
             restaged_by=restaged_by_iri,
@@ -19408,30 +19472,67 @@ class DoxaBase:
             preview_graphs=preview_graphs,
         )
 
-    def _restaged_source_validation_warning(
+    @staticmethod
+    def _staged_revision_patch_payload_signature(
+        staged: StagedGraphRevisionDescription,
+    ) -> list[
+        tuple[int | None, str | None, str | None, str | None, str | None, str | None]
+    ]:
+        return [
+            (
+                patch.sequence_index,
+                patch.operation,
+                patch.target_graph,
+                patch.patch_role,
+                patch.format,
+                patch.content,
+            )
+            for patch in staged.patches
+        ]
+
+    def _restaged_source_validation_context(
         self,
         staged: StagedGraphRevisionDescription,
-    ) -> str | None:
+    ) -> tuple[str | None, bool]:
         if staged.restaged_from is None:
-            return None
+            return None, False
         source = self.describe_staged_revision(staged.restaged_from.iri)
+        reuses_source_patch_payload = (
+            self._staged_revision_patch_payload_signature(staged)
+            == self._staged_revision_patch_payload_signature(source)
+        )
         source_status = self._staged_validation_status(
             conforms=source.validation_conforms,
             result_count=source.validation_result_count,
         )
         if source_status != "failed":
-            return None
+            return None, reuses_source_patch_payload
         result_text = (
             f" with {source.validation_result_count} result(s)"
             if source.validation_result_count is not None
             else ""
         )
+        if not reuses_source_patch_payload:
+            return (
+                "The restaged source failed staged-time validation"
+                f"{result_text}; this successor uses a revised patch payload, "
+                "so compare it with the source diagnostics before applying.",
+                reuses_source_patch_payload,
+            )
         return (
             "The restaged source failed staged-time validation"
             f"{result_text}; current validation may pass because intervening "
             "graph state supplied semantics that the source framing originally "
-            "omitted."
+            "omitted.",
+            reuses_source_patch_payload,
         )
+
+    def _restaged_source_validation_warning(
+        self,
+        staged: StagedGraphRevisionDescription,
+    ) -> str | None:
+        warning, _ = self._restaged_source_validation_context(staged)
+        return warning
 
     def _staged_revision_semantic_risk(
         self,
@@ -19901,8 +20002,13 @@ class DoxaBase:
         *,
         blocking_reasons: list[str] | None = None,
         restaged_source_validation_warning: str | None = None,
+        restaged_successor_reuses_source_patch_payload: bool = True,
     ) -> str:
-        if status == "ready" and restaged_source_validation_warning is not None:
+        if (
+            status == "ready"
+            and restaged_source_validation_warning is not None
+            and restaged_successor_reuses_source_patch_payload
+        ):
             return "inspect_restaged_source_validation_failure"
         if status == "conflict" and blocking_reasons is not None:
             if not self._staged_apply_check_is_restageable_conflict(
@@ -20052,8 +20158,15 @@ class DoxaBase:
         restaged_by: str | None = None,
         current_restaged_by: str | None = None,
         restaged_source_validation_warning: str | None = None,
+        restaged_successor_reuses_source_patch_payload: bool = True,
     ) -> str | None:
         if status == "ready" and restaged_source_validation_warning is not None:
+            if not restaged_successor_reuses_source_patch_payload:
+                return (
+                    f"{restaged_source_validation_warning} Inspect the source "
+                    "validation diagnostics and the revised successor payload; "
+                    "apply after review only if the repair is still desired."
+                )
             return (
                 f"{restaged_source_validation_warning} Inspect the source "
                 "validation diagnostics and stage a repaired or alternative "
@@ -20158,6 +20271,7 @@ class DoxaBase:
         snapshot_drifts: list[StagedGraphSnapshotDrift] | None = None,
         validation_scope: str | None = None,
         restaged_source_validation_warning: str | None = None,
+        restaged_successor_reuses_source_patch_payload: bool = True,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
 
@@ -20179,7 +20293,11 @@ class DoxaBase:
                 )
             )
 
-        if status == "ready" and restaged_source_validation_warning is not None:
+        if (
+            status == "ready"
+            and restaged_source_validation_warning is not None
+            and restaged_successor_reuses_source_patch_payload
+        ):
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
@@ -20206,26 +20324,47 @@ class DoxaBase:
                 action_label="Export restaged validation bundle",
             )
         elif status == "ready":
+            if restaged_source_validation_warning is not None:
+                review_reason = (
+                    f"{restaged_source_validation_warning} Review the revised "
+                    "successor payload, validation preview, impacts, support, "
+                    "and any judgement panel before deciding to apply."
+                )
+                review_label = "Review repaired successor"
+                export_slug = "staged-revision-repaired-successor"
+                export_reason = (
+                    "Write a Markdown review bundle that preserves the source "
+                    "validation failure and the current ready repaired successor."
+                )
+                export_label = "Export repaired successor bundle"
+            else:
+                review_reason = (
+                    "Review patches, validation, impacts, support, and any "
+                    "judgement panel before deciding to apply."
+                )
+                review_label = "Review staged revision"
+                export_slug = "staged-revision-review"
+                export_reason = (
+                    "Write a Markdown review bundle before applying if review is needed."
+                )
+                export_label = "Export review bundle"
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
-                (
-                    "Review patches, validation, impacts, support, and any "
-                    "judgement panel before deciding to apply."
-                ),
-                action_label="Review staged revision",
+                review_reason,
+                action_label=review_label,
             )
             add_action(
                 "export_staged_revision",
                 {
                     "iri": staged_revision_iri,
                     "path": self._suggested_review_export_path(
-                        "staged-revision-review",
+                        export_slug,
                         [staged_revision_iri],
                     ),
                 },
-                "Write a Markdown review bundle before applying if review is needed.",
-                action_label="Export review bundle",
+                export_reason,
+                action_label=export_label,
             )
             apply_reason = (
                 "Apply this staged revision only after semantic review confirms "

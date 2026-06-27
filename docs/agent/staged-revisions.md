@@ -678,10 +678,13 @@ per-status counts and per-row `history_only_count_digest`,
 some graph roles have exact snapshot rows. Use that panel to decide whether a
 companion revision snapshot JSON bundle is still needed before relying on exact
 stale drift or applied-diff triples.
-When a restaged successor is mechanically ready only because current graph state
-filled a source validation gap, its decision is
+When a same-payload mechanical restaged successor is ready only because current
+graph state filled a source validation gap, its decision is
 `inspect_restaged_source_validation_failure` and its compact queue is
-`repair_or_replace`, not `apply_after_review`. When a row has
+`repair_or_replace`, not `apply_after_review`. When a caller-authored successor
+uses `restages_revision` with a revised conforming patch payload, the source
+failure stays in semantic-risk/review text but the ready successor can route to
+`apply_after_review`. When a row has
 `staged_validation_conforms=False` or a failed `staged_validation_status`,
 the compact route remains `repair_or_replace` even if the live apply check now
 reports count or digest drift; inspect stored validation diagnostics before

@@ -1037,10 +1037,12 @@ validation status, semantic risk, and a top-level `can_apply` flag. Read
 applied event, review validation diagnostics, or restage after conflicts.
 `superseded_by_restage` means the staged source already has a refreshed
 successor; inspect that successor instead of applying the old source.
-`inspect_restaged_source_validation_failure` means a restaged successor is
-mechanically ready, but its source failed staged-time validation and current
-graph state may be filling the semantic gap; inspect/export it and stage a
-repair or alternative before applying.
+`inspect_restaged_source_validation_failure` means a same-payload restaged
+successor is mechanically ready, but its source failed staged-time validation
+and current graph state may be filling the semantic gap; inspect/export it and
+stage a repair or alternative before applying. A revised conforming successor
+created with `restages_revision` still carries the source-failure warning, but
+routes like an ordinary ready row after review.
 For `ready` checks with `semantic_risk_level` of `attention` or `high`, the
 apply action is labelled `Apply only after semantic review`. For conflict
 checks, the review action includes `include_current_apply_check=True` so the

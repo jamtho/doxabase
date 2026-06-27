@@ -997,9 +997,10 @@ few useful gaps:
   deciding which ready relation or path to draft.
 - Staged-revision recovery trials found that a source framing that failed
   staged-time validation can later restage as mechanically ready if current graph
-  state supplies the missing semantics. Apply checks now preserve that history
-  with `decision="inspect_restaged_source_validation_failure"` and route the
-  successor through `repair_or_replace` instead of `apply_after_review`.
+  state supplies the missing semantics. Apply checks preserve that history with
+  `decision="inspect_restaged_source_validation_failure"` and route same-payload
+  successors through `repair_or_replace`; caller-authored revised successors keep
+  the warning but can route to `apply_after_review` when they validate.
 - A staged-revision recovery trial found grouped exports had useful status
   counts but `list_graph_revisions` required scripts to recompute them from row
   data. Revision lists now expose returned-page application, stale-resolution,
