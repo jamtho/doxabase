@@ -10186,6 +10186,8 @@ def test_draft_query_plan_hints_unmatched_partition_placeholders(
     dataset = "https://example.test/project#PartitionOwnedEvents"
     event_date = "https://example.test/project#partition_events__event_date"
     event_year = "https://example.test/project#partition_events__year"
+    event_home_region = "https://example.test/project#partition_events__home_region"
+    event_ship_region = "https://example.test/project#partition_events__ship_region"
     storage = db.record_map_storage_access(
         "https://example.test/project#partition_events_storage",
         label="Partition events storage",
@@ -10201,7 +10203,7 @@ def test_draft_query_plan_hints_unmatched_partition_placeholders(
     )
     partition = db.record_map_partition_scheme(
         "https://example.test/project#partition_events_daily_partition",
-        path_template="events/year={year}/dt={date}/*.parquet",
+        path_template="events/year={year}/region={region}/dt={date}/*.parquet",
         partition_columns=[event_date],
         granularity="rc:Daily",
         datasets=[dataset],
@@ -10227,6 +10229,16 @@ def test_draft_query_plan_hints_unmatched_partition_placeholders(
         column_name="year",
         physical_type="rc:Integer",
     )
+    db.record_map_column(
+        event_home_region,
+        table_iri=dataset,
+        column_name="home_region",
+    )
+    db.record_map_column(
+        event_ship_region,
+        table_iri=dataset,
+        column_name="ship_region",
+    )
 
     plan = db.draft_query_plan(dataset)
 
@@ -10247,6 +10259,24 @@ def test_draft_query_plan_hints_unmatched_partition_placeholders(
     assert year_binding.candidate_column_matches[0].match_kind == "exact_name"
     assert year_binding.candidate_column_matches[0].confidence == "high"
     assert "Candidate column hint(s): year" in year_binding.derivation_note
+
+    region_binding = bindings_by_name["region"]
+    assert region_binding.binding_kind == "partition_template_placeholder"
+    assert region_binding.partition_column is None
+    assert region_binding.candidate_column_match_status == "ambiguous"
+    assert [match.column.iri for match in region_binding.candidate_column_matches] == [
+        event_home_region,
+        event_ship_region,
+    ]
+    assert {
+        match.match_kind for match in region_binding.candidate_column_matches
+    } == {"suffix_name"}
+    assert "Candidate column hint(s): home_region, ship_region" in (
+        region_binding.derivation_note
+    )
+    assert "Multiple candidate columns matched this placeholder" in (
+        region_binding.derivation_note
+    )
 
     date_binding = bindings_by_name["date"]
     assert date_binding.partition_column is not None
@@ -17531,7 +17561,8 @@ def test_profile_type_advisory_duplicate_actions_preserve_support(
     type_observations = {
         advisory.profile_observation_iri for advisory in draft.type_advisories
     }
-    for advisory in draft.type_advisories:
+    for index, advisory in enumerate(draft.type_advisories):
+        assert advisory.type_advisory_index == index
         assert advisory.duplicate_group_key == type_group_key
         assert advisory.duplicate_group_key.startswith("profile-type-advisory:")
         assert advisory.duplicate_count == 2
@@ -17618,6 +17649,7 @@ def test_profile_type_review_lane_is_representative_action_queue(
     }
     groups: dict[str, list[int]] = {}
     for index, advisory in enumerate(draft.type_advisories):
+        assert advisory.type_advisory_index == index
         groups.setdefault(advisory.duplicate_group_key, []).append(index)
     assert len(groups) == 2
 
@@ -17767,7 +17799,8 @@ def test_profile_map_update_duplicate_groups_preserve_representative_support(
     metric_observations = {
         advisory.profile_observation_iri for advisory in draft.metric_advisories
     }
-    for advisory in draft.metric_advisories:
+    for index, advisory in enumerate(draft.metric_advisories):
+        assert advisory.metric_advisory_index == index
         assert advisory.duplicate_group_key == metric_group_key
         assert advisory.duplicate_group_key.startswith("profile-metric-advisory:")
         assert advisory.duplicate_count == 2
@@ -18821,10 +18854,14 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
     }
     assert full_draft.representative_type_advisory_indexes == [0, 2]
     assert all(
-        advisory.duplicate_advisory_indexes == [0, 1]
+        advisory.metric_advisory_index == index
+        and advisory.duplicate_advisory_indexes == [0, 1]
         and advisory.promotion_patterns[0].iri == metric_pattern.pattern_iri
-        for advisory in full_draft.metric_advisories
+        for index, advisory in enumerate(full_draft.metric_advisories)
     )
+    assert [
+        advisory.type_advisory_index for advisory in full_draft.type_advisories
+    ] == [0, 1, 2, 3]
 
     staged_updates = db.stage_profile_map_updates(
         dataset,

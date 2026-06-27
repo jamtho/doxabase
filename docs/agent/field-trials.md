@@ -1517,6 +1517,11 @@ few useful gaps:
   columns as `candidate_column_match_status="not_applicable"`, but unmatched
   partition placeholders fall back to the same best-effort column-name hints used
   for dataset and storage templates.
+- A profile/systematisation trial found automation had to enumerate
+  `metric_advisories[]` and `type_advisories[]` manually even though top-level
+  representative advisory index lists already existed. Advisory rows now carry
+  row-local `metric_advisory_index` or `type_advisory_index`, matching
+  recommendation rows' `recommendation_index` pattern.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

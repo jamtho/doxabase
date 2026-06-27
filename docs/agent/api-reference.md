@@ -444,6 +444,8 @@ metric advisory counts plus `representative_metric_advisory_indexes`, type
 advisory counts plus `representative_type_advisory_indexes`, grouped
 `suggested_next_action_groups` / `suggested_next_call_groups`, and flat
 top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
+Each metric/type advisory row also carries its row-local
+`metric_advisory_index` or `type_advisory_index`.
 Prefer grouped routing: `profile_map_updates`, `metric_vocabulary_review`, and
 `profile_type_review` are present only when that lane has actions.
 Recommendation rows carry `recommendation_index`, the source profile

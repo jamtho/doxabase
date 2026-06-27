@@ -922,6 +922,7 @@ includes:
 
 ```python
 advisory.profile_observation_iri
+advisory.metric_advisory_index
 advisory.evidence_iri
 advisory.metric
 advisory.target
@@ -975,7 +976,9 @@ same for all siblings. For advisory lanes, start with
 `representative_metric_advisory_indexes` and
 `representative_type_advisory_indexes` when you need one review row per
 duplicate group, then read each representative advisory's duplicate fields when
-you need the grouped profile observation support.
+you need the grouped profile observation support. Rows also carry their own
+`metric_advisory_index` or `type_advisory_index`, so scripts do not need to
+reconstruct list positions while following representative index lists.
 
 `type_advisories[]` rows surface observation-only `physical_type` and
 `value_type` findings. They are not accepted recommendation indexes and are not
@@ -985,6 +988,7 @@ includes:
 
 ```python
 advisory.profile_observation_iri
+advisory.type_advisory_index
 advisory.evidence_iri
 advisory.observed_column
 advisory.observed_column_name
@@ -1042,8 +1046,8 @@ representative action queue, not the grouping source; labels such as
 across advisory groups. Scripts that need per-column grouping should iterate
 `type_advisories[]` by
 `representative_type_advisory_indexes` first, then use each representative
-advisory's `duplicate_group_key` / `duplicate_advisory_indexes` and
-`suggested_next_actions`.
+advisory's `type_advisory_index`, `duplicate_group_key` /
+`duplicate_advisory_indexes`, and `suggested_next_actions`.
 Drafts with at least one default-stageable representative recommendation include
 a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled

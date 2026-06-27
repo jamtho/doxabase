@@ -105,11 +105,11 @@ Treat the grouped `profile_type_review` lane as a representative action queue:
 its labels may repeat across advisory groups. For automation, iterate
 `representative_type_advisory_indexes` first and use each representative
 advisory's `suggested_next_actions`; read its `duplicate_group_key` /
-`duplicate_advisory_indexes` when you need the grouped sibling rows. Metric
-vocabulary review has the same shape through
-`representative_metric_advisory_indexes`. This keeps the column, observed
-types, metric vocabulary, and duplicate observation support clear without
-making scripts reconstruct groups manually.
+`type_advisory_index` / `duplicate_advisory_indexes` when you need the grouped
+sibling rows. Metric vocabulary review has the same shape through
+`representative_metric_advisory_indexes` and `metric_advisory_index`. This keeps
+the column, observed types, metric vocabulary, and duplicate observation support
+clear without making scripts reconstruct groups manually.
 That staged assertion also merges related assertion-support lore, so the final
 revision may include both the pattern you just recorded and patterns that
 directly target, imply, or claim-support the column or assertion. Same-profile

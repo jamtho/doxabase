@@ -1724,6 +1724,7 @@ class ProfileMapUpdateRecommendation:
 @dataclass(frozen=True)
 class ProfileMetricVocabularyAdvisory:
     profile_observation_iri: str
+    metric_advisory_index: int
     evidence_iri: str
     metric: ResourceSummary
     target: ResourceSummary | None
@@ -1750,6 +1751,7 @@ class ProfileMetricVocabularyAdvisory:
 @dataclass(frozen=True)
 class ProfileTypeFindingAdvisory:
     profile_observation_iri: str
+    type_advisory_index: int
     evidence_iri: str
     observed_column: ResourceSummary
     observed_column_name: str | None
@@ -13030,6 +13032,7 @@ class DoxaBase:
             advisories.append(
                 ProfileTypeFindingAdvisory(
                     profile_observation_iri=profile.iri,
+                    type_advisory_index=len(advisories),
                     evidence_iri=evidence_iri,
                     observed_column=profile.observed_column,
                     observed_column_name=profile.observed_column_name,
@@ -13146,7 +13149,7 @@ class DoxaBase:
             ).append((index, advisory))
 
         annotated: list[ProfileTypeFindingAdvisory] = []
-        for advisory in advisories:
+        for index, advisory in enumerate(advisories):
             group_key = self._profile_type_advisory_duplicate_group_key(advisory)
             group = groups[group_key]
             duplicate_advisory_indexes = [group_index for group_index, _ in group]
@@ -13176,6 +13179,7 @@ class DoxaBase:
             annotated.append(
                 replace(
                     advisory,
+                    type_advisory_index=index,
                     duplicate_group_key=group_key,
                     duplicate_count=len(group),
                     duplicate_advisory_indexes=duplicate_advisory_indexes,
@@ -13809,6 +13813,7 @@ class DoxaBase:
                 advisories.append(
                     ProfileMetricVocabularyAdvisory(
                         profile_observation_iri=profile.iri,
+                        metric_advisory_index=len(advisories),
                         evidence_iri=evidence_iri,
                         metric=metric.metric,
                         target=metric.target,
@@ -13855,12 +13860,13 @@ class DoxaBase:
             ).append((index, advisory))
 
         annotated: list[ProfileMetricVocabularyAdvisory] = []
-        for advisory in advisories:
+        for index, advisory in enumerate(advisories):
             group_key = self._profile_metric_advisory_duplicate_group_key(advisory)
             group = groups[group_key]
             annotated.append(
                 replace(
                     advisory,
+                    metric_advisory_index=index,
                     duplicate_group_key=group_key,
                     duplicate_count=len(group),
                     duplicate_advisory_indexes=[

@@ -4256,6 +4256,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         "project_metric_undefined": 1,
     }
     assert result["metric_advisories"][0]["metric"]["iri"] == project_metric
+    assert result["metric_advisories"][0]["metric_advisory_index"] == 0
     assert result["metric_advisories"][0]["advisory_status"] == (
         "project_metric_undefined"
     )
@@ -4276,6 +4277,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["type_advisory_status_counts"] == {
         "type_finding_missing_map_type": 1,
     }
+    assert result["type_advisories"][0]["type_advisory_index"] == 0
     assert result["type_advisories"][0]["observed_column"]["iri"] == status_column
     assert result["type_advisories"][0]["observed_physical_type"]["iri"] == (
         RC + "Varchar"

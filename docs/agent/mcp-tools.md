@@ -352,10 +352,11 @@ Prefer `suggested_next_action_groups` / `suggested_next_call_groups` for quick
 routing; non-empty lanes are grouped as `profile_map_updates`,
 `metric_vocabulary_review`, and `profile_type_review`. Use representative
 advisory indexes when you need one review row per duplicate metric or type
-advisory group. Group lanes may de-duplicate shared actions, such as one
-`describe_pattern` call supporting several metric advisories; use each
-`metric_advisories[]` row's own `suggested_next_actions` for per-metric
-follow-through.
+advisory group; each row also carries `metric_advisory_index` or
+`type_advisory_index` for row-local routing. Group lanes may de-duplicate shared
+actions, such as one `describe_pattern` call supporting several metric
+advisories; use each `metric_advisories[]` row's own `suggested_next_actions`
+for per-metric follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
 `default_skip_reason`, and duplicate-group fields; metric and type advisories
 carry duplicate-group fields too.
