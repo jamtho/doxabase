@@ -4229,7 +4229,9 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     assert promotion_args["patterns"] == [pattern["pattern_iri"]]
     assert promotion_args["evidence"] == [shared_evidence]
     assert promotion_args["anchors"] == [project_metric]
-    assert "rc:ProfileMetricKind" in promotion_args["framings"][0]["content"]
+    framing_content = promotion_args["framings"][0]["content"]
+    assert "rc:ProfileMetricKind" in framing_content
+    assert "reusable completeness score" in framing_content
 
     promoted = stage_pattern_promotion_tool(db, **promotion_args)
 

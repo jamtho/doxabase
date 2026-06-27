@@ -4259,9 +4259,8 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert check.next_action.queue == "repair_or_replace"
     assert check.next_action.tool_name == "stage_map_assertion_change"
     action_tools = [action.tool_name for action in check.suggested_next_actions]
-    assert action_tools.index("stage_map_assertion_change") < action_tools.index(
-        "restage_staged_revision"
-    )
+    assert "stage_map_assertion_change" in action_tools
+    assert "restage_staged_revision" not in action_tools
     action = next(
         action
         for action in check.suggested_next_actions
@@ -4276,6 +4275,9 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert action.arguments["graph"] == "map"
     assert action.arguments["restages_revision"] == source.revision_iri
     assert action.arguments["validation_scope"] == "all"
+
+    with pytest.raises(DoxaBaseError, match="same-slot replacement conflict"):
+        db.restage_staged_revision(source.revision_iri)
 
     repair = db.stage_map_assertion_change(**action.arguments)
     assert repair.staged_revision.restaged_from == source.revision_iri
@@ -10267,6 +10269,20 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert "template_source=storage_access" in error
     assert "storage='Orders local access'" in error
     assert "Pass candidate_index for an exact selection." in error
+    with pytest.raises(
+        DoxaBaseError,
+        match="physical_layout_iri was matched",
+    ) as layout_excinfo:
+        db.draft_query_plan(
+            dataset,
+            storage_access_iri=storage.iri,
+            physical_layout_iri=layout.iri,
+        )
+    layout_error = str(layout_excinfo.value)
+    assert "storage_access_iri still identifies multiple query target candidates" in (
+        layout_error
+    )
+    assert "candidate_index for the exact path/relation" in layout_error
 
 
 def test_describe_query_context_warns_on_protocol_location_mismatch(
@@ -16399,8 +16415,10 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert promotion_args["anchors"] == [project_metric]
     assert promotion_args["evidence"] == [evidence]
     assert promotion_args["validation_scope"] == "all"
-    assert "rc:ProfileMetricKind" in promotion_args["framings"][0]["content"]
-    assert project_metric in promotion_args["framings"][0]["content"]
+    framing_content = promotion_args["framings"][0]["content"]
+    assert "rc:ProfileMetricKind" in framing_content
+    assert project_metric in framing_content
+    assert "reusable completeness score" in framing_content
     assert [action.tool_name for action in draft.suggested_next_actions] == [
         "describe_context_slice",
         "list_entities",

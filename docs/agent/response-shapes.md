@@ -881,6 +881,9 @@ metric lookup. If an undefined metric also has a same-evidence pattern that
 names the metric as a target or map implication, the advisory includes
 `promotion_patterns` and adds `describe_pattern` plus a reviewable
 `stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
+The skeleton seeds its `rdfs:comment` from the matched pattern text, rationale,
+or summary when available; treat it as a draft definition and review units,
+calculation, and comparison semantics before apply.
 Defined metrics point at
 `describe_resource(..., graph="ontology")` for the existing definition;
 ambiguous metrics point at both the existing definition and nearby metric
@@ -1492,7 +1495,9 @@ If the source context is globally blocked, use
 direct blockers but still need review-gated drafting.
 `storage_access_iri` must identify exactly one query target candidate; when one
 storage access has multiple candidate paths, the error includes compact
-candidate snippets and callers should rerun with `candidate_index`.
+candidate snippets and callers should rerun with `candidate_index`. If a
+matching `physical_layout_iri` was also supplied, the error says the layout was
+matched but the storage selector still spans multiple path/relation candidates.
 `plan.scan` gives a best-effort scan
 function such as `read_parquet`, a URI/path template for file/object storage,
 file format, compression, and the selected candidate path status. For

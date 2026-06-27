@@ -452,7 +452,9 @@ carry `advisory_status`, `definition_found`, optional `definition`,
 `suggested_next_actions` for ontology/context review. Undefined metrics with a
 same-evidence pattern that names the metric as a target or map implication also
 get a reviewable `stage_pattern_promotion` skeleton for an ontology
-`rc:ProfileMetricKind`.
+`rc:ProfileMetricKind`. The skeleton seeds its `rdfs:comment` from that
+pattern's text, rationale, or summary when available; review and tighten units,
+calculation, and comparison semantics before applying it unchanged.
 Type findings are outside the accepted recommendation-index set:
 `physical_type` and `value_type` are persisted on profile observations as
 observed evidence, and observation-only profile records now produce
@@ -1144,7 +1146,8 @@ whether a row needs apply, repair, or replacement.
 Guarded same-slot conflicts whose apply check already suggests
 `stage_map_assertion_change` replacement are skipped with
 `not_restageable_reason="same_slot_replacement"`; use `next_action_after` rather
-than forcing a mechanical restage.
+than forcing a mechanical restage. Direct `restage_staged_revision()` also
+rejects this route, so stage the replacement with `restages_revision`.
 Stale conflicts whose patch payload already has no effective current delta are
 skipped with `not_restageable_reason="already_effective"`; inspect or export the
 source rather than creating a refreshed no-op successor.

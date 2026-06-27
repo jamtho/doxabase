@@ -9248,6 +9248,7 @@ class DoxaBase:
             context,
             candidate_index=candidate_index,
             storage_access_iri=storage_access_iri,
+            physical_layout_selected=physical_layout_selected,
         )
         selected_candidate = self._draft_query_plan_effective_layout_candidate(
             selected_candidate,
@@ -9436,6 +9437,7 @@ class DoxaBase:
         *,
         candidate_index: int | None,
         storage_access_iri: str | None,
+        physical_layout_selected: bool = False,
     ) -> tuple[int | None, QueryTargetCandidate | None, str, str, str, str | None]:
         if candidate_index is not None and storage_access_iri is not None:
             raise DoxaBaseError(
@@ -9485,10 +9487,17 @@ class DoxaBase:
                     )
                     for index, candidate in matches
                 )
+                layout_note = (
+                    " physical_layout_iri was matched, but storage_access_iri "
+                    "still identifies multiple query target candidates; pass "
+                    "candidate_index for the exact path/relation."
+                    if physical_layout_selected
+                    else ""
+                )
                 raise DoxaBaseError(
                     "storage_access_iri matched multiple query target candidates "
                     f"({indexes}): {snippets}. Pass candidate_index for an "
-                    "exact selection."
+                    f"exact selection.{layout_note}"
                 )
             selected_index, selected_candidate = matches[0]
             return (
@@ -13284,18 +13293,23 @@ class DoxaBase:
         evidence_iri: str | None,
     ) -> dict[str, Any]:
         metric_label = self._local_name(metric_iri) or metric_iri
+        semantic_hint = self._profile_metric_promotion_semantic_hint(pattern_iris)
+        comment = (
+            f"Project-specific profile metric observed in profile evidence: "
+            f"{semantic_hint}"
+            if semantic_hint is not None
+            else (
+                "Project-specific profile metric observed in profile evidence; "
+                "review and sharpen its calculation, unit, and comparison "
+                "semantics before applying this vocabulary definition."
+            )
+        )
         content = (
             "@prefix rc: <https://richcanopy.org/ns/rc#> .\n"
             "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\n"
             f"<{metric_iri}> a rc:ProfileMetricKind ;\n"
             f"    rdfs:label {Literal(metric_label).n3()} ;\n"
-            "    rdfs:comment "
-            + Literal(
-                "Project-specific profile metric observed in profile evidence; "
-                "review and sharpen its calculation, unit, and comparison "
-                "semantics before applying this vocabulary definition."
-            ).n3()
-            + " ."
+            "    rdfs:comment " + Literal(comment).n3() + " ."
         )
         arguments: dict[str, Any] = {
             "patterns": pattern_iris,
@@ -13331,6 +13345,23 @@ class DoxaBase:
         if evidence_iri is not None:
             arguments["evidence"] = [evidence_iri]
         return arguments
+
+    def _profile_metric_promotion_semantic_hint(
+        self,
+        pattern_iris: list[str],
+    ) -> str | None:
+        for pattern_iri in pattern_iris:
+            try:
+                pattern = self.describe_pattern(pattern_iri)
+            except DoxaBaseError:
+                continue
+            for value in (pattern.pattern_text, pattern.rationale, pattern.summary):
+                if value is None:
+                    continue
+                hint = self._compact_restage_reason(value, limit=260)
+                if hint:
+                    return hint
+        return None
 
     def _profile_handoff_note(
         self,
@@ -17473,6 +17504,16 @@ class DoxaBase:
             )
         if (
             check.next_action is not None
+            and check.next_action.tool_name == "stage_map_assertion_change"
+        ):
+            raise DoxaBaseError(
+                "restage_staged_revision will not create a mechanical restage "
+                "for a same-slot replacement conflict. Follow the suggested "
+                "stage_map_assertion_change replacement with restages_revision "
+                "so the refreshed proposal replaces the current value."
+            )
+        if (
+            check.next_action is not None
             and check.next_action.action_type == "inspect_no_effective_change"
         ):
             raise DoxaBaseError(
@@ -20269,6 +20310,7 @@ class DoxaBase:
                 restaged_by is None
                 and is_restageable_conflict
                 and not already_effective_stale
+                and same_slot_replacement_action is None
             ):
                 add_action(
                     "restage_staged_revision",

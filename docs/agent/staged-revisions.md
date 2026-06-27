@@ -188,9 +188,10 @@ describe `current_revision_iri` after the batch decision; use
 `next_action_after` and `suggested_next_actions_after` for the concrete
 post-batch route, then use `check_staged_revision_apply()` before each apply.
 Guarded same-slot conflicts that already suggest a
-`stage_map_assertion_change` replacement are skipped with
-`not_restageable_reason="same_slot_replacement"`; follow the item repair action
-instead of forcing mechanical restage.
+`stage_map_assertion_change` replacement are skipped by batch restage with
+`not_restageable_reason="same_slot_replacement"` and rejected by direct
+`restage_staged_revision()`; follow the item repair action and pass
+`restages_revision` so the replacement supersedes the stale source.
 Scripts should drive follow-up calls from `next_action_after.arguments["iri"]`
 when present, or `current_revision_iri` otherwise. `restaged_revision_iri` is
 only populated for a batch item that created a successor in that batch. For a

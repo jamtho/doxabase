@@ -1371,6 +1371,15 @@ few useful gaps:
   dataset/recommended-resource support rule, and systematisation docs warn that
   shared additions attach to every framing while transitive evidence is not
   direct staged-revision evidence unless passed or linked directly.
+- A further trial wave found three small agent-facing gaps. Same-evidence
+  profile metric promotion now seeds the ontology skeleton comment from the
+  supporting pattern so the draft is less empty while still requiring review.
+  `draft_query_plan(storage_access_iri=..., physical_layout_iri=...)` now says
+  when the layout matched but the storage selector is still path/relation
+  ambiguous. Same-slot replacement conflicts now keep the mutation route clean:
+  suggested actions omit mechanical restage, batch restage skips them, and
+  direct `restage_staged_revision()` rejects them so agents follow
+  `stage_map_assertion_change(..., restages_revision=...)`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
