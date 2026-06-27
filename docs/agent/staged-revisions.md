@@ -745,7 +745,8 @@ one staged revision can make sibling ready/no-op revisions on the same changed
 graph stale. Grouped bundle summaries put that sequencing hazard in `warnings`
 and `sequential_apply_recheck_candidate_iris`; `post_apply_recheck_revision_iris`
 is the same list under its older compatibility name. Both are pre-apply
-grouped-review hazard lists. After the actual mutation, prefer the
+grouped-review hazard lists, and grouped Markdown labels them as sequential
+apply recheck candidates. After the actual mutation, prefer the
 `post_apply_recheck_revisions` returned by `apply_staged_revision`, then re-run
 `check_staged_revision_apply` or `export_staged_revisions` before acting on
 siblings. The recheck list can include repair-only rows such as patch conflicts

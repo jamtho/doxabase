@@ -21013,9 +21013,9 @@ class DoxaBase:
             [],
             [],
             "Exact drift does not touch staged patch subjects. Predicate "
-            "overlap is reported separately and may reflect broad schema "
-            "activity; DoxaBase still blocks apply until the proposal is "
-            "reviewed and restaged.",
+            "overlap is reported separately, even when empty, and may "
+            "reflect broad schema activity; DoxaBase still blocks apply "
+            "until the proposal is reviewed and restaged.",
         )
 
     def _is_broad_snapshot_drift_object_overlap(
@@ -27163,7 +27163,7 @@ class DoxaBase:
                 bundle_summary.recommended_applied_inspection_iris,
             ),
             (
-                "Post-apply recheck",
+                "Sequential apply recheck candidates",
                 bundle_summary.post_apply_recheck_revision_iris,
             ),
         ]

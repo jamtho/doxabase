@@ -1073,7 +1073,7 @@ affected revision IRIs for pre-apply grouped-review hazards.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for the same list.
 Grouped Markdown exports include a `Review Queues` section mirroring the
 recommended-review sets, derived next-action buckets, apply/restage, repair,
-applied-inspection, and post-apply recheck buckets.
+applied-inspection, and sequential apply recheck candidate buckets.
 Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
 

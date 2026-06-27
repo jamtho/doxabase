@@ -1289,7 +1289,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         created_by: str | None = None,
         validation_scope: str | None = None,
     ) -> dict[str, Any]:
-        """Restage a conflicted staged revision against current graph counts."""
+        """Restage a conflicted staged revision against current graph state."""
 
         return restage_staged_revision_tool(
             db,

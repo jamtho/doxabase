@@ -813,7 +813,7 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert "- Recommended review: " in export_text
     assert "- Recommended mutation review: " in export_text
     assert "- Apply/restage review: " in export_text
-    assert "- Post-apply recheck: " in export_text
+    assert "- Sequential apply recheck candidates: " in export_text
     assert "## Restage Context" in export_text
     assert "**Inspect current refreshed successor:**" in export_text
 

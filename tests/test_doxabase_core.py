@@ -3428,6 +3428,7 @@ def test_apply_check_reports_same_count_snapshot_digest_drift(
     assert drift.patch_overlap_predicates == []
     assert drift.patch_overlap_objects == []
     assert drift.revision_anchor_overlap == []
+    assert "Predicate overlap is reported separately, even when empty" in drift.note
     assert [triple.object for triple in drift.triples_added_since_snapshot] == [
         "Seed dataset renamed"
     ]
@@ -5759,7 +5760,7 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert "## Review Queues" in exported
     assert "- Apply/restage review: " in exported
     assert "- Repair review: (none)" in exported
-    assert "- Post-apply recheck: " in exported
+    assert "- Sequential apply recheck candidates: " in exported
     assert "## Restage Context" in exported
     assert exported.index("## Review Queues") < exported.index("## Restage Context")
     assert "Stage order lifecycle table" in exported

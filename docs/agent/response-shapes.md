@@ -3624,7 +3624,9 @@ status a conflict or skips validation.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for
 `post_apply_recheck_revision_iris` in grouped export summaries: both name ready
 or no-op candidates that share changed graphs and should be rechecked after any
-one of them is applied.
+one of them is applied. Grouped Markdown labels this queue as sequential apply
+recheck candidates, because it is a pre-apply hazard list rather than the
+post-apply result from one completed mutation.
 `recommended_mutation_review_iris` is the broad compatibility review queue for
 staged revisions that may still need restage, repair, apply, or manual mutation
 decisions. Use `recommended_apply_or_restage_review_iris` for rows that need

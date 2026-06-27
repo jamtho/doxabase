@@ -1268,7 +1268,9 @@ automation.
 Grouped Markdown mirrors those buckets in a `Review Queues` section so human
 reviewers do not have to infer the routing from the summary table alone. It also
 mirrors the top-level recommended-review sets and derived next-action buckets
-there.
+there; the older `post_apply_recheck_revision_iris` field is labeled as
+sequential apply recheck candidates because it is a pre-apply grouped-review
+hazard list.
 Bundles with restaged revisions include a `Restage Context` section near the
 top. When a stored alternative target has a restaged successor, grouped
 Markdown includes `Alternative Context` with the current comparison target.
