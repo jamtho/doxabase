@@ -4798,11 +4798,25 @@ class DoxaBase:
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
         )
+        lineage_applied_revision_iri = applied_revision_iri
+        lineage_staged_revision_iri = staged_revision_iri
+        applied_diff_item = (
+            selected if selected.revision.iri == applied_revision_iri else paired
+        )
+        if (
+            lineage_applied_revision_iri is None
+            and graph_lineage.latest_role == "applied_event"
+            and graph_lineage.applied_revision_iri is not None
+        ):
+            lineage_applied_revision_iri = graph_lineage.applied_revision_iri
+            if graph_lineage.restage_chain_iris:
+                lineage_staged_revision_iri = graph_lineage.restage_chain_iris[-1]
+            applied_diff_item = by_iri.get(lineage_applied_revision_iri)
         related_revision_iris = self._resource_lineage_related_revision_iris(
             selected,
             paired,
-            applied_revision_iri=applied_revision_iri,
-            staged_revision_iri=staged_revision_iri,
+            applied_revision_iri=lineage_applied_revision_iri,
+            staged_revision_iri=lineage_staged_revision_iri,
             current_staged_revision_iri=current_staged_revision_iri,
             current_successor_applied_revision_iri=(
                 current_successor_applied_revision_iri
@@ -4825,20 +4839,19 @@ class DoxaBase:
             "No applied staged-revision event is linked to this resource revision."
         )
         applied_diff: ResourceAppliedRevisionDiffSummary | None = None
-        if applied_revision_iri is not None and staged_revision_iri is not None:
+        if (
+            lineage_applied_revision_iri is not None
+            and lineage_staged_revision_iri is not None
+        ):
             if include_applied_diff:
                 applied_diff = self._resource_applied_revision_diff_summary(
                     resource_iri=resource_value,
-                    applied_revision_iri=applied_revision_iri,
-                    staged_revision_iri=staged_revision_iri,
+                    applied_revision_iri=lineage_applied_revision_iri,
+                    staged_revision_iri=lineage_staged_revision_iri,
                     graph=graph,
                     include_triples=include_triples,
                     max_triples=max_triples,
-                    applied_item=(
-                        selected
-                        if selected.revision.iri == applied_revision_iri
-                        else paired
-                    ),
+                    applied_item=applied_diff_item,
                 )
                 applied_diff_status = (
                     "available"
@@ -4873,8 +4886,8 @@ class DoxaBase:
                 if paired is not None
                 else None
             ),
-            applied_revision_iri=applied_revision_iri,
-            staged_revision_iri=staged_revision_iri,
+            applied_revision_iri=lineage_applied_revision_iri,
+            staged_revision_iri=lineage_staged_revision_iri,
             current_staged_revision_iri=current_staged_revision_iri,
             current_revision_iri=current_staged_revision_iri,
             latest_revision_iri=graph_lineage.latest_revision_iri,

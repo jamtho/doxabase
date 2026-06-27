@@ -193,11 +193,14 @@ staged/applied row when visible, graph-level `restage_chain_iris`,
 `alternative_revision_iris`, merged `related_revision_iris`, selected next
 action, and the same patch scan status used by `list_resource_revisions`. When
 an applied event is linked, the response can include a resource-filtered applied
-diff summary with exact added/removed triples for that resource. This is not
-full graph-version browsing; call `describe_staged_revision` when patch content
-is needed. RDF-only imports can preserve resource route and staged/applied
-pairing, but exact resource-level applied diffs need the companion revision
-snapshot JSON import.
+diff summary with exact added/removed triples for that resource. If the selected
+row is an old stale source whose restaged successor has already been applied,
+`applied_revision_iri` and the diff summary follow that applied successor while
+`restage_chain_iris` preserves the original source route. This is not full
+graph-version browsing; call `describe_staged_revision` when patch content is
+needed. RDF-only imports can preserve resource route and staged/applied pairing,
+but exact resource-level applied diffs need the companion revision snapshot JSON
+import.
 
 `doxabase.search`
 
@@ -428,6 +431,9 @@ identifier; record the schema/table/relation on the storage access before using
 a database handoff. Root-only database storage without a storage-access
 relation template is also review-only with
 `database_relation_template_missing`, even when `location_kind="object"`.
+Suggested actions route reviewed query-plan drafts; database metadata repair
+guidance such as missing relation templates or template-source mismatches may
+live in `issues[].details` rather than in a dedicated repair action.
 
 `doxabase.draft_query_plan`
 

@@ -2276,11 +2276,14 @@ lineage.applied_diff
 `applied_source`, `restaged_source`, `current_staged_revision`,
 `staged_revision`, and `history_record`. `latest_revision_iri` / `latest_role`
 mirror graph lineage's latest family pointer, so a resource-first handoff can
-see the applied event after a successor has been applied without inferring it
-from `applied_revision_iri`. `applied_diff_status` is `available`,
-`unavailable`, `omitted`, or `not_applicable`. When present,
-`applied_diff.graph_diffs[]` contains resource-filtered added/removed counts and
-optional triple arrays:
+see the applied event after a successor has been applied. When the selected row
+is an old stale source whose restaged successor has already been applied,
+`applied_revision_iri` and `applied_diff` follow that applied successor while
+`staged_revision_iri` names the staged source that was actually applied.
+`restage_chain_iris` preserves the original source route. `applied_diff_status`
+is `available`, `unavailable`, `omitted`, or `not_applicable`. When present,
+`applied_diff.graph_diffs[]` contains resource-filtered added/removed counts
+and optional triple arrays:
 
 ```python
 applied_diff.applied_revision_iri

@@ -7848,6 +7848,8 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     assert applied_source_lineage.current_revision_iri is None
     assert applied_source_lineage.latest_revision_iri == applied.applied_revision_iri
     assert applied_source_lineage.latest_role == "applied_event"
+    assert applied_source_lineage.applied_revision_iri == applied.applied_revision_iri
+    assert applied_source_lineage.staged_revision_iri == restaged.revision_iri
     assert applied_source_lineage.restage_chain_iris == [
         original.revision_iri,
         restaged.revision_iri,
@@ -7874,6 +7876,19 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     assert applied_source_lineage.suggested_next_calls[0] == (
         "describe_graph_revision("
         f"iri={applied.applied_revision_iri!r})"
+    )
+    assert applied_source_lineage.applied_diff_status == "available"
+    assert applied_source_lineage.applied_diff is not None
+    assert applied_source_lineage.applied_diff.applied_revision_iri == (
+        applied.applied_revision_iri
+    )
+    assert applied_source_lineage.applied_diff.staged_revision_iri == (
+        restaged.revision_iri
+    )
+    assert applied_source_lineage.applied_diff.changed_graphs == ["map"]
+    assert (
+        applied_source_lineage.applied_diff.graph_diffs[0].resource_triples_added_count
+        == 1
     )
     applied_event_lineage = db.describe_resource_revision_lineage(
         orders,
