@@ -882,7 +882,9 @@ relationship claim. The helper calls `describe_assertion_support`, generates
 small Turtle addition/removal patches, records related observations, claims,
 patterns, evidence, caveat scopes, and assertion anchors on the staged revision,
 and returns the assertion-support snapshot, staged revision record, and a compact
-`judgement_panel`. Check the panel first for current/proposed values, caveat
+`judgement_panel`. The JSON also carries top-level `revision_iri` as an alias
+of `staged_revision.revision_iri` for parity with generic staged-revision tools.
+Check the panel first for current/proposed values, caveat
 scopes, semantic risk level/reasons, value-type context, reasons the current
 value may be intentional, strongest route summaries, impact spotlight entries,
 and safety notes. For physical type changes, `value_type_context` surfaces
@@ -976,8 +978,9 @@ related observations, claims, patterns, evidence, and revisions when DoxaBase ca
 find them.
 Pass `include_current_apply_check=true` when reviewing one staged revision and
 you need a compact live apply branch beside the patch payload. The nested
-`current_apply_check` includes status, decision, blockers, current validation
-headline, drift summaries, compact `next_action`, and suggested next actions.
+`current_apply_check` includes status, decision, `routing_decision`, blockers,
+current validation headline, drift summaries, compact `next_action`, and
+suggested next actions.
 It omits full `patch_checks`, `conflicts`, and `validation_results`; call
 `check_staged_revision_apply` for those.
 
@@ -1114,7 +1117,9 @@ IRIs for triage. In dry-run rows that would be restaged,
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. For `skipped_not_restageable`, inspect `status_before` and
 `decision_before` to distinguish ready, validation-failed, and already-applied
-rows. Each item also carries `status_after`, `decision_after`,
+rows; use `routing_decision_before` / `routing_decision_after` for the effective
+next route when a stale-conflict decision is broad. Each item also carries
+`status_after`, `decision_after`, `routing_decision_after`,
 `stale_resolution_state_after`, `blocking_reasons_after`, and effective triple
 deltas for `current_revision_iri` after the batch decision. Treat
 `source_staged_validation_status` / `source_validation_result_count` and

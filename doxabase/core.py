@@ -427,6 +427,7 @@ class StagedRevisionApplyCheck:
     can_apply: bool
     status: str
     decision: str
+    routing_decision: str
     summary: str
     review_recommended: bool
     semantic_risk_level: str
@@ -461,6 +462,7 @@ class StagedRevisionApplySummary:
     staged_revision_iri: str
     status: str
     decision: str | None
+    routing_decision: str | None
     can_apply: bool | None
     summary: str | None
     review_recommended: bool | None
@@ -538,6 +540,7 @@ class PostApplyRecheckRevision:
     recheck_reasons: list[str]
     application_status: str
     decision: str
+    routing_decision: str
     blocking_reasons: list[str]
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
@@ -647,6 +650,7 @@ class StagedGraphRevisionBatchRestageItem:
     summary: str | None
     status_before: str
     decision_before: str
+    routing_decision_before: str
     stale_resolution_state_before: str | None
     blocking_reasons_before: list[str]
     source_staged_validation_status: str
@@ -655,6 +659,7 @@ class StagedGraphRevisionBatchRestageItem:
     source_snapshot_evidence_completeness: str
     status_after: str
     decision_after: str
+    routing_decision_after: str
     stale_resolution_state_after: str | None
     blocking_reasons_after: list[str]
     current_staged_validation_status: str
@@ -2256,6 +2261,7 @@ class MapAssertionJudgementPanel:
 
 @dataclass(frozen=True)
 class StagedMapAssertionChangeRecord:
+    revision_iri: str
     change_kind: str
     graph: str
     subject: str
@@ -3014,6 +3020,7 @@ class DoxaBase:
             staged_description=staged_description,
         )
         return StagedMapAssertionChangeRecord(
+            revision_iri=staged.revision_iri,
             change_kind=kind,
             graph=graph,
             subject=subject_iri,
@@ -5791,6 +5798,7 @@ class DoxaBase:
                 staged_revision_iri=staged.iri,
                 status="not_available",
                 decision="inspect_staged_revision",
+                routing_decision="inspect_staged_revision",
                 can_apply=None,
                 summary=None,
                 review_recommended=None,
@@ -5828,6 +5836,7 @@ class DoxaBase:
             staged_revision_iri=check.staged_revision_iri,
             status=check.status,
             decision=check.decision,
+            routing_decision=check.routing_decision,
             can_apply=check.can_apply,
             summary=check.summary,
             review_recommended=check.review_recommended,
@@ -18716,6 +18725,10 @@ class DoxaBase:
                 restaged_by=current_direct_restaged_by,
                 staged_validation_status=current_staged_validation_status,
             )
+            routing_decision_after = self._staged_apply_check_routing_decision(
+                current_check.decision,
+                next_action_after,
+            )
             if (
                 action == "skipped_already_handled"
                 and stale_resolution_state_after
@@ -18752,6 +18765,7 @@ class DoxaBase:
                     summary=source.summary,
                     status_before=check.status,
                     decision_before=check.decision,
+                    routing_decision_before=check.routing_decision,
                     stale_resolution_state_before=stale_resolution_state,
                     blocking_reasons_before=check.blocking_reasons,
                     source_staged_validation_status=(
@@ -18766,6 +18780,7 @@ class DoxaBase:
                     ),
                     status_after=current_check.status,
                     decision_after=current_check.decision,
+                    routing_decision_after=routing_decision_after,
                     stale_resolution_state_after=stale_resolution_state_after,
                     blocking_reasons_after=current_check.blocking_reasons,
                     current_staged_validation_status=(
@@ -19675,6 +19690,10 @@ class DoxaBase:
                     ),
                 ),
             )
+            routing_decision = self._staged_apply_check_routing_decision(
+                apply_check.decision,
+                next_action,
+            )
             candidate_rows.append(
                 (
                     self._first_object(data_graphs, revision_iri, "rc:createdAt")
@@ -19689,6 +19708,7 @@ class DoxaBase:
                         recheck_reasons=recheck_reasons,
                         application_status=apply_check.status,
                         decision=apply_check.decision,
+                        routing_decision=routing_decision,
                         blocking_reasons=apply_check.blocking_reasons,
                         next_action=next_action,
                         suggested_next_actions=apply_check.suggested_next_actions,
@@ -19840,12 +19860,17 @@ class DoxaBase:
                     result_count=staged.validation_result_count,
                 ),
             )
+            routing_decision = self._staged_apply_check_routing_decision(
+                decision,
+                next_action,
+            )
             check = StagedRevisionApplyCheck(
                 staged_revision_iri=staged.iri,
                 revision_iri=staged.iri,
                 can_apply=False,
                 status=status,
                 decision=decision,
+                routing_decision=routing_decision,
                 summary=summary,
                 review_recommended=self._staged_apply_check_review_recommended(
                     status,
@@ -20170,12 +20195,17 @@ class DoxaBase:
                 result_count=staged.validation_result_count,
             ),
         )
+        routing_decision = self._staged_apply_check_routing_decision(
+            decision,
+            next_action,
+        )
         check = StagedRevisionApplyCheck(
             staged_revision_iri=staged.iri,
             revision_iri=staged.iri,
             can_apply=can_apply,
             status=status,
             decision=decision,
+            routing_decision=routing_decision,
             summary=summary,
             review_recommended=self._staged_apply_check_review_recommended(
                 status,
@@ -22073,6 +22103,17 @@ class DoxaBase:
             call=None,
             source="derived",
         )
+
+    @staticmethod
+    def _staged_apply_check_routing_decision(
+        decision: str | None,
+        next_action: RevisionNextAction | None,
+    ) -> str | None:
+        if next_action is None:
+            return decision
+        if next_action.tool_name == "stage_map_assertion_change":
+            return "stage_same_slot_replacement"
+        return next_action.action_type or decision
 
     @staticmethod
     def _revision_next_action_queue(

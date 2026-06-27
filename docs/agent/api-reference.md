@@ -796,7 +796,8 @@ helper will author the corresponding typed/language-tagged Turtle instead of a
 plain literal. It calls `describe_assertion_support()` before staging, generates
 the Turtle patches, links related observations/claims/patterns/evidence and
 revision anchors, and stores an assertion-support summary in the staged revision
-review note. The returned `judgement_panel` is the compact reviewer view:
+review note. The response includes top-level `revision_iri` as an alias of
+`staged_revision.revision_iri`. The returned `judgement_panel` is the compact reviewer view:
 headline,
 current/proposed values, semantic risk level/reasons, value-type context, reasons
 the current value may be intentional, caveat scopes, strongest related-lore
@@ -990,8 +991,8 @@ rationale. `applied_by` and `application_status="already_applied"` are present
 when this staged revision already has an applied revision event.
 Pass `include_current_apply_check=True` when a one-revision review needs compact
 live apply status beside the patch payload. `current_apply_check` includes
-status, decision, blockers, validation headline, drift summaries, compact
-`next_action`, and suggested next actions, but omits full patch checks and
+status, decision, `routing_decision`, blockers, validation headline, drift
+summaries, compact `next_action`, and suggested next actions, but omits full patch checks and
 validation result payloads.
 `export_staged_revision()` writes a Markdown review bundle with the current
 apply-check status, diagnostics, and impact review before patch payloads. Stale
@@ -1070,10 +1071,12 @@ per-patch count drift, graph snapshot digest drift, preview triple counts,
 validation status, semantic risk, and a top-level `can_apply` flag. Read
 `status`, `summary`, and
 `semantic_risk_level` first; use
-`decision`, `blocking_reasons`, `validation_skipped_reason`,
+`decision`, `routing_decision`, `blocking_reasons`, `validation_skipped_reason`,
 `recommended_resolution`, `count_drifts`, `snapshot_drifts`, and
 `suggested_next_actions` to decide whether to review then apply, inspect an
 applied event, review validation diagnostics, or restage after conflicts.
+`routing_decision` is derived from `next_action` and can be more specific than
+`decision` for stale conflicts.
 `superseded_by_restage` means the staged source already has a refreshed
 successor; inspect that successor instead of applying the old source.
 `inspect_restaged_source_validation_failure` means a same-payload restaged
@@ -1186,7 +1189,9 @@ validation-failed, already applied, or blocked by a stored patch conflict; each
 such row carries `not_restageable_reason`, and the batch-level
 `not_restageable_revision_iris_by_reason` groups skipped source IRIs by the same
 compact values. Inspect `status_before` and `decision_before` when deciding
-whether a row needs apply, repair, or replacement.
+whether a row needs apply, repair, or replacement; use
+`routing_decision_before` / `routing_decision_after` for the effective route
+when `decision_*` is a broad stale-conflict explanation.
 Guarded same-slot conflicts whose apply check already suggests
 `stage_map_assertion_change` replacement are skipped with
 `not_restageable_reason="same_slot_replacement"`; use `next_action_after` rather
@@ -1196,8 +1201,8 @@ Stale conflicts whose patch payload already has no effective current delta are
 skipped with `not_restageable_reason="already_effective"`; inspect or export the
 source rather than creating a refreshed no-op successor.
 Each item also carries
-`status_after`, `decision_after`, `stale_resolution_state_after`,
-`blocking_reasons_after`, and effective triple deltas for `current_revision_iri`
+`status_after`, `decision_after`, `routing_decision_after`,
+`stale_resolution_state_after`, `blocking_reasons_after`, and effective triple deltas for `current_revision_iri`
 after the batch decision. `restaged_revision_iris` is only a list of created
 successors, not an apply queue. `source_staged_validation_status` /
 `source_validation_result_count` and `current_staged_validation_status` /

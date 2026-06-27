@@ -1313,7 +1313,9 @@ def stage_map_assertion_change_tool(
         validation_scope=validation_scope,  # type: ignore[arg-type]
         limit=limit,
     )
-    return to_dict(result)
+    payload = to_dict(result)
+    payload["revision_iri"] = payload["staged_revision"]["revision_iri"]
+    return payload
 
 
 def stage_systematisation_tool(

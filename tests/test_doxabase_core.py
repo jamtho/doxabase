@@ -4346,6 +4346,7 @@ def test_stage_map_assertion_change_can_repair_stale_assertion_successor(
         restages_revision=source.revision_iri,
     )
 
+    assert repair.revision_iri == repair.staged_revision.revision_iri
     assert repair.staged_revision.restaged_from == source.revision_iri
     assert repair.staged_revision.restage_reason is not None
     assert "Repair the stale label candidate" in (
@@ -4396,6 +4397,7 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
 
     assert check.status == "conflict"
     assert check.decision == "restage_against_current_graph"
+    assert check.routing_decision == "stage_same_slot_replacement"
     assert check.recommended_resolution is not None
     assert "stage_map_assertion_change replacement" in (
         check.recommended_resolution
@@ -4422,6 +4424,15 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert action.arguments["graph"] == "map"
     assert action.arguments["restages_revision"] == source.revision_iri
     assert action.arguments["validation_scope"] == "all"
+    described = db.describe_staged_revision(
+        source.revision_iri,
+        include_current_apply_check=True,
+    )
+    assert described.current_apply_check is not None
+    assert described.current_apply_check.decision == "restage_against_current_graph"
+    assert described.current_apply_check.routing_decision == (
+        "stage_same_slot_replacement"
+    )
 
     with pytest.raises(DoxaBaseError, match="same-slot replacement conflict"):
         db.restage_staged_revision(source.revision_iri)
@@ -4472,6 +4483,8 @@ def test_stale_column_same_slot_drift_keeps_restage_route(
     check = db.check_staged_revision_apply(source.revision_iri)
 
     assert check.status == "conflict"
+    assert check.decision == "restage_against_current_graph"
+    assert check.routing_decision == "restage_after_review"
     assert check.next_action is not None
     assert check.next_action.action_type == "restage_after_review"
     assert check.next_action.tool_name == "restage_staged_revision"
@@ -4518,7 +4531,11 @@ def test_batch_restage_skips_row_semantics_same_slot_replacement(
     assert dry_item.action == "skipped_not_restageable"
     assert dry_item.not_restageable_reason == "same_slot_replacement"
     assert dry_item.status_before == "conflict"
+    assert dry_item.decision_before == "restage_against_current_graph"
+    assert dry_item.routing_decision_before == "stage_same_slot_replacement"
     assert dry_item.status_after == "conflict"
+    assert dry_item.decision_after == "restage_against_current_graph"
+    assert dry_item.routing_decision_after == "stage_same_slot_replacement"
     assert dry_item.current_revision_iri == source.revision_iri
     assert dry_item.restaged_revision_iri is None
     assert dry_item.next_action_after is not None
@@ -4578,6 +4595,8 @@ def test_stale_authored_replacement_suggests_same_slot_repair(
     check = db.check_staged_revision_apply(source.staged_revision.revision_iri)
 
     assert check.status == "conflict"
+    assert check.decision == "restage_against_current_graph"
+    assert check.routing_decision == "stage_same_slot_replacement"
     assert check.next_action is not None
     assert check.next_action.queue == "repair_or_replace"
     assert check.next_action.tool_name == "stage_map_assertion_change"
@@ -4631,6 +4650,7 @@ def test_stale_authored_replacement_with_target_already_current_routes_to_inspec
 
     assert check.status == "conflict"
     assert check.decision == "restage_against_current_graph"
+    assert check.routing_decision == "inspect_no_effective_change"
     assert check.already_applied_by is None
     assert check.next_action is not None
     assert check.next_action.action_type == "inspect_no_effective_change"
@@ -4659,6 +4679,11 @@ def test_stale_authored_replacement_with_target_already_current_routes_to_inspec
     assert dry_run.not_restageable_revision_iris_by_reason == {
         "already_effective": [source.staged_revision.revision_iri]
     }
+    dry_item = dry_run.items[0]
+    assert dry_item.decision_before == "restage_against_current_graph"
+    assert dry_item.routing_decision_before == "inspect_no_effective_change"
+    assert dry_item.decision_after == "restage_against_current_graph"
+    assert dry_item.routing_decision_after == "inspect_no_effective_change"
     assert dry_run.bundle_summary.next_action_queue == {
         "informational": [source.staged_revision.revision_iri]
     }
@@ -5271,6 +5296,7 @@ def test_noop_successor_post_apply_recheck_reports_live_decision(
     noop_check = db.check_staged_revision_apply(noop_successor.revision_iri)
     assert noop_check.status == "noop"
     assert noop_check.decision == "inspect_no_effective_change"
+    assert noop_check.routing_decision == "inspect_no_effective_change"
     assert noop_check.blocking_reasons == ["no_effective_patch_triples"]
 
     sibling = db.stage_graph_revision(
@@ -5299,6 +5325,7 @@ def test_noop_successor_post_apply_recheck_reports_live_decision(
     )
     assert recheck.application_status == "conflict"
     assert recheck.decision == "restage_against_current_graph"
+    assert recheck.routing_decision == "inspect_no_effective_change"
     assert "target_count_drift" in recheck.blocking_reasons
     assert recheck.next_action is not None
     assert recheck.next_action.action_type == "inspect_no_effective_change"

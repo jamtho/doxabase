@@ -1522,6 +1522,12 @@ few useful gaps:
   representative advisory index lists already existed. Advisory rows now carry
   row-local `metric_advisory_index` or `type_advisory_index`, matching
   recommendation rows' `recommendation_index` pattern.
+- A staged-revision routing trial found same-slot replacement and
+  already-effective stale conflicts still reported
+  `decision="restage_against_current_graph"` while `next_action` correctly
+  routed away from mechanical restage. Apply checks and batch restage items now
+  expose `routing_decision` fields as the effective next route while preserving
+  `decision` as the replay/status explanation.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

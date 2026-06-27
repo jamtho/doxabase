@@ -500,6 +500,7 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         "restage_staged_revision"
     )
     assert stale_check["next_action"]["action_type"] == "restage_after_review"
+    assert stale_check["routing_decision"] == "restage_after_review"
     assert stale_check["next_action"]["queue"] == "restage_after_review"
     assert stale_check["next_action"]["tool_name"] == "restage_staged_revision"
     assert stale_check["next_action"]["arguments"] == {"iri": staged["revision_iri"]}
@@ -1342,6 +1343,7 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
     )
     assert result["staged_revision"]["changed_graphs"] == ["map"]
     assert result["staged_revision"]["validation_conforms"] is True
+    assert result["revision_iri"] == result["staged_revision"]["revision_iri"]
     assert db.triple_count("map") == before_map_count
 
     description = describe_staged_revision_tool(
@@ -1538,6 +1540,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert check["can_apply"] is True
     assert check["status"] == "ready"
     assert check["decision"] == "review_then_apply"
+    assert check["routing_decision"] == "apply_after_review"
     assert check["review_recommended"] is True
     assert check["blocking_reasons"] == []
     assert check["validation_skipped_reason"] is None
@@ -1589,6 +1592,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert recheck["recheck_reasons"] == ["shared_changed_graph:map"]
     assert recheck["application_status"] == "conflict"
     assert recheck["decision"] == "restage_against_current_graph"
+    assert recheck["routing_decision"] == "restage_after_review"
     assert "target_count_drift" in recheck["blocking_reasons"]
     assert recheck["next_action"]["action_type"] == "restage_after_review"
     assert recheck["next_action"]["tool_name"] == "restage_staged_revision"

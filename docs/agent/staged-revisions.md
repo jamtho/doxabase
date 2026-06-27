@@ -183,8 +183,8 @@ you pass `path`. Use `dry_run=true` first when you want the same per-source
 classification without creating refreshed successors; unhandled conflicts report
 `action="would_restage"`. Treat `restaged_revision_iris` as a list of successors
 created during that run, not as an apply queue. Each item's `status_after`,
-`decision_after`, `stale_resolution_state_after`, and `blocking_reasons_after`
-describe `current_revision_iri` after the batch decision; use
+`decision_after`, `routing_decision_after`, `stale_resolution_state_after`, and
+`blocking_reasons_after` describe `current_revision_iri` after the batch decision; use
 `next_action_after` and `suggested_next_actions_after` for the concrete
 post-batch route, then use `check_staged_revision_apply()` before each apply.
 Guarded same-slot conflicts that already suggest a
@@ -579,7 +579,11 @@ is the compact branch hint: `review_then_apply`,
 `inspect_current_successor`,
 `restage_against_current_graph`, `inspect_patch_conflict`,
 `inspect_validation_results`, or
-`inspect_staged_revision`. `review_recommended=True` means the staged revision
+`inspect_staged_revision`. `routing_decision` is the effective next-route hint
+derived from `next_action`, so stale conflicts can say
+`stage_same_slot_replacement`, `inspect_no_effective_change`, or
+`restage_after_review` while preserving `decision="restage_against_current_graph"`
+as the replay explanation. `review_recommended=True` means the staged revision
 needs review before the next mutation. On `ready` checks that means review
 before application; on count/digest-drift `conflict` checks that means review
 before restaging; on `patch_conflict` checks that means inspect/export before

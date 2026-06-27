@@ -396,6 +396,7 @@ change.current_values_before
 change.additions
 change.removals
 change.assertion_support
+change.revision_iri
 change.staged_revision
 change.judgement_panel
 change.review_note
@@ -2514,6 +2515,7 @@ item.shared_changed_graphs
 item.recheck_reasons
 item.application_status
 item.decision
+item.routing_decision
 item.blocking_reasons
 item.next_action
 item.suggested_next_actions
@@ -2771,6 +2773,7 @@ The nested `StagedRevisionApplySummary` is compact:
 current.staged_revision_iri
 current.status
 current.decision
+current.routing_decision
 current.can_apply
 current.summary
 current.review_recommended
@@ -2909,6 +2912,7 @@ check.revision_iri
 check.can_apply
 check.status
 check.decision
+check.routing_decision
 check.summary
 check.review_recommended
 check.semantic_risk_level
@@ -2973,6 +2977,11 @@ successor whose source failed staged-time validation uses
 repaired or alternative candidate before applying. A revised conforming
 successor can use `review_then_apply` while still carrying the source-failure
 warning.
+`routing_decision` is the effective automation route derived from
+`next_action`: it can be more specific than `decision` for stale conflicts, for
+example `stage_same_slot_replacement`, `inspect_no_effective_change`, or
+`restage_after_review`. Prefer `routing_decision` and `next_action` for the next
+tool call; keep `decision` as the replay/status explanation.
 `review_recommended=True` means the caller should
 review the staged revision before the next mutation or replacement. For `ready` checks that
 means review before applying; for count/digest-drift `conflict` checks it means
@@ -3324,11 +3333,11 @@ batch.export_record
 ```
 
 Each `batch.items` row reports `source_revision_iri`, `summary`,
-`status_before`, `decision_before`, `stale_resolution_state_before`,
-`blocking_reasons_before`, `source_staged_validation_status`,
+`status_before`, `decision_before`, `routing_decision_before`,
+`stale_resolution_state_before`, `blocking_reasons_before`, `source_staged_validation_status`,
 `source_validation_result_count`, `source_snapshot_evidence`,
 `source_snapshot_evidence_completeness`, `status_after`, `decision_after`,
-`stale_resolution_state_after`, `blocking_reasons_after`,
+`routing_decision_after`, `stale_resolution_state_after`, `blocking_reasons_after`,
 `current_staged_validation_status`, `current_validation_result_count`,
 `current_snapshot_evidence`, `current_snapshot_evidence_completeness`,
 `triples_to_add_after`, `triples_to_remove_after`, `action`,
@@ -3367,6 +3376,10 @@ otherwise. `restaged_revision_iri` is only
 populated for items whose current batch call created a new successor. In the
 single-revision restage response, `revision_iri` is the newly created current
 successor.
+`routing_decision_before` and `routing_decision_after` mirror the effective
+route behind each row's compact next action. Use them when `decision_before` or
+`decision_after` says `restage_against_current_graph` but the actual route is a
+same-slot replacement or already-effective inspection.
 `source_staged_validation_status` and `source_validation_result_count` preserve
 the source row's stored staged-time validation signal. The `current_*`
 validation fields give the same stored staged-time signal for
