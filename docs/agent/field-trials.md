@@ -600,6 +600,12 @@ few useful gaps:
   false. For database handoffs, only `scan.relation_identifier` means a relation
   can be passed onward; `scan.connection_reference` without a relation identifier
   is repair/review context for mismatched or incomplete storage metadata.
+- A scan-gating query-plan trial found both `scan.uri_template` and
+  `scan.relation_identifier` can be present in non-ready plans, including
+  `context_review_required` and metadata-review/database-relation cases. The
+  scan card now mirrors the review gate as `scan.execution_attempt_ready` and
+  `scan.execution_attempt_blocking_reason_codes`, so consumers that start from
+  scan fields still see the execution-attempt gate locally.
 - A claim-reconsideration slice trial confirmed lifecycle mechanics and pattern
   routes work, but showed that column-only seeds were too narrow for column
   lore. `describe_context_slice` now treats mapped `rc:Column` seeds as valid

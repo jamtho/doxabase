@@ -408,9 +408,11 @@ switch was requested but not used, direct blocking codes distinguish already
 ready candidates from candidates that still need review. The payload
 includes the selected candidate, scan hint such as `read_parquet`, URI/path
 template for file/object storage, database relation fields for database-backed
-storage, parsed `required_bindings`, structured `binding_requirements`,
-non-secret storage environment hints, copied issues and analysis warnings,
-caveats, and a `review_gate`. Distinct linked physical layouts produce
+storage, scan-adjacent `execution_attempt_ready` and
+`execution_attempt_blocking_reason_codes` mirrors of the review gate, parsed
+`required_bindings`, structured `binding_requirements`, non-secret storage
+environment hints, copied issues and analysis warnings, caveats, and a
+`review_gate`. Distinct linked physical layouts produce
 `ambiguous_physical_layout`, leave `scan.function` unset, and keep
 `review_gate.ready_for_execution_attempt=false` until the intended layout is
 modeled or selected. Binding rows preserve the source text and say
@@ -449,7 +451,9 @@ If `ready_for_execution_attempt=false`, route relation fields before generic
 runtime resolution, then route `runtime_resolution_required`,
 `binding_values_required`, and remaining issue codes. Empty
 `blocking_reason_codes` and `executable_without_review=true` do not make a plan
-execution-ready.
+execution-ready. The scan card repeats the same gate as
+`scan.execution_attempt_ready`; when it is false, treat URI templates and
+relation identifiers as handoff context rather than execution permission.
 Database-backed storage still uses this generic
 review-draft shape today, so expect `scan.function=None` and review gating
 rather than executable SQL; read `scan.relation_identifier` and

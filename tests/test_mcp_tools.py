@@ -2425,6 +2425,10 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     assert result["selected_candidate"]["storage_access"]["iri"] == local_storage.iri
     assert result["selected_candidate"]["candidate_path_status"] == "ready"
     assert result["scan"]["candidate_path_status"] == "ready"
+    assert result["scan"]["execution_attempt_ready"] is False
+    assert result["scan"]["execution_attempt_blocking_reason_codes"] == [
+        "binding_values_required"
+    ]
     assert result["review_gate"]["status"] == "ready"
     assert result["review_gate"]["context_blocked_candidate_used"] is True
     assert result["review_gate"]["context_blocking_reason_codes"] == [
@@ -2493,6 +2497,11 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["scan"]["relation_identifier"] == "mart.orders"
     assert result["scan"]["connection_reference"] == "warehouse-prod"
     assert result["scan"]["composition"] == "database_connection_and_relation"
+    assert result["scan"]["execution_attempt_ready"] is False
+    assert result["scan"]["execution_attempt_blocking_reason_codes"] == [
+        "scan_function_not_inferred",
+        "runtime_resolution_required",
+    ]
     assert result["review_gate"]["blocking_reason_codes"] == [
         "scan_function_not_inferred"
     ]

@@ -1341,6 +1341,8 @@ class DraftQueryPlanScan:
     template_lineage: str | None
     composition: str | None
     non_executed_note: str
+    execution_attempt_ready: bool = False
+    execution_attempt_blocking_reason_codes: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -8910,6 +8912,13 @@ class DoxaBase:
             allow_context_blocked_candidate=allow_context_blocked_candidate,
             context_blocked_candidate_used=context_blocked_candidate_used,
             context_blocking_reasons=context_blocking_reasons,
+        )
+        scan = replace(
+            scan,
+            execution_attempt_ready=review_gate.ready_for_execution_attempt,
+            execution_attempt_blocking_reason_codes=list(
+                review_gate.execution_attempt_blocking_reason_codes
+            ),
         )
         handoff_kind = self._draft_query_plan_handoff_kind(
             selected_candidate,

@@ -85,12 +85,17 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    it is true only when the review gate is clear, runtime resolution is not
    required, and no required binding placeholders remain in the selected
    template.
+   `scan.execution_attempt_ready` mirrors this boolean next to the scan fields
+   so clients do not need to leave the scan card to see whether scan hints are
+   eligible for an execution attempt.
    `review_gate.blocking_reason_codes` can add
    `query_context_has_other_blockers` when the selected candidate is clean but
    the broader query context is not.
    `review_gate.execution_attempt_blocking_reason_codes` folds in non-review
    execution blockers such as runtime resolution and missing binding values, so
    it is the better machine-routing list when this boolean is false.
+   `scan.execution_attempt_blocking_reason_codes` mirrors that list beside
+   `scan.uri_template` and `scan.relation_identifier`.
 
 For downstream consumers, keep the routing order simple:
 

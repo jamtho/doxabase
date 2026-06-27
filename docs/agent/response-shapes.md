@@ -1495,8 +1495,13 @@ source resource. When `template_source == "storage_access_location"`, no path
 template exists and `template_lineage` describes the storage root candidate
 instead. Read these before treating a surprising URI template or root as the
 dataset's actual executable location; related or aggregate datasets can share a
-partition template while still being review-gated. `plan.required_bindings` is
-parsed from
+partition template while still being review-gated.
+`scan.execution_attempt_ready` mirrors
+`review_gate.ready_for_execution_attempt`, and
+`scan.execution_attempt_blocking_reason_codes` mirrors
+`review_gate.execution_attempt_blocking_reason_codes`; use these scan-adjacent
+fields before treating `scan.uri_template` or `scan.relation_identifier` as
+anything more than handoff context. `plan.required_bindings` is parsed from
 `{placeholders}` in the selected path and remains as a compact compatibility
 list. Prefer `plan.binding_requirements` for handoff work: each row has `name`,
 `source`, `source_text`, `required`, `derivation_status`, `derivation_note`,
@@ -1559,7 +1564,10 @@ when DuckDB has no file-scan function for the selected storage/layout shape.
 also includes non-review execution-attempt blockers such as
 `runtime_resolution_required` and `binding_values_required`, so downstream
 automation does not have to merge booleans and review codes before routing a
-false `ready_for_execution_attempt`.
+false `ready_for_execution_attempt`. The scan card repeats the same values as
+`scan.execution_attempt_ready` and
+`scan.execution_attempt_blocking_reason_codes` for consumers that start from
+the URI, relation, or scan-function hints.
 `review_gate.selection_overridden`, `context_blocked_candidate_allowed`,
 `context_blocked_candidate_used`, `direct_blocking_reason_codes`, and
 `context_blocking_reason_codes` explain whether an explicit or allowed
@@ -1592,7 +1600,9 @@ credential/object-existence guarantee.
 `ready_for_execution_attempt` is the stricter handoff boolean: it is true only
 when the review gate is clear, `runtime_resolution_required` is false, and
 `binding_values_required` is false.
-For consumer routing, check `ready_for_execution_attempt` first. If it is false
+For consumer routing, check `ready_for_execution_attempt` first, or its scan
+mirror `scan.execution_attempt_ready` when working inside the scan card. If the
+gate is false
 but `scan.relation_identifier` is present, hand it to a database-aware
 review/runtime route before generic runtime-resolution work. A
 `connection_reference` without a relation identifier is repair/review context,

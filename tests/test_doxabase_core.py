@@ -9246,6 +9246,10 @@ def test_draft_query_plan_carries_dataset_template_verification(
     assert plan.review_gate.execution_attempt_blocking_reason_codes == [
         "binding_values_required",
     ]
+    assert plan.scan.execution_attempt_ready is False
+    assert plan.scan.execution_attempt_blocking_reason_codes == [
+        "binding_values_required",
+    ]
 
 
 def test_draft_query_plan_hints_storage_template_placeholder_columns(
@@ -9729,6 +9733,11 @@ def test_query_target_candidates_surface_global_blockers(
     assert automatic_allowed_plan.review_gate.blocking_reason_codes == [
         "query_context_has_other_blockers"
     ]
+    assert automatic_allowed_plan.scan.uri_template is not None
+    assert automatic_allowed_plan.scan.execution_attempt_ready is False
+    assert automatic_allowed_plan.scan.execution_attempt_blocking_reason_codes == (
+        automatic_allowed_plan.review_gate.execution_attempt_blocking_reason_codes
+    )
 
     allowed_plan = db.draft_query_plan(
         dataset,
@@ -9780,6 +9789,10 @@ def test_query_target_candidates_surface_global_blockers(
     assert allowed_plan.review_gate.binding_values_required is True
     assert allowed_plan.review_gate.ready_for_execution_attempt is False
     assert allowed_plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "binding_values_required",
+    ]
+    assert allowed_plan.scan.execution_attempt_ready is False
+    assert allowed_plan.scan.execution_attempt_blocking_reason_codes == [
         "binding_values_required",
     ]
     assert allowed_plan.handoff_kind == "binding_values_required"
@@ -10386,6 +10399,8 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     assert plan.review_gate.runtime_resolution_required is False
     assert plan.review_gate.binding_values_required is False
     assert plan.review_gate.ready_for_execution_attempt is True
+    assert plan.scan.execution_attempt_ready is True
+    assert plan.scan.execution_attempt_blocking_reason_codes == []
     assert plan.handoff_kind == "execution_attempt_ready"
     assert "No endpoint or credential profile is recorded or required" in (
         plan.storage_environment.runtime_resolution_note
@@ -10518,6 +10533,11 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
     assert plan.review_gate.ready_for_execution_attempt is False
     assert plan.review_gate.blocking_reason_codes == ["scan_function_not_inferred"]
     assert plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "scan_function_not_inferred",
+        "runtime_resolution_required",
+    ]
+    assert plan.scan.execution_attempt_ready is False
+    assert plan.scan.execution_attempt_blocking_reason_codes == [
         "scan_function_not_inferred",
         "runtime_resolution_required",
     ]
