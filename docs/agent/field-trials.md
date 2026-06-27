@@ -1138,6 +1138,11 @@ few useful gaps:
   applied event restore the applied event and its direct staged source, but not
   older restage ancestors. Generic revision lineage now warns when any visible
   restage-chain row has RDF count/digest metadata but lacks stored snapshot rows.
+- A resource-lineage count-basis retest found resource-filtered applied diffs
+  work across map, ontology, and shapes once exact snapshot rows are restored,
+  but wrong-resource lineage requests for an existing revision sounded like
+  missing history. Those errors now distinguish "revision exists, but not for
+  this resource" from genuine missing RDF history.
 - A context-slice linked-support trial found `route_explained` is an attractive
   but invalid profile name, and plain `rc:Observation` seeds were too thin for
   handoff work. Route explanations live in `routes`, `route_legend`, and

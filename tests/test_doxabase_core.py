@@ -2005,6 +2005,16 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert {triple.subject for triple in exact_map_diff.triples_added} == {
         "https://example.test/project#Messages"
     }
+    with pytest.raises(DoxaBaseError) as wrong_resource_excinfo:
+        db.describe_resource_revision_lineage(
+            "https://example.test/project#UnrelatedResource",
+            result.applied_revision_iri,
+        )
+    wrong_resource_message = str(wrong_resource_excinfo.value)
+    assert "was not found in resource lineage" in wrong_resource_message
+    assert "Revision exists in history" in wrong_resource_message
+    assert "Snapshot rows exist for this revision IRI" not in wrong_resource_message
+    assert "Import the project/history RDF bundle" not in wrong_resource_message
     project_path = tmp_path / "project.trig"
     snapshot_path = tmp_path / "revision-snapshots.json"
     db.export_trig(project_path, graphs="project")

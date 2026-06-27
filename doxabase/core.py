@@ -4512,10 +4512,22 @@ class DoxaBase:
                     f"{scan.unreadable_revision_count}; "
                     f"omitted_match_risk={scan.omitted_match_risk}."
                 )
+            try:
+                self.describe_graph_revision(revision_value, graph=graph)
+            except DoxaBaseError:
+                history_hint = self._missing_revision_snapshot_storage_hint(
+                    revision_value
+                )
+            else:
+                history_hint = (
+                    " Revision exists in history, but it is not linked to "
+                    "this resource through revision anchors, patch payloads, "
+                    "or applied-source patch context."
+                )
             raise DoxaBaseError(
                 f"Revision '{revision_iri}' was not found in resource lineage "
                 f"for '{resource_iri}'"
-                f"{self._missing_revision_snapshot_storage_hint(revision_value)}."
+                f"{history_hint}."
                 f"{scan_note}"
             )
 
