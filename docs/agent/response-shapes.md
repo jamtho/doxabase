@@ -1614,7 +1614,9 @@ When peer ready candidates or peer context-blocked direct-clean candidates
 exist, `suggested_next_actions` also includes one explicit
 `draft_query_plan(candidate_index=...)` action for each peer. Use those actions
 instead of parsing peer indexes from prose or from
-`storage_access_iri` ambiguity errors.
+`storage_access_iri` ambiguity errors; they carry
+`allow_context_blocked_candidate=True` when sibling candidate metadata is the
+only broader blocker.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per linked
 layout signature with `candidate_index` and `physical_layout_iri`; it also emits
@@ -1780,7 +1782,11 @@ template, template source, source resource IRI, storage access IRI, storage
 protocol IRI, the allowed relation-template source list, and `repair_hint`.
 The repair hint names the source template, target storage access, reviewed
 relation placeholder, and ordered action templates; callers still supply a
-`rationale` for each staged add/remove. Its nested shape is:
+`rationale` for each staged add/remove.
+`database_relation_template_missing` includes the affected storage access IRI,
+storage protocol IRI, storage root, location kind, allowed relation-template
+sources, and a `repair_hint` with a reviewed add-template action on the storage
+access. The nested repair-hint shape is:
 
 ```python
 repair_hint.action_type
@@ -2422,6 +2428,9 @@ preview diagnostics. The `application_*` fields are a live apply check against
 the current graph. A row can therefore have stored validation failures while
 the live `application_status` is now `conflict` after graph drift; call
 `describe_staged_revision()` when historical validation diagnostics matter.
+List rows report validation status and result counts for routing, but omit full
+`validation_results`; open a staged-revision detail or export when you need the
+diagnostic rows.
 Use `staged_validation_status="failed"` to filter for those stored staged-time
 failures separately from live `application_status="validation_failed"`.
 `drift_detail="summary"` is the default and omits exact changed-triple arrays
@@ -3823,7 +3832,8 @@ result path, constraint, severity, value, messages, and sometimes a DoxaBase
 `hint` with repair guidance for common mistakes. In API and MCP JSON, these
 diagnostics are always exposed as `validation_results`; prose that says
 "diagnostics" and Markdown sections titled `Validation Results` refer to the
-same SHACL result records.
+same SHACL result records. Diagnostic text is in `messages`, a list of strings,
+not a singular `message` field.
 This SHACL `diagnostic.hint` is separate from query-planning
 `issue.details.repair_hint`: query-planning repair actions are reviewed
 `stage_map_assertion_change` templates and may declare required extra arguments

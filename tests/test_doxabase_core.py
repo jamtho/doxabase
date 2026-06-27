@@ -10575,6 +10575,11 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "record_map_storage_access",
         "stage_map_assertion_change",
     ]
+    assert repair_actions[0]["required_extra_arguments"] == [
+        "iri",
+        "storage_protocol",
+        "storage_root",
+    ]
     assert repair_actions[0]["arguments_template"]["datasets"] == [dataset]
     assert repair_actions[1]["arguments_template"]["subject"] == dataset
     assert repair_actions[1]["arguments_template"]["predicate"] == (
@@ -12441,16 +12446,48 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
         and target.storage_access is not None
         and target.storage_access.iri == local_storage.iri
     )
+    database_relation_index = next(
+        index
+        for index, target in enumerate(context.query_target_candidates)
+        if target.template_source == "storage_access"
+        and target.storage_access is not None
+        and target.storage_access.iri == database_storage.iri
+    )
     assert local_partition.source_resource.iri == partition.iri
     assert local_partition.candidate_path_status == "ready"
     assert local_partition.direct_review_required is False
     assert local_partition.review_reasons == []
+    assert context.unselected_ready_candidate_indexes == [
+        local_partition_index,
+        database_relation_index,
+    ]
     assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
     assert context.suggested_next_actions[0].arguments == {
         "iri": dataset,
         "candidate_index": context.query_target_decision.candidate_index,
         "allow_context_blocked_candidate": True,
     }
+    peer_actions = context.suggested_next_actions[1:]
+    assert [action.action_label for action in peer_actions] == [
+        "Draft peer direct-clean candidate with context allowance",
+        "Draft peer direct-clean candidate with context allowance",
+    ]
+    assert [action.arguments for action in peer_actions] == [
+        {
+            "iri": dataset,
+            "candidate_index": local_partition_index,
+            "allow_context_blocked_candidate": True,
+        },
+        {
+            "iri": dataset,
+            "candidate_index": database_relation_index,
+            "allow_context_blocked_candidate": True,
+        },
+    ]
+    assert all(
+        "allow_context_blocked_candidate=True" in action.reason
+        for action in peer_actions
+    )
 
     blocked_plan = db.draft_query_plan(
         dataset,
@@ -12465,6 +12502,12 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert blocked_plan.review_gate.blocking_reason_codes == [
         "query_context_has_other_blockers"
     ]
+
+    peer_action_plan = db.draft_query_plan(**peer_actions[0].arguments)
+
+    assert peer_action_plan.review_gate.context_blocked_candidate_used is True
+    assert peer_action_plan.review_gate.blocking_reason_codes == []
+    assert peer_action_plan.handoff_kind == "binding_values_required"
 
     automatic_allowed_plan = db.draft_query_plan(
         dataset,
@@ -12778,12 +12821,49 @@ def test_database_root_only_storage_requires_relation_template(
 
     assert context.readiness == "needs_review"
     assert context.issues[0].code == "database_relation_template_missing"
-    assert context.issues[0].details == {
+    details = context.issues[0].details
+    assert details is not None
+    assert {
+        key: details[key]
+        for key in [
+            "storage_access_iri",
+            "storage_protocol_iri",
+            "storage_root",
+            "location_kind",
+            "allowed_relation_template_sources",
+        ]
+    } == {
         "storage_access_iri": storage.iri,
         "storage_protocol_iri": RC + "DatabaseStorage",
         "storage_root": "warehouse-prod",
         "location_kind": location_kind,
         "allowed_relation_template_sources": ["storage_access"],
+    }
+    repair_hint = details["repair_hint"]
+    assert repair_hint["action_type"] == "record_database_relation_template"
+    assert repair_hint["requires_review"] is True
+    assert repair_hint["source"] == {
+        "storage_access_iri": storage.iri,
+        "storage_root": "warehouse-prod",
+        "location_kind": location_kind,
+    }
+    assert repair_hint["target"] == {
+        "storage_access_iri": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "required_template_source": "storage_access",
+    }
+    assert repair_hint["candidate_relation_identifier"]["requires_review"] is True
+    add_action = repair_hint["actions"][0]
+    assert add_action["tool_name"] == "stage_map_assertion_change"
+    assert add_action["mcp_tool_name"] == "doxabase.stage_map_assertion_change"
+    assert add_action["required_extra_arguments"] == ["rationale"]
+    assert add_action["arguments_template"] == {
+        "subject": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "object": "<reviewed_database_relation_identifier>",
+        "object_kind": "literal",
+        "change_kind": "add",
+        "graph": "map",
     }
     target = context.query_target_candidates[0]
     assert target.template_source == "storage_access_location"
@@ -18175,6 +18255,10 @@ def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
         ]
         assert "recommendation index(es) 0, 1 first" in advisory.routing_note
         assert "column shell" in advisory.routing_note
+        assert "duplicate group" in advisory.routing_note
+        assert "representative stage_profile_map_updates action" in (
+            advisory.routing_note
+        )
         assert [action.tool_name for action in advisory.suggested_next_actions] == [
             "describe_context_slice",
             "record_pattern",

@@ -170,7 +170,9 @@ or `draft_query_plan(..., storage_access_iri=..., allow_context_blocked_candidat
 Do not use the allowance selectorless: the automatic selection path keeps the
 context review gate active and reports `context_blocked_candidate_allowed=True`
 with `context_blocked_candidate_used=False` until the caller names an explicit
-candidate.
+candidate. When peer ready candidates are present, prefer the suggested
+`draft_query_plan` actions; they include `allow_context_blocked_candidate=True`
+when sibling candidate metadata is the only broader blocker.
 The source context keeps the automatic `query_target_decision` plus the explicit
 selection mode, and the review gate reports whether a context-blocked candidate
 was used. Only use this switch when `direct_review_required` is false for the
@@ -220,7 +222,9 @@ repair action declares `required_extra_arguments=["rationale"]`; add a reviewed
 rationale to the copied arguments before calling `stage_map_assertion_change`.
 The stale dataset or partition path is context for review, not the relation
 identifier. Root-only database storage without such a template carries
-`database_relation_template_missing` even when `location_kind == "object"`.
+`database_relation_template_missing` even when `location_kind == "object"`;
+its `details.repair_hint` gives the reviewed add-template action for the
+storage access.
 
 If `runtime_resolution_required=False` for bare database storage, read the note
 before treating it as reachable. The boolean only says there is no recorded

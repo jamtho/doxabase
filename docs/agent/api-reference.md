@@ -291,7 +291,9 @@ candidate is ready, blocked only by sibling context, directly review-only, or
 absent. `selected_candidate_direct_clean` is true when the selected candidate
 has no direct blocker of its own. When such a selected candidate is blocked by
 sibling metadata, the suggested `draft_query_plan` action includes the explicit
-`candidate_index` and `allow_context_blocked_candidate=True`.
+`candidate_index` and `allow_context_blocked_candidate=True`; peer ready actions
+include the same allowance when sibling candidate metadata is the only broader
+blocker.
 When `row_count_snapshot` or profile metrics matter to the query handoff,
 `profile_summary.profile_run_candidates` gives the evidence IRIs to inspect with
 `describe_profile_run()` without first switching to `describe_dataset()`.
@@ -415,7 +417,9 @@ candidate's database-specific fields; if the selected database candidate came
 from a dataset or partition path, `scan.relation_identifier` is absent and the
 plan stays metadata-review-required. Root-only database storage without a
 storage-access relation template is also metadata-review-required with
-`database_relation_template_missing`. The `scan` card carries dataset-level
+`database_relation_template_missing`; the issue's `details.repair_hint` gives
+the reviewed add-template action for the storage access. The `scan` card carries
+dataset-level
 verification status/notes and template lineage/source verification fields so
 agents can see, for example, that a dataset-owned path was verified by listing
 or that an aggregate table's path came from a shared partition scheme and is

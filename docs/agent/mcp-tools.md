@@ -456,7 +456,9 @@ but context-blocked, the suggested `draft_query_plan` action carries
 `allow_context_blocked_candidate=true` and the explicit candidate index. For
 multiple direct-ready candidates, inspect `unselected_ready_candidate_indexes`
 and rerun/draft with an explicit `candidate_index` if candidate order picked the
-wrong route. In a globally blocked context, inspect
+wrong route; peer suggested actions include the same allowance when sibling
+candidate metadata is the only broader blocker. In a globally blocked context,
+inspect
 `unselected_direct_clean_candidate_indexes` when strict ready indexes are empty
 but another candidate has no direct blocker. When linked physical layouts are
 ambiguous, suggested `draft_query_plan` actions include explicit
@@ -476,7 +478,8 @@ arguments before calling `stage_map_assertion_change`. The stale dataset or
 partition path is review context, not the relation identifier. Root-only
 database storage without a storage-access relation template is also review-only
 with `database_relation_template_missing`, even when `location_kind="object"`;
-read `issues[].details` for the affected storage access.
+read `issues[].details.repair_hint` for the reviewed add-template action on the
+storage access.
 When `missing_storage_access` appears, read `issues[].details.repair_hint` for
 reviewed repair templates: record a non-secret storage access and link it to the
 dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing

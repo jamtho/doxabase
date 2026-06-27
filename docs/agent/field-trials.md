@@ -1569,6 +1569,24 @@ few useful gaps:
   competing alternative target had already been applied. Repaired successors
   should preserve both `restages_revision` and the source alternative link so
   the semantic alternative gate remains visible.
+- A staged-revision lineage trial found list rows intentionally expose
+  validation status/counts but not full `validation_results`, and diagnostics
+  use `messages[]` rather than a singular `message`. Agents needing exact SHACL
+  rows should open detail/export instead of inferring fields from list rows.
+- A profile advisory duplicate-shell trial found unmapped type advisories were
+  technically routeable but could make agents restage the same duplicate column
+  shell repeatedly. Routing notes now say that for duplicate groups, following
+  the representative `stage_profile_map_updates` action is enough to stage the
+  shared shell before rerun.
+- A query-planning peer-action trial found selected ready candidates could carry
+  `allow_context_blocked_candidate=True` while peer ready actions omitted it,
+  causing agents to hit `query_context_has_other_blockers` again when following
+  the peer action verbatim. Peer ready actions now include the allowance when
+  sibling candidate metadata is the only broader blocker. The same trial found
+  root-only database candidates with `database_relation_template_missing` needed
+  a structured repair path; missing-template issues now include a reviewed
+  storage-access `rc:pathTemplate` add action, and missing-storage repair hints
+  name `storage_root` to match the API template.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

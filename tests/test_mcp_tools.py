@@ -3406,13 +3406,45 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
 
     assert context["readiness"] == "needs_review"
     assert context["issues"][0]["code"] == "database_relation_template_missing"
-    assert context["issues"][0]["details"] == {
+    details = context["issues"][0]["details"]
+    assert {
+        key: details[key]
+        for key in [
+            "storage_access_iri",
+            "storage_protocol_iri",
+            "storage_root",
+            "location_kind",
+            "allowed_relation_template_sources",
+        ]
+    } == {
         "storage_access_iri": storage["iri"],
         "storage_protocol_iri": RC + "DatabaseStorage",
         "storage_root": "warehouse-prod",
         "location_kind": "object",
         "allowed_relation_template_sources": ["storage_access"],
     }
+    repair_hint = details["repair_hint"]
+    assert repair_hint["action_type"] == "record_database_relation_template"
+    assert repair_hint["requires_review"] is True
+    assert repair_hint["source"] == {
+        "storage_access_iri": storage["iri"],
+        "storage_root": "warehouse-prod",
+        "location_kind": "object",
+    }
+    assert repair_hint["target"] == {
+        "storage_access_iri": storage["iri"],
+        "predicate": "rc:pathTemplate",
+        "required_template_source": "storage_access",
+    }
+    assert repair_hint["actions"][0]["arguments_template"] == {
+        "subject": storage["iri"],
+        "predicate": "rc:pathTemplate",
+        "object": "<reviewed_database_relation_identifier>",
+        "object_kind": "literal",
+        "change_kind": "add",
+        "graph": "map",
+    }
+    assert repair_hint["actions"][0]["required_extra_arguments"] == ["rationale"]
     target = context["query_target_candidates"][0]
     assert target["template_source"] == "storage_access_location"
     assert target["composition"] == "database_connection_as_candidate"

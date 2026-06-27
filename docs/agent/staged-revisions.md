@@ -853,7 +853,7 @@ value, and one or more messages. Markdown staged-revision exports include the
 same diagnostics before the patch payloads. In API and MCP JSON, these
 diagnostics are always exposed as `validation_results`; prose that says
 "diagnostics" and Markdown sections titled `Validation Results` refer to the
-same SHACL result records.
+same SHACL result records. Each diagnostic uses `messages[]`, not `message`.
 
 ## Repair Loop Example
 

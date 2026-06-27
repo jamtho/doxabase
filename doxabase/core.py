@@ -9520,11 +9520,15 @@ class DoxaBase:
         )
         peer_action_indexes: list[int] = []
         peer_action_allowance = False
-        if decision.status == "ready":
-            peer_action_indexes = unselected_ready_candidate_indexes
-        elif (
+        peer_action_needs_context_allowance = (
             readiness != "ready_for_query_planning"
             and candidate.direct_review_required is False
+        )
+        if decision.status == "ready":
+            peer_action_indexes = unselected_ready_candidate_indexes
+            peer_action_allowance = peer_action_needs_context_allowance
+        elif (
+            peer_action_needs_context_allowance
         ):
             peer_action_indexes = unselected_direct_clean_candidate_indexes
             peer_action_allowance = True
@@ -11820,6 +11824,58 @@ class DoxaBase:
             ],
         }
 
+    def _query_database_relation_template_missing_repair_hint(
+        self,
+        storage_access: StorageAccessDescription,
+    ) -> dict[str, Any]:
+        return {
+            "action_type": "record_database_relation_template",
+            "requires_review": True,
+            "source": {
+                "storage_access_iri": storage_access.iri,
+                "storage_root": storage_access.storage_root,
+                "location_kind": storage_access.location_kind,
+            },
+            "target": {
+                "storage_access_iri": storage_access.iri,
+                "predicate": "rc:pathTemplate",
+                "required_template_source": "storage_access",
+            },
+            "candidate_relation_identifier": {
+                "value": "<reviewed_database_relation_identifier>",
+                "requires_review": True,
+                "review_note": (
+                    "Review the database schema/table/relation identifier "
+                    "before staging; the storage root is only the connection "
+                    "reference."
+                ),
+            },
+            "actions": [
+                {
+                    "action_type": "add_reviewed_relation_template",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed database relation identifier for "
+                        f"{storage_access.iri}."
+                    ),
+                    "arguments_template": {
+                        "subject": storage_access.iri,
+                        "predicate": "rc:pathTemplate",
+                        "object": "<reviewed_database_relation_identifier>",
+                        "object_kind": "literal",
+                        "change_kind": "add",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Replace the placeholder object with the reviewed "
+                        "schema, table, or relation identifier before staging."
+                    ),
+                }
+            ],
+        }
+
     def _query_candidate_metadata_issue(
         self,
         *,
@@ -11978,6 +12034,11 @@ class DoxaBase:
                 "storage_root": storage_access.storage_root,
                 "location_kind": storage_access.location_kind,
                 "allowed_relation_template_sources": ["storage_access"],
+                "repair_hint": (
+                    self._query_database_relation_template_missing_repair_hint(
+                        storage_access
+                    )
+                ),
             },
         )
 
@@ -12489,7 +12550,7 @@ class DoxaBase:
                         "required_extra_arguments": [
                             "iri",
                             "storage_protocol",
-                            "storage_location",
+                            "storage_root",
                         ],
                         "arguments_template": {
                             "iri": "<reviewed storage access IRI>",
@@ -14063,7 +14124,10 @@ class DoxaBase:
                     f"Review the related {kinds} recommendation index(es) "
                     f"{indexes} first. Stage/apply the column shell if "
                     "appropriate, then rerun or review type assertions after "
-                    "the column is map-present."
+                    "the column is map-present. When these indexes are a "
+                    "duplicate group, following the representative "
+                    "stage_profile_map_updates action is enough to stage the "
+                    "shared shell before rerun."
                 )
             return (
                 "No related unmapped_profiled_column recommendation was found; "
