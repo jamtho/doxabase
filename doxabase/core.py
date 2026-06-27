@@ -13177,6 +13177,18 @@ class DoxaBase:
                                 "<optional storage-owned path or relation template>"
                             ],
                         },
+                        "placeholder_fields": ["path_templates"],
+                        "reviewed_value_fields": ["path_templates"],
+                        "condition": (
+                            "Include path_templates only when the storage access "
+                            "itself owns the path or database relation template. "
+                            "Omit this optional field when the dataset or "
+                            "partition already carries the reviewed path "
+                            "template; duplicating it can create equivalent "
+                            "query target candidates. Database relation "
+                            "identifiers are the important exception and should "
+                            "be storage-access-owned."
+                        ),
                     },
                     {
                         "tool_name": "stage_map_assertion_change",

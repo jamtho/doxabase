@@ -11326,6 +11326,13 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "storage_root",
     ]
     assert repair_actions[0]["arguments_template"]["datasets"] == [dataset]
+    assert repair_actions[0]["placeholder_fields"] == ["path_templates"]
+    assert repair_actions[0]["reviewed_value_fields"] == ["path_templates"]
+    assert "Omit this optional field" in repair_actions[0]["condition"]
+    assert "duplicating it can create equivalent query target candidates" in (
+        repair_actions[0]["condition"]
+    )
+    assert "Database relation identifiers" in repair_actions[0]["condition"]
     assert repair_actions[1]["arguments_template"]["subject"] == dataset
     assert repair_actions[1]["arguments_template"]["predicate"] == (
         "rc:hasStorageAccess"
@@ -11358,6 +11365,60 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert context.query_target_decision.direct_review_required is None
     assert context.query_target_decision.selected_candidate_direct_clean is None
     assert context.query_target_decision.reason_codes == []
+
+
+def test_missing_storage_access_repair_omits_duplicate_path_template(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    template = "events/date={date}/*.parquet"
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        path_templates=[template],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    before = db.describe_query_context(dataset)
+    missing_storage = next(
+        issue for issue in before.issues if issue.code == "missing_storage_access"
+    )
+    assert missing_storage.details is not None
+    repair_action = missing_storage.details["repair_hint"]["actions"][0]
+    assert "Omit this optional field" in repair_action["condition"]
+
+    db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        datasets=[dataset],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+
+    after = db.describe_query_context(dataset)
+
+    assert after.readiness == "ready_for_query_planning"
+    assert after.issues == []
+    assert len(after.query_target_candidates) == 1
+    candidate = after.query_target_candidates[0]
+    assert candidate.template == template
+    assert candidate.template_source == "dataset"
+    assert candidate.composition == "storage_root_joined"
+    assert candidate.candidate_path_status == "ready"
+    draft_actions = [
+        action
+        for action in after.suggested_next_actions
+        if action.tool_name == "draft_query_plan"
+    ]
+    assert len(draft_actions) == 1
 
 
 def test_describe_query_context_flags_known_fixture_without_storage_access(

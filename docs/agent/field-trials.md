@@ -1712,6 +1712,13 @@ few useful gaps:
   is intentionally separate from flat `suggested_next_actions`: repair rows may
   contain placeholders and required rationale, so automation should use the lane
   for discovery and still review/fill the template before mutating the graph.
+- A follow-up missing-storage repair loop showed the optional
+  `record_map_storage_access.path_templates` placeholder can nudge agents to
+  duplicate a dataset-owned file/object template onto the new storage access,
+  producing equivalent ready candidates. The repair hint now carries a condition
+  beside that optional field: omit it when the dataset or partition already owns
+  the reviewed file/object path template, while still recording database
+  relation identifiers as storage-access-owned templates.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

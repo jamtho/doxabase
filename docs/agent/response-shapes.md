@@ -1827,10 +1827,14 @@ includes `dataset_iri`,
 `global_storage_access_count`, a `repair_hint`, and sometimes
 `fixture_staleness_hint`. The repair hint offers reviewed action templates for
 `record_map_storage_access(..., datasets=[...])` or a staged
-`rc:hasStorageAccess` assertion to an existing access resource. A fixture
-staleness hint means known AIS or Polymarket fixture tables are present while
-the capsule has zero `rc:StorageAccess` resources; use a fresh scratch fixture
-load before drawing query-target conclusions.
+`rc:hasStorageAccess` assertion to an existing access resource. In the
+record-new-storage template, omit optional storage-owned `path_templates` when
+the dataset or partition already carries the reviewed file/object path template;
+duplicating it can create equivalent ready query candidates. Database relation
+identifiers are the storage-owned exception. A fixture staleness hint means
+known AIS or Polymarket fixture tables are present while the capsule has zero
+`rc:StorageAccess` resources; use a fresh scratch fixture load before drawing
+query-target conclusions.
 `database_relation_template_source_mismatch` includes the
 template, template source, source resource IRI, storage access IRI, storage
 protocol IRI, the allowed relation-template source list, and `repair_hint`.

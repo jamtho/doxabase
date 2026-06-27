@@ -517,8 +517,13 @@ condition before calling the named tool.
 When `missing_storage_access` appears, read `issues[].details.repair_hint` for
 reviewed repair templates: record a non-secret storage access and link it to the
 dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing
-storage access. If `issues[].details.fixture_staleness_hint` is present, known
-AIS or Polymarket fixture tables exist but the capsule has zero
+storage access. For the record-new-storage action, include the optional
+`path_templates` field only when the storage access itself owns the path or
+database relation template. Omit it when a dataset or partition already carries
+the reviewed file/object path template, or you can create duplicate equivalent
+query target candidates. Database relation identifiers are the important
+storage-owned exception. If `issues[].details.fixture_staleness_hint` is present,
+known AIS or Polymarket fixture tables exist but the capsule has zero
 `rc:StorageAccess` resources; treat that as a stale/reduced fixture capsule and
 load fresh fixtures into scratch before judging query-target behavior.
 
