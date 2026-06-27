@@ -1125,6 +1125,17 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert second_page["next_action_queue"] == {
         "inspect_already_applied": [applied["applied_revision_iri"]]
     }
+    applied_row = second_page["revisions"][0]
+    assert applied_row["next_action"]["tool_name"] == "describe_graph_revision"
+    assert [
+        action["tool_name"] for action in applied_row["suggested_next_actions"]
+    ] == [
+        "describe_graph_revision",
+        "describe_applied_revision_diff",
+    ]
+    assert applied_row["suggested_next_actions"][1]["arguments"] == {
+        "iri": applied["applied_revision_iri"]
+    }
 
 
 def test_list_resource_revisions_tool_returns_json_like_payload(
@@ -1227,7 +1238,11 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     ]
     assert generic_lineage["next_action"]["queue"] == "inspect_already_applied"
     assert generic_lineage["suggested_next_calls"] == [
-        f"describe_graph_revision(iri='{applied['applied_revision_iri']}')"
+        f"describe_graph_revision(iri='{applied['applied_revision_iri']}')",
+        (
+            "describe_applied_revision_diff("
+            f"iri='{applied['applied_revision_iri']}')"
+        ),
     ]
     assert generic_lineage["warnings"] == []
 

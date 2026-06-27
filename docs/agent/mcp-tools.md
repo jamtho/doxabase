@@ -76,8 +76,10 @@ rationale, revision type, changed graph roles, included review/export graph
 roles, validation result, export path, graph snapshots with counts and
 `sha256:<hex>` content digests, `applies_staged_revision` for applied events,
 `applied_source` compact source context for applied staged revision events, and
-support links. `snapshot_evidence` classifies whether RDF history metadata and
-SQLite snapshot rows are both present for exact diff/drift work.
+support links. Applied events include suggested actions for
+`describe_graph_revision` and `describe_applied_revision_diff`.
+`snapshot_evidence` classifies whether RDF history metadata and SQLite snapshot
+rows are both present for exact diff/drift work.
 `applied_source` omits patch content and full diagnostics; call
 `describe_staged_revision` on `applies_staged_revision` when those are needed.
 

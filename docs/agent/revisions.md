@@ -411,13 +411,17 @@ A cold recovery script usually follows this order:
 2. Filter rows with `record_kind == "applied_event"`.
 3. Call `describe_graph_revision(applied_iri)` for the applied event's
    after-state `graph_snapshots`, compact `applied_source`, and
-   `applies_staged_revision` link.
-4. Call `describe_staged_revision(description.applies_staged_revision)` for the
+   `applies_staged_revision` link. Applied-event rows and descriptions suggest
+   this call plus `describe_applied_revision_diff(applied_iri)`.
+4. Call `describe_applied_revision_diff(applied_iri, include_triples=True)` when
+   you need before/after changed triples and snapshot evidence says exact rows
+   are available.
+5. Call `describe_staged_revision(description.applies_staged_revision)` for the
    original patch content, before-state snapshots, validation details, support,
    and judgement context. Use `include_current_apply_check=True` when you also
    want the source revision's live already-applied/stale/ready branch in the
    same response.
-5. Follow `applied_by` on staged descriptions when starting from the source
+6. Follow `applied_by` on staged descriptions when starting from the source
    proposal rather than from the applied event.
 
 Do not call `check_staged_revision_apply()` after application expecting an exact

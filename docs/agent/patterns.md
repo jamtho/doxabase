@@ -92,15 +92,20 @@ the pattern linked via `rc:mapImplication`.
 When the promotion is more nuanced, use `doxabase.stage_pattern_promotion`.
 It takes existing pattern IRIs plus caller-authored RDF framings and records
 reviewable staged revisions in `history`. The selected patterns become
-`supporting_patterns`; their supporting observations, claims, and evidence are
-rolled into the staged revision metadata; and their targets/map implications are
-used as revision anchors. The helper does not decide the graph shape for you.
-Use it for pattern-supported map, ontology, or shape changes that should be
-validated and reviewed before becoming durable project structure.
+`supporting_patterns`; their supporting observations and claims are rolled into
+the staged revision metadata; and their targets/map implications are used as
+revision anchors. Evidence linked through those observations or claims remains
+reachable through context-slice routes, but it is not direct staged-revision
+evidence unless you pass it explicitly or link it directly on the pattern. The
+helper does not decide the graph shape for you. Use it for pattern-supported
+map, ontology, or shape changes that should be validated and reviewed before
+becoming durable project structure.
 
 A useful promotion bundle can share provisional project vocabulary across
 several framings. Put common project ontology and any temporary project SHACL
 rules in shared additions, then let each framing supply its own map additions.
+Shared additions are included in every staged framing, so do not put ontology or
+shape patches there if one fallback framing is meant to avoid them.
 Keeping one intentionally incomplete or invalid framing is often useful: it
 turns validation diagnostics into a review cue while a complete sibling remains
 ready to apply. For example, a pattern might support a project-local

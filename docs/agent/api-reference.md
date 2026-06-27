@@ -818,7 +818,8 @@ rationale, changed/included graph roles, graph snapshots with counts and
 `sha256:<hex>` content digests, validation result, structured validation
 diagnostics, export path, `applies_staged_revision` for applied events,
 `applied_source` compact source context for applied staged revision events,
-revision anchors, and supporting observation/claim/pattern/evidence links.
+revision anchors, supporting observation/claim/pattern/evidence links, and
+applied-event suggested calls to inspect the event diff.
 It also includes `snapshot_evidence`, which classifies whether RDF history
 metadata and SQLite snapshot rows are both present for exact diff/drift work.
 

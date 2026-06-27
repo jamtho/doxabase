@@ -370,6 +370,11 @@ same provisional vocabulary or assumptions, pass `shared_additions` or
 exported as `rc:SharedContextPatch` entries. Shared patches can target
 `ontology`, `shapes`, or other mutable graph roles. Staged `shapes` patches
 participate in the preview SHACL validation for each framing.
+Because shared patches are attached to every framing, keep them out of
+fallbacks that are meant to avoid the provisional vocabulary or shape. Evidence
+behind supporting observations or claims remains reachable through slice routes,
+but it is not direct staged-revision evidence unless passed explicitly or linked
+directly on a supporting pattern.
 Because later framings are alternative-linked to the first framing by default,
 put the preferred comparison anchor first. If the first framing is intentionally
 invalid as a diagnostic repair probe, pass an explicit `alternative_to` or set
@@ -497,8 +502,10 @@ wrapper over `stage_systematisation`, not an automatic map editor. Pass the
 pattern IRIs and caller-authored framings. The helper:
 
 - records the selected patterns as `supporting_patterns`;
-- rolls up their supporting observations, claims, and evidence into revision
-  metadata;
+- rolls up their supporting observations and claims into revision metadata;
+- carries directly linked pattern evidence, while evidence linked only through
+  those observations or claims stays reachable through context slices unless
+  passed explicitly;
 - uses the pattern IRIs, pattern targets, and `rc:mapImplication` resources as
   revision anchors;
 - delegates patch parsing, preview counts, validation, alternatives, and review

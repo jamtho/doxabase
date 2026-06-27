@@ -2019,6 +2019,13 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert applied.graph_snapshots[0].triple_count == 3
     assert applied.graph_snapshots[0].content_digest is not None
     assert applied.graph_snapshots[0].content_digest.startswith("sha256:")
+    assert [action.tool_name for action in applied.suggested_next_actions] == [
+        "describe_graph_revision",
+        "describe_applied_revision_diff",
+    ]
+    assert applied.suggested_next_actions[1].arguments == {
+        "iri": result.applied_revision_iri
+    }
     diff = db.describe_applied_revision_diff(result.applied_revision_iri)
     assert diff.applied_revision_iri == result.applied_revision_iri
     assert diff.staged_revision_iri == staged.revision_iri
@@ -7054,6 +7061,10 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
         (
             "describe_graph_revision(iri='"
             f"{applied.applied_revision_iri}')"
+        ),
+        (
+            "describe_applied_revision_diff(iri='"
+            f"{applied.applied_revision_iri}')"
         )
     ]
     assert source_lineage.warnings == []
@@ -7080,6 +7091,10 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     assert applied_lineage.suggested_next_calls == [
         (
             "describe_graph_revision(iri='"
+            f"{applied.applied_revision_iri}')"
+        ),
+        (
+            "describe_applied_revision_diff(iri='"
             f"{applied.applied_revision_iri}')"
         )
     ]
@@ -7484,6 +7499,10 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     assert applied_event_lineage.suggested_next_calls == [
         (
             "describe_graph_revision("
+            f"iri={applied.applied_revision_iri!r})"
+        ),
+        (
+            "describe_applied_revision_diff("
             f"iri={applied.applied_revision_iri!r})"
         )
     ]
@@ -10842,6 +10861,91 @@ def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
             dataset,
             physical_layout_iri="https://example.test/project#missing_layout",
         )
+
+
+def test_draft_query_plan_layout_selection_preserves_other_blockers(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Feeds"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#feeds_https_storage",
+        label="Feeds HTTPS access",
+        storage_protocol="rc:HTTPSStorage",
+        storage_root="https://cdn.example.test/lake",
+        path_templates=[
+            "feeds/clean/date={date}.parquet",
+            "s3://wrong-bucket/feeds/*.parquet",
+        ],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    csv_layout = db.record_map_physical_layout(
+        "https://example.test/project#feeds_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    parquet_layout = db.record_map_physical_layout(
+        "https://example.test/project#feeds_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Feeds",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[csv_layout.iri, parquet_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+    clean_index = next(
+        index
+        for index, target in enumerate(context.query_target_candidates)
+        if target.template == "feeds/clean/date={date}.parquet"
+    )
+
+    assert context.readiness == "needs_review"
+    assert {issue.code for issue in context.issues} == {
+        "ambiguous_physical_layout",
+        "storage_protocol_location_mismatch",
+    }
+
+    selected_plan = db.draft_query_plan(
+        dataset,
+        candidate_index=clean_index,
+        physical_layout_iri=parquet_layout.iri,
+    )
+
+    assert selected_plan.source_context.requested_physical_layout_iri == (
+        parquet_layout.iri
+    )
+    assert selected_plan.scan.physical_layout is not None
+    assert selected_plan.scan.physical_layout.iri == parquet_layout.iri
+    assert selected_plan.scan.function == "read_parquet"
+    assert [issue.code for issue in selected_plan.issues] == [
+        "storage_protocol_location_mismatch"
+    ]
+    assert "ambiguous_physical_layout" not in (
+        selected_plan.review_gate.all_issue_codes
+    )
+    assert selected_plan.review_gate.direct_blocking_reason_codes == []
+    assert selected_plan.review_gate.context_blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert selected_plan.review_gate.blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert selected_plan.review_gate.binding_values_required is True
+    assert selected_plan.review_gate.ready_for_execution_attempt is False
+    assert selected_plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "query_context_has_other_blockers",
+        "binding_values_required",
+    ]
+    assert selected_plan.scan.execution_attempt_blocking_reason_codes == (
+        selected_plan.review_gate.execution_attempt_blocking_reason_codes
+    )
+    assert selected_plan.handoff_kind == "context_review_required"
 
 
 def test_draft_query_plan_review_gates_database_backed_table_without_scan_function(

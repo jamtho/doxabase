@@ -1364,6 +1364,13 @@ few useful gaps:
   auto-passes only same-evidence patterns that target or imply the dataset or
   recommended map resources; metric-only and type-only patterns stay in their
   review lanes unless explicitly supplied as support.
+- Follow-up query, revision, profile, and systematisation trials confirmed the
+  new layout selector, snapshot helper, and profile support selector behavior.
+  They added three small handoff lessons: applied-event rows now suggest
+  `describe_applied_revision_diff`, profile map-staging docs now match the
+  dataset/recommended-resource support rule, and systematisation docs warn that
+  shared additions attach to every framing while transitive evidence is not
+  direct staged-revision evidence unless passed or linked directly.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

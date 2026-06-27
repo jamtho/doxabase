@@ -2211,6 +2211,8 @@ description.supporting_claims
 description.supporting_patterns
 description.revision_anchors
 description.evidence
+description.suggested_next_actions
+description.suggested_next_calls
 ```
 
 For applied staged revision events, `applied_source` is a compact source card
@@ -2220,6 +2222,9 @@ content, and support-link counts. It is meant for quick history scanning; call
 `describe_staged_revision(description.applies_staged_revision)` for patch
 content, full diagnostics, impacts, or judgement panels.
 The `applied_source` relation fields are also nullable IRI strings.
+Applied-event descriptions also suggest `describe_applied_revision_diff()` so
+agents starting from history can jump directly to stored before/after snapshot
+counts and exact changed triples.
 
 `description.snapshot_evidence` has the same shape as
 `describe_revision_snapshot_evidence()`:

@@ -896,6 +896,8 @@ class GraphRevisionDescription:
     supporting_patterns: list[ResourceSummary]
     revision_anchors: list[ResourceSummary]
     evidence: list[ResourceSummary]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -3021,6 +3023,11 @@ class DoxaBase:
             for patch_iri in patch_iris
         ]
         patches.sort(key=self._staged_patch_sort_key)
+        suggested_next_actions = (
+            self._applied_revision_event_suggested_actions(revision_iri)
+            if applies_staged_revision is not None
+            else []
+        )
 
         return GraphRevisionDescription(
             iri=revision_iri,
@@ -3096,6 +3103,10 @@ class DoxaBase:
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
             ),
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
         )
 
     def describe_revision_snapshot_evidence(
@@ -3748,6 +3759,10 @@ class DoxaBase:
                 has_patch_payload=bool(patch_iris),
                 applies_staged_revision=applies_staged_revision,
             )
+            if item_record_kind == "applied_event":
+                suggested_next_actions = (
+                    self._applied_revision_event_suggested_actions(revision_iri)
+                )
             applied_by = self._first_subject(
                 data_graphs,
                 "rc:appliesStagedRevision",
@@ -3956,6 +3971,41 @@ class DoxaBase:
                 continue
             counts[value] = counts.get(value, 0) + 1
         return counts
+
+    def _applied_revision_event_suggested_actions(
+        self,
+        revision_iri: str,
+    ) -> list[SuggestedNextAction]:
+        return [
+            SuggestedNextAction(
+                action_label="Inspect applied event",
+                tool_name="describe_graph_revision",
+                mcp_tool_name="doxabase.describe_graph_revision",
+                arguments={"iri": revision_iri},
+                reason=(
+                    "Inspect the applied revision event for durable history "
+                    "context."
+                ),
+                call=self._suggested_call_string(
+                    "describe_graph_revision",
+                    {"iri": revision_iri},
+                ),
+            ),
+            SuggestedNextAction(
+                action_label="Inspect applied diff",
+                tool_name="describe_applied_revision_diff",
+                mcp_tool_name="doxabase.describe_applied_revision_diff",
+                arguments={"iri": revision_iri},
+                reason=(
+                    "Inspect stored before/after graph snapshot counts and, "
+                    "when needed, exact changed triples for the applied event."
+                ),
+                call=self._suggested_call_string(
+                    "describe_applied_revision_diff",
+                    {"iri": revision_iri},
+                ),
+            ),
+        ]
 
     def describe_revision_lineage(
         self,
@@ -9211,6 +9261,7 @@ class DoxaBase:
         ) = self._draft_query_plan_effective_candidate(
             context,
             selected_candidate,
+            issues=effective_issues,
             selection_mode=selection_mode,
             allow_context_blocked_candidate=allow_context_blocked_candidate,
         )
@@ -9513,6 +9564,7 @@ class DoxaBase:
         context: QueryPlanningContext,
         selected_candidate: QueryTargetCandidate | None,
         *,
+        issues: list[QueryPlanningIssue],
         selection_mode: str,
         allow_context_blocked_candidate: bool,
     ) -> tuple[QueryTargetCandidate | None, bool, list[QueryPlanningIssue]]:
@@ -9525,6 +9577,7 @@ class DoxaBase:
             self._draft_query_plan_sibling_candidate_metadata_context_blockers(
                 context,
                 selected_candidate,
+                issues=issues,
             )
         )
         context_blocking_reasons = list(context_blockers)
@@ -9574,6 +9627,8 @@ class DoxaBase:
         self,
         context: QueryPlanningContext,
         selected_candidate: QueryTargetCandidate,
+        *,
+        issues: list[QueryPlanningIssue],
     ) -> list[QueryPlanningIssue]:
         if (
             context.readiness == "ready_for_query_planning"
@@ -9581,7 +9636,7 @@ class DoxaBase:
             or selected_candidate.candidate_path_status != "ready"
         ):
             return []
-        blockers = self._query_target_blocking_reasons(context.issues)
+        blockers = self._query_target_blocking_reasons(issues)
         if not blockers or not all(
             self._is_candidate_metadata_issue(issue) for issue in blockers
         ):
