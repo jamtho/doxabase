@@ -756,7 +756,11 @@ alternatives durable. The same condition is available on single-row handoffs as
 `semantic_review_required=True`, plus `applied_source_iri` and
 `applied_revision_iri`; read it on `check_staged_revision_apply`,
 `describe_staged_revision(include_current_apply_check=True)`,
-`list_graph_revisions`, and grouped export `revision_summaries`.
+`list_graph_revisions`, and grouped export `revision_summaries`. These rows
+still route through the `apply_after_review` queue when mechanically ready, but
+their compact `next_action`, review/export suggestions, and apply suggestion
+name the semantic gate; the apply suggestion uses `Apply only after semantic
+review` and names the already-applied source.
 In scripts, the practical loop is: batch restage, review
 `ready_restage_successor_revision_iris`, apply at most one ready successor,
 then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the

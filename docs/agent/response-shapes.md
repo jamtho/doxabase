@@ -2799,7 +2799,11 @@ current.error
 and overlap arrays are present, but exact changed-triple arrays are omitted.
 `current.next_action` is the compact queue route for the live apply branch and
 matches the `RevisionNextAction` shape used by direct apply checks, revision
-lists, grouped exports, and post-apply recheck rows.
+lists, grouped exports, and post-apply recheck rows. A mechanically ready row
+whose `alternative_gate.semantic_review_required` is true can still use the
+`apply_after_review` queue, but its compact action label and suggested actions
+name the semantic gate; the apply suggestion says `Apply only after semantic
+review` and names the already-applied source when known.
 Call `check_staged_revision_apply()` when you need full `patch_checks`,
 `conflicts`, `validation_results`, or exact snapshot drift triples.
 

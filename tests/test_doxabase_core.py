@@ -6884,6 +6884,33 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert recovered_second_check.alternative_gate.applied_revision_iri == (
         result.applied_revision_iri
     )
+    assert recovered_second_check.semantic_risk_level == "none"
+    assert recovered_second_check.next_action is not None
+    assert recovered_second_check.next_action.action_type == "apply_after_review"
+    assert recovered_second_check.next_action.queue == "apply_after_review"
+    assert recovered_second_check.next_action.action_label == (
+        "Apply only after semantic review"
+    )
+    assert first_restaged.revision_iri in recovered_second_check.next_action.reason
+    assert result.applied_revision_iri in recovered_second_check.next_action.reason
+    review_action = recovered_second_check.suggested_next_actions[0]
+    assert review_action.tool_name == "describe_staged_revision"
+    assert review_action.action_label == "Review semantic alternative"
+    assert first_restaged.revision_iri in review_action.reason
+    assert result.applied_revision_iri in review_action.reason
+    export_action = recovered_second_check.suggested_next_actions[1]
+    assert export_action.tool_name == "export_staged_revision"
+    assert export_action.action_label == "Export semantic alternative bundle"
+    assert "semantic alternative gate" in export_action.reason
+    assert "staged-revision-semantic-alternative-review" in (
+        export_action.arguments["path"]
+    )
+    apply_action = recovered_second_check.suggested_next_actions[-1]
+    assert apply_action.tool_name == "apply_staged_revision"
+    assert apply_action.action_label == "Apply only after semantic review"
+    assert apply_action.reason == recovered_second_check.next_action.reason
+    assert first_restaged.revision_iri in apply_action.reason
+    assert result.applied_revision_iri in apply_action.reason
     recovered_description = db.describe_staged_revision(
         recovered_second.revision_iri,
         include_current_apply_check=True,
@@ -6940,6 +6967,12 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         "alternative_to_applied_source"
     )
     assert recovered_summary.alternative_gate.semantic_review_required is True
+    assert recovered_summary.next_action is not None
+    assert recovered_summary.next_action.action_label == (
+        "Apply only after semantic review"
+    )
+    assert first_restaged.revision_iri in recovered_summary.next_action.reason
+    assert result.applied_revision_iri in recovered_summary.next_action.reason
     assert applied_alternative_summary.next_action_queue == {
         "inspect_already_applied": [first_restaged.revision_iri],
         "informational": [second_restaged.revision_iri],

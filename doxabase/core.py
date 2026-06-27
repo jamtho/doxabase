@@ -21196,6 +21196,15 @@ class DoxaBase:
                 action_label="Export restaged validation bundle",
             )
         elif status == "ready":
+            alternative_gate = staged.alternative_gate if staged is not None else None
+            alternative_semantic_review_required = (
+                alternative_gate is not None
+                and alternative_gate.semantic_review_required
+            )
+            semantic_review_required = (
+                semantic_risk_level in {"attention", "high"}
+                or alternative_semantic_review_required
+            )
             if restaged_source_validation_warning is not None:
                 review_reason = (
                     f"{restaged_source_validation_warning} Review the revised "
@@ -21220,6 +21229,63 @@ class DoxaBase:
                     "Write a Markdown review bundle before applying if review is needed."
                 )
                 export_label = "Export review bundle"
+            if (
+                alternative_semantic_review_required
+                and alternative_gate is not None
+                and alternative_gate.applied_source_iri is not None
+            ):
+                semantic_review_note = (
+                    " This row is alternative to already-applied staged source "
+                    f"'{alternative_gate.applied_source_iri}'; inspect that "
+                    "source before making both alternatives durable."
+                )
+                if alternative_gate.applied_revision_iri is not None:
+                    semantic_review_note += (
+                        " Applied revision "
+                        f"'{alternative_gate.applied_revision_iri}' records "
+                        "the durable event."
+                    )
+                review_reason += semantic_review_note
+                export_reason += (
+                    " Include the semantic alternative gate and applied-source "
+                    "context in the review bundle."
+                )
+                if restaged_source_validation_warning is None:
+                    review_label = "Review semantic alternative"
+                    export_slug = "staged-revision-semantic-alternative-review"
+                    export_label = "Export semantic alternative bundle"
+            if (
+                alternative_semantic_review_required
+                and alternative_gate is not None
+                and alternative_gate.applied_source_iri is not None
+            ):
+                apply_reason = (
+                    "Apply this staged revision only after semantic review "
+                    "confirms the alternative remains desired alongside the "
+                    "already-applied staged source "
+                    f"'{alternative_gate.applied_source_iri}'."
+                )
+                if alternative_gate.applied_revision_iri is not None:
+                    apply_reason += (
+                        " Inspect applied revision "
+                        f"'{alternative_gate.applied_revision_iri}' before "
+                        "making both alternatives durable."
+                    )
+            elif semantic_review_required:
+                apply_reason = (
+                    "Apply this staged revision only after semantic review "
+                    "confirms the proposal is still desired."
+                )
+            else:
+                apply_reason = (
+                    "Apply this staged revision after review confirms the "
+                    "proposal is still desired."
+                )
+            apply_label = (
+                "Apply only after semantic review"
+                if semantic_review_required
+                else "Apply after review"
+            )
             add_action(
                 "describe_staged_revision",
                 {"iri": staged_revision_iri},
@@ -21237,20 +21303,6 @@ class DoxaBase:
                 },
                 export_reason,
                 action_label=export_label,
-            )
-            apply_reason = (
-                "Apply this staged revision only after semantic review confirms "
-                "the proposal is still desired."
-                if semantic_risk_level in {"attention", "high"}
-                else (
-                    "Apply this staged revision after review confirms the "
-                    "proposal is still desired."
-                )
-            )
-            apply_label = (
-                "Apply only after semantic review"
-                if semantic_risk_level in {"attention", "high"}
-                else "Apply after review"
             )
             add_action(
                 "apply_staged_revision",

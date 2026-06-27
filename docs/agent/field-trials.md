@@ -1137,6 +1137,10 @@ few useful gaps:
   checks, descriptions, and lists still required inference; those payloads now
   expose `alternative_gate` with `alternative_to_applied_source`,
   `semantic_review_required`, `applied_source_iri`, and `applied_revision_iri`.
+  A later trial found the compact apply action could still look ordinary when
+  the generic semantic risk was `none`; ready alternatives gated only by
+  `alternative_gate` now keep the `apply_after_review` queue but label and
+  explain the review/export/apply actions as semantic-review-only.
 - A grouped snapshot-evidence trial found JSON list/lineage helpers made mixed
   RDF-only and exact snapshot recovery clear, while grouped Markdown hid the
   status split in scattered drift notes. Grouped staged-review Markdown now adds
