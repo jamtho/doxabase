@@ -17567,6 +17567,32 @@ class DoxaBase:
         next_action_queue, suggested_next_actions = (
             self._systematisation_draft_routing(staged_revisions)
         )
+        if len(staged_revisions) > 1 and link_alternatives and first_revision_iri:
+            first_queue = next(
+                (
+                    queue
+                    for queue, revision_iris in next_action_queue.items()
+                    if first_revision_iri in revision_iris
+                ),
+                "unrouted",
+            )
+            if first_queue != "apply_after_review":
+                first_framing = framing_records[0]
+                if first_framing.validation_conforms:
+                    status_note = f"routed to {first_queue}"
+                else:
+                    status_note = (
+                        "failed staged validation"
+                        f" with {first_framing.validation_result_count} result(s)"
+                    )
+                warnings.append(
+                    "First framing "
+                    f"'{first_framing.label}' ({first_revision_iri}) "
+                    f"{status_note}; later framings were linked as alternatives "
+                    "to it. Pass alternative_to=... or link_alternatives=False "
+                    "when the first framing is diagnostic or complementary "
+                    "rather than the intended comparison anchor."
+                )
         return SystematisationDraftRecord(
             result_kind="systematisation_draft",
             summary=summary_value,
@@ -20073,6 +20099,8 @@ class DoxaBase:
             required=True,
         )
         revision_values = list(dict.fromkeys(revision_values))
+        for revision_iri in revision_values:
+            self._ensure_staged_revision_exportable(revision_iri)
         descriptions = [
             self.describe_staged_revision(revision_iri)
             for revision_iri in revision_values
@@ -20102,6 +20130,37 @@ class DoxaBase:
             bytes_written=bytes_written,
             revision_summaries=revision_summaries,
             bundle_summary=bundle_summary,
+        )
+
+    def _ensure_staged_revision_exportable(self, iri: str) -> None:
+        revision_iri = self.expand_iri(iri)
+        data_graphs = self._expand_graphs(["history"])
+        if not self._subject_exists(revision_iri, data_graphs):
+            return
+        if self.expand_iri("rc:GraphRevision") not in self._types_from_graphs(
+            data_graphs,
+            revision_iri,
+        ):
+            return
+        if self._objects(data_graphs, revision_iri, "rc:hasGraphPatch"):
+            return
+        applied_source = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:appliesStagedRevision",
+        )
+        if applied_source is not None:
+            raise DoxaBaseError(
+                "export_staged_revisions only accepts staged patch revisions; "
+                f"'{iri}' is an applied revision event. Use "
+                "describe_graph_revision or describe_revision_lineage for the "
+                "applied event, or pass the applied event's staged source IRI "
+                f"'{applied_source}'."
+            )
+        raise DoxaBaseError(
+            "export_staged_revisions only accepts staged patch revisions; "
+            f"graph revision '{iri}' has no staged patch entries. Use "
+            "describe_graph_revision for revision metadata instead."
         )
 
     def _staged_revision_apply_check_for_export(

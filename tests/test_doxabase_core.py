@@ -2206,6 +2206,20 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         staged.revision_iri
     ]
 
+    with pytest.raises(DoxaBaseError) as mixed_export_exc:
+        db.export_staged_revisions(
+            [staged.revision_iri, result.applied_revision_iri],
+            tmp_path / "mixed-applied-event-review.md",
+        )
+
+    mixed_export_message = str(mixed_export_exc.value)
+    assert "export_staged_revisions only accepts staged patch revisions" in (
+        mixed_export_message
+    )
+    assert "applied revision event" in mixed_export_message
+    assert result.applied_revision_iri in mixed_export_message
+    assert staged.revision_iri in mixed_export_message
+
 
 def test_stale_project_import_suggests_snapshot_json_before_restaging(
     tmp_path: Path,
@@ -7989,6 +8003,13 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         "repair_or_replace": [revision_iris[0]],
         "apply_after_review": [revision_iris[1], revision_iris[2]],
     }
+    assert any(
+        "First framing 'Incomplete map scope without timezone evidence'" in warning
+        and "failed staged validation" in warning
+        and revision_iris[0] in warning
+        and "link_alternatives=False" in warning
+        for warning in draft.warnings
+    )
     assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
     assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
     assert draft.suggested_next_actions[0].arguments["path"].startswith(

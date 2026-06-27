@@ -1099,9 +1099,14 @@ few useful gaps:
   lore in addition to the specific pattern you just recorded.
 - An awkward systematisation trial confirmed caller-authored competing framings,
   shared shapes, validation failures, support roll-up, and grouped exports worked.
-  Docs now remind agents that later framings default to alternatives of the first
-  framing, so intentionally invalid probes should not be first unless that is the
-  desired comparison anchor.
+  The runtime now warns when later framings are linked as alternatives to a
+  first framing that did not route to `apply_after_review`, and docs remind
+  agents that intentionally invalid probes should not be first unless that is
+  the desired comparison anchor.
+- A staged-lineage/rebase trial found agents naturally tried to include an
+  applied event IRI in a grouped staged-review export. Grouped staged exports now
+  fail with a route-specific message: pass staged patch IRIs, and inspect
+  applied events with graph revision, lineage, or applied-diff helpers.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

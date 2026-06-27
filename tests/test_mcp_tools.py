@@ -1714,6 +1714,18 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     )
     assert sibling_check["status"] == "conflict"
     assert "target_count_drift" in sibling_check["blocking_reasons"]
+    with pytest.raises(DoxaBaseError) as export_exc:
+        export_staged_revisions_tool(
+            db,
+            revision_iris=[staged["revision_iri"], result["applied_revision_iri"]],
+            path=str(tmp_path / "mixed-applied-event-review.md"),
+        )
+    export_message = str(export_exc.value)
+    assert "export_staged_revisions only accepts staged patch revisions" in (
+        export_message
+    )
+    assert "applied revision event" in export_message
+    assert staged["revision_iri"] in export_message
 
 
 def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) -> None:
@@ -1863,6 +1875,68 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert "## Summary" in exported
     assert "Pattern first" in exported
     assert "Map candidate" in exported
+
+
+def test_stage_systematisation_tool_warns_when_first_anchor_fails(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shared_shape = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+    ex:ThingShape a sh:NodeShape ;
+        sh:targetClass ex:Thing ;
+        sh:property [
+            sh:path ex:required ;
+            sh:minCount 1
+        ] .
+    """
+    incomplete_map = """
+    @prefix ex: <https://example.test/project#> .
+
+    ex:Thing1 a ex:Thing .
+    """
+    complete_map = """
+    @prefix ex: <https://example.test/project#> .
+
+    ex:Thing1 a ex:Thing ;
+        ex:required ex:Value .
+    """
+
+    result = stage_systematisation_tool(
+        db,
+        summary="Compare thing framings",
+        intent="Keep a diagnostic invalid framing beside a valid map framing.",
+        shared_additions=[{"graph": "shapes", "content": shared_shape}],
+        framings=[
+            {
+                "label": "Diagnostic incomplete thing",
+                "graph": "map",
+                "content": incomplete_map,
+            },
+            {
+                "label": "Complete thing",
+                "graph": "map",
+                "content": complete_map,
+            },
+        ],
+    )
+
+    revision_iris = [
+        revision["revision_iri"] for revision in result["staged_revisions"]
+    ]
+    assert result["next_action_queue"] == {
+        "repair_or_replace": [revision_iris[0]],
+        "apply_after_review": [revision_iris[1]],
+    }
+    assert any(
+        "First framing 'Diagnostic incomplete thing'" in warning
+        and "failed staged validation" in warning
+        and revision_iris[0] in warning
+        and "link_alternatives=False" in warning
+        for warning in result["warnings"]
+    )
 
 
 def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) -> None:

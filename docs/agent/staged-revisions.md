@@ -457,6 +457,10 @@ before applying, repairing, or restaging if any graph changes may have happened
 since the draft was created. Suggested export paths include a revision-derived
 slug and short hash so parallel trials do not all point at the same `/tmp`
 filename. Override the path when a run directory should own the artifact.
+Grouped staged exports accept staged patch revision IRIs. If you have an
+applied event IRI, inspect it with `describe_graph_revision`,
+`describe_revision_lineage`, or `describe_applied_revision_diff`, or pass the
+applied event's staged source IRI to the grouped export.
 
 The staged revision rationale records the systematisation intent, anchors,
 overall rationale, shared-context summary, and framing-specific rationale. The
@@ -469,6 +473,10 @@ staged revision. Use anchors for resources the hunch is about, such as columns,
 tables, caveats, relationships, observations, or patterns. Do not use anchors as
 a substitute for evidence: supporting observations, claims, patterns, and
 evidence links still carry the justification for the proposal.
+When `link_alternatives=True`, later framings are linked to the first framing by
+default. If the first framing is diagnostic, complementary, or fails validation,
+the runtime warns because it may be a poor comparison anchor; pass
+`alternative_to=...` explicitly or set `link_alternatives=False` for that run.
 
 ## Pattern-Supported Promotion
 
