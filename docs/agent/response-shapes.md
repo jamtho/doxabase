@@ -482,6 +482,8 @@ context.seed_profile_observations
 context.dataset_contexts
 context.pattern_contexts
 context.warnings
+context.suggested_next_actions
+context.suggested_next_calls
 ```
 
 `seed_iris` is the input argument name. The returned field is `seeds` in Python
@@ -521,6 +523,12 @@ beyond the exact seed while avoiding unrelated dataset leakage.
 for explicit profile-observation seeds and profile observations reached from
 observed-profile-metric, metric-kind, or observed-column seeds, even when those
 rows are older than the bounded `dataset_contexts[].profile_observations` slice.
+When `truncated=true`, `suggested_next_actions` first offers narrower
+`describe_context_slice(..., profile="pattern_brief")` calls for linked pattern
+contexts, then a same-seed retry with `max_triples` raised to
+`candidate_triple_count` for cases that truly need complete raw RDF. Use the
+pattern action before raising the cap when the structured pattern summary is
+enough.
 
 Each item in `context.resources` is a `ContextSliceResource`:
 

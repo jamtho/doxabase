@@ -2324,6 +2324,8 @@ class ContextSlice:
     dataset_contexts: list[DatasetDescription]
     pattern_contexts: list[PatternDescription]
     warnings: list[str]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -6994,6 +6996,15 @@ class DoxaBase:
                 truncated=truncated,
             )
         )
+        suggested_next_actions = self._context_slice_next_actions(
+            seed_iris=seeds,
+            profile=profile,
+            max_triples=max_triples,
+            include_trig=include_trig,
+            candidate_triple_count=candidate_triple_count,
+            truncated=truncated,
+            pattern_contexts=pattern_contexts.values(),
+        )
 
         return ContextSlice(
             profile=profile,
@@ -7026,7 +7037,91 @@ class DoxaBase:
             dataset_contexts=list(dataset_contexts.values()),
             pattern_contexts=list(pattern_contexts.values()),
             warnings=warnings,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
         )
+
+    def _context_slice_next_actions(
+        self,
+        *,
+        seed_iris: list[str],
+        profile: str,
+        max_triples: int,
+        include_trig: bool,
+        candidate_triple_count: int,
+        truncated: bool,
+        pattern_contexts: Iterable[PatternDescription],
+    ) -> list[SuggestedNextAction]:
+        if not truncated:
+            return []
+        actions: list[SuggestedNextAction] = []
+
+        def add_action(
+            arguments: dict[str, Any],
+            reason: str,
+            *,
+            action_label: str,
+        ) -> None:
+            actions.append(
+                SuggestedNextAction(
+                    action_label=action_label,
+                    tool_name="describe_context_slice",
+                    mcp_tool_name="doxabase.describe_context_slice",
+                    arguments=arguments,
+                    reason=reason,
+                    call=self._suggested_call_string(
+                        "describe_context_slice",
+                        arguments,
+                    ),
+                )
+            )
+
+        seen_pattern_iris: set[str] = set()
+        for pattern_context in pattern_contexts:
+            if pattern_context.iri in seen_pattern_iris:
+                continue
+            seen_pattern_iris.add(pattern_context.iri)
+            if profile == "pattern_brief":
+                continue
+            arguments: dict[str, Any] = {
+                "seed_iris": [pattern_context.iri],
+                "profile": "pattern_brief",
+                "max_triples": max_triples,
+            }
+            if include_trig:
+                arguments["include_trig"] = True
+            add_action(
+                arguments,
+                (
+                    "Raw triples were truncated, but this linked pattern has "
+                    "structured context. Rerun around the pattern for a smaller "
+                    "pattern-focused handoff before raising max_triples."
+                ),
+                action_label="Narrow to pattern context",
+            )
+            if len(actions) >= 3:
+                break
+
+        full_triple_cap = max(candidate_triple_count, max_triples)
+        arguments = {
+            "seed_iris": seed_iris,
+            "profile": profile,
+            "max_triples": full_triple_cap,
+        }
+        if include_trig:
+            arguments["include_trig"] = True
+        add_action(
+            arguments,
+            (
+                "Use this only when exact raw RDF triples are needed; "
+                "structured resources, route counts, and context summaries are "
+                "already complete despite the raw triple cap."
+            ),
+            action_label="Return full raw RDF for slice",
+        )
+        return actions
 
     @staticmethod
     def _context_slice_structured_context_warnings(
@@ -7042,8 +7137,6 @@ class DoxaBase:
             for dataset in dataset_contexts
             if len(dataset.columns) >= 50
         ]
-        if resource_count < 100 and not wide_datasets:
-            return []
         details: list[str] = []
         if resource_count >= 100:
             details.append(f"{resource_count} selected resource(s)")
@@ -7055,11 +7148,14 @@ class DoxaBase:
             if len(wide_datasets) > 3:
                 dataset_notes.append(f"{len(wide_datasets) - 3} more wide dataset(s)")
             details.append("; ".join(dataset_notes))
+        detail_text = f" ({'; '.join(details)})" if details else ""
         return [
             "Context slice raw RDF was truncated by max_triples, but structured "
-            "contexts are still returned in full "
-            f"({'; '.join(details)}). Use a narrower column, profile, metric, or "
-            "pattern seed for a smaller handoff."
+            "contexts are still returned in full"
+            f"{detail_text}. Use a narrower column, profile, metric, or pattern "
+            "seed for a smaller handoff; suggested_next_actions names concrete "
+            "pattern seeds when available and raises max_triples only when exact "
+            "raw RDF is needed."
         ]
 
     def _context_slice_profile_mismatch_warning(

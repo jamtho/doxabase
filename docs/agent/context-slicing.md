@@ -104,6 +104,10 @@ Useful fields:
   not match the selected profile, the warning names the seed type and the profile
   to retry, for example rerunning an `rc:Pattern` seed with `pattern_brief` or
   `deep_lore`.
+- `suggested_next_actions` and `suggested_next_calls`: structured follow-up
+  routes when raw triples are truncated. Pattern narrowing actions come before
+  the same-seed higher-`max_triples` retry because structured context is often
+  enough.
 - `triples`: selected RDF triples, preserving graph roles.
 - `trig`: optional TriG text when `include_trig=true`.
 - `resource_count`, `candidate_triple_count`, `returned_triple_count`, and
@@ -119,7 +123,8 @@ When `truncated=true`, read `warnings` before assuming the returned payload is
 small. Raw RDF is capped by `max_triples`, but structured contexts still return
 their full selected summaries; wide datasets or very broad seed sets emit a
 warning and should usually be narrowed to a column, profile, metric, or pattern
-seed for a smaller handoff.
+seed for a smaller handoff. Follow `suggested_next_actions` to narrow to linked
+patterns first; raise `max_triples` only when exact raw RDF triples are needed.
 Mapped column seeds narrow the route explanation and raw RDF neighborhood, but
 `dataset_contexts` still includes the owning dataset's full selected column
 inventory; use a profile, metric, or pattern seed when the full table inventory

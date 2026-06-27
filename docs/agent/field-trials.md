@@ -1443,8 +1443,8 @@ few useful gaps:
   `describe_revision_snapshot_evidence` or JSON `snapshot_evidence` fields for
   positive script checks. Truncated column-seeded `deep_lore` slices can still
   answer subtle promotion questions through structured resources and route
-  counts, but a future pass should add a clearer narrowing cue when raw triples
-  are truncated.
+  counts; they now expose `suggested_next_actions` that narrow to linked
+  `pattern_brief` slices before offering a higher-`max_triples` raw RDF retry.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -14473,6 +14473,105 @@ def test_context_slice_column_seed_expands_claim_reconsideration_lore(
     )
 
 
+def test_context_slice_truncation_suggests_pattern_narrowing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/payments#transactions"
+    column = "https://example.test/payments#transactions__merchant_category"
+    db.record_map_dataset(dataset, label="Payments transactions", is_table=True)
+    db.record_map_column(
+        column,
+        table_iri=dataset,
+        column_name="merchant_category",
+        physical_type="rc:Varchar",
+    )
+    claim = db.record_claim_observation(
+        summary="Merchant category needs acquirer-specific caveats.",
+        claim_text=(
+            "merchant_category is acquirer-normalized and should not be treated "
+            "as a universal closed domain."
+        ),
+        claim_kind="rc:CaveatClaim",
+        claim_targets=[column],
+        evidence_sources=["scratch://merchant-category-review.json"],
+    )
+    pattern = db.record_pattern(
+        summary="Merchant category claims require acquirer caveats.",
+        pattern_text="Use the caveat claim before reusing merchant category.",
+        rationale="The claim targets the mapped column.",
+        pattern_targets=[column],
+        supporting_claims=[claim.claim_iri],
+    )
+
+    context_slice = db.describe_context_slice(
+        [column],
+        profile="deep_lore",
+        max_triples=5,
+    )
+
+    assert context_slice.truncated is True
+    assert context_slice.pattern_contexts[0].iri == pattern.pattern_iri
+    assert any(
+        "suggested_next_actions" in warning
+        for warning in context_slice.warnings
+    )
+    assert [
+        action.action_label for action in context_slice.suggested_next_actions
+    ] == [
+        "Narrow to pattern context",
+        "Return full raw RDF for slice",
+    ]
+    assert context_slice.suggested_next_actions[0].arguments == {
+        "seed_iris": [pattern.pattern_iri],
+        "profile": "pattern_brief",
+        "max_triples": 5,
+    }
+    assert context_slice.suggested_next_actions[1].arguments == {
+        "seed_iris": [column],
+        "profile": "deep_lore",
+        "max_triples": context_slice.candidate_triple_count,
+    }
+    assert context_slice.suggested_next_calls == [
+        action.call for action in context_slice.suggested_next_actions
+    ]
+
+
+def test_truncated_pattern_context_slice_does_not_suggest_self_narrowing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    pattern_targets = [
+        f"https://example.test/project#Resource{index:02d}"
+        for index in range(20)
+    ]
+    for target in pattern_targets:
+        db.record_map_dataset(target, label=target.rsplit("#", 1)[-1])
+    pattern = db.record_pattern(
+        summary="Wide pattern for truncation routing.",
+        pattern_text="A deliberately wide pattern touches many resources.",
+        rationale="Exercise pattern_brief truncation actions without self-looping.",
+        pattern_targets=pattern_targets,
+        evidence_sources=["test://wide-pattern"],
+    )
+
+    context_slice = db.describe_context_slice(
+        [pattern.pattern_iri],
+        profile="pattern_brief",
+        max_triples=5,
+    )
+
+    assert context_slice.truncated is True
+    assert [
+        action.action_label for action in context_slice.suggested_next_actions
+    ] == ["Return full raw RDF for slice"]
+    assert context_slice.suggested_next_actions[0].arguments == {
+        "seed_iris": [pattern.pattern_iri],
+        "profile": "pattern_brief",
+        "max_triples": context_slice.candidate_triple_count,
+    }
+
+
 def test_record_pattern_links_observations_claims_evidence_and_targets(
     tmp_path: Path,
 ) -> None:

@@ -3511,6 +3511,25 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     assert result["truncation_scope"] == "triples_only"
     assert result["truncated"] is True
     assert result["omitted_triple_count"] > 0
+    assert [
+        action["action_label"] for action in result["suggested_next_actions"]
+    ] == [
+        "Narrow to pattern context",
+        "Return full raw RDF for slice",
+    ]
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "seed_iris": [pattern["pattern_iri"]],
+        "profile": "pattern_brief",
+        "max_triples": 120,
+    }
+    assert result["suggested_next_actions"][1]["arguments"] == {
+        "seed_iris": [seed_iri],
+        "profile": "dataset_brief",
+        "max_triples": result["candidate_triple_count"],
+    }
+    assert result["suggested_next_calls"] == [
+        action["call"] for action in result["suggested_next_actions"]
+    ]
     assert result["triples"][0]["subject"] == seed_iri
     assert result["trig"] is None
     resources_by_iri = {resource["iri"]: resource for resource in result["resources"]}
