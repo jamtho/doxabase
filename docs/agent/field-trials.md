@@ -1665,6 +1665,25 @@ few useful gaps:
   warnings are routing well. The durable review lesson is that staged revision
   `supporting_patterns` are direct support, while `impacts[].related_patterns`
   may include nearby metric/type advisory lore.
+- Post-fix retests confirmed the recent storage, resource-list, lineage, and
+  profile-support changes held up. Storage protocol/location repair hints were
+  scriptable across non-S3 bucket/prefix metadata, root-scheme mismatch,
+  path-template scheme mismatch, S3 bucket/prefix conflict, and repeated
+  key-prefix cases; templated protocol/location actions now expose
+  `placeholder_fields` and `reviewed_value_fields` so generic repair scripts
+  know which argument needs the reviewed value. The resource current-work
+  filter still depends on `include_patch_mentions=True`: a noisy resource
+  family with applied events, handled stale ancestors, patch-only live work, a
+  semantic-gated alternative, and a newer manual history row should return only
+  the live patch-only rows with `current_staged_work_only=True`, while
+  `include_patch_mentions=False` remains unsafe for unanchored patch-only
+  mutation queues. Lineage `next_action_queue_item` resolved the row-vs-target
+  ambiguity after a staged alternative lost the race to an applied branch; the
+  next larger staged-revision gap is a read-first
+  `draft_staged_revision_rebase(...)` helper for validation-failed or stale
+  overlapping alternatives, not another list/join tweak. Profile support versus
+  impact routing still looks right: `supporting_patterns` stays direct, while
+  `impacts[].related_patterns` carries broader metric/type review context.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

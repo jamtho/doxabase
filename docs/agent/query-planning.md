@@ -229,7 +229,9 @@ When `storage_protocol_location_mismatch` appears, read
 `details.repair_hint` before hand-authoring a repair. It offers reviewed
 `stage_map_assertion_change` templates for fixing protocol/root/bucket/prefix
 metadata and, when a path template caused the mismatch, adding a reviewed
-replacement template or removing the conflicting exact template.
+replacement template or removing the conflicting exact template. Templated
+protocol/location actions name `placeholder_fields` and
+`reviewed_value_fields` for the reviewed value to copy into the call.
 
 Database candidates currently use the generic draft-plan shape. A relation can
 be metadata-ready in `describe_query_context()` while

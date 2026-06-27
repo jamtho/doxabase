@@ -12196,6 +12196,8 @@ class DoxaBase:
                     "change_kind": "replace",
                     "graph": "map",
                 },
+                "placeholder_fields": ["object"],
+                "reviewed_value_fields": ["object"],
                 "condition": (
                     "Use when review shows the recorded storage protocol is the "
                     "wrong one for the true storage location."
@@ -12218,6 +12220,8 @@ class DoxaBase:
                     "change_kind": "replace",
                     "graph": "map",
                 },
+                "placeholder_fields": ["object"],
+                "reviewed_value_fields": ["object"],
                 "condition": (
                     "Use when review shows the protocol is right but the root, "
                     "URL, or connection reference is malformed or in the wrong "
@@ -12241,6 +12245,8 @@ class DoxaBase:
                     "change_kind": "replace",
                     "graph": "map",
                 },
+                "placeholder_fields": ["object"],
+                "reviewed_value_fields": ["object"],
                 "condition": (
                     "Use for S3-compatible storage when review confirms the "
                     "bucket should be recorded separately from path templates."
@@ -12263,6 +12269,8 @@ class DoxaBase:
                     "change_kind": "replace",
                     "graph": "map",
                 },
+                "placeholder_fields": ["object"],
+                "reviewed_value_fields": ["object"],
                 "condition": (
                     "Use for S3-compatible storage when review confirms the "
                     "prefix should be recorded separately from path templates."
@@ -12339,6 +12347,8 @@ class DoxaBase:
                             "change_kind": "add",
                             "graph": "map",
                         },
+                        "placeholder_fields": ["object"],
+                        "reviewed_value_fields": ["object"],
                         "condition": (
                             "Use when review confirms the template value should "
                             "be corrected while preserving the source resource."

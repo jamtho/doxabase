@@ -1813,6 +1813,8 @@ repair_hint.actions[].action_label
 repair_hint.actions[].reason
 repair_hint.actions[].required_extra_arguments
 repair_hint.actions[].rationale_template
+repair_hint.actions[].placeholder_fields
+repair_hint.actions[].reviewed_value_fields
 repair_hint.actions[].arguments_template
 repair_hint.actions[].arguments
 repair_hint.actions[].condition
@@ -1820,7 +1822,10 @@ repair_hint.actions[].condition
 
 Add actions use `arguments_template` with placeholders for reviewed values and
 caller rationale; remove actions may use ready `arguments` plus the same
-required `rationale` field. `ambiguous_physical_layout` includes
+required `rationale` field. Storage protocol/location repair templates also
+name `placeholder_fields` and `reviewed_value_fields` so generic repair scripts
+can replace reviewed values without issue-specific field guessing.
+`ambiguous_physical_layout` includes
 the distinct file-format/compression signatures and linked layout IRIs; when it
 is present, `draft_query_plan` leaves `scan.function` unset instead of guessing
 from the first layout. After reviewing those layouts, pass

@@ -8525,6 +8525,196 @@ def test_list_resource_revisions_filters_current_staged_work_before_pagination(
     assert hidden_patch_only_live_work.patch_mention_scan.status == "not_requested"
 
 
+def test_list_resource_revisions_filters_noisy_patch_only_current_work(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    applied_source = db.stage_graph_revision(
+        summary="Add applied Orders note",
+        rationale="Creates historical patch-only rows for the resource family.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Historical applied note." .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    applied_source_event = db.apply_staged_revision(
+        applied_source.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+    stale_simple = db.stage_graph_revision(
+        summary="Add current Orders note",
+        rationale="Patch-only current work should survive live-work filtering.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Current operations note." .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:02:00Z",
+    )
+    applied_alternative = db.stage_graph_revision(
+        summary="Model Orders as event rows",
+        rationale="First semantic alternative for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Event-row interpretation." .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:03:00Z",
+    )
+    stale_alternative = db.stage_graph_revision(
+        summary="Model Orders as snapshot rows",
+        rationale="Competing semantic alternative for review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Snapshot-row interpretation." .
+                """,
+            }
+        ],
+        alternative_to=applied_alternative.revision_iri,
+        created_at="2026-06-01T10:04:00Z",
+    )
+    applied_alternative_event = db.apply_staged_revision(
+        applied_alternative.revision_iri,
+        created_at="2026-06-01T10:05:00Z",
+    )
+    simple_current = db.restage_staged_revision(
+        stale_simple.revision_iri,
+        created_at="2026-06-01T10:06:00Z",
+    )
+    semantic_current = db.restage_staged_revision(
+        stale_alternative.revision_iri,
+        created_at="2026-06-01T10:07:00Z",
+    )
+    manual_history = db.record_graph_revision(
+        summary="Manual Orders review note",
+        rationale="Newest anchored non-staged history should not enter live work.",
+        changed_graphs=["map"],
+        revision_anchors=[orders],
+        created_at="2026-06-01T10:08:00Z",
+    )
+
+    full_page = db.list_resource_revisions(
+        orders,
+        include_apply_checks=True,
+        limit=1,
+        offset=0,
+    )
+    assert full_page.count == 9
+    assert full_page.revisions[0].revision.iri == manual_history.revision_iri
+    full_listing = db.list_resource_revisions(
+        orders,
+        include_apply_checks=True,
+    )
+    by_iri = {item.revision.iri: item for item in full_listing.revisions}
+    assert by_iri[manual_history.revision_iri].revision.record_kind == (
+        "history_record"
+    )
+    assert by_iri[applied_source.revision_iri].revision.application_status == (
+        "already_applied"
+    )
+    assert by_iri[applied_source_event.applied_revision_iri].revision.record_kind == (
+        "applied_event"
+    )
+    assert by_iri[stale_simple.revision_iri].revision.stale_resolution_state == (
+        "stale_handled_by_restage"
+    )
+    assert by_iri[stale_alternative.revision_iri].revision.stale_resolution_state == (
+        "stale_handled_by_restage"
+    )
+
+    live_listing = db.list_resource_revisions(
+        orders,
+        include_apply_checks=False,
+        current_staged_work_only=True,
+    )
+    assert live_listing.current_staged_work_only is True
+    assert live_listing.include_apply_checks is True
+    assert live_listing.count == 2
+    assert [item.revision.iri for item in live_listing.revisions] == [
+        semantic_current.revision_iri,
+        simple_current.revision_iri,
+    ]
+    assert [item.match_types for item in live_listing.revisions] == [
+        ["patch_subject"],
+        ["patch_subject"],
+    ]
+    assert all(
+        item.revision.is_current_staged_work for item in live_listing.revisions
+    )
+    assert live_listing.next_action_queue == {
+        "apply_after_review": [
+            semantic_current.revision_iri,
+            simple_current.revision_iri,
+        ]
+    }
+    semantic_queue_item = next(
+        item
+        for item in live_listing.next_action_queue_items
+        if item.row_iri == semantic_current.revision_iri
+    )
+    assert semantic_queue_item.row_is_target is True
+    assert semantic_queue_item.resolved_target_iri == semantic_current.revision_iri
+    assert semantic_queue_item.alternative_semantic_review_required is True
+    assert semantic_queue_item.alternative_applied_source_iri == (
+        applied_alternative.revision_iri
+    )
+    assert semantic_queue_item.alternative_applied_revision_iri == (
+        applied_alternative_event.applied_revision_iri
+    )
+
+    first_live_page = db.list_resource_revisions(
+        orders,
+        current_staged_work_only=True,
+        limit=1,
+        offset=0,
+    )
+    second_live_page = db.list_resource_revisions(
+        orders,
+        current_staged_work_only=True,
+        limit=1,
+        offset=1,
+    )
+    assert first_live_page.count == 2
+    assert second_live_page.count == 2
+    assert first_live_page.revisions[0].revision.iri == semantic_current.revision_iri
+    assert second_live_page.revisions[0].revision.iri == simple_current.revision_iri
+
+    hidden_patch_only_live_work = db.list_resource_revisions(
+        orders,
+        include_patch_mentions=False,
+        current_staged_work_only=True,
+    )
+    assert hidden_patch_only_live_work.count == 0
+    assert hidden_patch_only_live_work.patch_mention_scan.status == "not_requested"
+
+
 def test_list_resource_revisions_marks_unreadable_patch_mentions_incomplete(
     tmp_path: Path,
 ) -> None:
@@ -11600,6 +11790,21 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
         "change_kind": "replace",
         "graph": "map",
     }
+    assert action_by_type["set_reviewed_storage_protocol"]["placeholder_fields"] == [
+        "object"
+    ]
+    assert action_by_type["set_reviewed_storage_protocol"][
+        "reviewed_value_fields"
+    ] == ["object"]
+    assert action_by_type["set_reviewed_storage_root"]["placeholder_fields"] == [
+        "object"
+    ]
+    assert action_by_type["set_reviewed_bucket_name"]["placeholder_fields"] == [
+        "object"
+    ]
+    assert action_by_type["set_reviewed_key_prefix"]["placeholder_fields"] == [
+        "object"
+    ]
     assert action_by_type["remove_conflicting_bucket_name"]["arguments"] == {
         "subject": storage.iri,
         "predicate": "rc:bucketName",
@@ -11924,6 +12129,12 @@ def test_describe_query_context_warns_on_complete_template_protocol_mismatch(
         "change_kind": "add",
         "graph": "map",
     }
+    assert action_by_type["add_reviewed_path_template"]["placeholder_fields"] == [
+        "object"
+    ]
+    assert action_by_type["add_reviewed_path_template"][
+        "reviewed_value_fields"
+    ] == ["object"]
     assert action_by_type["remove_conflicting_path_template"]["arguments"] == {
         "subject": storage.iri,
         "predicate": "rc:pathTemplate",

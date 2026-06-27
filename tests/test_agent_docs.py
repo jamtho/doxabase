@@ -87,5 +87,7 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     assert "repair_hint.actions[].required_extra_arguments" in (
         query_context_content
     )
+    assert "repair_hint.actions[].placeholder_fields" in query_context_content
+    assert "repair_hint.actions[].reviewed_value_fields" in query_context_content
     assert "repair_hint.actions[].arguments_template" in query_context_content
     assert "repair_hint.actions[].arguments" in query_context_content

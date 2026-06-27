@@ -503,6 +503,9 @@ database storage without a storage-access relation template is also review-only
 with `database_relation_template_missing`, even when `location_kind="object"`;
 read `issues[].details.repair_hint` for the reviewed add-template action on the
 storage access.
+For storage protocol/location mismatch repairs, templated actions also name
+`placeholder_fields` and `reviewed_value_fields` for the reviewed value to fill
+in.
 When `missing_storage_access` appears, read `issues[].details.repair_hint` for
 reviewed repair templates: record a non-secret storage access and link it to the
 dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing

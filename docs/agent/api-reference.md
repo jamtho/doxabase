@@ -282,6 +282,8 @@ reviewed relation identifier to the storage access, then remove the misplaced
 source template only if it was relation metadata rather than a real file/object
 path. Protocol/location hints offer reviewed protocol/root/bucket/prefix edits
 and exact path-template add/remove repairs when a template caused the mismatch.
+Their templated actions name `placeholder_fields` and `reviewed_value_fields`
+for the reviewed value to fill in.
 Each repair action declares
 `required_extra_arguments=["rationale"]`; add a reviewed rationale to the copied
 arguments before calling `stage_map_assertion_change`. It does not generate SQL
