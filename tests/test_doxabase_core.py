@@ -3913,10 +3913,61 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert applied.applied_source.restage_reason is not None
     assert "prior status conflict" in applied.applied_source.restage_reason
     assert applied.applied_source.patch_count == 1
+    stale_check_after_apply = db.check_staged_revision_apply(staged.revision_iri)
+    assert stale_check_after_apply.status == "conflict"
+    assert stale_check_after_apply.restaged_by == restaged.revision_iri
+    assert stale_check_after_apply.current_restaged_by == restaged.revision_iri
+    assert (
+        stale_check_after_apply.stale_resolution_state
+        == "stale_handled_by_restage"
+    )
+    assert result.applied_revision_iri in stale_check_after_apply.summary
+    assert stale_check_after_apply.recommended_resolution is not None
+    assert result.applied_revision_iri in (
+        stale_check_after_apply.recommended_resolution
+    )
+    assert stale_check_after_apply.next_action is not None
+    assert stale_check_after_apply.next_action.action_type == (
+        "inspect_already_applied"
+    )
+    assert stale_check_after_apply.next_action.queue == "inspect_already_applied"
+    assert stale_check_after_apply.next_action.tool_name == "describe_graph_revision"
+    assert stale_check_after_apply.next_action.arguments == {
+        "iri": result.applied_revision_iri
+    }
+    assert stale_check_after_apply.suggested_next_actions[0].action_label == (
+        "Inspect applied restaged successor"
+    )
+    assert stale_check_after_apply.suggested_next_actions[0].tool_name == (
+        "describe_graph_revision"
+    )
+    assert stale_check_after_apply.suggested_next_actions[0].arguments == {
+        "iri": result.applied_revision_iri
+    }
+    assert stale_check_after_apply.suggested_next_actions[1].tool_name == (
+        "describe_applied_revision_diff"
+    )
+    assert stale_check_after_apply.suggested_next_actions[1].arguments == {
+        "iri": result.applied_revision_iri
+    }
     applied_grouped_export = db.export_staged_revisions(
         [staged.revision_iri, restaged.revision_iri],
         tmp_path / "applied-restaged-comparison.md",
     )
+    applied_stale_summary = applied_grouped_export.revision_summaries[0]
+    assert applied_stale_summary.next_action is not None
+    assert applied_stale_summary.next_action.action_type == (
+        "inspect_already_applied"
+    )
+    assert applied_stale_summary.next_action.arguments == {
+        "iri": result.applied_revision_iri
+    }
+    assert applied_stale_summary.suggested_next_actions[0].tool_name == (
+        "describe_graph_revision"
+    )
+    assert applied_stale_summary.suggested_next_actions[0].arguments == {
+        "iri": result.applied_revision_iri
+    }
     assert applied_grouped_export.revision_summaries[1].stale_resolution_state == (
         "restaged_successor_already_applied"
     )
@@ -3927,6 +3978,64 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert db.describe_dataset("https://example.test/project#Messages").iri == (
         "https://example.test/project#Messages"
     )
+
+
+def test_list_graph_revisions_routes_handled_stale_to_applied_successor(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    source = db.stage_graph_revision(
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftMaker",
+        label="Drift maker",
+    )
+    successor = db.restage_staged_revision(
+        source.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+    applied = db.apply_staged_revision(
+        successor.revision_iri,
+        created_at="2026-06-01T10:02:00Z",
+    )
+
+    listing = db.list_graph_revisions(include_apply_checks=True)
+    by_iri = {item.iri: item for item in listing.revisions}
+    source_row = by_iri[source.revision_iri]
+
+    assert source_row.application_status == "conflict"
+    assert source_row.restaged_by == successor.revision_iri
+    assert source_row.current_restaged_by == successor.revision_iri
+    assert source_row.stale_resolution_state == "stale_handled_by_restage"
+    assert source_row.is_current_staged_work is False
+    assert source_row.next_action is not None
+    assert source_row.next_action.action_type == "inspect_already_applied"
+    assert source_row.next_action.queue == "inspect_already_applied"
+    assert source_row.next_action.tool_name == "describe_graph_revision"
+    assert source_row.next_action.arguments == {"iri": applied.applied_revision_iri}
+    assert source_row.suggested_next_actions[0].tool_name == (
+        "describe_graph_revision"
+    )
+    assert source_row.suggested_next_actions[0].arguments == {
+        "iri": applied.applied_revision_iri
+    }
+    assert listing.next_action_queue["inspect_already_applied"].count(
+        source.revision_iri
+    ) == 1
 
 
 def test_restage_staged_revision_preserves_patch_sequence(

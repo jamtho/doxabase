@@ -985,7 +985,13 @@ graph state", not as `already_applied`; there is no applied revision event or
 durable review lineage unless `already_applied` says so.
 When a conflicted stale source already has `restaged_by` /
 `current_restaged_by`, compact `next_action` routes to inspect the current
-successor and suggested mutations omit another restage.
+successor and suggested mutations omit another restage. If that current
+successor has already been applied, `current_restaged_by` still names the staged
+successor, but `next_action.arguments["iri"]` and the first suggested actions
+point to the applied event with `describe_graph_revision` /
+`describe_applied_revision_diff`. In list and export responses,
+`next_action_queue` values remain returned row IRIs; use the row-local action
+arguments for the actual call target.
 `snapshot_drifts` records staged/current `sha256:<hex>` digest
 mismatches, including same-count graph changes. For revisions staged with the
 current runtime, it also includes exact triples added to and removed from the

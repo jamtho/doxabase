@@ -20319,6 +20319,23 @@ class DoxaBase:
             return "noop"
         return "not_ready"
 
+    def _applied_event_for_staged_revision(
+        self,
+        staged_revision_iri: str | None,
+        *,
+        graphs: Iterable[str] | None = None,
+    ) -> str | None:
+        if staged_revision_iri is None:
+            return None
+        lookup_graphs = list(graphs) if graphs is not None else self._expand_graphs(
+            ["history"]
+        )
+        return self._first_subject(
+            lookup_graphs,
+            "rc:appliesStagedRevision",
+            staged_revision_iri,
+        )
+
     def _staged_apply_check_summary(
         self,
         *,
@@ -20348,6 +20365,15 @@ class DoxaBase:
         if status == "already_applied":
             return f"Already applied by {already_applied_by}."
         if status == "superseded_by_restage":
+            successor_iri = current_restaged_by or restaged_by
+            applied_successor_iri = self._applied_event_for_staged_revision(
+                successor_iri
+            )
+            if applied_successor_iri is not None:
+                return (
+                    "Superseded by a refreshed successor that was applied by "
+                    f"{applied_successor_iri}; inspect the applied event."
+                )
             return (
                 "Superseded by a refreshed successor; inspect the current "
                 "successor instead of applying this staged source."
@@ -20356,6 +20382,17 @@ class DoxaBase:
             first_conflict = conflicts[0] if conflicts else "(unknown conflict)"
             successor_iri = current_restaged_by or restaged_by
             if successor_iri is not None:
+                applied_successor_iri = self._applied_event_for_staged_revision(
+                    successor_iri
+                )
+                if applied_successor_iri is not None:
+                    return (
+                        "Handled by restage; refreshed successor "
+                        f"{successor_iri} was applied by {applied_successor_iri}. "
+                        "Stale source is still blocked by "
+                        f"{len(conflicts)} conflict(s); first conflict: "
+                        f"{first_conflict}"
+                    )
                 return (
                     "Handled by restage; inspect successor "
                     f"{successor_iri}. Stale source is still blocked by "
@@ -20370,6 +20407,16 @@ class DoxaBase:
             result_count = validation_result_count or 0
             successor_iri = current_restaged_by or restaged_by
             if successor_iri is not None:
+                applied_successor_iri = self._applied_event_for_staged_revision(
+                    successor_iri
+                )
+                if applied_successor_iri is not None:
+                    return (
+                        "Handled by restage; refreshed successor "
+                        f"{successor_iri} was applied by {applied_successor_iri}. "
+                        "Stale source validation still fails with "
+                        f"{result_count} result(s)."
+                    )
                 return (
                     "Handled by restage; inspect successor "
                     f"{successor_iri}. Stale source validation still fails "
@@ -20571,12 +20618,31 @@ class DoxaBase:
         if status == "already_applied":
             return "Inspect the applied revision event; do not apply this staged revision again."
         if status == "superseded_by_restage":
+            successor_iri = current_restaged_by or restaged_by
+            applied_successor_iri = self._applied_event_for_staged_revision(
+                successor_iri
+            )
+            if applied_successor_iri is not None:
+                return (
+                    "Inspect the applied revision event "
+                    f"'{applied_successor_iri}'; do not apply this superseded "
+                    "staged source."
+                )
             return (
                 "Inspect the current refreshed successor; do not apply this "
                 "superseded staged source."
             )
         if status == "conflict" and (current_restaged_by or restaged_by):
             successor_iri = current_restaged_by or restaged_by
+            applied_successor_iri = self._applied_event_for_staged_revision(
+                successor_iri
+            )
+            if applied_successor_iri is not None:
+                return (
+                    "This stale source already has a refreshed successor that "
+                    f"was applied by '{applied_successor_iri}'. Inspect the "
+                    "applied event instead of restaging the source again."
+                )
             return (
                 "This stale source already has a refreshed successor. Inspect "
                 f"'{successor_iri}' instead of restaging the source again."
@@ -20634,6 +20700,17 @@ class DoxaBase:
         if status == "validation_failed":
             if current_restaged_by or restaged_by:
                 successor_iri = current_restaged_by or restaged_by
+                applied_successor_iri = self._applied_event_for_staged_revision(
+                    successor_iri
+                )
+                if applied_successor_iri is not None:
+                    return (
+                        "This failed staged source already has a refreshed "
+                        "successor that was applied by "
+                        f"'{applied_successor_iri}'. Preserve this row for "
+                        "validation diagnostics and inspect the applied event "
+                        "instead of repairing the old source again."
+                    )
                 return (
                     "This failed staged source already has a refreshed "
                     f"successor '{successor_iri}'. Preserve this row for "
@@ -20685,6 +20762,34 @@ class DoxaBase:
                     call=self._suggested_call_string(tool_name, arguments),
                 )
             )
+
+        def add_applied_successor_actions(
+            successor_iri: str | None,
+        ) -> bool:
+            applied_successor_iri = self._applied_event_for_staged_revision(
+                successor_iri
+            )
+            if applied_successor_iri is None:
+                return False
+            add_action(
+                "describe_graph_revision",
+                {"iri": applied_successor_iri},
+                (
+                    "The refreshed successor has already been applied; inspect "
+                    "the applied event instead of stopping at the staged source."
+                ),
+                action_label="Inspect applied restaged successor",
+            )
+            add_action(
+                "describe_applied_revision_diff",
+                {"iri": applied_successor_iri},
+                (
+                    "Inspect the applied diff for the refreshed successor when "
+                    "exact before/after graph changes matter."
+                ),
+                action_label="Inspect applied successor diff",
+            )
+            return True
 
         if (
             status == "ready"
@@ -20781,15 +20886,16 @@ class DoxaBase:
             )
         elif status == "superseded_by_restage":
             successor_iri = current_restaged_by or restaged_by
-            add_action(
-                "describe_staged_revision",
-                {"iri": successor_iri or staged_revision_iri},
-                (
-                    "This staged source already has a refreshed successor; "
-                    "inspect the current successor instead of applying this row."
-                ),
-                action_label="Inspect current refreshed successor",
-            )
+            if not add_applied_successor_actions(successor_iri):
+                add_action(
+                    "describe_staged_revision",
+                    {"iri": successor_iri or staged_revision_iri},
+                    (
+                        "This staged source already has a refreshed successor; "
+                        "inspect the current successor instead of applying this row."
+                    ),
+                    action_label="Inspect current refreshed successor",
+                )
         elif status == "noop":
             add_action(
                 "describe_staged_revision",
@@ -20838,8 +20944,12 @@ class DoxaBase:
                 is_restageable_conflict
                 and self._patch_checks_have_no_effective_delta(patch_checks or [])
             )
+            applied_successor_actions_added = False
             if restaged_by is not None:
                 successor_iri = current_restaged_by or restaged_by
+                applied_successor_actions_added = add_applied_successor_actions(
+                    successor_iri
+                )
                 review_reason = (
                     "Inspect this stale source as prior context, then follow the "
                     f"current refreshed successor '{successor_iri}'."
@@ -20955,28 +21065,33 @@ class DoxaBase:
                 )
             elif restaged_by is not None:
                 successor_iri = current_restaged_by or restaged_by
+                if not applied_successor_actions_added:
+                    add_action(
+                        "describe_staged_revision",
+                        {"iri": successor_iri},
+                        (
+                            "Inspect the current refreshed successor instead of "
+                            "restaging this stale source again."
+                        ),
+                        action_label="Inspect current refreshed successor",
+                    )
+        elif status == "validation_failed" and restaged_by is not None:
+            successor_iri = current_restaged_by or restaged_by
+            applied_successor_actions_added = add_applied_successor_actions(
+                successor_iri
+            )
+            if not applied_successor_actions_added:
                 add_action(
                     "describe_staged_revision",
                     {"iri": successor_iri},
                     (
-                        "Inspect the current refreshed successor instead of "
-                        "restaging this stale source again."
+                        "This failed staged source already has a refreshed "
+                        "successor. Preserve this row's validation_results for "
+                        "diagnostics, then inspect the current successor instead "
+                        "of repairing the old source again."
                     ),
                     action_label="Inspect current refreshed successor",
                 )
-        elif status == "validation_failed" and restaged_by is not None:
-            successor_iri = current_restaged_by or restaged_by
-            add_action(
-                "describe_staged_revision",
-                {"iri": successor_iri},
-                (
-                    "This failed staged source already has a refreshed "
-                    "successor. Preserve this row's validation_results for "
-                    "diagnostics, then inspect the current successor instead "
-                    "of repairing the old source again."
-                ),
-                action_label="Inspect current refreshed successor",
-            )
             add_action(
                 "export_staged_revision",
                 {
@@ -21287,6 +21402,27 @@ class DoxaBase:
                 ),
             )
 
+        def applied_successor_action(
+            applied_revision_iri: str,
+            *,
+            action_label: str,
+            reason: str,
+        ) -> SuggestedNextAction:
+            exact_action = find_exact_action(action_label=action_label)
+            if exact_action is not None:
+                return exact_action
+            return SuggestedNextAction(
+                action_label=action_label,
+                tool_name="describe_graph_revision",
+                mcp_tool_name="doxabase.describe_graph_revision",
+                arguments={"iri": applied_revision_iri},
+                reason=reason,
+                call=self._suggested_call_string(
+                    "describe_graph_revision",
+                    {"iri": applied_revision_iri},
+                ),
+            )
+
         action_type = "inspect_staged_revision"
         queue = "informational"
         label = "Inspect staged revision"
@@ -21312,34 +21448,72 @@ class DoxaBase:
         elif stale_resolution_state == "stale_handled_by_restage" or (
             apply_status == "conflict" and (current_restaged_by or restaged_by)
         ):
-            action_type = "inspect_current_successor"
-            queue = "informational"
-            label = "Inspect current refreshed successor"
-            reason = (
-                "This stale source already has a refreshed successor; inspect "
-                "the current successor instead of restaging this row again."
+            successor_iri = current_restaged_by or restaged_by
+            applied_successor_iri = self._applied_event_for_staged_revision(
+                successor_iri
             )
-            selected_action = successor_inspect_action(
-                current_restaged_by or restaged_by or revision_iri,
-                action_label=label,
-                reason=reason,
-            )
+            if applied_successor_iri is not None:
+                action_type = "inspect_already_applied"
+                queue = "inspect_already_applied"
+                label = "Inspect applied restaged successor"
+                reason = (
+                    "This stale source has a refreshed successor that was "
+                    "already applied; inspect the applied event instead of "
+                    "restaging this row again."
+                )
+                selected_action = applied_successor_action(
+                    applied_successor_iri,
+                    action_label=label,
+                    reason=reason,
+                )
+            else:
+                action_type = "inspect_current_successor"
+                queue = "informational"
+                label = "Inspect current refreshed successor"
+                reason = (
+                    "This stale source already has a refreshed successor; inspect "
+                    "the current successor instead of restaging this row again."
+                )
+                selected_action = successor_inspect_action(
+                    successor_iri or revision_iri,
+                    action_label=label,
+                    reason=reason,
+                )
         elif (
             apply_decision == "inspect_current_successor"
             or apply_status == "superseded_by_restage"
         ):
-            action_type = "inspect_current_successor"
-            queue = "informational"
-            label = "Inspect current refreshed successor"
-            reason = (
-                "This staged source has a refreshed successor; inspect the "
-                "current successor instead of applying this row."
+            successor_iri = current_restaged_by or restaged_by
+            applied_successor_iri = self._applied_event_for_staged_revision(
+                successor_iri
             )
-            selected_action = successor_inspect_action(
-                current_restaged_by or restaged_by or revision_iri,
-                action_label=label,
-                reason=reason,
-            )
+            if applied_successor_iri is not None:
+                action_type = "inspect_already_applied"
+                queue = "inspect_already_applied"
+                label = "Inspect applied restaged successor"
+                reason = (
+                    "This staged source has a refreshed successor that was "
+                    "already applied; inspect the applied event instead of "
+                    "applying this row."
+                )
+                selected_action = applied_successor_action(
+                    applied_successor_iri,
+                    action_label=label,
+                    reason=reason,
+                )
+            else:
+                action_type = "inspect_current_successor"
+                queue = "informational"
+                label = "Inspect current refreshed successor"
+                reason = (
+                    "This staged source has a refreshed successor; inspect the "
+                    "current successor instead of applying this row."
+                )
+                selected_action = successor_inspect_action(
+                    successor_iri or revision_iri,
+                    action_label=label,
+                    reason=reason,
+                )
         elif apply_decision == "inspect_restaged_source_validation_failure":
             action_type = "repair_or_replace"
             queue = "repair_or_replace"

@@ -223,7 +223,10 @@ For fast routing, prefer the queue fields in this order:
 
 Treat that as a triage queue, not an apply queue. It can include ready mutation
 candidates, validation-failed repair work, no-op rows, and stale refreshed
-successors. Use `application_status="ready"` when you want only mechanically
+successors. `next_action_queue` groups returned row IRIs, not necessarily the
+target IRI for the next call; read each row's `next_action.arguments["iri"]`
+because a handled stale source can route to the applied event of its restaged
+successor. Use `application_status="ready"` when you want only mechanically
 ready candidates. Use `application_status="validation_failed"` to find rows
 whose current replay still fails SHACL validation. The
 `staged_validation_status` filter values are `conforms`, `failed`, and
@@ -453,6 +456,13 @@ For a stale-restage-apply handoff between capsules:
 6. Run `import_revision_snapshots(snapshot_path)` and verify
    `post_import_snapshot_evidence` or `describe_revision_snapshot_evidence()`
    reaches `history_plus_snapshot_rows`.
+
+After the successor is applied, direct routes from the older stale source keep
+`restaged_by` / `current_restaged_by` pointing at the staged successor, but
+`check_staged_revision_apply()`, `list_graph_revisions()`, and grouped export
+rows can put `next_action.arguments["iri"]` on the applied event. Use lineage
+when you need the full chain; use row-local `next_action` when you just need the
+next inspection call.
 7. Then use `describe_applied_revision_diff(include_triples=True)` for changed
    triples, or `describe_revision_graph_snapshot(..., include_triples=True)`
    for full before/after snapshot contents. Suggested import paths are

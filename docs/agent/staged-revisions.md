@@ -657,7 +657,11 @@ a compact `restage_reason` when it can derive one from that rationale, and
 restage chain grows deeper, `current_restaged_by` points to the latest known
 successor while direct `restaged_by` keeps the immediate provenance edge. The
 single-restage helper refuses to create a parallel successor for a stale source
-that already has one; inspect or restage `current_restaged_by` instead.
+that already has one; inspect or restage `current_restaged_by` instead. If that
+current successor has already been applied, direct apply checks and revision
+list rows keep `current_restaged_by` as the staged successor IRI but route
+`next_action` and the first suggested actions to the applied event with
+`describe_graph_revision` / `describe_applied_revision_diff`.
 Markdown exports surface that same reason as a top `Restage headline`; stale
 original exports surface `Restaged by` and, when needed, `Current restaged by`.
 Grouped exports collect restage reasons in `Restage Context`. Grouped export
@@ -670,6 +674,9 @@ inspection set without recomputing those buckets. Prefer
 by derived next action (`apply_after_review`, `restage_after_review`,
 `repair_or_replace`, `inspect_already_applied`, and `informational`) without
 requiring the agent to join status, stale state, and recommendation fields.
+Queue values are the returned row IRIs; always read the row's
+`next_action.arguments` for the actual follow-up target, which may be an
+applied event reached through a restaged successor.
 Treat `next_action` as the compact route for the row, not as permission to run a
 mutating tool immediately. For review-first automation, follow
 `suggested_next_actions` / `suggested_next_calls` in order; ready and stale rows
@@ -695,7 +702,9 @@ failure stays in semantic-risk/review text but the ready successor can route to
 historical diagnostics: direct checks keep `status="validation_failed"` and the
 validation results, but compact `next_action` points to `current_restaged_by`.
 Suggested actions inspect the successor first and can export the failed source
-as a diagnostic bundle when you need to preserve the old validation details.
+as a diagnostic bundle when you need to preserve the old validation details; if
+the successor is already applied, the first suggested action inspects that
+applied event instead.
 When a row without a successor has
 `staged_validation_conforms=False` or a failed `staged_validation_status`,
 the compact route remains `repair_or_replace` even if the live apply check now
@@ -757,7 +766,9 @@ top-level recommended-review sets, derived next-action buckets, and the
 compatibility apply/restage, repair, applied-inspection, and post-apply recheck
 buckets from `bundle_summary`.
 When a requested stale source already has a restage chain, batch restage maps it
-to `current_restaged_by` so the review bundle opens the latest known successor.
+to `current_restaged_by` so the review bundle opens the latest known successor;
+if that successor is already applied, row-local `next_action` opens the applied
+event while `current_restaged_by` still records the staged successor.
 The summary also keeps
 `recommended_apply_or_restage_review_iris` separate from
 `recommended_repair_review_iris` while preserving

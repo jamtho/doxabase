@@ -2902,12 +2902,15 @@ carry the checked resource under the same name used by list and export rows.
 revision-list/export routing fields on direct apply checks. A handled stale
 source reports the direct successor in `restaged_by`, the latest known successor
 in `current_restaged_by`, and routes compact `next_action` to inspect that
-successor instead of another mechanical restage. Its `status` may still be
-`conflict` for historical graph-state drift or `validation_failed` for old
-failed validation diagnostics, but the `summary` headline starts with
-handled-by-restage wording and names the successor. Suggested actions inspect
-the successor first and may include an `export_staged_revision` diagnostic
-bundle for the handled failed source.
+successor instead of another mechanical restage. If the latest successor has
+already been applied, `current_restaged_by` still names the staged successor but
+`next_action.arguments["iri"]` and the first suggested actions point to the
+applied event. Its `status` may still be `conflict` for historical graph-state
+drift or `validation_failed` for old failed validation diagnostics, but the
+`summary` headline starts with handled-by-restage wording and names the
+successor or applied event. Suggested actions inspect the successor or applied
+event first and may include an `export_staged_revision` diagnostic bundle for
+the handled failed source.
 `alternative_gate` is the row-local alternative semantic gate. Its `status` is
 `not_applicable`, `alternative_to_unapplied_source`, or
 `alternative_to_applied_source`; the last status sets
@@ -3198,7 +3201,10 @@ replay validates but has no effective graph delta.
 `restaged_successor_stale_unresolved` marks a refreshed successor that has
 itself become stale again and needs restaging or replacement. The bundle's
 `recommended_review_iris` de-duplicates the current review set in bundle order,
-replacing handled stale sources with their successors.
+replacing handled stale sources with their successors. `next_action_queue`
+groups the returned row IRIs by action class; inspect each row's
+`next_action.arguments` for the target to call, because handled stale rows may
+point to an applied event even though the queued row is the stale source.
 `ready_restage_successor_alternative_to_applied_source_iris` lists ready
 refreshed successors whose `current_alternative_to` / `alternative_to` target is
 already applied. Treat these rows as semantic review targets, not automatic

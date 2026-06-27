@@ -1209,6 +1209,11 @@ few useful gaps:
   Direct apply checks now expose `restaged_by`, `current_restaged_by`, and
   `stale_resolution_state`; handled stale rows point compact `next_action` at the
   current successor, and grouped Markdown includes `Recommended review` rows.
+  A follow-up stale-restage-apply trial found direct apply checks and revision
+  list rows still stopped at that successor after it was applied, even though
+  lineage routes reached the applied event. Handled stale rows now preserve
+  `current_restaged_by` as the staged successor while routing `next_action` and
+  leading suggested actions to the applied event when the successor has landed.
 - A docs retrieval trial found large MCP docs hid deep sections behind the
   default prefix. Doc listings now expose section headings and `get_doc` accepts
   `section` or `start_char` for bounded navigation.

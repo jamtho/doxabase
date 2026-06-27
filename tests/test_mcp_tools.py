@@ -542,6 +542,38 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
         db,
         iri=restaged["revision_iri"],
     )["status"] == "ready"
+    applied = apply_staged_revision_tool(db, iri=restaged["revision_iri"])
+    stale_check_after_apply = check_staged_revision_apply_tool(
+        db,
+        iri=staged["revision_iri"],
+    )
+    assert stale_check_after_apply["restaged_by"] == restaged["revision_iri"]
+    assert (
+        stale_check_after_apply["current_restaged_by"]
+        == restaged["revision_iri"]
+    )
+    assert (
+        stale_check_after_apply["stale_resolution_state"]
+        == "stale_handled_by_restage"
+    )
+    assert stale_check_after_apply["next_action"]["action_type"] == (
+        "inspect_already_applied"
+    )
+    assert stale_check_after_apply["next_action"]["queue"] == (
+        "inspect_already_applied"
+    )
+    assert stale_check_after_apply["next_action"]["tool_name"] == (
+        "describe_graph_revision"
+    )
+    assert stale_check_after_apply["next_action"]["arguments"] == {
+        "iri": applied["applied_revision_iri"]
+    }
+    assert stale_check_after_apply["suggested_next_actions"][0][
+        "tool_name"
+    ] == "describe_graph_revision"
+    assert stale_check_after_apply["suggested_next_actions"][0]["arguments"] == {
+        "iri": applied["applied_revision_iri"]
+    }
 
 
 def test_stage_graph_revision_tool_records_repaired_restage_successor(
