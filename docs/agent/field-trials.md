@@ -843,6 +843,12 @@ few useful gaps:
   An end-to-end profile-bundle retest found staging itself should hand off to
   the read-only apply check; staging responses now suggest
   `check_staged_revision_apply` when a grouped revision is created.
+  Another helper-pattern trial found profile-created patterns were still
+  structurally prose-only for project-specific metric kinds unless the caller
+  manually supplied `pattern_map_implications`. Helper-created profile patterns
+  now default their map implications to the profiled dataset or column plus
+  project-specific metric kind IRIs from `profile_metrics`, while built-in
+  `rc:` metric kinds remain evidence-only.
   A broader workflow trial found undefined metric advisories still left agents
   to bridge manually from metric review to pattern promotion. When a
   same-evidence pattern names the metric as a target or map implication, metric

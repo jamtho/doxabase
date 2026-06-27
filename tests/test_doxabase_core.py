@@ -17351,6 +17351,157 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert bundle.handoff_entrypoints.profile_observation_iris[0] in export_text
 
 
+def test_profile_helper_pattern_defaults_include_project_metric_implications(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+
+    profile = db.record_dataset_profile(
+        dataset,
+        summary="Orders profile with an undefined project metric.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        row_count=100,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        pattern_summary="Orders completeness score needs vocabulary.",
+        pattern_text=(
+            "The Orders profile uses a reusable completeness score that needs "
+            "a project metric definition before comparison."
+        ),
+        pattern_rationale=(
+            "The helper-created profile pattern should point at the dataset "
+            "and the project metric kind it interprets."
+        ),
+    )
+
+    assert profile.pattern is not None
+    pattern_description = db.describe_pattern(profile.pattern.pattern_iri)
+    assert {item.iri for item in pattern_description.map_implications} == {
+        dataset,
+        project_metric,
+    }
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 0
+    advisory = draft.metric_advisories[0]
+    assert advisory.advisory_status == "project_metric_undefined"
+    assert advisory.promotion_pattern_count == 1
+    assert [item.iri for item in advisory.promotion_patterns] == [
+        profile.pattern.pattern_iri
+    ]
+    assert "stage_pattern_promotion" in [
+        action.tool_name for action in advisory.suggested_next_actions
+    ]
+
+
+def test_profile_bundle_all_profiles_pattern_defaults_include_column_metrics(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    completeness_metric = "https://example.test/project#CompletenessScore"
+    entropy_metric = "https://example.test/project#StatusEntropy"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with project metric outputs.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        row_count=100,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": completeness_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        pattern_summary="Orders profile metrics need vocabulary.",
+        pattern_text=(
+            "The Orders profiling pass uses reusable completeness and entropy "
+            "metrics that need project metric definitions."
+        ),
+        pattern_rationale=(
+            "The bundle-level synthesis should point at every project metric "
+            "kind it interprets across the profiled dataset and columns."
+        ),
+        pattern_support_scope="all_profiles",
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status values were profiled.",
+                "profile_metrics": [
+                    {
+                        "metric": entropy_metric,
+                        "value": "1.4",
+                        "datatype": "xsd:decimal",
+                    }
+                ],
+            }
+        ],
+    )
+
+    assert bundle.dataset_profile.pattern is not None
+    pattern_iri = bundle.dataset_profile.pattern.pattern_iri
+    pattern_description = db.describe_pattern(pattern_iri)
+    assert {item.iri for item in pattern_description.map_implications} == {
+        dataset,
+        completeness_metric,
+        entropy_metric,
+    }
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    advisories_by_metric = {
+        advisory.metric.iri: advisory for advisory in draft.metric_advisories
+    }
+
+    assert set(advisories_by_metric) == {completeness_metric, entropy_metric}
+    for metric_iri, advisory in advisories_by_metric.items():
+        assert advisory.advisory_status == "project_metric_undefined"
+        assert advisory.promotion_pattern_count == 1
+        assert [item.iri for item in advisory.promotion_patterns] == [
+            pattern_iri
+        ]
+        promotion_actions = [
+            action
+            for action in advisory.suggested_next_actions
+            if action.tool_name == "stage_pattern_promotion"
+        ]
+        assert len(promotion_actions) == 1
+        assert promotion_actions[0].arguments["patterns"] == [pattern_iri]
+        assert promotion_actions[0].arguments["anchors"] == [metric_iri]
+        assert promotion_actions[0].arguments["evidence"] == [evidence]
+
+
 def test_draft_profile_map_updates_routes_ambiguous_project_metric_advisory(
     tmp_path: Path,
 ) -> None:

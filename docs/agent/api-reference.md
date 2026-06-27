@@ -593,7 +593,11 @@ profile-observation context-slice seeds for handoff retrieval. When matching
 profile observations exist, the `describe_dataset()` not-found error includes
 this recovery hint and points at `record_map_dataset` for creating map context.
 When the helper creates a pattern and the profile observation has evidence, the
-same evidence is linked to the pattern.
+same evidence is linked to the pattern. When `pattern_map_implications` is
+omitted, the helper-created pattern points at the dataset plus any
+project-specific profile metric kind IRIs named in `profile_metrics`; built-in
+`rc:` metric kinds stay evidence-only. Pass `pattern_map_implications`
+explicitly when a synthesis should point somewhere narrower or different.
 `profile_summary.shared_evidence_iris` means an evidence IRI appears on every
 returned profile observation in the bounded `describe_dataset()` response. When
 older profile history is mixed with a newer shared-evidence bundle, inspect
@@ -651,6 +655,11 @@ the dataset profile plus every bundled column profile. For a synthesis that
 also needs claims or a hand-picked support set, collect
 `describe_profile_run(...).profile_observation_iris` and call
 `record_pattern(..., supporting_observations=[...], supporting_claims=[...], evidence_iri=shared_evidence_iri)`.
+When `pattern_map_implications` is omitted, bundle-created patterns default to
+the dataset plus project-specific top-level profile metric kind IRIs; with
+`pattern_support_scope="all_profiles"`, project-specific column metric kind
+IRIs are included too. Built-in `rc:` metric kinds remain observed profile
+evidence only.
 
 `record_column_profile()` does the same for one column: it records a profile
 observation with `observed_column`, can update map column metadata such as
@@ -660,7 +669,11 @@ entry, including any observed value-frequency pairs and scalar profile metrics
 supplied by the profiler. Use `sample_scope` and `sample_method` to distinguish,
 for example, a full-column scan from a top-N value-frequency sample.
 Scalar `profile_metrics` remain observed evidence unless a later claim, pattern,
-or map update interprets them.
+or map update interprets them. When a column helper creates a pattern and
+`pattern_map_implications` is omitted, project-specific metric kind IRIs from
+`profile_metrics` become map implications alongside the column so draft
+vocabulary-promotion routes can find the supporting pattern. Built-in `rc:`
+metric kinds stay evidence-only.
 `update_map_column` defaults to true, so pass `false` when observed values or
 counts should stay observation-only. For a profile such as "BUY/SELL appeared in
 this sample, but that is not an allowed-value domain", combine

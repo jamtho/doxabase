@@ -15066,6 +15066,9 @@ class DoxaBase:
         pattern_iri: str | None = None,
     ) -> DatasetProfileRecord:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        profile_metric_items = (
+            list(profile_metrics) if profile_metrics is not None else None
+        )
         should_record_pattern = self._profile_pattern_requested(
             pattern_summary,
             pattern_text,
@@ -15087,7 +15090,7 @@ class DoxaBase:
             null_count=null_count,
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
-            profile_metrics=profile_metrics,
+            profile_metrics=profile_metric_items,
             observation_iri=observation_iri,
             evidence_iri=evidence_iri,
         )
@@ -15113,9 +15116,10 @@ class DoxaBase:
             assert pattern_summary is not None
             assert pattern_text is not None
             assert pattern_rationale is not None
-            implication_values = self._string_values(
-                "pattern_map_implications",
+            implication_values = self._profile_pattern_map_implications(
+                dataset_value,
                 pattern_map_implications,
+                ("profile_metrics", profile_metric_items),
             )
             pattern = self.record_pattern(
                 summary=pattern_summary,
@@ -15127,7 +15131,7 @@ class DoxaBase:
                 confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
-                map_implications=implication_values or [dataset_value],
+                map_implications=implication_values,
                 pattern_iri=pattern_iri,
             )
 
@@ -15175,6 +15179,9 @@ class DoxaBase:
         pattern_iri: str | None = None,
     ) -> ColumnProfileRecord:
         column_value = self._required_iri("column_iri", column_iri)
+        profile_metric_items = (
+            list(profile_metrics) if profile_metrics is not None else None
+        )
         table_value = (
             self._required_iri("table_iri", table_iri)
             if table_iri is not None
@@ -15203,7 +15210,7 @@ class DoxaBase:
             null_count=null_count,
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
-            profile_metrics=profile_metrics,
+            profile_metrics=profile_metric_items,
             observed_physical_type=physical_type,
             observed_value_type=value_type,
             observation_iri=observation_iri,
@@ -15236,9 +15243,10 @@ class DoxaBase:
             assert pattern_summary is not None
             assert pattern_text is not None
             assert pattern_rationale is not None
-            implication_values = self._string_values(
-                "pattern_map_implications",
+            implication_values = self._profile_pattern_map_implications(
+                column_value,
                 pattern_map_implications,
+                ("profile_metrics", profile_metric_items),
             )
             pattern = self.record_pattern(
                 summary=pattern_summary,
@@ -15250,7 +15258,7 @@ class DoxaBase:
                 confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
-                map_implications=implication_values or [column_value],
+                map_implications=implication_values,
                 pattern_iri=pattern_iri,
             )
 
@@ -15297,6 +15305,9 @@ class DoxaBase:
         column_defaults: Mapping[str, Any] | None = None,
     ) -> ProfileBundleRecord:
         dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        profile_metric_items = (
+            list(profile_metrics) if profile_metrics is not None else None
+        )
         pattern_support_scope_value = self._profile_bundle_pattern_support_scope(
             pattern_support_scope
         )
@@ -15365,15 +15376,6 @@ class DoxaBase:
             pattern_text,
             pattern_rationale,
         )
-        if should_record_pattern:
-            implication_values = self._string_values(
-                "pattern_map_implications",
-                pattern_map_implications,
-            )
-            self._validate_resource_values(
-                "pattern_map_implications",
-                implication_values or [dataset_value],
-            )
 
         prepared_column_profiles: list[dict[str, Any]] = []
         for index, profile_mapping in enumerate(column_profiles or []):
@@ -15390,6 +15392,10 @@ class DoxaBase:
                     f"record_column_profile field(s): {', '.join(unknown_keys)}"
                 )
             column_kwargs = {**merged_defaults, **profile_values}
+            if column_kwargs.get("profile_metrics") is not None:
+                column_kwargs["profile_metrics"] = list(
+                    column_kwargs["profile_metrics"]
+                )
             missing_keys = sorted(
                 key for key in required_column_keys if not column_kwargs.get(key)
             )
@@ -15400,6 +15406,29 @@ class DoxaBase:
                 )
             self._preflight_profile_bundle_column(index, column_kwargs)
             prepared_column_profiles.append(column_kwargs)
+
+        bundle_pattern_implications: list[str] | None = None
+        if should_record_pattern:
+            metric_sets: list[tuple[str, Iterable[Mapping[str, Any]] | None]] = [
+                ("profile_metrics", profile_metric_items)
+            ]
+            if pattern_support_scope_value == "all_profiles":
+                metric_sets.extend(
+                    (
+                        f"column_profiles[{index}].profile_metrics",
+                        column_kwargs.get("profile_metrics"),
+                    )
+                    for index, column_kwargs in enumerate(prepared_column_profiles)
+                )
+            bundle_pattern_implications = self._profile_pattern_map_implications(
+                dataset_value,
+                pattern_map_implications,
+                *metric_sets,
+            )
+            self._validate_resource_values(
+                "pattern_map_implications",
+                bundle_pattern_implications,
+            )
 
         self._preflight_profile_bundle_evidence_summaries(
             shared_evidence_iri=shared_evidence_iri,
@@ -15421,7 +15450,7 @@ class DoxaBase:
             null_count=null_count,
             distinct_count=distinct_count,
             value_frequencies=value_frequencies,
-            profile_metrics=profile_metrics,
+            profile_metrics=profile_metric_items,
             update_map_snapshot=update_map_snapshot,
             map_label=map_label,
             map_description=map_description,
@@ -15445,7 +15474,7 @@ class DoxaBase:
             pattern_status=pattern_status,
             pattern_stability=pattern_stability,
             pattern_map_implications=(
-                pattern_map_implications
+                bundle_pattern_implications
                 if pattern_support_scope_value == "dataset_profile"
                 else None
             ),
@@ -15462,10 +15491,7 @@ class DoxaBase:
             assert pattern_summary is not None
             assert pattern_text is not None
             assert pattern_rationale is not None
-            implication_values = self._string_values(
-                "pattern_map_implications",
-                pattern_map_implications,
-            )
+            assert bundle_pattern_implications is not None
             pattern = self.record_pattern(
                 summary=pattern_summary,
                 pattern_text=pattern_text,
@@ -15482,7 +15508,7 @@ class DoxaBase:
                 confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
-                map_implications=implication_values or [dataset_value],
+                map_implications=bundle_pattern_implications,
             )
             dataset_profile = replace(dataset_profile, pattern=pattern)
 
@@ -30626,6 +30652,37 @@ class DoxaBase:
             f"{metric_iri!r}. Use one of {', '.join(base_metric_kinds)} or a "
             "project-specific full IRI."
         )
+
+    def _profile_pattern_map_implications(
+        self,
+        primary_resource_iri: str,
+        pattern_map_implications: Iterable[str] | str | None,
+        *profile_metric_sets: tuple[
+            str,
+            Iterable[Mapping[str, Any]] | None,
+        ],
+    ) -> list[str]:
+        explicit_implications = self._string_values(
+            "pattern_map_implications",
+            pattern_map_implications,
+        )
+        if explicit_implications:
+            return explicit_implications
+
+        implications = [primary_resource_iri]
+        seen = {primary_resource_iri}
+        for field_name, profile_metrics in profile_metric_sets:
+            for metric_iri, *_ in self._profile_metric_values(
+                profile_metrics,
+                field_name=field_name,
+            ):
+                if metric_iri.startswith(PREFIXES["rc"]):
+                    continue
+                if metric_iri in seen:
+                    continue
+                implications.append(metric_iri)
+                seen.add(metric_iri)
+        return implications
 
     def _string_values(
         self,

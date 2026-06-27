@@ -185,7 +185,12 @@ shared evidence:
 `pattern_support_scope` changes the helper-created pattern's supporting
 observations, not its target. The helper still targets the dataset. Use
 `pattern_map_implications` or a manual `record_pattern` call when the synthesis
-should name narrower map implications or targets.
+should name narrower map implications or targets. When profile helpers create a
+pattern and `pattern_map_implications` is omitted, the pattern's map
+implications default to the profiled dataset or column plus any project-specific
+profile metric kind IRIs named in `profile_metrics`. Built-in `rc:` metrics
+remain profile evidence only. Passing `pattern_map_implications` explicitly
+overrides those defaults.
 
 ```python
 bundle = db.record_profile_bundle(

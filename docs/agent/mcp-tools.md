@@ -608,7 +608,11 @@ context-slice seeds for handoff retrieval. When matching profile observations
 exist, the `describe_dataset()` not-found error includes this recovery hint and
 points at `record_map_dataset` for creating map context. If the helper creates a
 pattern, the profile evidence is linked to that pattern as well as the
-observation.
+observation. When `pattern_map_implications` is omitted, the helper-created
+pattern points at the dataset plus any project-specific profile metric kind IRIs
+named in `profile_metrics`; built-in `rc:` metric kinds stay evidence-only.
+Pass `pattern_map_implications` explicitly when a synthesis should point
+somewhere narrower or different.
 For a capsule that only records profile lore, `describe_dataset` may still emit
 missing storage/path/layout warnings. Those are query-planning gaps rather than
 profile validation failures. Read `profile_summary.handoff_note` when deciding
@@ -659,7 +663,11 @@ be supported by the dataset profile and every bundled column profile. For a
 synthesis that also needs claims or hand-picked support, call `record_pattern`
 after the bundle using `describe_profile_run(...).profile_observation_iris`
 plus the extra support, and pass the shared `evidence_iri` to reuse the
-profile-run evidence.
+profile-run evidence. When `pattern_map_implications` is omitted, bundle-created
+patterns default to the dataset plus project-specific top-level profile metric
+kind IRIs; with `pattern_support_scope="all_profiles"`, project-specific column
+metric kind IRIs are included too. Built-in `rc:` metric kinds remain observed
+profile evidence only.
 
 `doxabase.record_column_profile`
 
@@ -673,7 +681,11 @@ pairs and scalar metrics supplied by the profiler.
 Use `sample_scope` and `sample_method` to make sample caveats retrievable
 without parsing the evidence prose.
 Scalar `profile_metrics` are observed evidence, not constraints, shapes, allowed
-values, or durable map semantics by themselves.
+values, or durable map semantics by themselves. When a column helper creates a
+pattern and `pattern_map_implications` is omitted, project-specific metric kind
+IRIs from `profile_metrics` become map implications alongside the column so
+draft vocabulary-promotion routes can find the supporting pattern. Built-in
+`rc:` metric kinds stay evidence-only.
 `update_map_column` defaults to true; set it to false when counts or observed
 values are only sample evidence. For value-frequency guardrails, record the
 profile, then add a `record_claim_observation` and synthesize both with
