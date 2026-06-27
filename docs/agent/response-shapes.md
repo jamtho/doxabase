@@ -872,6 +872,8 @@ advisory.definition_found
 advisory.definition
 advisory.promotion_patterns
 advisory.promotion_pattern_count
+advisory.context_patterns
+advisory.context_pattern_count
 advisory.recommendation
 advisory.rationale
 advisory.suggested_next_actions
@@ -892,7 +894,10 @@ includes `promotion_patterns` and adds `describe_pattern` plus a reviewable
 `stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
 The skeleton seeds its `rdfs:comment` from the matched pattern text, rationale,
 or summary when available; treat it as a draft definition and review units,
-calculation, and comparison semantics before apply.
+calculation, and comparison semantics before apply. Same-evidence prose
+patterns that mention the metric without structurally targeting or implying it
+appear in `context_patterns` and add `describe_pattern` actions only; they are
+inspection cues, not automatic promotion support.
 Defined metrics point at
 `describe_resource(..., graph="ontology")` for the existing definition;
 ambiguous metrics point at both the existing definition and nearby metric

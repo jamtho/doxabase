@@ -1728,6 +1728,8 @@ class ProfileMetricVocabularyAdvisory:
     definition: ResourceSummary | None
     promotion_patterns: list[ResourceSummary]
     promotion_pattern_count: int
+    context_patterns: list[ResourceSummary]
+    context_pattern_count: int
     recommendation: str
     rationale: str
     suggested_next_actions: list[SuggestedNextAction]
@@ -13272,10 +13274,24 @@ class DoxaBase:
                     }
                     else []
                 )
+                context_pattern_iris = (
+                    self._profile_metric_context_pattern_iris(
+                        metric_iri=metric_iri,
+                        evidence_iri=evidence_iri,
+                        exclude_pattern_iris=promotion_pattern_iris,
+                    )
+                    if advisory_status
+                    in {
+                        "project_metric_undefined",
+                        "project_metric_definition_ambiguous",
+                    }
+                    else []
+                )
                 suggested_next_actions = self._profile_metric_advisory_actions(
                     metric_iri=metric_iri,
                     advisory_status=advisory_status,
                     promotion_pattern_iris=promotion_pattern_iris,
+                    context_pattern_iris=context_pattern_iris,
                     evidence_iri=evidence_iri,
                 )
                 advisories.append(
@@ -13295,6 +13311,11 @@ class DoxaBase:
                             promotion_pattern_iris,
                         ),
                         promotion_pattern_count=len(promotion_pattern_iris),
+                        context_patterns=self._resource_summaries(
+                            self._lookup_graphs(["patterns"]),
+                            context_pattern_iris,
+                        ),
+                        context_pattern_count=len(context_pattern_iris),
                         recommendation="review_metric_vocabulary_before_reuse",
                         rationale=(
                             "Project-specific profile metric IRIs are valid "
@@ -13359,6 +13380,9 @@ class DoxaBase:
             "promotion_pattern_iris": [
                 pattern.iri for pattern in advisory.promotion_patterns
             ],
+            "context_pattern_iris": [
+                pattern.iri for pattern in advisory.context_patterns
+            ],
             "recommendation": advisory.recommendation,
         }
         digest = hashlib.sha256(
@@ -13372,10 +13396,12 @@ class DoxaBase:
         metric_iri: str,
         advisory_status: str,
         promotion_pattern_iris: list[str] | None = None,
+        context_pattern_iris: list[str] | None = None,
         evidence_iri: str | None = None,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         promotion_pattern_values = list(promotion_pattern_iris or [])
+        context_pattern_values = list(context_pattern_iris or [])
 
         def add_action(
             tool_name: str,
@@ -13432,6 +13458,21 @@ class DoxaBase:
                 ),
                 action_label="List nearby metric vocabulary",
             )
+
+        def add_context_pattern_actions() -> None:
+            for pattern_iri in context_pattern_values[:3]:
+                add_action(
+                    "describe_pattern",
+                    {"iri": pattern_iri},
+                    (
+                        "Inspect this same-evidence metric pattern as context. "
+                        "It is not structurally tied to the metric as a target "
+                        "or map implication, so it is not used as automatic "
+                        "promotion support."
+                    ),
+                    action_label="Inspect metric context pattern",
+                )
+
         if (
             advisory_status
             in {
@@ -13450,6 +13491,7 @@ class DoxaBase:
                     ),
                     action_label="Inspect metric promotion pattern",
                 )
+            add_context_pattern_actions()
             add_action(
                 "stage_pattern_promotion",
                 self._profile_metric_promotion_skeleton_arguments(
@@ -13464,6 +13506,8 @@ class DoxaBase:
                 ),
                 action_label="Stage metric vocabulary skeleton",
             )
+        else:
+            add_context_pattern_actions()
         return actions
 
     def _profile_metric_promotion_pattern_iris(
@@ -13483,6 +13527,37 @@ class DoxaBase:
             self._subjects(pattern_graphs, "rc:mapImplication", metric_iri)
         )
         return sorted(same_evidence & metric_related)
+
+    def _profile_metric_context_pattern_iris(
+        self,
+        *,
+        metric_iri: str,
+        evidence_iri: str,
+        exclude_pattern_iris: Iterable[str] = (),
+    ) -> list[str]:
+        pattern_graphs = ["patterns"]
+        same_evidence = set(self._subjects(pattern_graphs, "rc:evidence", evidence_iri))
+        if not same_evidence:
+            return []
+        excluded = set(exclude_pattern_iris)
+        local_name = self._local_name(metric_iri)
+        matches: list[str] = []
+        for pattern_iri in sorted(same_evidence - excluded):
+            text_parts = [
+                value
+                for value in (
+                    self._first_object(pattern_graphs, pattern_iri, "rc:patternText"),
+                    self._first_object(pattern_graphs, pattern_iri, "rc:rationale"),
+                    self._first_object(pattern_graphs, pattern_iri, "rc:summary"),
+                )
+                if value
+            ]
+            haystack = "\n".join(text_parts).lower()
+            if metric_iri.lower() in haystack or (
+                local_name and local_name.lower() in haystack
+            ):
+                matches.append(pattern_iri)
+        return matches
 
     def _profile_metric_promotion_skeleton_arguments(
         self,

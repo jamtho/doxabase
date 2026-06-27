@@ -17057,6 +17057,74 @@ def test_draft_profile_map_updates_routes_ambiguous_project_metric_advisory(
     }
 
 
+def test_draft_profile_map_updates_surfaces_prose_metric_context_pattern(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with an undefined project metric.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        row_count=100,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+    pattern = db.record_pattern(
+        summary="CompletenessScore needs interpretation before reuse.",
+        pattern_text=(
+            "CompletenessScore appears to describe required-field coverage, but "
+            "this prose pattern does not yet name the metric as a formal target "
+            "or map implication."
+        ),
+        rationale="The pattern and profile run share one evidence resource.",
+        pattern_targets=[dataset],
+        evidence_iri=evidence,
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    advisory = draft.metric_advisories[0]
+    assert advisory.advisory_status == "project_metric_undefined"
+    assert advisory.promotion_pattern_count == 0
+    assert advisory.promotion_patterns == []
+    assert advisory.context_pattern_count == 1
+    assert [item.iri for item in advisory.context_patterns] == [
+        pattern.pattern_iri
+    ]
+    assert [action.tool_name for action in advisory.suggested_next_actions] == [
+        "describe_context_slice",
+        "list_entities",
+        "describe_pattern",
+    ]
+    assert advisory.suggested_next_actions[-1].action_label == (
+        "Inspect metric context pattern"
+    )
+    assert advisory.suggested_next_actions[-1].arguments == {
+        "iri": pattern.pattern_iri,
+    }
+    assert "stage_pattern_promotion" not in {
+        action.tool_name for action in draft.suggested_next_actions
+    }
+
+
 def test_draft_profile_map_updates_promotes_ambiguous_metric_with_pattern(
     tmp_path: Path,
 ) -> None:

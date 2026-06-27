@@ -4236,6 +4236,8 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     assert [item["iri"] for item in advisory["promotion_patterns"]] == [
         pattern["pattern_iri"]
     ]
+    assert advisory["context_pattern_count"] == 0
+    assert advisory["context_patterns"] == []
     assert [action["tool_name"] for action in advisory["suggested_next_actions"]] == [
         "describe_context_slice",
         "list_entities",

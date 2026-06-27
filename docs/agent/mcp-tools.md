@@ -300,16 +300,19 @@ arguments for accepted map-helper updates, plus `metric_advisories` for
 project-specific metric kinds that should be defined before reuse. Sampled
 zero-null profiles are intentionally not promoted into non-null map
 recommendations. Metric advisory rows include `advisory_status`,
-`definition_found`, optional `definition`, `promotion_patterns`, and structured
-`suggested_next_actions` so agents can inspect existing ontology definitions or
-nearby metric vocabulary before recording claims/patterns/promotions. When an
-undefined metric has a same-evidence pattern naming it as a target or map
-implication, the advisory also suggests `describe_pattern` and a reviewable
+`definition_found`, optional `definition`, `promotion_patterns`,
+`context_patterns`, and structured `suggested_next_actions` so agents can
+inspect existing ontology definitions or nearby metric vocabulary before
+recording claims/patterns/promotions. When an undefined or ambiguously typed
+metric has a same-evidence pattern naming it as a target or map implication,
+the advisory also suggests `describe_pattern` and a reviewable
 `stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
 That skeleton seeds its `rdfs:comment` from the supporting pattern text,
 rationale, or summary when available, but it is still a draft vocabulary
 definition; sharpen units, calculation, and comparison semantics before applying
-it unchanged.
+it unchanged. Same-evidence prose patterns that mention the metric but do not
+name it structurally appear as `context_patterns` with `describe_pattern`
+actions only; do not treat them as automatic promotion support.
 Do not infer metric vocabulary status from `describe_context_slice` alone:
 metric-kind resources that are only profile-metric objects can appear as
 `referenced_only`. Use `metric_advisories[].advisory_status` and
