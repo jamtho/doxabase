@@ -6240,6 +6240,50 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     )
     assert recovered_second_check.status == "ready"
     assert recovered_second_check.decision == "review_then_apply"
+    assert recovered_second_check.stale_resolution_state == (
+        "restaged_successor_ready"
+    )
+    assert recovered_second_check.alternative_gate.status == (
+        "alternative_to_applied_source"
+    )
+    assert recovered_second_check.alternative_gate.semantic_review_required is True
+    assert recovered_second_check.alternative_gate.applied_source_iri == (
+        first_restaged.revision_iri
+    )
+    assert recovered_second_check.alternative_gate.applied_revision_iri == (
+        result.applied_revision_iri
+    )
+    recovered_description = db.describe_staged_revision(
+        recovered_second.revision_iri,
+        include_current_apply_check=True,
+    )
+    assert recovered_description.alternative_gate.status == (
+        "alternative_to_applied_source"
+    )
+    assert recovered_description.current_apply_check is not None
+    assert recovered_description.current_apply_check.stale_resolution_state == (
+        "restaged_successor_ready"
+    )
+    assert recovered_description.current_apply_check.alternative_gate.status == (
+        "alternative_to_applied_source"
+    )
+    current_work_before_second_apply = db.list_graph_revisions(
+        current_staged_work_only=True,
+        include_apply_checks=True,
+    )
+    assert current_work_before_second_apply.count == 1
+    assert current_work_before_second_apply.revisions[0].iri == (
+        recovered_second.revision_iri
+    )
+    assert current_work_before_second_apply.revisions[0].alternative_gate.status == (
+        "alternative_to_applied_source"
+    )
+    single_export_path = tmp_path / "ready-successor-applied-alternative-single.md"
+    db.export_staged_revision(recovered_second.revision_iri, single_export_path)
+    single_export_text = single_export_path.read_text(encoding="utf-8")
+    assert "Alternative gate: semantic review required" in single_export_text
+    assert first_restaged.revision_iri in single_export_text
+    assert result.applied_revision_iri in single_export_text
     applied_alternative_export = db.export_staged_revisions(
         [
             first_restaged.revision_iri,
@@ -6257,6 +6301,14 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         applied_alternative_summary.ready_restage_successor_alternative_to_applied_source_iris
     )
     assert semantic_gate_iris == [recovered_second.revision_iri]
+    recovered_summary = {
+        summary.revision_iri: summary
+        for summary in applied_alternative_export.revision_summaries
+    }[recovered_second.revision_iri]
+    assert recovered_summary.alternative_gate.status == (
+        "alternative_to_applied_source"
+    )
+    assert recovered_summary.alternative_gate.semantic_review_required is True
     assert applied_alternative_summary.next_action_queue == {
         "inspect_already_applied": [first_restaged.revision_iri],
         "informational": [second_restaged.revision_iri],

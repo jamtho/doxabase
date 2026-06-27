@@ -660,6 +660,8 @@ reports count or digest drift; inspect stored validation diagnostics before
 restaging.
 Grouped Markdown mirrors the important `current_alternative_to` case in
 `Alternative Context` when a stored alternative target has been restaged.
+Single-row Markdown also prints an `Alternative gate` line when the current
+alternative target has already been applied.
 Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and their suggested actions now point agents toward structured
 diagnostics plus a Markdown review export before staging a repaired candidate.
@@ -697,7 +699,12 @@ already been applied, grouped summaries list it in
 `ready_restage_successor_alternative_to_applied_source_iris` and add a bundle
 warning. Treat that as semantic gating: the successor is mechanically ready, but
 review the applied source and `current_alternative_to` before making both
-alternatives durable.
+alternatives durable. The same condition is available on single-row handoffs as
+`alternative_gate.status == "alternative_to_applied_source"` with
+`semantic_review_required=True`, plus `applied_source_iri` and
+`applied_revision_iri`; read it on `check_staged_revision_apply`,
+`describe_staged_revision(include_current_apply_check=True)`,
+`list_graph_revisions`, and grouped export `revision_summaries`.
 In scripts, the practical loop is: batch restage, review
 `ready_restage_successor_revision_iris`, apply at most one ready successor,
 then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the

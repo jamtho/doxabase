@@ -2634,6 +2634,7 @@ check.already_applied_by
 check.restaged_by
 check.current_restaged_by
 check.stale_resolution_state
+check.alternative_gate
 check.changed_graphs
 check.patch_checks
 check.count_drifts
@@ -2661,6 +2662,13 @@ in `current_restaged_by`, and routes compact `next_action` to inspect that
 successor instead of another mechanical restage. Its `status` may still be
 `conflict` for historical graph-state drift, but the `summary` headline starts
 with handled-by-restage wording and names the successor.
+`alternative_gate` is the row-local alternative semantic gate. Its `status` is
+`not_applicable`, `alternative_to_unapplied_source`, or
+`alternative_to_applied_source`; the last status sets
+`semantic_review_required=True` and carries `applied_source_iri` /
+`applied_revision_iri`. Treat that as a semantic review gate even when
+`status="ready"` and `next_action.queue="apply_after_review"`: mechanical
+readiness is not approval to make both alternatives durable.
 
 Read `status`, `summary`, and `semantic_risk_level` first. Current statuses are
 `ready`, `noop`, `already_applied`, `superseded_by_restage`, `conflict`,
@@ -2932,7 +2940,9 @@ replacing handled stale sources with their successors.
 refreshed successors whose `current_alternative_to` / `alternative_to` target is
 already applied. Treat these rows as semantic review targets, not automatic
 apply candidates, even though their row-local `next_action.queue` is still
-`apply_after_review`.
+`apply_after_review`. The same condition is exposed locally on list rows, direct
+apply checks, staged descriptions, and export summaries as
+`alternative_gate.status == "alternative_to_applied_source"`.
 Grouped Markdown still keeps handled stale rows in the summary table for
 provenance, but their recommendation points to the refreshed successor or
 Review Queues instead of treating the stale source as an active restage target.

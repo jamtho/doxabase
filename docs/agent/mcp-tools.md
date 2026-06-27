@@ -105,7 +105,9 @@ only populated for revisions with graph patch payloads. Rows include
 `record_kind`, `has_patch_payload`, `patch_count`, revision relation links,
 selected apply-check blockers/drift summaries, and review-first suggested next
 actions. Rows also include `snapshot_evidence` for the same history/snapshot-row
-classification as revision detail. Use `record_kind`, `application_status`,
+classification as revision detail, and `alternative_gate` so a ready row that is
+an alternative to an already-applied source carries a local
+`semantic_review_required` signal. Use `record_kind`, `application_status`,
 `staged_validation_status`, and `stale_resolution_state` filters to ask
 directly for applied events, ready staged proposals, rows with stored staged-time
 validation failures, unresolved stale sources, or handled stale sources. Rows

@@ -316,6 +316,17 @@ class StagedPatchApplyCheck:
 
 
 @dataclass(frozen=True)
+class StagedRevisionAlternativeGate:
+    status: str
+    alternative_to: str | None
+    current_alternative_to: str | None
+    applied_source_iri: str | None
+    applied_revision_iri: str | None
+    semantic_review_required: bool
+    note: str
+
+
+@dataclass(frozen=True)
 class StagedGraphCountDrift:
     patch_iri: str
     patch_sequence_index: int | None
@@ -422,6 +433,7 @@ class StagedRevisionApplyCheck:
     restaged_by: str | None
     current_restaged_by: str | None
     stale_resolution_state: str | None
+    alternative_gate: StagedRevisionAlternativeGate
     changed_graphs: list[str]
     patch_checks: list[StagedPatchApplyCheck]
     count_drifts: list[StagedGraphCountDrift]
@@ -453,6 +465,10 @@ class StagedRevisionApplySummary:
     blocking_reasons: list[str]
     recommended_resolution: str | None
     already_applied_by: str | None
+    restaged_by: str | None
+    current_restaged_by: str | None
+    stale_resolution_state: str | None
+    alternative_gate: StagedRevisionAlternativeGate
     changed_graphs: list[str]
     validation_scope: str | None
     validation_conforms: bool | None
@@ -558,6 +574,7 @@ class StagedGraphRevisionExportSummary:
     revision_stance_label: str | None
     alternative_to: str | None
     current_alternative_to: str | None
+    alternative_gate: StagedRevisionAlternativeGate
     changed_graphs: list[str]
     apply_status: str | None
     apply_decision: str | None
@@ -876,6 +893,7 @@ class GraphRevisionListItem:
     applies_staged_revision: str | None
     alternative_to: str | None
     current_alternative_to: str | None
+    alternative_gate: StagedRevisionAlternativeGate
     restaged_from: str | None
     restaged_by: str | None
     current_restaged_by: str | None
@@ -1069,6 +1087,7 @@ class StagedGraphRevisionDescription:
     review_note: str | None
     review_recommendation: str | None
     alternative_to: ResourceSummary | None
+    alternative_gate: StagedRevisionAlternativeGate
     restaged_from: ResourceSummary | None
     restaged_by: ResourceSummary | None
     current_restaged_by: ResourceSummary | None
@@ -3664,6 +3683,10 @@ class DoxaBase:
                 record_kind=item_record_kind,
                 staged_validation_status=item_staged_validation_status,
             )
+            alternative_gate = self._staged_revision_alternative_gate(
+                alternative_to,
+                graphs=data_graphs,
+            )
             items.append(
                 GraphRevisionListItem(
                     iri=revision_iri,
@@ -3704,10 +3727,8 @@ class DoxaBase:
                     applied_by=applied_by,
                     applies_staged_revision=applies_staged_revision,
                     alternative_to=alternative_to,
-                    current_alternative_to=self._current_alternative_to_iri(
-                        alternative_to,
-                        graphs=data_graphs,
-                    ),
+                    current_alternative_to=alternative_gate.current_alternative_to,
+                    alternative_gate=alternative_gate,
                     restaged_from=restaged_from,
                     restaged_by=restaged_by,
                     current_restaged_by=current_restaged_by,
@@ -5059,6 +5080,59 @@ class DoxaBase:
             current_iri = successor
             seen.add(successor)
 
+    def _staged_revision_alternative_gate(
+        self,
+        alternative_to: str | None,
+        *,
+        graphs: list[str] | None = None,
+    ) -> StagedRevisionAlternativeGate:
+        if alternative_to is None:
+            return StagedRevisionAlternativeGate(
+                status="not_applicable",
+                alternative_to=None,
+                current_alternative_to=None,
+                applied_source_iri=None,
+                applied_revision_iri=None,
+                semantic_review_required=False,
+                note="This staged revision is not marked as an alternative.",
+            )
+        lookup_graphs = graphs or self._expand_graphs(["history"])
+        current_alternative_to = (
+            self._current_alternative_to_iri(alternative_to, graphs=lookup_graphs)
+            or alternative_to
+        )
+        applied_revision_iri = self._first_subject(
+            lookup_graphs,
+            "rc:appliesStagedRevision",
+            current_alternative_to,
+        )
+        if applied_revision_iri is None:
+            return StagedRevisionAlternativeGate(
+                status="alternative_to_unapplied_source",
+                alternative_to=alternative_to,
+                current_alternative_to=current_alternative_to,
+                applied_source_iri=None,
+                applied_revision_iri=None,
+                semantic_review_required=False,
+                note=(
+                    "This staged revision is an alternative; compare related "
+                    "alternatives before applying one framing."
+                ),
+            )
+        return StagedRevisionAlternativeGate(
+            status="alternative_to_applied_source",
+            alternative_to=alternative_to,
+            current_alternative_to=current_alternative_to,
+            applied_source_iri=current_alternative_to,
+            applied_revision_iri=applied_revision_iri,
+            semantic_review_required=True,
+            note=(
+                "The current alternative target has already been applied. "
+                "Mechanical readiness is not approval to make both alternatives "
+                "durable; inspect the applied source before applying this row."
+            ),
+        )
+
     def _stale_resolution_state(
         self,
         *,
@@ -5313,6 +5387,10 @@ class DoxaBase:
                 if alternative_to_iri is not None
                 else None
             ),
+            alternative_gate=self._staged_revision_alternative_gate(
+                alternative_to_iri,
+                graphs=all_lookup_graphs,
+            ),
             restaged_from=restaged_from,
             restaged_by=restaged_by,
             current_restaged_by=current_restaged_by,
@@ -5417,6 +5495,16 @@ class DoxaBase:
                 blocking_reasons=[],
                 recommended_resolution=None,
                 already_applied_by=None,
+                restaged_by=(
+                    staged.restaged_by.iri if staged.restaged_by is not None else None
+                ),
+                current_restaged_by=(
+                    staged.current_restaged_by.iri
+                    if staged.current_restaged_by is not None
+                    else None
+                ),
+                stale_resolution_state=None,
+                alternative_gate=staged.alternative_gate,
                 changed_graphs=staged.changed_graphs,
                 validation_scope=staged.validation_scope,
                 validation_conforms=None,
@@ -5444,6 +5532,10 @@ class DoxaBase:
             blocking_reasons=check.blocking_reasons,
             recommended_resolution=check.recommended_resolution,
             already_applied_by=check.already_applied_by,
+            restaged_by=check.restaged_by,
+            current_restaged_by=check.current_restaged_by,
+            stale_resolution_state=check.stale_resolution_state,
+            alternative_gate=check.alternative_gate,
             changed_graphs=check.changed_graphs,
             validation_scope=check.validation_scope,
             validation_conforms=check.validation_conforms,
@@ -18377,6 +18469,7 @@ class DoxaBase:
                 restaged_by=restaged_by_iri,
                 current_restaged_by=current_restaged_by_iri,
                 stale_resolution_state=stale_resolution_state,
+                alternative_gate=staged.alternative_gate,
                 changed_graphs=changed_graphs,
                 patch_checks=[],
                 count_drifts=[],
@@ -18687,6 +18780,7 @@ class DoxaBase:
             restaged_by=restaged_by_iri,
             current_restaged_by=current_restaged_by_iri,
             stale_resolution_state=stale_resolution_state,
+            alternative_gate=staged.alternative_gate,
             changed_graphs=changed_graphs,
             patch_checks=patch_checks,
             count_drifts=count_drifts,
@@ -20416,13 +20510,10 @@ class DoxaBase:
                         if description.alternative_to is not None
                         else None
                     ),
-                    current_alternative_to=self._current_alternative_to_iri(
-                        (
-                            description.alternative_to.iri
-                            if description.alternative_to is not None
-                            else None
-                        )
+                    current_alternative_to=(
+                        description.alternative_gate.current_alternative_to
                     ),
+                    alternative_gate=description.alternative_gate,
                     changed_graphs=description.changed_graphs,
                     apply_status=apply_check.status if apply_check is not None else None,
                     apply_decision=(
@@ -20692,29 +20783,12 @@ class DoxaBase:
         self,
         summaries: list[StagedGraphRevisionExportSummary],
     ) -> list[str]:
-        applied_source_iris = {
-            summary.revision_iri
-            for summary in summaries
-            if summary.apply_status == "already_applied"
-            or summary.stale_resolution_state == "restaged_successor_already_applied"
-        }
-        history_graphs = self._expand_graphs(["history"])
         affected: list[str] = []
         for summary in summaries:
             if summary.stale_resolution_state != "restaged_successor_ready":
                 continue
-            alternative_target = summary.current_alternative_to or summary.alternative_to
-            if alternative_target is None:
-                continue
-            if alternative_target not in applied_source_iris:
-                applied_event = self._first_subject(
-                    history_graphs,
-                    "rc:appliesStagedRevision",
-                    alternative_target,
-                )
-                if applied_event is None:
-                    continue
-            affected.append(summary.revision_iri)
+            if summary.alternative_gate.semantic_review_required:
+                affected.append(summary.revision_iri)
         return affected
 
     def _staged_revisions_bundle_warnings(
@@ -23821,7 +23895,22 @@ class DoxaBase:
         )
         if check.validation_skipped_reason:
             lines.append(f"- Validation skipped: {check.validation_skipped_reason}")
-        if alternative_to is not None and check.can_apply:
+        if check.alternative_gate.semantic_review_required:
+            lines.append(
+                "- Alternative gate: semantic review required; "
+                f"{check.alternative_gate.note}"
+            )
+            if check.alternative_gate.applied_source_iri is not None:
+                lines.append(
+                    "- Applied alternative source: "
+                    f"`{check.alternative_gate.applied_source_iri}`"
+                )
+            if check.alternative_gate.applied_revision_iri is not None:
+                lines.append(
+                    "- Applied alternative event: "
+                    f"`{check.alternative_gate.applied_revision_iri}`"
+                )
+        elif alternative_to is not None and check.can_apply:
             label = alternative_to.label or alternative_to.iri
             lines.append(
                 "- Alternative caution: this staged revision is marked as an "

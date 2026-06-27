@@ -1122,7 +1122,11 @@ few useful gaps:
   remains an alternative to an already-applied source still needs semantic
   gating. Bundle summaries now list those rows in
   `ready_restage_successor_alternative_to_applied_source_iris` and warn that
-  mechanical readiness is not approval to make both alternatives durable.
+  mechanical readiness is not approval to make both alternatives durable. A
+  follow-up scratch trial confirmed grouped export was clear but single-row
+  checks, descriptions, and lists still required inference; those payloads now
+  expose `alternative_gate` with `alternative_to_applied_source`,
+  `semantic_review_required`, `applied_source_iri`, and `applied_revision_iri`.
 - A grouped snapshot-evidence trial found JSON list/lineage helpers made mixed
   RDF-only and exact snapshot recovery clear, while grouped Markdown hid the
   status split in scattered drift notes. Grouped staged-review Markdown now adds
