@@ -64,10 +64,12 @@ seed graphs in the bundle. The export record can list empty graph roles, but
 TriG serializes only graph blocks that contain triples. Importing into a fresh
 `DoxaBase.create(...)` capsule recreates the standard role metadata before the
 non-empty graphs are imported. Workflow exports intentionally omit project
-`ontology`; use the default project export or an ontology-bearing bundle when
-project-specific metric kinds, value types, classes, or predicates are part of
-the handoff. RDF exports do not include SQLite-side snapshot rows; pair them
-with `export_revision_snapshots()` when exact applied-diff or stale-drift
+`ontology` and `history`; use the default project export or an explicit
+history-bearing bundle for revision-lineage handoffs, and use an
+ontology-bearing bundle when project-specific metric kinds, value types,
+classes, or predicates are part of the handoff. RDF exports do not include
+SQLite-side snapshot rows; pair them with `export_revision_snapshots()` when
+exact applied-diff or stale-drift
 triple reconstruction must survive import.
 
 `export_revision_snapshots()` writes a JSON handoff bundle for stored revision

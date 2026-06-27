@@ -2928,9 +2928,10 @@ provenance, but their recommendation points to the refreshed successor or
 Review Queues instead of treating the stale source as an active restage target.
 When any grouped row lacks full exact snapshot rows, grouped Markdown also
 includes a `Snapshot Evidence` section. It summarizes snapshot-evidence status
-counts and lists each row's status, RDF snapshot graph roles, stored snapshot
-row roles, exact roles, missing/orphan roles, and suggested next calls. This is
-a review-artifact shortcut over each row's `snapshot_evidence` /
+counts and lists each row's status, completeness (`complete`, `partial`,
+`history-only`, `snapshot-only`, or `missing`), RDF snapshot graph roles, stored
+snapshot row roles, exact roles, missing/orphan roles, and suggested next calls.
+This is a review-artifact shortcut over each row's `snapshot_evidence` /
 `describe_revision_snapshot_evidence()` payload.
 `validation_failed_revision_iris` lists rows whose patch counts
 replay but whose current preview validation does not conform.

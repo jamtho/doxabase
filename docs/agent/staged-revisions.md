@@ -646,9 +646,10 @@ When grouped Markdown is generated from an imported capsule and included rows
 do not all have exact snapshot rows, it includes a `Snapshot Evidence` panel with
 per-status counts and per-row `history_only_count_digest`,
 `history_plus_snapshot_rows`, `snapshot_rows_without_history`, or
-`history_missing` status. Use that panel to decide whether a companion revision
-snapshot JSON bundle is still needed before relying on exact stale drift or
-applied-diff triples.
+`history_missing` status. The `Completeness` column marks partial rows when only
+some graph roles have exact snapshot rows. Use that panel to decide whether a
+companion revision snapshot JSON bundle is still needed before relying on exact
+stale drift or applied-diff triples.
 When a restaged successor is mechanically ready only because current graph state
 filled a source validation gap, its decision is
 `inspect_restaged_source_validation_failure` and its compact queue is

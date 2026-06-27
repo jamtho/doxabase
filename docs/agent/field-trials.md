@@ -1199,6 +1199,11 @@ few useful gaps:
   `selected_candidate_note`, summarizing the selected candidate, handoff route,
   and sibling/context blocker codes that still remain in
   `review_gate.all_issue_codes`.
+- A follow-up query-plan consumer trial confirmed `selected_candidate_note`
+  helps humans, but machine consumers must still route on `handoff_kind`,
+  `review_gate.ready_for_execution_attempt`, `context_blocked_candidate_used`,
+  and execution blocking codes rather than scan fields that can look usable
+  under review-gated plans.
 - A follow-up query-planning handoff trial confirmed ambiguous layouts,
   candidate selection errors, S3 runtime blockers, and database relation cards
   route conservatively. It also clarified that downstream agents must gate any

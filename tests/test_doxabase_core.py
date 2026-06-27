@@ -2329,6 +2329,64 @@ def test_revision_lineage_warns_when_restage_ancestor_lacks_snapshots(
     assert recovered_lineage.warnings == []
 
 
+def test_grouped_export_marks_partial_snapshot_evidence(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage map and ontology together",
+        rationale="Exercise partial exact snapshot rows in grouped review.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:ReviewTerm a rdfs:Class ;
+                        rdfs:label "Review term" .
+                """,
+            },
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:ReviewDataset a rc:Dataset .
+                """,
+            },
+        ],
+    )
+    project_path = tmp_path / "project.trig"
+    map_only_snapshot_path = tmp_path / "map-only-snapshots.json"
+    db.export_trig(project_path, graphs="project")
+    db.export_revision_snapshots(
+        map_only_snapshot_path,
+        revision_iris=[staged.revision_iri],
+        graph_roles=["map"],
+    )
+    partial = DoxaBase.create(tmp_path / "partial.sqlite")
+    partial.import_trig(project_path)
+    partial.import_revision_snapshots(map_only_snapshot_path)
+
+    status = partial.describe_revision_snapshot_evidence(staged.revision_iri)
+    assert status.status == "history_plus_snapshot_rows"
+    assert status.exact_snapshot_graph_roles == ["map"]
+    assert status.missing_snapshot_row_graph_roles == ["ontology"]
+    grouped_export_path = tmp_path / "partial-multigraph-review.md"
+    partial.export_staged_revisions([staged.revision_iri], grouped_export_path)
+    grouped_export_text = grouped_export_path.read_text(encoding="utf-8")
+
+    assert "## Snapshot Evidence" in grouped_export_text
+    assert "history_plus_snapshot_rows: 1" in grouped_export_text
+    assert "| 1 |" in grouped_export_text
+    assert "history_plus_snapshot_rows | partial | map, ontology | map | map | ontology" in (
+        grouped_export_text
+    )
+    assert "import_revision_snapshots" in grouped_export_text
+
+
 def test_stale_project_import_suggests_snapshot_json_before_restaging(
     tmp_path: Path,
 ) -> None:

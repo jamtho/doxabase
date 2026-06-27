@@ -1158,8 +1158,10 @@ By default this exports the mutable project graphs: `ontology`, `map`,
 `observations`, `patterns`, `evidence`, `shapes`, and `history`. Useful presets
 are `workflow` / `review_bundle` for `map`, `observations`, `patterns`, and
 `evidence`, plus `all_with_seeds` when you explicitly need immutable seed graphs
-included too. All-with-seeds bundles may require special import handling because
-normal capsules protect `base_ontology` and `base_shapes`.
+included too. Workflow/review-bundle exports do not include `history`, so use
+the default project export or an explicit history-bearing bundle for
+revision-lineage handoffs. All-with-seeds bundles may require special import
+handling because normal capsules protect `base_ontology` and `base_shapes`.
 
 `doxabase.export_revision_snapshots`
 

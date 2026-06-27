@@ -24545,7 +24545,7 @@ class DoxaBase:
             for index, description in enumerate(descriptions, start=1)
         ]
         if not rows or all(
-            evidence.status == "history_plus_snapshot_rows"
+            self._snapshot_evidence_completeness_label(evidence) == "complete"
             for _, _, evidence in rows
         ):
             return []
@@ -24569,14 +24569,15 @@ class DoxaBase:
             (
                 "- Exact stale drift triples and applied diffs require "
                 "`history_plus_snapshot_rows`; import companion revision "
-                "snapshot JSON when rows remain history-only."
+                "snapshot JSON when rows remain history-only or partial."
             ),
             "",
             (
-                "| # | Revision | Summary | Status | RDF graphs | Stored rows | "
-                "Exact rows | Missing rows | Orphan rows | Suggested next calls |"
+                "| # | Revision | Summary | Status | Completeness | RDF graphs | "
+                "Stored rows | Exact rows | Missing rows | Orphan rows | "
+                "Suggested next calls |"
             ),
-            "|---:|---|---|---|---|---|---|---|---|---|",
+            "|---:|---|---|---|---|---|---|---|---|---|---|",
         ]
         for index, description, evidence in rows:
             lines.append(
@@ -24589,6 +24590,9 @@ class DoxaBase:
                             description.summary or description.iri
                         ),
                         self._markdown_table_cell(evidence.status),
+                        self._markdown_table_cell(
+                            self._snapshot_evidence_completeness_label(evidence)
+                        ),
                         self._markdown_table_cell(
                             self._markdown_graph_role_list(
                                 evidence.rdf_snapshot_graph_roles
@@ -24626,6 +24630,22 @@ class DoxaBase:
     @staticmethod
     def _markdown_graph_role_list(values: list[str]) -> str:
         return ", ".join(values) if values else "(none)"
+
+    @staticmethod
+    def _snapshot_evidence_completeness_label(
+        evidence: RevisionSnapshotEvidenceStatus,
+    ) -> str:
+        if evidence.status == "history_plus_snapshot_rows":
+            if evidence.missing_snapshot_row_graph_roles:
+                return "partial"
+            if evidence.orphan_snapshot_row_graph_roles:
+                return "partial-extra-rows"
+            return "complete"
+        if evidence.status == "history_only_count_digest":
+            return "history-only"
+        if evidence.status == "snapshot_rows_without_history":
+            return "snapshot-only"
+        return "missing"
 
     @staticmethod
     def _staged_revisions_effective_recommendation(
