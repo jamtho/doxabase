@@ -734,7 +734,13 @@ diagnostics plus a Markdown review export before staging a repaired candidate.
 When the original intent is still live but the payload itself needs a
 caller-authored repair or rebase, call `draft_staged_revision_rebase()` first.
 It is read-only: it returns live apply-check context, compact lineage, and
-reviewed repair actions when DoxaBase recognizes a safe single-slot repair. Then
+reviewed repair actions when DoxaBase recognizes a safe single-slot repair. Safe
+here means the current graph has exactly one same-subject/predicate value and
+the staged object matches the guarded slot shape: `rc:rowSemantics`,
+`rc:physicalType`, and `rc:schemaStability` use IRI objects, while
+`rc:nullable` can use a typed boolean literal. Blank nodes, free-text
+`rc:rowSemantics` literals, and multiple current values are left for manual
+repair because the helper cannot safely infer the intended replacement. Then
 stage the repaired patch with
 `restages_revision=<stale_revision_iri>` through `stage_graph_revision` or
 `stage_map_assertion_change`. That records the same `rc:restagesRevision`

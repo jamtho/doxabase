@@ -19669,6 +19669,7 @@ class DoxaBase:
                 source,
                 check,
                 repair_actions=repair_actions,
+                source_staged_validation_status=source_staged_validation_status,
             )
         )
         return StagedRevisionRebaseDraft(
@@ -19705,6 +19706,7 @@ class DoxaBase:
         check: StagedRevisionApplyCheck,
         *,
         repair_actions: list[SuggestedNextAction],
+        source_staged_validation_status: str,
     ) -> tuple[str, str, list[str], str]:
         if source.applied_by is not None:
             return (
@@ -19736,6 +19738,21 @@ class DoxaBase:
                 (
                     "Drafted a reviewed stage_map_assertion_change replacement "
                     "candidate. The helper did not stage or apply it."
+                ),
+            )
+        if source_staged_validation_status == "failed":
+            reason_codes = list(
+                dict.fromkeys(["staged_validation_failed", *check.blocking_reasons])
+            )
+            return (
+                "not_drafted",
+                "validation_repair_needed",
+                reason_codes,
+                (
+                    "The selected staged revision already had staged-time "
+                    "validation failures, and this helper did not recognize a "
+                    "safe single-slot replacement candidate. Inspect stored "
+                    "validation_results before restaging or authoring a repair."
                 ),
             )
         if check.status == "conflict" and self._staged_apply_check_is_restageable_conflict(
@@ -20074,6 +20091,12 @@ class DoxaBase:
             proposed_row[5],
             proposed_row[6],
         )
+        if not self._staged_same_slot_replacement_object_allowed(
+            diagnostic.result_path,
+            object_kind,
+            object_datatype,
+        ):
+            return None
         current_triples = self._assertion_triples(
             ["map"],
             subject=diagnostic.focus_node,
@@ -23448,6 +23471,12 @@ class DoxaBase:
         )
         if replacement_label is None:
             return None
+        if not self._staged_same_slot_replacement_object_allowed(
+            predicate,
+            object_kind,
+            object_datatype,
+        ):
+            return None
 
         addition_operation = self.expand_iri("rc:AdditionPatch")
         removal_operation = self.expand_iri("rc:RemovalPatch")
@@ -23513,6 +23542,24 @@ class DoxaBase:
             )
         ]
         if not same_slot_added:
+            return None
+        current_same_slot_triples = self._assertion_triples(
+            ["map"],
+            subject=subject,
+            predicate=predicate,
+            object_filter=None,
+            limit=10,
+        )
+        if len(current_same_slot_triples) != 1:
+            return None
+        current = current_same_slot_triples[0]
+        normalized_object_kind = "uri" if object_kind == "iri" else object_kind
+        if (
+            current.object == object_value
+            and current.object_kind == normalized_object_kind
+            and current.object_datatype == object_datatype
+            and current.object_lang == object_lang
+        ):
             return None
 
         rationale = (
@@ -23592,6 +23639,27 @@ class DoxaBase:
         ):
             return "schema stability"
         return None
+
+    def _staged_same_slot_replacement_object_allowed(
+        self,
+        predicate: str,
+        object_kind: str,
+        object_datatype: str | None,
+    ) -> bool:
+        normalized_kind = "iri" if object_kind == "uri" else object_kind
+        iri_slots = {
+            self.expand_iri("rc:rowSemantics"),
+            self.expand_iri("rc:physicalType"),
+            self.expand_iri("rc:schemaStability"),
+        }
+        if predicate in iri_slots:
+            return normalized_kind == "iri"
+        if predicate == self.expand_iri("rc:nullable"):
+            return (
+                normalized_kind == "literal"
+                and object_datatype == str(XSD.boolean)
+            )
+        return False
 
     @staticmethod
     def _graph_triple_object_matches_assertion_candidate(
@@ -28124,6 +28192,8 @@ class DoxaBase:
         if isinstance(subject, BNode) or not isinstance(predicate, URIRef):
             return None
         object_node = additions[0][2] if additions else removals[0][2]
+        if isinstance(object_node, BNode):
+            return None
         object_value, object_kind, object_datatype, object_lang = (
             self._object_filter_from_node(object_node)
         )

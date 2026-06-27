@@ -1693,6 +1693,16 @@ few useful gaps:
   alternative should replace the now-current value instead of replaying the same
   additive patch again. Keep future expansion focused on additional safe,
   reviewable repair candidates rather than making restage silently semantic.
+- An adversarial retest of that helper found it was too willing to draft
+  replacement actions for ambiguous or invalid row-semantics payloads. The
+  helper now requires exactly one current same-subject/predicate value before
+  drafting a same-slot repair, limits `rowSemantics`, `physicalType`, and
+  `schemaStability` repairs to IRI objects, preserves the typed-boolean
+  `nullable` path, and treats blank-node/free-text row-semantics cases as
+  manual validation repair work. If the selected source already failed
+  staged-time validation and no safe repair candidate is recognized,
+  `draft_staged_revision_rebase()` now reports `validation_repair_needed`
+  instead of presenting mechanical restage as the main route.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

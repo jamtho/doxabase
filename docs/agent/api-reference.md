@@ -1190,10 +1190,18 @@ the live apply check, compact lineage context, `draft_status`, `draft_kind`,
 `reason_codes`, repair candidates, repair actions, and a compact `next_action`.
 When DoxaBase recognizes a safe singleton-slot repair, such as
 `rc:rowSemantics` max-count validation failure where the current graph has
-exactly one different value, it drafts
+exactly one different IRI value, it drafts
 `stage_map_assertion_change(change_kind="replace", restages_revision=...)`
 arguments without staging them. If the source already has a successor or applied
 event, the draft is a redirect instead of a parallel repair.
+The first slice is deliberately narrow: `rc:rowSemantics`, `rc:physicalType`,
+and `rc:schemaStability` repair drafts require IRI objects; `rc:nullable` repair
+drafts allow typed `xsd:boolean` literals; blank-node objects, free-text
+`rc:rowSemantics` literals, and multiple current values are not drafted.
+For drafted repair mutations, `preferred_action` and the first repair action are
+the post-review staging calls. `next_action_queue_item.resolved_target_iri` may
+be null because the call creates a repaired successor; use
+`next_action.arguments["restages_revision"]` to see the source row.
 
 `describe_applied_revision_diff(applied_revision_iri, include_triples=False,
 max_triples=500)` returns the stored snapshot diff for an applied staged

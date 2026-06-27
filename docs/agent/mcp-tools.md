@@ -1108,7 +1108,12 @@ or authored replacement for a curated singleton map slot where exact snapshot
 rows show the current map added a different value for the same subject and
 predicate. Current guarded slots are `rc:rowSemantics`, column
 `rc:physicalType`, column `rc:nullable`, and data-asset `rc:schemaStability`. In
-those cases `suggested_next_actions` includes `stage_map_assertion_change` with
+those cases DoxaBase only drafts the replacement when the current graph has
+exactly one same-subject/predicate value and the staged object kind matches the
+slot contract: `rowSemantics`, `physicalType`, and `schemaStability` require IRI
+objects, while `nullable` allows typed boolean literals. Blank-node objects and
+free-text `rowSemantics` literals are not safe automatic repair candidates. When
+recognized, `suggested_next_actions` includes `stage_map_assertion_change` with
 `change_kind="replace"` and `restages_revision` set to the stale source, and
 compact `next_action` routes to `repair_or_replace`; execute it only after
 reviewing the semantics.
@@ -1133,13 +1138,16 @@ The response includes the live apply check, compact lineage context,
 `reason_codes`, repair candidates, repair actions, and a compact `next_action`.
 When DoxaBase recognizes a safe singleton-slot
 repair, such as `rc:rowSemantics` max-count validation failure where the current
-graph has exactly one different value, it returns a ready-to-call
+graph has exactly one different IRI value, it returns a ready-to-call
 `stage_map_assertion_change(change_kind="replace", restages_revision=...)`
-action. The action preserves the selected revision's `alternative_to` link when
-present, so semantic alternative gates survive the repair. When the selected row
-already has `restaged_by`, `current_restaged_by`, or `applied_by`, the draft is
-a redirect and the compact action points at the current successor or applied
-event instead of creating a parallel repair.
+action. `repair_actions`, `preferred_action`, and a drafted repair
+`suggested_next_actions[0]` are mutating staging calls after the agent has
+reviewed `repair_candidates`; they are not the usual review-first apply-check
+ordering. The action preserves the selected revision's `alternative_to` link
+when present, so semantic alternative gates survive the repair. When the
+selected row already has `restaged_by`, `current_restaged_by`, or `applied_by`,
+the draft is a redirect and the compact action points at the current successor
+or applied event instead of creating a parallel repair.
 
 `doxabase.describe_applied_revision_diff`
 

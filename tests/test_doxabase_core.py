@@ -4611,6 +4611,100 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert repair_check.status == "ready"
 
 
+def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Model Orders as snapshot rows",
+        rationale="Original row-grain proposal before an ambiguous map edit.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics rc:SnapshotRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders rc:rowSemantics rc:EventRow, rc:AggregateRow .
+        """,
+        graph="map",
+    )
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.queue == "restage_after_review"
+    assert not any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in check.suggested_next_actions
+    )
+    draft = db.draft_staged_revision_rebase(source.revision_iri)
+    assert draft.draft_status == "not_drafted"
+    assert draft.draft_kind == "mechanical_restage_available"
+    assert draft.repair_actions == []
+    assert draft.repair_candidates == []
+
+
+@pytest.mark.parametrize("staged_object", ['"snapshot"', "[]"])
+def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
+    tmp_path: Path,
+    staged_object: str,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    source = db.stage_graph_revision(
+        summary="Model Orders with invalid row-semantics object",
+        rationale="Probe that invalid singleton-slot objects are not repaired mechanically.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics {staged_object} .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    assert source.validation_conforms is False
+    db.record_map_dataset(orders, row_semantics="rc:EventRow")
+
+    check = db.check_staged_revision_apply(source.revision_iri)
+
+    assert check.status == "conflict"
+    assert check.next_action is not None
+    assert check.next_action.queue == "repair_or_replace"
+    assert not any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in check.suggested_next_actions
+    )
+    draft = db.draft_staged_revision_rebase(source.revision_iri)
+    assert draft.draft_status == "not_drafted"
+    assert draft.draft_kind == "validation_repair_needed"
+    assert "staged_validation_failed" in draft.reason_codes
+    assert draft.repair_actions == []
+    assert draft.repair_candidates == []
+    assert draft.next_action is not None
+    assert draft.next_action.queue == "repair_or_replace"
+
+
 def test_same_slot_replacement_preserves_applied_alternative_gate(
     tmp_path: Path,
 ) -> None:

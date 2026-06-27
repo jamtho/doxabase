@@ -3594,6 +3594,17 @@ single-slot replacement, `preferred_action` and the first `repair_actions[]`
 entry are ready-to-call `stage_map_assertion_change` arguments with
 `change_kind="replace"` and `restages_revision` set to the selected staged row.
 They still require normal semantic review; the helper only drafts the action.
+For drafted repairs, `suggested_next_actions[0]` may also be that mutating
+staging call. Treat it as the chosen post-review repair action, not as the
+review-first ordering used by plain apply checks.
+
+Top-level `current_revision_iri` is the current route target for the selected
+row; it can be an applied event IRI for redirect cases. Use `draft.lineage` when
+you need staged-lineage fields such as `current_staged_revision_iri`. For a
+drafted repair mutation, `next_action_queue_item.resolved_target_iri` can be
+`None` and `row_is_target=False` because the action creates a new repaired
+successor rather than pointing at an existing row. In that case drive the call
+from `next_action.arguments`, especially `restages_revision`.
 
 `draft.lineage` is compact lineage context:
 
@@ -3641,7 +3652,11 @@ candidate.note
 
 For the current first slice, `candidate_kind="same_slot_replacement"` means the
 helper recognized a singleton map slot such as `rc:rowSemantics` where the
-current graph has exactly one different value.
+current graph has exactly one different value. The helper only drafts this for
+curated slot/object pairs: `rc:rowSemantics`, `rc:physicalType`, and
+`rc:schemaStability` require IRI objects, while `rc:nullable` allows a typed
+`xsd:boolean` literal. Blank-node objects and free-text `rc:rowSemantics`
+literals are left as manual validation repair work.
 `current_same_subject_predicate_triples` shows the value that a replacement
 would remove, and `proposed_triples` shows the staged value that would be made
 current. If no candidate appears, inspect `validation_results`, `patch_checks`,
