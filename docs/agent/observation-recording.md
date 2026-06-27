@@ -337,7 +337,10 @@ ambiguously typed metric already has a same-evidence pattern naming it as a
 `promotion_patterns` and suggests a reviewable `stage_pattern_promotion`
 skeleton for an ontology definition. For ambiguous metrics, inspect the
 existing definition first; the skeleton is a repair path when the term is real
-but not yet typed as `rc:ProfileMetricKind`.
+but not yet typed as `rc:ProfileMetricKind`. Same-evidence prose patterns that
+mention the metric without naming it structurally appear as `context_patterns`
+and get `describe_pattern` actions only; use them as interpretation context,
+not automatic promotion support.
 `draft_profile_map_updates().type_advisories[]` similarly points from observed
 profile `physical_type` / `value_type` evidence toward context loading,
 pattern recording, or focused staged map assertions after review.
