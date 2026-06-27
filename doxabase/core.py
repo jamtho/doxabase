@@ -5584,7 +5584,10 @@ class DoxaBase:
             raise DoxaBaseError("max_triples must be at least 1")
         if profile not in {"dataset_brief", "pattern_brief", "deep_lore"}:
             raise DoxaBaseError(
-                "profile must be 'dataset_brief', 'pattern_brief', or 'deep_lore'"
+                "profile must be 'dataset_brief', 'pattern_brief', or "
+                "'deep_lore'; route explanations are returned as routes and "
+                "route_legend on every valid profile, not as a "
+                "'route_explained' profile"
             )
 
         seeds = [
@@ -6507,6 +6510,18 @@ class DoxaBase:
                 )
             elif (
                 profile in {"dataset_brief", "deep_lore"}
+                and self.expand_iri("rc:Observation") in seed_types
+            ):
+                add_observation(
+                    seed,
+                    None,
+                    0,
+                    route="seed_observation",
+                    route_label="seed observation",
+                    expand_observed_dataset=True,
+                )
+            elif (
+                profile in {"dataset_brief", "deep_lore"}
                 and self.expand_iri("rc:ObservedProfileMetric") in seed_types
             ):
                 add_profile_metric(seed, None, 0)
@@ -6869,6 +6884,7 @@ class DoxaBase:
             "dataset_profile_observation": 13,
             "column_profile_observation": 13,
             "unmapped_column_profile_observation": 13,
+            "seed_observation": 13,
             "seed_profile_observation": 13,
             "profile_metric_observation": 13,
             "observed_profile_metric": 14,
@@ -6917,6 +6933,7 @@ class DoxaBase:
             "dataset_profile_observation",
             "column_profile_observation",
             "unmapped_column_profile_observation",
+            "seed_observation",
             "seed_profile_observation",
             "profile_metric_observation",
             "observed_profile_metric",
@@ -7011,6 +7028,7 @@ class DoxaBase:
             "reconsidered_claim": "An earlier claim named by a reconsideration.",
             "reconsidering_claim": "A later claim that reconsiders the selected claim.",
             "supporting_observation": "An observation supporting a selected pattern or claim.",
+            "seed_observation": "A seed resource expanded as an ordinary observation.",
             "dataset_profile_observation": (
                 "A bounded dataset-level profile observation returned by the selected dataset context."
             ),

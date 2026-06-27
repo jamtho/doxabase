@@ -1111,6 +1111,11 @@ few useful gaps:
   applied event restore the applied event and its direct staged source, but not
   older restage ancestors. Generic revision lineage now warns when any visible
   restage-chain row has RDF count/digest metadata but lacks stored snapshot rows.
+- A context-slice linked-support trial found `route_explained` is an attractive
+  but invalid profile name, and plain `rc:Observation` seeds were too thin for
+  handoff work. Route explanations live in `routes`, `route_legend`, and
+  `route_counts` on every valid profile; dataset/deep-lore slices now expand
+  ordinary observation seeds through observed resources and support.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

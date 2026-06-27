@@ -12141,6 +12141,24 @@ def test_describe_context_slice_warns_when_seed_profile_mismatches(
     assert pattern_slice.warnings == []
 
 
+def test_describe_context_slice_invalid_profile_points_to_route_fields(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+    db.record_map_dataset(dataset, label="Messages", is_table=True)
+
+    with pytest.raises(DoxaBaseError) as exc:
+        db.describe_context_slice(dataset, profile="route_explained")  # type: ignore[arg-type]
+
+    error_message = str(exc.value)
+    assert "profile must be 'dataset_brief', 'pattern_brief', or 'deep_lore'" in (
+        error_message
+    )
+    assert "routes and route_legend" in error_message
+    assert "'route_explained' profile" in error_message
+
+
 def test_describe_context_slice_includes_profile_observations_and_metrics(
     tmp_path: Path,
 ) -> None:
@@ -12608,6 +12626,99 @@ def test_deep_lore_context_slice_expands_revision_seeds(
     assert "revision_anchor" in applied_routes[dataset]
     assert applied_slice.route_counts["applies_staged_revision"] == 1
     assert applied_slice.route_counts["applied_revision"] == 1
+
+
+def test_deep_lore_context_slice_expands_plain_observation_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/payments#payments"
+    status_column = "https://example.test/payments#payments__status"
+    db.record_map_dataset(dataset, label="Payments", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    claim = db.record_claim_observation(
+        summary="Payment status mixes processor and settlement semantics.",
+        claim_text=(
+            "payment status combines processor state with settlement lifecycle "
+            "and should not be treated as a simple closed enum."
+        ),
+        claim_kind="rc:CaveatClaim",
+        claim_targets=[dataset, status_column],
+        observed_asset=dataset,
+        observed_column=status_column,
+        evidence_sources=["scratch://payments-status-review.json"],
+    )
+    assert claim.evidence_iri is not None
+    pattern = db.record_pattern(
+        summary="Payment status needs lifecycle caveats.",
+        pattern_text=(
+            "Status mappings should preserve processor and settlement lifecycle "
+            "caveats."
+        ),
+        rationale="The claim observes the dataset and status column directly.",
+        pattern_targets=[dataset],
+        supporting_observations=[claim.observation_iri],
+        supporting_claims=[claim.claim_iri],
+        evidence_iri=claim.evidence_iri,
+    )
+    staged = db.stage_graph_revision(
+        summary="Draft payment status caveat",
+        rationale="Exercise revision support for plain observation context slices.",
+        supporting_observations=[claim.observation_iri],
+        supporting_patterns=[pattern.pattern_iri],
+        revision_anchors=[dataset],
+        evidence=[claim.evidence_iri],
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix pay: <https://example.test/payments#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <{dataset}> rc:hasKnownCaveat pay:status_lifecycle_caveat .
+                    pay:status_lifecycle_caveat a rc:KnownCaveat ;
+                        rc:caveatDescription "Status mixes processor and settlement lifecycle." ;
+                        rc:severity rc:Moderate .
+                """,
+            }
+        ],
+    )
+
+    context_slice = db.describe_context_slice(
+        claim.observation_iri,
+        profile="deep_lore",
+        max_triples=400,
+    )
+
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert not context_slice.warnings
+    assert claim.observation_iri in resources
+    assert dataset in resources
+    assert status_column in resources
+    assert claim.claim_iri in resources
+    assert claim.evidence_iri in resources
+    assert pattern.pattern_iri in resources
+    assert staged.revision_iri in resources
+    assert context_slice.dataset_contexts[0].iri == dataset
+    assert [context.iri for context in context_slice.pattern_contexts] == [
+        pattern.pattern_iri
+    ]
+    assert context_slice.route_counts["seed_observation"] == 1
+    assert context_slice.route_counts["observed_asset"] == 1
+    assert context_slice.route_counts["observed_column"] == 1
+    assert context_slice.route_counts["supporting_claim"] >= 1
+    assert context_slice.route_counts["evidence"] >= 1
+    assert context_slice.route_counts["linked_pattern"] >= 1
+    assert context_slice.route_counts["revision_supporting_observation"] == 1
+    route_legend = {row.route: row for row in context_slice.route_legend}
+    assert route_legend["seed_observation"].meaning == (
+        "A seed resource expanded as an ordinary observation."
+    )
 
 
 def test_describe_dataset_handles_blank_node_physical_layout(tmp_path: Path) -> None:

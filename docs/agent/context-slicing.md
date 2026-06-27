@@ -35,6 +35,13 @@ For metric-kind seeds, use `seed_profile_observations` to identify the exact
 matching profile rows; `route_counts` and `dataset_contexts` describe broader
 handoff context and repeated inclusion routes, not exact metric match counts.
 
+Dataset and deep-lore slices also understand ordinary `rc:Observation` seeds.
+They expand through observed assets/columns, claims, evidence, value
+frequencies, metrics, linked dataset patterns, and, for `deep_lore`, revision
+records that cite the observation. Profile observations keep their separate
+`seed_profile_observation` route and structured `seed_profile_observations`
+summary.
+
 Dataset and deep-lore slices also understand mapped column seeds. A seed
 `rc:Column` expands to its owning dataset plus claims, patterns, observations,
 and reconsiderations that directly target or observe that column. This is the
@@ -58,6 +65,8 @@ between a lore handoff and an opaque RDF neighborhood.
 `route_counts` count route occurrences rather than unique resources, so one
 resource can legitimately contribute to multiple route totals when it was useful
 for more than one reason.
+There is no `route_explained` profile; route explanations are returned through
+`routes`, `route_legend`, and `route_counts` on every valid profile.
 
 Useful fields:
 
