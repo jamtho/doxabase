@@ -4589,6 +4589,104 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     assert promoted["staged_revisions"][0]["validation_conforms"] is True
 
 
+def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    value_type = "https://example.test/project#StatusCodeValue"
+    project_metric = "https://example.test/project#StatusCompletenessScore"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    record_map_dataset_tool(db, table, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=table,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    bundle = record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled with shared review evidence.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.91",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status has a project value type.",
+                "physical_type": "rc:Varchar",
+                "value_type": value_type,
+            }
+        ],
+    )
+    pattern = record_pattern_tool(
+        db,
+        summary="Status profile needs metric and value type vocabulary.",
+        pattern_text=(
+            "StatusCompletenessScore measures populated status values, while "
+            "StatusCodeValue names the reviewed status domain."
+        ),
+        rationale="The same profile evidence supports both review lanes.",
+        pattern_targets=[project_metric, value_type],
+        supporting_observations=(
+            bundle["handoff_entrypoints"]["profile_observation_iris"]
+        ),
+        evidence_iri=shared_evidence,
+        map_implications=[project_metric, value_type],
+    )
+
+    result = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+
+    metric_advisory = result["metric_advisories"][0]
+    type_advisory = result["type_advisories"][0]
+    assert [item["iri"] for item in metric_advisory["mixed_support_patterns"]] == [
+        pattern["pattern_iri"]
+    ]
+    assert [item["iri"] for item in type_advisory["mixed_support_patterns"]] == [
+        pattern["pattern_iri"]
+    ]
+    assert metric_advisory["mixed_support_pattern_count"] == 1
+    assert type_advisory["mixed_support_pattern_count"] == 1
+    grouped_metric_action = [
+        action
+        for action in result["suggested_next_action_groups"][
+            "metric_vocabulary_review"
+        ]
+        if action["tool_name"] == "stage_pattern_promotion"
+    ][0]
+    grouped_type_action = [
+        action
+        for action in result["suggested_next_action_groups"]["profile_type_review"]
+        if action["tool_name"] == "stage_map_assertion_change"
+        and action["arguments"]["predicate"] == "rc:valueType"
+    ][0]
+    assert grouped_metric_action["source_profile_advisory"]["mixed_support"][
+        "pattern_iris"
+    ] == [pattern["pattern_iri"]]
+    assert grouped_type_action["source_profile_advisory"]["mixed_support"][
+        "pattern_iris"
+    ] == [pattern["pattern_iri"]]
+    assert "Mixed support" in grouped_metric_action["reason"]
+    assert "Mixed support" in grouped_type_action["arguments"]["review_note"]
+
+
 def test_stage_profile_map_updates_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:

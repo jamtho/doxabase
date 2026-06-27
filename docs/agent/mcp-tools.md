@@ -306,11 +306,12 @@ project-specific metric kinds that should be defined before reuse. Sampled
 zero-null profiles are intentionally not promoted into non-null map
 recommendations. Metric advisory rows include `advisory_status`,
 `definition_found`, optional `definition`, `promotion_patterns`,
-`context_patterns`, and structured `suggested_next_actions` so agents can
-inspect existing ontology definitions or nearby metric vocabulary before
-recording claims/patterns/promotions. When an undefined or ambiguously typed
-metric has a same-evidence pattern naming it as a target or map implication,
-the advisory also suggests `describe_pattern` and a reviewable
+`mixed_support_patterns`, `mixed_support_note`, `context_patterns`, and
+structured `suggested_next_actions` so agents can inspect existing ontology
+definitions or nearby metric vocabulary before recording
+claims/patterns/promotions. When an undefined or ambiguously typed metric has a
+same-evidence pattern naming it as a target or map implication, the advisory
+also suggests `describe_pattern` and a reviewable
 `stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
 That skeleton seeds its `rdfs:comment` from metric-specific supporting pattern
 text, rationale, or summary when available; otherwise it uses a generic
@@ -342,6 +343,11 @@ suggests `describe_pattern` and a reviewable `stage_pattern_promotion` skeleton
 for an ontology `rc:ValueType`. That skeleton defines only the vocabulary shell
 with label/comment; review domain meaning, allowed values, and physical-type
 expectations before applying it unchanged.
+If the same promotion pattern supports both metric vocabulary and type review,
+both advisory rows expose `mixed_support_patterns` and `mixed_support_note`;
+grouped promotion/assertion actions also include
+`source_profile_advisory.mixed_support` plus a review-note cue. Inspect the
+shared pattern before promoting or asserting either lane independently.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `representative_metric_advisory_indexes`,
@@ -357,7 +363,8 @@ advisory group; each row also carries `metric_advisory_index` or
 actions, such as one `describe_pattern` call supporting several metric
 advisories; grouped metric/type actions carry `source_profile_advisory` with
 the source advisory kind, index field, represented advisory indexes, duplicate
-group keys, duplicate advisory indexes, and duplicate profile-observation IRIs.
+group keys, duplicate advisory indexes, duplicate profile-observation IRIs, and
+optional `mixed_support`.
 Use that source block for direct lane routing, or use each advisory row's own
 `suggested_next_actions` for per-metric or per-column follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,

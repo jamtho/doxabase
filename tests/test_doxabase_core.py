@@ -17980,6 +17980,142 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert status_value_type in {item.iri for item in staged.revision_anchors}
 
 
+def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#StatusCodeValue"
+    project_metric = "https://example.test/project#StatusCompletenessScore"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with shared metric and value-type evidence.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.91",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status used varchar storage and a project value type.",
+                "physical_type": "rc:Varchar",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+    pattern = db.record_pattern(
+        summary="Status profile needs metric and value type vocabulary.",
+        pattern_text=(
+            "StatusCompletenessScore measures populated status values, while "
+            "StatusCodeValue names the reviewed status domain."
+        ),
+        rationale="The same profile evidence supports both review lanes.",
+        pattern_targets=[project_metric, status_value_type],
+        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
+        evidence_iri=evidence,
+        map_implications=[project_metric, status_value_type],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.metric_advisory_count == 1
+    assert draft.type_advisory_count == 1
+    metric_advisory = draft.metric_advisories[0]
+    type_advisory = draft.type_advisories[0]
+    assert [item.iri for item in metric_advisory.promotion_patterns] == [
+        pattern.pattern_iri
+    ]
+    assert [item.iri for item in type_advisory.promotion_patterns] == [
+        pattern.pattern_iri
+    ]
+    assert metric_advisory.mixed_support_pattern_count == 1
+    assert type_advisory.mixed_support_pattern_count == 1
+    assert [item.iri for item in metric_advisory.mixed_support_patterns] == [
+        pattern.pattern_iri
+    ]
+    assert [item.iri for item in type_advisory.mixed_support_patterns] == [
+        pattern.pattern_iri
+    ]
+    assert metric_advisory.mixed_support_note is not None
+    assert "profile type review" in metric_advisory.mixed_support_note
+    assert type_advisory.mixed_support_note is not None
+    assert "metric vocabulary review" in type_advisory.mixed_support_note
+
+    metric_promotion_action = [
+        action
+        for action in metric_advisory.suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    ][0]
+    type_promotion_action = [
+        action
+        for action in type_advisory.suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    ][0]
+    value_assertion_action = [
+        action
+        for action in type_advisory.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+        and action.arguments["predicate"] == "rc:valueType"
+    ][0]
+
+    assert "Mixed support" in metric_promotion_action.reason
+    assert "Mixed support" in type_promotion_action.reason
+    assert "Mixed support" in value_assertion_action.reason
+    assert "Mixed support" in metric_promotion_action.arguments["framings"][0][
+        "review_note"
+    ]
+    assert "Mixed support" in type_promotion_action.arguments["framings"][0][
+        "review_note"
+    ]
+    assert "Mixed support" in value_assertion_action.arguments["review_note"]
+
+    grouped_metric_action = [
+        action
+        for action in draft.suggested_next_action_groups[
+            "metric_vocabulary_review"
+        ]
+        if action.tool_name == "stage_pattern_promotion"
+    ][0]
+    grouped_type_action = [
+        action
+        for action in draft.suggested_next_action_groups["profile_type_review"]
+        if action.tool_name == "stage_map_assertion_change"
+        and action.arguments["predicate"] == "rc:valueType"
+    ][0]
+
+    assert grouped_metric_action.source_profile_advisory["mixed_support"] == {
+        "pattern_iris": [pattern.pattern_iri],
+        "pattern_count": 1,
+        "other_review_lanes": ["profile_type_review"],
+        "note": metric_advisory.mixed_support_note,
+    }
+    assert grouped_type_action.source_profile_advisory["mixed_support"] == {
+        "pattern_iris": [pattern.pattern_iri],
+        "pattern_count": 1,
+        "other_review_lanes": ["metric_vocabulary_review"],
+        "note": type_advisory.mixed_support_note,
+    }
+
+
 def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
     tmp_path: Path,
 ) -> None:

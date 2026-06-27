@@ -1096,6 +1096,9 @@ advisory.definition_found
 advisory.definition
 advisory.promotion_patterns
 advisory.promotion_pattern_count
+advisory.mixed_support_patterns
+advisory.mixed_support_pattern_count
+advisory.mixed_support_note
 advisory.context_patterns
 advisory.context_pattern_count
 advisory.recommendation
@@ -1120,7 +1123,10 @@ The skeleton seeds its `rdfs:comment` from matched pattern text, rationale, or
 summary only when that text mentions the metric IRI, local name, or normalized
 local-name phrase. Otherwise it uses a generic review-first comment. Treat it as
 a draft definition and review units, calculation, and comparison semantics
-before apply. Same-evidence prose
+before apply. If the same promotion pattern is also used by a type advisory,
+`mixed_support_patterns`, `mixed_support_pattern_count`, and
+`mixed_support_note` flag the shared evidence so agents do not promote the
+metric without inspecting the type-review lane. Same-evidence prose
 patterns that mention the metric without structurally targeting or implying it
 appear in `context_patterns` and add `describe_pattern` actions only; they are
 inspection cues, not automatic promotion support.
@@ -1159,6 +1165,11 @@ advisory.observed_value_type
 advisory.map_column_found
 advisory.current_physical_type
 advisory.current_value_type
+advisory.promotion_patterns
+advisory.promotion_pattern_count
+advisory.mixed_support_patterns
+advisory.mixed_support_pattern_count
+advisory.mixed_support_note
 advisory.advisory_status
 advisory.recommendation
 advisory.rationale
@@ -1185,14 +1196,19 @@ same-evidence pattern that names it as a target or map implication,
 `stage_pattern_promotion` ontology skeleton for `rc:ValueType`. The skeleton
 borrows pattern prose for its `rdfs:comment` only when that prose mentions the
 value type IRI, local name, or normalized local-name phrase; otherwise it uses a
-generic review-first comment. Use `type_advisory_count` and
-`type_advisory_status_counts` for queue routing before reading full advisory
-rows. For `type_finding_unmapped_column`, `related_recommendation_indexes` points
-at the matching `unmapped_profiled_column` shell recommendation; review/stage
-that column-shell route first, then rerun or review type assertions once the
-column is map-present. When duplicate type advisories collapse to one top-level
-suggested action set, the representative pattern/staged-assertion actions
-preserve every grouped profile observation in `supporting_observations`.
+generic review-first comment. If the same promotion pattern is also used by a
+metric advisory, `mixed_support_patterns`, `mixed_support_pattern_count`, and
+`mixed_support_note` flag the shared evidence; grouped promotion and
+`stage_map_assertion_change` actions also carry this cue in
+`source_profile_advisory.mixed_support` and review notes. Use
+`type_advisory_count` and `type_advisory_status_counts` for queue routing before
+reading full advisory rows. For `type_finding_unmapped_column`,
+`related_recommendation_indexes` points at the matching
+`unmapped_profiled_column` shell recommendation; review/stage that column-shell
+route first, then rerun or review type assertions once the column is
+map-present. When duplicate type advisories collapse to one top-level suggested
+action set, the representative pattern/staged-assertion actions preserve every
+grouped profile observation in `supporting_observations`.
 
 Use `suggested_next_action_groups` for first-pass machine routing. Groups are
 present only when non-empty and currently use `profile_map_updates`,
@@ -1211,10 +1227,13 @@ action.source_profile_advisory["advisory_indexes"]
 action.source_profile_advisory["duplicate_group_keys"]
 action.source_profile_advisory["duplicate_advisory_indexes"]
 action.source_profile_advisory["duplicate_profile_observation_iris"]
+action.source_profile_advisory["mixed_support"]
 ```
 
 Use `source_profile_advisory` when routing directly from grouped lanes. Scripts
-that need per-metric or per-column follow-through can still iterate
+should inspect optional `mixed_support` before applying grouped promotion or
+assertion actions; it names shared promotion pattern IRIs, the other review
+lane, and the review note. Scripts that need per-metric or per-column follow-through can still iterate
 `metric_advisories[]` or `type_advisories[]` by the representative advisory
 indexes first, then use each representative advisory's row-local index,
 duplicate-group fields, and own `suggested_next_actions`. `profile_type_review`

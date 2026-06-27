@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import re
@@ -1741,6 +1742,9 @@ class ProfileMetricVocabularyAdvisory:
     definition: ResourceSummary | None
     promotion_patterns: list[ResourceSummary]
     promotion_pattern_count: int
+    mixed_support_patterns: list[ResourceSummary]
+    mixed_support_pattern_count: int
+    mixed_support_note: str | None
     context_patterns: list[ResourceSummary]
     context_pattern_count: int
     recommendation: str
@@ -1765,6 +1769,11 @@ class ProfileTypeFindingAdvisory:
     map_column_found: bool
     current_physical_type: ResourceSummary | None
     current_value_type: ResourceSummary | None
+    promotion_patterns: list[ResourceSummary]
+    promotion_pattern_count: int
+    mixed_support_patterns: list[ResourceSummary]
+    mixed_support_pattern_count: int
+    mixed_support_note: str | None
     advisory_status: str
     recommendation: str
     rationale: str
@@ -8389,6 +8398,12 @@ class DoxaBase:
             columns_by_iri=columns_by_iri,
             recommendations=recommendations,
         )
+        metric_advisories, type_advisories = (
+            self._with_profile_advisory_mixed_support(
+                metric_advisories,
+                type_advisories,
+            )
+        )
         recommendations = self._with_profile_update_default_staging_metadata(
             recommendations
         )
@@ -13332,6 +13347,17 @@ class DoxaBase:
                     recommendation.kind for recommendation in related_recommendations
                 )
             )
+            value_type_promotion_pattern_iris = (
+                self._profile_value_type_promotion_pattern_iris(
+                    value_type_iri=profile.observed_value_type.iri,
+                    evidence_iri=evidence_iri,
+                )
+                if profile.observed_value_type is not None
+                and self._profile_value_type_needs_ontology_skeleton(
+                    profile.observed_value_type.iri
+                )
+                else []
+            )
             suggested_next_actions = self._profile_type_advisory_actions(
                 profile=profile,
                 evidence_iri=evidence_iri,
@@ -13339,6 +13365,9 @@ class DoxaBase:
                 map_column_found=column is not None,
                 current_physical_type=current_physical_type,
                 current_value_type=current_value_type,
+                value_type_promotion_pattern_iris=(
+                    value_type_promotion_pattern_iris
+                ),
             )
             advisories.append(
                 ProfileTypeFindingAdvisory(
@@ -13352,6 +13381,14 @@ class DoxaBase:
                     map_column_found=column is not None,
                     current_physical_type=current_physical_type,
                     current_value_type=current_value_type,
+                    promotion_patterns=self._resource_summaries(
+                        self._lookup_graphs(["patterns"]),
+                        value_type_promotion_pattern_iris,
+                    ),
+                    promotion_pattern_count=len(value_type_promotion_pattern_iris),
+                    mixed_support_patterns=[],
+                    mixed_support_pattern_count=0,
+                    mixed_support_note=None,
                     advisory_status=advisory_status,
                     recommendation="review_profile_type_finding_before_map_update",
                     rationale=self._profile_type_advisory_rationale(
@@ -13619,6 +13656,7 @@ class DoxaBase:
         map_column_found: bool,
         current_physical_type: ResourceSummary | None,
         current_value_type: ResourceSummary | None,
+        value_type_promotion_pattern_iris: list[str],
     ) -> list[SuggestedNextAction]:
         assert profile.observed_column is not None
         actions: list[SuggestedNextAction] = []
@@ -13706,17 +13744,6 @@ class DoxaBase:
         pattern_carry_forward_note = (
             " If you used the suggested record_pattern action, add its returned "
             "pattern_iri to supporting_patterns on this staging call."
-        )
-        value_type_promotion_pattern_iris = (
-            self._profile_value_type_promotion_pattern_iris(
-                value_type_iri=profile.observed_value_type.iri,
-                evidence_iri=evidence_iri,
-            )
-            if profile.observed_value_type is not None
-            and self._profile_value_type_needs_ontology_skeleton(
-                profile.observed_value_type.iri
-            )
-            else []
         )
         if value_type_promotion_pattern_iris:
             for pattern_iri in value_type_promotion_pattern_iris[:3]:
@@ -14134,6 +14161,9 @@ class DoxaBase:
                             promotion_pattern_iris,
                         ),
                         promotion_pattern_count=len(promotion_pattern_iris),
+                        mixed_support_patterns=[],
+                        mixed_support_pattern_count=0,
+                        mixed_support_note=None,
                         context_patterns=self._resource_summaries(
                             self._lookup_graphs(["patterns"]),
                             context_pattern_iris,
@@ -14214,6 +14244,160 @@ class DoxaBase:
         ).hexdigest()[:12]
         return f"profile-metric-advisory:{digest}"
 
+    def _with_profile_advisory_mixed_support(
+        self,
+        metric_advisories: list[ProfileMetricVocabularyAdvisory],
+        type_advisories: list[ProfileTypeFindingAdvisory],
+    ) -> tuple[
+        list[ProfileMetricVocabularyAdvisory],
+        list[ProfileTypeFindingAdvisory],
+    ]:
+        metric_pattern_iris = {
+            pattern.iri
+            for advisory in metric_advisories
+            for pattern in advisory.promotion_patterns
+        }
+        type_pattern_iris = {
+            pattern.iri
+            for advisory in type_advisories
+            for pattern in advisory.promotion_patterns
+        }
+        mixed_pattern_iris = metric_pattern_iris & type_pattern_iris
+        if not mixed_pattern_iris:
+            return metric_advisories, type_advisories
+
+        metric_note = self._profile_advisory_mixed_support_note(
+            "metric_vocabulary_review",
+        )
+        type_note = self._profile_advisory_mixed_support_note(
+            "profile_type_review",
+        )
+
+        def annotate(
+            advisory: ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory,
+            *,
+            note: str,
+        ) -> ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory:
+            mixed_patterns = [
+                pattern
+                for pattern in advisory.promotion_patterns
+                if pattern.iri in mixed_pattern_iris
+            ]
+            if not mixed_patterns:
+                return advisory
+            suggested_next_actions = (
+                self._profile_advisory_actions_with_mixed_support(
+                    advisory.suggested_next_actions,
+                    mixed_pattern_iris=mixed_pattern_iris,
+                    mixed_support_note=note,
+                )
+            )
+            return replace(
+                advisory,
+                mixed_support_patterns=mixed_patterns,
+                mixed_support_pattern_count=len(mixed_patterns),
+                mixed_support_note=note,
+                suggested_next_actions=suggested_next_actions,
+                suggested_next_calls=[
+                    action.call for action in suggested_next_actions
+                ],
+            )
+
+        annotated_metric_advisories = [
+            annotate(advisory, note=metric_note) for advisory in metric_advisories
+        ]
+        annotated_type_advisories = [
+            annotate(advisory, note=type_note) for advisory in type_advisories
+        ]
+        return annotated_metric_advisories, annotated_type_advisories
+
+    @staticmethod
+    def _profile_advisory_mixed_support_note(advisory_kind: str) -> str:
+        other_lane = (
+            "profile type review"
+            if advisory_kind == "metric_vocabulary_review"
+            else "metric vocabulary review"
+        )
+        return (
+            "Mixed support: one or more same-evidence promotion patterns also "
+            f"support {other_lane}. Inspect the shared pattern carefully before "
+            "promoting or asserting this lane independently."
+        )
+
+    def _profile_advisory_actions_with_mixed_support(
+        self,
+        actions: list[SuggestedNextAction],
+        *,
+        mixed_pattern_iris: set[str],
+        mixed_support_note: str,
+    ) -> list[SuggestedNextAction]:
+        updated_actions: list[SuggestedNextAction] = []
+        for action in actions:
+            arguments = action.arguments
+            reason = action.reason
+            should_note = False
+            if (
+                action.tool_name == "describe_pattern"
+                and arguments.get("iri") in mixed_pattern_iris
+            ):
+                should_note = True
+            elif (
+                action.tool_name == "stage_pattern_promotion"
+                and set(arguments.get("patterns") or []) & mixed_pattern_iris
+            ):
+                should_note = True
+            elif action.tool_name == "stage_map_assertion_change":
+                should_note = True
+
+            if not should_note:
+                updated_actions.append(action)
+                continue
+
+            updated_arguments = copy.deepcopy(arguments)
+            if action.tool_name in {
+                "stage_pattern_promotion",
+                "stage_map_assertion_change",
+            }:
+                self._add_mixed_support_review_note(
+                    updated_arguments,
+                    mixed_support_note,
+                )
+            updated_actions.append(
+                replace(
+                    action,
+                    arguments=updated_arguments,
+                    reason=f"{reason} {mixed_support_note}",
+                    call=self._suggested_call_string(
+                        action.tool_name,
+                        updated_arguments,
+                    ),
+                )
+            )
+        return updated_actions
+
+    @staticmethod
+    def _add_mixed_support_review_note(
+        arguments: dict[str, Any],
+        mixed_support_note: str,
+    ) -> None:
+        if "framings" in arguments:
+            for framing in arguments.get("framings") or []:
+                framing["review_note"] = (
+                    f"{framing.get('review_note') or ''} {mixed_support_note}"
+                ).strip()
+                framing["review_recommendation"] = (
+                    f"{framing.get('review_recommendation') or ''} "
+                    f"{mixed_support_note}"
+                ).strip()
+            return
+        arguments["review_note"] = (
+            f"{arguments.get('review_note') or ''} {mixed_support_note}"
+        ).strip()
+        arguments["review_recommendation"] = (
+            f"{arguments.get('review_recommendation') or ''} "
+            f"{mixed_support_note}"
+        ).strip()
+
     @staticmethod
     def _profile_advisory_suggested_actions(
         advisories: Iterable[
@@ -14251,6 +14435,39 @@ class DoxaBase:
                     }
                 source = source_by_key[key]
                 DoxaBase._append_unique(source["advisory_indexes"], advisory_index)
+                mixed_support_patterns = getattr(
+                    advisory,
+                    "mixed_support_patterns",
+                    [],
+                )
+                mixed_support_note = getattr(advisory, "mixed_support_note", None)
+                if mixed_support_patterns:
+                    mixed_support = source.setdefault(
+                        "mixed_support",
+                        {
+                            "pattern_iris": [],
+                            "pattern_count": 0,
+                            "other_review_lanes": [],
+                            "note": mixed_support_note,
+                        },
+                    )
+                    other_lane = (
+                        "profile_type_review"
+                        if advisory_kind == "metric_vocabulary_review"
+                        else "metric_vocabulary_review"
+                    )
+                    DoxaBase._append_unique(
+                        mixed_support["other_review_lanes"],
+                        other_lane,
+                    )
+                    for pattern in mixed_support_patterns:
+                        DoxaBase._append_unique(
+                            mixed_support["pattern_iris"],
+                            pattern.iri,
+                        )
+                    mixed_support["pattern_count"] = len(
+                        mixed_support["pattern_iris"]
+                    )
                 if advisory.duplicate_group_key:
                     DoxaBase._append_unique(
                         source["duplicate_group_keys"],
