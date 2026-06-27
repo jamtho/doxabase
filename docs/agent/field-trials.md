@@ -1107,6 +1107,10 @@ few useful gaps:
   applied event IRI in a grouped staged-review export. Grouped staged exports now
   fail with a route-specific message: pass staged patch IRIs, and inspect
   applied events with graph revision, lineage, or applied-diff helpers.
+- A resource-lineage recovery trial found snapshot exports seeded only by an
+  applied event restore the applied event and its direct staged source, but not
+  older restage ancestors. Generic revision lineage now warns when any visible
+  restage-chain row has RDF count/digest metadata but lacks stored snapshot rows.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

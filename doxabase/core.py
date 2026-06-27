@@ -3898,6 +3898,7 @@ class DoxaBase:
                 paired=paired_revision,
                 latest=latest_revision,
                 current_staged_revision=current_staged_revision,
+                restage_chain=restage_chain,
             )
         )
         return RevisionLineageDescription(
@@ -4188,12 +4189,17 @@ class DoxaBase:
         paired: GraphRevisionListItem | None,
         latest: GraphRevisionListItem,
         current_staged_revision: GraphRevisionListItem | None,
+        restage_chain: list[GraphRevisionListItem] | None = None,
     ) -> list[str]:
         rows = [
             ("selected", selected),
             ("paired", paired),
             ("latest", latest),
             ("current", current_staged_revision),
+            *(
+                (f"restage-chain ancestor {index}", item)
+                for index, item in enumerate(restage_chain or [], start=1)
+            ),
         ]
         warnings: list[str] = []
         seen: set[tuple[str, str]] = set()

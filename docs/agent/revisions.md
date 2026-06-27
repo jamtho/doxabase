@@ -104,6 +104,11 @@ staged-revision event, the filter also includes its staged source revision so
 the bundle has both before and after rows for exact diff reconstruction. A
 zero-quad snapshot row can still be meaningful, for example the empty
 before-state of an applied staged revision.
+That applied-event convenience includes the direct staged source, not every
+older ancestor in a restage chain. If a receiving agent must recover exact drift
+for the full restage chain, include those older staged revision IRIs explicitly;
+lineage warnings call out visible chain rows that have RDF count/digest metadata
+but no stored snapshot rows.
 Use `describe_revision_snapshot_evidence(revision_iri)` after imports when the
 revision recovery state is unclear. It classifies `history_missing`,
 `history_only_count_digest`, `history_plus_snapshot_rows`, and

@@ -2221,6 +2221,98 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert staged.revision_iri in mixed_export_message
 
 
+def test_revision_lineage_warns_when_restage_ancestor_lacks_snapshots(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage daily orders snapshot",
+        rationale="Initial candidate before unrelated map drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrdersDailySnapshot a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#UnrelatedAuditLog",
+        label="Unrelated audit log",
+        is_table=True,
+    )
+    restaged = db.restage_staged_revision(staged.revision_iri)
+    applied = db.apply_staged_revision(restaged.revision_iri)
+    project_path = tmp_path / "project.trig"
+    applied_only_snapshot_path = tmp_path / "applied-only-snapshots.json"
+    db.export_trig(project_path, graphs="project")
+    applied_only_export = db.export_revision_snapshots(
+        applied_only_snapshot_path,
+        revision_iris=[applied.applied_revision_iri],
+    )
+
+    assert applied_only_export.revision_iris == [
+        applied.applied_revision_iri,
+        restaged.revision_iri,
+    ]
+
+    partial = DoxaBase.create(tmp_path / "partial.sqlite")
+    partial.import_trig(project_path)
+    partial.import_revision_snapshots(applied_only_snapshot_path)
+    partial_lineage = partial.describe_revision_lineage(
+        applied.applied_revision_iri,
+    )
+
+    assert partial_lineage.restage_chain_iris == [
+        staged.revision_iri,
+        restaged.revision_iri,
+    ]
+    assert partial_lineage.selected_revision.snapshot_evidence.status == (
+        "history_plus_snapshot_rows"
+    )
+    assert partial_lineage.paired_revision is not None
+    assert partial_lineage.paired_revision.snapshot_evidence.status == (
+        "history_plus_snapshot_rows"
+    )
+    assert any(
+        "restage-chain ancestor 1 revision" in warning
+        and staged.revision_iri in warning
+        and "import a companion revision snapshot JSON bundle" in warning
+        for warning in partial_lineage.warnings
+    )
+    assert not any(
+        restaged.revision_iri in warning for warning in partial_lineage.warnings
+    )
+
+    full_snapshot_path = tmp_path / "full-chain-snapshots.json"
+    full_export = db.export_revision_snapshots(
+        full_snapshot_path,
+        revision_iris=[applied.applied_revision_iri, staged.revision_iri],
+    )
+    assert set(full_export.revision_iris) == {
+        applied.applied_revision_iri,
+        restaged.revision_iri,
+        staged.revision_iri,
+    }
+
+    recovered = DoxaBase.create(tmp_path / "recovered.sqlite")
+    recovered.import_trig(project_path)
+    recovered.import_revision_snapshots(full_snapshot_path)
+    recovered_lineage = recovered.describe_revision_lineage(
+        applied.applied_revision_iri,
+    )
+
+    assert recovered_lineage.restage_chain_iris == [
+        staged.revision_iri,
+        restaged.revision_iri,
+    ]
+    assert recovered_lineage.warnings == []
+
+
 def test_stale_project_import_suggests_snapshot_json_before_restaging(
     tmp_path: Path,
 ) -> None:
