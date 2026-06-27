@@ -2754,6 +2754,113 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["handoff_kind"] == "database_relation_handoff"
 
 
+def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    relation_storage = db.record_map_storage_access(
+        "https://example.test/project#orders_database_storage",
+        label="Orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["mart.orders", "mart.orders_archive"],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    blocked_storage = db.record_map_storage_access(
+        "https://example.test/project#orders_broken_database_storage",
+        label="Orders broken database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-stale",
+        endpoint_profile="warehouse-stale",
+        credential_reference="profile:warehouse-stale-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[relation_storage.iri, blocked_storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = describe_query_context_tool(db, iri=dataset)
+    relation_candidate_index = next(
+        index
+        for index, candidate in enumerate(context["query_target_candidates"])
+        if candidate["relation_identifier"] == "mart.orders"
+    )
+
+    assert context["query_target_decision"]["status"] == "context_blocked"
+    assert context["ready_candidate_indexes"] == []
+    assert relation_candidate_index in context["direct_clean_candidate_indexes"]
+
+    result = draft_query_plan_tool(
+        db,
+        iri=dataset,
+        candidate_index=relation_candidate_index,
+        allow_context_blocked_candidate=True,
+    )
+
+    assert result["source_context"]["selection_mode"] == "candidate_index"
+    assert result["source_context"]["selected_candidate_index"] == (
+        relation_candidate_index
+    )
+    assert result["source_context"]["requested_candidate_index"] == (
+        relation_candidate_index
+    )
+    assert result["source_context"]["requested_storage_access_iri"] is None
+    assert result["source_context"]["allow_context_blocked_candidate"] is True
+    assert result["selected_candidate"]["storage_access"]["iri"] == (
+        relation_storage.iri
+    )
+    assert result["selected_candidate"]["relation_identifier"] == "mart.orders"
+    assert result["selected_candidate"]["candidate_path_status"] == "ready"
+    assert result["selected_candidate"]["review_required"] is False
+    assert result["selected_candidate"]["direct_review_required"] is False
+    assert result["scan"]["uri_template"] is None
+    assert result["scan"]["relation_identifier"] == "mart.orders"
+    assert result["scan"]["connection_reference"] == "warehouse-prod"
+    assert result["scan"]["composition"] == "database_connection_and_relation"
+    assert result["review_gate"]["status"] == "ready"
+    assert result["review_gate"]["context_blocked_candidate_used"] is True
+    assert result["review_gate"]["context_blocking_reason_codes"] == [
+        "query_context_has_other_blockers"
+    ]
+    assert result["review_gate"]["blocking_reason_codes"] == [
+        "scan_function_not_inferred"
+    ]
+    assert result["review_gate"]["all_issue_codes"] == [
+        "database_relation_template_missing"
+    ]
+    assert result["handoff_kind"] == "database_relation_handoff"
+
+    with pytest.raises(DoxaBaseError) as exc_info:
+        draft_query_plan_tool(
+            db,
+            iri=dataset,
+            storage_access_iri=relation_storage.iri,
+        )
+
+    error_message = str(exc_info.value)
+    assert "storage_access_iri matched multiple query target candidates" in (
+        error_message
+    )
+    assert "Pass candidate_index for an exact selection" in error_message
+    assert "relation_identifier='mart.orders'" in error_message
+    assert "relation_identifier='mart.orders_archive'" in error_message
+
+
 def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
     tmp_path: Path,
 ) -> None:
