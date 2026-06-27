@@ -1005,6 +1005,8 @@ profile lists. With `limit=None`, returned and total counts should match unless
 the run has no observations for that dataset. A positive `limit` caps returned
 profiles and leaves omitted counts non-zero.
 
+### Profile Map Update Drafts
+
 `db.draft_profile_map_updates(dataset_iri, evidence_iri)` returns a
 `ProfileMapUpdateDraft`:
 
@@ -1238,6 +1240,8 @@ the deduped advisory actions for vocabulary/context/type review; do not call
 `stage_profile_map_updates` because no-op advisory staging is deferred. When map
 recommendations and advisories coexist, follow the `profile_map_updates` lane for
 accepted map facts, then continue the metric/type review lanes separately.
+
+### Profile Map Update Staging
 
 `db.stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 returns a `ProfileMapUpdateStagingRecord`:
@@ -1741,7 +1745,27 @@ template, template source, source resource IRI, storage access IRI, storage
 protocol IRI, the allowed relation-template source list, and `repair_hint`.
 The repair hint names the source template, target storage access, reviewed
 relation placeholder, and ordered action templates; callers still supply a
-`rationale` for each staged add/remove. `ambiguous_physical_layout` includes
+`rationale` for each staged add/remove. Its nested shape is:
+
+```python
+repair_hint.action_type
+repair_hint.source
+repair_hint.target
+repair_hint.candidate_relation_identifier
+repair_hint.actions[].tool_name
+repair_hint.actions[].mcp_tool_name
+repair_hint.actions[].action_label
+repair_hint.actions[].reason
+repair_hint.actions[].required_extra_arguments
+repair_hint.actions[].rationale_template
+repair_hint.actions[].arguments_template
+repair_hint.actions[].arguments
+repair_hint.actions[].condition
+```
+
+Add actions use `arguments_template` with placeholders for reviewed values and
+caller rationale; remove actions may use ready `arguments` plus the same
+required `rationale` field. `ambiguous_physical_layout` includes
 the distinct file-format/compression signatures and linked layout IRIs; when it
 is present, `draft_query_plan` leaves `scan.function` unset instead of guessing
 from the first layout. After reviewing those layouts, pass

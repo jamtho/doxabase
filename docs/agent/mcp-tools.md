@@ -293,7 +293,7 @@ intentionally wants a capped payload. The run is inferred from profile
 observations linked to the requested evidence IRI, not from a separate
 persisted profile-run node.
 
-`doxabase.draft_profile_map_updates`
+### doxabase.draft_profile_map_updates
 
 Returns read-only review recommendations by comparing one
 `describe_profile_run(dataset_iri, evidence_iri)` result with current map facts.
@@ -376,7 +376,7 @@ do not call `doxabase.stage_profile_map_updates`. When recommendations and
 advisories coexist, follow `profile_map_updates` for map staging and keep metric
 or type review lanes separate.
 
-`doxabase.stage_profile_map_updates`
+### doxabase.stage_profile_map_updates
 
 Stages accepted `draft_profile_map_updates` recommendation indexes as one
 grouped reviewable `map` revision. Pass `dataset_iri`, `evidence_iri`, and
@@ -406,7 +406,7 @@ pattern that should stay advisory-only, target or imply the metric IRI rather
 than the dataset; dataset-targeted metric patterns are eligible map-patch
 support.
 
-`doxabase.describe_query_context`
+### doxabase.describe_query_context
 
 Returns a compact read-only projection for query planning around one dataset:
 dataset summary, physical-metadata readiness, `readiness_note`, an `issues`
@@ -465,7 +465,7 @@ database storage without a storage-access relation template is also review-only
 with `database_relation_template_missing`, even when `location_kind="object"`;
 read `issues[].details` for the affected storage access.
 
-`doxabase.draft_query_plan`
+### doxabase.draft_query_plan
 
 Returns a non-executed, review-gated physical plan draft over
 `describe_query_context`. It currently supports `engine="duckdb"` and selects
@@ -996,7 +996,7 @@ suggested next actions.
 It omits full `patch_checks`, `conflicts`, and `validation_results`; call
 `check_staged_revision_apply` for those.
 
-`doxabase.check_staged_revision_apply`
+### doxabase.check_staged_revision_apply
 
 Previews whether one staged revision can apply without mutating graph state.
 Returns `can_apply`, already-applied state, per-patch current/preview/effective counts,
@@ -1112,7 +1112,7 @@ is the same-patch replay path. Caller-authored repaired successors inherit the
 source row's stored `alternative_to` link unless an explicit replacement is
 supplied.
 
-`doxabase.restage_staged_revisions`
+### doxabase.restage_staged_revisions
 
 Batch recovery helper for stale staged revisions. It accepts staged revision
 IRIs, checks each current apply state, restages count/digest-drift rows that do
@@ -1215,7 +1215,7 @@ Suggested export actions use revision-derived `/tmp` filenames with a short hash
 to reduce collisions across concurrent runs; callers may override the path. This
 is for human/agent review.
 
-`doxabase.export_staged_revisions`
+### doxabase.export_staged_revisions
 
 Writes one Markdown review bundle for several staged revisions in caller-chosen
 order. Use it after `stage_systematisation` when failed, repaired, and

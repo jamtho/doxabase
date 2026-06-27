@@ -55,3 +55,37 @@ def test_storage_access_docs_distinguish_protocol_from_location_kind() -> None:
         assert '"directory"' in content or "`directory`" in content
         assert '"prefix"' in content or "`prefix`" in content
         assert '"connection"' in content or "`connection`" in content
+
+
+def test_high_value_sections_are_addressable_for_cold_start() -> None:
+    mcp_doc = get_agent_doc(
+        "mcp_tools",
+        section="doxabase.draft_profile_map_updates",
+        max_chars=2_000,
+    )
+    assert mcp_doc["selected_section"]["heading"] == (
+        "doxabase.draft_profile_map_updates"
+    )
+    assert "profile_map_updates" in str(mcp_doc["content"])
+
+    response_doc = get_agent_doc(
+        "response_shapes",
+        section="Profile Map Update Drafts",
+        max_chars=3_000,
+    )
+    assert response_doc["selected_section"]["heading"] == (
+        "Profile Map Update Drafts"
+    )
+    assert "draft.recommendations" in str(response_doc["content"])
+
+    query_context_doc = get_agent_doc(
+        "response_shapes",
+        section="Query Context",
+        max_chars=30_000,
+    )
+    query_context_content = str(query_context_doc["content"])
+    assert "repair_hint.actions[].required_extra_arguments" in (
+        query_context_content
+    )
+    assert "repair_hint.actions[].arguments_template" in query_context_content
+    assert "repair_hint.actions[].arguments" in query_context_content
