@@ -1121,6 +1121,10 @@ few useful gaps:
   type-advisory pattern handoff, and sampled-row guardrails in sequence. Accept
   representative duplicate indexes for map staging, then handle metric/type
   advisories as separate review lanes.
+- A profile/query-planning trial confirmed storage/layout/partition metadata,
+  caveats, profile evidence, metric advisories, and draft query planning compose
+  cleanly. It also caught a docs-shape trap: `describe_pattern.evidence` is a
+  list, even when exactly one evidence resource is linked.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

@@ -1646,6 +1646,9 @@ description.map_implications
 ```
 
 Use `pattern_targets`, not `targets`.
+`description.evidence` is a list of evidence resource summaries, even when the
+pattern links to only one evidence resource. Treat it as plural and iterate over
+the items rather than expecting a singular object.
 `description.map_implications` contains resource summaries for map resources or
 assertion nodes the pattern may affect; it is not a prose summary field. Use
 `description.pattern_text` and `description.rationale` for explanation.
