@@ -275,9 +275,13 @@ direct/upstream caveats, `row_count_snapshot`, `profile_summary`,
 `ready_candidate_indexes`,
 `unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
 `unselected_direct_clean_candidate_indexes`, and structured `suggested_next_actions`
-for drafting the selected route. It does not generate SQL or resolve credentials;
-use it to decide whether the graph has enough non-secret physical context for a
-query attempt, then review caveats before trusting aggregations or
+for drafting the selected route. For database template-source mismatches,
+`issues[].details.repair_hint` gives ordered, review-gated repair templates:
+add the reviewed relation identifier to the storage access, then remove the
+misplaced source template only if it was relation metadata rather than a real
+file/object path. It does not generate SQL or resolve credentials; use it to
+decide whether the graph has enough non-secret physical context for a query
+attempt, then review caveats before trusting aggregations or
 interpretations. Read `query_target_decision` first: its `candidate_index` is a
 zero-based pointer into the candidate list, and its `status` tells whether that
 candidate is ready, blocked only by sibling context, directly review-only, or

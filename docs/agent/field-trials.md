@@ -1534,6 +1534,13 @@ few useful gaps:
   carry `source_profile_advisory`, naming the advisory kind, row-local index
   field, represented advisory indexes, duplicate groups, and duplicate
   profile-observation support.
+- A database query-planning trial found
+  `database_relation_template_source_mismatch` gave enough details for a human
+  repair but no structured repair route. Mismatch issues now include
+  `details.repair_hint` with a review-gated move: add the reviewed
+  schema/table/relation to the storage access, then remove the misplaced
+  dataset or partition template only if review confirms it was relation
+  metadata rather than a real file/object path.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

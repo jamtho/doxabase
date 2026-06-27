@@ -1481,8 +1481,12 @@ rather than a joined connection path; read `relation_identifier` and
 storage-access-owned templates become database relation identifiers; dataset
 or partition templates paired with database storage remain review-only
 inventory and carry `database_relation_template_source_mismatch` instead of a
-`relation_identifier`. These cards do not
-resolve credentials, endpoint profiles, or executable SQL. `review_reasons` may include
+`relation_identifier`. The mismatch issue's `details.repair_hint` names the
+source template, storage-access target, candidate relation value for review,
+and ordered `stage_map_assertion_change` templates for adding the reviewed
+relation identifier and optionally removing the misplaced source template.
+These cards do not resolve credentials, endpoint profiles, or executable SQL.
+`review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
 requires review before executable use. `direct_review_reasons` excludes the
 synthetic `query_context_has_other_blockers` warning, so use

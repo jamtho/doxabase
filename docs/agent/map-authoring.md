@@ -44,6 +44,9 @@ You can link columns either with `record_map_dataset(columns=[...])` or with
 `record_map_column(table_iri=...)`. Supplying the same link through both helpers
 is harmless; DoxaBase treats repeated identical RDF edges as one graph fact in
 descriptions.
+Link partition schemes to datasets with
+`record_map_partition_scheme(datasets=[...])`; `record_map_dataset` does not
+take a `partition_schemes` argument.
 Resource-valued fields across these helpers expect IRIs or CURIEs, not
 descriptive prose. Pass terms such as `rc:EventRow`, `rc:FixedSchema`,
 `rc:Parquet`, or a project IRI for columns, datasets, caveats, storage access,

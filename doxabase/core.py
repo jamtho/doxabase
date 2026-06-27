@@ -11647,8 +11647,84 @@ class DoxaBase:
                     else None
                 ),
                 "allowed_relation_template_sources": ["storage_access"],
+                "repair_hint": self._query_database_relation_template_repair_hint(
+                    template=template,
+                    template_source=template_source,
+                    source_resource=source_resource,
+                    storage_access=storage_access,
+                ),
             },
         )
+
+    def _query_database_relation_template_repair_hint(
+        self,
+        *,
+        template: str,
+        template_source: str,
+        source_resource: ResourceSummary,
+        storage_access: StorageAccessDescription,
+    ) -> dict[str, Any]:
+        return {
+            "action_type": "move_database_relation_template_to_storage_access",
+            "requires_review": True,
+            "source": {
+                "subject_iri": source_resource.iri,
+                "template_source": template_source,
+                "predicate": "rc:pathTemplate",
+                "template": template,
+            },
+            "target": {
+                "storage_access_iri": storage_access.iri,
+                "predicate": "rc:pathTemplate",
+                "required_template_source": "storage_access",
+            },
+            "candidate_relation_identifier": {
+                "value": template,
+                "requires_review": True,
+                "review_note": (
+                    "Dataset and partition path templates are not database "
+                    "relation identifiers by default; replace this value with "
+                    "the reviewed schema/table/relation before staging the add."
+                ),
+            },
+            "actions": [
+                {
+                    "action_type": "add_reviewed_relation_template",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "arguments_template": {
+                        "subject": storage_access.iri,
+                        "predicate": "rc:pathTemplate",
+                        "object": "<reviewed_database_relation_identifier>",
+                        "object_kind": "literal",
+                        "change_kind": "add",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Replace the placeholder object with the reviewed "
+                        "database relation identifier before staging."
+                    ),
+                },
+                {
+                    "action_type": "remove_misplaced_source_template",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "arguments": {
+                        "subject": source_resource.iri,
+                        "predicate": "rc:pathTemplate",
+                        "object": template,
+                        "object_kind": "literal",
+                        "change_kind": "remove",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Only after review confirms the source template was "
+                        "misplaced relation metadata rather than a real "
+                        "file/object path."
+                    ),
+                },
+            ],
+        }
 
     def _query_candidate_metadata_issue(
         self,

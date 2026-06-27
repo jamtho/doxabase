@@ -3094,6 +3094,67 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
         "storage_access_iri": storage.iri,
         "storage_protocol_iri": RC + "DatabaseStorage",
         "allowed_relation_template_sources": ["storage_access"],
+        "repair_hint": {
+            "action_type": "move_database_relation_template_to_storage_access",
+            "requires_review": True,
+            "source": {
+                "subject_iri": dataset,
+                "template_source": "dataset",
+                "predicate": "rc:pathTemplate",
+                "template": dataset_template,
+            },
+            "target": {
+                "storage_access_iri": storage.iri,
+                "predicate": "rc:pathTemplate",
+                "required_template_source": "storage_access",
+            },
+            "candidate_relation_identifier": {
+                "value": dataset_template,
+                "requires_review": True,
+                "review_note": (
+                    "Dataset and partition path templates are not database "
+                    "relation identifiers by default; replace this value with "
+                    "the reviewed schema/table/relation before staging the add."
+                ),
+            },
+            "actions": [
+                {
+                    "action_type": "add_reviewed_relation_template",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "arguments_template": {
+                        "subject": storage.iri,
+                        "predicate": "rc:pathTemplate",
+                        "object": "<reviewed_database_relation_identifier>",
+                        "object_kind": "literal",
+                        "change_kind": "add",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Replace the placeholder object with the reviewed "
+                        "database relation identifier before staging."
+                    ),
+                },
+                {
+                    "action_type": "remove_misplaced_source_template",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "arguments": {
+                        "subject": dataset,
+                        "predicate": "rc:pathTemplate",
+                        "object": dataset_template,
+                        "object_kind": "literal",
+                        "change_kind": "remove",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Only after review confirms the source template was "
+                        "misplaced relation metadata rather than a real "
+                        "file/object path."
+                    ),
+                },
+            ],
+        },
     }
     target = context["query_target_candidates"][0]
     assert target["candidate_path"] is None
@@ -3103,6 +3164,9 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
     assert target["direct_review_reasons"][0]["code"] == (
         "database_relation_template_source_mismatch"
     )
+    assert [action["tool_name"] for action in context["suggested_next_actions"]] == [
+        "draft_query_plan",
+    ]
     assert plan["selected_candidate"]["template_source"] == "dataset"
     assert plan["scan"]["uri_template"] is None
     assert plan["scan"]["relation_identifier"] is None

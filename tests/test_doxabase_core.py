@@ -12104,6 +12104,67 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
         "storage_access_iri": storage.iri,
         "storage_protocol_iri": RC + "DatabaseStorage",
         "allowed_relation_template_sources": ["storage_access"],
+        "repair_hint": {
+            "action_type": "move_database_relation_template_to_storage_access",
+            "requires_review": True,
+            "source": {
+                "subject_iri": partition.iri,
+                "template_source": "partition_scheme",
+                "predicate": "rc:pathTemplate",
+                "template": partition_template,
+            },
+            "target": {
+                "storage_access_iri": storage.iri,
+                "predicate": "rc:pathTemplate",
+                "required_template_source": "storage_access",
+            },
+            "candidate_relation_identifier": {
+                "value": partition_template,
+                "requires_review": True,
+                "review_note": (
+                    "Dataset and partition path templates are not database "
+                    "relation identifiers by default; replace this value with "
+                    "the reviewed schema/table/relation before staging the add."
+                ),
+            },
+            "actions": [
+                {
+                    "action_type": "add_reviewed_relation_template",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "arguments_template": {
+                        "subject": storage.iri,
+                        "predicate": "rc:pathTemplate",
+                        "object": "<reviewed_database_relation_identifier>",
+                        "object_kind": "literal",
+                        "change_kind": "add",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Replace the placeholder object with the reviewed "
+                        "database relation identifier before staging."
+                    ),
+                },
+                {
+                    "action_type": "remove_misplaced_source_template",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "arguments": {
+                        "subject": partition.iri,
+                        "predicate": "rc:pathTemplate",
+                        "object": partition_template,
+                        "object_kind": "literal",
+                        "change_kind": "remove",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Only after review confirms the source template was "
+                        "misplaced relation metadata rather than a real "
+                        "file/object path."
+                    ),
+                },
+            ],
+        },
     }
     partition_target_index, partition_target = next(
         (index, target)
@@ -12139,6 +12200,9 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     assert relation_target.review_required is False
     assert relation_target.direct_review_required is False
     assert context.query_target_decision.candidate_index == relation_target_index
+    assert "record_map_storage_access" not in {
+        action.tool_name for action in context.suggested_next_actions
+    }
 
     plan = db.draft_query_plan(dataset)
 
@@ -12373,6 +12437,36 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
 
     assert context.readiness == "needs_review"
     target = context.query_target_candidates[0]
+    issue = context.issues[0]
+    assert issue.details is not None
+    repair_hint = issue.details["repair_hint"]
+    assert repair_hint["source"] == {
+        "subject_iri": dataset,
+        "template_source": "dataset",
+        "predicate": "rc:pathTemplate",
+        "template": dataset_template,
+    }
+    assert repair_hint["target"] == {
+        "storage_access_iri": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "required_template_source": "storage_access",
+    }
+    assert repair_hint["actions"][0]["arguments_template"] == {
+        "subject": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "object": "<reviewed_database_relation_identifier>",
+        "object_kind": "literal",
+        "change_kind": "add",
+        "graph": "map",
+    }
+    assert repair_hint["actions"][1]["arguments"] == {
+        "subject": dataset,
+        "predicate": "rc:pathTemplate",
+        "object": dataset_template,
+        "object_kind": "literal",
+        "change_kind": "remove",
+        "graph": "map",
+    }
     assert target.template_source == "dataset"
     assert target.candidate_path is None
     assert target.relation_identifier is None
@@ -12381,6 +12475,9 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
     assert target.candidate_path_status == "unresolved"
     assert [reason.code for reason in target.direct_review_reasons] == [
         "database_relation_template_source_mismatch"
+    ]
+    assert [action.tool_name for action in context.suggested_next_actions] == [
+        "draft_query_plan",
     ]
 
     plan = db.draft_query_plan(dataset)
@@ -12394,6 +12491,31 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         "database_relation_template_source_mismatch"
     ]
     assert plan.handoff_kind == "metadata_review_required"
+
+    db.record_map_storage_access(storage.iri, path_templates=["mart.events"])
+    add_only_context = db.describe_query_context(dataset)
+    assert any(
+        issue.code == "database_relation_template_source_mismatch"
+        for issue in add_only_context.issues
+    )
+    assert any(
+        candidate.template_source == "storage_access"
+        and candidate.relation_identifier == "mart.events"
+        for candidate in add_only_context.query_target_candidates
+    )
+
+    db.record_map_dataset(dataset, path_templates=[])
+    repaired_context = db.describe_query_context(dataset)
+    assert not any(
+        issue.code == "database_relation_template_source_mismatch"
+        for issue in repaired_context.issues
+    )
+    assert any(
+        candidate.template_source == "storage_access"
+        and candidate.relation_identifier == "mart.events"
+        and candidate.direct_review_required is False
+        for candidate in repaired_context.query_target_candidates
+    )
 
 
 @pytest.mark.parametrize("location_kind", ["object", "connection"])
