@@ -12132,6 +12132,11 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                     "action_type": "add_reviewed_relation_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed database relation identifier for "
+                        f"{storage.iri}."
+                    ),
                     "arguments_template": {
                         "subject": storage.iri,
                         "predicate": "rc:pathTemplate",
@@ -12149,6 +12154,11 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                     "action_type": "remove_misplaced_source_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed source template as misplaced database "
+                        "relation metadata."
+                    ),
                     "arguments": {
                         "subject": partition.iri,
                         "predicate": "rc:pathTemplate",
@@ -12459,6 +12469,10 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         "change_kind": "add",
         "graph": "map",
     }
+    assert repair_hint["actions"][0]["required_extra_arguments"] == ["rationale"]
+    assert repair_hint["actions"][0]["rationale_template"] == (
+        f"Reviewed database relation identifier for {storage.iri}."
+    )
     assert repair_hint["actions"][1]["arguments"] == {
         "subject": dataset,
         "predicate": "rc:pathTemplate",
@@ -12467,6 +12481,10 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         "change_kind": "remove",
         "graph": "map",
     }
+    assert repair_hint["actions"][1]["required_extra_arguments"] == ["rationale"]
+    assert repair_hint["actions"][1]["rationale_template"] == (
+        "Reviewed source template as misplaced database relation metadata."
+    )
     assert target.template_source == "dataset"
     assert target.candidate_path is None
     assert target.relation_identifier is None
@@ -12505,6 +12523,95 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
     )
 
     db.record_map_dataset(dataset, path_templates=[])
+    repaired_context = db.describe_query_context(dataset)
+    assert not any(
+        issue.code == "database_relation_template_source_mismatch"
+        for issue in repaired_context.issues
+    )
+    assert any(
+        candidate.template_source == "storage_access"
+        and candidate.relation_identifier == "mart.events"
+        and candidate.direct_review_required is False
+        for candidate in repaired_context.query_target_candidates
+    )
+
+
+def test_database_relation_repair_hint_templates_stage_and_apply(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    dataset_template = "events/current/*.parquet"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_database_storage",
+        label="Events database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-prod",
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        path_templates=[dataset_template],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    issue = next(
+        issue
+        for issue in db.describe_query_context(dataset).issues
+        if issue.code == "database_relation_template_source_mismatch"
+    )
+    assert issue.details is not None
+    add_action, _ = issue.details["repair_hint"]["actions"]
+
+    assert add_action["required_extra_arguments"] == ["rationale"]
+    add_arguments = dict(add_action["arguments_template"])
+    add_arguments["object"] = "mart.events"
+    add_arguments["rationale"] = "Reviewed mart.events as the database relation."
+    add_revision = db.stage_map_assertion_change(**add_arguments)
+    assert db.check_staged_revision_apply(add_revision.revision_iri).status == "ready"
+    db.apply_staged_revision(add_revision.revision_iri)
+
+    add_only_context = db.describe_query_context(dataset)
+    assert any(
+        issue.code == "database_relation_template_source_mismatch"
+        for issue in add_only_context.issues
+    )
+    assert any(
+        candidate.template_source == "storage_access"
+        and candidate.relation_identifier == "mart.events"
+        for candidate in add_only_context.query_target_candidates
+    )
+
+    issue = next(
+        issue
+        for issue in add_only_context.issues
+        if issue.code == "database_relation_template_source_mismatch"
+    )
+    assert issue.details is not None
+    remove_action = issue.details["repair_hint"]["actions"][1]
+    assert remove_action["required_extra_arguments"] == ["rationale"]
+    remove_arguments = dict(remove_action["arguments"])
+    remove_arguments["rationale"] = (
+        "Reviewed dataset path template as misplaced database relation metadata."
+    )
+    remove_revision = db.stage_map_assertion_change(**remove_arguments)
+    assert db.check_staged_revision_apply(remove_revision.revision_iri).status == (
+        "ready"
+    )
+    db.apply_staged_revision(remove_revision.revision_iri)
+
     repaired_context = db.describe_query_context(dataset)
     assert not any(
         issue.code == "database_relation_template_source_mismatch"

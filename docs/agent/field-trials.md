@@ -1540,12 +1540,25 @@ few useful gaps:
   `details.repair_hint` with a review-gated move: add the reviewed
   schema/table/relation to the storage access, then remove the misplaced
   dataset or partition template only if review confirms it was relation
-  metadata rather than a real file/object path.
+  metadata rather than a real file/object path. A follow-up repair trial found
+  the route works end-to-end but the action templates needed to say that
+  `stage_map_assertion_change` still requires caller-supplied rationale; repair
+  actions now declare that required extra argument.
 - A response-shape docs audit found agents had to infer several nested payload
   fields from dataclasses or tests. `response-shapes` now spells out common
   nested rows for assertion hints and judgement panels, dataset storage and
   related-pattern handoffs, query-plan source/scan/runtime cards, staged
   patch/snapshot diagnostics, and validation diagnostics.
+- A cold-start docs follow-up found those nested response-shape fields were
+  present but hard to land on through bounded MCP section reads. The long
+  `response-shapes` doc now has route subheadings for dataset storage, linked
+  pattern reasons, query context, draft query plans, staged apply checks, and
+  validation diagnostics.
+- A grouped profile-advisory retest confirmed `source_profile_advisory` is
+  sufficient for routing duplicate metric/type lanes. It also showed an
+  authoring nuance: metric-vocabulary patterns that target the dataset can be
+  pulled into profile map patches, so advisory-only metric patterns should
+  target or imply the metric IRI instead.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

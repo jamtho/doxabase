@@ -279,9 +279,12 @@ for drafting the selected route. For database template-source mismatches,
 `issues[].details.repair_hint` gives ordered, review-gated repair templates:
 add the reviewed relation identifier to the storage access, then remove the
 misplaced source template only if it was relation metadata rather than a real
-file/object path. It does not generate SQL or resolve credentials; use it to
-decide whether the graph has enough non-secret physical context for a query
-attempt, then review caveats before trusting aggregations or
+file/object path. Each repair action declares
+`required_extra_arguments=["rationale"]`; add a reviewed rationale to the copied
+arguments before calling `stage_map_assertion_change`. It does not generate SQL
+or resolve credentials; use it to decide whether the graph has enough
+non-secret physical context for a query attempt, then review caveats before
+trusting aggregations or
 interpretations. Read `query_target_decision` first: its `candidate_index` is a
 zero-based pointer into the candidate list, and its `status` tells whether that
 candidate is ready, blocked only by sibling context, directly review-only, or

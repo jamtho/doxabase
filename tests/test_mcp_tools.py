@@ -146,7 +146,17 @@ def test_doc_tools_return_json_like_payloads() -> None:
     assert {
         section["anchor"]
         for section in response_shapes_doc["sections"]
-    } >= {"profile-helper-records", "staged-revisions"}
+    } >= {
+        "profile-helper-records",
+        "dataset-storage-and-layout",
+        "linked-pattern-reasons",
+        "query-context",
+        "draft-query-plan",
+        "staged-detail-and-current-apply-summary",
+        "apply-check-patch-checks-and-snapshot-drift",
+        "validation-diagnostics",
+        "staged-revisions",
+    }
 
     section = get_doc_tool(
         "response_shapes",
@@ -166,6 +176,18 @@ def test_doc_tools_return_json_like_payloads() -> None:
     assert offset["start_char"] == section["end_char"]
     assert len(offset["content"]) <= 120
     assert offset["selected_section"]["anchor"] == "profile-helper-records"
+
+    nested_section = get_doc_tool(
+        "response_shapes",
+        section="Apply Check, Patch Checks, And Snapshot Drift",
+        max_chars=300,
+    )
+    assert nested_section["selected_section"]["anchor"] == (
+        "apply-check-patch-checks-and-snapshot-drift"
+    )
+    assert nested_section["content"].startswith(
+        "### Apply Check, Patch Checks, And Snapshot Drift"
+    )
 
 
 def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
@@ -3122,6 +3144,11 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
                     "action_type": "add_reviewed_relation_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed database relation identifier for "
+                        f"{storage.iri}."
+                    ),
                     "arguments_template": {
                         "subject": storage.iri,
                         "predicate": "rc:pathTemplate",
@@ -3139,6 +3166,11 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
                     "action_type": "remove_misplaced_source_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed source template as misplaced database "
+                        "relation metadata."
+                    ),
                     "arguments": {
                         "subject": dataset,
                         "predicate": "rc:pathTemplate",

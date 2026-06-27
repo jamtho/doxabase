@@ -819,6 +819,13 @@ fields such as `dataset.provenance`, `dataset.transformations`,
 `dataset.related_datasets`, and `dataset.related_dataset_groups`. Treat the list
 above as the common working set, not as an exhaustive whitelist.
 
+Cold-route note: this long doc also contains linked pattern reasons,
+query-context fields, and draft-query-plan fields. Use the section headings
+`Linked Pattern Reasons`, `Query Context`, and `Draft Query Plan` when reading
+through MCP `get_doc(section=...)`.
+
+### Dataset Storage And Layout
+
 Nested physical handoff rows use these common fields:
 
 ```python
@@ -890,6 +897,8 @@ tag.relationship_kind_label
 tag.declared
 tag.referential_integrity
 ```
+
+### Linked Pattern Reasons
 
 Linked pattern reasons summarize why patterns were pulled into the dataset
 handoff:
@@ -1215,9 +1224,12 @@ profile patterns target or imply the dataset or recommendation resources, the
 suggested staging arguments also include `supporting_patterns` so the staged map
 revision carries the directly relevant synthesis without a second pattern
 lookup. Metric-only and type-only profile patterns stay in their advisory lanes
-unless the caller explicitly passes them as support. Pass only the indexes
-actually accepted after reviewing sample scope and modelling intent; include
-duplicate sibling indexes only when they need distinct review treatment.
+unless the caller explicitly passes them as support. When authoring a metric
+vocabulary pattern that should remain advisory-only, target or imply the metric
+IRI rather than the dataset; dataset-targeted patterns are eligible to support
+the map patch. Pass only the indexes actually accepted after reviewing sample
+scope and modelling intent; include duplicate sibling indexes only when they
+need distinct review treatment.
 When `draft.recommendations` is empty and either metric or type advisories are
 present, the draft is advisory-only. The grouped and flat suggested actions are
 the deduped advisory actions for vocabulary/context/type review; do not call
@@ -1493,6 +1505,8 @@ column.profile_observations
 `description`. There is no `column.semantic_role` field; use `column.value_type`
 for the semantic value concept when present.
 
+### Query Context
+
 `db.describe_query_context(table_iri)` returns a `QueryPlanningContext`:
 
 ```python
@@ -1630,7 +1644,9 @@ inventory and carry `database_relation_template_source_mismatch` instead of a
 `relation_identifier`. The mismatch issue's `details.repair_hint` names the
 source template, storage-access target, candidate relation value for review,
 and ordered `stage_map_assertion_change` templates for adding the reviewed
-relation identifier and optionally removing the misplaced source template.
+relation identifier and optionally removing the misplaced source template. Each
+repair action declares `required_extra_arguments=["rationale"]`; add a reviewed
+rationale to the copied arguments before calling `stage_map_assertion_change`.
 These cards do not resolve credentials, endpoint profiles, or executable SQL.
 `review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
@@ -1719,10 +1735,13 @@ failed.
 protocol/location mismatches include storage fields and mismatch reasons, while
 `query_context_has_other_blockers` includes excluded blocker counts, codes, and
 resource IRIs. `database_relation_template_source_mismatch` includes the
-template, template source, source resource IRI, storage access IRI, and the
-allowed relation-template source list. `ambiguous_physical_layout` includes the
-distinct file-format/compression signatures and linked layout IRIs; when it is
-present, `draft_query_plan` leaves `scan.function` unset instead of guessing
+template, template source, source resource IRI, storage access IRI, storage
+protocol IRI, the allowed relation-template source list, and `repair_hint`.
+The repair hint names the source template, target storage access, reviewed
+relation placeholder, and ordered action templates; callers still supply a
+`rationale` for each staged add/remove. `ambiguous_physical_layout` includes
+the distinct file-format/compression signatures and linked layout IRIs; when it
+is present, `draft_query_plan` leaves `scan.function` unset instead of guessing
 from the first layout. After reviewing those layouts, pass
 `physical_layout_iri` to `draft_query_plan` to select one for that draft; the
 source context records the requested layout and the scan card reports the
@@ -1731,6 +1750,8 @@ selected layout.
 Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and
 pattern handoff in `describe_dataset`.
+
+### Draft Query Plan
 
 `db.draft_query_plan(table_iri, engine="duckdb")` returns a non-executed
 `DraftQueryPlan` over `describe_query_context`:
@@ -2923,6 +2944,8 @@ If snapshot JSON was imported before history RDF, rows report
 `status="snapshot_rows_without_history"` and include an `import_trig` suggested
 action.
 
+### Staged Detail And Current Apply Summary
+
 `db.describe_staged_revision(revision_iri)` returns the fuller
 `StagedGraphRevisionDescription`:
 
@@ -3136,6 +3159,8 @@ layout/path changes, and documentation changes attached to the same subject as
 another semantic impact.
 Do not treat `impacts` as proof that a staged revision is wrong; they are a
 review spotlight.
+
+### Apply Check, Patch Checks, And Snapshot Drift
 
 `db.check_staged_revision_apply(revision_iri)` returns a
 `StagedRevisionApplyCheck`:
@@ -3723,6 +3748,8 @@ or validation-failed successor that belongs in an informational or repair queue.
 After any apply, discard stale bundle readiness and feed
 `post_apply_recheck_revision_iris` into a fresh check, grouped export, or batch
 restage pass.
+
+### Validation Diagnostics
 
 When `validation_conforms` is false, read `validation_results` before inferring
 the problem from patch text. Validation results usually include focus node,

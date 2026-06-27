@@ -11692,6 +11692,11 @@ class DoxaBase:
                     "action_type": "add_reviewed_relation_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed database relation identifier for "
+                        f"{storage_access.iri}."
+                    ),
                     "arguments_template": {
                         "subject": storage_access.iri,
                         "predicate": "rc:pathTemplate",
@@ -11709,6 +11714,11 @@ class DoxaBase:
                     "action_type": "remove_misplaced_source_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed source template as misplaced database "
+                        "relation metadata."
+                    ),
                     "arguments": {
                         "subject": source_resource.iri,
                         "predicate": "rc:pathTemplate",

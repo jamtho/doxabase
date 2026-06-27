@@ -399,7 +399,9 @@ merged with the automatic profile-derived anchors.
 Default `stage_profile_map_updates` suggestions only auto-pass same-evidence
 patterns that target or imply the dataset or recommended map resources. Keep
 metric-only and type-only patterns in their advisory lanes unless you explicitly
-want them to support the map patch.
+want them to support the map patch. When authoring a metric vocabulary pattern
+that should stay advisory-only, target or imply the metric IRI rather than the
+dataset; dataset-targeted metric patterns are eligible map-patch support.
 
 `doxabase.describe_query_context`
 
@@ -452,7 +454,9 @@ identifier; record the schema/table/relation on the storage access before using
 a database handoff. Read `issues[].details.repair_hint` for the ordered repair:
 stage an add of the reviewed relation identifier onto the storage access, then
 stage removal of the misplaced source template only if review confirms it was
-relation metadata rather than a real file/object path. The stale dataset or
+relation metadata rather than a real file/object path. Repair actions declare
+`required_extra_arguments=["rationale"]`; add a reviewed rationale to the copied
+arguments before calling `stage_map_assertion_change`. The stale dataset or
 partition path is review context, not the relation identifier. Root-only
 database storage without a storage-access relation template is also review-only
 with `database_relation_template_missing`, even when `location_kind="object"`;

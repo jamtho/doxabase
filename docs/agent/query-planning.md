@@ -203,8 +203,10 @@ on the storage access before using a database handoff. The issue carries
 `details.repair_hint` with ordered, review-gated
 `stage_map_assertion_change` templates: add the reviewed relation identifier to
 the storage access, then remove the misplaced source template only if review
-confirms it was relation metadata rather than a real file/object path. The
-stale dataset or partition path is context for review, not the relation
+confirms it was relation metadata rather than a real file/object path. Each
+repair action declares `required_extra_arguments=["rationale"]`; add a reviewed
+rationale to the copied arguments before calling `stage_map_assertion_change`.
+The stale dataset or partition path is context for review, not the relation
 identifier. Root-only database storage without such a template carries
 `database_relation_template_missing` even when `location_kind == "object"`.
 
