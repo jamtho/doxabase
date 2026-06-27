@@ -9209,6 +9209,101 @@ class DoxaBase:
                 call=self._suggested_call_string("draft_query_plan", arguments),
             )
         )
+        actions.extend(
+            self._query_context_physical_layout_selection_actions(
+                dataset_iri=dataset_iri,
+                graph=graph,
+                candidate_index=decision.candidate_index,
+                candidate=candidate,
+            )
+        )
+        return actions
+
+    def _query_context_physical_layout_selection_actions(
+        self,
+        *,
+        dataset_iri: str,
+        graph: str | None,
+        candidate_index: int,
+        candidate: QueryTargetCandidate,
+    ) -> list[SuggestedNextAction]:
+        issue = next(
+            (
+                reason
+                for reason in candidate.direct_review_reasons
+                if reason.code == "ambiguous_physical_layout"
+                and reason.details is not None
+            ),
+            None,
+        )
+        if issue is None or issue.details is None:
+            return []
+        signatures = issue.details.get("layout_signatures")
+        if not isinstance(signatures, list):
+            return []
+        actions: list[SuggestedNextAction] = []
+        seen_layout_iris: set[str] = set()
+        for signature in signatures:
+            if not isinstance(signature, Mapping):
+                continue
+            layout_iris = signature.get("layout_iris")
+            if not isinstance(layout_iris, list):
+                continue
+            file_format_iri = signature.get("file_format_iri")
+            compression_codec_iri = signature.get("compression_codec_iri")
+            signature_note_parts: list[str] = []
+            if isinstance(file_format_iri, str) and file_format_iri:
+                file_format_label = (
+                    self._compact_iri(file_format_iri)
+                    or self._local_name(file_format_iri)
+                    or file_format_iri
+                )
+                signature_note_parts.append(f"file format {file_format_label}")
+            if isinstance(compression_codec_iri, str) and compression_codec_iri:
+                compression_label = (
+                    self._compact_iri(compression_codec_iri)
+                    or self._local_name(compression_codec_iri)
+                    or compression_codec_iri
+                )
+                signature_note_parts.append(f"compression {compression_label}")
+            signature_note = (
+                " with " + " and ".join(signature_note_parts)
+                if signature_note_parts
+                else ""
+            )
+            for layout_iri in layout_iris:
+                if not isinstance(layout_iri, str) or not layout_iri:
+                    continue
+                if layout_iri in seen_layout_iris:
+                    continue
+                seen_layout_iris.add(layout_iri)
+                arguments: dict[str, Any] = {
+                    "iri": dataset_iri,
+                    "candidate_index": candidate_index,
+                    "physical_layout_iri": layout_iri,
+                }
+                if graph is not None and graph != "map":
+                    arguments["graph"] = graph
+                actions.append(
+                    SuggestedNextAction(
+                        action_label="Select physical layout for draft",
+                        tool_name="draft_query_plan",
+                        mcp_tool_name="doxabase.draft_query_plan",
+                        arguments=arguments,
+                        reason=(
+                            "The selected candidate is blocked by ambiguous "
+                            "physical layout metadata. After reviewing that "
+                            f"{layout_iri} is the intended layout"
+                            f"{signature_note}, draft the query plan with "
+                            "physical_layout_iri so scan.function is inferred "
+                            "from an explicit layout choice."
+                        ),
+                        call=self._suggested_call_string(
+                            "draft_query_plan",
+                            arguments,
+                        ),
+                    )
+                )
         return actions
 
     def draft_query_plan(
@@ -29866,11 +29961,20 @@ class DoxaBase:
                 raise DoxaBaseError(f"{item_name} must be an object")
             if "value" not in item:
                 raise DoxaBaseError(f"{item_name} must include a value")
-            frequency = item.get("frequency")
+            frequency_field = "frequency"
+            if "frequency" in item:
+                frequency = item.get("frequency")
+            elif "count" in item:
+                frequency = item.get("count")
+                frequency_field = "count"
+            else:
+                frequency = None
             if not isinstance(frequency, int) or isinstance(frequency, bool):
-                raise DoxaBaseError(f"{item_name}.frequency must be an integer")
+                raise DoxaBaseError(
+                    f"{item_name}.{frequency_field} must be an integer"
+                )
             self._ensure_non_negative(
-                f"{item_name}.frequency",
+                f"{item_name}.{frequency_field}",
                 frequency,
             )
             values.append((item["value"], frequency))

@@ -8387,6 +8387,82 @@ def test_stage_pattern_promotion_rolls_pattern_support_into_staged_revision(
     }
 
 
+def test_stage_pattern_promotion_keeps_claim_evidence_indirect_unless_passed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile#"
+    dataset = f"{base}Orders"
+    metric = f"{base}CompletenessRatio"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    claim = db.record_claim_observation(
+        summary="Completeness ratio was reviewed.",
+        claim_text=(
+            "The Orders completeness ratio is meaningful only after excluding "
+            "synthetic heartbeat rows."
+        ),
+        claim_kind="rc:MetricClaim",
+        claim_targets=[metric],
+        evidence_sources=["test://orders-completeness-review"],
+    )
+    assert claim.evidence_iri is not None
+    pattern = db.record_pattern(
+        summary="Completeness ratio needs project vocabulary.",
+        pattern_text=(
+            "Orders profiles reuse a completeness ratio with project-specific "
+            "denominator semantics."
+        ),
+        rationale="The supporting claim carries the source evidence.",
+        pattern_targets=[dataset],
+        supporting_claims=[claim.claim_iri],
+        map_implications=[metric],
+    )
+    framing = {
+        "label": "Metric vocabulary",
+        "graph": "ontology",
+        "content": f"""
+            @prefix rc: <https://richcanopy.org/ns/rc#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            <{metric}> a rc:ProfileMetricKind ;
+                rdfs:label "Completeness ratio" .
+        """,
+    }
+
+    indirect = db.stage_pattern_promotion(
+        patterns=[pattern.pattern_iri],
+        summary="Promote metric without direct evidence",
+        intent="Show that claim evidence stays indirect unless selected.",
+        framings=[framing],
+        validation_scope="all",
+    )
+
+    indirect_staged = db.describe_staged_revision(
+        indirect.staged_revisions[0].revision_iri
+    )
+    assert {item.iri for item in indirect_staged.supporting_claims} == {
+        claim.claim_iri
+    }
+    assert indirect_staged.evidence == []
+
+    explicit = db.stage_pattern_promotion(
+        patterns=[pattern.pattern_iri],
+        summary="Promote metric with explicit evidence",
+        intent="Show how callers promote claim evidence into direct revision evidence.",
+        framings=[framing],
+        evidence=[claim.evidence_iri],
+        validation_scope="all",
+    )
+
+    explicit_staged = db.describe_staged_revision(
+        explicit.staged_revisions[0].revision_iri
+    )
+    assert {item.iri for item in explicit_staged.supporting_claims} == {
+        claim.claim_iri
+    }
+    assert {item.iri for item in explicit_staged.evidence} == {claim.evidence_iri}
+
+
 def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     tmp_path: Path,
 ) -> None:
@@ -10832,6 +10908,25 @@ def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
     assert [reason.code for reason in target.direct_review_reasons] == [
         "ambiguous_physical_layout"
     ]
+    selection_actions = [
+        action
+        for action in context.suggested_next_actions
+        if action.action_label == "Select physical layout for draft"
+    ]
+    assert [action.arguments for action in selection_actions] == [
+        {
+            "iri": dataset,
+            "candidate_index": 0,
+            "physical_layout_iri": csv_layout.iri,
+        },
+        {
+            "iri": dataset,
+            "candidate_index": 0,
+            "physical_layout_iri": parquet_layout.iri,
+        },
+    ]
+    assert "file format rc:CSV" in selection_actions[0].reason
+    assert "file format rc:Parquet" in selection_actions[1].reason
 
     plan = db.draft_query_plan(dataset)
 
@@ -14753,7 +14848,7 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
                 "distinct_count": 3,
                 "value_frequencies": [
                     {"value": "fulfilled", "frequency": 70},
-                    {"value": "pending", "frequency": 20},
+                    {"value": "pending", "count": 20},
                 ],
             },
             {

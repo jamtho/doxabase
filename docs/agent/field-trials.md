@@ -1380,6 +1380,17 @@ few useful gaps:
   suggested actions omit mechanical restage, batch restage skips them, and
   direct `restage_staged_revision()` rejects them so agents follow
   `stage_map_assertion_change(..., restages_revision=...)`.
+- The next four-way trial wave found three small polish points worth keeping.
+  Ambiguous physical-layout query contexts now add concrete
+  `draft_query_plan(candidate_index=..., physical_layout_iri=...)` actions for
+  each layout signature. Profile value-frequency inputs accept `count` as a
+  profiler-output alias while responses keep `frequency`. Pattern-promotion
+  evidence placement is now pinned in tests/docs: supporting-claim evidence is
+  reachable through context slices but is not direct staged-revision evidence
+  unless passed explicitly or linked directly on the pattern. A staged-revision
+  trial also confirmed restage/apply/snapshot lineage works on realistic stale
+  caveat proposals; its remaining polish candidate is a more actionable
+  validation-blocked `apply_staged_revision` error.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -97,6 +97,8 @@ the staged revision metadata; and their targets/map implications are used as
 revision anchors. Evidence linked through those observations or claims remains
 reachable through context-slice routes, but it is not direct staged-revision
 evidence unless you pass it explicitly or link it directly on the pattern. The
+grouped review can therefore show direct `evidence: 0` while still listing
+supporting claims or observations whose own evidence is reachable by slice.
 helper does not decide the graph shape for you. Use it for pattern-supported
 map, ontology, or shape changes that should be validated and reviewed before
 becoming durable project structure.

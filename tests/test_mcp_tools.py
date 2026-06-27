@@ -2762,6 +2762,24 @@ def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
     assert "ambiguous_physical_layout" in {
         issue["code"] for issue in context["issues"]
     }
+    selection_actions = [
+        action
+        for action in context["suggested_next_actions"]
+        if action["action_label"] == "Select physical layout for draft"
+    ]
+    assert [action["arguments"] for action in selection_actions] == [
+        {
+            "iri": dataset,
+            "candidate_index": 0,
+            "physical_layout_iri": csv_layout["iri"],
+        },
+        {
+            "iri": dataset,
+            "candidate_index": 0,
+            "physical_layout_iri": parquet_layout["iri"],
+        },
+    ]
+    assert selection_actions[1]["call"].startswith("draft_query_plan(")
     assert automatic["scan"]["function"] is None
     assert automatic["review_gate"]["blocking_reason_codes"] == [
         "ambiguous_physical_layout"

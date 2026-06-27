@@ -1284,6 +1284,10 @@ info-only notes.
 into `draft_query_plan`. In a context-blocked but direct-clean candidate case,
 it includes `candidate_index` and `allow_context_blocked_candidate=True` so a
 script can draft the selected route while keeping the context issues visible.
+When `ambiguous_physical_layout` blocks the selected candidate,
+`suggested_next_actions` also includes one `draft_query_plan` action per linked
+layout signature with `candidate_index` and `physical_layout_iri`; follow the
+one you have reviewed before relying on `scan.function`.
 `ready_candidate_indexes` lists direct-ready candidates at the context stage;
 `unselected_ready_candidate_indexes` is the same list excluding
 `query_target_decision.candidate_index`. When it is non-empty, another ready

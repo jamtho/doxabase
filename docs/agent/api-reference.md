@@ -607,6 +607,8 @@ fields or sample context. Top-level `observed_at`, `observed_by`,
 `evidence_summary`, `evidence_sources`, `sample_size`, `sample_scope`, and
 `sample_method` default into each column profile unless the column item
 overrides them.
+`value_frequencies` inputs accept `count` as a convenience alias, but returned
+profile observations normalize the field to `frequency`.
 Pass `shared_evidence_iri` when the dataset profile and column profiles should
 all link to one shared profiler-run `rc:Evidence` resource. A column item can
 override that by supplying its own `evidence_iri`.

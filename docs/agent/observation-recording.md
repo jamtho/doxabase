@@ -42,7 +42,9 @@ covered by the profile. Use `sample_method` for how it was produced, such as
 full scan, random sample, stratified sample, or top-N query. Profile observations
 may also include `value_frequencies`, a list of
 `{"value": ..., "frequency": ...}` objects for observed values or value
-buckets, and `profile_metrics`, a list of
+buckets. Input may use `count` as a convenience alias, but DoxaBase stores and
+returns the field as `frequency`. Profile observations may also include
+`profile_metrics`, a list of
 `{"metric": "rc:MinimumValue", "value": ...}` objects. Use base metric kinds
 such as `rc:MinimumValue`, `rc:MaximumValue`, `rc:MeanValue`,
 `rc:MedianValue`, and `rc:StandardDeviationValue` when they fit; use project

@@ -566,6 +566,8 @@ profile run should preserve both the raw noticing and the emerging synthesis.
 sample, row, null, distinct, observed value-frequency, and scalar metric values.
 Use `sample_scope` for the population or slice covered by the profile, and
 `sample_method` for how the profile was produced.
+`value_frequencies` outputs always use `frequency`; inputs may use `count` as a
+profiler-output convenience alias.
 Use `profile_metrics=[{"metric": "rc:MinimumValue", "value": ...}]` for
 observed min/max/mean/median-style profiler output. These scalar metrics are
 observed profile evidence, not constraints, shapes, allowed values, or durable

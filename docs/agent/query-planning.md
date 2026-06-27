@@ -74,7 +74,10 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    function unset. After reviewing the linked layouts, pass
    `physical_layout_iri` to `draft_query_plan` to select one for that draft; the
    source context records the requested layout and `scan.physical_layout`
-   records the selected layout.
+   records the selected layout. `describe_query_context.suggested_next_actions`
+   includes one `draft_query_plan` action per distinct linked layout signature
+   so scripts can choose a reviewed layout without parsing issue details by
+   hand.
 7. `required_bindings` and `binding_requirements` still need runtime values.
    `review_gate.binding_values_required=True` and
    `handoff_kind="binding_values_required"` make that case explicit. When a
