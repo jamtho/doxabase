@@ -15898,6 +15898,255 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     }
 
 
+def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-followthrough#"
+    dataset = f"{base}Payments"
+    status_column = f"{base}PaymentsStatus"
+    settlement_column = f"{base}PaymentsSettlementMethod"
+    referrer_column = f"{base}PaymentsReferrer"
+    full_evidence = f"{base}FullProfileEvidence"
+    sampled_evidence = f"{base}SampleProfileEvidence"
+    project_metric = f"{base}PaymentsFreshnessScore"
+
+    db.record_map_dataset(
+        dataset,
+        label="Payments",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        nullable=False,
+        physical_type="rc:Varchar",
+    )
+    db.record_map_column(
+        referrer_column,
+        table_iri=dataset,
+        column_name="referrer",
+        nullable=False,
+    )
+
+    full_profile_observations: list[str] = []
+    for index in range(2):
+        bundle = db.record_profile_bundle(
+            dataset,
+            dataset_summary="Payments were profiled with a full-table scan.",
+            evidence_summary="Payments full profile.",
+            evidence_sources=[f"test://payments/full/{index}"],
+            shared_evidence_iri=full_evidence,
+            sample_size=12,
+            sample_scope="All rows in the local Payments table.",
+            sample_method="DuckDB full-table profile.",
+            row_count=12,
+            update_map_snapshot=False,
+            profile_metrics=[
+                {
+                    "metric": project_metric,
+                    "value": "0.93",
+                    "datatype": "xsd:decimal",
+                }
+            ],
+            column_defaults={"update_map_column": False},
+            column_profiles=[
+                {
+                    "column_iri": status_column,
+                    "column_name": "status",
+                    "summary": "Status had nulls and looked integer-coded.",
+                    "null_count": 2,
+                    "physical_type": "rc:Integer",
+                },
+                {
+                    "column_iri": settlement_column,
+                    "column_name": "settlement_method",
+                    "summary": "Settlement method was observed but unmapped.",
+                    "null_count": 0,
+                    "physical_type": "rc:Varchar",
+                },
+            ],
+        )
+        full_profile_observations.extend(
+            bundle.handoff_entrypoints.profile_observation_iris
+        )
+
+    metric_pattern = db.record_pattern(
+        summary="Payments freshness score needs vocabulary.",
+        pattern_text=(
+            "The Payments profile uses a reusable freshness score that needs "
+            "a project metric definition before comparison."
+        ),
+        rationale="The metric and pattern share the full-profile evidence.",
+        pattern_targets=[dataset],
+        supporting_observations=full_profile_observations,
+        evidence_iri=full_evidence,
+        map_implications=[project_metric],
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Payments sampled partition profile.",
+        evidence_summary="Payments sampled profile.",
+        evidence_sources=["test://payments/sample"],
+        shared_evidence_iri=sampled_evidence,
+        sample_size=40,
+        sample_scope="Sampled partition rows; not the full Payments table.",
+        sample_method="DuckDB sampled partition profile.",
+        row_count=40,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": referrer_column,
+                "column_name": "referrer",
+                "summary": "Referrer had nulls in the sampled partition.",
+                "null_count": 3,
+            }
+        ],
+    )
+
+    full_draft = db.draft_profile_map_updates(dataset, full_evidence)
+
+    assert full_draft.recommendation_count == 6
+    assert full_draft.representative_recommendation_indexes == [0, 2, 4]
+    assert [
+        recommendation.kind for recommendation in full_draft.recommendations
+    ] == [
+        "dataset_row_count_snapshot",
+        "dataset_row_count_snapshot",
+        "column_nullable",
+        "column_nullable",
+        "unmapped_profiled_column",
+        "unmapped_profiled_column",
+    ]
+    assert full_draft.metric_advisory_status_counts == {
+        "project_metric_undefined": 2,
+    }
+    assert full_draft.type_advisory_status_counts == {
+        "type_finding_conflicts_current_map": 2,
+        "type_finding_unmapped_column": 2,
+    }
+    assert all(
+        advisory.duplicate_advisory_indexes == [0, 1]
+        and advisory.promotion_patterns[0].iri == metric_pattern.pattern_iri
+        for advisory in full_draft.metric_advisories
+    )
+
+    staged_updates = db.stage_profile_map_updates(
+        dataset,
+        full_evidence,
+        accepted_recommendation_indexes=(
+            full_draft.representative_recommendation_indexes
+        ),
+    )
+    assert staged_updates.status_counts == {
+        "staged": 3,
+        "skipped": 0,
+        "not_selected": 3,
+    }
+    assert staged_updates.staged_revision is not None
+    assert db.check_staged_revision_apply(
+        staged_updates.staged_revision.revision_iri
+    ).status == "ready"
+    applied_updates = db.apply_staged_revision(
+        staged_updates.staged_revision.revision_iri
+    )
+    assert applied_updates.patches_applied == 2
+    updated_dataset = db.describe_dataset(dataset)
+    assert updated_dataset.row_count_snapshot == 12
+    assert {
+        column.iri: column.nullable for column in updated_dataset.columns
+    } == {
+        status_column: True,
+        settlement_column: None,
+        referrer_column: False,
+    }
+
+    metric_promotion_action = next(
+        action
+        for action in full_draft.metric_advisories[0].suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    )
+    metric_promotion = db.stage_pattern_promotion(
+        **metric_promotion_action.arguments
+    )
+    assert len(metric_promotion.staged_revisions) == 1
+    promoted_revision = metric_promotion.staged_revisions[0]
+    promoted_description = db.describe_staged_revision(
+        promoted_revision.revision_iri
+    )
+    assert {item.iri for item in promoted_description.supporting_patterns} == {
+        metric_pattern.pattern_iri
+    }
+    assert project_metric in {
+        item.iri for item in promoted_description.revision_anchors
+    }
+    assert db.check_staged_revision_apply(promoted_revision.revision_iri).status == (
+        "ready"
+    )
+    assert db.apply_staged_revision(promoted_revision.revision_iri).patches_applied == 1
+
+    type_advisory = next(
+        advisory
+        for advisory in full_draft.type_advisories
+        if advisory.observed_column.iri == status_column
+    )
+    type_pattern_action = next(
+        action
+        for action in type_advisory.suggested_next_actions
+        if action.tool_name == "record_pattern"
+    )
+    type_pattern = db.record_pattern(**type_pattern_action.arguments)
+    physical_type_action = next(
+        action
+        for action in type_advisory.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+        and action.arguments["predicate"] == "rc:physicalType"
+    )
+    physical_type_arguments = dict(physical_type_action.arguments)
+    physical_type_arguments["supporting_patterns"] = [type_pattern.pattern_iri]
+    staged_type = db.stage_map_assertion_change(**physical_type_arguments)
+    assert staged_type.judgement_panel.semantic_risk_level == "high"
+    assert staged_type.staged_revision.validation_conforms is True
+    described_type = db.describe_staged_revision(
+        staged_type.staged_revision.revision_iri
+    )
+    assert type_pattern.pattern_iri in {
+        item.iri for item in described_type.supporting_patterns
+    }
+
+    sampled_draft = db.draft_profile_map_updates(dataset, sampled_evidence)
+    assert sampled_draft.recommendation_count == 2
+    assert sampled_draft.representative_recommendation_indexes == [0, 1]
+    assert [
+        (recommendation.kind, recommendation.default_stageable)
+        for recommendation in sampled_draft.recommendations
+    ] == [
+        ("dataset_row_count_snapshot", False),
+        ("column_nullable", True),
+    ]
+    assert sampled_draft.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": sampled_evidence,
+        "accepted_recommendation_indexes": [1],
+    }
+    sampled_stage = db.stage_profile_map_updates(
+        dataset,
+        sampled_evidence,
+        accepted_recommendation_indexes=[0, 1],
+    )
+    assert sampled_stage.status_counts == {
+        "staged": 1,
+        "skipped": 1,
+        "not_selected": 0,
+    }
+    assert sampled_stage.staged_recommendation_indexes == [1]
+    assert sampled_stage.skipped_recommendation_indexes == [0]
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_stage_profile_map_updates_preserves_caller_support_metadata(
     tmp_path: Path,
 ) -> None:

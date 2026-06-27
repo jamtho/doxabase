@@ -117,6 +117,12 @@ links are recorded on the staged revision for later review.
 Representative duplicate staging preserves every grouped profile observation as
 staged-revision support, so accepting one duplicate row does not discard sibling
 evidence.
+Mixed followthroughs are expected: a duplicate full run may stage representative
+map updates, route metric vocabulary through `stage_pattern_promotion`, and
+route type findings through `record_pattern` plus
+`stage_map_assertion_change(..., supporting_patterns=[...])`; a sampled run in
+the same capsule still skips row-count updates by default while allowing other
+stageable recommendations.
 
 Use direct map helpers only when immediate mutation is intended. Treat sampled
 row-count recommendations conservatively: the staging helper skips them by

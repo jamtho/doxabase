@@ -1116,6 +1116,11 @@ few useful gaps:
   handoff work. Route explanations live in `routes`, `route_legend`, and
   `route_counts` on every valid profile; dataset/deep-lore slices now expand
   ordinary observation seeds through observed resources and support.
+- A profile followthrough trial confirmed a mixed capsule can safely handle
+  duplicate full-profile map updates, same-evidence metric promotion, manual
+  type-advisory pattern handoff, and sampled-row guardrails in sequence. Accept
+  representative duplicate indexes for map staging, then handle metric/type
+  advisories as separate review lanes.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with
