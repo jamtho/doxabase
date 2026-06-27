@@ -5203,6 +5203,15 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert batch.items[1].decision_after == "review_then_apply"
     assert batch.items[1].stale_resolution_state_after == "restaged_successor_ready"
     assert batch.items[1].blocking_reasons_after == []
+    assert batch.items[1].source_snapshot_evidence.status == (
+        "history_plus_snapshot_rows"
+    )
+    assert batch.items[1].source_snapshot_evidence_completeness == "complete"
+    assert batch.items[1].current_snapshot_evidence.revision_iri == restaged_second
+    assert batch.items[1].current_snapshot_evidence.status == (
+        "history_plus_snapshot_rows"
+    )
+    assert batch.items[1].current_snapshot_evidence_completeness == "complete"
     assert batch.items[1].triples_to_add_after > 0
     assert batch.items[1].triples_to_remove_after == 0
     assert batch.items[0].next_action_after is not None

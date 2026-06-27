@@ -647,12 +647,16 @@ class StagedGraphRevisionBatchRestageItem:
     blocking_reasons_before: list[str]
     source_staged_validation_status: str
     source_validation_result_count: int | None
+    source_snapshot_evidence: RevisionSnapshotEvidenceStatus
+    source_snapshot_evidence_completeness: str
     status_after: str
     decision_after: str
     stale_resolution_state_after: str | None
     blocking_reasons_after: list[str]
     current_staged_validation_status: str
     current_validation_result_count: int | None
+    current_snapshot_evidence: RevisionSnapshotEvidenceStatus
+    current_snapshot_evidence_completeness: str
     triples_to_add_after: int
     triples_to_remove_after: int
     action: str
@@ -17169,6 +17173,7 @@ class DoxaBase:
         current_revision_by_source: dict[str, str] = {}
         review_revision_iris: list[str] = []
         items: list[StagedGraphRevisionBatchRestageItem] = []
+        history_graphs = self._expand_graphs(["history"])
 
         def add_review_revision(iri: str | None) -> None:
             if iri is not None and iri not in review_revision_iris:
@@ -17176,6 +17181,10 @@ class DoxaBase:
 
         for source_iri in processed_revision_iris:
             source = self.describe_staged_revision(source_iri)
+            source_snapshot_evidence = self._revision_snapshot_evidence_status(
+                source.iri,
+                history_graphs,
+            )
             source_staged_validation_status = self._staged_validation_status(
                 conforms=source.validation_conforms,
                 result_count=source.validation_result_count,
@@ -17328,6 +17337,10 @@ class DoxaBase:
                 conforms=current_description.validation_conforms,
                 result_count=current_description.validation_result_count,
             )
+            current_snapshot_evidence = self._revision_snapshot_evidence_status(
+                current_revision_iri,
+                history_graphs,
+            )
             current_restaged_from = (
                 current_description.restaged_from.iri
                 if current_description.restaged_from is not None
@@ -17396,6 +17409,12 @@ class DoxaBase:
                         source_staged_validation_status
                     ),
                     source_validation_result_count=source.validation_result_count,
+                    source_snapshot_evidence=source_snapshot_evidence,
+                    source_snapshot_evidence_completeness=(
+                        self._snapshot_evidence_completeness_label(
+                            source_snapshot_evidence
+                        )
+                    ),
                     status_after=current_check.status,
                     decision_after=current_check.decision,
                     stale_resolution_state_after=stale_resolution_state_after,
@@ -17405,6 +17424,12 @@ class DoxaBase:
                     ),
                     current_validation_result_count=(
                         current_description.validation_result_count
+                    ),
+                    current_snapshot_evidence=current_snapshot_evidence,
+                    current_snapshot_evidence_completeness=(
+                        self._snapshot_evidence_completeness_label(
+                            current_snapshot_evidence
+                        )
                     ),
                     triples_to_add_after=current_check.triples_to_add,
                     triples_to_remove_after=current_check.triples_to_remove,

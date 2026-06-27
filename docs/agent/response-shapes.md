@@ -3008,13 +3008,19 @@ batch.export_record
 Each `batch.items` row reports `source_revision_iri`, `summary`,
 `status_before`, `decision_before`, `stale_resolution_state_before`,
 `blocking_reasons_before`, `source_staged_validation_status`,
-`source_validation_result_count`, `status_after`, `decision_after`,
+`source_validation_result_count`, `source_snapshot_evidence`,
+`source_snapshot_evidence_completeness`, `status_after`, `decision_after`,
 `stale_resolution_state_after`, `blocking_reasons_after`,
 `current_staged_validation_status`, `current_validation_result_count`,
+`current_snapshot_evidence`, `current_snapshot_evidence_completeness`,
 `triples_to_add_after`, `triples_to_remove_after`, `action`,
 `not_restageable_reason`, `restaged_revision_iri`,
 `restaged_from`, `current_restaged_by`, `current_revision_iri`,
 `next_action_after`, `suggested_next_actions_after`, and `note`.
+The snapshot evidence fields use the same status object as revision list rows,
+and the completeness labels match grouped Markdown (`complete`, `partial`,
+`partial-extra-rows`, `history-only`, `snapshot-only`, or `missing`). Read them
+before trusting exact drift rationale from a dry-run or real batch row.
 `restaged_from` is present when the source item is itself a refreshed successor
 of an older stale proposal. Current actions are
 `restaged`, `would_restage`, `skipped_already_handled`, and

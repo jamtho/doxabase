@@ -1131,7 +1131,9 @@ few useful gaps:
   RDF-only and exact snapshot recovery clear, while grouped Markdown hid the
   status split in scattered drift notes. Grouped staged-review Markdown now adds
   a `Snapshot Evidence` panel whenever included rows are not all fully recovered
-  with exact snapshot rows.
+  with exact snapshot rows. A batch-restage follow-up found scripts still had to
+  cross-check that panel before trusting dry-run rows; batch items now carry
+  source/current `snapshot_evidence` plus completeness labels directly.
 - A resource-lineage recovery trial found snapshot exports seeded only by an
   applied event restore the applied event and its direct staged source, but not
   older restage ancestors. Generic revision lineage now warns when any visible
