@@ -3552,6 +3552,101 @@ label says `Apply only after semantic review` in that case. Conflict review
 actions include `include_current_apply_check=True` so the next inspection reloads
 the current blocked status.
 
+### Staged Revision Rebase Draft
+
+`db.draft_staged_revision_rebase(revision_iri)` returns a
+`StagedRevisionRebaseDraft`:
+
+```python
+draft.result_kind
+draft.helper
+draft.mode
+draft.source_revision_iri
+draft.current_revision_iri
+draft.draft_status
+draft.draft_kind
+draft.reason_codes
+draft.source_staged_validation_status
+draft.apply_check
+draft.lineage
+draft.validation_results
+draft.repair_candidates
+draft.repair_actions
+draft.preferred_action
+draft.next_action
+draft.next_action_queue_item
+draft.suggested_next_actions
+draft.suggested_next_calls
+draft.note
+```
+
+The helper is read-only. It never stages, restages, applies, or exports a
+revision. Use it when a staged revision routes to `repair_or_replace`, or when a
+mechanical restage produced a `validation_failed` successor and the next step is
+a reviewed repair rather than another same-payload restage.
+
+`draft_status` is `drafted`, `not_drafted`, or `redirect`.
+`draft_kind` explains the route, for example `same_slot_replacement`,
+`mechanical_restage_available`, `validation_repair_needed`,
+`patch_conflict_repair_needed`, `already_effective`, `already_ready`,
+`already_handled`, or `already_applied`. When the helper recognizes a safe
+single-slot replacement, `preferred_action` and the first `repair_actions[]`
+entry are ready-to-call `stage_map_assertion_change` arguments with
+`change_kind="replace"` and `restages_revision` set to the selected staged row.
+They still require normal semantic review; the helper only drafts the action.
+
+`draft.lineage` is compact lineage context:
+
+```python
+lineage.selected_revision_iri
+lineage.current_staged_revision_iri
+lineage.current_revision_iri
+lineage.latest_revision_iri
+lineage.latest_role
+lineage.restage_chain_iris
+lineage.alternative_revision_iris
+lineage.related_revision_iris
+lineage.alternative_to
+lineage.current_alternative_to
+lineage.alternative_gate_status
+lineage.alternative_semantic_review_required
+lineage.alternative_applied_source_iri
+lineage.alternative_applied_revision_iri
+```
+
+This is enough to preserve alternative provenance when a repaired successor is
+also a semantic alternative to an already-applied staged source. If
+`draft_status == "redirect"`, follow `next_action` /
+`next_action_queue_item.resolved_target_iri` instead of staging a parallel
+repair.
+
+Each `draft.repair_candidates[]` row contains:
+
+```python
+candidate.candidate_kind
+candidate.candidate_status
+candidate.graph
+candidate.subject
+candidate.predicate
+candidate.object
+candidate.object_kind
+candidate.object_datatype
+candidate.object_lang
+candidate.current_same_subject_predicate_triples
+candidate.proposed_triples
+candidate.validation_results
+candidate.action
+candidate.note
+```
+
+For the current first slice, `candidate_kind="same_slot_replacement"` means the
+helper recognized a singleton map slot such as `rc:rowSemantics` where the
+current graph has exactly one different value.
+`current_same_subject_predicate_triples` shows the value that a replacement
+would remove, and `proposed_triples` shows the staged value that would be made
+current. If no candidate appears, inspect `validation_results`, `patch_checks`,
+and `suggested_next_actions` before authoring a repair.
+
 `export_staged_revision()` and `export_staged_revisions()` embed this live apply
 check into the Markdown artifact at export time. Treat the `Current Apply Check`
 section as the review bundle's current-status header: it may say a staged

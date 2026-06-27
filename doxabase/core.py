@@ -493,6 +493,66 @@ class StagedRevisionApplySummary:
 
 
 @dataclass(frozen=True)
+class StagedRevisionRebaseLineageContext:
+    selected_revision_iri: str
+    current_staged_revision_iri: str | None
+    current_revision_iri: str | None
+    latest_revision_iri: str | None
+    latest_role: str | None
+    restage_chain_iris: list[str]
+    alternative_revision_iris: list[str]
+    related_revision_iris: list[str]
+    alternative_to: str | None
+    current_alternative_to: str | None
+    alternative_gate_status: str
+    alternative_semantic_review_required: bool
+    alternative_applied_source_iri: str | None
+    alternative_applied_revision_iri: str | None
+
+
+@dataclass(frozen=True)
+class StagedRevisionRebaseCandidate:
+    candidate_kind: str
+    candidate_status: str
+    graph: str
+    subject: str
+    predicate: str
+    object: str | None
+    object_kind: str
+    object_datatype: str | None
+    object_lang: str | None
+    current_same_subject_predicate_triples: list[ResourceTriple]
+    proposed_triples: list[GraphTripleDescription]
+    validation_results: list[ValidationDiagnostic]
+    action: SuggestedNextAction
+    note: str
+
+
+@dataclass(frozen=True)
+class StagedRevisionRebaseDraft:
+    result_kind: str
+    helper: str
+    mode: str
+    source_revision_iri: str
+    current_revision_iri: str
+    draft_status: str
+    draft_kind: str
+    reason_codes: list[str]
+    source_staged_validation_status: str
+    apply_check: StagedRevisionApplyCheck
+    lineage: StagedRevisionRebaseLineageContext
+    validation_results: list[ValidationDiagnostic]
+    repair_candidates: list[StagedRevisionRebaseCandidate]
+    repair_actions: list[SuggestedNextAction]
+    preferred_action: SuggestedNextAction | None
+    next_action: RevisionNextAction | None
+    next_action_queue_item: RevisionNextActionQueueItem | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    note: str
+
+
+@dataclass(frozen=True)
 class SystematisationFramingRecord:
     label: str
     rationale: str | None
@@ -19527,6 +19587,568 @@ class DoxaBase:
                 f"has already been applied by '{source.applied_by.iri}'."
             )
         return source.iri
+
+    def draft_staged_revision_rebase(
+        self,
+        iri: str,
+        *,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+    ) -> StagedRevisionRebaseDraft:
+        source = self.describe_staged_revision(iri)
+        check = self.check_staged_revision_apply(
+            source.iri,
+            validation_scope=validation_scope,
+        )
+        source_staged_validation_status = self._staged_validation_status(
+            conforms=source.validation_conforms,
+            result_count=source.validation_result_count,
+        )
+        repair_actions = [
+            action
+            for action in check.suggested_next_actions
+            if action.tool_name == "stage_map_assertion_change"
+        ]
+        repair_candidates = [
+            candidate
+            for action in repair_actions
+            if (
+                candidate := self._staged_rebase_candidate_from_action(
+                    check,
+                    action,
+                    validation_results=check.validation_results,
+                )
+            )
+            is not None
+        ]
+        validation_repair_candidates = (
+            self._staged_validation_same_slot_rebase_candidates(
+                source,
+                check,
+                validation_scope=validation_scope or check.validation_scope,
+            )
+            if check.status == "validation_failed"
+            else []
+        )
+        for candidate in validation_repair_candidates:
+            if all(
+                candidate.action.arguments != existing.arguments
+                for existing in repair_actions
+            ):
+                repair_candidates.append(candidate)
+                repair_actions.append(candidate.action)
+
+        preferred_action = repair_actions[0] if repair_actions else None
+        suggested_next_actions = self._dedupe_suggested_next_actions(
+            [*repair_actions, *check.suggested_next_actions]
+        )
+        draft_next_action = (
+            self._revision_next_action_from_rebase_repair(preferred_action)
+            if preferred_action is not None
+            else check.next_action
+        )
+        current_revision_iri = self._staged_rebase_current_revision_iri(source)
+        next_action_queue_item = self._revision_next_action_queue_item(
+            row_iri=source.iri,
+            next_action=draft_next_action,
+            record_kind=self._graph_revision_record_kind_for_iri(source.iri),
+            application_status=check.status,
+            application_decision=check.decision,
+            stale_resolution_state=check.stale_resolution_state,
+            staged_validation_status=source_staged_validation_status,
+            alternative_gate=check.alternative_gate,
+        )
+        draft_status, draft_kind, reason_codes, note = (
+            self._staged_rebase_draft_route(
+                source,
+                check,
+                repair_actions=repair_actions,
+            )
+        )
+        return StagedRevisionRebaseDraft(
+            result_kind="staged_revision_rebase_draft",
+            helper="draft_staged_revision_rebase",
+            mode="non_executed_review_draft",
+            source_revision_iri=source.iri,
+            current_revision_iri=current_revision_iri,
+            draft_status=draft_status,
+            draft_kind=draft_kind,
+            reason_codes=reason_codes,
+            source_staged_validation_status=source_staged_validation_status,
+            apply_check=check,
+            lineage=self._staged_rebase_lineage_context(
+                source.iri,
+                alternative_gate=check.alternative_gate,
+            ),
+            validation_results=check.validation_results or source.validation_results,
+            repair_candidates=repair_candidates,
+            repair_actions=repair_actions,
+            preferred_action=preferred_action,
+            next_action=draft_next_action,
+            next_action_queue_item=next_action_queue_item,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+            note=note,
+        )
+
+    def _staged_rebase_draft_route(
+        self,
+        source: StagedGraphRevisionDescription,
+        check: StagedRevisionApplyCheck,
+        *,
+        repair_actions: list[SuggestedNextAction],
+    ) -> tuple[str, str, list[str], str]:
+        if source.applied_by is not None:
+            return (
+                "redirect",
+                "already_applied",
+                ["already_applied"],
+                (
+                    "The selected staged revision has already been applied; "
+                    "follow the applied-event inspection route instead of "
+                    "drafting a repair."
+                ),
+            )
+        if source.current_restaged_by is not None or source.restaged_by is not None:
+            return (
+                "redirect",
+                "already_handled",
+                ["already_has_restage_successor"],
+                (
+                    "The selected staged revision already has a refreshed "
+                    "successor; inspect that current successor before drafting "
+                    "another repair."
+                ),
+            )
+        if repair_actions:
+            return (
+                "drafted",
+                "same_slot_replacement",
+                ["same_slot_replacement"],
+                (
+                    "Drafted a reviewed stage_map_assertion_change replacement "
+                    "candidate. The helper did not stage or apply it."
+                ),
+            )
+        if check.status == "conflict" and self._staged_apply_check_is_restageable_conflict(
+            check.blocking_reasons
+        ):
+            return (
+                "not_drafted",
+                "mechanical_restage_available",
+                check.blocking_reasons,
+                (
+                    "This looks like ordinary count/digest drift; review the "
+                    "source and use restage_staged_revision if the patch intent "
+                    "is still desired."
+                ),
+            )
+        if check.status == "validation_failed":
+            return (
+                "not_drafted",
+                "validation_repair_needed",
+                check.blocking_reasons,
+                (
+                    "Validation failed, but this helper did not recognize a "
+                    "safe single-slot replacement candidate. Inspect "
+                    "validation_results and stage a reviewed repair manually."
+                ),
+            )
+        if check.status == "noop":
+            return (
+                "not_drafted",
+                "already_effective",
+                check.blocking_reasons,
+                (
+                    "The staged patch has no effective graph delta; inspect the "
+                    "current graph state before replacing or ignoring it."
+                ),
+            )
+        if check.status == "ready":
+            return (
+                "not_drafted",
+                "already_ready",
+                [],
+                "The staged revision is already apply-ready; review before applying.",
+            )
+        if check.status == "already_applied":
+            return (
+                "redirect",
+                "already_applied",
+                check.blocking_reasons,
+                "The staged revision is already applied; inspect the applied event.",
+            )
+        return (
+            "not_drafted",
+            "patch_conflict_repair_needed",
+            check.blocking_reasons or ["not_ready"],
+            "Inspect patch checks and validation details before staging a repair.",
+        )
+
+    def _staged_rebase_current_revision_iri(
+        self,
+        source: StagedGraphRevisionDescription,
+    ) -> str:
+        if source.current_restaged_by is not None:
+            return source.current_restaged_by.iri
+        if source.restaged_by is not None:
+            return source.restaged_by.iri
+        if source.applied_by is not None:
+            return source.applied_by.iri
+        return source.iri
+
+    def _staged_rebase_lineage_context(
+        self,
+        revision_iri: str,
+        *,
+        alternative_gate: StagedRevisionAlternativeGate,
+    ) -> StagedRevisionRebaseLineageContext:
+        lineage = self.describe_revision_lineage(
+            revision_iri,
+            include_apply_checks=True,
+        )
+        return StagedRevisionRebaseLineageContext(
+            selected_revision_iri=lineage.selected_revision.iri,
+            current_staged_revision_iri=lineage.current_staged_revision_iri,
+            current_revision_iri=lineage.current_revision_iri,
+            latest_revision_iri=lineage.latest_revision_iri,
+            latest_role=lineage.latest_role,
+            restage_chain_iris=lineage.restage_chain_iris,
+            alternative_revision_iris=lineage.alternative_revision_iris,
+            related_revision_iris=lineage.related_revision_iris,
+            alternative_to=alternative_gate.alternative_to,
+            current_alternative_to=alternative_gate.current_alternative_to,
+            alternative_gate_status=alternative_gate.status,
+            alternative_semantic_review_required=(
+                alternative_gate.semantic_review_required
+            ),
+            alternative_applied_source_iri=alternative_gate.applied_source_iri,
+            alternative_applied_revision_iri=(
+                alternative_gate.applied_revision_iri
+            ),
+        )
+
+    @staticmethod
+    def _dedupe_suggested_next_actions(
+        actions: Iterable[SuggestedNextAction],
+    ) -> list[SuggestedNextAction]:
+        deduped: list[SuggestedNextAction] = []
+        seen: set[tuple[str, str, str]] = set()
+        for action in actions:
+            key = (
+                action.tool_name,
+                action.call,
+                json.dumps(action.arguments, sort_keys=True, default=str),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(action)
+        return deduped
+
+    @staticmethod
+    def _revision_next_action_from_rebase_repair(
+        action: SuggestedNextAction | None,
+    ) -> RevisionNextAction | None:
+        if action is None:
+            return None
+        return RevisionNextAction(
+            action_type="repair_or_replace",
+            queue="repair_or_replace",
+            action_label=action.action_label,
+            tool_name=action.tool_name,
+            mcp_tool_name=action.mcp_tool_name,
+            arguments=action.arguments,
+            reason=action.reason,
+            call=action.call,
+            source="draft_staged_revision_rebase",
+        )
+
+    def _staged_rebase_candidate_from_action(
+        self,
+        check: StagedRevisionApplyCheck,
+        action: SuggestedNextAction,
+        *,
+        validation_results: list[ValidationDiagnostic],
+    ) -> StagedRevisionRebaseCandidate | None:
+        arguments = action.arguments
+        subject = arguments.get("subject")
+        predicate = arguments.get("predicate")
+        object_value = arguments.get("object")
+        graph = arguments.get("graph", "map")
+        object_kind = arguments.get("object_kind", "auto")
+        if (
+            not isinstance(subject, str)
+            or not isinstance(predicate, str)
+            or not isinstance(object_kind, str)
+            or graph != "map"
+            or object_value is not None
+            and not isinstance(object_value, str)
+        ):
+            return None
+        object_datatype = arguments.get("object_datatype")
+        object_lang = arguments.get("object_lang")
+        if object_datatype is not None and not isinstance(object_datatype, str):
+            object_datatype = None
+        if object_lang is not None and not isinstance(object_lang, str):
+            object_lang = None
+        support = self.describe_assertion_support(
+            subject=subject,
+            predicate=predicate,
+            object=object_value,
+            graph="map",
+            object_kind=object_kind,  # type: ignore[arg-type]
+            object_datatype=object_datatype,
+            object_lang=object_lang,
+        )
+        proposed_triples = []
+        if object_value is not None:
+            proposed_triple = self._rebase_action_proposed_triple(
+                subject,
+                predicate,
+                object_value,
+                object_kind=object_kind,
+                object_datatype=object_datatype,
+                object_lang=object_lang,
+            )
+            if proposed_triple is not None:
+                proposed_triples.append(proposed_triple)
+        note = (
+            "This candidate preserves restage provenance and replaces current "
+            "same-subject/predicate map values after review."
+        )
+        if check.alternative_gate.semantic_review_required:
+            note += (
+                " The selected revision is gated as a semantic alternative to "
+                "an already-applied staged source; review both alternatives "
+                "before applying any repaired successor."
+            )
+        return StagedRevisionRebaseCandidate(
+            candidate_kind="same_slot_replacement",
+            candidate_status="ready_to_stage",
+            graph="map",
+            subject=support.subject.iri,
+            predicate=support.predicate,
+            object=(
+                support.requested_object.value
+                if support.requested_object is not None
+                else object_value
+            ),
+            object_kind=(
+                support.requested_object.value_kind
+                if support.requested_object is not None
+                else object_kind
+            ),
+            object_datatype=(
+                support.requested_object.datatype
+                if support.requested_object is not None
+                else object_datatype
+            ),
+            object_lang=(
+                support.requested_object.lang
+                if support.requested_object is not None
+                else object_lang
+            ),
+            current_same_subject_predicate_triples=(
+                support.same_subject_predicate_triples
+            ),
+            proposed_triples=proposed_triples,
+            validation_results=validation_results,
+            action=action,
+            note=note,
+        )
+
+    def _rebase_action_proposed_triple(
+        self,
+        subject: str,
+        predicate: str,
+        object_value: str,
+        *,
+        object_kind: str,
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
+    ) -> GraphTripleDescription | None:
+        object_filter = self._assertion_object_filter(
+            object_value,
+            object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
+        )
+        if object_filter is None:
+            return None
+        stored_object, stored_kind, stored_datatype, stored_lang = object_filter
+        return self._graph_triple_description(
+            (
+                self.expand_iri(subject),
+                "uri",
+                self.expand_iri(predicate),
+                stored_object,
+                stored_kind,
+                stored_datatype,
+                stored_lang,
+            )
+        )
+
+    def _staged_validation_same_slot_rebase_candidates(
+        self,
+        source: StagedGraphRevisionDescription,
+        check: StagedRevisionApplyCheck,
+        *,
+        validation_scope: str,
+    ) -> list[StagedRevisionRebaseCandidate]:
+        candidates: list[StagedRevisionRebaseCandidate] = []
+        max_count_component = PREFIXES["sh"] + "MaxCountConstraintComponent"
+        for diagnostic in check.validation_results:
+            if (
+                diagnostic.focus_node is None
+                or diagnostic.result_path is None
+                or diagnostic.source_constraint_component != max_count_component
+            ):
+                continue
+            replacement_label = self._staged_same_slot_replacement_label(
+                diagnostic.focus_node,
+                diagnostic.result_path,
+            )
+            if replacement_label is None:
+                continue
+            candidate = self._staged_validation_same_slot_candidate_for_diagnostic(
+                source,
+                diagnostic,
+                replacement_label=replacement_label,
+                validation_scope=validation_scope,
+            )
+            if candidate is not None:
+                candidates.append(candidate)
+        return candidates
+
+    def _staged_validation_same_slot_candidate_for_diagnostic(
+        self,
+        source: StagedGraphRevisionDescription,
+        diagnostic: ValidationDiagnostic,
+        *,
+        replacement_label: str,
+        validation_scope: str,
+    ) -> StagedRevisionRebaseCandidate | None:
+        assert diagnostic.focus_node is not None
+        assert diagnostic.result_path is not None
+        proposed_rows: list[GraphStorageRow] = []
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        for patch in source.patches:
+            try:
+                target_graph = self._required_staged_patch_target_graph(patch)
+                operation = self._required_staged_patch_field(
+                    patch,
+                    "operation",
+                    patch.operation,
+                )
+            except DoxaBaseError:
+                return None
+            if target_graph != "map" or operation != addition_operation:
+                continue
+            try:
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                return None
+            for row in self._rdf_graph_storage_rows(patch_graph):
+                if (
+                    row[0] == diagnostic.focus_node
+                    and row[2] == diagnostic.result_path
+                ):
+                    proposed_rows.append(row)
+        proposed_rows = self._sort_graph_storage_rows(set(proposed_rows))
+        if len(proposed_rows) != 1:
+            return None
+
+        proposed_row = proposed_rows[0]
+        object_value, object_kind, object_datatype, object_lang = (
+            proposed_row[3],
+            "iri" if proposed_row[4] == "uri" else proposed_row[4],
+            proposed_row[5],
+            proposed_row[6],
+        )
+        current_triples = self._assertion_triples(
+            ["map"],
+            subject=diagnostic.focus_node,
+            predicate=diagnostic.result_path,
+            object_filter=None,
+            limit=10,
+        )
+        if len(current_triples) != 1:
+            return None
+        current = current_triples[0]
+        if (
+            current.object == proposed_row[3]
+            and current.object_kind == proposed_row[4]
+            and current.object_datatype == proposed_row[5]
+            and current.object_lang == proposed_row[6]
+        ):
+            return None
+        rationale = (
+            f"Repair staged revision {source.iri} by replacing the current "
+            f"{replacement_label} value instead of adding a second value after "
+            "validation failed."
+        )
+        arguments: dict[str, Any] = {
+            "subject": diagnostic.focus_node,
+            "predicate": diagnostic.result_path,
+            "object": object_value,
+            "rationale": rationale,
+            "change_kind": "replace",
+            "graph": "map",
+            "object_kind": object_kind,
+            "restages_revision": source.iri,
+            "validation_scope": validation_scope,
+        }
+        if source.alternative_to is not None:
+            arguments["alternative_to"] = source.alternative_to.iri
+        if object_datatype is not None:
+            arguments["object_datatype"] = object_datatype
+        if object_lang is not None:
+            arguments["object_lang"] = object_lang
+        action = SuggestedNextAction(
+            action_label="Stage same-slot replacement",
+            tool_name="stage_map_assertion_change",
+            mcp_tool_name="doxabase.stage_map_assertion_change",
+            arguments=arguments,
+            reason=(
+                f"Validation failed because {replacement_label} is "
+                "single-valued and the current graph has a different value. "
+                "Stage a reviewed replacement successor instead of replaying "
+                "the same addition patch."
+            ),
+            call=self._suggested_call_string(
+                "stage_map_assertion_change",
+                arguments,
+            ),
+        )
+        return StagedRevisionRebaseCandidate(
+            candidate_kind="same_slot_replacement",
+            candidate_status="ready_to_stage",
+            graph="map",
+            subject=diagnostic.focus_node,
+            predicate=diagnostic.result_path,
+            object=object_value,
+            object_kind=object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
+            current_same_subject_predicate_triples=current_triples,
+            proposed_triples=[self._graph_triple_description(proposed_row)],
+            validation_results=[diagnostic],
+            action=action,
+            note=(
+                "Recognized a validation-failed single-slot addition where the "
+                "current graph has exactly one different value. Review the "
+                "semantic alternative context before staging this repair."
+            ),
+        )
 
     def restage_staged_revision(
         self,

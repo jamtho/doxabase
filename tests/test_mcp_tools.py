@@ -25,6 +25,7 @@ from doxabase.mcp_tools import (
     describe_staged_revision_tool,
     draft_profile_map_updates_tool,
     draft_query_plan_tool,
+    draft_staged_revision_rebase_tool,
     export_graph_tool,
     export_revision_snapshots_tool,
     export_staged_revision_tool,
@@ -95,6 +96,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_resource_revision_lineage" in tool_names
     assert "doxabase.describe_staged_revision" in tool_names
     assert "doxabase.check_staged_revision_apply" in tool_names
+    assert "doxabase.draft_staged_revision_rebase" in tool_names
     assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
@@ -458,6 +460,81 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert export["format"] == "markdown"
     assert export_path.exists()
     assert "exploratory hunch" in export_path.read_text()
+
+
+def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    event_framing = db.stage_graph_revision(
+        summary="Model Orders as event rows",
+        rationale="First alternative for row-grain review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Dataset, rc:Table ;
+                        rc:rowSemantics rc:EventRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    snapshot_framing = db.stage_graph_revision(
+        summary="Model Orders as snapshot rows",
+        rationale="Competing row-grain alternative.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders a rc:Dataset, rc:Table ;
+                        rc:rowSemantics rc:SnapshotRow .
+                """,
+            }
+        ],
+        alternative_to=event_framing.revision_iri,
+        revision_anchors=[orders],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftDataset",
+        label="Drift dataset",
+    )
+    event_successor = db.restage_staged_revision(event_framing.revision_iri)
+    db.apply_staged_revision(event_successor.revision_iri)
+    snapshot_successor = db.restage_staged_revision(snapshot_framing.revision_iri)
+
+    result = draft_staged_revision_rebase_tool(
+        db,
+        iri=snapshot_successor.revision_iri,
+    )
+
+    assert result["helper"] == "draft_staged_revision_rebase"
+    assert result["mode"] == "non_executed_review_draft"
+    assert result["source_revision_iri"] == snapshot_successor.revision_iri
+    assert result["draft_status"] == "drafted"
+    assert result["draft_kind"] == "same_slot_replacement"
+    assert result["apply_check"]["status"] == "validation_failed"
+    assert result["lineage"]["alternative_gate_status"] == (
+        "alternative_to_applied_source"
+    )
+    assert result["repair_actions"][0]["tool_name"] == (
+        "stage_map_assertion_change"
+    )
+    assert result["repair_actions"][0]["arguments"]["restages_revision"] == (
+        snapshot_successor.revision_iri
+    )
+    assert result["repair_candidates"][0]["proposed_triples"][0]["object"] == (
+        RC + "SnapshotRow"
+    )
+    assert result["next_action"]["source"] == "draft_staged_revision_rebase"
 
 
 def test_restage_staged_revision_tool_returns_json_like_payload(

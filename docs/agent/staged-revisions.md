@@ -263,7 +263,7 @@ them may be stale:
 | `ready` | Review/export, apply at most one, then regenerate checks before siblings. |
 | `target_count_drift` or `target_digest_drift` | Review/export the conflict, then restage against current graph state. |
 | `patch_conflict` | Inspect patch diagnostics or export; stage a repaired or alternative proposal. |
-| `validation_failed` | Inspect `validation_results`; stage a repaired or alternative proposal. If the row already has `restaged_by` / `current_restaged_by`, preserve it as diagnostic history and inspect the current successor instead. If `apply_staged_revision()` raises this route, use the `describe_staged_revision(..., include_current_apply_check=True)` call in the error. For overlapping single assertions, prefer removal+addition or `stage_map_assertion_change` replacement over another restage. |
+| `validation_failed` | Inspect `validation_results`; call `draft_staged_revision_rebase()` for a read-only repair plan, then stage a repaired or alternative proposal. If the row already has `restaged_by` / `current_restaged_by`, preserve it as diagnostic history and inspect the current successor instead. If `apply_staged_revision()` raises this route, use the `describe_staged_revision(..., include_current_apply_check=True)` call in the error. For overlapping single assertions, prefer the draft helper's `stage_map_assertion_change` replacement or an explicit removal+addition over another restage. |
 | `noop` | Inspect/export; do not apply unless the no-op is exactly the intended durable event. |
 | `already_applied` | Inspect the applied event and staged source; do not replay it. |
 
@@ -732,7 +732,10 @@ Restaging is for count or digest drift conflicts; validation failures still need
 graph repair, and their suggested actions now point agents toward structured
 diagnostics plus a Markdown review export before staging a repaired candidate.
 When the original intent is still live but the payload itself needs a
-caller-authored repair or rebase, stage the repaired patch with
+caller-authored repair or rebase, call `draft_staged_revision_rebase()` first.
+It is read-only: it returns live apply-check context, compact lineage, and
+reviewed repair actions when DoxaBase recognizes a safe single-slot repair. Then
+stage the repaired patch with
 `restages_revision=<stale_revision_iri>` through `stage_graph_revision` or
 `stage_map_assertion_change`. That records the same `rc:restagesRevision`
 provenance without replaying the old payload. If the source row was already an

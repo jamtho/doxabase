@@ -280,6 +280,19 @@ def check_staged_revision_apply_tool(
     )
 
 
+def draft_staged_revision_rebase_tool(
+    db: DoxaBase,
+    iri: str,
+    validation_scope: str | None = None,
+) -> dict[str, Any]:
+    return to_dict(
+        db.draft_staged_revision_rebase(
+            iri=iri,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
+        )
+    )
+
+
 def describe_pattern_tool(
     db: DoxaBase,
     iri: str,

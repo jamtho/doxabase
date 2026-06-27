@@ -355,6 +355,10 @@ stale = db.list_graph_revisions(
 
 for item in stale.revisions:
     db.describe_staged_revision(item.iri, include_current_apply_check=True)
+    if item.next_action and item.next_action.queue == "repair_or_replace":
+        draft = db.draft_staged_revision_rebase(item.iri)
+        # Review draft.repair_actions before staging any repair.
+        continue
     restaged = db.restage_staged_revision(item.iri)
     check = db.check_staged_revision_apply(restaged.revision_iri)
     if check.can_apply:
@@ -368,6 +372,12 @@ After any apply, treat old readiness as stale. Re-list
 `post_apply_recheck_revision_iris` before applying another same-graph proposal.
 Use `record_kind="applied_event"` when you are browsing history after the live
 mutation queue is empty.
+If the compact route is `repair_or_replace`, call
+`draft_staged_revision_rebase()` before hand-authoring a successor. The helper
+is read-only and can turn recognizable same-slot conflicts or validation
+failures into reviewed `stage_map_assertion_change(..., restages_revision=...)`
+arguments while preserving semantic alternative context. Mechanical restage is
+still the same-payload path for clean count/digest drift.
 
 ## Revision Types
 

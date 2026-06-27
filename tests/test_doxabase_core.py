@@ -4564,6 +4564,29 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert action.arguments["graph"] == "map"
     assert action.arguments["restages_revision"] == source.revision_iri
     assert action.arguments["validation_scope"] == "all"
+    draft = db.draft_staged_revision_rebase(source.revision_iri)
+    assert draft.result_kind == "staged_revision_rebase_draft"
+    assert draft.mode == "non_executed_review_draft"
+    assert draft.source_revision_iri == source.revision_iri
+    assert draft.current_revision_iri == source.revision_iri
+    assert draft.draft_status == "drafted"
+    assert draft.draft_kind == "same_slot_replacement"
+    assert draft.reason_codes == ["same_slot_replacement"]
+    assert draft.apply_check.routing_decision == "stage_same_slot_replacement"
+    assert draft.preferred_action is not None
+    assert draft.preferred_action.arguments == action.arguments
+    assert draft.next_action is not None
+    assert draft.next_action.queue == "repair_or_replace"
+    assert draft.next_action.tool_name == "stage_map_assertion_change"
+    assert draft.next_action_queue_item is not None
+    assert draft.next_action_queue_item.row_iri == source.revision_iri
+    assert draft.next_action_queue_item.row_is_target is False
+    assert draft.repair_candidates[0].current_same_subject_predicate_triples[0].object == (
+        RC + "EventRow"
+    )
+    assert draft.repair_candidates[0].proposed_triples[0].object == (
+        RC + "SnapshotRow"
+    )
     described = db.describe_staged_revision(
         source.revision_iri,
         include_current_apply_check=True,
@@ -7362,6 +7385,46 @@ def test_same_subject_alternative_restage_routes_max_count_repair(
     assert "rc:EventRow" in row_semantics_diagnostic.hint
     assert "rc:SnapshotRow" in row_semantics_diagnostic.hint
     assert "removal+addition" in row_semantics_diagnostic.hint
+    draft = db.draft_staged_revision_rebase(snapshot_successor.revision_iri)
+    assert draft.source_revision_iri == snapshot_successor.revision_iri
+    assert draft.current_revision_iri == snapshot_successor.revision_iri
+    assert draft.draft_status == "drafted"
+    assert draft.draft_kind == "same_slot_replacement"
+    assert draft.apply_check.status == "validation_failed"
+    assert draft.apply_check.decision == "inspect_validation_results"
+    assert draft.lineage.alternative_gate_status == (
+        "alternative_to_applied_source"
+    )
+    assert draft.lineage.alternative_semantic_review_required is True
+    assert draft.lineage.alternative_applied_source_iri == (
+        event_successor.revision_iri
+    )
+    assert draft.repair_actions[0].tool_name == "stage_map_assertion_change"
+    assert draft.repair_actions[0].arguments["subject"] == orders
+    assert draft.repair_actions[0].arguments["predicate"] == RC + "rowSemantics"
+    assert draft.repair_actions[0].arguments["object"] == RC + "SnapshotRow"
+    assert draft.repair_actions[0].arguments["change_kind"] == "replace"
+    assert draft.repair_actions[0].arguments["restages_revision"] == (
+        snapshot_successor.revision_iri
+    )
+    assert draft.repair_actions[0].arguments["alternative_to"] == (
+        event_framing.revision_iri
+    )
+    repair_candidate = draft.repair_candidates[0]
+    assert repair_candidate.candidate_status == "ready_to_stage"
+    assert repair_candidate.current_same_subject_predicate_triples[0].object == (
+        RC + "EventRow"
+    )
+    assert repair_candidate.proposed_triples[0].object == RC + "SnapshotRow"
+    assert repair_candidate.validation_results[0].result_path == (
+        RC + "rowSemantics"
+    )
+    assert draft.next_action is not None
+    assert draft.next_action.source == "draft_staged_revision_rebase"
+    assert draft.next_action.tool_name == "stage_map_assertion_change"
+    assert draft.suggested_next_actions[0].tool_name == (
+        "stage_map_assertion_change"
+    )
     snapshot_description = db.describe_staged_revision(
         snapshot_successor.revision_iri
     )

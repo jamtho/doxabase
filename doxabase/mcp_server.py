@@ -26,6 +26,7 @@ from doxabase.mcp_tools import (
     describe_staged_revision_tool,
     draft_profile_map_updates_tool,
     draft_query_plan_tool,
+    draft_staged_revision_rebase_tool,
     export_graph_tool,
     export_staged_revision_tool,
     export_staged_revisions_tool,
@@ -465,6 +466,19 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Preview whether a staged graph revision can apply cleanly."""
 
         return check_staged_revision_apply_tool(
+            db,
+            iri=iri,
+            validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.draft_staged_revision_rebase")
+    def draft_staged_revision_rebase(
+        iri: str,
+        validation_scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Draft a read-only repaired successor plan for a staged revision."""
+
+        return draft_staged_revision_rebase_tool(
             db,
             iri=iri,
             validation_scope=validation_scope,

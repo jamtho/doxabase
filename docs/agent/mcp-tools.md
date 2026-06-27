@@ -1121,6 +1121,26 @@ come before mutation calls such as apply or restage. Use it before
 `doxabase.apply_staged_revision` when an agent or human wants an explicit
 read-only check.
 
+### doxabase.draft_staged_revision_rebase
+
+Drafts a read-only repair/rebase plan for one staged revision. It does not
+stage, restage, apply, or export anything. Use it after an apply check routes to
+`repair_or_replace`, especially when overlapping single-slot alternatives have
+become stale or `validation_failed` after a mechanical restage.
+
+The response includes the live apply check, compact lineage context,
+`mode="non_executed_review_draft"`, `draft_status`, `draft_kind`,
+`reason_codes`, repair candidates, repair actions, and a compact `next_action`.
+When DoxaBase recognizes a safe singleton-slot
+repair, such as `rc:rowSemantics` max-count validation failure where the current
+graph has exactly one different value, it returns a ready-to-call
+`stage_map_assertion_change(change_kind="replace", restages_revision=...)`
+action. The action preserves the selected revision's `alternative_to` link when
+present, so semantic alternative gates survive the repair. When the selected row
+already has `restaged_by`, `current_restaged_by`, or `applied_by`, the draft is
+a redirect and the compact action points at the current successor or applied
+event instead of creating a parallel repair.
+
 `doxabase.describe_applied_revision_diff`
 
 Returns stored before/after snapshot diffs for an applied staged revision. Pass

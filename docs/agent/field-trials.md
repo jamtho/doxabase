@@ -1684,6 +1684,15 @@ few useful gaps:
   overlapping alternatives, not another list/join tweak. Profile support versus
   impact routing still looks right: `supporting_patterns` stays direct, while
   `impacts[].related_patterns` carries broader metric/type review context.
+- A follow-up staged-rebase design pass reproduced the validation-failed
+  alternative case and found the smallest useful helper is read-only:
+  `draft_staged_revision_rebase()` now composes live apply-check routing,
+  compact lineage, and reviewed repair actions without staging anything. Its
+  first concrete repair draft covers recognizable singleton-slot replacements,
+  including the `rc:rowSemantics` max-count case where a mechanically restaged
+  alternative should replace the now-current value instead of replaying the same
+  additive patch again. Keep future expansion focused on additional safe,
+  reviewable repair candidates rather than making restage silently semantic.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

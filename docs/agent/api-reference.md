@@ -1183,6 +1183,18 @@ Suggested actions are ordered review-first; mutation calls come after
 inspection/export suggestions.
 `can_apply=True` means replay and validation readiness, not semantic approval.
 
+`draft_staged_revision_rebase()` is a read-only repair/rebase planner for one
+staged revision. Use it when an apply check routes to `repair_or_replace`, or
+after a mechanical restage produces a `validation_failed` successor. It returns
+the live apply check, compact lineage context, `draft_status`, `draft_kind`,
+`reason_codes`, repair candidates, repair actions, and a compact `next_action`.
+When DoxaBase recognizes a safe singleton-slot repair, such as
+`rc:rowSemantics` max-count validation failure where the current graph has
+exactly one different value, it drafts
+`stage_map_assertion_change(change_kind="replace", restages_revision=...)`
+arguments without staging them. If the source already has a successor or applied
+event, the draft is a redirect instead of a parallel repair.
+
 `describe_applied_revision_diff(applied_revision_iri, include_triples=False,
 max_triples=500)` returns the stored snapshot diff for an applied staged
 revision. It compares the staged source's before snapshots with the applied
@@ -1226,7 +1238,9 @@ and `current_restaged_by` fields so handoffs do not need a separate
 When the drift review shows the payload itself needs editing, stage the repaired
 payload with `stage_graph_revision(..., restages_revision=...)` or
 `stage_map_assertion_change(..., restages_revision=...)` instead of calling this
-mechanical replay helper.
+mechanical replay helper. Call `draft_staged_revision_rebase()` first when you
+want DoxaBase to compose the read-only repair route and preserve alternative
+lineage context for recognizable same-slot repairs.
 
 `restage_staged_revisions()` is the batch recovery helper for larger stale sets.
 It checks each requested staged revision, restages conflicted revisions that do

@@ -109,6 +109,8 @@ Implemented:
   revision event in history.
 - `describe_applied_revision_diff()` for stored before/after snapshot diffs on
   applied staged revision events, with exact triple arrays opt-in.
+- `draft_staged_revision_rebase()` for read-only repair planning when a staged
+  revision routes to repair/replace rather than mechanical restage.
 - `restage_staged_revision()` for refreshing a stale staged proposal against
   current graph state while preserving a link to the older proposal.
 - Row-level staged graph snapshot storage for exact count/digest drift reporting
@@ -241,18 +243,20 @@ Useful first tool calls for an agent:
 24. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
 25. `doxabase.check_staged_revision_apply` before turning a staged proposal
     into durable graph state
-26. `doxabase.restage_staged_revision` when count or digest drift made a
+26. `doxabase.draft_staged_revision_rebase` when a staged proposal routes to
+    repair or replacement before a successor should be authored
+27. `doxabase.restage_staged_revision` when count or digest drift made a
     still-useful staged proposal stale
-27. `doxabase.describe_applied_revision_diff` when an applied staged revision
+28. `doxabase.describe_applied_revision_diff` when an applied staged revision
     needs stored before/after snapshot diff counts or opt-in exact triples
-28. `doxabase.apply_staged_revision` when a staged proposal should become
+29. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-29. `doxabase.record_map_dataset` and related map helpers for current-best facts
-30. `doxabase.validate_graph` with `scope="all"`
-31. `doxabase.export_trig` when you need a named-graph project review bundle
-32. `doxabase.record_graph_revision` when the bundle/change rationale should be
+30. `doxabase.record_map_dataset` and related map helpers for current-best facts
+31. `doxabase.validate_graph` with `scope="all"`
+32. `doxabase.export_trig` when you need a named-graph project review bundle
+33. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-33. `doxabase.describe_graph_revision` when reviewing a history record
+34. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -294,6 +298,7 @@ Current MCP tools:
 - `doxabase.stage_systematisation`
 - `doxabase.stage_pattern_promotion`
 - `doxabase.check_staged_revision_apply`
+- `doxabase.draft_staged_revision_rebase`
 - `doxabase.restage_staged_revision`
 - `doxabase.describe_applied_revision_diff`
 - `doxabase.apply_staged_revision`

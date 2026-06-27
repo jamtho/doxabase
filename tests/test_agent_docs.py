@@ -68,6 +68,16 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     )
     assert "profile_map_updates" in str(mcp_doc["content"])
 
+    rebase_mcp_doc = get_agent_doc(
+        "mcp_tools",
+        section="doxabase.draft_staged_revision_rebase",
+        max_chars=2_000,
+    )
+    assert rebase_mcp_doc["selected_section"]["heading"] == (
+        "doxabase.draft_staged_revision_rebase"
+    )
+    assert "non_executed_review_draft" in str(rebase_mcp_doc["content"])
+
     response_doc = get_agent_doc(
         "response_shapes",
         section="Profile Map Update Drafts",
@@ -77,6 +87,16 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
         "Profile Map Update Drafts"
     )
     assert "draft.recommendations" in str(response_doc["content"])
+
+    rebase_response_doc = get_agent_doc(
+        "response_shapes",
+        section="Staged Revision Rebase Draft",
+        max_chars=4_000,
+    )
+    assert rebase_response_doc["selected_section"]["heading"] == (
+        "Staged Revision Rebase Draft"
+    )
+    assert "draft.repair_candidates" in str(rebase_response_doc["content"])
 
     query_context_doc = get_agent_doc(
         "response_shapes",
