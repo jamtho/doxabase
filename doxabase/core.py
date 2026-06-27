@@ -12137,8 +12137,238 @@ class DoxaBase:
                 "bucket_name": storage_access.bucket_name,
                 "key_prefix": storage_access.key_prefix,
                 "mismatch_reasons": mismatch_reasons,
+                "repair_hint": self._storage_protocol_location_repair_hint(
+                    storage_access,
+                    mismatch_reasons=mismatch_reasons,
+                    template=template,
+                    template_source_resource=source_resource,
+                ),
             },
         )
+
+    def _storage_protocol_location_repair_hint(
+        self,
+        storage_access: StorageAccessDescription,
+        *,
+        mismatch_reasons: list[str],
+        template: str | None = None,
+        template_source_resource: ResourceSummary | None = None,
+    ) -> dict[str, Any]:
+        actions: list[dict[str, Any]] = [
+            {
+                "action_type": "set_reviewed_storage_protocol",
+                "tool_name": "stage_map_assertion_change",
+                "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                "required_extra_arguments": ["rationale"],
+                "rationale_template": (
+                    "Reviewed protocol for storage access "
+                    f"{storage_access.iri}."
+                ),
+                "arguments_template": {
+                    "subject": storage_access.iri,
+                    "predicate": "rc:storageProtocol",
+                    "object": "<reviewed_rc_storage_protocol_iri>",
+                    "object_kind": "iri",
+                    "change_kind": "replace",
+                    "graph": "map",
+                },
+                "condition": (
+                    "Use when review shows the recorded storage protocol is the "
+                    "wrong one for the true storage location."
+                ),
+            },
+            {
+                "action_type": "set_reviewed_storage_root",
+                "tool_name": "stage_map_assertion_change",
+                "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                "required_extra_arguments": ["rationale"],
+                "rationale_template": (
+                    "Reviewed storage root or URL for storage access "
+                    f"{storage_access.iri}."
+                ),
+                "arguments_template": {
+                    "subject": storage_access.iri,
+                    "predicate": "rc:storageRoot",
+                    "object": "<reviewed_protocol_appropriate_root_url_or_connection>",
+                    "object_kind": "literal",
+                    "change_kind": "replace",
+                    "graph": "map",
+                },
+                "condition": (
+                    "Use when review shows the protocol is right but the root, "
+                    "URL, or connection reference is malformed or in the wrong "
+                    "scheme."
+                ),
+            },
+            {
+                "action_type": "set_reviewed_bucket_name",
+                "tool_name": "stage_map_assertion_change",
+                "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                "required_extra_arguments": ["rationale"],
+                "rationale_template": (
+                    "Reviewed bucket name for storage access "
+                    f"{storage_access.iri}."
+                ),
+                "arguments_template": {
+                    "subject": storage_access.iri,
+                    "predicate": "rc:bucketName",
+                    "object": "<reviewed_bucket_name>",
+                    "object_kind": "literal",
+                    "change_kind": "replace",
+                    "graph": "map",
+                },
+                "condition": (
+                    "Use for S3-compatible storage when review confirms the "
+                    "bucket should be recorded separately from path templates."
+                ),
+            },
+            {
+                "action_type": "set_reviewed_key_prefix",
+                "tool_name": "stage_map_assertion_change",
+                "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                "required_extra_arguments": ["rationale"],
+                "rationale_template": (
+                    "Reviewed key prefix for storage access "
+                    f"{storage_access.iri}."
+                ),
+                "arguments_template": {
+                    "subject": storage_access.iri,
+                    "predicate": "rc:keyPrefix",
+                    "object": "<reviewed_key_prefix>",
+                    "object_kind": "literal",
+                    "change_kind": "replace",
+                    "graph": "map",
+                },
+                "condition": (
+                    "Use for S3-compatible storage when review confirms the "
+                    "prefix should be recorded separately from path templates."
+                ),
+            },
+        ]
+        if storage_access.bucket_name:
+            actions.append(
+                {
+                    "action_type": "remove_conflicting_bucket_name",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed bucket metadata as inappropriate for storage "
+                        f"access {storage_access.iri}."
+                    ),
+                    "arguments": {
+                        "subject": storage_access.iri,
+                        "predicate": "rc:bucketName",
+                        "object": storage_access.bucket_name,
+                        "object_kind": "literal",
+                        "change_kind": "remove",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Only after review confirms bucket metadata is wrong for "
+                        "this storage protocol or should be represented elsewhere."
+                    ),
+                }
+            )
+        if storage_access.key_prefix:
+            actions.append(
+                {
+                    "action_type": "remove_conflicting_key_prefix",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed key-prefix metadata as inappropriate for "
+                        f"storage access {storage_access.iri}."
+                    ),
+                    "arguments": {
+                        "subject": storage_access.iri,
+                        "predicate": "rc:keyPrefix",
+                        "object": storage_access.key_prefix,
+                        "object_kind": "literal",
+                        "change_kind": "remove",
+                        "graph": "map",
+                    },
+                    "condition": (
+                        "Only after review confirms key-prefix metadata is wrong "
+                        "for this storage protocol or duplicates the template."
+                    ),
+                }
+            )
+        if template is not None and template_source_resource is not None:
+            actions.extend(
+                [
+                    {
+                        "action_type": "add_reviewed_path_template",
+                        "tool_name": "stage_map_assertion_change",
+                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "required_extra_arguments": ["rationale"],
+                        "rationale_template": (
+                            "Reviewed protocol-appropriate path template for "
+                            f"{template_source_resource.iri}."
+                        ),
+                        "arguments_template": {
+                            "subject": template_source_resource.iri,
+                            "predicate": "rc:pathTemplate",
+                            "object": "<reviewed_protocol_appropriate_path_template>",
+                            "object_kind": "literal",
+                            "change_kind": "add",
+                            "graph": "map",
+                        },
+                        "condition": (
+                            "Use when review confirms the template value should "
+                            "be corrected while preserving the source resource."
+                        ),
+                    },
+                    {
+                        "action_type": "remove_conflicting_path_template",
+                        "tool_name": "stage_map_assertion_change",
+                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "required_extra_arguments": ["rationale"],
+                        "rationale_template": (
+                            "Reviewed path template as conflicting with storage "
+                            f"access {storage_access.iri}."
+                        ),
+                        "arguments": {
+                            "subject": template_source_resource.iri,
+                            "predicate": "rc:pathTemplate",
+                            "object": template,
+                            "object_kind": "literal",
+                            "change_kind": "remove",
+                            "graph": "map",
+                        },
+                        "condition": (
+                            "Only after review confirms this exact template is "
+                            "malformed, duplicated, or belongs on a different "
+                            "storage access."
+                        ),
+                    },
+                ]
+            )
+        hint: dict[str, Any] = {
+            "action_type": "repair_storage_protocol_location_mismatch",
+            "requires_review": True,
+            "storage_access": {
+                "storage_access_iri": storage_access.iri,
+                "storage_protocol_iri": (
+                    storage_access.storage_protocol.iri
+                    if storage_access.storage_protocol is not None
+                    else None
+                ),
+                "storage_root": storage_access.storage_root,
+                "bucket_name": storage_access.bucket_name,
+                "key_prefix": storage_access.key_prefix,
+            },
+            "mismatch_reasons": mismatch_reasons,
+            "actions": actions,
+        }
+        if template is not None and template_source_resource is not None:
+            hint["source"] = {
+                "subject_iri": template_source_resource.iri,
+                "predicate": "rc:pathTemplate",
+                "template": template,
+            }
+        return hint
 
     def _query_target_candidate_metadata_issues(
         self,
@@ -12688,6 +12918,12 @@ class DoxaBase:
                         "bucket_name": access.bucket_name,
                         "key_prefix": access.key_prefix,
                         "mismatch_reasons": location_mismatch_reasons,
+                        "repair_hint": (
+                            self._storage_protocol_location_repair_hint(
+                                access,
+                                mismatch_reasons=location_mismatch_reasons,
+                            )
+                        ),
                     },
                 )
             self._add_layout_status_issue(

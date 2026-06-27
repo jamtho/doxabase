@@ -1702,6 +1702,10 @@ may include `query_context_has_other_blockers` even when its own storage access
 looks clean. Protocol/location warnings such as
 `s3_access_resolution_unrecorded` and `storage_protocol_location_mismatch` mean
 the candidate path is only an orientation aid until storage access is clarified.
+For `storage_protocol_location_mismatch`, read
+`details.repair_hint.actions`: it gives reviewed `stage_map_assertion_change`
+templates for protocol/root/bucket/prefix edits and, when applicable, exact
+path-template add/remove repairs.
 Complete path templates such as `s3://...` are checked against the declared
 storage protocol and any recorded bucket/prefix; relative templates that repeat
 the recorded key prefix are also review-only because the composed path would
@@ -1773,9 +1777,10 @@ to `severity`: an `error` in `query_planning` means executable query-planning
 metadata is missing or contradicted, not that profile lore or graph validation
 failed.
 `details` is optional structured context for selected issue kinds. For example,
-protocol/location mismatches include storage fields and mismatch reasons, while
-`query_context_has_other_blockers` includes excluded blocker counts, codes, and
-resource IRIs. `missing_storage_access` includes `dataset_iri`,
+protocol/location mismatches include storage fields, mismatch reasons, and a
+reviewed `repair_hint`, while `query_context_has_other_blockers` includes
+excluded blocker counts, codes, and resource IRIs. `missing_storage_access`
+includes `dataset_iri`,
 `global_storage_access_count`, a `repair_hint`, and sometimes
 `fixture_staleness_hint`. The repair hint offers reviewed action templates for
 `record_map_storage_access(..., datasets=[...])` or a staged

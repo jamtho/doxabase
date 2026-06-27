@@ -225,6 +225,11 @@ filesystem/object-existence checks before running anything.
 S3-compatible candidates often need endpoint profile, credential reference, and
 region or equivalent local runtime setup. DoxaBase records non-secret planning
 facts; it does not store secrets or prove the object exists.
+When `storage_protocol_location_mismatch` appears, read
+`details.repair_hint` before hand-authoring a repair. It offers reviewed
+`stage_map_assertion_change` templates for fixing protocol/root/bucket/prefix
+metadata and, when a path template caused the mismatch, adding a reviewed
+replacement template or removing the conflicting exact template.
 
 Database candidates currently use the generic draft-plan shape. A relation can
 be metadata-ready in `describe_query_context()` while

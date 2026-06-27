@@ -275,11 +275,14 @@ direct/upstream caveats, `row_count_snapshot`, `profile_summary`,
 `ready_candidate_indexes`,
 `unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
 `unselected_direct_clean_candidate_indexes`, and structured `suggested_next_actions`
-for drafting the selected route. For database template-source mismatches,
-`issues[].details.repair_hint` gives ordered, review-gated repair templates:
-add the reviewed relation identifier to the storage access, then remove the
-misplaced source template only if it was relation metadata rather than a real
-file/object path. Each repair action declares
+for drafting the selected route. For database template-source mismatches and
+storage protocol/location mismatches, `issues[].details.repair_hint` gives
+ordered, review-gated repair templates. Database template-source hints add the
+reviewed relation identifier to the storage access, then remove the misplaced
+source template only if it was relation metadata rather than a real file/object
+path. Protocol/location hints offer reviewed protocol/root/bucket/prefix edits
+and exact path-template add/remove repairs when a template caused the mismatch.
+Each repair action declares
 `required_extra_arguments=["rationale"]`; add a reviewed rationale to the copied
 arguments before calling `stage_map_assertion_change`. It does not generate SQL
 or resolve credentials; use it to decide whether the graph has enough

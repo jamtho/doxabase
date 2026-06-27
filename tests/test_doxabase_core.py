@@ -11553,6 +11553,37 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
         "bucket/prefix" in reason
         for reason in mismatch.details["mismatch_reasons"]
     )
+    repair_hint = mismatch.details["repair_hint"]
+    assert repair_hint["action_type"] == "repair_storage_protocol_location_mismatch"
+    assert repair_hint["requires_review"] is True
+    assert repair_hint["storage_access"]["storage_access_iri"] == storage.iri
+    action_by_type = {
+        action["action_type"]: action for action in repair_hint["actions"]
+    }
+    assert action_by_type["set_reviewed_storage_protocol"]["arguments_template"] == {
+        "subject": storage.iri,
+        "predicate": "rc:storageProtocol",
+        "object": "<reviewed_rc_storage_protocol_iri>",
+        "object_kind": "iri",
+        "change_kind": "replace",
+        "graph": "map",
+    }
+    assert action_by_type["remove_conflicting_bucket_name"]["arguments"] == {
+        "subject": storage.iri,
+        "predicate": "rc:bucketName",
+        "object": "public",
+        "object_kind": "literal",
+        "change_kind": "remove",
+        "graph": "map",
+    }
+    assert action_by_type["remove_conflicting_key_prefix"]["arguments"] == {
+        "subject": storage.iri,
+        "predicate": "rc:keyPrefix",
+        "object": "snapshots",
+        "object_kind": "literal",
+        "change_kind": "remove",
+        "graph": "map",
+    }
 
 
 def test_describe_query_context_warns_on_non_s3_bucket_prefix(
@@ -11838,6 +11869,37 @@ def test_describe_query_context_warns_on_complete_template_protocol_mismatch(
         and "path template" in reason.message
         for reason in target.review_reasons
     )
+    mismatch = next(
+        reason
+        for reason in target.review_reasons
+        if reason.code == "storage_protocol_location_mismatch"
+    )
+    assert mismatch.details is not None
+    repair_hint = mismatch.details["repair_hint"]
+    assert repair_hint["source"] == {
+        "subject_iri": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "template": "s3://public-bucket/snapshots/*.parquet",
+    }
+    action_by_type = {
+        action["action_type"]: action for action in repair_hint["actions"]
+    }
+    assert action_by_type["add_reviewed_path_template"]["arguments_template"] == {
+        "subject": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "object": "<reviewed_protocol_appropriate_path_template>",
+        "object_kind": "literal",
+        "change_kind": "add",
+        "graph": "map",
+    }
+    assert action_by_type["remove_conflicting_path_template"]["arguments"] == {
+        "subject": storage.iri,
+        "predicate": "rc:pathTemplate",
+        "object": "s3://public-bucket/snapshots/*.parquet",
+        "object_kind": "literal",
+        "change_kind": "remove",
+        "graph": "map",
+    }
 
 
 def test_describe_query_context_warns_on_s3_template_bucket_prefix_conflict(

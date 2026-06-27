@@ -1650,6 +1650,11 @@ few useful gaps:
   resource-first mutation queue. `list_resource_revisions()` now has
   `current_staged_work_only=True` to mirror the graph-list live-work filter
   while preserving patch mention discovery before pagination.
+- A query-storage helper trial confirmed suggested query-plan handoffs and
+  database relation repair hints are scriptable, but
+  `storage_protocol_location_mismatch` still needed issue-specific repair code.
+  Those issues now carry `details.repair_hint.actions` for reviewed protocol,
+  root, bucket, prefix, and exact path-template staged repairs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
