@@ -18061,6 +18061,35 @@ def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
         for action in draft.suggested_next_action_groups["profile_type_review"]
     ] == ["describe_context_slice", "record_pattern"]
 
+    staged = db.stage_profile_map_updates(
+        **draft.suggested_next_action_groups["profile_map_updates"][0].arguments
+    )
+    assert staged.staged_revision is not None
+    followthrough_note = (
+        "After applying staged unmapped column shells, rerun "
+        "draft_profile_map_updates for the same dataset and evidence"
+    )
+    assert followthrough_note in staged.review_note
+    described = db.describe_staged_revision(staged.staged_revision.revision_iri)
+    assert described.review_note is not None
+    assert followthrough_note in described.review_note
+
+    db.apply_staged_revision(staged.staged_revision.revision_iri)
+    rerun = db.draft_profile_map_updates(dataset, evidence)
+
+    assert rerun.recommendation_count == 0
+    assert rerun.type_advisory_status_counts == {
+        "type_finding_missing_map_type": 2,
+    }
+    assert [
+        action.tool_name
+        for action in rerun.suggested_next_action_groups["profile_type_review"]
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_map_assertion_change",
+    ]
+
 
 def test_profile_type_advisory_duplicate_actions_preserve_support(
     tmp_path: Path,

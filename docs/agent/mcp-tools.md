@@ -405,6 +405,12 @@ when they also name the profiled column. When authoring a metric vocabulary
 pattern that should stay advisory-only, target or imply the metric IRI rather
 than the dataset; dataset-targeted metric patterns are eligible map-patch
 support.
+When accepted recommendations stage unmapped column shells and current type
+advisories are still `type_finding_unmapped_column`, the returned and stored
+review note tells agents to apply the shell after review and rerun
+`draft_profile_map_updates` for the same dataset/evidence. That rerun is what
+turns related type advisories into map-present `rc:physicalType` /
+`rc:valueType` assertion actions.
 
 ### doxabase.describe_query_context
 

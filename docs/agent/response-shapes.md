@@ -1347,7 +1347,11 @@ use it to inspect, record support patterns, or stage focused type assertions
 after reviewing the map update. These grouped actions carry the same
 `source_profile_advisory` metadata for type advisory rows. The type-review lane
 is not part of the grouped map patch and is not a replacement for the staged
-revision apply check.
+revision apply check. If the staged map patch added an unmapped column shell and
+the review note mentions `type_finding_unmapped_column`, apply the shell after
+review, then rerun `draft_profile_map_updates` for the same dataset/evidence so
+the type advisories can reclassify against a map-present column and expose
+focused `stage_map_assertion_change` actions.
 When no accepted recommendation produces a staged patch,
 `result.staged_revision is None` and `suggested_next_actions` is empty.
 An accepted recommendation index can therefore appear under either `staged` or

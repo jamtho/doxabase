@@ -9099,6 +9099,20 @@ class DoxaBase:
             type_advisory_count,
             type_advisory_status_counts,
         )
+        type_followthrough_note = ""
+        if type_advisory_status_counts.get(
+            "type_finding_unmapped_column",
+            0,
+        ) and any(
+            item.status == "staged" and item.kind == "unmapped_profiled_column"
+            for item in items
+        ):
+            type_followthrough_note = (
+                " After applying staged unmapped column shells, rerun "
+                "draft_profile_map_updates for the same dataset and evidence "
+                "so related profile type advisories can reclassify against "
+                "map-present columns."
+            )
         evidence_summary = "; ".join(
             (
                 f"{item.recommendation_index}:{item.kind}:"
@@ -9116,7 +9130,8 @@ class DoxaBase:
             "Metric vocabulary advisories (review separately; not staged as map "
             f"patches): {metric_advisory_summary}. Profile type advisories "
             "(review separately; not staged as map patches): "
-            f"{type_advisory_summary}. Items: {evidence_summary}"
+            f"{type_advisory_summary}.{type_followthrough_note} "
+            f"Items: {evidence_summary}"
         )
 
     @staticmethod
