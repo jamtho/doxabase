@@ -24445,6 +24445,12 @@ class DoxaBase:
         if bundle_summary.warnings:
             lines.extend(["", "## Bundle Warnings", ""])
             lines.extend(f"- {warning}" for warning in bundle_summary.warnings)
+        snapshot_evidence = self._staged_revisions_snapshot_evidence_markdown(
+            descriptions
+        )
+        if snapshot_evidence:
+            lines.extend(["", "## Snapshot Evidence", ""])
+            lines.extend(snapshot_evidence)
         review_queues = self._staged_revisions_review_queues_markdown(bundle_summary)
         if review_queues:
             lines.extend(["", "## Review Queues", ""])
@@ -24521,6 +24527,105 @@ class DoxaBase:
                 ]
         )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revisions_snapshot_evidence_markdown(
+        self,
+        descriptions: list[StagedGraphRevisionDescription],
+    ) -> list[str]:
+        history_graphs = self._expand_graphs(["history"])
+        rows = [
+            (
+                index,
+                description,
+                self._revision_snapshot_evidence_status(
+                    description.iri,
+                    history_graphs,
+                ),
+            )
+            for index, description in enumerate(descriptions, start=1)
+        ]
+        if not rows or all(
+            evidence.status == "history_plus_snapshot_rows"
+            for _, _, evidence in rows
+        ):
+            return []
+
+        counts: dict[str, int] = {}
+        for _, _, evidence in rows:
+            counts[evidence.status] = counts.get(evidence.status, 0) + 1
+        status_order = [
+            "history_plus_snapshot_rows",
+            "history_only_count_digest",
+            "snapshot_rows_without_history",
+            "history_missing",
+        ]
+        count_text = ", ".join(
+            f"{status}: {counts[status]}"
+            for status in status_order
+            if status in counts
+        )
+        lines = [
+            f"- Status counts: {count_text}",
+            (
+                "- Exact stale drift triples and applied diffs require "
+                "`history_plus_snapshot_rows`; import companion revision "
+                "snapshot JSON when rows remain history-only."
+            ),
+            "",
+            (
+                "| # | Revision | Summary | Status | RDF graphs | Stored rows | "
+                "Exact rows | Missing rows | Orphan rows | Suggested next calls |"
+            ),
+            "|---:|---|---|---|---|---|---|---|---|---|",
+        ]
+        for index, description, evidence in rows:
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(index),
+                        self._markdown_table_cell(f"`{description.iri}`"),
+                        self._markdown_table_cell(
+                            description.summary or description.iri
+                        ),
+                        self._markdown_table_cell(evidence.status),
+                        self._markdown_table_cell(
+                            self._markdown_graph_role_list(
+                                evidence.rdf_snapshot_graph_roles
+                            )
+                        ),
+                        self._markdown_table_cell(
+                            self._markdown_graph_role_list(
+                                evidence.stored_snapshot_graph_roles
+                            )
+                        ),
+                        self._markdown_table_cell(
+                            self._markdown_graph_role_list(
+                                evidence.exact_snapshot_graph_roles
+                            )
+                        ),
+                        self._markdown_table_cell(
+                            self._markdown_graph_role_list(
+                                evidence.missing_snapshot_row_graph_roles
+                            )
+                        ),
+                        self._markdown_table_cell(
+                            self._markdown_graph_role_list(
+                                evidence.orphan_snapshot_row_graph_roles
+                            )
+                        ),
+                        self._markdown_table_cell(
+                            "; ".join(evidence.suggested_next_calls) or "(none)"
+                        ),
+                    ]
+                )
+                + " |"
+            )
+        return lines
+
+    @staticmethod
+    def _markdown_graph_role_list(values: list[str]) -> str:
+        return ", ".join(values) if values else "(none)"
 
     @staticmethod
     def _staged_revisions_effective_recommendation(

@@ -2287,6 +2287,22 @@ def test_revision_lineage_warns_when_restage_ancestor_lacks_snapshots(
     assert not any(
         restaged.revision_iri in warning for warning in partial_lineage.warnings
     )
+    grouped_export_path = tmp_path / "partial-snapshot-grouped-review.md"
+    partial.export_staged_revisions(
+        [staged.revision_iri, restaged.revision_iri],
+        grouped_export_path,
+        title="Partial snapshot grouped review",
+    )
+    grouped_export_text = grouped_export_path.read_text(encoding="utf-8")
+    assert "## Snapshot Evidence" in grouped_export_text
+    assert "history_plus_snapshot_rows: 1" in grouped_export_text
+    assert "history_only_count_digest: 1" in grouped_export_text
+    assert staged.revision_iri in grouped_export_text
+    assert restaged.revision_iri in grouped_export_text
+    assert "import_revision_snapshots" in grouped_export_text
+    assert grouped_export_text.index("## Snapshot Evidence") < grouped_export_text.index(
+        "## Review Queues"
+    )
 
     full_snapshot_path = tmp_path / "full-chain-snapshots.json"
     full_export = db.export_revision_snapshots(

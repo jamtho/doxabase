@@ -1117,6 +1117,11 @@ few useful gaps:
   gating. Bundle summaries now list those rows in
   `ready_restage_successor_alternative_to_applied_source_iris` and warn that
   mechanical readiness is not approval to make both alternatives durable.
+- A grouped snapshot-evidence trial found JSON list/lineage helpers made mixed
+  RDF-only and exact snapshot recovery clear, while grouped Markdown hid the
+  status split in scattered drift notes. Grouped staged-review Markdown now adds
+  a `Snapshot Evidence` panel whenever included rows are not all fully recovered
+  with exact snapshot rows.
 - A resource-lineage recovery trial found snapshot exports seeded only by an
   applied event restore the applied event and its direct staged source, but not
   older restage ancestors. Generic revision lineage now warns when any visible
