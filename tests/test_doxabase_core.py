@@ -11545,6 +11545,124 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     assert selected_from_action.handoff_kind == "binding_values_required"
 
 
+def test_describe_query_context_suggests_peer_layout_selection_actions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    local_storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "lake"),
+        path_templates=["events/current/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    database_storage = db.record_map_storage_access(
+        "https://example.test/project#events_database_storage",
+        label="Events database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-prod",
+        path_templates=["mart.events"],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    csv_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    parquet_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[local_storage.iri, database_storage.iri],
+        physical_layouts=[csv_layout.iri, parquet_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+    local_index, local_candidate = next(
+        (index, target)
+        for index, target in enumerate(context.query_target_candidates)
+        if target.storage_access is not None
+        and target.storage_access.iri == local_storage.iri
+    )
+    database_index, database_candidate = next(
+        (index, target)
+        for index, target in enumerate(context.query_target_candidates)
+        if target.storage_access is not None
+        and target.storage_access.iri == database_storage.iri
+    )
+
+    selected_index = context.query_target_decision.candidate_index
+    peer_index = local_index if selected_index == database_index else database_index
+    assert local_candidate.candidate_path_status == "orientation_only"
+    assert database_candidate.candidate_path_status == "orientation_only"
+    assert [reason.code for reason in database_candidate.direct_review_reasons] == [
+        "ambiguous_physical_layout"
+    ]
+
+    selection_actions = [
+        action
+        for action in context.suggested_next_actions
+        if action.action_label == "Select physical layout for draft"
+    ]
+
+    assert [action.arguments for action in selection_actions] == [
+        {
+            "iri": dataset,
+            "candidate_index": selected_index,
+            "physical_layout_iri": csv_layout.iri,
+        },
+        {
+            "iri": dataset,
+            "candidate_index": selected_index,
+            "physical_layout_iri": parquet_layout.iri,
+        },
+        {
+            "iri": dataset,
+            "candidate_index": peer_index,
+            "physical_layout_iri": csv_layout.iri,
+        },
+        {
+            "iri": dataset,
+            "candidate_index": peer_index,
+            "physical_layout_iri": parquet_layout.iri,
+        },
+    ]
+    assert f"Candidate {peer_index} is blocked" in selection_actions[2].reason
+
+    database_action = next(
+        action
+        for action in selection_actions
+        if action.arguments["candidate_index"] == database_index
+        and action.arguments["physical_layout_iri"] == parquet_layout.iri
+    )
+    database_plan = db.draft_query_plan(**database_action.arguments)
+
+    assert database_plan.selected_candidate is not None
+    assert database_plan.selected_candidate.storage_access is not None
+    assert database_plan.selected_candidate.storage_access.iri == database_storage.iri
+    assert database_plan.selected_candidate.direct_review_required is False
+    assert database_plan.scan.relation_identifier == "mart.events"
+    assert database_plan.scan.connection_reference == "analytics-prod"
+    assert database_plan.scan.physical_layout is not None
+    assert database_plan.scan.physical_layout.iri == parquet_layout.iri
+    assert "ambiguous_physical_layout" not in (
+        database_plan.review_gate.all_issue_codes
+    )
+    assert database_plan.handoff_kind == "database_relation_handoff"
+
+
 def test_draft_query_plan_layout_selection_preserves_runtime_resolution_gate(
     tmp_path: Path,
 ) -> None:

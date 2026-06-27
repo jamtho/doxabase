@@ -1398,8 +1398,11 @@ few useful gaps:
 - The next four-way trial wave found three small polish points worth keeping.
   Ambiguous physical-layout query contexts now add concrete
   `draft_query_plan(candidate_index=..., physical_layout_iri=...)` actions for
-  each layout signature. Profile value-frequency inputs accept `count` as a
-  profiler-output alias while responses keep `frequency`. Pattern-promotion
+  each layout signature. A later peer-candidate retest found those actions were
+  selected-candidate-only; query contexts now emit the same reviewed
+  candidate/layout pairs for peer candidates whose only direct blocker is
+  `ambiguous_physical_layout`. Profile value-frequency inputs accept `count` as
+  a profiler-output alias while responses keep `frequency`. Pattern-promotion
   evidence placement is now pinned in tests/docs: supporting-claim evidence is
   reachable through context slices but is not direct staged-revision evidence
   unless passed explicitly or linked directly on the pattern. A staged-revision

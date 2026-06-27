@@ -9446,21 +9446,46 @@ class DoxaBase:
                     ),
                 )
             )
-        actions.extend(
-            self._query_context_physical_layout_selection_actions(
-                dataset_iri=dataset_iri,
-                graph=graph,
-                candidate_index=decision.candidate_index,
-                candidate=candidate,
-                allow_context_blocked_candidate=(
-                    self._query_context_layout_selection_needs_context_allowance(
-                        candidate=candidate,
-                        issues=issues,
-                    )
-                ),
+        layout_action_indexes = [
+            decision.candidate_index,
+            *(
+                index
+                for index, candidate_item in enumerate(candidates)
+                if index != decision.candidate_index
+                and self._query_context_candidate_only_layout_blocked(
+                    candidate_item
+                )
+            ),
+        ]
+        for layout_action_index in layout_action_indexes:
+            layout_candidate = candidates[layout_action_index]
+            actions.extend(
+                self._query_context_physical_layout_selection_actions(
+                    dataset_iri=dataset_iri,
+                    graph=graph,
+                    candidate_index=layout_action_index,
+                    candidate=layout_candidate,
+                    allow_context_blocked_candidate=(
+                        self._query_context_layout_selection_needs_context_allowance(
+                            candidate=layout_candidate,
+                            issues=issues,
+                        )
+                    ),
+                )
             )
-        )
         return actions
+
+    def _query_context_candidate_only_layout_blocked(
+        self,
+        candidate: QueryTargetCandidate,
+    ) -> bool:
+        direct_blockers = self._query_target_blocking_reasons(
+            candidate.direct_review_reasons
+        )
+        return bool(direct_blockers) and all(
+            reason.code == "ambiguous_physical_layout"
+            for reason in direct_blockers
+        )
 
     def _query_context_layout_selection_needs_context_allowance(
         self,
@@ -9468,13 +9493,7 @@ class DoxaBase:
         candidate: QueryTargetCandidate,
         issues: list[QueryPlanningIssue],
     ) -> bool:
-        direct_blockers = self._query_target_blocking_reasons(
-            candidate.direct_review_reasons
-        )
-        if not direct_blockers or any(
-            reason.code != "ambiguous_physical_layout"
-            for reason in direct_blockers
-        ):
+        if not self._query_context_candidate_only_layout_blocked(candidate):
             return False
         remaining_blockers = [
             reason
@@ -9572,7 +9591,7 @@ class DoxaBase:
                         mcp_tool_name="doxabase.draft_query_plan",
                         arguments=arguments,
                         reason=(
-                            "The selected candidate is blocked by ambiguous "
+                            f"Candidate {candidate_index} is blocked by ambiguous "
                             "physical layout metadata. After reviewing that "
                             f"{layout_iri} is the intended layout"
                             f"{signature_note}, draft the query plan with "

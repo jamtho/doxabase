@@ -334,7 +334,10 @@ Prefer `suggested_next_action_groups` / `suggested_next_call_groups` for quick
 routing; non-empty lanes are grouped as `profile_map_updates`,
 `metric_vocabulary_review`, and `profile_type_review`. Use representative
 advisory indexes when you need one review row per duplicate metric or type
-advisory group.
+advisory group. Group lanes may de-duplicate shared actions, such as one
+`describe_pattern` call supporting several metric advisories; use each
+`metric_advisories[]` row's own `suggested_next_actions` for per-metric
+follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
 `default_skip_reason`, and duplicate-group fields; metric and type advisories
 carry duplicate-group fields too.
@@ -413,7 +416,10 @@ multiple direct-ready candidates, inspect `unselected_ready_candidate_indexes`
 and rerun/draft with an explicit `candidate_index` if candidate order picked the
 wrong route. In a globally blocked context, inspect
 `unselected_direct_clean_candidate_indexes` when strict ready indexes are empty
-but another candidate has no direct blocker. For
+but another candidate has no direct blocker. When linked physical layouts are
+ambiguous, suggested `draft_query_plan` actions include explicit
+`candidate_index` / `physical_layout_iri` pairs for the selected candidate and
+peer candidates whose only direct blocker is layout ambiguity. For
 database-backed storage, only
 storage-access-owned templates become `relation_identifier` values. Dataset or
 partition path templates paired with database storage are review-only

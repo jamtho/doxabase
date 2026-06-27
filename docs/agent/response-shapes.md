@@ -1016,10 +1016,14 @@ present only when non-empty and currently use `profile_map_updates`,
 `metric_vocabulary_review`, and `profile_type_review`. `suggested_next_call_groups`
 mirrors those groups with display call strings. The flat top-level
 `suggested_next_actions` / `suggested_next_calls` fields remain for compatibility
-and are ordered by those lanes. `profile_type_review` is a representative action
-queue, not the grouping source; labels such as `Inspect profile type context`
-and `Stage physical type assertion` can repeat across advisory groups. Scripts
-that need per-column grouping should iterate `type_advisories[]` by
+and are ordered by those lanes. Group lanes may de-duplicate shared actions, such
+as one `describe_pattern` action used by several metric advisories. Scripts that
+need per-metric follow-through should iterate `metric_advisories[]` and use each
+advisory's own `suggested_next_actions`. `profile_type_review` is a
+representative action queue, not the grouping source; labels such as
+`Inspect profile type context` and `Stage physical type assertion` can repeat
+across advisory groups. Scripts that need per-column grouping should iterate
+`type_advisories[]` by
 `representative_type_advisory_indexes` first, then use each representative
 advisory's `duplicate_group_key` / `duplicate_advisory_indexes` and
 `suggested_next_actions`.
@@ -1383,12 +1387,14 @@ instead of parsing peer indexes from prose or from
 `storage_access_iri` ambiguity errors.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per linked
-layout signature with `candidate_index` and `physical_layout_iri`; follow the
-one you have reviewed before relying on `scan.function`. When resolving that
-layout would leave a direct-clean selected route and the remaining blockers are
-candidate metadata on sibling routes, the layout-selection action also includes
-`allow_context_blocked_candidate=True` so scripts can reach the next execution
-gate without an extra retry while preserving context audit fields.
+layout signature with `candidate_index` and `physical_layout_iri`; it also emits
+the same action shape for peer candidates whose only direct blocker is layout
+ambiguity. Follow the candidate/layout pair you have reviewed before relying on
+`scan.function`. When resolving that layout would leave a direct-clean selected
+route and the remaining blockers are candidate metadata on sibling routes, the
+layout-selection action also includes `allow_context_blocked_candidate=True` so
+scripts can reach the next execution gate without an extra retry while
+preserving context audit fields.
 `ready_candidate_indexes` lists direct-ready candidates at the context stage;
 `unselected_ready_candidate_indexes` is the same list excluding
 `query_target_decision.candidate_index`. When it is non-empty, another ready
