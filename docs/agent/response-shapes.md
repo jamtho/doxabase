@@ -1613,6 +1613,8 @@ issue detail. It is not folded into `suggested_next_actions` because repair
 templates require review, often contain placeholders, and usually need caller
 rationale before any mutation call. `suggested_repair_action_group_count` is the
 number of groups returned.
+Do not concatenate this lane into `suggested_next_actions` or call
+`repair_group.actions[]` unchanged.
 
 Each repair action group has:
 

@@ -13235,6 +13235,23 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
             ],
         },
     }
+    assert context.suggested_repair_action_group_count == 1
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.issue_index == context.issues.index(issue)
+    assert repair_group.issue_code == "database_relation_template_source_mismatch"
+    assert repair_group.issue_resource is not None
+    assert repair_group.issue_resource.iri == storage.iri
+    assert repair_group.repair_action_type == (
+        "move_database_relation_template_to_storage_access"
+    )
+    assert repair_group.repair_context["source"]["subject_iri"] == partition.iri
+    assert repair_group.repair_context["target"]["storage_access_iri"] == storage.iri
+    assert [action["action_type"] for action in repair_group.actions] == [
+        "add_reviewed_relation_template",
+        "remove_misplaced_source_template",
+    ]
+    assert repair_group.actions[0]["required_extra_arguments"] == ["rationale"]
+    assert repair_group.actions[1]["required_extra_arguments"] == ["rationale"]
     partition_target_index, partition_target = next(
         (index, target)
         for index, target in enumerate(context.query_target_candidates)
@@ -13269,9 +13286,10 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     assert relation_target.review_required is False
     assert relation_target.direct_review_required is False
     assert context.query_target_decision.candidate_index == relation_target_index
-    assert "record_map_storage_access" not in {
-        action.tool_name for action in context.suggested_next_actions
-    }
+    flat_tools = {action.tool_name for action in context.suggested_next_actions}
+    assert "record_map_storage_access" not in flat_tools
+    assert "stage_map_assertion_change" not in flat_tools
+    assert flat_tools == {"draft_query_plan"}
 
     plan = db.draft_query_plan(dataset)
 
@@ -13375,6 +13393,27 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert {
         issue.code for issue in context.issues
     } == {"database_relation_template_source_mismatch"}
+    assert context.suggested_repair_action_group_count == len(context.issues)
+    assert [
+        group.issue_code for group in context.suggested_repair_action_groups
+    ] == ["database_relation_template_source_mismatch"] * len(context.issues)
+    assert [
+        group.repair_action_type for group in context.suggested_repair_action_groups
+    ] == ["move_database_relation_template_to_storage_access"] * len(
+        context.issues
+    )
+    assert all(
+        group.repair_hint_path == f"issues[{group.issue_index}].details.repair_hint"
+        for group in context.suggested_repair_action_groups
+    )
+    assert all(
+        [action["action_type"] for action in group.actions]
+        == [
+            "add_reviewed_relation_template",
+            "remove_misplaced_source_template",
+        ]
+        for group in context.suggested_repair_action_groups
+    )
     local_partition_index, local_partition = next(
         (index, target)
         for index, target in enumerate(context.query_target_candidates)
@@ -13403,6 +13442,9 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
         "candidate_index": context.query_target_decision.candidate_index,
         "allow_context_blocked_candidate": True,
     }
+    assert {
+        action.tool_name for action in context.suggested_next_actions
+    } == {"draft_query_plan"}
     peer_actions = context.suggested_next_actions[1:]
     assert [action.action_label for action in peer_actions] == [
         "Draft peer direct-clean candidate with context allowance",
@@ -13778,6 +13820,23 @@ def test_database_root_only_storage_requires_relation_template(
     repair_hint = details["repair_hint"]
     assert repair_hint["action_type"] == "record_database_relation_template"
     assert repair_hint["requires_review"] is True
+    assert context.suggested_repair_action_group_count == 1
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.issue_index == 0
+    assert repair_group.issue_code == "database_relation_template_missing"
+    assert repair_group.issue_resource is not None
+    assert repair_group.issue_resource.iri == storage.iri
+    assert repair_group.repair_action_type == "record_database_relation_template"
+    assert repair_group.repair_context["source"]["storage_access_iri"] == storage.iri
+    assert repair_group.repair_context["target"]["required_template_source"] == (
+        "storage_access"
+    )
+    assert [action["action_type"] for action in repair_group.actions] == [
+        "add_reviewed_relation_template"
+    ]
+    assert {
+        action.tool_name for action in context.suggested_next_actions
+    } == {"draft_query_plan"}
     assert repair_hint["source"] == {
         "storage_access_iri": storage.iri,
         "storage_root": "warehouse-prod",
