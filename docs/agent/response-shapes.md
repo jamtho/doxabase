@@ -2863,6 +2863,10 @@ and `exact_changed_triples_included=False`; that means exact triples exist but
 were intentionally omitted from the list response. The added/removed count
 fields still report how many exact triples were omitted when those counts are
 known.
+Stale drift rows use `triples_added_since_snapshot_count` and
+`triples_removed_since_snapshot_count`. Applied revision diffs use
+`triples_added_count` and `triples_removed_count`; they compare the staged
+source's stored before snapshot with the applied event's stored after snapshot.
 Each changed-triple item carries exact raw RDF fields (`subject`, `subject_kind`,
 `predicate`, `object`, `object_kind`, `datatype`, `lang`) plus scan-friendly
 fields (`subject_curie`, `subject_display`, `predicate_curie`,

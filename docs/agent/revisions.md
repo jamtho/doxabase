@@ -240,6 +240,34 @@ for stale original proposals with no successor, and
 refreshed successor is itself stale. The broader
 `current_staged_work_only=True` queue is often the safest starting point because
 it catches all of these active categories together.
+When alternatives and stale successors are both in play, start there instead of
+with a full mixed history list:
+
+```python
+queue = db.list_graph_revisions(
+    current_staged_work_only=True,
+    include_apply_checks=True,
+    drift_detail="exact",
+)
+```
+
+The active stale successor should remain visible with
+`stale_resolution_state="restaged_successor_stale_unresolved"` and its own
+`next_action.queue` and `next_action.arguments`. Route by
+`is_current_staged_work`, `stale_resolution_state`, and `next_action`, not only
+by `application_status`; handled stale originals can remain historical
+`conflict` rows. If a stale source has `restaged_by` or `current_restaged_by`,
+inspect or restage the current successor instead of the original source. If a
+ready successor is an alternative to a source that has already been applied,
+read `alternative_gate.status`, `alternative_gate.semantic_review_required`,
+`alternative_gate.applied_source_iri`, and
+`alternative_gate.applied_revision_iri` before mutating. `alternative_to` is the
+stored provenance edge; `current_alternative_to` follows a restaged alternative
+target to its current successor. Then open the relevant row with
+`describe_revision_lineage(revision_iri)` or
+`describe_resource_revision_lineage(resource_iri, revision_iri)`; lineage keeps
+the competing applied family in `related_revision_iris` without making handled
+stale originals look like current work.
 
 Read `application_status`, `application_decision`, `application_can_apply`,
 `application_summary`, `application_blocking_reasons`, and
@@ -404,6 +432,29 @@ patches whose parsed RDF payload mentions the resource as subject, predicate, or
 object, and applied events whose staged source matched. Patch mention summaries
 are role-aware flags with matched triple counts; call
 `describe_staged_revision()` for full patch content.
+
+For a stale-restage-apply handoff between capsules:
+
+1. Restage stale work with `restage_staged_revision(stale_iri)`.
+2. Check the successor with
+   `check_staged_revision_apply(restaged.revision_iri)`.
+3. Apply only after review with `apply_staged_revision(restaged.revision_iri)`.
+4. Export both the project/history RDF and SQLite-side snapshot rows:
+   `export_trig(project_path, graphs="project")` plus
+   `export_revision_snapshots(snapshot_path, revision_iris=[applied_iri])`.
+   Include older stale ancestor IRIs explicitly if exact full-chain recovery
+   matters beyond the direct staged source and applied event.
+5. On the receiving capsule, run `import_trig(project_path)` first. Before the
+   snapshot JSON import, expect `history_only_count_digest` and no exact triples.
+6. Run `import_revision_snapshots(snapshot_path)` and verify
+   `post_import_snapshot_evidence` or `describe_revision_snapshot_evidence()`
+   reaches `history_plus_snapshot_rows`.
+7. Then use `describe_applied_revision_diff(include_triples=True)` for changed
+   triples, or `describe_revision_graph_snapshot(..., include_triples=True)`
+   for full before/after snapshot contents. Suggested import paths are
+   placeholders when `path_is_placeholder=True`; replace them with real handoff
+   artifact paths.
+
 Use the full provenance recipe when an autonomous agent needs to answer "what
 changed this resource, why, and what review action remains?":
 
@@ -447,6 +498,14 @@ default response omits those arrays to keep MCP payloads small.
 Read the per-graph `triples_added_count` and `triples_removed_count`, not only
 the before/after graph counts. A replacement can keep the same triple count
 while still adding and removing exact triples.
+Use `describe_revision_graph_snapshot(staged_source_iri, graph_role,
+include_triples=True)` for the full before snapshot and
+`describe_revision_graph_snapshot(applied_iri, graph_role,
+include_triples=True)` for the full after snapshot. On RDF-only imports, these
+helpers can still report `rdf_history_graph_snapshot` count/digest metadata,
+but exact triples require importing the companion snapshot JSON. On
+snapshot-only imports, import the RDF history bundle before using normal
+applied-diff helpers.
 The response carries `snapshot_evidence` for the applied event and
 `source_snapshot_evidence` for the staged source. If either says
 `history_only_count_digest`, import the companion revision snapshot JSON before
