@@ -8142,6 +8142,18 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         and "link_alternatives=False" in warning
         for warning in draft.warnings
     )
+    assert len(draft.structured_warnings) == 1
+    structured_warning = draft.structured_warnings[0]
+    assert structured_warning.warning_code == "first_alternative_anchor_not_ready"
+    assert structured_warning.message in draft.warnings
+    assert structured_warning.affected_revision_iris == revision_iris
+    assert (
+        structured_warning.suggested_action
+        == "rerun_with_explicit_alternative_routing"
+    )
+    assert structured_warning.suggested_rerun_arguments == {
+        "link_alternatives": False
+    }
     assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
     assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
     assert draft.suggested_next_actions[0].arguments["path"].startswith(

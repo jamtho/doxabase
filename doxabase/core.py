@@ -487,12 +487,22 @@ class SystematisationFramingRecord:
 
 
 @dataclass(frozen=True)
+class SystematisationWarningRecord:
+    warning_code: str
+    message: str
+    affected_revision_iris: list[str]
+    suggested_action: str
+    suggested_rerun_arguments: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class SystematisationDraftRecord:
     result_kind: str
     summary: str
     intent: str
     anchors: list[str]
     warnings: list[str]
+    structured_warnings: list[SystematisationWarningRecord]
     framings: list[SystematisationFramingRecord]
     staged_revisions: list[StagedGraphRevisionRecord]
     next_action_queue: dict[str, list[str]]
@@ -17467,6 +17477,7 @@ class DoxaBase:
         )
 
         warnings: list[str] = []
+        structured_warnings: list[SystematisationWarningRecord] = []
         if not anchor_values:
             warnings.append(
                 "No anchors were supplied; future reviewers may have less context."
@@ -17613,7 +17624,7 @@ class DoxaBase:
                         "failed staged validation"
                         f" with {first_framing.validation_result_count} result(s)"
                     )
-                warnings.append(
+                warning_message = (
                     "First framing "
                     f"'{first_framing.label}' ({first_revision_iri}) "
                     f"{status_note}; later framings were linked as alternatives "
@@ -17621,12 +17632,25 @@ class DoxaBase:
                     "when the first framing is diagnostic or complementary "
                     "rather than the intended comparison anchor."
                 )
+                warnings.append(warning_message)
+                structured_warnings.append(
+                    SystematisationWarningRecord(
+                        warning_code="first_alternative_anchor_not_ready",
+                        message=warning_message,
+                        affected_revision_iris=[
+                            revision.revision_iri for revision in staged_revisions
+                        ],
+                        suggested_action="rerun_with_explicit_alternative_routing",
+                        suggested_rerun_arguments={"link_alternatives": False},
+                    )
+                )
         return SystematisationDraftRecord(
             result_kind="systematisation_draft",
             summary=summary_value,
             intent=intent_value,
             anchors=anchor_values,
             warnings=warnings,
+            structured_warnings=structured_warnings,
             framings=framing_records,
             staged_revisions=staged_revisions,
             next_action_queue=next_action_queue,

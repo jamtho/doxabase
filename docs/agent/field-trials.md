@@ -1102,7 +1102,10 @@ few useful gaps:
   The runtime now warns when later framings are linked as alternatives to a
   first framing that did not route to `apply_after_review`, and docs remind
   agents that intentionally invalid probes should not be first unless that is
-  the desired comparison anchor.
+  the desired comparison anchor. A follow-up pattern-promotion trial found that
+  prose alone made automation parse the warning; these drafts now also return a
+  `first_alternative_anchor_not_ready` structured warning with
+  `suggested_rerun_arguments={"link_alternatives": False}`.
 - A staged-lineage/rebase trial found agents naturally tried to include an
   applied event IRI in a grouped staged-review export. Grouped staged exports now
   fail with a route-specific message: pass staged patch IRIs, and inspect

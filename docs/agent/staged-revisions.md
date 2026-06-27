@@ -477,6 +477,10 @@ When `link_alternatives=True`, later framings are linked to the first framing by
 default. If the first framing is diagnostic, complementary, or fails validation,
 the runtime warns because it may be a poor comparison anchor; pass
 `alternative_to=...` explicitly or set `link_alternatives=False` for that run.
+Automation should read `structured_warnings` as well as `warnings`; the
+`first_alternative_anchor_not_ready` warning carries
+`suggested_rerun_arguments={"link_alternatives": False}` so callers do not have
+to parse prose.
 
 ## Pattern-Supported Promotion
 

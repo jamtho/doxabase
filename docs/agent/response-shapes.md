@@ -1689,6 +1689,7 @@ draft.summary
 draft.intent
 draft.anchors
 draft.warnings
+draft.structured_warnings
 draft.framings
 draft.staged_revisions
 draft.next_action_queue
@@ -1707,6 +1708,24 @@ include a grouped `export_staged_revisions` call plus per-revision
 paths include a readable revision slug and short hash to reduce collisions
 across concurrent scratch runs; callers can still pass their own run-specific
 path.
+
+`draft.structured_warnings` is a machine-readable companion to selected prose
+warnings. For example, when the first framing is not routed to
+`apply_after_review` but later framings were linked to it as alternatives, the
+draft includes:
+
+```python
+warning.warning_code
+warning.message
+warning.affected_revision_iris
+warning.suggested_action
+warning.suggested_rerun_arguments
+```
+
+For that invalid-anchor case, `warning.warning_code` is
+`first_alternative_anchor_not_ready` and
+`warning.suggested_rerun_arguments == {"link_alternatives": False}`. Use the
+structured fields for automation; keep `warnings` for readable handoffs.
 
 Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:
 

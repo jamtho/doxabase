@@ -1937,6 +1937,15 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
         and "link_alternatives=False" in warning
         for warning in result["warnings"]
     )
+    assert result["structured_warnings"] == [
+        {
+            "warning_code": "first_alternative_anchor_not_ready",
+            "message": result["warnings"][-1],
+            "affected_revision_iris": revision_iris,
+            "suggested_action": "rerun_with_explicit_alternative_routing",
+            "suggested_rerun_arguments": {"link_alternatives": False},
+        }
+    ]
 
 
 def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) -> None:

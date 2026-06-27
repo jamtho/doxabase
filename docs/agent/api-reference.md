@@ -774,11 +774,15 @@ validation for each framing. This is a drafting and validation scaffold, not an
 ontology decision engine. Anchors are recorded as `rc:revisionAnchor` metadata
 on each staged revision and are also repeated in rationale text for readability.
 The returned `SystematisationDraftRecord` carries
-`result_kind="systematisation_draft"`, a draft-level `next_action_queue`, and
+`result_kind="systematisation_draft"`, readable `warnings`, machine-readable
+`structured_warnings`, a draft-level `next_action_queue`, and
 `suggested_next_actions` / `suggested_next_calls`. The queue uses the same
 apply-check grouping as staged-revision exports, so callers can separate
 `repair_or_replace` framings from `apply_after_review` framings immediately
-after staging.
+after staging. When later framings were linked to a first framing that did not
+route to `apply_after_review`, `structured_warnings` includes
+`warning_code="first_alternative_anchor_not_ready"` and
+`suggested_rerun_arguments={"link_alternatives": False}`.
 
 `stage_pattern_promotion()` stages one or more caller-authored RDF framings
 supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;
