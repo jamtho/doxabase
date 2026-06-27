@@ -1541,6 +1541,11 @@ few useful gaps:
   schema/table/relation to the storage access, then remove the misplaced
   dataset or partition template only if review confirms it was relation
   metadata rather than a real file/object path.
+- A response-shape docs audit found agents had to infer several nested payload
+  fields from dataclasses or tests. `response-shapes` now spells out common
+  nested rows for assertion hints and judgement panels, dataset storage and
+  related-pattern handoffs, query-plan source/scan/runtime cards, staged
+  patch/snapshot diagnostics, and validation diagnostics.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

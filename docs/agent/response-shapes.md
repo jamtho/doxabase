@@ -236,6 +236,17 @@ ranked by local-name similarity and including full predicate IRIs,
 `predicate_curie` display values when known, labels, descriptions, triple counts,
 and sample values. Use it to recover from predicate-shape guesses such as asking
 for `rc:hasPartitionScheme` when the map actually uses `rc:partitionedBy`.
+Each predicate hint includes sample values in the same value shape used by
+matching triples:
+
+```python
+hint.predicate
+hint.predicate_curie
+hint.predicate_label
+hint.predicate_description
+hint.triple_count
+hint.sample_values
+```
 
 `nearby_caveats` is the unique list of caveats near the assertion.
 `nearby_caveat_links` explains why each caveat was included:
@@ -425,6 +436,44 @@ panel.impacts
 panel.safety_notes
 ```
 
+Common child rows inside the panel use these fields:
+
+```python
+value.value
+value.label
+value.value_kind
+value.datatype
+value.lang
+value.caveat
+
+caveat.caveat_iri
+caveat.caveat_label
+caveat.scope
+caveat.route_label
+caveat.via_resource
+caveat.matched_resource
+caveat.description
+caveat.impact
+caveat.severity_label
+
+route.rank
+route.resource_iri
+route.resource_label
+route.resource_kind
+route.strongest_route_label
+route.route_count
+route.route_note
+route.matched_resources
+route.generic_value_only
+route.relevance_note
+
+impact.impact_type
+impact.severity
+impact.message
+impact.removed_values
+impact.added_values
+```
+
 The panel does not decide whether the change is right. It packages the current
 and proposed values, physical/value-type context, reasons the current value may
 be intentional, caveat scopes, strongest related-lore routes, deterministic
@@ -450,6 +499,15 @@ booleans for whether that required type matches the current or proposed physical
 type. `panel.strongest_routes[*].generic_value_only` is true when a route only
 matched a generic shared value such as `rc:Varchar`; treat those as weak context
 unless other routes tie the lore to the assertion subject or owner dataset.
+Each value-type context row has:
+
+```python
+value_type_context.value_type
+value_type_context.required_physical_type
+value_type_context.current_physical_type_matches
+value_type_context.proposed_physical_type_matches
+value_type_context.note
+```
 
 The `assertion_support` field remains the full pre-change
 `AssertionSupportDescription`. `additions` and `removals` are the generated
@@ -760,6 +818,94 @@ The current full payload also includes provenance and related-dataset handoff
 fields such as `dataset.provenance`, `dataset.transformations`,
 `dataset.related_datasets`, and `dataset.related_dataset_groups`. Treat the list
 above as the common working set, not as an exhaustive whitelist.
+
+Nested physical handoff rows use these common fields:
+
+```python
+layout.iri
+layout.label
+layout.description
+layout.file_format
+layout.compression_codec
+layout.layout_verification_status
+layout.layout_verification_note
+
+storage.iri
+storage.label
+storage.description
+storage.storage_protocol
+storage.access_mode
+storage.location_kind
+storage.storage_root
+storage.endpoint_profile
+storage.bucket_name
+storage.key_prefix
+storage.region
+storage.path_style_access
+storage.credential_reference
+storage.path_templates
+storage.layout_verification_status
+storage.layout_verification_note
+```
+
+Each `dataset.related_datasets[]` row is the compact peer summary:
+
+```python
+related.iri
+related.label
+related.description
+related.relationship
+related.relationship_iri
+related.relationship_label
+related.relationship_kind
+related.relationship_kind_label
+```
+
+Related dataset groups preserve the relationship route that linked each peer:
+
+```python
+group.iri
+group.label
+group.description
+group.reasons
+
+reason.relationship
+reason.relationship_iri
+reason.relationship_label
+reason.relationship_kind
+reason.relationship_kind_label
+reason.columns
+reason.current_dataset_columns
+reason.related_dataset_columns
+reason.declared
+reason.referential_integrity
+reason.source_caveats
+reason.relationship_tags
+
+tag.relationship
+tag.relationship_iri
+tag.relationship_label
+tag.relationship_kind
+tag.relationship_kind_label
+tag.declared
+tag.referential_integrity
+```
+
+Linked pattern reasons summarize why patterns were pulled into the dataset
+handoff:
+
+```python
+pattern_reason.iri
+pattern_reason.pattern_iri
+pattern_reason.label
+pattern_reason.pattern_text
+pattern_reason.rationale
+pattern_reason.match_group_count
+pattern_reason.raw_match_count
+pattern_reason.relevance_tier_counts
+pattern_reason.match_groups
+pattern_reason.matches
+```
 
 Resource-valued dataset fields such as `row_semantics`, `entity_key`, and
 `schema_stability` return resource summaries or IRIs. Use `dataset.description`,
@@ -1637,6 +1783,76 @@ carries the automatic decision, while `selected_candidate_index`,
 context-blocked direct-clean cases it says which candidate was selected, what
 route kind the draft produced, and which sibling/context blocker codes remain in
 `review_gate.all_issue_codes`.
+
+`plan.source_context` is the selection audit for the draft:
+
+```python
+source_context.api
+source_context.readiness
+source_context.readiness_note
+source_context.query_target_decision
+source_context.selected_candidate_index
+source_context.candidate_count
+source_context.ready_candidate_indexes
+source_context.unselected_ready_candidate_indexes
+source_context.direct_clean_candidate_indexes
+source_context.unselected_direct_clean_candidate_indexes
+source_context.selection_mode
+source_context.requested_candidate_index
+source_context.requested_storage_access_iri
+source_context.requested_physical_layout_iri
+source_context.selection_status
+source_context.selection_note
+source_context.selected_candidate_note
+source_context.allow_context_blocked_candidate
+```
+
+`plan.scan` is the non-executed handoff card. Do not treat a relation or URI
+field as execution permission without the review gate:
+
+```python
+scan.function
+scan.uri_template
+scan.relation_identifier
+scan.connection_reference
+scan.file_format
+scan.compression
+scan.candidate_path_status
+scan.dataset_verification_status
+scan.dataset_verification_note
+scan.template
+scan.template_source
+scan.template_source_resource
+scan.template_source_verification_status
+scan.template_source_verification_note
+scan.template_lineage
+scan.composition
+scan.physical_layout
+scan.physical_layout_selection_note
+scan.non_executed_note
+scan.execution_attempt_ready
+scan.primary_execution_attempt_blocking_reason_code
+scan.execution_attempt_blocking_reason_codes
+```
+
+`plan.storage_environment` carries non-secret runtime orientation:
+
+```python
+storage_environment.storage_protocol
+storage_environment.storage_root
+storage_environment.bucket_name
+storage_environment.key_prefix
+storage_environment.region
+storage_environment.endpoint_profile
+storage_environment.credential_reference
+storage_environment.access_mode
+storage_environment.path_style_access
+storage_environment.requires_endpoint_profile
+storage_environment.runtime_resolution_required
+storage_environment.duckdb_settings_from_context
+storage_environment.runtime_resolution_note
+```
+
 If `unselected_ready_candidate_indexes` is non-empty, another direct-ready
 candidate exists and agents should consider whether to rerun with explicit
 `candidate_index`. The returned list order is not an authoring-preference
@@ -2962,6 +3178,52 @@ check.suggested_next_calls
 
 `revision_iri` is an alias of `staged_revision_iri` so copied check payloads
 carry the checked resource under the same name used by list and export rows.
+Each `check.patch_checks[]` row summarizes one staged patch replay:
+
+```python
+patch_check.patch_iri
+patch_check.target_graph
+patch_check.count_basis
+patch_check.operation
+patch_check.operation_label
+patch_check.patch_role
+patch_check.patch_role_label
+patch_check.triple_count
+patch_check.before_triple_count
+patch_check.current_triple_count
+patch_check.after_triple_count
+patch_check.preview_triple_count
+patch_check.effective_triples_to_add
+patch_check.effective_triples_to_remove
+patch_check.already_present_triples
+patch_check.already_absent_triples
+patch_check.can_apply
+patch_check.conflict
+```
+
+Each `check.snapshot_drifts[]` row compares a stored graph snapshot with current
+state:
+
+```python
+snapshot_drift.graph_role
+snapshot_drift.snapshot_triple_count
+snapshot_drift.current_triple_count
+snapshot_drift.snapshot_content_digest
+snapshot_drift.current_content_digest
+snapshot_drift.exact_changed_triples_available
+snapshot_drift.exact_changed_triples_included
+snapshot_drift.triples_added_since_snapshot_count
+snapshot_drift.triples_removed_since_snapshot_count
+snapshot_drift.drift_relevance
+snapshot_drift.patch_overlap_subjects
+snapshot_drift.patch_overlap_predicates
+snapshot_drift.patch_overlap_objects
+snapshot_drift.revision_anchor_overlap
+snapshot_drift.triples_added_since_snapshot
+snapshot_drift.triples_removed_since_snapshot
+snapshot_drift.note
+```
+
 `restaged_by`, `current_restaged_by`, and `stale_resolution_state` mirror the
 revision-list/export routing fields on direct apply checks. A handled stale
 source reports the direct successor in `restaged_by`, the latest known successor
@@ -3469,3 +3731,31 @@ result path, constraint, severity, value, messages, and sometimes a DoxaBase
 diagnostics are always exposed as `validation_results`; prose that says
 "diagnostics" and Markdown sections titled `Validation Results` refer to the
 same SHACL result records.
+
+`validate_graph()` returns a `ValidationResult`:
+
+```python
+validation.conforms
+validation.report_text
+validation.result_count
+validation.scope
+validation.results
+```
+
+Each `ValidationDiagnostic` row uses:
+
+```python
+diagnostic.iri
+diagnostic.focus_node
+diagnostic.focus_node_label
+diagnostic.result_path
+diagnostic.result_path_label
+diagnostic.value
+diagnostic.source_shape
+diagnostic.source_constraint_component
+diagnostic.source_constraint_component_label
+diagnostic.severity
+diagnostic.severity_label
+diagnostic.messages
+diagnostic.hint
+```
