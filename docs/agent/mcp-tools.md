@@ -453,6 +453,7 @@ ready candidates from candidates that still need review. The payload
 includes the selected candidate, scan hint such as `read_parquet`, URI/path
 template for file/object storage, database relation fields for database-backed
 storage, scan-adjacent `execution_attempt_ready` and
+`primary_execution_attempt_blocking_reason_code` /
 `execution_attempt_blocking_reason_codes` mirrors of the review gate, parsed
 `required_bindings`, structured `binding_requirements`, non-secret storage
 environment hints, copied issues and analysis warnings, caveats, and a
@@ -480,8 +481,11 @@ status summarizes the whole hint set. Top-level
 `runtime_resolution_required`, `database_relation_handoff`,
 `binding_values_required`, or `execution_attempt_ready`. `review_gate`
 includes `blocking_reason_codes`, `all_issue_codes`, the legacy `reason_codes`
-alias for blocking reasons, `binding_values_required`, and
-`ready_for_execution_attempt`. It may add
+alias for blocking reasons, `binding_values_required`,
+`ready_for_execution_attempt`, `primary_execution_attempt_blocking_reason_code`,
+and `execution_attempt_blocking_reason_codes`. The primary execution blocker is
+the first item from the ordered blocker list, or `None` when no
+execution-attempt blocker remains. It may add
 handoff-only blockers such as `query_context_has_other_blockers` for clean
 selected candidates with bad siblings, or `scan_function_not_inferred` when
 DuckDB has no file-scan function for the selected storage/layout shape.
@@ -495,8 +499,11 @@ Use `ready_for_execution_attempt`, not `handoff_kind` alone, as the gate for
 any execution attempt; `database_relation_handoff` means the selected route is a
 relation/connection handoff, not that execution is safe.
 If `ready_for_execution_attempt=false`, route relation fields before generic
-runtime resolution, then route `runtime_resolution_required`,
-`binding_values_required`, and remaining issue codes. Empty
+runtime resolution, then route
+`primary_execution_attempt_blocking_reason_code` as the compact next blocker,
+using `execution_attempt_blocking_reason_codes` for the full ordered detail.
+Then inspect `runtime_resolution_required`, `binding_values_required`, and
+remaining issue codes. Empty
 `blocking_reason_codes` and `executable_without_review=true` do not make a plan
 execution-ready. The scan card repeats the same gate as
 `scan.execution_attempt_ready`; when it is false, treat URI templates and

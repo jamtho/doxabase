@@ -2685,6 +2685,9 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     assert result["selected_candidate"]["candidate_path_status"] == "ready"
     assert result["scan"]["candidate_path_status"] == "ready"
     assert result["scan"]["execution_attempt_ready"] is False
+    assert result["scan"]["primary_execution_attempt_blocking_reason_code"] == (
+        "binding_values_required"
+    )
     assert result["scan"]["execution_attempt_blocking_reason_codes"] == [
         "binding_values_required"
     ]
@@ -2694,6 +2697,9 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
         "query_context_has_other_blockers"
     ]
     assert result["review_gate"]["blocking_reason_codes"] == []
+    assert result["review_gate"]["primary_execution_attempt_blocking_reason_code"] == (
+        "binding_values_required"
+    )
     assert result["review_gate"]["execution_attempt_blocking_reason_codes"] == [
         "binding_values_required"
     ]

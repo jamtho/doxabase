@@ -1398,6 +1398,7 @@ class DraftQueryPlanScan:
     physical_layout_selection_note: str | None
     non_executed_note: str
     execution_attempt_ready: bool = False
+    primary_execution_attempt_blocking_reason_code: str | None = None
     execution_attempt_blocking_reason_codes: list[str] = field(default_factory=list)
 
 
@@ -1456,6 +1457,7 @@ class DraftQueryPlanReviewGate:
     candidate_path_status: str | None
     blocking_reason_codes: list[str]
     execution_attempt_blocking_reason_codes: list[str]
+    primary_execution_attempt_blocking_reason_code: str | None
     all_issue_codes: list[str]
     reason_codes: list[str]
     review_note: str
@@ -9545,6 +9547,9 @@ class DoxaBase:
         scan = replace(
             scan,
             execution_attempt_ready=review_gate.ready_for_execution_attempt,
+            primary_execution_attempt_blocking_reason_code=(
+                review_gate.primary_execution_attempt_blocking_reason_code
+            ),
             execution_attempt_blocking_reason_codes=list(
                 review_gate.execution_attempt_blocking_reason_codes
             ),
@@ -10832,6 +10837,11 @@ class DoxaBase:
             blocking_reason_codes=blocking_reason_codes,
             execution_attempt_blocking_reason_codes=(
                 execution_attempt_blocking_reason_codes
+            ),
+            primary_execution_attempt_blocking_reason_code=(
+                execution_attempt_blocking_reason_codes[0]
+                if execution_attempt_blocking_reason_codes
+                else None
             ),
             all_issue_codes=self._query_issue_codes(issues),
             reason_codes=blocking_reason_codes,

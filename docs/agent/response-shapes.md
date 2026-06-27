@@ -1565,7 +1565,9 @@ dataset's actual executable location; related or aggregate datasets can share a
 partition template while still being review-gated.
 `scan.execution_attempt_ready` mirrors
 `review_gate.ready_for_execution_attempt`, and
-`scan.execution_attempt_blocking_reason_codes` mirrors
+`scan.primary_execution_attempt_blocking_reason_code` mirrors the first item in
+`review_gate.execution_attempt_blocking_reason_codes`, or `None` when no blocker
+remains. `scan.execution_attempt_blocking_reason_codes` mirrors
 `review_gate.execution_attempt_blocking_reason_codes`; use these scan-adjacent
 fields before treating `scan.uri_template` or `scan.relation_identifier` as
 anything more than handoff context. `plan.required_bindings` is parsed from
@@ -1618,6 +1620,7 @@ credential references must be resolved, or when selected S3-compatible access is
 review-gated because endpoint/credential/region metadata is not yet recorded.
 `plan.review_gate` keeps the query-target decision status,
 `blocking_reason_codes`, `execution_attempt_blocking_reason_codes`,
+`primary_execution_attempt_blocking_reason_code`,
 `all_issue_codes`, the legacy alias `reason_codes`,
 `executable_without_review`, `runtime_resolution_required`,
 `binding_values_required`, and
@@ -1637,10 +1640,14 @@ scan. Runtime-only cases can have empty `blocking_reason_codes` and
 also includes non-review execution-attempt blockers such as
 `runtime_resolution_required` and `binding_values_required`, so downstream
 automation does not have to merge booleans and review codes before routing a
-false `ready_for_execution_attempt`. The scan card repeats the same values as
+false `ready_for_execution_attempt`.
+`primary_execution_attempt_blocking_reason_code` is the first ordered blocker,
+or `None` when the plan is ready for an execution attempt. The scan card repeats
+the same values as
 `scan.execution_attempt_ready` and
-`scan.execution_attempt_blocking_reason_codes` for consumers that start from
-the URI, relation, or scan-function hints.
+`scan.primary_execution_attempt_blocking_reason_code` /
+`scan.execution_attempt_blocking_reason_codes` for consumers that start from the
+URI, relation, or scan-function hints.
 `review_gate.selection_overridden`, `context_blocked_candidate_allowed`,
 `context_blocked_candidate_used`, `direct_blocking_reason_codes`, and
 `context_blocking_reason_codes` explain whether an explicit or allowed
@@ -1680,9 +1687,11 @@ but `scan.relation_identifier` is present, hand it to a database-aware
 review/runtime route before generic runtime-resolution work. A
 `connection_reference` without a relation identifier is repair/review context,
 not a database relation handoff. Then route
-`execution_attempt_blocking_reason_codes`, unresolved storage environment,
-required bindings, and remaining issue codes. Empty `blocking_reason_codes` or
-`executable_without_review=True` must not be treated as execution permission.
+`primary_execution_attempt_blocking_reason_code` as the compact next blocker and
+`execution_attempt_blocking_reason_codes` for the full ordered detail, followed
+by unresolved storage environment, required bindings, and remaining issue codes.
+Empty `blocking_reason_codes` or `executable_without_review=True` must not be
+treated as execution permission.
 
 Each caveat in `dataset.caveats` has:
 

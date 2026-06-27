@@ -111,7 +111,10 @@ agent runtime decides how profile X resolves.
    runtime context before execution. Treat
    `plan.review_gate.ready_for_execution_attempt` as the compact "no recorded
    review or runtime-resolution blocker" signal before considering a local
-   execution attempt. Use `plan.handoff_kind` for first-pass machine routing:
+   execution attempt. When it is false,
+   `plan.review_gate.primary_execution_attempt_blocking_reason_code` names the
+   first ordered execution-attempt blocker, or `None` if no blocker remains.
+   Use `plan.handoff_kind` for first-pass machine routing:
    it distinguishes review-required drafts, runtime-resolution work, database
    relation handoffs, URI-template binding work, and execution-attempt-ready
    local/file/object drafts.

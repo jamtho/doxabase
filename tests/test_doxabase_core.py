@@ -9928,7 +9928,15 @@ def test_draft_query_plan_carries_dataset_template_verification(
     assert plan.review_gate.execution_attempt_blocking_reason_codes == [
         "binding_values_required",
     ]
+    assert (
+        plan.review_gate.primary_execution_attempt_blocking_reason_code
+        == "binding_values_required"
+    )
     assert plan.scan.execution_attempt_ready is False
+    assert (
+        plan.scan.primary_execution_attempt_blocking_reason_code
+        == "binding_values_required"
+    )
     assert plan.scan.execution_attempt_blocking_reason_codes == [
         "binding_values_required",
     ]
@@ -11096,6 +11104,8 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     assert plan.review_gate.binding_values_required is False
     assert plan.review_gate.ready_for_execution_attempt is True
     assert plan.scan.execution_attempt_ready is True
+    assert plan.review_gate.primary_execution_attempt_blocking_reason_code is None
+    assert plan.scan.primary_execution_attempt_blocking_reason_code is None
     assert plan.scan.execution_attempt_blocking_reason_codes == []
     assert plan.handoff_kind == "execution_attempt_ready"
     assert "No endpoint or credential profile is recorded or required" in (
@@ -11322,6 +11332,14 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
         "query_context_has_other_blockers",
         "binding_values_required",
     ]
+    assert (
+        selected_plan.review_gate.primary_execution_attempt_blocking_reason_code
+        == "query_context_has_other_blockers"
+    )
+    assert (
+        selected_plan.scan.primary_execution_attempt_blocking_reason_code
+        == "query_context_has_other_blockers"
+    )
     assert selected_plan.scan.execution_attempt_blocking_reason_codes == (
         selected_plan.review_gate.execution_attempt_blocking_reason_codes
     )
@@ -11342,6 +11360,14 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     assert selected_from_action.review_gate.execution_attempt_blocking_reason_codes == [
         "binding_values_required",
     ]
+    assert (
+        selected_from_action.review_gate.primary_execution_attempt_blocking_reason_code
+        == "binding_values_required"
+    )
+    assert (
+        selected_from_action.scan.primary_execution_attempt_blocking_reason_code
+        == "binding_values_required"
+    )
     assert selected_from_action.scan.execution_attempt_blocking_reason_codes == [
         "binding_values_required",
     ]
@@ -11408,9 +11434,17 @@ def test_draft_query_plan_layout_selection_preserves_runtime_resolution_gate(
     assert selected_plan.review_gate.execution_attempt_blocking_reason_codes == [
         "runtime_resolution_required",
     ]
+    assert (
+        selected_plan.review_gate.primary_execution_attempt_blocking_reason_code
+        == "runtime_resolution_required"
+    )
     assert selected_plan.scan.execution_attempt_blocking_reason_codes == [
         "runtime_resolution_required",
     ]
+    assert (
+        selected_plan.scan.primary_execution_attempt_blocking_reason_code
+        == "runtime_resolution_required"
+    )
     assert selected_plan.handoff_kind == "runtime_resolution_required"
 
 
@@ -11480,11 +11514,19 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
         "scan_function_not_inferred",
         "runtime_resolution_required",
     ]
+    assert (
+        plan.review_gate.primary_execution_attempt_blocking_reason_code
+        == "scan_function_not_inferred"
+    )
     assert plan.scan.execution_attempt_ready is False
     assert plan.scan.execution_attempt_blocking_reason_codes == [
         "scan_function_not_inferred",
         "runtime_resolution_required",
     ]
+    assert (
+        plan.scan.primary_execution_attempt_blocking_reason_code
+        == "scan_function_not_inferred"
+    )
     assert plan.review_gate.reason_codes == ["scan_function_not_inferred"]
     assert plan.handoff_kind == "database_relation_handoff"
     assert "Selected candidate 0 is a direct-clean database relation handoff" in (

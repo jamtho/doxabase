@@ -360,7 +360,8 @@ candidate, route kind, and sibling/context blocker codes that remain visible in
 `review_gate.all_issue_codes`.
 The response includes a scan hint such as `read_parquet`, the candidate
 URI/path template for file/object storage, database relation fields for
-database-backed storage, scan-adjacent `execution_attempt_ready` and
+database-backed storage, scan-adjacent `execution_attempt_ready`,
+`primary_execution_attempt_blocking_reason_code`, and
 `execution_attempt_blocking_reason_codes` mirrors of the review gate, parsed
 placeholder names in `required_bindings`, structured `binding_requirements`
 rows for handoff work, non-secret storage environment hints, copied issues and
@@ -382,10 +383,14 @@ Binding rows identify the placeholder source text and explicitly report when
 DoxaBase has not inferred derivation or runtime values. `review_gate` separates
 `blocking_reason_codes` from `all_issue_codes` while preserving `reason_codes`
 as a legacy alias for blocking reasons. It also exposes
-`binding_values_required` and `ready_for_execution_attempt`, which is true only
-when the graph-metadata review gate is clear, no runtime endpoint/credential or
-object resolution remains recorded, and no required binding placeholders remain
-in the selected template. The scan card mirrors those execution-attempt fields
+`binding_values_required`, `ready_for_execution_attempt`,
+`primary_execution_attempt_blocking_reason_code`, and
+`execution_attempt_blocking_reason_codes`. The primary execution blocker is the
+first item from the ordered blocker list, or `None` when no execution-attempt
+blocker remains. `ready_for_execution_attempt` is true only when the
+graph-metadata review gate is clear, no runtime endpoint/credential or object
+resolution remains recorded, and no required binding placeholders remain in the
+selected template. The scan card mirrors those execution-attempt fields
 so a present `scan.uri_template` or `scan.relation_identifier` is not mistaken
 for execution permission. It may add handoff-only blockers such as
 `query_context_has_other_blockers` for clean selected candidates with bad

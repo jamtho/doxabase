@@ -118,7 +118,10 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    `review_gate.execution_attempt_blocking_reason_codes` folds in non-review
    execution blockers such as runtime resolution and missing binding values, so
    it is the better machine-routing list when this boolean is false.
-   `scan.execution_attempt_blocking_reason_codes` mirrors that list beside
+   `review_gate.primary_execution_attempt_blocking_reason_code` is the first
+   code from that ordered list, or `None` when the plan is execution-attempt
+   ready. `scan.primary_execution_attempt_blocking_reason_code` and
+   `scan.execution_attempt_blocking_reason_codes` mirror those values beside
    `scan.uri_template` and `scan.relation_identifier`.
 
 For downstream consumers, keep the routing order simple:
@@ -130,7 +133,9 @@ For downstream consumers, keep the routing order simple:
    relation handoff before generic runtime resolution. The relation can be
    useful even when execution is not ready. A `scan.connection_reference` without
    a relation is repair/review context.
-3. Otherwise, route `review_gate.execution_attempt_blocking_reason_codes`, then
+3. Otherwise, route `review_gate.primary_execution_attempt_blocking_reason_code`
+   first, using `review_gate.execution_attempt_blocking_reason_codes` for the
+   full ordered detail. Then inspect
    `storage_environment.runtime_resolution_required`,
    `review_gate.binding_values_required`, and remaining
    `blocking_reason_codes` / `all_issue_codes`. Empty blocking codes or

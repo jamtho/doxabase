@@ -1406,6 +1406,13 @@ few useful gaps:
   direct-clean candidate and the remaining blockers belong to sibling candidate
   metadata, so scripts do not need an extra retry to reach the next execution
   gate.
+- Query-planning execution-blocker trials found agents could route from the
+  ordered `execution_attempt_blocking_reason_codes` list, but simple automation
+  still had to pick its own headline blocker. Draft query plans now expose
+  `primary_execution_attempt_blocking_reason_code` on both `review_gate` and
+  `scan` as the first ordered blocker, or `None` when no execution-attempt
+  blocker remains. Treat it as a compact queue key while preserving the full
+  ordered list for review detail.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
