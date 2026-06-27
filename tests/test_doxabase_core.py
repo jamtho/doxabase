@@ -17423,6 +17423,124 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     }
 
 
+def test_profile_map_update_support_omits_type_review_patterns(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Payments"
+    status_column = "https://example.test/project#PaymentsStatus"
+    status_value_type = "https://example.test/project#StatusCodeValue"
+    evidence = "https://example.test/project#PaymentsProfileRunEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Payments",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        nullable=False,
+        physical_type="rc:Varchar",
+    )
+
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Payments were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run with nullable and type findings.",
+        evidence_sources=["test://payments-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the test Payments table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status had nulls and looked integer-coded.",
+                "null_count": 2,
+                "physical_type": "rc:Integer",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+    profile = db.describe_profile_run(
+        dataset,
+        evidence,
+    ).mapped_column_profile_observations[0]
+    map_pattern = db.record_pattern(
+        summary="Payments profile supports map updates.",
+        pattern_text=(
+            "The Payments profile run supports row-count and nullable map "
+            "updates for the current table and status column."
+        ),
+        rationale=(
+            "This same-evidence pattern is about helper-equivalent map facts, "
+            "not semantic type assertions."
+        ),
+        pattern_targets=[dataset, status_column],
+        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
+        evidence_iri=evidence,
+        map_implications=[dataset, status_column],
+    )
+    type_pattern = db.record_pattern(
+        summary="Payments status type finding needs review.",
+        pattern_text=(
+            "The Payments status profile suggests an integer-coded status "
+            "value type that should stay in type review."
+        ),
+        rationale=(
+            "Column-targeted type rationale should not become automatic support "
+            "for unrelated nullable or row-count map patches."
+        ),
+        pattern_targets=[status_column],
+        supporting_observations=[profile.iri],
+        evidence_iri=evidence,
+        map_implications=[status_column, f"{RC}Integer", status_value_type],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 2
+    assert draft.type_advisory_count == 1
+    profile_map_action = draft.suggested_next_action_groups[
+        "profile_map_updates"
+    ][0]
+    assert profile_map_action.arguments["supporting_patterns"] == [
+        map_pattern.pattern_iri
+    ]
+    type_advisory = draft.type_advisories[0]
+    value_type_promotion_action = [
+        action
+        for action in type_advisory.suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    ][0]
+    assert value_type_promotion_action.arguments["patterns"] == [
+        type_pattern.pattern_iri
+    ]
+    assert type_pattern.pattern_iri not in (
+        profile_map_action.arguments["supporting_patterns"]
+    )
+
+    staged = db.stage_profile_map_updates(**profile_map_action.arguments)
+    assert staged.staged_revision is not None
+    staged_description = db.describe_staged_revision(
+        staged.staged_revision.revision_iri
+    )
+
+    assert {item.iri for item in staged_description.supporting_patterns} == {
+        map_pattern.pattern_iri
+    }
+    assert type_pattern.pattern_iri not in {
+        item.iri for item in staged_description.supporting_patterns
+    }
+
+
 def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     tmp_path: Path,
 ) -> None:

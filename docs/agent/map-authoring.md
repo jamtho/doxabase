@@ -137,10 +137,12 @@ When a profile-derived change is backed by synthesized lore, pass
 links are recorded on the staged revision for later review.
 The default `profile_map_updates` suggested action pre-fills
 `supporting_patterns` when same-evidence profile patterns clearly overlap the
-profile run's dataset or recommended map resources. Keep those unless review
-shows the pattern is unrelated to the accepted map changes. Profiled-column-only
-type rationale belongs in the `profile_type_review` lane unless you explicitly
-pass it as support to a focused type assertion change.
+profile run's dataset or recommended map resources, while skipping patterns that
+mention observed physical/value type resources from the profile type-review
+lane. Keep the auto-filled patterns unless review shows one is unrelated to the
+accepted map changes. Profiled-column-only type rationale belongs in the
+`profile_type_review` lane unless you explicitly pass it as support to a focused
+type assertion change.
 Representative duplicate staging preserves every grouped profile observation as
 staged-revision support, so accepting one duplicate row does not discard sibling
 evidence.

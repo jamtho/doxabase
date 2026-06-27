@@ -399,9 +399,12 @@ merged with the automatic profile-derived anchors.
 Default `stage_profile_map_updates` suggestions only auto-pass same-evidence
 patterns that target or imply the dataset or recommended map resources. Keep
 metric-only and type-only patterns in their advisory lanes unless you explicitly
-want them to support the map patch. When authoring a metric vocabulary pattern
-that should stay advisory-only, target or imply the metric IRI rather than the
-dataset; dataset-targeted metric patterns are eligible map-patch support.
+want them to support the map patch. Column-targeted patterns that mention
+observed physical/value type resources are treated as type-review patterns even
+when they also name the profiled column. When authoring a metric vocabulary
+pattern that should stay advisory-only, target or imply the metric IRI rather
+than the dataset; dataset-targeted metric patterns are eligible map-patch
+support.
 
 `doxabase.describe_query_context`
 

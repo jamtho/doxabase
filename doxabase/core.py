@@ -8378,6 +8378,7 @@ class DoxaBase:
             self._profile_map_update_supporting_pattern_iris(
                 profile_run,
                 recommendations=recommendations,
+                type_advisories=type_advisories,
             )
         )
         suggested_next_action_groups = (
@@ -8792,6 +8793,7 @@ class DoxaBase:
         profile_run: ProfileRunDescription,
         *,
         recommendations: list[ProfileMapUpdateRecommendation],
+        type_advisories: list[ProfileTypeFindingAdvisory],
     ) -> list[str]:
         pattern_graphs = ["patterns"]
         same_evidence_patterns = set(
@@ -8803,6 +8805,15 @@ class DoxaBase:
         relevant_resource_iris = {profile_run.dataset.iri}
         for recommendation in recommendations:
             relevant_resource_iris.add(recommendation.resource.iri)
+        type_review_resource_iris = {
+            resource.iri
+            for advisory in type_advisories
+            for resource in (
+                advisory.observed_physical_type,
+                advisory.observed_value_type,
+            )
+            if resource is not None
+        }
 
         pattern_iris: list[str] = []
         for pattern_iri in sorted(same_evidence_patterns):
@@ -8810,6 +8821,8 @@ class DoxaBase:
                 *self._objects(pattern_graphs, pattern_iri, "rc:patternTarget"),
                 *self._objects(pattern_graphs, pattern_iri, "rc:mapImplication"),
             }
+            if pattern_resources & type_review_resource_iris:
+                continue
             if pattern_resources & relevant_resource_iris:
                 pattern_iris.append(pattern_iri)
         return pattern_iris

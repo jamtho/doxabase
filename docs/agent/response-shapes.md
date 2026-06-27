@@ -1224,12 +1224,14 @@ profile patterns target or imply the dataset or recommendation resources, the
 suggested staging arguments also include `supporting_patterns` so the staged map
 revision carries the directly relevant synthesis without a second pattern
 lookup. Metric-only and type-only profile patterns stay in their advisory lanes
-unless the caller explicitly passes them as support. When authoring a metric
-vocabulary pattern that should remain advisory-only, target or imply the metric
-IRI rather than the dataset; dataset-targeted patterns are eligible to support
-the map patch. Pass only the indexes actually accepted after reviewing sample
-scope and modelling intent; include duplicate sibling indexes only when they
-need distinct review treatment.
+unless the caller explicitly passes them as support. Column-targeted patterns
+that mention observed physical/value type resources stay in
+`profile_type_review` by default even when they also name a recommended column.
+When authoring a metric vocabulary pattern that should remain advisory-only,
+target or imply the metric IRI rather than the dataset; dataset-targeted
+patterns are eligible to support the map patch. Pass only the indexes actually
+accepted after reviewing sample scope and modelling intent; include duplicate
+sibling indexes only when they need distinct review treatment.
 When `draft.recommendations` is empty and either metric or type advisories are
 present, the draft is advisory-only. The grouped and flat suggested actions are
 the deduped advisory actions for vocabulary/context/type review; do not call
