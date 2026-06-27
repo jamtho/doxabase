@@ -544,6 +544,10 @@ resource.primary_route
 resource.routes
 ```
 
+`resource.primary_route` is the first full `ContextSliceRoute` object from
+`resource.routes`, not a scalar route id. Read `resource.primary_route.route`
+or MCP `resource["primary_route"]["route"]` when you only need the route name.
+
 `surface_role` is a compact graph-role cue for first-pass reading. Current
 values are `current_map_context`, `observation_context`, `pattern_synthesis`,
 `evidence_support`, `revision_history`, `vocabulary_context`, `mixed_context`,

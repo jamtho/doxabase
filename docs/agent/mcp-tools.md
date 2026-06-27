@@ -534,8 +534,11 @@ used by profile metrics. Deep-lore slices can also start from an
 `rc:GraphRevision` seed and expand support, evidence, anchors, application,
 restage, and alternative links. `seed_profile_observations` preserves structured
 profile summaries selected by those profile/metric seeds even when the same row
-is older than the bounded dataset profile list. Read `resources[].routes` and `route_counts` before
-raw triples; those fields explain why each resource entered the slice.
+is older than the bounded dataset profile list. Read `resources[].primary_route`,
+`resources[].routes`, and `route_counts` before raw triples; those fields
+explain why each resource entered the slice. `resources[].primary_route` is the
+first full route object, so use `resources[].primary_route.route` when only the
+route id is needed.
 Read `resources[].surface_role` as the compact trust cue for whether a resource
 is current map context, observation context, pattern synthesis, evidence support,
 revision history, vocabulary context, mixed context, or a referenced-only object.

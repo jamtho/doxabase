@@ -13295,6 +13295,7 @@ def test_describe_context_slice_returns_route_explained_dataset_brief(
     assert claim_result.evidence_iri in resources
     assert resources[messages].referenced_only is False
     assert resources[messages].surface_role == "current_map_context"
+    assert resources[messages].primary_route == resources[messages].routes[0]
     assert resources[messages].primary_route.route == "seed"
     assert any(route.route == "seed" for route in resources[messages].routes)
     assert resources[doc_id].surface_role == "current_map_context"

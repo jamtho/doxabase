@@ -82,11 +82,12 @@ Useful fields:
   resources, then raw RDF when needed.
 - `resources`: selected resources with labels, descriptions, types, graphs,
   `surface_role`, and route reasons. `primary_route` is the highest-priority
-  inclusion reason. `surface_role` is the quick trust cue: current map context,
-  observation context, pattern synthesis, evidence support, revision history,
-  vocabulary context, mixed context, or a referenced-only object. `referenced_only=true`
-  means the resource was selected as an object/reference but has no subject
-  triples in the selected graphs.
+  route object, not a scalar route id; read `primary_route.route` in Python or
+  `primary_route["route"]` in MCP payloads. `surface_role` is the quick trust
+  cue: current map context, observation context, pattern synthesis, evidence
+  support, revision history, vocabulary context, mixed context, or a
+  referenced-only object. `referenced_only=true` means the resource was selected
+  as an object/reference but has no subject triples in the selected graphs.
 - `route_legend`: list of route legend rows for the route names present in this
   slice, including `route`, `route_label`, `meaning`, `priority`, and `count`.
   Build a dict keyed by `route` if that is more convenient.

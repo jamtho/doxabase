@@ -3537,6 +3537,15 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     assert resources_by_iri[pattern["pattern_iri"]]["surface_role"] == (
         "pattern_synthesis"
     )
+    seed_resource = resources_by_iri[seed_iri]
+    assert seed_resource["primary_route"] == seed_resource["routes"][0]
+    assert set(seed_resource["primary_route"]) == {
+        "depth",
+        "route",
+        "route_label",
+        "source_iri",
+        "source_label",
+    }
     assert any(
         resource["iri"]
         == "https://richcanopy.org/example/manifest/polymarket#MarketSnapshots"
