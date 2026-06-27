@@ -1903,11 +1903,17 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
     ex:Thing1 a ex:Thing ;
         ex:required ex:Value .
     """
+    complementary_map = """
+    @prefix ex: <https://example.test/project#> .
+
+    ex:Thing1 a ex:Thing ;
+        ex:required ex:OtherValue .
+    """
 
     result = stage_systematisation_tool(
         db,
         summary="Compare thing framings",
-        intent="Keep a diagnostic invalid framing beside a valid map framing.",
+        intent="Keep a diagnostic invalid framing beside valid map framings.",
         shared_additions=[{"graph": "shapes", "content": shared_shape}],
         framings=[
             {
@@ -1920,6 +1926,11 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
                 "graph": "map",
                 "content": complete_map,
             },
+            {
+                "label": "Complementary complete thing",
+                "graph": "map",
+                "content": complementary_map,
+            },
         ],
     )
 
@@ -1928,7 +1939,7 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
     ]
     assert result["next_action_queue"] == {
         "repair_or_replace": [revision_iris[0]],
-        "apply_after_review": [revision_iris[1]],
+        "apply_after_review": [revision_iris[1], revision_iris[2]],
     }
     assert any(
         "First framing 'Diagnostic incomplete thing'" in warning
@@ -1946,6 +1957,21 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
             "suggested_rerun_arguments": {"link_alternatives": False},
         }
     ]
+    export_path = tmp_path / "invalid-first-review.md"
+    export = export_staged_revisions_tool(
+        db,
+        revision_iris=revision_iris,
+        path=str(export_path),
+        title="Invalid first framing review",
+    )
+    assert export["bundle_summary"]["next_action_queue"] == {
+        "repair_or_replace": [revision_iris[0]],
+        "apply_after_review": [revision_iris[1], revision_iris[2]],
+    }
+    exported = export_path.read_text(encoding="utf-8")
+    assert "## Review Queues" in exported
+    assert "Diagnostic incomplete thing" in exported
+    assert "Complementary complete thing" in exported
 
 
 def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) -> None:

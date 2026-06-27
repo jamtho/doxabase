@@ -2889,6 +2889,7 @@ bundle.stale_resolution_state_counts
 bundle.unresolved_stale_revision_iris
 bundle.stale_handled_by_restage_revision_iris
 bundle.ready_restage_successor_revision_iris
+bundle.ready_restage_successor_alternative_to_applied_source_iris
 bundle.post_apply_recheck_revision_iris
 bundle.sequential_apply_recheck_candidate_iris
 bundle.warnings
@@ -2912,6 +2913,11 @@ replay validates but has no effective graph delta.
 itself become stale again and needs restaging or replacement. The bundle's
 `recommended_review_iris` de-duplicates the current review set in bundle order,
 replacing handled stale sources with their successors.
+`ready_restage_successor_alternative_to_applied_source_iris` lists ready
+refreshed successors whose `current_alternative_to` / `alternative_to` target is
+already applied. Treat these rows as semantic review targets, not automatic
+apply candidates, even though their row-local `next_action.queue` is still
+`apply_after_review`.
 Grouped Markdown still keeps handled stale rows in the summary table for
 provenance, but their recommendation points to the refreshed successor or
 Review Queues instead of treating the stale source as an active restage target.

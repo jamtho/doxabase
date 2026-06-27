@@ -1110,6 +1110,13 @@ few useful gaps:
   applied event IRI in a grouped staged-review export. Grouped staged exports now
   fail with a route-specific message: pass staged patch IRIs, and inspect
   applied events with graph revision, lineage, or applied-diff helpers.
+- A stale-alternative recovery trial found agents could follow
+  `current_restaged_by`, handled-stale summaries, and grouped queues after
+  applying one alternative and restaging a sibling, but a ready successor that
+  remains an alternative to an already-applied source still needs semantic
+  gating. Bundle summaries now list those rows in
+  `ready_restage_successor_alternative_to_applied_source_iris` and warn that
+  mechanical readiness is not approval to make both alternatives durable.
 - A resource-lineage recovery trial found snapshot exports seeded only by an
   applied event restore the applied event and its direct staged source, but not
   older restage ancestors. Generic revision lineage now warns when any visible

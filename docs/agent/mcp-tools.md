@@ -805,10 +805,13 @@ active during the preview validation for each framing. The helper records the
 systematisation intent, anchors, rationale, optional review notes and
 recommendations, validation preview, and linked staged revisions; it does not
 decide the ontology design for the agent. The result has
-`result_kind="systematisation_draft"`, `next_action_queue`,
-`suggested_next_actions`, and `suggested_next_calls`, so automation can route
-validation-failed framings to repair and ready framings to review/apply checks
-before writing a Markdown bundle.
+`result_kind="systematisation_draft"`, `warnings`, `structured_warnings`,
+`next_action_queue`, `suggested_next_actions`, and `suggested_next_calls`, so
+automation can route validation-failed framings to repair and ready framings to
+review/apply checks before writing a Markdown bundle. If later framings were
+linked to a first framing that did not route to `apply_after_review`,
+`structured_warnings` includes `first_alternative_anchor_not_ready` with
+`suggested_rerun_arguments={"link_alternatives": False}`.
 
 `doxabase.stage_pattern_promotion`
 
@@ -1007,6 +1010,10 @@ when an intermediate successor was also processed and restaged. Item-level
 for candidates to apply. If an already-handled row has
 `stale_resolution_state_after="restaged_successor_stale_unresolved"`, its
 current successor is stale too; inspect or restage `current_revision_iri`.
+If the bundle also lists a ready successor in
+`ready_restage_successor_alternative_to_applied_source_iris`, it is still an
+alternative to an already-applied staged source; treat that as semantic review
+gating even when the row's next action is `apply_after_review`.
 Each item also carries `next_action_after` and
 `suggested_next_actions_after` for that `current_revision_iri`, which is the
 direct row-level route to follow after the batch decision.

@@ -596,6 +596,7 @@ class StagedGraphRevisionBundleSummary:
     unresolved_stale_revision_iris: list[str]
     stale_handled_by_restage_revision_iris: list[str]
     ready_restage_successor_revision_iris: list[str]
+    ready_restage_successor_alternative_to_applied_source_iris: list[str]
     post_apply_recheck_revision_iris: list[str]
     sequential_apply_recheck_candidate_iris: list[str]
     warnings: list[str]
@@ -20548,6 +20549,11 @@ class DoxaBase:
         post_apply_recheck = self._staged_revisions_post_apply_recheck_revision_iris(
             summaries
         )
+        ready_applied_alternative_successors = (
+            self._ready_restage_successor_alternative_to_applied_source_iris(
+                summaries
+            )
+        )
         bundled_revision_iris = {summary.revision_iri for summary in summaries}
         external_recommended_review = [
             iri for iri in recommended_review if iri not in bundled_revision_iris
@@ -20559,11 +20565,17 @@ class DoxaBase:
             unresolved_stale_revision_iris=unresolved_stale,
             stale_handled_by_restage_revision_iris=handled_stale,
             ready_restage_successor_revision_iris=ready_successors,
+            ready_restage_successor_alternative_to_applied_source_iris=(
+                ready_applied_alternative_successors
+            ),
             post_apply_recheck_revision_iris=post_apply_recheck,
             sequential_apply_recheck_candidate_iris=post_apply_recheck,
             warnings=self._staged_revisions_bundle_warnings(
                 post_apply_recheck,
                 external_recommended_review_iris=external_recommended_review,
+                ready_restage_successor_alternative_to_applied_source_iris=(
+                    ready_applied_alternative_successors
+                ),
             ),
             validation_failed_revision_iris=validation_failed,
             staged_validation_failed_revision_iris=staged_validation_failed,
@@ -20608,11 +20620,43 @@ class DoxaBase:
             if any(graph in graphs_needing_recheck for graph in summary.changed_graphs)
         ]
 
+    def _ready_restage_successor_alternative_to_applied_source_iris(
+        self,
+        summaries: list[StagedGraphRevisionExportSummary],
+    ) -> list[str]:
+        applied_source_iris = {
+            summary.revision_iri
+            for summary in summaries
+            if summary.apply_status == "already_applied"
+            or summary.stale_resolution_state == "restaged_successor_already_applied"
+        }
+        history_graphs = self._expand_graphs(["history"])
+        affected: list[str] = []
+        for summary in summaries:
+            if summary.stale_resolution_state != "restaged_successor_ready":
+                continue
+            alternative_target = summary.current_alternative_to or summary.alternative_to
+            if alternative_target is None:
+                continue
+            if alternative_target not in applied_source_iris:
+                applied_event = self._first_subject(
+                    history_graphs,
+                    "rc:appliesStagedRevision",
+                    alternative_target,
+                )
+                if applied_event is None:
+                    continue
+            affected.append(summary.revision_iri)
+        return affected
+
     def _staged_revisions_bundle_warnings(
         self,
         post_apply_recheck_revision_iris: list[str],
         *,
         external_recommended_review_iris: list[str] | None = None,
+        ready_restage_successor_alternative_to_applied_source_iris: (
+            list[str] | None
+        ) = None,
     ) -> list[str]:
         warnings: list[str] = []
         if post_apply_recheck_revision_iris:
@@ -20628,6 +20672,18 @@ class DoxaBase:
                 "Recommended review includes revision(s) outside this bundle: "
                 f"{', '.join(external_recommended_review_iris)}. Export or "
                 "describe them before acting on this review bundle."
+            )
+        if ready_restage_successor_alternative_to_applied_source_iris:
+            affected = ", ".join(
+                ready_restage_successor_alternative_to_applied_source_iris
+            )
+            warnings.append(
+                "Ready restage successor(s) are mechanically apply-ready but "
+                "remain alternatives to already-applied staged source(s): "
+                f"{affected}. "
+                "Treat them as semantic review targets before applying; inspect "
+                "each row's current_alternative_to/applied source before making "
+                "both alternatives durable."
             )
         return warnings
 

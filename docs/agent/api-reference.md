@@ -1133,6 +1133,10 @@ validation-failed, no-op, or otherwise not ready. Use
 `check_staged_revision_apply()` before applying. If an already-handled row has
 `stale_resolution_state_after="restaged_successor_stale_unresolved"`, its
 current successor is stale too; inspect or restage `current_revision_iri`.
+If `bundle_summary.ready_restage_successor_alternative_to_applied_source_iris`
+is non-empty, those ready successors are still alternatives to already-applied
+staged sources; treat them as semantic review targets even when mechanically
+ready.
 Each row also carries `next_action_after` and
 `suggested_next_actions_after` for that `current_revision_iri`, so autonomous
 scripts can route the post-batch current revision without a separate listing

@@ -684,6 +684,12 @@ or validation failures when they share changed graphs, so route by the fresh
 check/export `next_action_queue` rather than by the recheck list alone. In
 post-apply recheck rows, a sibling that failed staged-time validation still
 routes to `repair_or_replace` even when the live replay now reports conflict.
+If a ready restage successor remains an alternative to a staged source that has
+already been applied, grouped summaries list it in
+`ready_restage_successor_alternative_to_applied_source_iris` and add a bundle
+warning. Treat that as semantic gating: the successor is mechanically ready, but
+review the applied source and `current_alternative_to` before making both
+alternatives durable.
 In scripts, the practical loop is: batch restage, review
 `ready_restage_successor_revision_iris`, apply at most one ready successor,
 then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the

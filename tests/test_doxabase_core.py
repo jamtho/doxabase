@@ -6166,6 +6166,36 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     )
     assert recovered_second_check.status == "ready"
     assert recovered_second_check.decision == "review_then_apply"
+    applied_alternative_export = db.export_staged_revisions(
+        [
+            first_restaged.revision_iri,
+            second_restaged.revision_iri,
+            recovered_second.revision_iri,
+        ],
+        tmp_path / "ready-successor-applied-alternative.md",
+        title="Ready successor with applied alternative",
+    )
+    applied_alternative_markdown = (
+        tmp_path / "ready-successor-applied-alternative.md"
+    ).read_text(encoding="utf-8")
+    applied_alternative_summary = applied_alternative_export.bundle_summary
+    semantic_gate_iris = (
+        applied_alternative_summary.ready_restage_successor_alternative_to_applied_source_iris
+    )
+    assert semantic_gate_iris == [recovered_second.revision_iri]
+    assert applied_alternative_summary.next_action_queue == {
+        "inspect_already_applied": [first_restaged.revision_iri],
+        "informational": [second_restaged.revision_iri],
+        "apply_after_review": [recovered_second.revision_iri],
+    }
+    assert any(
+        "mechanically apply-ready" in warning
+        and "already-applied staged source" in warning
+        and recovered_second.revision_iri in warning
+        for warning in applied_alternative_summary.warnings
+    )
+    assert "## Bundle Warnings" in applied_alternative_markdown
+    assert "semantic review targets before applying" in applied_alternative_markdown
 
     second_apply = db.apply_staged_revision(recovered_second.revision_iri)
 
