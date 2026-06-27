@@ -6693,6 +6693,24 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert recheck_export.revision_summaries[0].next_action.arguments == (
         recheck.next_action.arguments
     )
+    post_apply_dry_run = db.restage_staged_revisions(
+        result.post_apply_recheck_revision_iris,
+        dry_run=True,
+    )
+    assert post_apply_dry_run.dry_run is True
+    assert [item.action for item in post_apply_dry_run.items] == [
+        "would_restage"
+    ]
+    assert post_apply_dry_run.items[0].current_revision_iri == (
+        second_restaged.revision_iri
+    )
+    assert post_apply_dry_run.items[0].next_action_after is not None
+    assert post_apply_dry_run.items[0].next_action_after.action_type == (
+        "restage_after_review"
+    )
+    assert post_apply_dry_run.items[0].next_action_after.arguments == {
+        "iri": second_restaged.revision_iri,
+    }
     second_check_after_apply = db.check_staged_revision_apply(
         second_restaged.revision_iri
     )
@@ -16821,6 +16839,12 @@ def test_profile_map_update_duplicate_groups_preserve_representative_support(
 
     assert staged.staged_recommendation_indexes == representative_indexes
     assert staged.status_counts == {"staged": 3, "skipped": 0, "not_selected": 3}
+    for item in staged.items:
+        assert set(item.supporting_profile_observation_iris) == set(
+            draft.recommendations[
+                item.recommendation_index
+            ].duplicate_profile_observation_iris
+        )
     assert staged.staged_revision is not None
     described = db.describe_staged_revision(staged.staged_revision.revision_iri)
     described_support = {item.iri for item in described.supporting_observations}

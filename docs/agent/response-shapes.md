@@ -1054,15 +1054,20 @@ item.sample_size
 item.sample_scope
 item.sample_method
 item.profile_observation_iri
+item.supporting_profile_observation_iris
 ```
 
 When at least one accepted recommendation passes safety checks,
 `result.staged_revision` is a normal `StagedGraphRevisionRecord` for one grouped
 `map` revision. `suggested_next_actions` then points to
 `check_staged_revision_apply` for that staged revision; run the read-only check
-before reviewing, exporting, or applying. Use `describe_staged_revision()` to
-inspect preserved profile observation support, caller claim/pattern support,
-revision anchors, and shared evidence because the immediate staging response
+before reviewing, exporting, or applying. Each item echoes the profile
+observation IRIs that support that recommendation, including duplicate sibling
+observations when the row belongs to a duplicate group; accepted staged rows
+feed those lists into the grouped revision support. Use
+`describe_staged_revision()` to inspect caller claim/pattern support, revision
+anchors, shared evidence, and the final grouped staged-revision support because
+the immediate staging response
 stays compact. If an accepted representative belongs to a duplicate group, the
 staged revision preserves all `duplicate_profile_observation_iris` from that
 group as supporting observations even though only the accepted index appears as
@@ -3000,6 +3005,7 @@ item.revision_stance
 item.revision_stance_label
 item.alternative_to
 item.current_alternative_to
+item.alternative_gate
 item.changed_graphs
 item.apply_status
 item.apply_decision

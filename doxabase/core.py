@@ -1804,6 +1804,7 @@ class ProfileMapUpdateStagingItem:
     sample_scope: str | None
     sample_method: str | None
     profile_observation_iri: str
+    supporting_profile_observation_iris: list[str]
 
 
 @dataclass(frozen=True)
@@ -8395,6 +8396,10 @@ class DoxaBase:
         for index, recommendation in enumerate(recommendations):
             status = "not_selected"
             reason: str | None = "Recommendation index was not accepted by caller."
+            supporting_profile_observation_iris = (
+                recommendation.duplicate_profile_observation_iris
+                or [recommendation.profile_observation_iri]
+            )
             if index in accepted_index_set:
                 reason = self._profile_update_skip_reason(
                     recommendation,
@@ -8410,10 +8415,7 @@ class DoxaBase:
                     )
                     status = "staged"
                     staged_indexes.append(index)
-                    support_observations.extend(
-                        recommendation.duplicate_profile_observation_iris
-                        or [recommendation.profile_observation_iri]
-                    )
+                    support_observations.extend(supporting_profile_observation_iris)
                     for anchor in self._profile_update_revision_anchors(
                         recommendation,
                         dataset_iri=draft.dataset.iri,
@@ -8439,6 +8441,9 @@ class DoxaBase:
                     sample_scope=recommendation.sample_scope,
                     sample_method=recommendation.sample_method,
                     profile_observation_iri=recommendation.profile_observation_iri,
+                    supporting_profile_observation_iris=(
+                        supporting_profile_observation_iris
+                    ),
                 )
             )
 

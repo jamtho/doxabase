@@ -4337,6 +4337,10 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
         "not_selected": 0,
     }
     assert [item["status"] for item in result["items"]] == ["staged", "staged"]
+    assert [
+        item["supporting_profile_observation_iris"]
+        for item in result["items"]
+    ] == [[item["profile_observation_iri"]] for item in result["items"]]
     assert result["staged_revision"]["changed_graphs"] == ["map"]
     assert result["staged_revision"]["validation_conforms"] is True
     assert result["metric_advisory_count"] == 0
