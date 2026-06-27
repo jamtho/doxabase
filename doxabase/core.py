@@ -3110,10 +3110,18 @@ class DoxaBase:
             has_patch_payload=bool(patch_iris),
             applies_staged_revision=applies_staged_revision,
         )
+        snapshot_evidence = self._revision_snapshot_evidence_status(
+            revision_iri,
+            data_graphs,
+        )
         suggested_next_actions = (
             self._applied_revision_event_suggested_actions(revision_iri)
             if applies_staged_revision is not None
             else []
+        )
+        suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            suggested_next_actions,
+            snapshot_evidence,
         )
 
         return GraphRevisionDescription(
@@ -3163,10 +3171,7 @@ class DoxaBase:
                 patches=patches,
             ),
             graph_snapshots=snapshots,
-            snapshot_evidence=self._revision_snapshot_evidence_status(
-                revision_iri,
-                data_graphs,
-            ),
+            snapshot_evidence=snapshot_evidence,
             supporting_observations=self._resource_summaries(
                 all_lookup_graphs,
                 self._objects(
@@ -3460,6 +3465,51 @@ class DoxaBase:
                 action_label="Import project/history RDF bundle",
             )
         return actions
+
+    @staticmethod
+    def _with_revision_snapshot_evidence_actions(
+        actions: list[SuggestedNextAction],
+        *snapshot_evidence_items: RevisionSnapshotEvidenceStatus | None,
+    ) -> list[SuggestedNextAction]:
+        promoted_actions: list[SuggestedNextAction] = []
+        for evidence in snapshot_evidence_items:
+            if evidence is None:
+                continue
+            promoted_actions.extend(evidence.suggested_next_actions)
+        if not promoted_actions:
+            return actions
+        combined: list[SuggestedNextAction] = []
+        seen: set[tuple[str, str | None]] = set()
+        for action in [*promoted_actions, *actions]:
+            key = (action.tool_name, action.call)
+            if key in seen:
+                continue
+            seen.add(key)
+            combined.append(action)
+        return combined
+
+    @staticmethod
+    def _snapshot_evidence_completion_next_action(
+        actions: Iterable[SuggestedNextAction],
+    ) -> RevisionNextAction | None:
+        for action in actions:
+            if action.tool_name not in {
+                "import_revision_snapshots",
+                "import_trig",
+            }:
+                continue
+            return RevisionNextAction(
+                action_type="complete_handoff_import",
+                queue="complete_handoff_import",
+                action_label=action.action_label,
+                tool_name=action.tool_name,
+                mcp_tool_name=action.mcp_tool_name,
+                arguments=action.arguments,
+                reason=action.reason,
+                call=action.call,
+                source="snapshot_evidence",
+            )
+        return None
 
     def _missing_revision_snapshot_storage_hint(self, revision_iri: str) -> str:
         stored_graph_roles = self._graph_snapshot_storage_graph_roles(revision_iri)
@@ -3913,6 +3963,14 @@ class DoxaBase:
             if current_staged_work_only and not is_current_staged_work:
                 continue
 
+            snapshot_evidence = self._revision_snapshot_evidence_status(
+                revision_iri,
+                data_graphs,
+            )
+            suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+                suggested_next_actions,
+                snapshot_evidence,
+            )
             next_action = self._revision_next_action(
                 revision_iri,
                 apply_status=application_status,
@@ -3987,10 +4045,7 @@ class DoxaBase:
                     application_blocking_reasons=application_blocking_reasons,
                     application_count_drifts=application_count_drifts,
                     application_snapshot_drifts=application_snapshot_drifts,
-                    snapshot_evidence=self._revision_snapshot_evidence_status(
-                        revision_iri,
-                        data_graphs,
-                    ),
+                    snapshot_evidence=snapshot_evidence,
                     next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=[
@@ -4200,6 +4255,23 @@ class DoxaBase:
             )
             if derived_action is not None:
                 suggested_next_actions = [derived_action]
+        suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            suggested_next_actions,
+            selected.snapshot_evidence,
+            paired_revision.snapshot_evidence if paired_revision is not None else None,
+            latest_revision.snapshot_evidence,
+            (
+                current_staged_revision.snapshot_evidence
+                if current_staged_revision is not None
+                else None
+            ),
+            *(item.snapshot_evidence for item in restage_chain),
+        )
+        snapshot_next_action = self._snapshot_evidence_completion_next_action(
+            suggested_next_actions
+        )
+        if snapshot_next_action is not None:
+            next_action = snapshot_next_action
         alternative_revision_iris = self._revision_lineage_alternative_revision_iris(
             selected=selected,
             restage_chain=restage_chain,
@@ -4917,6 +4989,28 @@ class DoxaBase:
                     "Applied event is linked, but applied diff summary was "
                     "omitted by request."
                 )
+        lineage_suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            lineage_suggested_next_actions,
+            selected.revision.snapshot_evidence,
+            paired.revision.snapshot_evidence if paired is not None else None,
+            graph_lineage.selected_revision.snapshot_evidence,
+            (
+                graph_lineage.paired_revision.snapshot_evidence
+                if graph_lineage.paired_revision is not None
+                else None
+            ),
+            applied_diff.snapshot_evidence if applied_diff is not None else None,
+            (
+                applied_diff.source_snapshot_evidence
+                if applied_diff is not None
+                else None
+            ),
+        )
+        snapshot_next_action = self._snapshot_evidence_completion_next_action(
+            lineage_suggested_next_actions
+        )
+        if snapshot_next_action is not None:
+            lineage_next_action = snapshot_next_action
 
         return ResourceRevisionLineageDescription(
             resource=lineage.resource,
@@ -22568,6 +22662,12 @@ class DoxaBase:
         label = "Inspect staged revision"
         reason = "Inspect staged revision details before taking action."
         selected_action: SuggestedNextAction | None = None
+
+        snapshot_next_action = self._snapshot_evidence_completion_next_action(
+            suggested_next_actions
+        )
+        if snapshot_next_action is not None:
+            return snapshot_next_action
 
         if record_kind == "applied_event" or apply_status == "applied_event":
             action_type = "inspect_applied_event"

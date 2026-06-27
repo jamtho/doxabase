@@ -894,7 +894,10 @@ whether the capsule has `history_missing`, `history_only_count_digest`,
 `history_plus_snapshot_rows`, or `snapshot_rows_without_history`. The last case
 usually means a workflow-only RDF bundle was paired with snapshot JSON: the
 snapshot rows imported, but normal revision helpers still need the project or
-history RDF records.
+history RDF records. Revision list, detail, and lineage responses promote
+snapshot-evidence import actions to top-level `suggested_next_actions`; list
+and lineage routing use queue `complete_handoff_import` before exact diff or
+stale-drift inspection.
 
 `list_graph_revisions()` returns compact history rows for `rc:GraphRevision`
 resources, newest first. Each row includes summary, revision type/stance,

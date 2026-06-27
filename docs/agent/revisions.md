@@ -125,7 +125,10 @@ missing exact rows point at `import_revision_snapshots`, and orphan snapshot
 rows point at `import_trig` for the project/history RDF.
 Those import actions include placeholder paths plus
 `path_is_placeholder=True`; replace them with the actual handoff artifact paths
-before calling the import tools.
+before calling the import tools. Revision list, detail, and lineage responses
+promote these import actions to top-level `suggested_next_actions`; list and
+lineage `next_action_queue` / `next_action` route them as
+`complete_handoff_import` before diff or stale-drift inspection.
 `import_revision_snapshots()` also returns `post_import_snapshot_evidence` for
 the bundle's revision IRIs, so snapshot-before-history imports can be routed
 without making a separate evidence call first.

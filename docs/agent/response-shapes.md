@@ -2363,7 +2363,11 @@ computes apply checks, so the returned rows include current application status
 and suggested actions. `next_action` is a compact routing hint derived from
 those fields; `next_action_queue` groups the returned rows by queues such as
 `apply_after_review`, `restage_after_review`, `repair_or_replace`,
-`inspect_already_applied`, and `informational`.
+`inspect_already_applied`, `complete_handoff_import`, and `informational`.
+`complete_handoff_import` means a row's snapshot evidence found an incomplete
+RDF/snapshot handoff; follow the promoted `import_revision_snapshots` or
+`import_trig` action before relying on exact applied diffs or stale drift
+triples.
 It is a routing surface, not a preference order for competing alternatives; use
 row details such as `review_recommendation`, `alternative_to`, and
 `current_alternative_to` when comparing alternative framings.
@@ -2769,7 +2773,10 @@ Status values are `history_missing`, `history_only_count_digest`,
 `history_plus_snapshot_rows`, and `snapshot_rows_without_history`. A
 workflow-only RDF import plus snapshot JSON can produce
 `snapshot_rows_without_history`: snapshot rows exist, but normal revision
-helpers still need the matching RDF history records.
+helpers still need the matching RDF history records. When snapshot evidence has
+an import action, `describe_graph_revision()`, list rows, and lineage helpers
+also promote it into top-level `suggested_next_actions`; list and lineage
+`next_action` route to `complete_handoff_import`.
 
 `applied_source` has:
 
@@ -2978,7 +2985,9 @@ using normal revision helpers. When exact rows are missing, suggested actions
 point at `import_revision_snapshots`; when snapshot rows are orphaned, they
 point at `import_trig` for the project/history RDF bundle. Import actions use
 placeholder paths and include `path_is_placeholder=True`; substitute the real
-handoff artifact path before executing them.
+handoff artifact path before executing them. Revision list/detail/lineage
+responses promote these actions to their top-level `suggested_next_actions`, and
+list/lineage `next_action` uses queue `complete_handoff_import`.
 
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
 returns `RevisionSnapshotBundleExportRecord`:

@@ -98,7 +98,10 @@ The response includes structured `suggested_next_actions`: missing exact rows
 point at `doxabase.import_revision_snapshots`, and orphan snapshot rows point at
 `doxabase.import_trig` for the missing project/history RDF. The suggested import
 paths are placeholders marked with `path_is_placeholder=True`; replace them with
-the real handoff artifact path before executing the action.
+the real handoff artifact path before executing the action. Revision list,
+detail, and lineage responses promote these import actions to top-level
+`suggested_next_actions`; list and lineage `next_action` use the
+`complete_handoff_import` queue before exact diff or stale-drift inspection.
 
 `doxabase.describe_revision_graph_snapshot`
 

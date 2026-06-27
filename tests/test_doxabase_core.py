@@ -2144,6 +2144,13 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         )
     )
     assert imported_lineage_before_snapshots.selected_role == "applied_event"
+    assert imported_lineage_before_snapshots.next_action is not None
+    assert imported_lineage_before_snapshots.next_action.queue == (
+        "complete_handoff_import"
+    )
+    assert imported_lineage_before_snapshots.suggested_next_actions[
+        0
+    ].tool_name == "import_revision_snapshots"
     assert imported_lineage_before_snapshots.paired_revision is not None
     assert (
         imported_lineage_before_snapshots.paired_revision.revision.iri
@@ -2174,10 +2181,36 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         "path_is_placeholder": True,
     }
     assert "real handoff path" in snapshot_action.reason
+    imported_graph_detail_before_snapshots = round_trip.describe_graph_revision(
+        result.applied_revision_iri
+    )
+    assert [
+        action.tool_name
+        for action in imported_graph_detail_before_snapshots.suggested_next_actions[
+            :2
+        ]
+    ] == ["import_revision_snapshots", "describe_graph_revision"]
+    imported_revision_list_before_snapshots = round_trip.list_graph_revisions(
+        record_kind="applied_event"
+    )
+    assert imported_revision_list_before_snapshots.next_action_queue == {
+        "complete_handoff_import": [result.applied_revision_iri]
+    }
+    assert imported_revision_list_before_snapshots.revisions[0].next_action is not None
+    assert imported_revision_list_before_snapshots.revisions[0].next_action.queue == (
+        "complete_handoff_import"
+    )
     imported_graph_lineage_before_snapshots = round_trip.describe_revision_lineage(
         result.applied_revision_iri
     )
     assert imported_graph_lineage_before_snapshots.selected_role == "applied_event"
+    assert imported_graph_lineage_before_snapshots.next_action is not None
+    assert imported_graph_lineage_before_snapshots.next_action.queue == (
+        "complete_handoff_import"
+    )
+    assert imported_graph_lineage_before_snapshots.suggested_next_actions[
+        0
+    ].tool_name == "import_revision_snapshots"
     assert [
         item.snapshot_evidence.status
         for item in [

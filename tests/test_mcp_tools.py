@@ -1727,6 +1727,26 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert "real handoff path" in snapshot_status_before_import[
         "suggested_next_actions"
     ][0]["reason"]
+    imported_detail_before_snapshots = describe_graph_revision_tool(
+        round_trip,
+        result["applied_revision_iri"],
+    )
+    assert [
+        action["tool_name"]
+        for action in imported_detail_before_snapshots["suggested_next_actions"][
+            :2
+        ]
+    ] == ["import_revision_snapshots", "describe_graph_revision"]
+    imported_list_before_snapshots = list_graph_revisions_tool(
+        round_trip,
+        record_kind="applied_event",
+    )
+    assert imported_list_before_snapshots["next_action_queue"] == {
+        "complete_handoff_import": [result["applied_revision_iri"]]
+    }
+    assert imported_list_before_snapshots["revisions"][0]["next_action"][
+        "queue"
+    ] == "complete_handoff_import"
     imported_diff_before_snapshots = describe_applied_revision_diff_tool(
         round_trip,
         result["applied_revision_iri"],
