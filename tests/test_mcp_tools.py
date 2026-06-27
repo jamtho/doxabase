@@ -3516,6 +3516,15 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
     assert "Profile lore is observed evidence" in (
         query_context["profile_summary"]["handoff_note"]
     )
+    assert [
+        action["tool_name"] for action in query_context["suggested_next_actions"]
+    ] == [
+        "describe_profile_run",
+    ]
+    assert query_context["suggested_next_actions"][0]["arguments"] == {
+        "dataset_iri": table,
+        "evidence_iri": shared_evidence,
+    }
     profile_run = describe_profile_run_tool(
         db,
         dataset_iri=table,

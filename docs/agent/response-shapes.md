@@ -1241,6 +1241,11 @@ query.suggested_next_calls
 Use it with `row_count_snapshot` when query planning depends on profiler output:
 it exposes the evidence IRIs and `profile_run_candidates` behind the observed
 row-count/profile handoff without requiring a separate `describe_dataset` call.
+When candidates exist, `suggested_next_actions` includes a
+`describe_profile_run` action first; a draft-plan action follows when a query
+target candidate is available. In mixed profile history, match the
+dataset-profile `row_count` in candidate runs to `row_count_snapshot` before
+relying on a profile-derived count.
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
 `insufficient_metadata`, or `blocked_by_contradiction`. It is about physical

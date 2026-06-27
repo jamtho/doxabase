@@ -361,6 +361,11 @@ dataset/layout verification status and note, caveats, and structured
 `profile_summary` beside `row_count_snapshot`, so a planner can follow profile
 evidence IRIs and `profile_run_candidates` without a separate
 `describe_dataset` call when row counts or metric context came from profiling.
+When profile run candidates exist, `suggested_next_actions` includes
+`describe_profile_run` first; a draft-plan action follows when a query target
+candidate is available. In mixed profile history, match the dataset-profile
+`row_count` in candidate runs to `row_count_snapshot` before relying on a
+profile-derived count.
 It also returns `ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
 `direct_clean_candidate_indexes`, and
 `unselected_direct_clean_candidate_indexes` so callers can see peer strict-ready

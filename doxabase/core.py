@@ -8798,6 +8798,7 @@ class DoxaBase:
             dataset_iri=dataset.iri,
             graph=graph,
             readiness=readiness,
+            profile_summary=dataset.profile_summary,
             decision=query_target_decision,
             candidates=query_target_candidates,
             unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
@@ -8858,17 +8859,42 @@ class DoxaBase:
         dataset_iri: str,
         graph: str | None,
         readiness: str,
+        profile_summary: ProfileSummary,
         decision: QueryTargetDecision,
         candidates: list[QueryTargetCandidate],
         unselected_ready_candidate_indexes: list[int],
         unselected_direct_clean_candidate_indexes: list[int],
     ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        if profile_summary.profile_run_candidates:
+            candidate_run = profile_summary.profile_run_candidates[0]
+            profile_arguments = {
+                "dataset_iri": dataset_iri,
+                "evidence_iri": candidate_run.evidence_iri,
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Inspect profile run evidence",
+                    tool_name="describe_profile_run",
+                    mcp_tool_name="doxabase.describe_profile_run",
+                    arguments=profile_arguments,
+                    reason=(
+                        "Inspect the profile observations behind the selected "
+                        "row-count/profile handoff before relying on profiler "
+                        "evidence in a query plan."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_profile_run",
+                        profile_arguments,
+                    ),
+                )
+            )
         if (
             decision.candidate_index is None
             or decision.candidate_index < 0
             or decision.candidate_index >= len(candidates)
         ):
-            return []
+            return actions
         candidate = candidates[decision.candidate_index]
         arguments: dict[str, Any] = {
             "iri": dataset_iri,
@@ -8930,7 +8956,7 @@ class DoxaBase:
                     "an explicit candidate_index if another route is intended."
                 )
 
-        return [
+        actions.append(
             SuggestedNextAction(
                 action_label=action_label,
                 tool_name="draft_query_plan",
@@ -8939,7 +8965,8 @@ class DoxaBase:
                 reason=reason,
                 call=self._suggested_call_string("draft_query_plan", arguments),
             )
-        ]
+        )
+        return actions
 
     def draft_query_plan(
         self,

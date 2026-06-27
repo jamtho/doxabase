@@ -1160,7 +1160,9 @@ few useful gaps:
 - A query-planning/profile handoff trial found `describe_query_context` used
   profile-derived row-count snapshots but did not expose the evidence/run
   entrypoint behind them. Query contexts now carry `profile_summary` beside
-  `row_count_snapshot`.
+  `row_count_snapshot`. A retest confirmed the normal shared-evidence route and
+  added a `describe_profile_run` suggested action so mixed profile histories are
+  easier to check before drafting a query plan.
 - A multi-patch staged-revision trial found count drift rows for the same graph
   can show different expected counts because each patch records its own staged
   replay point. Count-drift rows now expose `patch_sequence_index` and
