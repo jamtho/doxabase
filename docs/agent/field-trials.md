@@ -1587,6 +1587,20 @@ few useful gaps:
   a structured repair path; missing-template issues now include a reviewed
   storage-access `rc:pathTemplate` add action, and missing-storage repair hints
   name `storage_root` to match the API template.
+- A query-routing retest confirmed those repair hints and peer actions are now
+  executable from structured fields. The remaining naming nuance is that
+  `ready_candidate_indexes` means candidate-local direct readiness, so it can be
+  non-empty while top-level `readiness == "needs_review"` because sibling
+  candidate metadata still blocks the whole context.
+- A profile/systematisation trial confirmed duplicate unmapped column shells
+  and advisory-only metric/type lanes now route well. The remaining mixed
+  support risk is independent review of coupled metric/type ontology drafts from
+  the same pattern; mixed-support notes now tell agents to review or export the
+  generated drafts together before applying either lane independently.
+- A staged-revision lineage trial found list/detail parity friction: list rows
+  exposed `record_kind`, but `describe_graph_revision()` detail required agents
+  to infer applied events from `revision_type_label` and `applied_source`.
+  Graph-revision detail now exposes the same `record_kind` for direct routing.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

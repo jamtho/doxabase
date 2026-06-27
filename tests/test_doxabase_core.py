@@ -543,6 +543,7 @@ def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
 
     description = db.describe_graph_revision(revision.revision_iri)
     assert description.summary == "AIS map review bundle recorded"
+    assert description.record_kind == "export_record"
     assert description.revision_type == RC + "ExportRevision"
     assert description.revision_type_label == "export revision"
     assert description.changed_graphs == ["observations"]
@@ -1996,6 +1997,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert messages.label == "Messages"
 
     applied = db.describe_graph_revision(result.applied_revision_iri)
+    assert applied.record_kind == "applied_event"
     assert applied.revision_type == RC + "AppliedStagedRevision"
     assert applied.snapshot_evidence.status == "history_plus_snapshot_rows"
     assert applied.snapshot_evidence.exact_snapshot_graph_roles == ["map"]
@@ -18137,8 +18139,12 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
     ]
     assert metric_advisory.mixed_support_note is not None
     assert "profile type review" in metric_advisory.mixed_support_note
+    assert "Review or export" in metric_advisory.mixed_support_note
     assert type_advisory.mixed_support_note is not None
     assert "metric vocabulary review" in type_advisory.mixed_support_note
+    assert "generated promotion or assertion drafts together" in (
+        type_advisory.mixed_support_note
+    )
 
     metric_promotion_action = [
         action

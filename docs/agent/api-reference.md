@@ -302,7 +302,10 @@ Candidate rows expose `dataset_profile_row_count_bases` and
 be recognized as full-scan, sampled, or unknown-scope support.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
-when candidate order selected a different route than intended.
+when candidate order selected a different route than intended. These indexes
+describe candidate-local direct readiness, so they may be non-empty while
+top-level `readiness == "needs_review"` because sibling candidate metadata
+still blocks the whole context.
 When global sibling blockers leave strict ready indexes empty,
 `direct_clean_candidate_indexes` and
 `unselected_direct_clean_candidate_indexes` name candidates with no direct
@@ -463,7 +466,9 @@ metric/type actions carry `source_profile_advisory` with the source advisory
 kind, index field, represented advisory indexes, duplicate group keys, duplicate
 advisory indexes, and duplicate profile-observation IRIs, so scripts can route
 directly from the grouped lane without rejoining every action to the advisory
-rows first.
+rows first. If `source_profile_advisory.mixed_support` is present on promotion
+or assertion actions in both metric and type lanes, review or export those
+generated drafts together before applying either lane independently.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and
@@ -874,9 +879,9 @@ shape. It returns the same `systematisation_draft` routing fields as
 `stage_systematisation()`.
 
 `describe_graph_revision()` returns compact revision context: summary,
-rationale, changed/included graph roles, graph snapshots with counts and
-`sha256:<hex>` content digests, validation result, structured validation
-diagnostics, export path, `applies_staged_revision` for applied events,
+rationale, `record_kind`, changed/included graph roles, graph snapshots with
+counts and `sha256:<hex>` content digests, validation result, structured
+validation diagnostics, export path, `applies_staged_revision` for applied events,
 `applied_source` compact source context for applied staged revision events,
 revision anchors, supporting observation/claim/pattern/evidence links, and
 applied-event suggested calls to inspect the event diff.
@@ -953,6 +958,7 @@ matched the resource. It filters before pagination and wraps each normal
 `patch_mentions`, `applied_source_revision_iri`, and
 `applied_source_patch_mentions`. Patch mentions are compact role-aware flags,
 not patch content; call `describe_staged_revision()` for the full payload.
+The top-level collection is `revisions` and the total is `count`.
 Rows also expose `patch_mentions_incomplete` /
 `applied_source_patch_mentions_incomplete` plus unreadable counts when stored
 patch payloads were missing or unparseable during resource matching. The

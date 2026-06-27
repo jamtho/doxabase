@@ -22,6 +22,9 @@ Start with `describe_query_context(dataset_iri)`:
 2. Read `unselected_ready_candidate_indexes`. If it is non-empty, the selected
    candidate has peer ready candidates; inspect `query_target_candidates` and
    pass an explicit `candidate_index` when a different route is intended.
+   These indexes are candidate-local direct readiness, so they can be non-empty
+   even when top-level `readiness == "needs_review"` because sibling metadata
+   still blocks the whole context.
    When global context blockers are present, `ready_candidate_indexes` may be
    empty even though some candidates have no direct warning or error. In that
    case read `direct_clean_candidate_indexes` and

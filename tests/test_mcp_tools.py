@@ -1226,6 +1226,8 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     result = list_resource_revisions_tool(db, resource_iri=orders)
 
     assert result["resource"]["iri"] == orders
+    assert "items" not in result
+    assert "total_count" not in result
     assert result["patch_mention_scan"] == {
         "status": "complete",
         "unreadable_patch_count": 0,
@@ -1233,6 +1235,7 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         "omitted_match_risk": False,
     }
     assert result["count"] == 2
+    assert len(result["revisions"]) == 2
     by_iri = {item["revision"]["iri"]: item for item in result["revisions"]}
     assert by_iri[staged["revision_iri"]]["match_types"] == ["patch_subject"]
     assert by_iri[staged["revision_iri"]]["patch_mentions_incomplete"] is False
@@ -1630,6 +1633,7 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["triples_added"] == 3
     assert result["validation_conforms"] is True
     description = describe_graph_revision_tool(db, result["applied_revision_iri"])
+    assert description["record_kind"] == "applied_event"
     assert description["revision_type_label"] == "applied staged revision"
     assert description["applies_staged_revision"] == staged["revision_iri"]
     assert description["snapshot_evidence"]["status"] == "history_plus_snapshot_rows"

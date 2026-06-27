@@ -881,6 +881,7 @@ class GraphRevisionDescription:
     graph: str | None
     label: str | None
     summary: str | None
+    record_kind: str
     revision_type: str | None
     revision_type_label: str | None
     rationale: str | None
@@ -3104,6 +3105,11 @@ class DoxaBase:
             for patch_iri in patch_iris
         ]
         patches.sort(key=self._staged_patch_sort_key)
+        record_kind = self._graph_revision_record_kind(
+            revision_type,
+            has_patch_payload=bool(patch_iris),
+            applies_staged_revision=applies_staged_revision,
+        )
         suggested_next_actions = (
             self._applied_revision_event_suggested_actions(revision_iri)
             if applies_staged_revision is not None
@@ -3115,6 +3121,7 @@ class DoxaBase:
             graph=graph,
             label=self._display_label_from_graphs(lookup_graphs, revision_iri),
             summary=self._first_object(data_graphs, revision_iri, "rc:summary"),
+            record_kind=record_kind,
             revision_type=revision_type,
             revision_type_label=(
                 self._label_from_graphs(self._expand_graphs(["ontology"]), revision_type)
@@ -14385,7 +14392,9 @@ class DoxaBase:
         return (
             "Mixed support: one or more same-evidence promotion patterns also "
             f"support {other_lane}. Inspect the shared pattern carefully before "
-            "promoting or asserting this lane independently."
+            "promoting or asserting this lane independently. Review or export "
+            "the generated promotion or assertion drafts together before "
+            "applying either lane independently."
         )
 
     def _profile_advisory_actions_with_mixed_support(

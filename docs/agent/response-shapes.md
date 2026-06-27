@@ -1233,10 +1233,13 @@ action.source_profile_advisory["mixed_support"]
 Use `source_profile_advisory` when routing directly from grouped lanes. Scripts
 should inspect optional `mixed_support` before applying grouped promotion or
 assertion actions; it names shared promotion pattern IRIs, the other review
-lane, and the review note. Scripts that need per-metric or per-column follow-through can still iterate
-`metric_advisories[]` or `type_advisories[]` by the representative advisory
-indexes first, then use each representative advisory's row-local index,
-duplicate-group fields, and own `suggested_next_actions`. `profile_type_review`
+lane, and the review note. When both lanes generate staged promotion/assertion
+drafts from the same pattern, review or export those drafts together before
+applying either lane independently. Scripts that need per-metric or per-column
+follow-through can still iterate `metric_advisories[]` or `type_advisories[]`
+by the representative advisory indexes first, then use each representative
+advisory's row-local index, duplicate-group fields, and own
+`suggested_next_actions`. `profile_type_review`
 is a representative action queue; labels such as `Inspect profile type context`
 and `Stage physical type assertion` can repeat across advisory groups.
 Drafts with at least one default-stageable representative recommendation include
@@ -1631,7 +1634,10 @@ preserving context audit fields.
 `unselected_ready_candidate_indexes` is the same list excluding
 `query_target_decision.candidate_index`. When it is non-empty, another ready
 path or relation exists and the caller should inspect candidate cards before
-treating the automatic index as intended.
+treating the automatic index as intended. These indexes describe candidate-local
+direct readiness, so they can be non-empty while top-level `readiness` is
+`needs_review` because sibling candidate metadata still blocks the whole
+context.
 `direct_clean_candidate_indexes` lists candidates with no direct warning or
 error even when the overall context is blocked by sibling metadata;
 `unselected_direct_clean_candidate_indexes` excludes the selected decision
@@ -2526,8 +2532,9 @@ resource_revisions.drift_detail
 resource_revisions.next_action_queue
 ```
 
-The row collection is `revisions`, not `items`. Each row then wraps the normal
-revision-list row under `revision`.
+The row collection is `revisions`, not `items`, and the top-level total is
+`count`, not `total_count`. Each row then wraps the normal revision-list row
+under `revision`.
 
 Each `resource_revisions.revisions[]` item wraps a normal
 `GraphRevisionListItem` under `revision` and adds resource-match context:
@@ -2701,6 +2708,7 @@ description.iri
 description.graph
 description.label
 description.summary
+description.record_kind
 description.revision_type
 description.revision_type_label
 description.rationale
@@ -2726,10 +2734,13 @@ description.suggested_next_actions
 description.suggested_next_calls
 ```
 
-For applied staged revision events, `applied_source` is a compact source card
-with staged summary, stance, review note/recommendation, restage links, staged
-validation headline, graph snapshots, patch counts, patch metadata without
-content, and support-link counts. It is meant for quick history scanning; call
+`record_kind` uses the same compact categories as list rows, for example
+`staged_patch`, `applied_event`, `export_record`, `import_record`, and
+`history_record`. For applied staged revision events, `applied_source` is a
+compact source card with staged summary, stance, review note/recommendation,
+restage links, staged validation headline, graph snapshots, patch counts, patch
+metadata without content, and support-link counts. It is meant for quick
+history scanning; call
 `describe_staged_revision(description.applies_staged_revision)` for patch
 content, full diagnostics, impacts, or judgement panels.
 The `applied_source` relation fields are also nullable IRI strings.

@@ -390,8 +390,8 @@ When you need to reconstruct what happened after staged revisions have been
 applied, start with `list_graph_revisions(include_apply_checks=True)`. Applied
 events have `record_kind="applied_event"` and `applies_staged_revision`; staged
 sources expose `applied_by` after application. Inspect the applied event with
-`describe_graph_revision()` for after-state graph snapshots and the compact
-`applied_source` card. Inspect the staged source with
+`describe_graph_revision()` for the same `record_kind`, after-state graph
+snapshots, and the compact `applied_source` card. Inspect the staged source with
 `describe_staged_revision()` when you need patch content, full validation
 diagnostics, impacts, or judgement panels. For a mixed queue, use
 `export_staged_revisions()` or `restage_staged_revisions(path=...)` and read

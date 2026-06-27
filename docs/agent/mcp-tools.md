@@ -80,6 +80,9 @@ support links. Applied events include suggested actions for
 `describe_graph_revision` and `describe_applied_revision_diff`.
 `snapshot_evidence` classifies whether RDF history metadata and SQLite snapshot
 rows are both present for exact diff/drift work.
+`record_kind` mirrors list rows (`staged_patch`, `applied_event`,
+`export_record`, `import_record`, or `history_record`) so callers can route a
+detail response the same way they route `list_graph_revisions` rows.
 `applied_source` omits patch content and full diagnostics; call
 `describe_staged_revision` on `applies_staged_revision` when those are needed.
 
@@ -173,7 +176,8 @@ diff browser; call `describe_staged_revision` for patch content and
 Lists revisions that explicitly touch one resource. Matches come from
 `rc:revisionAnchor`, exact subject/predicate/object URI mentions in staged patch
 payloads, or an applied event whose staged source matched the resource. The
-response wraps the normal revision list row under `revision` and adds
+response top-level collection is `revisions` with total `count`; each row wraps
+the normal revision list row under `revision` and adds
 `match_types`, `patch_mentions`, `applied_source_revision_iri`, and
 `applied_source_patch_mentions`. `patch_mention_scan` and per-row incomplete
 flags report missing or unparseable patch payloads; when
@@ -347,7 +351,9 @@ If the same promotion pattern supports both metric vocabulary and type review,
 both advisory rows expose `mixed_support_patterns` and `mixed_support_note`;
 grouped promotion/assertion actions also include
 `source_profile_advisory.mixed_support` plus a review-note cue. Inspect the
-shared pattern before promoting or asserting either lane independently.
+shared pattern before promoting or asserting either lane independently; when
+both lanes generate staged drafts, review or export those drafts together before
+applying either lane on its own.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `representative_metric_advisory_indexes`,
@@ -442,7 +448,10 @@ sampled or unknown-scope profile evidence.
 It also returns `ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
 `direct_clean_candidate_indexes`, and
 `unselected_direct_clean_candidate_indexes` so callers can see peer strict-ready
-routes and peer direct-clean routes before drafting. Use it before
+routes and peer direct-clean routes before drafting. The ready indexes are
+candidate-local direct readiness and may be non-empty while top-level
+`readiness` is `needs_review` because sibling candidate metadata still blocks
+the whole context. Use it before
 drafting DuckDB/S3/local-file queries when you need to decide whether graph
 metadata is executable or only useful for orientation, especially when you need
 physical metadata and warnings without the full relationship/pattern handoff in
