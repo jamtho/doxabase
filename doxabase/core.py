@@ -1639,7 +1639,9 @@ class ProfileRunCandidate:
     returned_profile_count: int
     profile_observation_iris: list[str]
     dataset_profile_row_counts: list[int]
+    dataset_profile_row_count_bases: dict[str, list[str]]
     row_count_snapshot_matches: bool
+    row_count_snapshot_basis: str | None
     shared_by_all_returned_profiles: bool
 
 
@@ -8989,9 +8991,10 @@ class DoxaBase:
             and not allow_sampled_row_count_updates
         ):
             return (
-                "Sampled row-count recommendations are not staged by default; "
-                "set allow_sampled_row_count_updates=True only when the sample "
-                "scope is the intended durable population."
+                "Sampled or unknown-scope row-count recommendations are not "
+                "staged by default; set allow_sampled_row_count_updates=True "
+                "only when the profile scope is the intended durable "
+                "population."
             )
         return None
 
@@ -12769,9 +12772,14 @@ class DoxaBase:
             and evidence_profile_counts[evidence_iri] == returned_profile_count
         ]
         dataset_profile_row_counts_by_evidence: dict[str, list[int]] = {}
+        dataset_profile_row_count_bases_by_evidence: dict[
+            str,
+            dict[int, set[str]],
+        ] = {}
         for profile in dataset_profiles:
             if profile.row_count is None:
                 continue
+            basis = self._profile_observation_basis(profile)
             for evidence_iri in {
                 evidence.iri for evidence in profile.evidence if evidence.iri
             }:
@@ -12779,6 +12787,10 @@ class DoxaBase:
                     evidence_iri,
                     [],
                 ).append(profile.row_count)
+                dataset_profile_row_count_bases_by_evidence.setdefault(
+                    evidence_iri,
+                    {},
+                ).setdefault(profile.row_count, set()).add(basis)
         profile_run_candidates = [
             ProfileRunCandidate(
                 evidence_iri=evidence_iri,
@@ -12787,10 +12799,26 @@ class DoxaBase:
                 dataset_profile_row_counts=sorted(
                     set(dataset_profile_row_counts_by_evidence.get(evidence_iri, []))
                 ),
+                dataset_profile_row_count_bases={
+                    str(row_count): sorted(bases)
+                    for row_count, bases in sorted(
+                        dataset_profile_row_count_bases_by_evidence.get(
+                            evidence_iri,
+                            {},
+                        ).items()
+                    )
+                },
                 row_count_snapshot_matches=(
                     row_count_snapshot is not None
                     and row_count_snapshot
                     in dataset_profile_row_counts_by_evidence.get(evidence_iri, [])
+                ),
+                row_count_snapshot_basis=self._profile_row_count_snapshot_basis(
+                    row_count_snapshot,
+                    dataset_profile_row_count_bases_by_evidence.get(
+                        evidence_iri,
+                        {},
+                    ),
                 ),
                 shared_by_all_returned_profiles=(
                     returned_profile_count > 0
@@ -12838,10 +12866,37 @@ class DoxaBase:
             ),
         )
 
+    @staticmethod
+    def _profile_row_count_snapshot_basis(
+        row_count_snapshot: int | None,
+        row_count_bases: dict[int, set[str]],
+    ) -> str | None:
+        if row_count_snapshot is None or row_count_snapshot not in row_count_bases:
+            return None
+        bases = sorted(row_count_bases[row_count_snapshot])
+        if len(bases) == 1:
+            return bases[0]
+        return "mixed"
+
     def _profile_observation_basis(self, profile: ProfileObservationSummary) -> str:
+        return self._profile_observation_basis_from_values(
+            sample_size=profile.sample_size,
+            sample_scope=profile.sample_scope,
+            sample_method=profile.sample_method,
+            row_count=profile.row_count,
+        )
+
+    @staticmethod
+    def _profile_observation_basis_from_values(
+        *,
+        sample_size: int | None,
+        sample_scope: str | None,
+        sample_method: str | None,
+        row_count: int | None,
+    ) -> str:
         text = " ".join(
             value.lower()
-            for value in (profile.sample_method, profile.sample_scope)
+            for value in (sample_method, sample_scope)
             if value
         )
         sample_markers = ("sample", "sampled", "sampling")
@@ -12860,13 +12915,13 @@ class DoxaBase:
         if (
             any(marker in text for marker in full_scan_markers)
             or (
-                profile.sample_size is not None
-                and profile.row_count is not None
-                and profile.sample_size == profile.row_count
+                sample_size is not None
+                and row_count is not None
+                and sample_size == row_count
             )
         ):
             return "full_scan"
-        if profile.sample_size is not None or "sample" in text:
+        if sample_size is not None or "sample" in text:
             return "sample"
         return "unknown"
 
@@ -13322,6 +13377,43 @@ class DoxaBase:
             " If you used the suggested record_pattern action, add its returned "
             "pattern_iri to supporting_patterns on this staging call."
         )
+        value_type_promotion_pattern_iris = (
+            self._profile_value_type_promotion_pattern_iris(
+                value_type_iri=profile.observed_value_type.iri,
+                evidence_iri=evidence_iri,
+            )
+            if profile.observed_value_type is not None
+            and self._profile_value_type_needs_ontology_skeleton(
+                profile.observed_value_type.iri
+            )
+            else []
+        )
+        if value_type_promotion_pattern_iris:
+            for pattern_iri in value_type_promotion_pattern_iris[:3]:
+                add_action(
+                    "describe_pattern",
+                    {"iri": pattern_iri},
+                    (
+                        "Inspect the same-evidence pattern before promoting "
+                        "this project value type into ontology vocabulary."
+                    ),
+                    action_label="Inspect value type promotion pattern",
+                )
+            add_action(
+                "stage_pattern_promotion",
+                self._profile_value_type_promotion_skeleton_arguments(
+                    value_type_iri=profile.observed_value_type.iri,
+                    pattern_iris=value_type_promotion_pattern_iris,
+                    evidence_iri=evidence_iri,
+                ),
+                (
+                    "Stage a reviewable ontology skeleton for this project "
+                    "value type only after checking that the same-evidence "
+                    "pattern captures its domain meaning and physical-type "
+                    "expectations."
+                ),
+                action_label="Stage value type vocabulary skeleton",
+            )
 
         if map_column_found:
             if (
@@ -13372,6 +13464,129 @@ class DoxaBase:
                     action_label="Stage value type assertion",
                 )
         return actions
+
+    def _profile_value_type_needs_ontology_skeleton(
+        self,
+        value_type_iri: str,
+    ) -> bool:
+        if value_type_iri.startswith(PREFIXES["rc"]):
+            return False
+        ontology_graphs = self._expand_graphs(["ontology"])
+        value_type_class = self.expand_iri("rc:ValueType")
+        return value_type_class not in self._types_from_graphs(
+            ontology_graphs,
+            value_type_iri,
+        )
+
+    def _profile_value_type_promotion_pattern_iris(
+        self,
+        *,
+        value_type_iri: str,
+        evidence_iri: str,
+    ) -> list[str]:
+        pattern_graphs = ["patterns"]
+        same_evidence = set(self._subjects(pattern_graphs, "rc:evidence", evidence_iri))
+        if not same_evidence:
+            return []
+        value_type_related = set(
+            self._subjects(pattern_graphs, "rc:patternTarget", value_type_iri)
+        )
+        value_type_related.update(
+            self._subjects(pattern_graphs, "rc:mapImplication", value_type_iri)
+        )
+        return sorted(same_evidence & value_type_related)
+
+    def _profile_value_type_promotion_skeleton_arguments(
+        self,
+        *,
+        value_type_iri: str,
+        pattern_iris: list[str],
+        evidence_iri: str | None,
+    ) -> dict[str, Any]:
+        value_type_label = self._local_name(value_type_iri) or value_type_iri
+        semantic_hint = self._profile_value_type_promotion_semantic_hint(
+            value_type_iri=value_type_iri,
+            pattern_iris=pattern_iris,
+        )
+        comment = (
+            f"Project-specific value type observed in profile evidence: "
+            f"{semantic_hint}"
+            if semantic_hint is not None
+            else (
+                "Project-specific value type observed in profile evidence; "
+                "review and sharpen its domain meaning, allowed values, and "
+                "physical-type expectations before applying this vocabulary "
+                "definition."
+            )
+        )
+        content = (
+            "@prefix rc: <https://richcanopy.org/ns/rc#> .\n"
+            "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\n"
+            f"<{value_type_iri}> a rc:ValueType ;\n"
+            f"    rdfs:label {Literal(value_type_label).n3()} ;\n"
+            "    rdfs:comment " + Literal(comment).n3() + " ."
+        )
+        arguments: dict[str, Any] = {
+            "patterns": pattern_iris,
+            "summary": f"Define {value_type_label} value type",
+            "intent": (
+                "Stage project ontology vocabulary for a value type that "
+                "already has same-evidence pattern support."
+            ),
+            "rationale": (
+                "The type advisory found a project-specific value type that is "
+                "undefined or not yet typed as rc:ValueType, plus an existing "
+                "pattern tied to the same evidence. Keep this as a staged "
+                "ontology proposal until domain meaning and physical-type "
+                "expectations have been reviewed."
+            ),
+            "framings": [
+                {
+                    "label": "Value type definition",
+                    "graph": "ontology",
+                    "content": content,
+                    "review_note": (
+                        "Generated as a value-type promotion skeleton from "
+                        "draft_profile_map_updates; review wording before "
+                        "applying."
+                    ),
+                    "review_recommendation": (
+                        "Apply only after the value type's domain meaning, "
+                        "allowed values, and physical-type expectations are "
+                        "explicit enough for reuse."
+                    ),
+                }
+            ],
+            "anchors": [value_type_iri],
+            "validation_scope": "all",
+        }
+        if evidence_iri is not None:
+            arguments["evidence"] = [evidence_iri]
+        return arguments
+
+    def _profile_value_type_promotion_semantic_hint(
+        self,
+        *,
+        value_type_iri: str,
+        pattern_iris: list[str],
+    ) -> str | None:
+        for pattern_iri in pattern_iris:
+            try:
+                pattern = self.describe_pattern(pattern_iri)
+            except DoxaBaseError:
+                continue
+            for value in (pattern.pattern_text, pattern.rationale, pattern.summary):
+                if value is None:
+                    continue
+                if not self._profile_metric_text_mentions_metric(
+                    value,
+                    metric_iri=value_type_iri,
+                ):
+                    continue
+                hint = self._compact_restage_reason(value, limit=260)
+                if hint:
+                    return hint
+        return None
 
     def _profile_type_existing_type_seed_iris(
         self,
@@ -15159,6 +15374,7 @@ class DoxaBase:
         value_frequencies: Iterable[Mapping[str, Any]] | None = None,
         profile_metrics: Iterable[Mapping[str, Any]] | None = None,
         update_map_snapshot: bool = True,
+        allow_sampled_row_count_snapshot: bool = False,
         map_label: str | None = None,
         map_description: str | None = None,
         is_table: bool | None = None,
@@ -15204,8 +15420,15 @@ class DoxaBase:
         )
 
         map_dataset: MapResourceRecord | None = None
+        row_count_snapshot = self._profile_row_count_snapshot_value(
+            row_count=row_count,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
+            allow_sampled_row_count_snapshot=allow_sampled_row_count_snapshot,
+        )
         should_update_map = update_map_snapshot and (
-            row_count is not None
+            row_count_snapshot is not None
             or map_label is not None
             or map_description is not None
             or is_table is not None
@@ -15216,7 +15439,7 @@ class DoxaBase:
                 label=map_label,
                 description=map_description,
                 is_table=is_table,
-                row_count_snapshot=row_count,
+                row_count_snapshot=row_count_snapshot,
             )
 
         pattern: PatternRecord | None = None
@@ -15249,6 +15472,27 @@ class DoxaBase:
             map_dataset=map_dataset,
             pattern=pattern,
         )
+
+    def _profile_row_count_snapshot_value(
+        self,
+        *,
+        row_count: int | None,
+        sample_size: int | None,
+        sample_scope: str | None,
+        sample_method: str | None,
+        allow_sampled_row_count_snapshot: bool,
+    ) -> int | None:
+        if row_count is None:
+            return None
+        basis = self._profile_observation_basis_from_values(
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
+            row_count=row_count,
+        )
+        if basis == "full_scan" or allow_sampled_row_count_snapshot:
+            return row_count
+        return None
 
     def record_column_profile(
         self,
@@ -15397,6 +15641,7 @@ class DoxaBase:
         value_frequencies: Iterable[Mapping[str, Any]] | None = None,
         profile_metrics: Iterable[Mapping[str, Any]] | None = None,
         update_map_snapshot: bool = True,
+        allow_sampled_row_count_snapshot: bool = False,
         map_label: str | None = None,
         map_description: str | None = None,
         is_table: bool | None = None,
@@ -15560,6 +15805,7 @@ class DoxaBase:
             value_frequencies=value_frequencies,
             profile_metrics=profile_metric_items,
             update_map_snapshot=update_map_snapshot,
+            allow_sampled_row_count_snapshot=allow_sampled_row_count_snapshot,
             map_label=map_label,
             map_description=map_description,
             is_table=is_table,

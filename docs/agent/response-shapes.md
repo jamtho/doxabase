@@ -801,9 +801,14 @@ that support several profiles from the same run. `profile_run_candidates`
 contains the count-ranked evidence IRIs that support more than one returned
 profile; each candidate has `evidence_iri`, `returned_profile_count`,
 `profile_observation_iris`, `dataset_profile_row_counts`,
-`row_count_snapshot_matches`, and `shared_by_all_returned_profiles`.
+`dataset_profile_row_count_bases`, `row_count_snapshot_matches`,
+`row_count_snapshot_basis`, and `shared_by_all_returned_profiles`.
 Candidates are ordered by returned profile count, then by whether a returned
 dataset-profile `row_count` matches `row_count_snapshot`, then by evidence IRI.
+`dataset_profile_row_count_bases` is keyed by row-count string and records
+whether each count came from `full_scan`, `sample`, `unknown`, or mixed evidence.
+`row_count_snapshot_basis` tells you the basis for the matching map snapshot
+when there is one; a match can still be sampled or unknown-scope evidence.
 Use
 `profile_observation_iris` to seed `describe_context_slice` or inspect the
 returned observations that make up the candidate run. It is a bounded response
@@ -1008,7 +1013,13 @@ advisory.duplicate_profile_observation_iris
 omits observed type IRIs that do not yet exist as graph resources, so the action
 can be followed directly; undefined project value types still remain in the
 `record_pattern` map implications and focused `stage_map_assertion_change`
-payloads. Use `type_advisory_count` and
+payloads. If an undefined or not-yet-typed project value type also has a
+same-evidence pattern that names it as a target or map implication,
+`suggested_next_actions` adds `describe_pattern` and a reviewable
+`stage_pattern_promotion` ontology skeleton for `rc:ValueType`. The skeleton
+borrows pattern prose for its `rdfs:comment` only when that prose mentions the
+value type IRI, local name, or normalized local-name phrase; otherwise it uses a
+generic review-first comment. Use `type_advisory_count` and
 `type_advisory_status_counts` for queue routing before reading full advisory
 rows. For `type_finding_unmapped_column`, `related_recommendation_indexes` points
 at the matching `unmapped_profiled_column` shell recommendation; review/stage
@@ -1355,7 +1366,8 @@ When candidates exist, `suggested_next_actions` includes a
 `describe_profile_run` action first; a draft-plan action follows when a query
 target candidate is available. In mixed profile history, match the
 dataset-profile `row_count` in candidate runs to `row_count_snapshot` before
-relying on a profile-derived count.
+relying on a profile-derived count, and check `row_count_snapshot_basis` before
+treating the matching count as full-scan evidence.
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
 `insufficient_metadata`, or `blocked_by_contradiction`. It is about physical

@@ -15415,6 +15415,63 @@ def test_record_dataset_profile_writes_observation_map_snapshot_and_pattern(
     assert validation.conforms, validation.report_text
 
 
+def test_record_dataset_profile_keeps_sampled_row_count_out_of_map_snapshot(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersSampleEvidence"
+    override_dataset = "https://example.test/project#OrdersOverride"
+
+    result = db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled from a sampled partition.",
+        evidence_summary="Synthetic sampled profile output.",
+        evidence_sources=["test://orders-sampled-profile"],
+        evidence_iri=evidence,
+        sample_size=25,
+        sample_scope="Twenty-five sampled Orders rows.",
+        sample_method="DuckDB sampled profile query.",
+        row_count=1000,
+        map_label="Orders",
+        is_table=True,
+    )
+
+    assert result.map_dataset is not None
+    description = db.describe_dataset(dataset)
+    assert description.label == "Orders"
+    assert description.row_count_snapshot is None
+    assert description.profile_observations[0].row_count == 1000
+    assert description.profile_summary.profile_run_candidates == []
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert [
+        (
+            recommendation.kind,
+            recommendation.basis,
+            recommendation.default_stageable,
+        )
+        for recommendation in draft.recommendations
+    ] == [("dataset_row_count_snapshot", "sample", False)]
+
+    db.record_dataset_profile(
+        override_dataset,
+        summary="Orders sampled count was explicitly accepted as durable scope.",
+        evidence_summary="Synthetic sampled profile output.",
+        evidence_sources=["test://orders-sampled-profile"],
+        sample_size=25,
+        sample_scope="Twenty-five sampled Orders rows.",
+        sample_method="DuckDB sampled profile query.",
+        row_count=1000,
+        map_label="Orders override",
+        is_table=True,
+        allow_sampled_row_count_snapshot=True,
+    )
+
+    assert db.describe_dataset(override_dataset).row_count_snapshot == 1000
+
+
 def test_describe_dataset_profile_without_value_frequencies_returns_empty_list(
     tmp_path: Path,
 ) -> None:
@@ -15426,6 +15483,8 @@ def test_describe_dataset_profile_without_value_frequencies_returns_empty_list(
         summary="Orders were profiled before value-frequency capture existed.",
         evidence_summary="Synthetic profile output.",
         row_count=10,
+        map_label="Orders",
+        is_table=True,
     )
 
     description = db.describe_dataset(dataset)
@@ -15809,8 +15868,20 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert (
         description.profile_summary.profile_run_candidates[
             0
+        ].dataset_profile_row_count_bases
+        == {"100": ["full_scan"]}
+    )
+    assert (
+        description.profile_summary.profile_run_candidates[
+            0
         ].row_count_snapshot_matches
         is True
+    )
+    assert (
+        description.profile_summary.profile_run_candidates[
+            0
+        ].row_count_snapshot_basis
+        == "full_scan"
     )
     assert (
         description.profile_summary.profile_run_candidates[
@@ -16036,7 +16107,9 @@ def test_profile_summary_surfaces_run_candidates_in_mixed_profile_history(
     run_candidate = description.profile_summary.profile_run_candidates[0]
     assert run_candidate.returned_profile_count == 3
     assert run_candidate.dataset_profile_row_counts == [100]
+    assert run_candidate.dataset_profile_row_count_bases == {"100": ["full_scan"]}
     assert run_candidate.row_count_snapshot_matches is False
+    assert run_candidate.row_count_snapshot_basis is None
     assert set(run_candidate.profile_observation_iris) == {
         bundle.dataset_profile.observation.observation_iri,
         *(
@@ -16102,13 +16175,15 @@ def test_profile_run_candidates_are_count_ranked_and_ignore_singletons(
             candidate.evidence_iri,
             candidate.returned_profile_count,
             candidate.dataset_profile_row_counts,
+            candidate.dataset_profile_row_count_bases,
             candidate.row_count_snapshot_matches,
+            candidate.row_count_snapshot_basis,
         )
         for candidate in candidates
     ] == [
-        (evidence_a, 3, [], False),
-        (evidence_b, 2, [], False),
-        (evidence_c, 2, [], False),
+        (evidence_a, 3, [], {}, False, None),
+        (evidence_b, 2, [], {}, False, None),
+        (evidence_c, 2, [], {}, False, None),
     ]
     assert all(
         not candidate.shared_by_all_returned_profiles for candidate in candidates
@@ -16185,12 +16260,14 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
             candidate.evidence_iri,
             candidate.returned_profile_count,
             candidate.dataset_profile_row_counts,
+            candidate.dataset_profile_row_count_bases,
             candidate.row_count_snapshot_matches,
+            candidate.row_count_snapshot_basis,
         )
         for candidate in description.profile_summary.profile_run_candidates
     ] == [
-        (matching_evidence, 2, [120], True),
-        (old_evidence, 2, [80], False),
+        (matching_evidence, 2, [120], {"120": ["unknown"]}, True, "unknown"),
+        (old_evidence, 2, [80], {"80": ["unknown"]}, False, None),
     ]
 
     context = db.describe_query_context(dataset)
@@ -17081,6 +17158,117 @@ def test_profile_type_context_action_omits_undefined_value_type_seed(
 
     assert status_value_type in pattern_action.arguments["map_implications"]
     assert value_type_action.arguments["object"] == status_value_type
+
+
+def test_profile_type_advisory_routes_value_type_promotion_skeleton(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#StatusCodeValue"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with an undefined project value type.",
+        evidence_summary="Synthetic type-finding profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+    profile = db.describe_profile_run(
+        dataset,
+        evidence,
+    ).mapped_column_profile_observations[0]
+    target_pattern = db.record_pattern(
+        summary="Status code value needs vocabulary.",
+        pattern_text=(
+            "Status code value means the reviewed order lifecycle domain, not "
+            "only the integer storage representation."
+        ),
+        rationale="The pattern and profile run share the same evidence.",
+        pattern_targets=[status_value_type],
+        supporting_observations=[profile.iri],
+        evidence_iri=evidence,
+    )
+    implication_pattern = db.record_pattern(
+        summary="Orders status profile implies a value type.",
+        pattern_text=(
+            "The Orders status profile implies a reusable project value type "
+            "before status codes are promoted into current map assertions."
+        ),
+        rationale="The pattern and profile run share the same evidence.",
+        pattern_targets=[status_column],
+        supporting_observations=[profile.iri],
+        evidence_iri=evidence,
+        map_implications=[status_value_type],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    advisory = draft.type_advisories[0]
+
+    assert advisory.observed_value_type is not None
+    assert advisory.observed_value_type.iri == status_value_type
+    assert [action.tool_name for action in advisory.suggested_next_actions] == [
+        "describe_context_slice",
+        "record_pattern",
+        "describe_pattern",
+        "describe_pattern",
+        "stage_pattern_promotion",
+        "stage_map_assertion_change",
+        "stage_map_assertion_change",
+    ]
+    promotion_action = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    ][0]
+    promotion_args = promotion_action.arguments
+    assert promotion_action.action_label == "Stage value type vocabulary skeleton"
+    assert set(promotion_args["patterns"]) == {
+        target_pattern.pattern_iri,
+        implication_pattern.pattern_iri,
+    }
+    assert promotion_args["anchors"] == [status_value_type]
+    assert promotion_args["evidence"] == [evidence]
+    framing_content = promotion_args["framings"][0]["content"]
+    assert "rc:ValueType" in framing_content
+    assert "rc:ProfileMetricKind" not in framing_content
+    assert status_value_type in framing_content
+    assert "reviewed order lifecycle domain" in framing_content
+
+    staged_promotion = db.stage_pattern_promotion(**promotion_args)
+
+    assert len(staged_promotion.staged_revisions) == 1
+    staged = db.describe_staged_revision(
+        staged_promotion.staged_revisions[0].revision_iri
+    )
+    assert staged.validation_conforms is True
+    assert {item.iri for item in staged.supporting_patterns} == {
+        target_pattern.pattern_iri,
+        implication_pattern.pattern_iri,
+    }
+    assert {item.iri for item in staged.supporting_observations} == {profile.iri}
+    assert {item.iri for item in staged.evidence} == {evidence}
+    assert status_value_type in {item.iri for item in staged.revision_anchors}
 
 
 def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
@@ -18817,7 +19005,7 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     nullable_recommendation = draft.recommendations[1]
     assert row_count_recommendation.kind == "dataset_row_count_snapshot"
     assert row_count_recommendation.default_stageable is False
-    assert "Sampled row-count recommendations" in (
+    assert "Sampled or unknown-scope row-count recommendations" in (
         row_count_recommendation.default_skip_reason or ""
     )
     assert nullable_recommendation.kind == "column_nullable"
@@ -18846,7 +19034,9 @@ def test_stage_profile_map_updates_skips_sampled_row_count_by_default(
     assert staged.suggested_next_calls == []
     assert staged.items[0].status == "skipped"
     assert staged.items[1].status == "not_selected"
-    assert "Sampled row-count recommendations" in (staged.items[0].reason or "")
+    assert "Sampled or unknown-scope row-count recommendations" in (
+        staged.items[0].reason or ""
+    )
     assert db.describe_dataset(dataset).row_count_snapshot == 100
 
     mixed = db.stage_profile_map_updates(

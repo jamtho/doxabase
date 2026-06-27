@@ -1453,6 +1453,14 @@ few useful gaps:
   `dataset_profile_row_counts` and `row_count_snapshot_matches` so agents can
   see the tie-break and still inspect `describe_profile_run` before treating a
   profile-derived count as current.
+- A sampled-profile query-planning trial found `update_map_snapshot=true` could
+  promote sampled row counts straight into durable `rc:rowCountSnapshot`,
+  bypassing the sampled row-count staging guardrail. Profile recording now
+  writes row-count snapshots only for full-scan-looking profile bases by
+  default; sampled or unknown-scope counts stay as profile evidence unless the
+  caller explicitly opts into `allow_sampled_row_count_snapshot`. Profile-run
+  candidates also expose row-count basis fields so query planners can tell when
+  a matching count is not full-scan evidence.
 - Handoff recovery and context-lineage trials found the existing recovery
   mechanics mostly held up. RDF-only imports route to companion snapshot JSON
   when exact triples are unavailable, and full RDF+snapshot imports recover
@@ -1481,6 +1489,11 @@ few useful gaps:
   reached the pattern/staging route. Type advisories now omit missing type
   resources from `describe_context_slice` seeds while preserving them in
   `record_pattern` map implications and `stage_map_assertion_change` payloads.
+- A follow-up value-type advisory trial found that same-evidence patterns could
+  structurally target or imply an undefined observed `rc:ValueType` without a
+  direct ontology route. Type advisories now add a `stage_pattern_promotion`
+  value-type skeleton when that structural pattern support exists, keeping the
+  map assertion route separate from the vocabulary-definition review.
 - A metric-promotion skeleton trial found structurally supported patterns could
   lend broad or sibling-metric prose to an ontology `rdfs:comment`. Metric
   promotion skeletons now borrow pattern prose only when it names the metric IRI,

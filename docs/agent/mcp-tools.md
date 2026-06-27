@@ -335,6 +335,12 @@ observed project value type has not been defined yet, it is omitted from the
 context-slice seed list so the suggested action remains runnable, but it still
 appears in the `record_pattern` map implications and the focused
 `stage_map_assertion_change` value-type assertion payload.
+When an undefined or not-yet-typed project value type has a same-evidence
+pattern naming it as a target or map implication, the type advisory also
+suggests `describe_pattern` and a reviewable `stage_pattern_promotion` skeleton
+for an ontology `rc:ValueType`. That skeleton defines only the vocabulary shell
+with label/comment; review domain meaning, allowed values, and physical-type
+expectations before applying it unchanged.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `representative_metric_advisory_indexes`,
@@ -407,7 +413,9 @@ When profile run candidates exist, `suggested_next_actions` includes
 `describe_profile_run` first; a draft-plan action follows when a query target
 candidate is available. In mixed profile history, match the dataset-profile
 `row_count` in candidate runs to `row_count_snapshot` before relying on a
-profile-derived count.
+profile-derived count. Also read `row_count_snapshot_basis` and
+`dataset_profile_row_count_bases`; a matching row count can still come from
+sampled or unknown-scope profile evidence.
 It also returns `ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
 `direct_clean_candidate_indexes`, and
 `unselected_direct_clean_candidate_indexes` so callers can see peer strict-ready
@@ -620,14 +628,19 @@ such as `rc:MinValue` do not become ad hoc RDF. A metric item may include
 `target` when the scalar is specifically about a resource narrower than the
 profile observation as a whole. Profile evidence entries include source strings
 and source spans when recorded.
-`update_map_snapshot` defaults to true; set it to false for scratch or tentative
-row counts that should remain observation-only. If that is a brand-new dataset,
-`describe_dataset()` may not find it until map context is recorded; use
-`describe_profile_run(dataset_iri, evidence_iri)` or profile-observation
-context-slice seeds for handoff retrieval. When matching profile observations
-exist, the `describe_dataset()` not-found error includes this recovery hint and
-points at `record_map_dataset` for creating map context. If the helper creates a
-pattern, the profile evidence is linked to that pattern as well as the
+`update_map_snapshot` defaults to true, but row counts are written to
+`rc:rowCountSnapshot` only when the profile basis looks like a full scan.
+Sampled or unknown-scope row counts remain observation evidence by default; pass
+`allow_sampled_row_count_snapshot=true` only when that profiled population is
+the intended durable map population. Set `update_map_snapshot=false` for scratch
+or tentative profile runs that should remain observation-only. If that is a
+brand-new dataset, `describe_dataset()` may not find it until map context is
+recorded; use `describe_profile_run(dataset_iri, evidence_iri)` or
+profile-observation context-slice seeds for handoff retrieval. When matching
+profile observations exist, the `describe_dataset()` not-found error includes
+this recovery hint and points at `record_map_dataset` for creating map context.
+If the helper creates a pattern, the profile evidence is linked to that pattern
+as well as the
 observation. When `pattern_map_implications` is omitted, the helper-created
 pattern points at the dataset plus any project-specific profile metric kind IRIs
 named in `profile_metrics`; built-in `rc:` metric kinds stay evidence-only.

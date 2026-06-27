@@ -288,6 +288,9 @@ sibling metadata, the suggested `draft_query_plan` action includes the explicit
 When `row_count_snapshot` or profile metrics matter to the query handoff,
 `profile_summary.profile_run_candidates` gives the evidence IRIs to inspect with
 `describe_profile_run()` without first switching to `describe_dataset()`.
+Candidate rows expose `dataset_profile_row_count_bases` and
+`row_count_snapshot_basis`, so a count that matches the map snapshot can still
+be recognized as full-scan, sampled, or unknown-scope support.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
 when candidate order selected a different route than intended.
@@ -586,14 +589,18 @@ includes both `base_ontology` and project ontology results; filter each returned
 entity's `graph` field for project-local vocabulary. A metric item may include `target`
 when the scalar is specifically about a resource narrower than the profile
 observation as a whole. Profile evidence entries include source strings and
-source spans when recorded. `update_map_snapshot`
-defaults to true, so pass `false` when a row count is only a scratch sample or
-tentative measurement. On a brand-new dataset that keeps the profile
-observation-only, `describe_dataset()` may not find the dataset until map
-context is recorded; use `describe_profile_run(dataset_iri, evidence_iri)` or
-profile-observation context-slice seeds for handoff retrieval. When matching
-profile observations exist, the `describe_dataset()` not-found error includes
-this recovery hint and points at `record_map_dataset` for creating map context.
+source spans when recorded. `update_map_snapshot` defaults to true, but row
+counts are written to `rc:rowCountSnapshot` only when the profile basis looks
+like a full scan. Sampled or unknown-scope row counts stay as profile evidence
+by default; pass `allow_sampled_row_count_snapshot=True` only when that profiled
+population is the intended durable map population, or pass
+`update_map_snapshot=False` for observation-only profile runs. On a brand-new
+dataset that keeps the profile observation-only, `describe_dataset()` may not
+find the dataset until map context is recorded; use
+`describe_profile_run(dataset_iri, evidence_iri)` or profile-observation
+context-slice seeds for handoff retrieval. When matching profile observations
+exist, the `describe_dataset()` not-found error includes this recovery hint and
+points at `record_map_dataset` for creating map context.
 When the helper creates a pattern and the profile observation has evidence, the
 same evidence is linked to the pattern. When `pattern_map_implications` is
 omitted, the helper-created pattern points at the dataset plus any

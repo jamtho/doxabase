@@ -2587,6 +2587,12 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
     assert context["profile_summary"]["profile_run_candidates"][0][
         "returned_profile_count"
     ] == 2
+    assert context["profile_summary"]["profile_run_candidates"][0][
+        "dataset_profile_row_count_bases"
+    ] == {"42": ["full_scan"]}
+    assert context["profile_summary"]["profile_run_candidates"][0][
+        "row_count_snapshot_basis"
+    ] == "full_scan"
     assert [
         action["tool_name"] for action in context["suggested_next_actions"]
     ] == [
@@ -4017,7 +4023,7 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
 
     dataset = describe_dataset_tool(db, table)
 
-    assert dataset["row_count_snapshot"] == 1000
+    assert dataset["row_count_snapshot"] is None
     assert dataset["columns"] == []
     assert dataset["profile_summary"]["returned_dataset_profile_count"] == 1
     assert dataset["profile_summary"]["returned_mapped_column_profile_count"] == 0
@@ -4040,12 +4046,14 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
                 result["column_profiles"][0]["observation"]["observation_iri"],
             ],
             "dataset_profile_row_counts": [1000],
-            "row_count_snapshot_matches": True,
+            "dataset_profile_row_count_bases": {"1000": ["sample"]},
+            "row_count_snapshot_matches": False,
+            "row_count_snapshot_basis": None,
             "shared_by_all_returned_profiles": True,
         }
     ]
     query_context = describe_query_context_tool(db, table)
-    assert query_context["row_count_snapshot"] == 1000
+    assert query_context["row_count_snapshot"] is None
     assert query_context["profile_summary"]["evidence_iris"] == [shared_evidence]
     assert query_context["profile_summary"]["profile_run_candidates"] == (
         dataset["profile_summary"]["profile_run_candidates"]

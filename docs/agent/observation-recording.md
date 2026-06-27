@@ -233,8 +233,10 @@ If the synthesis also needs a guardrail claim or narrower support set, call
 manually instead of using `pattern_support_scope`.
 
 Be explicit about the map update booleans. `record_dataset_profile` defaults
-`update_map_snapshot=true` and can write `rc:rowCountSnapshot` when `row_count`
-is supplied. `record_column_profile` defaults `update_map_column=true` and can
+`update_map_snapshot=true`, but it writes `rc:rowCountSnapshot` only when the
+profile basis looks like a full scan. Sampled or unknown-scope row counts stay
+as profile evidence unless `allow_sampled_row_count_snapshot=true` is supplied
+deliberately. `record_column_profile` defaults `update_map_column=true` and can
 write map column metadata when map fields are supplied. Set these booleans to
 `false` when the profile result is a scratch sample, a tentative measurement, or
 otherwise not ready to become current-best map context.
