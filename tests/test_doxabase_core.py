@@ -17803,6 +17803,142 @@ def test_profile_bundle_all_profiles_pattern_defaults_include_column_metrics(
         assert promotion_actions[0].arguments["evidence"] == [evidence]
 
 
+def test_metric_promotion_skeleton_uses_generic_comment_for_broad_pattern(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#BroadNoMentionCompletenessScore"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with a broad project metric pattern.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.92",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+    pattern = db.record_pattern(
+        summary="Orders quality gates need vocabulary.",
+        pattern_text=(
+            "The profile run suggests the Orders feed should have reusable "
+            "quality gates before downstream comparison."
+        ),
+        rationale="The pattern and profile run share one evidence resource.",
+        pattern_targets=[dataset],
+        supporting_observations=(
+            bundle.handoff_entrypoints.profile_observation_iris
+        ),
+        evidence_iri=evidence,
+        map_implications=[project_metric],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    advisory = draft.metric_advisories[0]
+    promotion_action = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    ][0]
+    framing_content = promotion_action.arguments["framings"][0]["content"]
+
+    assert [item.iri for item in advisory.promotion_patterns] == [
+        pattern.pattern_iri
+    ]
+    assert "review and sharpen its calculation" in framing_content
+    assert "quality gates" not in framing_content
+
+
+def test_metric_promotion_skeleton_uses_metric_specific_pattern_hint(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    completeness_metric = "https://example.test/project#CompletenessScore"
+    freshness_metric = "https://example.test/project#FreshnessLagDays"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with two project metric outputs.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": completeness_metric,
+                "value": "0.92",
+                "datatype": "xsd:decimal",
+            },
+            {
+                "metric": freshness_metric,
+                "value": "3",
+                "datatype": "xsd:integer",
+            },
+        ],
+        column_defaults={"update_map_column": False},
+    )
+    pattern = db.record_pattern(
+        summary="CompletenessScore needs metric vocabulary.",
+        pattern_text=(
+            "CompletenessScore is non-null values divided by row count and is "
+            "a unitless ratio for comparing full-table profile runs. The same "
+            "run also surfaced another project metric for later vocabulary "
+            "review."
+        ),
+        rationale="The pattern and profile run share one evidence resource.",
+        pattern_targets=[dataset],
+        supporting_observations=(
+            bundle.handoff_entrypoints.profile_observation_iris
+        ),
+        evidence_iri=evidence,
+        map_implications=[completeness_metric, freshness_metric],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    advisories_by_metric = {
+        advisory.metric.iri: advisory for advisory in draft.metric_advisories
+    }
+
+    assert set(advisories_by_metric) == {
+        completeness_metric,
+        freshness_metric,
+    }
+    for advisory in advisories_by_metric.values():
+        assert [item.iri for item in advisory.promotion_patterns] == [
+            pattern.pattern_iri
+        ]
+
+    completeness_action = [
+        action
+        for action in advisories_by_metric[
+            completeness_metric
+        ].suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    ][0]
+    freshness_action = [
+        action
+        for action in advisories_by_metric[freshness_metric].suggested_next_actions
+        if action.tool_name == "stage_pattern_promotion"
+    ][0]
+    completeness_content = completeness_action.arguments["framings"][0]["content"]
+    freshness_content = freshness_action.arguments["framings"][0]["content"]
+
+    assert "CompletenessScore is non-null values" in completeness_content
+    assert "review and sharpen its calculation" in freshness_content
+    assert "CompletenessScore is non-null values" not in freshness_content
+
+
 def test_draft_profile_map_updates_routes_ambiguous_project_metric_advisory(
     tmp_path: Path,
 ) -> None:

@@ -461,9 +461,11 @@ a target or map implication also get a reviewable `stage_pattern_promotion`
 skeleton for an ontology `rc:ProfileMetricKind`; ambiguous metrics keep the
 existing-definition inspection action ahead of the repair skeleton. Prose-only
 same-evidence patterns that mention the metric appear as context patterns only.
-The skeleton seeds its `rdfs:comment` from the promotion pattern's text,
-rationale, or summary when available; review and tighten units, calculation,
-and comparison semantics before applying it unchanged.
+The skeleton seeds its `rdfs:comment` from promotion-pattern text, rationale, or
+summary only when that text names the metric IRI, local name, or normalized
+local-name phrase. Otherwise it uses a generic review-first comment. Review and
+tighten units, calculation, and comparison semantics before applying it
+unchanged.
 Type findings are outside the accepted recommendation-index set:
 `physical_type` and `value_type` are persisted on profile observations as
 observed evidence, and observation-only profile records now produce

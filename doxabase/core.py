@@ -13835,7 +13835,10 @@ class DoxaBase:
         evidence_iri: str | None,
     ) -> dict[str, Any]:
         metric_label = self._local_name(metric_iri) or metric_iri
-        semantic_hint = self._profile_metric_promotion_semantic_hint(pattern_iris)
+        semantic_hint = self._profile_metric_promotion_semantic_hint(
+            metric_iri=metric_iri,
+            pattern_iris=pattern_iris,
+        )
         comment = (
             f"Project-specific profile metric observed in profile evidence: "
             f"{semantic_hint}"
@@ -13891,6 +13894,8 @@ class DoxaBase:
 
     def _profile_metric_promotion_semantic_hint(
         self,
+        *,
+        metric_iri: str,
         pattern_iris: list[str],
     ) -> str | None:
         for pattern_iri in pattern_iris:
@@ -13901,10 +13906,52 @@ class DoxaBase:
             for value in (pattern.pattern_text, pattern.rationale, pattern.summary):
                 if value is None:
                     continue
+                if not self._profile_metric_text_mentions_metric(
+                    value,
+                    metric_iri=metric_iri,
+                ):
+                    continue
                 hint = self._compact_restage_reason(value, limit=260)
                 if hint:
                     return hint
         return None
+
+    def _profile_metric_text_mentions_metric(
+        self,
+        text: str,
+        *,
+        metric_iri: str,
+    ) -> bool:
+        text_lower = text.lower()
+        if metric_iri.lower() in text_lower:
+            return True
+        local_name = self._local_name(metric_iri)
+        if not local_name:
+            return False
+        if self._contains_name_like_token(text_lower, local_name.lower()):
+            return True
+        phrase = self._profile_metric_local_name_phrase(local_name)
+        return bool(phrase and self._contains_name_like_token(text_lower, phrase))
+
+    @staticmethod
+    def _profile_metric_local_name_phrase(local_name: str) -> str:
+        spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", local_name)
+        return " ".join(
+            token.lower()
+            for token in re.findall(r"[A-Za-z0-9]+", spaced)
+        )
+
+    @staticmethod
+    def _contains_name_like_token(text_lower: str, needle_lower: str) -> bool:
+        if not needle_lower:
+            return False
+        return (
+            re.search(
+                rf"(?<![A-Za-z0-9]){re.escape(needle_lower)}(?![A-Za-z0-9])",
+                text_lower,
+            )
+            is not None
+        )
 
     def _profile_handoff_note(
         self,

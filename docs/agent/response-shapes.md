@@ -948,9 +948,11 @@ repair path. If an undefined or ambiguous metric also has a same-evidence
 pattern that names the metric as a target or map implication, the advisory
 includes `promotion_patterns` and adds `describe_pattern` plus a reviewable
 `stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
-The skeleton seeds its `rdfs:comment` from the matched pattern text, rationale,
-or summary when available; treat it as a draft definition and review units,
-calculation, and comparison semantics before apply. Same-evidence prose
+The skeleton seeds its `rdfs:comment` from matched pattern text, rationale, or
+summary only when that text mentions the metric IRI, local name, or normalized
+local-name phrase. Otherwise it uses a generic review-first comment. Treat it as
+a draft definition and review units, calculation, and comparison semantics
+before apply. Same-evidence prose
 patterns that mention the metric without structurally targeting or implying it
 appear in `context_patterns` and add `describe_pattern` actions only; they are
 inspection cues, not automatic promotion support.

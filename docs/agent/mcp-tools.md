@@ -310,12 +310,13 @@ recording claims/patterns/promotions. When an undefined or ambiguously typed
 metric has a same-evidence pattern naming it as a target or map implication,
 the advisory also suggests `describe_pattern` and a reviewable
 `stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
-That skeleton seeds its `rdfs:comment` from the supporting pattern text,
-rationale, or summary when available, but it is still a draft vocabulary
-definition; sharpen units, calculation, and comparison semantics before applying
-it unchanged. Same-evidence prose patterns that mention the metric but do not
-name it structurally appear as `context_patterns` with `describe_pattern`
-actions only; do not treat them as automatic promotion support.
+That skeleton seeds its `rdfs:comment` from metric-specific supporting pattern
+text, rationale, or summary when available; otherwise it uses a generic
+review-first comment. It is still a draft vocabulary definition; sharpen units,
+calculation, and comparison semantics before applying it unchanged.
+Same-evidence prose patterns that mention the metric but do not name it
+structurally appear as `context_patterns` with `describe_pattern` actions only;
+do not treat them as automatic promotion support.
 Do not infer metric vocabulary status from `describe_context_slice` alone:
 metric-kind resources that are only profile-metric objects can appear as
 `referenced_only`. Use `metric_advisories[].advisory_status` and

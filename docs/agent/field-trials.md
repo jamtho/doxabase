@@ -1477,6 +1477,11 @@ few useful gaps:
   reached the pattern/staging route. Type advisories now omit missing type
   resources from `describe_context_slice` seeds while preserving them in
   `record_pattern` map implications and `stage_map_assertion_change` payloads.
+- A metric-promotion skeleton trial found structurally supported patterns could
+  lend broad or sibling-metric prose to an ontology `rdfs:comment`. Metric
+  promotion skeletons now borrow pattern prose only when it names the metric IRI,
+  local name, or normalized local-name phrase; otherwise they use the generic
+  review-first comment.
 - Storage-access setup trials confirmed `local_path` should stay invalid for
   `location_kind`: local filesystem belongs in `storage_protocol`, while
   `location_kind` is only the root shape (`object`, `directory`, `prefix`, or
