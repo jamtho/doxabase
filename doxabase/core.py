@@ -13218,7 +13218,11 @@ class DoxaBase:
                         metric_iri=metric_iri,
                         evidence_iri=evidence_iri,
                     )
-                    if advisory_status == "project_metric_undefined"
+                    if advisory_status
+                    in {
+                        "project_metric_undefined",
+                        "project_metric_definition_ambiguous",
+                    }
                     else []
                 )
                 suggested_next_actions = self._profile_metric_advisory_actions(
@@ -13381,7 +13385,14 @@ class DoxaBase:
                 ),
                 action_label="List nearby metric vocabulary",
             )
-        if advisory_status == "project_metric_undefined" and promotion_pattern_values:
+        if (
+            advisory_status
+            in {
+                "project_metric_undefined",
+                "project_metric_definition_ambiguous",
+            }
+            and promotion_pattern_values
+        ):
             for pattern_iri in promotion_pattern_values[:3]:
                 add_action(
                     "describe_pattern",
@@ -13460,9 +13471,10 @@ class DoxaBase:
                 "already has same-evidence pattern support."
             ),
             "rationale": (
-                "The metric advisory found an undefined project-specific profile "
-                "metric and an existing pattern tied to the same evidence. Keep "
-                "this as a staged ontology proposal until calculation, unit, and "
+                "The metric advisory found a project-specific profile metric "
+                "that is undefined or not yet typed as rc:ProfileMetricKind, "
+                "plus an existing pattern tied to the same evidence. Keep this "
+                "as a staged ontology proposal until calculation, unit, and "
                 "comparison semantics have been reviewed."
             ),
             "framings": [

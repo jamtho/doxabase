@@ -329,12 +329,15 @@ project-local metric kinds only, filter the returned entities for
 `graph == "ontology"`.
 `draft_profile_map_updates().metric_advisories[]` now points into this loop:
 `project_metric_undefined` / `project_metric_definition_ambiguous` advisories
-suggest context loading and nearby metric lookup, while `project_metric_defined`
-advisories also suggest inspecting the existing ontology definition. When an
-undefined metric already has a same-evidence pattern naming it as a
+suggest context loading and nearby metric lookup, while
+`project_metric_definition_ambiguous` and `project_metric_defined` advisories
+also suggest inspecting the existing ontology definition. When an undefined or
+ambiguously typed metric already has a same-evidence pattern naming it as a
 `pattern_target` or `map_implication`, the advisory also names
 `promotion_patterns` and suggests a reviewable `stage_pattern_promotion`
-skeleton for an ontology definition.
+skeleton for an ontology definition. For ambiguous metrics, inspect the
+existing definition first; the skeleton is a repair path when the term is real
+but not yet typed as `rc:ProfileMetricKind`.
 `draft_profile_map_updates().type_advisories[]` similarly points from observed
 profile `physical_type` / `value_type` evidence toward context loading,
 pattern recording, or focused staged map assertions after review.

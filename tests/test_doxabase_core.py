@@ -17018,6 +17018,111 @@ def test_draft_profile_map_updates_routes_ambiguous_project_metric_advisory(
     }
 
 
+def test_draft_profile_map_updates_promotes_ambiguous_metric_with_pattern(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    db.replace_graph_triples(
+        "ontology",
+        additions=f"""
+            @prefix metric: <https://example.test/project#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            <{project_metric}> a metric:Metric ;
+                rdfs:label "Completeness score" ;
+                rdfs:comment "Share of records with complete required fields." .
+        """,
+        allow_count_change=True,
+    )
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with an ambiguously typed project metric.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        row_count=100,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+    pattern = db.record_pattern(
+        summary="Orders completeness score is reusable metric vocabulary.",
+        pattern_text=(
+            "CompletenessScore is the share of records with complete required "
+            "fields and should be typed as reusable profile metric vocabulary."
+        ),
+        rationale="The pattern and profile run share one evidence resource.",
+        pattern_targets=[project_metric],
+        supporting_observations=(
+            bundle.handoff_entrypoints.profile_observation_iris
+        ),
+        evidence_iri=evidence,
+        map_implications=[project_metric],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    advisory = draft.metric_advisories[0]
+    assert advisory.advisory_status == "project_metric_definition_ambiguous"
+    assert advisory.definition_found is True
+    assert advisory.promotion_pattern_count == 1
+    assert [item.iri for item in advisory.promotion_patterns] == [
+        pattern.pattern_iri
+    ]
+    assert [action.tool_name for action in advisory.suggested_next_actions] == [
+        "describe_context_slice",
+        "describe_resource",
+        "list_entities",
+        "describe_pattern",
+        "stage_pattern_promotion",
+    ]
+    assert advisory.suggested_next_actions[1].arguments == {
+        "iri": project_metric,
+        "graph": "ontology",
+    }
+    promotion_action = advisory.suggested_next_actions[-1]
+    promotion_args = promotion_action.arguments
+    assert promotion_args["patterns"] == [pattern.pattern_iri]
+    assert promotion_args["anchors"] == [project_metric]
+    assert promotion_args["evidence"] == [evidence]
+    assert "CompletenessScore is the share" in (
+        promotion_args["framings"][0]["content"]
+    )
+    assert [action.tool_name for action in draft.suggested_next_actions] == [
+        "describe_context_slice",
+        "describe_resource",
+        "list_entities",
+        "describe_pattern",
+        "stage_pattern_promotion",
+    ]
+
+    staged_promotion = db.stage_pattern_promotion(**promotion_args)
+
+    staged = db.describe_staged_revision(
+        staged_promotion.staged_revisions[0].revision_iri
+    )
+    assert staged.validation_conforms is True
+    assert {item.iri for item in staged.supporting_patterns} == {
+        pattern.pattern_iri
+    }
+    assert project_metric in {item.iri for item in staged.revision_anchors}
+
+
 def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     tmp_path: Path,
 ) -> None:

@@ -449,12 +449,14 @@ the caller opts in. It does not mutate or stage graph changes, and it skips
 sampled zero-null promotions. Metric advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
 `promotion_patterns`, duplicate-group metadata, and structured
-`suggested_next_actions` for ontology/context review. Undefined metrics with a
-same-evidence pattern that names the metric as a target or map implication also
-get a reviewable `stage_pattern_promotion` skeleton for an ontology
-`rc:ProfileMetricKind`. The skeleton seeds its `rdfs:comment` from that
-pattern's text, rationale, or summary when available; review and tighten units,
-calculation, and comparison semantics before applying it unchanged.
+`suggested_next_actions` for ontology/context review. Undefined or ambiguously
+typed metrics with a same-evidence pattern that names the metric as a target or
+map implication also get a reviewable `stage_pattern_promotion` skeleton for an
+ontology `rc:ProfileMetricKind`; ambiguous metrics keep the existing-definition
+inspection action ahead of the repair skeleton. The skeleton seeds its
+`rdfs:comment` from that pattern's text, rationale, or summary when available;
+review and tighten units, calculation, and comparison semantics before applying
+it unchanged.
 Type findings are outside the accepted recommendation-index set:
 `physical_type` and `value_type` are persisted on profile observations as
 observed evidence, and observation-only profile records now produce

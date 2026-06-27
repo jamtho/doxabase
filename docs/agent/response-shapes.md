@@ -885,9 +885,10 @@ advisory.duplicate_profile_observation_iris
 `advisory_status` is `project_metric_undefined`,
 `project_metric_defined`, or `project_metric_definition_ambiguous`.
 Undefined metrics point suggested actions at context loading and nearby ontology
-metric lookup. If an undefined metric also has a same-evidence pattern that
-names the metric as a target or map implication, the advisory includes
-`promotion_patterns` and adds `describe_pattern` plus a reviewable
+metric lookup. Ambiguous metrics add existing-definition inspection before any
+repair path. If an undefined or ambiguous metric also has a same-evidence
+pattern that names the metric as a target or map implication, the advisory
+includes `promotion_patterns` and adds `describe_pattern` plus a reviewable
 `stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
 The skeleton seeds its `rdfs:comment` from the matched pattern text, rationale,
 or summary when available; treat it as a draft definition and review units,
@@ -895,8 +896,9 @@ calculation, and comparison semantics before apply.
 Defined metrics point at
 `describe_resource(..., graph="ontology")` for the existing definition;
 ambiguous metrics point at both the existing definition and nearby metric
-lookup. Use `metric_advisory_count` and `metric_advisory_status_counts` for
-queue routing before reading full advisory rows.
+lookup even when no promotion skeleton is available. Use
+`metric_advisory_count` and `metric_advisory_status_counts` for queue routing
+before reading full advisory rows.
 Duplicate fields are populated for every recommendation and advisory. Count `1`
 means the row is unique in this draft; higher counts mean repeated profile
 observations produced the same review row. Agents can accept one representative
