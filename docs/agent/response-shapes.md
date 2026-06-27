@@ -1002,7 +1002,11 @@ advisory.duplicate_profile_observation_iris
 
 `advisory_status` is `type_finding_unmapped_column`,
 `type_finding_conflicts_current_map`, `type_finding_missing_map_type`, or
-`type_finding_needs_review`. Use `type_advisory_count` and
+`type_finding_needs_review`. The `describe_context_slice` suggested action
+omits observed type IRIs that do not yet exist as graph resources, so the action
+can be followed directly; undefined project value types still remain in the
+`record_pattern` map implications and focused `stage_map_assertion_change`
+payloads. Use `type_advisory_count` and
 `type_advisory_status_counts` for queue routing before reading full advisory
 rows. For `type_finding_unmapped_column`, `related_recommendation_indexes` points
 at the matching `unmapped_profiled_column` shell recommendation; review/stage

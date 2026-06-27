@@ -4276,6 +4276,68 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     ] == "describe_context_slice"
 
 
+def test_draft_profile_map_updates_tool_omits_undefined_value_type_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    value_type = "https://example.test/project#StatusCodeValue"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    record_map_dataset_tool(db, table, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=table,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled with a project value type finding.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+                "value_type": value_type,
+            }
+        ],
+    )
+
+    result = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+    advisory = result["type_advisories"][0]
+    context_action = advisory["suggested_next_actions"][0]
+    value_type_action = [
+        action
+        for action in advisory["suggested_next_actions"]
+        if action["tool_name"] == "stage_map_assertion_change"
+        and action["arguments"]["predicate"] == "rc:valueType"
+    ][0]
+
+    assert context_action["tool_name"] == "describe_context_slice"
+    assert value_type not in context_action["arguments"]["seed_iris"]
+    assert context_action["arguments"]["seed_iris"] == [
+        advisory["profile_observation_iri"],
+        status_column,
+        RC + "Integer",
+    ]
+    context = describe_context_slice_tool(db, **context_action["arguments"])
+    assert status_column in {resource["iri"] for resource in context["resources"]}
+    assert value_type_action["arguments"]["object"] == value_type
+
+
 def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     tmp_path: Path,
 ) -> None:

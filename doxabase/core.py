@@ -13247,8 +13247,7 @@ class DoxaBase:
                 )
             )
 
-        seed_iris = [
-            profile.iri,
+        type_implication_iris = [
             profile.observed_column.iri,
             *(
                 [profile.observed_physical_type.iri]
@@ -13260,6 +13259,11 @@ class DoxaBase:
                 if profile.observed_value_type is not None
                 else []
             ),
+        ]
+        seed_iris = [
+            profile.iri,
+            profile.observed_column.iri,
+            *self._profile_type_existing_type_seed_iris(profile),
         ]
         add_action(
             "describe_context_slice",
@@ -13297,7 +13301,7 @@ class DoxaBase:
                 "pattern_targets": [profile.observed_column.iri],
                 "supporting_observations": [profile.iri],
                 "evidence_iri": evidence_iri,
-                "map_implications": list(dict.fromkeys(seed_iris[1:])),
+                "map_implications": list(dict.fromkeys(type_implication_iris)),
             },
             (
                 "Record a synthesis if this type finding needs semantic review "
@@ -13359,6 +13363,22 @@ class DoxaBase:
                     action_label="Stage value type assertion",
                 )
         return actions
+
+    def _profile_type_existing_type_seed_iris(
+        self,
+        profile: ProfileObservationSummary,
+    ) -> list[str]:
+        all_graphs = self._expand_graphs(["all"])
+        seed_iris: list[str] = []
+        for observed_type in (
+            profile.observed_physical_type,
+            profile.observed_value_type,
+        ):
+            if observed_type is None:
+                continue
+            if self._subject_exists(observed_type.iri, all_graphs):
+                seed_iris.append(observed_type.iri)
+        return seed_iris
 
     def _profile_type_assertion_action_arguments(
         self,

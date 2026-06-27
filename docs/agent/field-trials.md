@@ -1472,6 +1472,11 @@ few useful gaps:
   `restage_chain_iris`. Query-planning repair for database relation metadata
   may still live in `issues[].details` rather than in a dedicated suggested
   repair action; suggested actions focus on reviewed draft-plan routing.
+- A profile-helper systematisation trial found type-review context actions
+  could seed an undefined observed project value type and fail before the agent
+  reached the pattern/staging route. Type advisories now omit missing type
+  resources from `describe_context_slice` seeds while preserving them in
+  `record_pattern` map implications and `stage_map_assertion_change` payloads.
 - Storage-access setup trials confirmed `local_path` should stay invalid for
   `location_kind`: local filesystem belongs in `storage_protocol`, while
   `location_kind` is only the root shape (`object`, `directory`, `prefix`, or

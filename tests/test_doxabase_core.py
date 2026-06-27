@@ -17003,6 +17003,65 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_profile_type_context_action_omits_undefined_value_type_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#StatusCodeValue"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with an undefined project value type.",
+        evidence_summary="Synthetic type-finding profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    advisory = draft.type_advisories[0]
+    context_action = advisory.suggested_next_actions[0]
+    pattern_action = advisory.suggested_next_actions[1]
+    value_type_action = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "stage_map_assertion_change"
+        and action.arguments["predicate"] == "rc:valueType"
+    ][0]
+
+    assert context_action.tool_name == "describe_context_slice"
+    assert context_action.arguments == {
+        "seed_iris": [advisory.profile_observation_iri, status_column, RC + "Integer"],
+        "profile": "dataset_brief",
+    }
+    assert status_value_type not in context_action.arguments["seed_iris"]
+    context_slice = db.describe_context_slice(**context_action.arguments)
+    assert status_column in {resource.iri for resource in context_slice.resources}
+
+    assert status_value_type in pattern_action.arguments["map_implications"]
+    assert value_type_action.arguments["object"] == status_value_type
+
+
 def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
     tmp_path: Path,
 ) -> None:

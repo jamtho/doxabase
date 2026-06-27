@@ -327,6 +327,12 @@ facts, the draft returns `type_advisories` with context, pattern, and focused
 `stage_map_assertion_change` suggested actions for review. Unmapped-column type
 advisories also name related `unmapped_profiled_column` recommendation indexes
 so agents can stage the column shell before reviewing type assertions.
+Type-context actions seed `describe_context_slice` with the profile observation,
+column, and observed type resources that already exist in the graph. If an
+observed project value type has not been defined yet, it is omitted from the
+context-slice seed list so the suggested action remains runnable, but it still
+appears in the `record_pattern` map implications and the focused
+`stage_map_assertion_change` value-type assertion payload.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `representative_metric_advisory_indexes`,

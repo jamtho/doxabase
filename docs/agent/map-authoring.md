@@ -95,7 +95,10 @@ recommendation indexes. `physical_type` and `value_type` are still persisted on
 profile observations when `update_map_column=False`; `draft_profile_map_updates`
 surfaces them as `type_advisories` with context, pattern, and focused staged
 assertion suggestions. Review those advisories before turning type evidence into
-current map facts. If you follow the suggested `record_pattern` action first,
+current map facts. The suggested context-slice action only seeds observed type
+resources that already exist, so undefined project value types may be absent
+from that context call while still appearing in the pattern and staged assertion
+arguments. If you follow the suggested `record_pattern` action first,
 copy the returned `pattern_iri` into the following
 `stage_map_assertion_change(..., supporting_patterns=[...])` call.
 Treat the grouped `profile_type_review` lane as a representative action queue:
