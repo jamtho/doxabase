@@ -9087,6 +9087,7 @@ class DoxaBase:
             dataset_iri=dataset.iri,
             graph=graph,
             readiness=readiness,
+            issues=issues,
             profile_summary=dataset.profile_summary,
             decision=query_target_decision,
             candidates=query_target_candidates,
@@ -9148,6 +9149,7 @@ class DoxaBase:
         dataset_iri: str,
         graph: str | None,
         readiness: str,
+        issues: list[QueryPlanningIssue],
         profile_summary: ProfileSummary,
         decision: QueryTargetDecision,
         candidates: list[QueryTargetCandidate],
@@ -9261,9 +9263,41 @@ class DoxaBase:
                 graph=graph,
                 candidate_index=decision.candidate_index,
                 candidate=candidate,
+                allow_context_blocked_candidate=(
+                    self._query_context_layout_selection_needs_context_allowance(
+                        candidate=candidate,
+                        issues=issues,
+                    )
+                ),
             )
         )
         return actions
+
+    def _query_context_layout_selection_needs_context_allowance(
+        self,
+        *,
+        candidate: QueryTargetCandidate,
+        issues: list[QueryPlanningIssue],
+    ) -> bool:
+        direct_blockers = self._query_target_blocking_reasons(
+            candidate.direct_review_reasons
+        )
+        if not direct_blockers or any(
+            reason.code != "ambiguous_physical_layout"
+            for reason in direct_blockers
+        ):
+            return False
+        remaining_blockers = [
+            reason
+            for reason in self._query_target_blocking_reasons(issues)
+            if reason.code != "ambiguous_physical_layout"
+        ]
+        if not remaining_blockers:
+            return False
+        return all(
+            self._is_candidate_metadata_issue(reason)
+            for reason in remaining_blockers
+        )
 
     def _query_context_physical_layout_selection_actions(
         self,
@@ -9272,6 +9306,7 @@ class DoxaBase:
         graph: str | None,
         candidate_index: int,
         candidate: QueryTargetCandidate,
+        allow_context_blocked_candidate: bool,
     ) -> list[SuggestedNextAction]:
         issue = next(
             (
@@ -9330,6 +9365,17 @@ class DoxaBase:
                 }
                 if graph is not None and graph != "map":
                     arguments["graph"] = graph
+                allowance_reason = ""
+                if allow_context_blocked_candidate:
+                    arguments["allow_context_blocked_candidate"] = True
+                    allowance_reason = (
+                        " Because this candidate's only direct blocker is "
+                        "layout ambiguity and the remaining blockers are "
+                        "candidate metadata on sibling routes, the action "
+                        "includes allow_context_blocked_candidate=True to "
+                        "draft the reviewed direct-clean route while keeping "
+                        "context audit fields visible."
+                    )
                 actions.append(
                     SuggestedNextAction(
                         action_label="Select physical layout for draft",
@@ -9343,6 +9389,7 @@ class DoxaBase:
                             f"{signature_note}, draft the query plan with "
                             "physical_layout_iri so scan.function is inferred "
                             "from an explicit layout choice."
+                            f"{allowance_reason}"
                         ),
                         call=self._suggested_call_string(
                             "draft_query_plan",

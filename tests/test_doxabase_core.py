@@ -11231,6 +11231,26 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
         "ambiguous_physical_layout",
         "storage_protocol_location_mismatch",
     }
+    selection_actions = [
+        action
+        for action in context.suggested_next_actions
+        if action.action_label == "Select physical layout for draft"
+    ]
+    assert [action.arguments for action in selection_actions] == [
+        {
+            "iri": dataset,
+            "candidate_index": clean_index,
+            "physical_layout_iri": csv_layout.iri,
+            "allow_context_blocked_candidate": True,
+        },
+        {
+            "iri": dataset,
+            "candidate_index": clean_index,
+            "physical_layout_iri": parquet_layout.iri,
+            "allow_context_blocked_candidate": True,
+        },
+    ]
+    assert "allow_context_blocked_candidate=True" in selection_actions[0].reason
 
     selected_plan = db.draft_query_plan(
         dataset,
@@ -11270,6 +11290,25 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     )
     assert selected_plan.scan.execution_attempt_ready is False
     assert selected_plan.handoff_kind == "context_review_required"
+
+    selected_from_action = db.draft_query_plan(**selection_actions[1].arguments)
+
+    assert selected_from_action.source_context.allow_context_blocked_candidate is True
+    assert selected_from_action.review_gate.context_blocked_candidate_allowed is True
+    assert selected_from_action.review_gate.context_blocked_candidate_used is True
+    assert selected_from_action.review_gate.status == "ready"
+    assert selected_from_action.review_gate.blocking_reason_codes == []
+    assert selected_from_action.review_gate.context_blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+    assert selected_from_action.review_gate.binding_values_required is True
+    assert selected_from_action.review_gate.execution_attempt_blocking_reason_codes == [
+        "binding_values_required",
+    ]
+    assert selected_from_action.scan.execution_attempt_blocking_reason_codes == [
+        "binding_values_required",
+    ]
+    assert selected_from_action.handoff_kind == "binding_values_required"
 
 
 def test_draft_query_plan_layout_selection_preserves_runtime_resolution_gate(

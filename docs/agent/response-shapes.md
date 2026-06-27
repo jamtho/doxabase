@@ -1303,7 +1303,11 @@ script can draft the selected route while keeping the context issues visible.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per linked
 layout signature with `candidate_index` and `physical_layout_iri`; follow the
-one you have reviewed before relying on `scan.function`.
+one you have reviewed before relying on `scan.function`. When resolving that
+layout would leave a direct-clean selected route and the remaining blockers are
+candidate metadata on sibling routes, the layout-selection action also includes
+`allow_context_blocked_candidate=True` so scripts can reach the next execution
+gate without an extra retry while preserving context audit fields.
 `ready_candidate_indexes` lists direct-ready candidates at the context stage;
 `unselected_ready_candidate_indexes` is the same list excluding
 `query_target_decision.candidate_index`. When it is non-empty, another ready
