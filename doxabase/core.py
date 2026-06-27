@@ -5406,6 +5406,8 @@ class DoxaBase:
     ) -> str | None:
         if not has_patch_payload:
             return None
+        if restaged_by is not None:
+            return "stale_handled_by_restage"
         if status == "conflict":
             if restaged_from is not None and restaged_by is None:
                 return "restaged_successor_stale_unresolved"
@@ -19990,6 +19992,13 @@ class DoxaBase:
             )
         if status == "validation_failed":
             result_count = validation_result_count or 0
+            successor_iri = current_restaged_by or restaged_by
+            if successor_iri is not None:
+                return (
+                    "Handled by restage; inspect successor "
+                    f"{successor_iri}. Stale source validation still fails "
+                    f"with {result_count} result(s)."
+                )
             return (
                 "Patch counts replay cleanly, but preview validation failed with "
                 f"{result_count} result(s)."
@@ -20247,6 +20256,14 @@ class DoxaBase:
                 "candidate unless the conflict is count/digest drift."
             )
         if status == "validation_failed":
+            if current_restaged_by or restaged_by:
+                successor_iri = current_restaged_by or restaged_by
+                return (
+                    "This failed staged source already has a refreshed "
+                    f"successor '{successor_iri}'. Preserve this row for "
+                    "validation diagnostics and inspect the current successor "
+                    "instead of repairing the old source again."
+                )
             return (
                 "Inspect validation_results and stage a repaired or alternative "
                 "candidate. If validation failed after restaging an overlapping "
@@ -20571,6 +20588,19 @@ class DoxaBase:
                     ),
                     action_label="Inspect current refreshed successor",
                 )
+        elif status == "validation_failed" and restaged_by is not None:
+            successor_iri = current_restaged_by or restaged_by
+            add_action(
+                "describe_staged_revision",
+                {"iri": successor_iri},
+                (
+                    "This failed staged source already has a refreshed "
+                    "successor. Preserve this row's validation_results for "
+                    "diagnostics, then inspect the current successor instead "
+                    "of repairing the old source again."
+                ),
+                action_label="Inspect current refreshed successor",
+            )
         elif status == "validation_failed":
             add_action(
                 "describe_staged_revision",

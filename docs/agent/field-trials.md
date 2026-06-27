@@ -1001,6 +1001,9 @@ few useful gaps:
   `decision="inspect_restaged_source_validation_failure"` and route same-payload
   successors through `repair_or_replace`; caller-authored revised successors keep
   the warning but can route to `apply_after_review` when they validate.
+  Direct checks on the old failed source preserve `validation_failed`
+  diagnostics but route compact `next_action` to `current_restaged_by` once a
+  repaired successor exists.
 - A staged-revision recovery trial found grouped exports had useful status
   counts but `list_graph_revisions` required scripts to recompute them from row
   data. Revision lists now expose returned-page application, stale-resolution,

@@ -260,7 +260,7 @@ them may be stale:
 | `ready` | Review/export, apply at most one, then regenerate checks before siblings. |
 | `target_count_drift` or `target_digest_drift` | Review/export the conflict, then restage against current graph state. |
 | `patch_conflict` | Inspect patch diagnostics or export; stage a repaired or alternative proposal. |
-| `validation_failed` | Inspect `validation_results`; stage a repaired or alternative proposal. If `apply_staged_revision()` raises this route, use the `describe_staged_revision(..., include_current_apply_check=True)` call in the error. For overlapping single assertions, prefer removal+addition or `stage_map_assertion_change` replacement over another restage. |
+| `validation_failed` | Inspect `validation_results`; stage a repaired or alternative proposal. If the row already has `restaged_by` / `current_restaged_by`, preserve it as diagnostic history and inspect the current successor instead. If `apply_staged_revision()` raises this route, use the `describe_staged_revision(..., include_current_apply_check=True)` call in the error. For overlapping single assertions, prefer removal+addition or `stage_map_assertion_change` replacement over another restage. |
 | `noop` | Inspect/export; do not apply unless the no-op is exactly the intended durable event. |
 | `already_applied` | Inspect the applied event and staged source; do not replay it. |
 
@@ -684,7 +684,10 @@ graph state filled a source validation gap, its decision is
 `repair_or_replace`, not `apply_after_review`. When a caller-authored successor
 uses `restages_revision` with a revised conforming patch payload, the source
 failure stays in semantic-risk/review text but the ready successor can route to
-`apply_after_review`. When a row has
+`apply_after_review`. A failed source that already has a repaired successor is
+historical diagnostics: direct checks keep `status="validation_failed"` and the
+validation results, but compact `next_action` points to `current_restaged_by`.
+When a row without a successor has
 `staged_validation_conforms=False` or a failed `staged_validation_status`,
 the compact route remains `repair_or_replace` even if the live apply check now
 reports count or digest drift; inspect stored validation diagnostics before

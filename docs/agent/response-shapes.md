@@ -1598,6 +1598,10 @@ plan handoff: they may include decision reasons,
 `query_context_has_other_blockers` when the selected candidate is clean but
 sibling metadata blocks the overall context, or `scan_function_not_inferred`
 when DuckDB has no file-scan function for the selected storage/layout shape.
+After selecting `physical_layout_iri`, `status` may be `ready` while
+`ready_for_execution_attempt` and `scan.execution_attempt_ready` remain false;
+always route from the stricter execution-attempt fields before attempting a
+scan.
 `execution_attempt_blocking_reason_codes` starts with those review blockers and
 also includes non-review execution-attempt blockers such as
 `runtime_resolution_required` and `binding_values_required`, so downstream
@@ -2767,8 +2771,9 @@ revision-list/export routing fields on direct apply checks. A handled stale
 source reports the direct successor in `restaged_by`, the latest known successor
 in `current_restaged_by`, and routes compact `next_action` to inspect that
 successor instead of another mechanical restage. Its `status` may still be
-`conflict` for historical graph-state drift, but the `summary` headline starts
-with handled-by-restage wording and names the successor.
+`conflict` for historical graph-state drift or `validation_failed` for old
+failed validation diagnostics, but the `summary` headline starts with
+handled-by-restage wording and names the successor.
 `alternative_gate` is the row-local alternative semantic gate. Its `status` is
 `not_applicable`, `alternative_to_unapplied_source`, or
 `alternative_to_applied_source`; the last status sets
@@ -2809,10 +2814,10 @@ conflicts route to `repair_or_replace`, and already-applied rows route to
 that the original same-payload framing omitted. A caller-authored successor with
 a revised conforming patch payload keeps the source validation warning in
 semantic-risk and review text, but can route to `apply_after_review`. Rows with
-failed staged-time validation also
-route to `repair_or_replace` even if later graph drift makes the live apply
-check report `conflict`. No-op and superseded-by-restage rows usually route to
-informational inspection queues. When `validation_conforms is None`, read
+failed staged-time validation and no successor also route to `repair_or_replace`
+even if later graph drift makes the live apply check report `conflict`. No-op
+and superseded-by-restage rows usually route to informational inspection queues.
+When `validation_conforms is None`, read
 `validation_skipped_reason` before guessing
 why validation did not run; common values are `conflicts_present` and
 `already_applied`.
@@ -3185,7 +3190,8 @@ ready only after current graph state fills a source validation gap,
 the source-failure warning remains visible but the ready row can route to
 `apply_after_review`.
 Rows with failed staged-time validation keep a `repair_or_replace` compact route
-even when later drift makes `status_after` a live conflict.
+when no successor exists, even when later drift makes `status_after` a live
+conflict.
 `stale_resolution_state_after == "restaged_successor_stale_unresolved"` means a
 skipped already-handled source points to a current successor that is itself
 stale; inspect or restage `current_revision_iri` before applying anything.

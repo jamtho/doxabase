@@ -101,6 +101,11 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    it is true only when the review gate is clear, runtime resolution is not
    required, and no required binding placeholders remain in the selected
    template.
+   Do not treat `review_gate.status="ready"` as execution permission. After
+   selecting an ambiguous `physical_layout_iri`, the selected candidate can have
+   `status="ready"` while `ready_for_execution_attempt` and
+   `scan.execution_attempt_ready` remain false because sibling context blockers,
+   runtime resolution, or binding placeholders still need review.
    `scan.execution_attempt_ready` mirrors this boolean next to the scan fields
    so clients do not need to leave the scan card to see whether scan hints are
    eligible for an execution attempt.

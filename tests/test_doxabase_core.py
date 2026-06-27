@@ -6162,6 +6162,91 @@ def test_authored_repair_for_staged_validation_failure_can_apply_after_review(
         for action in check.suggested_next_actions
     )
 
+    source_check = db.check_staged_revision_apply(source.revision_iri)
+    assert source_check.status == "validation_failed"
+    assert source_check.decision == "inspect_validation_results"
+    assert source_check.restaged_by == repair.revision_iri
+    assert source_check.current_restaged_by == repair.revision_iri
+    assert source_check.stale_resolution_state == "stale_handled_by_restage"
+    assert source_check.summary.startswith("Handled by restage; inspect successor")
+    assert source_check.next_action is not None
+    assert source_check.next_action.action_type == "inspect_current_successor"
+    assert source_check.next_action.queue == "informational"
+    assert source_check.next_action.tool_name == "describe_staged_revision"
+    assert source_check.next_action.arguments == {"iri": repair.revision_iri}
+    assert [action.tool_name for action in source_check.suggested_next_actions] == [
+        "describe_staged_revision",
+    ]
+    assert source_check.suggested_next_actions[0].arguments == {
+        "iri": repair.revision_iri,
+    }
+    assert source_check.recommended_resolution is not None
+    assert "already has a refreshed successor" in (
+        source_check.recommended_resolution
+    )
+    assert source_check.validation_result_count == 1
+    source_description = db.describe_staged_revision(
+        source.revision_iri,
+        include_current_apply_check=True,
+    )
+    assert source_description.current_apply_check is not None
+    assert source_description.current_apply_check.stale_resolution_state == (
+        "stale_handled_by_restage"
+    )
+    assert source_description.current_apply_check.next_action is not None
+    assert source_description.current_apply_check.next_action.arguments == {
+        "iri": repair.revision_iri,
+    }
+
+    current_work = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        current_staged_work_only=True,
+    )
+    assert [item.iri for item in current_work.revisions] == [repair.revision_iri]
+    listing = db.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        include_apply_checks=True,
+    )
+    by_iri = {item.iri: item for item in listing.revisions}
+    assert by_iri[source.revision_iri].stale_resolution_state == (
+        "stale_handled_by_restage"
+    )
+    assert by_iri[source.revision_iri].next_action is not None
+    assert by_iri[source.revision_iri].next_action.arguments == {
+        "iri": repair.revision_iri,
+    }
+    assert listing.next_action_queue == {
+        "informational": [source.revision_iri],
+        "apply_after_review": [repair.revision_iri],
+    }
+
+    export = db.export_staged_revisions(
+        [source.revision_iri, repair.revision_iri],
+        tmp_path / "authored-repair-review.md",
+    )
+    assert export.bundle_summary.apply_status_counts == {
+        "validation_failed": 1,
+        "ready": 1,
+    }
+    assert export.bundle_summary.stale_resolution_state_counts == {
+        "stale_handled_by_restage": 1,
+        "restaged_successor_ready": 1,
+    }
+    assert export.bundle_summary.validation_failed_revision_iris == [
+        source.revision_iri,
+    ]
+    assert export.bundle_summary.staged_validation_failed_revision_iris == [
+        source.revision_iri,
+    ]
+    assert export.bundle_summary.recommended_repair_review_iris == []
+    assert export.bundle_summary.recommended_apply_or_restage_review_iris == [
+        repair.revision_iri,
+    ]
+    assert export.bundle_summary.next_action_queue == {
+        "informational": [source.revision_iri],
+        "apply_after_review": [repair.revision_iri],
+    }
+
     applied = db.apply_staged_revision(repair.revision_iri)
     assert applied.staged_revision_iri == repair.revision_iri
     assert applied.validation_conforms is True
@@ -11158,6 +11243,8 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     assert "ambiguous_physical_layout" not in (
         selected_plan.review_gate.all_issue_codes
     )
+    assert selected_plan.review_gate.status == "ready"
+    assert selected_plan.review_gate.executable_without_review is False
     assert selected_plan.review_gate.direct_blocking_reason_codes == []
     assert selected_plan.review_gate.context_blocking_reason_codes == [
         "query_context_has_other_blockers"
@@ -11174,6 +11261,7 @@ def test_draft_query_plan_layout_selection_preserves_other_blockers(
     assert selected_plan.scan.execution_attempt_blocking_reason_codes == (
         selected_plan.review_gate.execution_attempt_blocking_reason_codes
     )
+    assert selected_plan.scan.execution_attempt_ready is False
     assert selected_plan.handoff_kind == "context_review_required"
 
 
