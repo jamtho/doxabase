@@ -1395,6 +1395,17 @@ few useful gaps:
   trial also confirmed restage/apply/snapshot lineage works on realistic stale
   caveat proposals; validation-blocked `apply_staged_revision` errors now name
   the staged IRI and exact inspect call.
+- Post-rebuild metric and query-planning trials found three scriptability gaps
+  that are now pinned. Ambiguous project metric definitions can surface the same
+  pattern-backed `stage_pattern_promotion` repair skeleton as undefined
+  metrics, while still inspecting the existing ontology definition first.
+  Same-evidence prose patterns that only mention a project profile metric now
+  appear as context-only metric advisory patterns with `describe_pattern`
+  actions, not promotion support. Physical-layout selection actions now include
+  `allow_context_blocked_candidate=True` when resolving layout leaves a
+  direct-clean candidate and the remaining blockers belong to sibling candidate
+  metadata, so scripts do not need an extra retry to reach the next execution
+  gate.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
