@@ -347,6 +347,9 @@ lists are non-empty, the automatic or explicit selection has peer candidates
 worth reviewing before execution. Candidate order is not an
 authoring-preference contract; use `candidate_index` as a response-local pointer
 after inspecting the returned candidate cards.
+`source_context.selected_candidate_note` summarizes the actual selected
+candidate, route kind, and sibling/context blocker codes that remain visible in
+`review_gate.all_issue_codes`.
 The response includes a scan hint such as `read_parquet`, the candidate
 URI/path template for file/object storage, database relation fields for
 database-backed storage, parsed placeholder names in `required_bindings`,

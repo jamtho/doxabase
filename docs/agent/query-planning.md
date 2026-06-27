@@ -49,17 +49,20 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    Candidate order is not an authoring-preference contract. Treat
    `candidate_index` as a pointer into the returned list, not proof that the
    first ready relation/path is the preferred one.
-3. `scan.uri_template` is for file/object scans.
-4. `scan.relation_identifier` is the database-backed storage handoff; do not
+3. Read `source_context.selected_candidate_note` for a compact handoff summary
+   of the selected candidate, route kind, and sibling/context blocker codes
+   that still remain in `review_gate.all_issue_codes`.
+4. `scan.uri_template` is for file/object scans.
+5. `scan.relation_identifier` is the database-backed storage handoff; do not
    treat the candidate path as a file URI in that case. Relation identifiers
    come from storage-access-owned templates, not dataset or partition file paths.
    `scan.connection_reference` without `scan.relation_identifier` is
    repair/review context, not a database relation handoff.
-5. `scan.function` is only a hint when the physical layout is unambiguous. If a
+6. `scan.function` is only a hint when the physical layout is unambiguous. If a
    dataset links multiple distinct file formats or compression codecs,
    `ambiguous_physical_layout` blocks execution-readiness and leaves the scan
    function unset until the intended layout is modeled or selected.
-6. `required_bindings` and `binding_requirements` still need runtime values.
+7. `required_bindings` and `binding_requirements` still need runtime values.
    `review_gate.binding_values_required=True` and
    `handoff_kind="binding_values_required"` make that case explicit. When a
    selected template comes from partition metadata, binding rows may include

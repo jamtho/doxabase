@@ -1456,7 +1456,12 @@ still carries the automatic decision, while `selected_candidate_index`,
 `unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
 `unselected_direct_clean_candidate_indexes`, `selection_mode`, `requested_candidate_index`,
 `requested_storage_access_iri`, `selection_status`, `selection_note`, and
-`allow_context_blocked_candidate` describe the actual draft selection.
+`selected_candidate_note` / `allow_context_blocked_candidate` describe the
+actual draft selection.
+`selected_candidate_note` is a compact prose handoff for the selected route. In
+context-blocked direct-clean cases it says which candidate was selected, what
+route kind the draft produced, and which sibling/context blocker codes remain in
+`review_gate.all_issue_codes`.
 If `unselected_ready_candidate_indexes` is non-empty, another direct-ready
 candidate exists and agents should consider whether to rerun with explicit
 `candidate_index`. The returned list order is not an authoring-preference

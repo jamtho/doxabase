@@ -1188,6 +1188,12 @@ few useful gaps:
   `allow_context_blocked_candidate=True`. Suggested actions now include the
   allowance whenever the selected candidate is direct-clean and broader readiness
   is not `ready_for_query_planning`.
+- A direct-clean database-relation trial found the explicit allowance route was
+  correct but still easy to overread when sibling copied-file metadata left the
+  source context blocked. Draft source contexts now include
+  `selected_candidate_note`, summarizing the selected candidate, handoff route,
+  and sibling/context blocker codes that still remain in
+  `review_gate.all_issue_codes`.
 - A follow-up query-planning handoff trial confirmed ambiguous layouts,
   candidate selection errors, S3 runtime blockers, and database relation cards
   route conservatively. It also clarified that downstream agents must gate any

@@ -399,7 +399,10 @@ multiple candidate paths, rerun with
 also reports `candidate_count`, `ready_candidate_indexes`, and
 `unselected_ready_candidate_indexes`, plus direct-clean peer indexes, so
 automatic plans reveal peer ready or context-blocked-direct-clean candidates
-that may deserve explicit selection. Read
+that may deserve explicit selection. It also includes
+`selected_candidate_note`, a compact prose summary of the selected candidate,
+route kind, and any sibling/context blocker codes that remain visible in
+`review_gate.all_issue_codes`. Read
 `context_blocked_candidate_allowed` with `context_blocked_candidate_used`: if the
 switch was requested but not used, direct blocking codes distinguish already
 ready candidates from candidates that still need review. The payload

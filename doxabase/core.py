@@ -1318,6 +1318,7 @@ class DraftQueryPlanSourceContext:
     requested_storage_access_iri: str | None = None
     selection_status: str = "automatic"
     selection_note: str = ""
+    selected_candidate_note: str = ""
     allow_context_blocked_candidate: bool = False
 
 
@@ -8910,6 +8911,13 @@ class DoxaBase:
             context_blocked_candidate_used=context_blocked_candidate_used,
             context_blocking_reasons=context_blocking_reasons,
         )
+        handoff_kind = self._draft_query_plan_handoff_kind(
+            selected_candidate,
+            scan=scan,
+            binding_requirements=binding_requirements,
+            storage_environment=storage_environment,
+            review_gate=review_gate,
+        )
         ready_candidate_indexes = self._query_ready_candidate_indexes(
             context.query_target_candidates
         )
@@ -8919,13 +8927,7 @@ class DoxaBase:
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
-            handoff_kind=self._draft_query_plan_handoff_kind(
-                selected_candidate,
-                scan=scan,
-                binding_requirements=binding_requirements,
-                storage_environment=storage_environment,
-                review_gate=review_gate,
-            ),
+            handoff_kind=handoff_kind,
             engine=DraftQueryPlanEngine(
                 name=engine_value,
                 source="caller_requested_target_engine",
@@ -8955,6 +8957,15 @@ class DoxaBase:
                 requested_storage_access_iri=requested_storage_access_iri,
                 selection_status=selection_status,
                 selection_note=selection_note,
+                selected_candidate_note=(
+                    self._draft_query_plan_selected_candidate_note(
+                        selected_candidate,
+                        selected_candidate_index,
+                        handoff_kind=handoff_kind,
+                        review_gate=review_gate,
+                        context_blocking_reasons=context_blocking_reasons,
+                    )
+                ),
                 allow_context_blocked_candidate=allow_context_blocked_candidate,
             ),
             selected_candidate=selected_candidate,
@@ -9348,6 +9359,54 @@ class DoxaBase:
         if review_gate.ready_for_execution_attempt:
             return "execution_attempt_ready"
         return "metadata_review_required"
+
+    @staticmethod
+    def _draft_query_plan_selected_candidate_note(
+        selected_candidate: QueryTargetCandidate | None,
+        selected_candidate_index: int | None,
+        *,
+        handoff_kind: str,
+        review_gate: DraftQueryPlanReviewGate,
+        context_blocking_reasons: list[QueryPlanningIssue],
+    ) -> str:
+        if selected_candidate is None or selected_candidate_index is None:
+            return "No query target candidate is selected."
+        direct_state = (
+            "direct-clean"
+            if selected_candidate.direct_review_required is False
+            else "review-gated"
+        )
+        route_label = handoff_kind.replace("_", " ")
+        note = (
+            f"Selected candidate {selected_candidate_index} is a "
+            f"{direct_state} {route_label}."
+        )
+        if review_gate.context_blocked_candidate_used:
+            sibling_codes: list[str] = []
+            for reason in context_blocking_reasons:
+                details = reason.details or {}
+                excluded_codes = details.get("excluded_blocker_codes")
+                if isinstance(excluded_codes, list):
+                    sibling_codes.extend(str(code) for code in excluded_codes)
+            sibling_codes = list(dict.fromkeys(sibling_codes))
+            if sibling_codes:
+                return (
+                    f"{note} Sibling/context metadata still has "
+                    f"{', '.join(sibling_codes)}; these codes remain in "
+                    "review_gate.all_issue_codes."
+                )
+            if review_gate.context_blocking_reason_codes:
+                return (
+                    f"{note} Context blockers still have "
+                    f"{', '.join(review_gate.context_blocking_reason_codes)}; "
+                    "see review_gate.all_issue_codes."
+                )
+        if review_gate.blocking_reason_codes:
+            return (
+                f"{note} Blocking reason codes: "
+                f"{', '.join(review_gate.blocking_reason_codes)}."
+            )
+        return note
 
     def _draft_query_plan_storage_access(
         self,

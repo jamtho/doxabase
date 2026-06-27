@@ -9669,6 +9669,16 @@ def test_query_target_candidates_surface_global_blockers(
     assert allowed_plan.source_context.requested_candidate_index == local_index
     assert allowed_plan.source_context.selection_status == "matched"
     assert allowed_plan.source_context.allow_context_blocked_candidate is True
+    assert "Selected candidate" in allowed_plan.source_context.selected_candidate_note
+    assert "direct-clean binding values required" in (
+        allowed_plan.source_context.selected_candidate_note
+    )
+    assert "contradicted_layout" in (
+        allowed_plan.source_context.selected_candidate_note
+    )
+    assert "review_gate.all_issue_codes" in (
+        allowed_plan.source_context.selected_candidate_note
+    )
     assert allowed_plan.source_context.direct_clean_candidate_indexes == [
         local_index,
         archive_index,
@@ -10439,6 +10449,12 @@ def test_draft_query_plan_review_gates_database_backed_table_without_scan_functi
     ]
     assert plan.review_gate.reason_codes == ["scan_function_not_inferred"]
     assert plan.handoff_kind == "database_relation_handoff"
+    assert "Selected candidate 0 is a direct-clean database relation handoff" in (
+        plan.source_context.selected_candidate_note
+    )
+    assert "scan_function_not_inferred" in (
+        plan.source_context.selected_candidate_note
+    )
 
 
 def test_database_storage_does_not_treat_partition_template_as_relation(

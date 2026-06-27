@@ -2409,6 +2409,13 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     )
     assert result["source_context"]["selection_status"] == "matched"
     assert result["source_context"]["allow_context_blocked_candidate"] is True
+    assert "Selected candidate" in result["source_context"]["selected_candidate_note"]
+    assert "direct-clean binding values required" in (
+        result["source_context"]["selected_candidate_note"]
+    )
+    assert "contradicted_layout" in (
+        result["source_context"]["selected_candidate_note"]
+    )
     assert result["source_context"]["ready_candidate_indexes"] == []
     assert result["source_context"]["unselected_ready_candidate_indexes"] == []
     assert result["source_context"]["direct_clean_candidate_indexes"] == [
