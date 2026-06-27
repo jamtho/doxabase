@@ -7512,6 +7512,7 @@ def test_describe_revision_lineage_warns_about_imported_odd_history(
     successor_a_iri = "https://example.test/project#ambiguous-a-successor"
     successor_z_iri = "https://example.test/project#ambiguous-z-successor"
     manual_iri = "https://example.test/project#manual-restage-note"
+    parallel_applied_iri = "https://example.test/project#parallel-applied-event"
     missing_source_iri = "https://example.test/project#missing-applied-source"
     applied_iri = "https://example.test/project#applied-event-missing-source"
 
@@ -7570,6 +7571,12 @@ def test_describe_revision_lineage_warns_about_imported_odd_history(
             rc:restagesRevision <{successor_a.revision_iri}> ;
             rc:createdAt "2026-06-01T10:03:00Z" .
 
+        <{parallel_applied_iri}> a rc:GraphRevision ;
+            rc:summary "Applied parallel successor" ;
+            rc:revisionType rc:AppliedStagedRevision ;
+            rc:appliesStagedRevision <{successor_z_iri}> ;
+            rc:createdAt "2026-06-01T10:03:30Z" .
+
         <{applied_iri}> a rc:GraphRevision ;
             rc:summary "Applied event missing source" ;
             rc:revisionType rc:AppliedStagedRevision ;
@@ -7590,6 +7597,7 @@ def test_describe_revision_lineage_warns_about_imported_odd_history(
         successor_a.revision_iri,
         successor_z_iri,
         manual_iri,
+        parallel_applied_iri,
     }.issubset(set(source_lineage.related_revision_iris))
     assert any(
         "multiple visible successors" in warning
@@ -7602,6 +7610,19 @@ def test_describe_revision_lineage_warns_about_imported_odd_history(
         and manual_iri in warning
         and "history_record" in warning
         for warning in source_lineage.warnings
+    )
+    export = db.export_staged_revisions(
+        [source.revision_iri],
+        tmp_path / "parallel-successor-review.md",
+    )
+    assert parallel_applied_iri in (
+        export.bundle_summary.recommended_applied_inspection_iris
+    )
+    assert any(
+        "Parallel restage successor" in warning
+        and successor_z_iri in warning
+        and parallel_applied_iri in warning
+        for warning in export.bundle_summary.warnings
     )
 
     missing_source_lineage = db.describe_revision_lineage(applied_iri)

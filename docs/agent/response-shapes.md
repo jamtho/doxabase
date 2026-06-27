@@ -2146,7 +2146,8 @@ a successor is still live staged work, `current_staged_revision_iri` and
 includes selected, paired, restage-chain, latest/current, alternative,
 applied-event IRIs reachable from alternative staged rows, and every visible
 restage successor for rows in the lineage when imported history contains
-parallel successor links.
+parallel successor links. It also includes applied events attached to those
+visible parallel successor branches.
 
 `warnings` reports broken restage links and top-level snapshot handoff hazards.
 It also warns when an applied event points to a missing staged source, when a
@@ -3263,9 +3264,12 @@ fields manually.
 `warnings` calls out bundle-level sequencing hazards and recommended review IRIs
 that are outside the current bundle. If a source-only handled-stale bundle points
 at an external refreshed successor, export or describe that successor before
-acting. `post_apply_recheck_revision_iris` lists grouped ready/no-op staged
-revisions sharing a changed graph whose old readiness should be discarded after
-any successful apply. This includes mixed reviews where applying one ready
+acting. If imported odd history has a parallel restage successor with an applied
+event outside the followed current route, warnings name the source, successor,
+and applied event, and `recommended_applied_inspection_iris` includes that
+applied event. `post_apply_recheck_revision_iris` lists grouped ready/no-op
+staged revisions sharing a changed graph whose old readiness should be discarded
+after any successful apply. This includes mixed reviews where applying one ready
 revision can make sibling ready or no-op revisions stale.
 Use
 `recommended_applied_inspection_iris` for already-applied staged revisions that

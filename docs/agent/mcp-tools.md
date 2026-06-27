@@ -158,7 +158,8 @@ alternative revision IRIs, related revision IRIs, warnings for broken lineage,
 and next-action routing from the latest row. Related IRIs also include applied
 events reachable from alternative staged rows when those alternatives have
 already been applied, plus every visible restage successor when imported history
-has ambiguous parallel successors. Top-level warnings report missing restage or
+has ambiguous parallel successors, including applied events already attached to
+those successor branches. Top-level warnings report missing restage or
 applied-source links, non-staged rows inside a restage chain, parallel restage
 successors where the current route chose one branch, and snapshot handoff gaps.
 When list rows expose only RDF history/count/digest metadata, warnings remind
@@ -1209,7 +1210,10 @@ direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.warnings` calls out
 bundle-level sequencing hazards such as ready/no-op reviews sharing a changed
 graph that should be re-checked after each apply, plus source-only bundles whose
-recommended review target is outside the current bundle;
+recommended review target is outside the current bundle. If imported odd
+history has a parallel restage successor that is already applied outside the
+followed current route, the bundle recommends applied-event inspection and names
+the source, successor, and applied event in warnings;
 `post_apply_recheck_revision_iris` is the machine-readable affected-revision
 list for pre-apply grouped-review hazards.
 `sequential_apply_recheck_candidate_iris` is a clearer alias for the same list.

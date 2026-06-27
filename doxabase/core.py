@@ -4398,13 +4398,22 @@ class DoxaBase:
                 ]
             )
         for item in [selected, *restage_chain, *alternative_revisions]:
-            values.extend(
-                successor.iri
-                for successor in DoxaBase._revision_lineage_visible_restage_successors(
+            for successor in DoxaBase._revision_lineage_visible_restage_successors(
                     item,
                     by_iri,
+            ):
+                values.extend(
+                    [
+                        successor.iri,
+                        successor.applied_by,
+                        successor.applies_staged_revision,
+                        successor.restaged_from,
+                        successor.restaged_by,
+                        successor.current_restaged_by,
+                        successor.alternative_to,
+                        successor.current_alternative_to,
+                    ]
                 )
-            )
         return [value for value in dict.fromkeys(values) if value is not None]
 
     @staticmethod
@@ -22045,6 +22054,7 @@ class DoxaBase:
         recommended_apply_or_restage_review: list[str] = []
         recommended_repair_review: list[str] = []
         recommended_applied_inspection: list[str] = []
+        parallel_applied_restage_successors: list[tuple[str, str, str]] = []
 
         def increment(counts: dict[str, int], key: str | None) -> None:
             if key is None:
@@ -22113,6 +22123,16 @@ class DoxaBase:
             if iri is not None and iri not in staged_validation_failed:
                 staged_validation_failed.append(iri)
 
+        def track_parallel_applied_restage_successor(
+            source_iri: str,
+            successor_iri: str,
+            applied_iri: str,
+        ) -> None:
+            route = (source_iri, successor_iri, applied_iri)
+            if route not in parallel_applied_restage_successors:
+                parallel_applied_restage_successors.append(route)
+            recommend_applied_inspection(applied_iri)
+
         for summary in summaries:
             increment(apply_status_counts, summary.apply_status)
             state = summary.stale_resolution_state
@@ -22121,6 +22141,16 @@ class DoxaBase:
                 track_validation_failed(summary.revision_iri)
             if summary.staged_validation_conforms is False:
                 track_staged_validation_failed(summary.revision_iri)
+            for (
+                source_iri,
+                successor_iri,
+                applied_iri,
+            ) in self._parallel_applied_restage_successor_events(summary):
+                track_parallel_applied_restage_successor(
+                    source_iri,
+                    successor_iri,
+                    applied_iri,
+                )
 
             if state in {"stale_unresolved", "restaged_successor_stale_unresolved"}:
                 unresolved_stale.append(summary.revision_iri)
@@ -22178,6 +22208,9 @@ class DoxaBase:
                 ready_restage_successor_alternative_to_applied_source_iris=(
                     ready_applied_alternative_successors
                 ),
+                parallel_applied_restage_successors=(
+                    parallel_applied_restage_successors
+                ),
             ),
             validation_failed_revision_iris=validation_failed,
             staged_validation_failed_revision_iris=staged_validation_failed,
@@ -22192,6 +22225,33 @@ class DoxaBase:
                 (summary.revision_iri, summary.next_action) for summary in summaries
             ),
         )
+
+    def _parallel_applied_restage_successor_events(
+        self,
+        summary: StagedGraphRevisionExportSummary,
+    ) -> list[tuple[str, str, str]]:
+        history_graphs = self._expand_graphs(["history"])
+        followed_successors = {
+            iri
+            for iri in (summary.restaged_by, summary.current_restaged_by)
+            if iri is not None
+        }
+        events: list[tuple[str, str, str]] = []
+        for successor_iri in self._subjects(
+            history_graphs,
+            "rc:restagesRevision",
+            summary.revision_iri,
+        ):
+            if successor_iri in followed_successors:
+                continue
+            applied_iri = self._first_subject(
+                history_graphs,
+                "rc:appliesStagedRevision",
+                successor_iri,
+            )
+            if applied_iri is not None:
+                events.append((summary.revision_iri, successor_iri, applied_iri))
+        return events
 
     def _staged_revisions_post_apply_recheck_revision_iris(
         self,
@@ -22242,6 +22302,9 @@ class DoxaBase:
         ready_restage_successor_alternative_to_applied_source_iris: (
             list[str] | None
         ) = None,
+        parallel_applied_restage_successors: (
+            list[tuple[str, str, str]] | None
+        ) = None,
     ) -> list[str]:
         warnings: list[str] = []
         if post_apply_recheck_revision_iris:
@@ -22269,6 +22332,21 @@ class DoxaBase:
                 "Treat them as semantic review targets before applying; inspect "
                 "each row's current_alternative_to/applied source before making "
                 "both alternatives durable."
+            )
+        if parallel_applied_restage_successors:
+            routes = "; ".join(
+                f"{source_iri} -> {successor_iri} -> {applied_iri}"
+                for (
+                    source_iri,
+                    successor_iri,
+                    applied_iri,
+                ) in parallel_applied_restage_successors
+            )
+            warnings.append(
+                "Parallel restage successor branch(es) already have applied "
+                "events outside the followed current route: "
+                f"{routes}. Inspect the applied event(s) before following the "
+                "current successor route."
             )
         return warnings
 

@@ -1319,8 +1319,12 @@ few useful gaps:
   parallel restage successors were silently collapsed to the lexically first
   route, and applied events with missing staged sources mislabeled themselves as
   the staged revision. Lineage now warns for those integrity hazards, includes
-  all visible parallel successors in `related_revision_iris`, and leaves
-  `staged_revision_iri=None` when an applied event's source is absent.
+  all visible parallel successors and their applied events in
+  `related_revision_iris`, and leaves `staged_revision_iri=None` when an
+  applied event's source is absent. A grouped-export follow-up found the
+  non-followed successor may itself already be applied; export summaries now
+  recommend inspecting that applied event and warn with the source, successor,
+  and applied route before agents follow the current branch.
 - A resource-first import recovery trial confirmed history-bearing imports route
   applied/source pairs and resource-filtered diffs well, but a one-row resource
   lineage card still hid sibling alternatives unless the caller made a separate
