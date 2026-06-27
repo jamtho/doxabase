@@ -129,6 +129,11 @@ If the draft has no recommendations and metric or type advisories are present,
 handle it as advisory-only: follow the grouped advisory calls for vocabulary,
 context, or type review and do not call `stage_profile_map_updates`. Advisory
 rows are not map-update recommendations, and no-op advisory staging is deferred.
+After applying unmapped column shells, rerun
+`draft_profile_map_updates(dataset_iri, evidence_iri)` before treating the
+profile pass as advisory-only. The newly map-present column may surface ordinary
+map recommendations, such as nullability, that should go through
+`profile_map_updates` first.
 An accepted index is still routed through guardrails: it may be `staged` or
 `skipped`, while `not_selected` means the draft row was not accepted for that
 call. Check `status_counts` first, then item reasons.

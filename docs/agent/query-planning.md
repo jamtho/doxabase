@@ -61,6 +61,26 @@ Start with `describe_query_context(dataset_iri)`:
    ambiguity errors. In the context-blocked direct-clean case, draft actions
    include `allow_context_blocked_candidate=True`.
 
+A common non-error shape is:
+
+```text
+readiness = "needs_review"
+query_target_decision.status = "ready"
+ready_candidate_indexes = [1, 3, 4]
+unselected_ready_candidate_indexes = [3, 4]
+issues = ["database_relation_template_source_mismatch"]
+suggested_next_actions[0].arguments = {
+    "iri": dataset_iri,
+    "candidate_index": 1,
+    "allow_context_blocked_candidate": True,
+}
+```
+
+Here `ready_candidate_indexes` means candidate-local direct readiness, not
+global context readiness. Follow the structured draft action when it matches
+your intended candidate; it preserves the sibling issue audit in the resulting
+review gate while allowing the clean selected route to draft.
+
 Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 
 1. `handoff_kind` is the compact machine-readable route. Use it for first-pass

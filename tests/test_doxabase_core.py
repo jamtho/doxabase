@@ -2136,6 +2136,40 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
 
     round_trip = DoxaBase.create(tmp_path / "round-trip.sqlite")
     round_trip.import_trig(project_path)
+    imported_resource_list_before_snapshots = round_trip.list_resource_revisions(
+        "https://example.test/project#Messages",
+        include_patch_mentions=True,
+        include_apply_checks=True,
+        drift_detail="summary",
+    )
+    assert imported_resource_list_before_snapshots.count == 2
+    assert imported_resource_list_before_snapshots.patch_mention_scan.status == (
+        "complete"
+    )
+    assert {
+        iri
+        for iri in imported_resource_list_before_snapshots.next_action_queue[
+            "complete_handoff_import"
+        ]
+    } == {result.applied_revision_iri, staged.revision_iri}
+    assert imported_resource_list_before_snapshots.next_action_queue_item_counts == {
+        "complete_handoff_import": 2,
+    }
+    assert {
+        item.revision.iri: item.match_types
+        for item in imported_resource_list_before_snapshots.revisions
+    } == {
+        result.applied_revision_iri: [
+            "revision_anchor",
+            "applied_source_patch_subject",
+            "applied_source_revision_anchor",
+        ],
+        staged.revision_iri: ["revision_anchor", "patch_subject"],
+    }
+    assert (
+        '"content"'
+        not in json.dumps(to_dict(imported_resource_list_before_snapshots))
+    )
     imported_lineage_before_snapshots = (
         round_trip.describe_resource_revision_lineage(
             "https://example.test/project#Messages",
@@ -2285,6 +2319,33 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
         result.applied_revision_iri
     )
     assert imported_graph_lineage_after_snapshots.warnings == []
+    imported_resource_list_after_snapshots = round_trip.list_resource_revisions(
+        "https://example.test/project#Messages",
+        include_patch_mentions=True,
+        include_apply_checks=True,
+        drift_detail="summary",
+    )
+    assert imported_resource_list_after_snapshots.count == 2
+    assert {
+        iri
+        for iri in imported_resource_list_after_snapshots.next_action_queue[
+            "inspect_already_applied"
+        ]
+    } == {result.applied_revision_iri, staged.revision_iri}
+    assert imported_resource_list_after_snapshots.next_action_queue_item_counts == {
+        "inspect_already_applied": 2,
+    }
+    assert {
+        item.row_iri: item.resolved_target_iri
+        for item in imported_resource_list_after_snapshots.next_action_queue_items
+    } == {
+        result.applied_revision_iri: result.applied_revision_iri,
+        staged.revision_iri: result.applied_revision_iri,
+    }
+    assert (
+        '"content"'
+        not in json.dumps(to_dict(imported_resource_list_after_snapshots))
+    )
     imported_exact_diff = round_trip.describe_applied_revision_diff(
         result.applied_revision_iri,
         include_triples=True,

@@ -1628,6 +1628,23 @@ few useful gaps:
   semantic gates are visible before exporting, and batch-restage items now
   expose `next_action_queue_item_after` scoped to `current_revision_iri` so
   item-local consumers do not have to join bundle queue items manually.
+- A query-planning ready-index retest confirmed the current structured actions
+  are sufficient when `readiness == "needs_review"` but
+  `ready_candidate_indexes` is non-empty. The lasting lesson is naming: treat
+  those indexes as candidate-local readiness, and follow
+  `suggested_next_actions` when they provide `candidate_index` plus
+  `allow_context_blocked_candidate=True`.
+- A profile/advisory routing trial found grouped metric/type actions and
+  `source_profile_advisory` remain mechanically sufficient for duplicate and
+  mixed-support lanes. It also found a workflow nuance: after applying duplicate
+  unmapped column shells, rerun profile-map drafting because the now-map-present
+  column may produce ordinary recommendations before the draft becomes
+  advisory-only.
+- A resource-lineage routing trial confirmed resource-first list/detail helpers
+  are sufficient across stale, applied, and current successor families and after
+  RDF-only then snapshot JSON handoff imports. The remaining ergonomic friction
+  is payload size: resource lists omit patch `content`, but rich per-row routing
+  can still be large; use queue items first when only live work matters.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

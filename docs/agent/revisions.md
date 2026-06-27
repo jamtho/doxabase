@@ -491,6 +491,10 @@ changed this resource, why, and what review action remains?":
 2. Inspect `match_types`, patch mention flags, `revision.application_status`,
    `revision.stale_resolution_state`, `revision.next_action`, and the top-level
    `next_action_queue` before opening large payloads.
+   Resource listings intentionally omit patch `content`, but they can still be
+   verbose for a resource with many stale, applied, and current successor rows.
+   Use `next_action_queue_items` as the compact live routing table before
+   opening individual row detail.
 3. Open the relevant row with
    `describe_resource_revision_lineage(resource_iri, revision_iri,
    include_applied_diff=True)`.
