@@ -1609,17 +1609,19 @@ few useful gaps:
   routes them through `complete_handoff_import`.
 - A batch restage/export queue trial confirmed grouped Markdown queues are
   mostly followable across ready, stale, validation-failed, already-applied, and
-  same-slot replacement rows. Remaining friction: queues name row IRIs while the
-  concrete follow-up target can differ for handled stale/applied rows; consider
-  adding compact queue item rows with row IRI, status, next tool, and resolved
-  target IRI.
+  same-slot replacement rows. The main friction was that queues name row IRIs
+  while the concrete follow-up target can differ for handled stale/applied rows.
+  List, resource-revision, and grouped bundle summaries now add
+  `next_action_queue_items` with row IRI, status, next tool, resolved target
+  IRI, and `row_is_target` while preserving the old queue map.
 - A semantic-alternative gate trial confirmed ready restaged successors whose
   alternative target was already applied preserve
   `alternative_gate.status == "alternative_to_applied_source"` and
-  `semantic_review_required=True`. The weak route is queue-only scanning:
-  `next_action_queue.apply_after_review` can include these gated successors, so
-  future queue item rows should surface alternative-gate status or a
-  semantic-review count beside the queue.
+  `semantic_review_required=True`. Queue-only scanning remains intentionally
+  coarse because `next_action_queue.apply_after_review` can include these gated
+  successors, so summaries now expose
+  `semantic_review_required_queue_counts` and queue-item alternative-gate fields
+  beside the queue.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

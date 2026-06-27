@@ -969,6 +969,16 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["bundle_summary"]["next_action_queue"] == {
         "apply_after_review": [staged["revision_iri"]]
     }
+    assert export["bundle_summary"]["next_action_queue_item_counts"] == {
+        "apply_after_review": 1
+    }
+    assert export["bundle_summary"]["semantic_review_required_queue_counts"] == {}
+    export_queue_item = export["bundle_summary"]["next_action_queue_items"][0]
+    assert export_queue_item["row_iri"] == staged["revision_iri"]
+    assert export_queue_item["queue"] == "apply_after_review"
+    assert export_queue_item["resolved_target_iri"] == staged["revision_iri"]
+    assert export_queue_item["row_is_target"] is True
+    assert export_queue_item["alternative_semantic_review_required"] is False
     assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]
     assert export["revision_summaries"][0]["alternative_to"] is None
     assert export["revision_summaries"][0]["current_alternative_to"] is None
@@ -1060,6 +1070,19 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert result["next_action_queue"] == {
         "apply_after_review": [staged["revision_iri"]]
     }
+    assert result["next_action_queue_item_counts"] == {"apply_after_review": 1}
+    assert result["semantic_review_required_queue_counts"] == {}
+    queue_item = result["next_action_queue_items"][0]
+    assert queue_item["row_iri"] == staged["revision_iri"]
+    assert queue_item["queue"] == "apply_after_review"
+    assert queue_item["action_type"] == "apply_after_review"
+    assert queue_item["resolved_target_iri"] == staged["revision_iri"]
+    assert queue_item["resolved_target_iri_source"] == "next_action.arguments.iri"
+    assert queue_item["row_is_target"] is True
+    assert queue_item["record_kind"] == "staged_patch"
+    assert queue_item["application_status"] == "ready"
+    assert queue_item["staged_validation_status"] == "conforms"
+    assert queue_item["alternative_semantic_review_required"] is False
     assert result["revisions"][0]["iri"] == staged["revision_iri"]
     assert result["revisions"][0]["record_kind"] == "staged_patch"
     assert result["revisions"][0]["is_current_staged_work"] is True
@@ -1181,6 +1204,14 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert second_page["next_action_queue"] == {
         "inspect_already_applied": [applied["applied_revision_iri"]]
     }
+    assert second_page["next_action_queue_item_counts"] == {
+        "inspect_already_applied": 1
+    }
+    second_queue_item = second_page["next_action_queue_items"][0]
+    assert second_queue_item["row_iri"] == applied["applied_revision_iri"]
+    assert second_queue_item["resolved_target_iri"] == applied["applied_revision_iri"]
+    assert second_queue_item["row_is_target"] is True
+    assert second_queue_item["record_kind"] == "applied_event"
     applied_row = second_page["revisions"][0]
     assert applied_row["next_action"]["tool_name"] == "describe_graph_revision"
     assert [

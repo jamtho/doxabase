@@ -216,11 +216,17 @@ For fast routing, prefer the queue fields in this order:
 1. Use `next_action_queue` on `list_graph_revisions()` or
    `export_staged_revisions().bundle_summary` to group work by current action
    class.
-2. Use each row's `next_action.queue`, `next_action.action_label`, and
+2. Use `next_action_queue_items` when you need machine-readable row-vs-target
+   routing or semantic gate state. Each item includes the queued `row_iri`,
+   `resolved_target_iri`, `row_is_target`, status fields, and alternative-gate
+   fields. `next_action_queue_item_counts` and
+   `semantic_review_required_queue_counts` are scoped to the same returned
+   rows as `next_action_queue`.
+3. Use each row's `next_action.queue`, `next_action.action_label`, and
    `next_action.arguments` for row-level routing.
-3. Use `suggested_next_actions` when you need concrete follow-up calls and
+4. Use `suggested_next_actions` when you need concrete follow-up calls and
    arguments.
-4. Use `application_status`, `application_blocking_reasons`,
+5. Use `application_status`, `application_blocking_reasons`,
    `stale_resolution_state`, and `not_current_staged_work_reason` to explain
    why the row landed in that queue.
 
@@ -229,8 +235,10 @@ candidates, validation-failed repair work, no-op rows, and stale refreshed
 successors. `next_action_queue` groups returned row IRIs, not necessarily the
 target IRI for the next call; read each row's `next_action.arguments["iri"]`
 because a handled stale source can route to the applied event of its restaged
-successor. Use `application_status="ready"` when you want only mechanically
-ready candidates. Use `application_status="validation_failed"` to find rows
+successor. `next_action_queue_items[].resolved_target_iri` exposes that target
+without opening each row, and `row_is_target=False` flags redirects. Use
+`application_status="ready"` when you want only mechanically ready candidates.
+Use `application_status="validation_failed"` to find rows
 whose current replay still fails SHACL validation. The
 `staged_validation_status` filter values are `conforms`, `failed`, and
 `not_recorded`; use `conforms`, not `passed`, for staged-time validation that
@@ -269,7 +277,10 @@ read `alternative_gate.status`, `alternative_gate.semantic_review_required`,
 `alternative_gate.applied_source_iri`, and
 `alternative_gate.applied_revision_iri` before mutating. `alternative_to` is the
 stored provenance edge; `current_alternative_to` follows a restaged alternative
-target to its current successor. Then open the relevant row with
+target to its current successor. Queue summaries also surface this as
+`semantic_review_required_queue_counts` and queue-item fields
+`alternative_semantic_review_required`, `alternative_applied_source_iri`, and
+`alternative_applied_revision_iri`. Then open the relevant row with
 `describe_revision_lineage(revision_iri)` or
 `describe_resource_revision_lineage(resource_iri, revision_iri)`; lineage keeps
 the competing applied family in `related_revision_iris` without making handled

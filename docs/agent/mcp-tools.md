@@ -133,7 +133,11 @@ directly for applied events, ready staged proposals, rows with stored staged-tim
 validation failures, unresolved stale sources, or handled stale sources. Rows
 also include `is_current_staged_work`; pass `current_staged_work_only=True` for
 the live staged work queue, excluding applied sources and stale rows already
-handled by restage. Non-current rows include `not_current_staged_work_reason`,
+handled by restage. Responses include page-scoped `next_action_queue_items`,
+`next_action_queue_item_counts`, and `semantic_review_required_queue_counts`.
+Queue items preserve the old row-IRI queue while adding
+`resolved_target_iri`, `row_is_target`, status fields, and alternative-gate
+fields for automation. Non-current rows include `not_current_staged_work_reason`,
 such as
 `already_applied_source`, `superseded_by_restage`, or `applied_event_record`.
 Do not route full-list `application_status="conflict"` rows directly: a handled
@@ -1076,7 +1080,8 @@ successor has already been applied, `current_restaged_by` still names the staged
 successor, but `next_action.arguments["iri"]` and the first suggested actions
 point to the applied event with `describe_graph_revision` /
 `describe_applied_revision_diff`. In list and export responses,
-`next_action_queue` values remain returned row IRIs; use the row-local action
+`next_action_queue` values remain returned row IRIs; use
+`next_action_queue_items[].resolved_target_iri` or the row-local action
 arguments for the actual call target.
 `snapshot_drifts` records staged/current `sha256:<hex>` digest
 mismatches, including same-count graph changes. For revisions staged with the
@@ -1277,7 +1282,10 @@ apply status, deduped
 and `recommended_applied_inspection_iris`. Prefer
 `bundle_summary.next_action_queue` when an autonomous script needs the most
 direct apply/restage/repair/inspection routing without joining the older fields
-manually. `bundle_summary.warnings` calls out
+manually. `bundle_summary.next_action_queue_items` adds the resolved target IRI,
+row-vs-target flag, and semantic alternative gate fields for each queued row;
+`semantic_review_required_queue_counts` flags gated rows by queue.
+`bundle_summary.warnings` calls out
 bundle-level sequencing hazards such as ready/no-op reviews sharing a changed
 graph that should be re-checked after each apply, plus source-only bundles whose
 recommended review target is outside the current bundle. If imported odd

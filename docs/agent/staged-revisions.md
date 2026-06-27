@@ -680,7 +680,11 @@ by derived next action (`apply_after_review`, `restage_after_review`,
 requiring the agent to join status, stale state, and recommendation fields.
 Queue values are the returned row IRIs; always read the row's
 `next_action.arguments` for the actual follow-up target, which may be an
-applied event reached through a restaged successor.
+applied event reached through a restaged successor. For automation, prefer the
+machine-readable `bundle_summary.next_action_queue_items`: each item includes
+`row_iri`, `resolved_target_iri`, `row_is_target`, row status fields, and the
+selected tool/call. `next_action_queue_item_counts` mirrors queue sizes, and
+`semantic_review_required_queue_counts` highlights gated rows by queue.
 Treat `next_action` as the compact route for the row, not as permission to run a
 mutating tool immediately. For review-first automation, follow
 `suggested_next_actions` / `suggested_next_calls` in order; ready and stale rows
@@ -768,7 +772,9 @@ alternatives durable. The same condition is available on single-row handoffs as
 still route through the `apply_after_review` queue when mechanically ready, but
 their compact `next_action`, review/export suggestions, and apply suggestion
 name the semantic gate; the apply suggestion uses `Apply only after semantic
-review` and names the already-applied source.
+review` and names the already-applied source. Queue items expose the same gate
+as `alternative_semantic_review_required`, `alternative_applied_source_iri`,
+and `alternative_applied_revision_iri`.
 In scripts, the practical loop is: batch restage, review
 `ready_restage_successor_revision_iris`, apply at most one ready successor,
 then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the

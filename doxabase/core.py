@@ -633,6 +633,9 @@ class StagedGraphRevisionBundleSummary:
     recommended_repair_review_iris: list[str]
     recommended_applied_inspection_iris: list[str]
     next_action_queue: dict[str, list[str]]
+    next_action_queue_items: list[RevisionNextActionQueueItem]
+    next_action_queue_item_counts: dict[str, int]
+    semantic_review_required_queue_counts: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -967,6 +970,9 @@ class GraphRevisionList:
     returned_stale_resolution_state_counts: dict[str, int]
     returned_staged_validation_status_counts: dict[str, int]
     next_action_queue: dict[str, list[str]]
+    next_action_queue_items: list[RevisionNextActionQueueItem]
+    next_action_queue_item_counts: dict[str, int]
+    semantic_review_required_queue_counts: dict[str, int]
     include_apply_checks: bool
     drift_detail: str
 
@@ -1052,6 +1058,9 @@ class ResourceRevisionList:
     include_apply_checks: bool
     drift_detail: str
     next_action_queue: dict[str, list[str]]
+    next_action_queue_items: list[RevisionNextActionQueueItem]
+    next_action_queue_item_counts: dict[str, int]
+    semantic_review_required_queue_counts: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -2167,6 +2176,30 @@ class RevisionNextAction:
     reason: str
     call: str | None
     source: str
+
+
+@dataclass(frozen=True)
+class RevisionNextActionQueueItem:
+    row_iri: str
+    queue: str
+    action_type: str
+    action_label: str
+    tool_name: str | None
+    mcp_tool_name: str | None
+    resolved_target_iri: str | None
+    resolved_target_iri_source: str | None
+    row_is_target: bool
+    call: str | None
+    source: str
+    record_kind: str | None
+    application_status: str | None
+    application_decision: str | None
+    stale_resolution_state: str | None
+    staged_validation_status: str | None
+    alternative_gate_status: str | None
+    alternative_semantic_review_required: bool
+    alternative_applied_source_iri: str | None
+    alternative_applied_revision_iri: str | None
 
 
 @dataclass(frozen=True)
@@ -4066,6 +4099,20 @@ class DoxaBase:
         returned_current_staged_work_items = [
             item for item in sliced_items if item.is_current_staged_work
         ]
+        next_action_queue_items: list[RevisionNextActionQueueItem] = []
+        for item in sliced_items:
+            queue_item = self._revision_next_action_queue_item(
+                row_iri=item.iri,
+                next_action=item.next_action,
+                record_kind=item.record_kind,
+                application_status=item.application_status,
+                application_decision=item.application_decision,
+                stale_resolution_state=item.stale_resolution_state,
+                staged_validation_status=item.staged_validation_status,
+                alternative_gate=item.alternative_gate,
+            )
+            if queue_item is not None:
+                next_action_queue_items.append(queue_item)
         return GraphRevisionList(
             revisions=sliced_items,
             count=len(items),
@@ -4097,6 +4144,17 @@ class DoxaBase:
             ),
             next_action_queue=self._revision_next_action_queue(
                 (item.iri, item.next_action) for item in sliced_items
+            ),
+            next_action_queue_items=next_action_queue_items,
+            next_action_queue_item_counts=(
+                self._revision_next_action_queue_item_counts(
+                    next_action_queue_items
+                )
+            ),
+            semantic_review_required_queue_counts=(
+                self._semantic_review_required_queue_counts(
+                    next_action_queue_items
+                )
             ),
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
@@ -4784,6 +4842,20 @@ class DoxaBase:
             )
 
         sliced = matched[offset : offset + limit]
+        next_action_queue_items: list[RevisionNextActionQueueItem] = []
+        for item in sliced:
+            queue_item = self._revision_next_action_queue_item(
+                row_iri=item.revision.iri,
+                next_action=item.revision.next_action,
+                record_kind=item.revision.record_kind,
+                application_status=item.revision.application_status,
+                application_decision=item.revision.application_decision,
+                stale_resolution_state=item.revision.stale_resolution_state,
+                staged_validation_status=item.revision.staged_validation_status,
+                alternative_gate=item.revision.alternative_gate,
+            )
+            if queue_item is not None:
+                next_action_queue_items.append(queue_item)
         return ResourceRevisionList(
             resource=self._resource_summary(lookup_graphs, resource_value),
             revisions=sliced,
@@ -4813,6 +4885,17 @@ class DoxaBase:
             drift_detail=drift_detail,
             next_action_queue=self._revision_next_action_queue(
                 (item.revision.iri, item.revision.next_action) for item in sliced
+            ),
+            next_action_queue_items=next_action_queue_items,
+            next_action_queue_item_counts=(
+                self._revision_next_action_queue_item_counts(
+                    next_action_queue_items
+                )
+            ),
+            semantic_review_required_queue_counts=(
+                self._semantic_review_required_queue_counts(
+                    next_action_queue_items
+                )
             ),
         )
 
@@ -22904,6 +22987,91 @@ class DoxaBase:
             queues.setdefault(next_action.queue, []).append(revision_iri)
         return queues
 
+    @staticmethod
+    def _revision_next_action_resolved_target_iri(
+        next_action: RevisionNextAction,
+    ) -> str | None:
+        target_iri = next_action.arguments.get("iri")
+        return target_iri if isinstance(target_iri, str) else None
+
+    def _revision_next_action_queue_item(
+        self,
+        *,
+        row_iri: str,
+        next_action: RevisionNextAction | None,
+        record_kind: str | None = None,
+        application_status: str | None = None,
+        application_decision: str | None = None,
+        stale_resolution_state: str | None = None,
+        staged_validation_status: str | None = None,
+        alternative_gate: StagedRevisionAlternativeGate | None = None,
+    ) -> RevisionNextActionQueueItem | None:
+        if next_action is None:
+            return None
+        resolved_target_iri = self._revision_next_action_resolved_target_iri(
+            next_action
+        )
+        return RevisionNextActionQueueItem(
+            row_iri=row_iri,
+            queue=next_action.queue,
+            action_type=next_action.action_type,
+            action_label=next_action.action_label,
+            tool_name=next_action.tool_name,
+            mcp_tool_name=next_action.mcp_tool_name,
+            resolved_target_iri=resolved_target_iri,
+            resolved_target_iri_source=(
+                "next_action.arguments.iri"
+                if resolved_target_iri is not None
+                else None
+            ),
+            row_is_target=resolved_target_iri == row_iri,
+            call=next_action.call,
+            source=next_action.source,
+            record_kind=record_kind,
+            application_status=application_status,
+            application_decision=application_decision,
+            stale_resolution_state=stale_resolution_state,
+            staged_validation_status=staged_validation_status,
+            alternative_gate_status=(
+                alternative_gate.status if alternative_gate is not None else None
+            ),
+            alternative_semantic_review_required=(
+                alternative_gate.semantic_review_required
+                if alternative_gate is not None
+                else False
+            ),
+            alternative_applied_source_iri=(
+                alternative_gate.applied_source_iri
+                if alternative_gate is not None
+                else None
+            ),
+            alternative_applied_revision_iri=(
+                alternative_gate.applied_revision_iri
+                if alternative_gate is not None
+                else None
+            ),
+        )
+
+    @staticmethod
+    def _revision_next_action_queue_item_counts(
+        queue_items: Iterable[RevisionNextActionQueueItem],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in queue_items:
+            counts[item.queue] = counts.get(item.queue, 0) + 1
+        return counts
+
+    @staticmethod
+    def _semantic_review_required_queue_counts(
+        queue_items: Iterable[RevisionNextActionQueueItem],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in queue_items:
+            if not item.alternative_semantic_review_required:
+                continue
+            counts[item.queue] = counts.get(item.queue, 0) + 1
+        return counts
+
     def export_staged_revision(
         self,
         iri: str,
@@ -23333,6 +23501,23 @@ class DoxaBase:
         external_recommended_review = [
             iri for iri in recommended_review if iri not in bundled_revision_iris
         ]
+        next_action_queue_items: list[RevisionNextActionQueueItem] = []
+        for summary in summaries:
+            queue_item = self._revision_next_action_queue_item(
+                row_iri=summary.revision_iri,
+                next_action=summary.next_action,
+                record_kind="staged_patch",
+                application_status=summary.apply_status,
+                application_decision=summary.apply_decision,
+                stale_resolution_state=summary.stale_resolution_state,
+                staged_validation_status=self._staged_validation_status(
+                    conforms=summary.staged_validation_conforms,
+                    result_count=summary.staged_validation_result_count,
+                ),
+                alternative_gate=summary.alternative_gate,
+            )
+            if queue_item is not None:
+                next_action_queue_items.append(queue_item)
         return StagedGraphRevisionBundleSummary(
             total_revisions=len(summaries),
             apply_status_counts=apply_status_counts,
@@ -23366,6 +23551,17 @@ class DoxaBase:
             recommended_applied_inspection_iris=recommended_applied_inspection,
             next_action_queue=self._revision_next_action_queue(
                 (summary.revision_iri, summary.next_action) for summary in summaries
+            ),
+            next_action_queue_items=next_action_queue_items,
+            next_action_queue_item_counts=(
+                self._revision_next_action_queue_item_counts(
+                    next_action_queue_items
+                )
+            ),
+            semantic_review_required_queue_counts=(
+                self._semantic_review_required_queue_counts(
+                    next_action_queue_items
+                )
             ),
         )
 

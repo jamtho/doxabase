@@ -914,6 +914,13 @@ advisory route derived from status, stale/restage state, and the structured
 suggested actions. The response-level `next_action_queue` groups returned rows
 into queues such as `apply_after_review`, `restage_after_review`,
 `repair_or_replace`, `inspect_already_applied`, and `informational`.
+`next_action_queue_items` is the machine-readable companion: each item names the
+queued `row_iri`, `resolved_target_iri`, whether `row_is_target`, the selected
+tool/call, row status fields, and alternative-gate fields. Use it when a queued
+stale source redirects to a refreshed successor or applied event, or when an
+`apply_after_review` row still requires semantic review. The
+`next_action_queue_item_counts` and `semantic_review_required_queue_counts`
+dictionaries are scoped to the same returned page as `next_action_queue`.
 Most count/digest-drift conflicts stay in `restage_after_review`, but stale
 single-assertion adds or authored replacements for curated singleton slots with
 exact same-slot drift route to `repair_or_replace` and include a
@@ -1078,6 +1085,12 @@ staged revisions that are useful context but not mutation targets.
 `next_action_queue` is the most direct routing surface for autonomous scripts:
 it groups current per-row action hints without requiring callers to join apply
 status, stale state, recommendation source, and suggested action fields by hand.
+When the concrete follow-up target can differ from the queued row, use
+`bundle_summary.next_action_queue_items[].resolved_target_iri`; its
+`row_is_target` flag is false for redirects such as handled stale sources that
+point at an applied event. The bundle also exposes
+`next_action_queue_item_counts` and `semantic_review_required_queue_counts`, so
+queue-only scripts can notice semantic review gates inside `apply_after_review`.
 `bundle_summary.warnings` calls out sequencing hazards, including grouped
 ready/no-op reviews on the same changed graph that should be re-checked after
 each apply, and source-only bundles whose recommended review target is outside
@@ -1242,7 +1255,9 @@ current successor is stale too; inspect or restage `current_revision_iri`.
 If `bundle_summary.ready_restage_successor_alternative_to_applied_source_iris`
 is non-empty, those ready successors are still alternatives to already-applied
 staged sources; treat them as semantic review targets even when mechanically
-ready.
+ready. The same condition is visible in `bundle_summary.next_action_queue_items`
+through `alternative_semantic_review_required=True` and the applied-source /
+applied-revision fields.
 Each row also carries `next_action_after` and
 `suggested_next_actions_after` for that `current_revision_iri`, so autonomous
 scripts can route the post-batch current revision without a separate listing

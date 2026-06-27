@@ -4007,6 +4007,27 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert applied_grouped_export.revision_summaries[1].stale_resolution_state == (
         "restaged_successor_already_applied"
     )
+    applied_source_queue_item = next(
+        item
+        for item in applied_grouped_export.bundle_summary.next_action_queue_items
+        if item.row_iri == staged.revision_iri
+    )
+    assert applied_source_queue_item.queue == "inspect_already_applied"
+    assert (
+        applied_source_queue_item.resolved_target_iri
+        == result.applied_revision_iri
+    )
+    assert applied_source_queue_item.row_is_target is False
+    assert applied_source_queue_item.stale_resolution_state == (
+        "stale_handled_by_restage"
+    )
+    assert applied_grouped_export.bundle_summary.next_action_queue_item_counts == {
+        "inspect_already_applied": 2
+    }
+    assert (
+        applied_grouped_export.bundle_summary.semantic_review_required_queue_counts
+        == {}
+    )
     assert applied_grouped_export.bundle_summary.recommended_mutation_review_iris == []
     assert applied_grouped_export.bundle_summary.recommended_applied_inspection_iris == [
         restaged.revision_iri
@@ -4072,6 +4093,23 @@ def test_list_graph_revisions_routes_handled_stale_to_applied_successor(
     assert listing.next_action_queue["inspect_already_applied"].count(
         source.revision_iri
     ) == 1
+    source_queue_item = next(
+        item
+        for item in listing.next_action_queue_items
+        if item.row_iri == source.revision_iri
+    )
+    assert source_queue_item.queue == "inspect_already_applied"
+    assert source_queue_item.action_type == "inspect_already_applied"
+    assert source_queue_item.resolved_target_iri == applied.applied_revision_iri
+    assert source_queue_item.resolved_target_iri_source == (
+        "next_action.arguments.iri"
+    )
+    assert source_queue_item.row_is_target is False
+    assert source_queue_item.application_status == "conflict"
+    assert source_queue_item.stale_resolution_state == "stale_handled_by_restage"
+    assert source_queue_item.alternative_semantic_review_required is False
+    assert listing.next_action_queue_item_counts["inspect_already_applied"] >= 1
+    assert listing.semantic_review_required_queue_counts == {}
 
 
 def test_restage_staged_revision_preserves_patch_sequence(
@@ -7115,6 +7153,35 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         "informational": [second_restaged.revision_iri],
         "apply_after_review": [recovered_second.revision_iri],
     }
+    assert applied_alternative_summary.next_action_queue_item_counts == {
+        "inspect_already_applied": 1,
+        "informational": 1,
+        "apply_after_review": 1,
+    }
+    assert applied_alternative_summary.semantic_review_required_queue_counts == {
+        "informational": 1,
+        "apply_after_review": 1,
+    }
+    semantic_queue_item = next(
+        item
+        for item in applied_alternative_summary.next_action_queue_items
+        if item.row_iri == recovered_second.revision_iri
+    )
+    assert semantic_queue_item.queue == "apply_after_review"
+    assert semantic_queue_item.resolved_target_iri == recovered_second.revision_iri
+    assert semantic_queue_item.row_is_target is True
+    assert semantic_queue_item.alternative_gate_status == (
+        "alternative_to_applied_source"
+    )
+    assert semantic_queue_item.alternative_semantic_review_required is True
+    assert (
+        semantic_queue_item.alternative_applied_source_iri
+        == first_restaged.revision_iri
+    )
+    assert (
+        semantic_queue_item.alternative_applied_revision_iri
+        == result.applied_revision_iri
+    )
     assert any(
         "mechanically apply-ready" in warning
         and "already-applied staged source" in warning
@@ -7503,6 +7570,20 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
             queues.setdefault(item.next_action.queue, []).append(item.iri)
         return queues
 
+    def page_queue_item_counts(page) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in page.next_action_queue_items:
+            counts[item.queue] = counts.get(item.queue, 0) + 1
+        return counts
+
+    def page_semantic_gate_counts(page) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in page.next_action_queue_items:
+            if not item.alternative_semantic_review_required:
+                continue
+            counts[item.queue] = counts.get(item.queue, 0) + 1
+        return counts
+
     full_page = db.list_graph_revisions(include_apply_checks=True)
     first_page = db.list_graph_revisions(
         include_apply_checks=True,
@@ -7537,6 +7618,12 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         first_page,
     )
     assert first_page.next_action_queue == page_queue(first_page)
+    assert first_page.next_action_queue_item_counts == page_queue_item_counts(
+        first_page
+    )
+    assert first_page.semantic_review_required_queue_counts == (
+        page_semantic_gate_counts(first_page)
+    )
     assert second_page.returned_application_status_counts == page_counts(
         "application_status",
         second_page,
@@ -7548,6 +7635,12 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         )
     )
     assert second_page.next_action_queue == page_queue(second_page)
+    assert second_page.next_action_queue_item_counts == page_queue_item_counts(
+        second_page
+    )
+    assert second_page.semantic_review_required_queue_counts == (
+        page_semantic_gate_counts(second_page)
+    )
     assert first_page.returned_application_status_counts != (
         full_page.returned_application_status_counts
     )

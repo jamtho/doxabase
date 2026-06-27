@@ -2368,6 +2368,12 @@ those fields; `next_action_queue` groups the returned rows by queues such as
 RDF/snapshot handoff; follow the promoted `import_revision_snapshots` or
 `import_trig` action before relying on exact applied diffs or stale drift
 triples.
+`next_action_queue_items` mirrors the same returned-row scope with one compact
+row per routed item. It preserves the queued `row_iri`, adds
+`resolved_target_iri` and `row_is_target`, and carries row status plus
+alternative-gate fields. `next_action_queue_item_counts` counts those items by
+queue, while `semantic_review_required_queue_counts` counts queued rows whose
+alternative gate still requires semantic review.
 It is a routing surface, not a preference order for competing alternatives; use
 row details such as `review_recommendation`, `alternative_to`, and
 `current_alternative_to` when comparing alternative framings.
@@ -3157,7 +3163,10 @@ lists, grouped exports, and post-apply recheck rows. A mechanically ready row
 whose `alternative_gate.semantic_review_required` is true can still use the
 `apply_after_review` queue, but its compact action label and suggested actions
 name the semantic gate; the apply suggestion says `Apply only after semantic
-review` and names the already-applied source when known.
+review` and names the already-applied source when known. On list and bundle
+responses, `semantic_review_required_queue_counts` and
+`next_action_queue_items[].alternative_semantic_review_required` make the same
+gate visible without opening the full row.
 Call `check_staged_revision_apply()` when you need full `patch_checks`,
 `conflicts`, `validation_results`, or exact snapshot drift triples.
 
@@ -3654,6 +3663,8 @@ replacing handled stale sources with their successors. `next_action_queue`
 groups the returned row IRIs by action class; inspect each row's
 `next_action.arguments` for the target to call, because handled stale rows may
 point to an applied event even though the queued row is the stale source.
+`next_action_queue_items[].resolved_target_iri` exposes that target directly,
+and `row_is_target=False` flags redirected rows.
 `ready_restage_successor_alternative_to_applied_source_iris` lists ready
 refreshed successors whose `current_alternative_to` / `alternative_to` target is
 already applied. Treat these rows as semantic review targets, not automatic
