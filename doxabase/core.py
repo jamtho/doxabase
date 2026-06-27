@@ -7045,6 +7045,7 @@ class DoxaBase:
             include_trig=include_trig,
             candidate_triple_count=candidate_triple_count,
             truncated=truncated,
+            dataset_contexts=dataset_contexts.values(),
             pattern_contexts=pattern_contexts.values(),
         )
 
@@ -7094,13 +7095,12 @@ class DoxaBase:
         include_trig: bool,
         candidate_triple_count: int,
         truncated: bool,
+        dataset_contexts: Iterable[DatasetDescription],
         pattern_contexts: Iterable[PatternDescription],
     ) -> list[SuggestedNextAction]:
-        if not truncated:
-            return []
         actions: list[SuggestedNextAction] = []
 
-        def add_action(
+        def add_slice_action(
             arguments: dict[str, Any],
             reason: str,
             *,
@@ -7120,7 +7120,47 @@ class DoxaBase:
                 )
             )
 
+        seed_iris_set = set(seed_iris)
+        seen_dataset_iris: set[str] = set()
+        for dataset in dataset_contexts:
+            if dataset.iri not in seed_iris_set or dataset.iri in seen_dataset_iris:
+                continue
+            issue_codes = sorted(
+                {
+                    issue.code
+                    for issue in dataset.operational_warnings
+                    if issue.severity in {"error", "warning"}
+                }
+            )
+            if not issue_codes:
+                continue
+            seen_dataset_iris.add(dataset.iri)
+            arguments = {"iri": dataset.iri}
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Inspect query-planning context",
+                    tool_name="describe_query_context",
+                    mcp_tool_name="doxabase.describe_query_context",
+                    arguments=arguments,
+                    reason=(
+                        "The seed dataset has operational query-planning "
+                        f"warning(s): {', '.join(issue_codes)}. "
+                        "describe_query_context exposes readiness, target "
+                        "candidates, and repair hints before drafting or "
+                        "running queries."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_query_context",
+                        arguments,
+                    ),
+                )
+            )
+
+        if not truncated:
+            return actions
+
         seen_pattern_iris: set[str] = set()
+        pattern_action_count = 0
         for pattern_context in pattern_contexts:
             if pattern_context.iri in seen_pattern_iris:
                 continue
@@ -7134,7 +7174,7 @@ class DoxaBase:
             }
             if include_trig:
                 arguments["include_trig"] = True
-            add_action(
+            add_slice_action(
                 arguments,
                 (
                     "Raw triples were truncated, but this linked pattern has "
@@ -7143,7 +7183,8 @@ class DoxaBase:
                 ),
                 action_label="Narrow to pattern context",
             )
-            if len(actions) >= 3:
+            pattern_action_count += 1
+            if pattern_action_count >= 3:
                 break
 
         full_triple_cap = max(candidate_triple_count, max_triples)
@@ -7154,7 +7195,7 @@ class DoxaBase:
         }
         if include_trig:
             arguments["include_trig"] = True
-        add_action(
+        add_slice_action(
             arguments,
             (
                 "Use this only when exact raw RDF triples are needed; "

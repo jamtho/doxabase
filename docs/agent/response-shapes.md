@@ -582,7 +582,11 @@ beyond the exact seed while avoiding unrelated dataset leakage.
 for explicit profile-observation seeds and profile observations reached from
 observed-profile-metric, metric-kind, or observed-column seeds, even when those
 rows are older than the bounded `dataset_contexts[].profile_observations` slice.
-When `truncated=true`, `suggested_next_actions` first offers narrower
+`suggested_next_actions` can include `describe_query_context` for seed
+datasets/tables whose nested `dataset_contexts[].operational_warnings` contain
+query-planning errors or warnings. Use that route to inspect readiness, target
+candidates, and repair hints before drafting a query. When `truncated=true`,
+the remaining actions first offer narrower
 `describe_context_slice(..., profile="pattern_brief")` calls for linked pattern
 contexts, then a same-seed retry with `max_triples` raised to
 `candidate_triple_count` for cases that truly need complete raw RDF. Use the

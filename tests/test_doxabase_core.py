@@ -15228,6 +15228,48 @@ def test_describe_context_slice_warns_on_large_structured_context(
     )
 
 
+def test_context_slice_suggests_query_context_for_seed_operational_warnings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        path_templates=["events/date={date}/*.parquet"],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context_slice = db.describe_context_slice(dataset, profile="dataset_brief")
+
+    assert context_slice.truncated is False
+    assert context_slice.warnings == []
+    assert context_slice.dataset_contexts[0].operational_warnings[0].code == (
+        "missing_storage_access"
+    )
+    assert [action.tool_name for action in context_slice.suggested_next_actions] == [
+        "describe_query_context"
+    ]
+    action = context_slice.suggested_next_actions[0]
+    assert action.action_label == "Inspect query-planning context"
+    assert action.mcp_tool_name == "doxabase.describe_query_context"
+    assert action.arguments == {"iri": dataset}
+    assert "missing_storage_access" in action.reason
+    assert "repair hints" in action.reason
+    assert context_slice.suggested_next_calls == [action.call]
+
+    query_context = db.describe_query_context(**action.arguments)
+    assert query_context.readiness == "insufficient_metadata"
+    assert query_context.issues[0].code == "missing_storage_access"
+
+
 def test_context_slice_column_seed_expands_claim_reconsideration_lore(
     tmp_path: Path,
 ) -> None:

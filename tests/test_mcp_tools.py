@@ -3731,6 +3731,42 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         for resource in result["resources"]
     )
 
+    warning_db = DoxaBase.create(tmp_path / "warning-capsule.sqlite")
+    warning_dataset = "https://example.test/project#Events"
+    warning_layout = record_map_physical_layout_tool(
+        warning_db,
+        iri="https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        warning_db,
+        iri=warning_dataset,
+        label="Events",
+        is_table=True,
+        path_templates=["events/date={date}/*.parquet"],
+        physical_layouts=[warning_layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    warning_result = describe_context_slice_tool(
+        warning_db,
+        seed_iris=[warning_dataset],
+        profile="dataset_brief",
+    )
+    assert warning_result["truncated"] is False
+    assert warning_result["warnings"] == []
+    assert warning_result["dataset_contexts"][0]["operational_warnings"][0][
+        "code"
+    ] == "missing_storage_access"
+    assert [
+        action["tool_name"] for action in warning_result["suggested_next_actions"]
+    ] == ["describe_query_context"]
+    warning_action = warning_result["suggested_next_actions"][0]
+    assert warning_action["mcp_tool_name"] == "doxabase.describe_query_context"
+    assert warning_action["arguments"] == {"iri": warning_dataset}
+    assert "missing_storage_access" in warning_action["reason"]
+    assert warning_result["suggested_next_calls"] == [warning_action["call"]]
+
     mismatch = describe_context_slice_tool(
         db,
         seed_iris=[pattern["pattern_iri"]],
