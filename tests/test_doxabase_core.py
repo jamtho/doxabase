@@ -6674,6 +6674,25 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert recheck.next_action.arguments == {"iri": second_restaged.revision_iri}
     assert recheck.suggested_next_actions[-1].tool_name == "restage_staged_revision"
     assert recheck.suggested_next_calls[-1].startswith("restage_staged_revision(")
+    recheck_export_path = tmp_path / "post-apply-recheck.md"
+    recheck_export = db.export_staged_revisions(
+        result.post_apply_recheck_revision_iris,
+        recheck_export_path,
+    )
+    assert recheck_export.revision_iris == [
+        second_restaged.revision_iri
+    ]
+    assert recheck_export.bundle_summary.total_revisions == 1
+    assert recheck_export.bundle_summary.apply_status_counts == {
+        "conflict": 1,
+    }
+    assert recheck_export.bundle_summary.next_action_queue == {
+        "restage_after_review": [second_restaged.revision_iri],
+    }
+    assert recheck_export.revision_summaries[0].next_action is not None
+    assert recheck_export.revision_summaries[0].next_action.arguments == (
+        recheck.next_action.arguments
+    )
     second_check_after_apply = db.check_staged_revision_apply(
         second_restaged.revision_iri
     )
