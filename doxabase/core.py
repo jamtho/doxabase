@@ -19437,7 +19437,10 @@ class DoxaBase:
             ) and not already_effective_stale and restaged_by is None:
                 add_action(
                     "import_revision_snapshots",
-                    {"path": "/tmp/revision-snapshots.json"},
+                    {
+                        "path": "/tmp/revision-snapshots.json",
+                        "path_is_placeholder": True,
+                    },
                     (
                         "Exact drift triples are unavailable for one or more "
                         "changed graphs. If this capsule came from an RDF "

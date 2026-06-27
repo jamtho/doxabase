@@ -1068,6 +1068,20 @@ few useful gaps:
   exports showed support counts and selected patterns but not the rolled-up
   profile observations or evidence IRIs. Single staged-revision exports now add a
   generic `Linked Support` section for stored support links.
+- A query-planning storage trial confirmed context-blocked clean candidates and
+  storage-access ambiguity behaved well. Docs now call out that
+  `storage_access_iri` can still be ambiguous when partition/template candidates
+  share that access; use `candidate_index` to select the exact relation.
+- A revision snapshot import/export trial confirmed RDF-only handoffs recover
+  lineage and count/digest context, while companion snapshot JSON restores exact
+  diffs. Stale apply-check snapshot-import suggestions now mark the example
+  `/tmp/revision-snapshots.json` path as a placeholder, matching
+  `describe_revision_snapshot_evidence`.
+- An awkward systematisation trial confirmed caller-authored competing framings,
+  shared shapes, validation failures, support roll-up, and grouped exports worked.
+  Docs now remind agents that later framings default to alternatives of the first
+  framing, so intentionally invalid probes should not be first unless that is the
+  desired comparison anchor.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

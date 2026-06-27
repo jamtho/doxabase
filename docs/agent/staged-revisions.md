@@ -366,6 +366,11 @@ same provisional vocabulary or assumptions, pass `shared_additions` or
 exported as `rc:SharedContextPatch` entries. Shared patches can target
 `ontology`, `shapes`, or other mutable graph roles. Staged `shapes` patches
 participate in the preview SHACL validation for each framing.
+Because later framings are alternative-linked to the first framing by default,
+put the preferred comparison anchor first. If the first framing is intentionally
+invalid as a diagnostic repair probe, pass an explicit `alternative_to` or set
+`link_alternatives=False` so ready siblings are not all framed as alternatives to
+the invalid probe.
 
 Use it for the part of the work where graph judgement matters:
 

@@ -2189,6 +2189,10 @@ def test_stale_project_import_suggests_snapshot_json_before_restaging(
     assert check.suggested_next_actions[2].action_label == (
         "Import snapshot bundle if available"
     )
+    assert check.suggested_next_actions[2].arguments == {
+        "path": "/tmp/revision-snapshots.json",
+        "path_is_placeholder": True,
+    }
 
 
 def test_import_revision_snapshots_validates_bundle_before_writing(

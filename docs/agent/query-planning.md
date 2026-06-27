@@ -121,6 +121,9 @@ still needs review.
 When `storage_access_iri` matches multiple candidate paths, the error includes
 compact candidate snippets. Choose from those snippets and rerun with
 `candidate_index`; the storage selector must identify exactly one candidate.
+This can happen even for database storage when the same storage access is linked
+to dataset or partition template review cards; use the candidate snippet for the
+storage-owned relation when you want the database relation handoff.
 
 ## Common Cases
 
