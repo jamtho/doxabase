@@ -52,7 +52,13 @@ Start with `describe_query_context(dataset_iri)`:
    guessing at a path: either record reviewed non-secret storage access metadata
    and link it to the dataset, or stage a reviewed `rc:hasStorageAccess` link to
    an existing access resource.
-6. Use `suggested_next_actions` when scripting the next step. If profile run
+6. Use `suggested_repair_action_groups` when scripting metadata repairs. It is a
+   top-level `query_repair_review` lane over existing
+   `issues[].details.repair_hint.actions[]`, preserving issue index/code/resource
+   and ordered repair templates. These are reviewed templates, not call-ready
+   `suggested_next_actions`: fill placeholders, add required fields such as
+   `rationale`, and check each `condition` before calling the named tool.
+7. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, the first action inspects the profile evidence; when a
    query target candidate is also available, the draft-query-plan action follows.
    Peer ready or context-blocked direct-clean candidates are also exposed as

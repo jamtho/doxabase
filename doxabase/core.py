@@ -1364,6 +1364,22 @@ class QueryPlanningIssue:
 
 
 @dataclass(frozen=True)
+class QueryRepairActionGroup:
+    group_name: str
+    issue_index: int
+    issue_code: str
+    issue_severity: str
+    issue_message: str
+    issue_resource: ResourceSummary | None
+    repair_hint_path: str
+    repair_action_type: str | None
+    requires_review: bool
+    repair_context: dict[str, Any]
+    actions: list[dict[str, Any]]
+    action_count: int
+
+
+@dataclass(frozen=True)
 class QueryTargetCandidate:
     template: str
     template_source: str
@@ -1408,6 +1424,8 @@ class QueryPlanningContext:
     readiness_note: str
     issues: list[QueryPlanningIssue]
     analysis_warnings: list[QueryPlanningIssue]
+    suggested_repair_action_groups: list[QueryRepairActionGroup]
+    suggested_repair_action_group_count: int
     planning_notes: list[str]
     row_count_snapshot: int | None
     profile_summary: ProfileSummary
@@ -9638,6 +9656,7 @@ class DoxaBase:
         ready_candidate_indexes = self._query_ready_candidate_indexes(
             query_target_candidates
         )
+        suggested_repair_action_groups = self._query_repair_action_groups(issues)
         unselected_ready_candidate_indexes = [
             index
             for index in ready_candidate_indexes
@@ -9674,6 +9693,8 @@ class DoxaBase:
             ),
             issues=issues,
             analysis_warnings=analysis_warnings,
+            suggested_repair_action_groups=suggested_repair_action_groups,
+            suggested_repair_action_group_count=len(suggested_repair_action_groups),
             planning_notes=[
                 (
                     "DoxaBase records non-secret planning metadata only; local "
@@ -9710,6 +9731,46 @@ class DoxaBase:
                 action.call for action in suggested_next_actions
             ],
         )
+
+    def _query_repair_action_groups(
+        self,
+        issues: list[QueryPlanningIssue],
+    ) -> list[QueryRepairActionGroup]:
+        groups: list[QueryRepairActionGroup] = []
+        for issue_index, issue in enumerate(issues):
+            if issue.details is None:
+                continue
+            repair_hint = issue.details.get("repair_hint")
+            if not isinstance(repair_hint, MappingABC):
+                continue
+            actions = repair_hint.get("actions")
+            if not isinstance(actions, list) or not actions:
+                continue
+            repair_context = {
+                str(key): copy.deepcopy(value)
+                for key, value in repair_hint.items()
+                if key != "actions"
+            }
+            action_type = repair_hint.get("action_type")
+            groups.append(
+                QueryRepairActionGroup(
+                    group_name="query_repair_review",
+                    issue_index=issue_index,
+                    issue_code=issue.code,
+                    issue_severity=issue.severity,
+                    issue_message=issue.message,
+                    issue_resource=issue.resource,
+                    repair_hint_path=f"issues[{issue_index}].details.repair_hint",
+                    repair_action_type=(
+                        str(action_type) if action_type is not None else None
+                    ),
+                    requires_review=repair_hint.get("requires_review") is not False,
+                    repair_context=repair_context,
+                    actions=copy.deepcopy(actions),
+                    action_count=len(actions),
+                )
+            )
+        return groups
 
     def _query_context_next_actions(
         self,

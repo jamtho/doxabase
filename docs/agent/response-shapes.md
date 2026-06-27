@@ -1554,6 +1554,8 @@ query.readiness
 query.readiness_note
 query.issues
 query.analysis_warnings
+query.suggested_repair_action_groups
+query.suggested_repair_action_group_count
 query.planning_notes
 query.row_count_snapshot
 query.profile_summary
@@ -1603,6 +1605,44 @@ metadata exists but no explicit verification status has been recorded.
 `query.analysis_warnings` returns caveat-shaped interpretation warnings that
 matter after a query can be planned, such as deduplication, mixed payload
 coercion, or JSON parsing caveats. These warnings do not change `readiness`.
+
+`query.suggested_repair_action_groups` is a read-only top-level lane over
+existing `issues[].details.repair_hint.actions[]`. It is meant for automation
+that needs one place to find metadata repair templates without scanning every
+issue detail. It is not folded into `suggested_next_actions` because repair
+templates require review, often contain placeholders, and usually need caller
+rationale before any mutation call. `suggested_repair_action_group_count` is the
+number of groups returned.
+
+Each repair action group has:
+
+```python
+repair_group.group_name
+repair_group.issue_index
+repair_group.issue_code
+repair_group.issue_severity
+repair_group.issue_message
+repair_group.issue_resource
+repair_group.repair_hint_path
+repair_group.repair_action_type
+repair_group.requires_review
+repair_group.repair_context
+repair_group.actions
+repair_group.action_count
+```
+
+`group_name` is currently `query_repair_review`. `issue_index` points back into
+`query.issues`, and `repair_hint_path` names the original nested source, for
+example `issues[3].details.repair_hint`. `repair_context` copies the repair
+hint without its `actions` array so scripts can inspect source/target metadata,
+candidate reviewed values, and mismatch reasons. Jump back to
+`query.issues[issue_index].details` for sibling issue details such as fixture
+staleness hints.
+`actions` preserves the original ordered repair action templates. Copy an
+action's `arguments` or fill its `arguments_template`, add every
+`required_extra_arguments` value such as `rationale`, replace fields named in
+`placeholder_fields` / `reviewed_value_fields`, and review `condition` before
+calling the named tool.
 
 Read `query.query_target_decision` before choosing from
 `query_target_candidates`. It is a derived handoff hint, not a new graph fact.

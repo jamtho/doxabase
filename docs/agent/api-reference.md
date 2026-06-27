@@ -275,7 +275,13 @@ direct/upstream caveats, `row_count_snapshot`, `profile_summary`,
 `ready_candidate_indexes`,
 `unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
 `unselected_direct_clean_candidate_indexes`, and structured `suggested_next_actions`
-for drafting the selected route. For database template-source mismatches and
+for drafting the selected route. `suggested_repair_action_groups` lifts existing
+`issues[].details.repair_hint.actions[]` into a top-level `query_repair_review`
+lane with the issue index/code/resource, repair hint type, copied context, and
+ordered action templates. These repair rows are reviewed templates rather than
+call-ready next actions: fill placeholders, add required extra arguments such as
+`rationale`, and check conditions before calling the named tool. For database
+template-source mismatches and
 storage protocol/location mismatches, `issues[].details.repair_hint` gives
 ordered, review-gated repair templates. Database template-source hints add the
 reviewed relation identifier to the storage access, then remove the misplaced

@@ -448,7 +448,8 @@ for caveats that matter after a query can be planned, planning notes, columns,
 path templates, derived `query_target_decision` and `query_target_candidates`,
 physical layouts, storage access descriptions, partition schemes,
 dataset/layout verification status and note, caveats, and structured
-`suggested_next_actions` for drafting the selected route. It returns
+`suggested_next_actions` for drafting the selected route. It also returns
+`suggested_repair_action_groups` for reviewed metadata repair templates, plus
 `profile_summary` beside `row_count_snapshot`, so a planner can follow profile
 evidence IRIs and `profile_run_candidates` without a separate
 `describe_dataset` call when row counts or metric context came from profiling.
@@ -506,6 +507,13 @@ storage access.
 For storage protocol/location mismatch repairs, templated actions also name
 `placeholder_fields` and `reviewed_value_fields` for the reviewed value to fill
 in.
+`suggested_repair_action_groups` lifts those existing nested repair hints into a
+top-level `query_repair_review` lane with the source issue index/code/resource,
+repair hint type, copied context, ordered action templates, and action count.
+Use it for repair discovery and scripting, but keep the review gate: these rows
+are templates, not flat call-ready `suggested_next_actions`. Fill placeholders,
+add required extra arguments such as `rationale`, and review each action's
+condition before calling the named tool.
 When `missing_storage_access` appears, read `issues[].details.repair_hint` for
 reviewed repair templates: record a non-secret storage access and link it to the
 dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing

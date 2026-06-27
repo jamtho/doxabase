@@ -3465,6 +3465,69 @@ def test_describe_query_context_tool_warns_on_complete_s3_template_without_resol
     )
 
 
+def test_describe_query_context_tool_lifts_repair_action_groups(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Snapshots"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#snapshots_https_storage",
+        label="Snapshots HTTPS access",
+        storage_protocol="rc:HTTPSStorage",
+        bucket_name="public",
+        key_prefix="snapshots",
+        path_templates=["dt={date}.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#snapshots_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Snapshots",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["suggested_repair_action_group_count"] == 1
+    repair_group = result["suggested_repair_action_groups"][0]
+    assert repair_group["group_name"] == "query_repair_review"
+    assert repair_group["issue_code"] == "storage_protocol_location_mismatch"
+    assert repair_group["issue_resource"]["iri"] == storage["iri"]
+    assert repair_group["repair_hint_path"] == (
+        f"issues[{repair_group['issue_index']}].details.repair_hint"
+    )
+    assert repair_group["repair_action_type"] == (
+        "repair_storage_protocol_location_mismatch"
+    )
+    assert repair_group["requires_review"] is True
+    assert repair_group["action_count"] == len(repair_group["actions"])
+    action_by_type = {
+        action["action_type"]: action for action in repair_group["actions"]
+    }
+    assert action_by_type["set_reviewed_storage_protocol"][
+        "required_extra_arguments"
+    ] == ["rationale"]
+    assert action_by_type["set_reviewed_storage_protocol"]["placeholder_fields"] == [
+        "object"
+    ]
+    assert action_by_type["set_reviewed_storage_protocol"][
+        "reviewed_value_fields"
+    ] == ["object"]
+    assert action_by_type["remove_conflicting_bucket_name"]["arguments"][
+        "object"
+    ] == "public"
+
+
 def test_describe_query_context_tool_surfaces_root_only_targets(
     tmp_path: Path,
 ) -> None:

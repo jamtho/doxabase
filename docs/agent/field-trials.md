@@ -1703,6 +1703,15 @@ few useful gaps:
   staged-time validation and no safe repair candidate is recognized,
   `draft_staged_revision_rebase()` now reports `validation_repair_needed`
   instead of presenting mechanical restage as the main route.
+- A query workflow gap trial found profile workflows had top-level action
+  lanes while query metadata repairs were complete but nested under
+  `issues[].details.repair_hint.actions[]`. `describe_query_context()` now
+  exposes `suggested_repair_action_groups`, a read-only
+  `query_repair_review` lane that lifts existing repair hints with issue
+  index/code/resource, copied repair context, and ordered action templates. This
+  is intentionally separate from flat `suggested_next_actions`: repair rows may
+  contain placeholders and required rationale, so automation should use the lane
+  for discovery and still review/fill the template before mutating the graph.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

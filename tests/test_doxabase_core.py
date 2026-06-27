@@ -11330,6 +11330,25 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert repair_actions[1]["arguments_template"]["predicate"] == (
         "rc:hasStorageAccess"
     )
+    assert context.suggested_repair_action_group_count == 1
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.group_name == "query_repair_review"
+    assert repair_group.issue_code == "missing_storage_access"
+    assert repair_group.issue_resource is not None
+    assert repair_group.issue_resource.iri == dataset
+    assert repair_group.repair_action_type == "record_or_link_storage_access"
+    assert repair_group.repair_hint_path == (
+        f"issues[{repair_group.issue_index}].details.repair_hint"
+    )
+    assert repair_group.action_count == 2
+    assert [action["tool_name"] for action in repair_group.actions] == [
+        "record_map_storage_access",
+        "stage_map_assertion_change",
+    ]
+    assert repair_group.actions[0]["arguments_template"]["datasets"] == [dataset]
+    assert repair_group.actions[1]["arguments_template"]["predicate"] == (
+        "rc:hasStorageAccess"
+    )
     assert [issue.severity for issue in context.issues[:2]] == ["error", "error"]
     assert {issue.domain for issue in context.issues} == {"query_planning"}
     assert context.query_target_decision.status == "no_candidate"
@@ -11936,9 +11955,37 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
     assert repair_hint["action_type"] == "repair_storage_protocol_location_mismatch"
     assert repair_hint["requires_review"] is True
     assert repair_hint["storage_access"]["storage_access_iri"] == storage.iri
+    assert context.suggested_repair_action_group_count == 1
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.group_name == "query_repair_review"
+    assert repair_group.issue_code == "storage_protocol_location_mismatch"
+    assert repair_group.issue_severity == "warning"
+    assert repair_group.issue_resource is not None
+    assert repair_group.issue_resource.iri == storage.iri
+    assert repair_group.repair_hint_path == (
+        f"issues[{repair_group.issue_index}].details.repair_hint"
+    )
+    assert context.issues[repair_group.issue_index].details is not None
+    assert (
+        context.issues[repair_group.issue_index].details["repair_hint"]
+        == repair_hint
+    )
+    assert repair_group.repair_action_type == (
+        "repair_storage_protocol_location_mismatch"
+    )
+    assert repair_group.requires_review is True
+    assert repair_group.repair_context["storage_access"]["storage_access_iri"] == (
+        storage.iri
+    )
+    assert "actions" not in repair_group.repair_context
+    assert repair_group.action_count == len(repair_hint["actions"])
     action_by_type = {
         action["action_type"]: action for action in repair_hint["actions"]
     }
+    grouped_action_by_type = {
+        action["action_type"]: action for action in repair_group.actions
+    }
+    assert grouped_action_by_type == action_by_type
     assert action_by_type["set_reviewed_storage_protocol"]["arguments_template"] == {
         "subject": storage.iri,
         "predicate": "rc:storageProtocol",
