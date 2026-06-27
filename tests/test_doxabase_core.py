@@ -15278,8 +15278,18 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert {item.iri for item in staged.supporting_patterns} == {
         pattern.pattern_iri
     }
+    assert {item.iri for item in staged.supporting_observations} == set(
+        bundle.handoff_entrypoints.profile_observation_iris
+    )
     assert {item.iri for item in staged.evidence} == {evidence}
     assert project_metric in {item.iri for item in staged.revision_anchors}
+    export_path = tmp_path / "metric-promotion-review.md"
+    db.export_staged_revision(staged.iri, export_path)
+    export_text = export_path.read_text()
+    assert "## Linked Support" in export_text
+    assert pattern.pattern_iri in export_text
+    assert evidence in export_text
+    assert bundle.handoff_entrypoints.profile_observation_iris[0] in export_text
 
 
 def test_draft_profile_map_updates_routes_ambiguous_project_metric_advisory(

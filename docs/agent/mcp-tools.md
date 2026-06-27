@@ -1037,6 +1037,8 @@ routes, and safety notes. Stale single-assertion exports may lack the judgement
 panel but still warn from stored review context. Restaged exports include a
 top metadata `Restage headline` before the apply check; stale original exports
 include a top `Restaged by` line when a refreshed successor already exists.
+Exports include a `Linked Support` section when supporting observations, claims,
+patterns, or evidence are recorded on the staged revision.
 Suggested export actions use revision-derived `/tmp` filenames with a short hash
 to reduce collisions across concurrent runs; callers may override the path. This
 is for human/agent review.

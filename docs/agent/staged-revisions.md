@@ -147,6 +147,10 @@ revision. When the bundle contains restaged revisions, a `Restage Context`
 section appears near the top before the detailed revision bodies. When an
 alternative points to a stale revision whose successor is also in play, an
 `Alternative Context` section names the current successor to compare against.
+Single-revision exports include `Linked Support` when the staged revision has
+supporting observations, claims, patterns, or evidence, so ontology promotions
+and other non-map patches still show their justification chain without requiring
+a separate `describe_staged_revision` call.
 
 A stale export should be read like this:
 

@@ -1064,6 +1064,10 @@ few useful gaps:
   staged assertions. Type-review staging suggestions now include an empty
   `supporting_patterns` slot and a carry-forward note for the returned
   `pattern_iri`.
+- A profile metric-promotion follow-through trial found that single Markdown
+  exports showed support counts and selected patterns but not the rolled-up
+  profile observations or evidence IRIs. Single staged-revision exports now add a
+  generic `Linked Support` section for stored support links.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with

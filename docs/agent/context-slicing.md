@@ -102,6 +102,10 @@ small. Raw RDF is capped by `max_triples`, but structured contexts still return
 their full selected summaries; wide datasets or very broad seed sets emit a
 warning and should usually be narrowed to a column, profile, metric, or pattern
 seed for a smaller handoff.
+Mapped column seeds narrow the route explanation and raw RDF neighborhood, but
+`dataset_contexts` still includes the owning dataset's full selected column
+inventory; use a profile, metric, or pattern seed when the full table inventory
+is not useful to the handoff.
 
 Treat a slice as a conversation brief, not a proof of closure. If an important
 resource is absent, use the routes and raw triples to decide whether the profile

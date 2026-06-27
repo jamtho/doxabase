@@ -23222,6 +23222,9 @@ class DoxaBase:
             lines.extend(["", "## Impact Review", ""])
             for impact in description.impacts:
                 lines.extend(self._staged_revision_impact_markdown(impact))
+        linked_support = self._staged_revision_linked_support_markdown(description)
+        if linked_support:
+            lines.extend(["", "## Linked Support", "", *linked_support])
         if description.alternative_to is not None:
             lines.extend(
                 [
@@ -24350,6 +24353,25 @@ class DoxaBase:
             else str(check.validation_result_count)
         )
         return f"{check.validation_conforms} ({result_count} result(s))"
+
+    def _staged_revision_linked_support_markdown(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> list[str]:
+        sections = [
+            ("Supporting observations", description.supporting_observations),
+            ("Supporting claims", description.supporting_claims),
+            ("Supporting patterns", description.supporting_patterns),
+            ("Evidence", description.evidence),
+        ]
+        lines: list[str] = []
+        for label, resources in sections:
+            if not resources:
+                continue
+            lines.append(f"- {label}:")
+            for resource in resources:
+                lines.append(f"  - {resource.label or resource.iri} (`{resource.iri}`)")
+        return lines
 
     def _staged_revision_impact_markdown(
         self,
