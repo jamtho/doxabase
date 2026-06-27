@@ -479,8 +479,11 @@ a substitute for evidence: supporting observations, claims, patterns, and
 evidence links still carry the justification for the proposal.
 When `link_alternatives=True`, later framings are linked to the first framing by
 default. If the first framing is diagnostic, complementary, or fails validation,
-the runtime warns because it may be a poor comparison anchor; pass
-`alternative_to=...` explicitly or set `link_alternatives=False` for that run.
+the runtime warns when at least one later framing actually default-linked to it.
+Draft-level `alternative_to=...` applies to the first framing; put
+`alternative_to` on individual sibling framings, or set `link_alternatives=False`
+for the run, when ready siblings should not be alternatives to the first
+framing.
 Automation should read `structured_warnings` as well as `warnings`; the
 `first_alternative_anchor_not_ready` warning carries
 `suggested_rerun_arguments={"link_alternatives": False}` so callers do not have
@@ -529,6 +532,8 @@ against the expanded role graph (`target_graph_plus_base_ontology` or
 `target_graph_plus_base_shapes`) because normal reads include immutable seed
 context. Applied revision snapshot rows remain role-local, so compare staged
 preview counts and applied snapshot counts only after checking `count_basis`.
+Grouped exports add a `Count Basis Context` panel when mixed graphs or
+seed-expanded bases make that comparison easy to misread.
 `describe_applied_revision_diff().graph_diffs[]` and resource-lineage
 `applied_diff.graph_diffs[]` report `count_basis="target_graph_only"` for this
 reason.

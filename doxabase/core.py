@@ -4519,11 +4519,20 @@ class DoxaBase:
                     revision_value
                 )
             else:
-                history_hint = (
-                    " Revision exists in history, but it is not linked to "
-                    "this resource through revision anchors, patch payloads, "
-                    "or applied-source patch context."
-                )
+                if include_patch_mentions:
+                    history_hint = (
+                        " Revision exists in history, but it is not linked to "
+                        "this resource through revision anchors, patch "
+                        "payloads, or applied-source patch context"
+                    )
+                else:
+                    history_hint = (
+                        " Revision exists in history, but patch payload "
+                        "scanning was disabled for this lineage request. "
+                        "Rerun with include_patch_mentions=True before "
+                        "concluding that the revision is not linked through "
+                        "patch payloads or applied-source patch context"
+                    )
             raise DoxaBaseError(
                 f"Revision '{revision_iri}' was not found in resource lineage "
                 f"for '{resource_iri}'"
@@ -17725,14 +17734,10 @@ class DoxaBase:
             warnings.append(
                 "Shared proposed context patches are included in every staged framing preview and patch bundle."
             )
-        if len(framing_values) > 1 and link_alternatives:
-            warnings.append(
-                "Multiple framings were staged; later revisions are linked as alternatives to the first."
-            )
-
         staged_revisions: list[StagedGraphRevisionRecord] = []
         framing_records: list[SystematisationFramingRecord] = []
         first_revision_iri: str | None = None
+        first_anchor_default_linked_revision_iris: list[str] = []
         for index, framing in enumerate(framing_values, start=1):
             if not isinstance(framing, Mapping):
                 raise DoxaBaseError("framings entries must be objects")
@@ -17792,12 +17797,14 @@ class DoxaBase:
                 framing_rationale=framing_rationale,
             )
             framing_alternative_to = str(framing.get("alternative_to") or "").strip()
+            default_linked_to_first = False
             if framing_alternative_to:
                 alternative_target = framing_alternative_to
             elif index == 1:
                 alternative_target = alternative_to
             elif link_alternatives:
                 alternative_target = first_revision_iri
+                default_linked_to_first = first_revision_iri is not None
             else:
                 alternative_target = alternative_to
 
@@ -17824,6 +17831,8 @@ class DoxaBase:
             if first_revision_iri is None:
                 first_revision_iri = staged.revision_iri
             staged_revisions.append(staged)
+            if default_linked_to_first:
+                first_anchor_default_linked_revision_iris.append(staged.revision_iri)
             framing_records.append(
                 SystematisationFramingRecord(
                     label=label,
@@ -17845,7 +17854,17 @@ class DoxaBase:
         next_action_queue, suggested_next_actions = (
             self._systematisation_draft_routing(staged_revisions)
         )
-        if len(staged_revisions) > 1 and link_alternatives and first_revision_iri:
+        if first_anchor_default_linked_revision_iris:
+            warnings.append(
+                "Multiple framings were staged; at least one later revision "
+                "was linked as an alternative to the first."
+            )
+        if (
+            len(staged_revisions) > 1
+            and link_alternatives
+            and first_revision_iri
+            and first_anchor_default_linked_revision_iris
+        ):
             first_queue = next(
                 (
                     queue
@@ -17877,7 +17896,8 @@ class DoxaBase:
                         warning_code="first_alternative_anchor_not_ready",
                         message=warning_message,
                         affected_revision_iris=[
-                            revision.revision_iri for revision in staged_revisions
+                            first_revision_iri,
+                            *first_anchor_default_linked_revision_iris,
                         ],
                         suggested_action="rerun_with_explicit_alternative_routing",
                         suggested_rerun_arguments={"link_alternatives": False},
@@ -19462,8 +19482,8 @@ class DoxaBase:
             )
         return (
             "expected_before_triple_count is the staged replay count before "
-            f"patch {patch_sequence_index}, after earlier patches in this "
-            "revision"
+            f"patch {patch_sequence_index} for this patch's target graph, after "
+            "any earlier patches that affected that target graph"
         )
 
     @staticmethod
@@ -24647,6 +24667,12 @@ class DoxaBase:
         if bundle_summary.warnings:
             lines.extend(["", "## Bundle Warnings", ""])
             lines.extend(f"- {warning}" for warning in bundle_summary.warnings)
+        count_basis_context = self._staged_revisions_count_basis_markdown(
+            descriptions
+        )
+        if count_basis_context:
+            lines.extend(["", "## Count Basis Context", ""])
+            lines.extend(count_basis_context)
         snapshot_evidence = self._staged_revisions_snapshot_evidence_markdown(
             descriptions
         )
@@ -24826,12 +24852,120 @@ class DoxaBase:
                     ]
                 )
                 + " |"
+        )
+        return lines
+
+    def _staged_revisions_count_basis_markdown(
+        self,
+        descriptions: list[StagedGraphRevisionDescription],
+    ) -> list[str]:
+        patch_rows: list[
+            tuple[int, StagedGraphRevisionDescription, StagedGraphPatchDescription]
+        ] = []
+        count_bases: set[str] = set()
+        changed_graphs: set[str] = set()
+        for index, description in enumerate(descriptions, start=1):
+            for patch in description.patches:
+                if patch.target_graph is None:
+                    continue
+                patch_rows.append((index, description, patch))
+                changed_graphs.add(patch.target_graph)
+                if patch.count_basis is not None:
+                    count_bases.add(patch.count_basis)
+
+        if not patch_rows:
+            return []
+        if count_bases == {"target_graph_only"} and len(changed_graphs) <= 1:
+            return []
+
+        history_graphs = self._expand_graphs(["history"])
+        snapshot_evidence_by_iri = {
+            description.iri: self._revision_snapshot_evidence_status(
+                description.iri,
+                history_graphs,
+            )
+            for _, description, _ in patch_rows
+        }
+        snapshot_counts_by_iri = {
+            description.iri: {
+                snapshot.graph_role: snapshot.triple_count
+                for snapshot in description.graph_snapshots
+            }
+            for _, description, _ in patch_rows
+        }
+        lines = [
+            (
+                "- Patch preview before/after counts use each row's "
+                "`count_basis`. `ontology` and `shapes` previews include their "
+                "immutable seed graphs; stored revision snapshots are "
+                "role-local graph counts."
+            ),
+            (
+                "- Compare preview counts with snapshot counts only after "
+                "checking the basis and snapshot evidence for that graph."
+            ),
+            "",
+            (
+                "| # | Graph | Patch | Count basis | Staged before | "
+                "Staged after | Snapshot count | Snapshot evidence |"
+            ),
+            "|---:|---|---:|---|---:|---:|---:|---|",
+        ]
+        for index, description, patch in patch_rows:
+            graph_role = patch.target_graph or "unknown"
+            snapshot_count = snapshot_counts_by_iri.get(description.iri, {}).get(
+                graph_role
+            )
+            evidence = snapshot_evidence_by_iri[description.iri]
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(index),
+                        self._markdown_table_cell(graph_role),
+                        str(patch.sequence_index or ""),
+                        self._markdown_table_cell(patch.count_basis or "unknown"),
+                        self._markdown_optional_int_cell(
+                            patch.before_triple_count
+                        ),
+                        self._markdown_optional_int_cell(patch.after_triple_count),
+                        self._markdown_optional_int_cell(snapshot_count),
+                        self._markdown_table_cell(
+                            self._snapshot_evidence_graph_label(
+                                evidence,
+                                graph_role,
+                            )
+                        ),
+                    ]
+                )
+                + " |"
             )
         return lines
 
     @staticmethod
     def _markdown_graph_role_list(values: list[str]) -> str:
         return ", ".join(values) if values else "(none)"
+
+    @staticmethod
+    def _markdown_optional_int_cell(value: int | None) -> str:
+        return "unknown" if value is None else str(value)
+
+    @staticmethod
+    def _snapshot_evidence_graph_label(
+        evidence: RevisionSnapshotEvidenceStatus,
+        graph_role: str,
+    ) -> str:
+        if graph_role in evidence.exact_snapshot_graph_roles:
+            return "complete"
+        if graph_role in evidence.missing_snapshot_row_graph_roles:
+            return "history-only"
+        if graph_role in evidence.orphan_snapshot_row_graph_roles:
+            return "snapshot-only"
+        if graph_role in evidence.rdf_snapshot_graph_roles:
+            return "rdf-history"
+        if graph_role in evidence.stored_snapshot_graph_roles:
+            return "snapshot-row-only"
+        return "not recorded"
 
     @staticmethod
     def _snapshot_evidence_completeness_label(

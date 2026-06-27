@@ -723,6 +723,17 @@ def test_stage_graph_revision_exposes_seed_expanded_count_basis(
     assert "- Count basis: `target_graph_plus_base_ontology`" in export_text
     assert "| Count basis |" in export_text
 
+    grouped_export_path = tmp_path / "grouped-staged-review.md"
+    db.export_staged_revisions([staged.revision_iri], grouped_export_path)
+    grouped_export_text = grouped_export_path.read_text()
+    assert "## Count Basis Context" in grouped_export_text
+    assert "stored revision snapshots are role-local graph counts" in grouped_export_text
+    assert (
+        "| 1 | ontology | 1 | target_graph_plus_base_ontology |"
+        in grouped_export_text
+    )
+    assert "| 1 | map | 2 | target_graph_only |" in grouped_export_text
+
 
 def test_stage_graph_revision_parse_errors_include_parser_detail(
     tmp_path: Path,
@@ -2956,8 +2967,9 @@ def test_mixed_staged_revision_uses_recorded_patch_sequence_for_apply_check(
         "before patch 1"
     )
     assert stale_check.count_drifts[1].expected_before_basis == (
-        "expected_before_triple_count is the staged replay count before patch 2, "
-        "after earlier patches in this revision"
+        "expected_before_triple_count is the staged replay count before patch 2 "
+        "for this patch's target graph, after any earlier patches that affected "
+        "that target graph"
     )
 
 
@@ -7413,6 +7425,40 @@ def test_list_resource_revisions_recovers_imported_applied_source_anchors(
         source_iri: ["revision_anchor"],
         applied_iri: ["applied_source_revision_anchor"],
     }
+    patch_only = db.stage_graph_revision(
+        summary="Unanchored Orders patch",
+        rationale="Patch payload mentions Orders without anchoring it.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:hasKnownCaveat ex:OrdersPatchOnlyCaveat .
+                """,
+            }
+        ],
+    )
+    with_patch_mentions = db.describe_resource_revision_lineage(
+        orders,
+        patch_only.revision_iri,
+    )
+    assert (
+        with_patch_mentions.selected_revision.revision.iri
+        == patch_only.revision_iri
+    )
+    assert with_patch_mentions.selected_revision.match_types == ["patch_subject"]
+    with pytest.raises(DoxaBaseError) as disabled_scan_excinfo:
+        db.describe_resource_revision_lineage(
+            orders,
+            patch_only.revision_iri,
+            include_patch_mentions=False,
+        )
+    disabled_scan_message = str(disabled_scan_excinfo.value)
+    assert "patch payload scanning was disabled" in disabled_scan_message
+    assert "include_patch_mentions=True" in disabled_scan_message
+    assert "Revision exists in history" in disabled_scan_message
 
 
 def test_list_resource_revisions_marks_unreadable_patch_mentions_incomplete(

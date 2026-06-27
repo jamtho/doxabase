@@ -1988,6 +1988,104 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
     assert "Complementary complete thing" in exported
 
 
+def test_stage_systematisation_tool_does_not_warn_for_explicit_sibling_alternatives(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    explicit_target = db.stage_graph_revision(
+        summary="Existing comparison anchor",
+        rationale="A staged source revision that explicit alternatives can target.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+
+                    ex:PreferredComparisonAnchor ex:note "Anchor revision." .
+                """,
+            }
+        ],
+    ).revision_iri
+    shared_shape = """
+    @prefix ex: <https://example.test/project#> .
+    @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+    ex:ThingShape a sh:NodeShape ;
+        sh:targetClass ex:Thing ;
+        sh:property [
+            sh:path ex:required ;
+            sh:minCount 1
+        ] .
+    """
+    incomplete_map = """
+    @prefix ex: <https://example.test/project#> .
+
+    ex:Thing1 a ex:Thing .
+    """
+    complete_map = """
+    @prefix ex: <https://example.test/project#> .
+
+    ex:Thing1 a ex:Thing ;
+        ex:required ex:Value .
+    """
+    complementary_map = """
+    @prefix ex: <https://example.test/project#> .
+
+    ex:Thing1 a ex:Thing ;
+        ex:required ex:OtherValue .
+    """
+
+    result = stage_systematisation_tool(
+        db,
+        summary="Compare explicitly routed thing framings",
+        intent=(
+            "Keep a diagnostic invalid framing beside valid framings that use "
+            "their own comparison anchor."
+        ),
+        shared_additions=[{"graph": "shapes", "content": shared_shape}],
+        framings=[
+            {
+                "label": "Diagnostic incomplete thing",
+                "graph": "map",
+                "content": incomplete_map,
+            },
+            {
+                "label": "Complete thing",
+                "graph": "map",
+                "content": complete_map,
+                "alternative_to": explicit_target,
+            },
+            {
+                "label": "Complementary complete thing",
+                "graph": "map",
+                "content": complementary_map,
+                "alternative_to": explicit_target,
+            },
+        ],
+    )
+
+    revision_iris = [
+        revision["revision_iri"] for revision in result["staged_revisions"]
+    ]
+    assert result["next_action_queue"] == {
+        "repair_or_replace": [revision_iris[0]],
+        "apply_after_review": [revision_iris[1], revision_iris[2]],
+    }
+    assert result["structured_warnings"] == []
+    assert not any(
+        "First framing 'Diagnostic incomplete thing'" in warning
+        for warning in result["warnings"]
+    )
+    assert not any(
+        "linked as an alternative to the first" in warning
+        or "linked as alternatives to the first" in warning
+        for warning in result["warnings"]
+    )
+    assert result["staged_revisions"][0]["alternative_to"] is None
+    assert result["staged_revisions"][1]["alternative_to"] == explicit_target
+    assert result["staged_revisions"][2]["alternative_to"] == explicit_target
+
+
 def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     target = "https://example.test/project#messages__body_top"
@@ -2338,6 +2436,84 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
         issue["code"] == "layout_needs_verification" for issue in result["issues"]
     )
     assert result["caveats"]
+
+
+def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+    dataset = "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    shared_evidence = "https://example.test/project#AISProfileRunEvidence"
+
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=dataset,
+        dataset_summary=(
+            "AIS daily broadcasts were profiled before drafting a query plan."
+        ),
+        evidence_summary="Synthetic profile run for query-planning route coverage.",
+        evidence_sources=["test://ais-query-profile-routing"],
+        shared_evidence_iri=shared_evidence,
+        sample_size=42,
+        sample_scope="Synthetic bounded fixture profile.",
+        sample_method="Focused query-planning routing trial.",
+        row_count=42,
+        update_map_snapshot=True,
+        map_label="AIS Daily Broadcast Positions",
+        is_table=True,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": (
+                    "https://richcanopy.org/example/manifest/ais#bc_date"
+                ),
+                "column_name": "date",
+                "summary": "AIS broadcast date was profiled in the same run.",
+                "row_count": 42,
+            }
+        ],
+    )
+
+    context = describe_query_context_tool(db, iri=dataset)
+
+    assert context["row_count_snapshot"] == 42
+    assert context["query_target_decision"]["candidate_index"] == 0
+    assert len(context["query_target_candidates"]) == 1
+    assert context["profile_summary"]["profile_run_candidates"][0][
+        "evidence_iri"
+    ] == shared_evidence
+    assert context["profile_summary"]["profile_run_candidates"][0][
+        "returned_profile_count"
+    ] == 2
+    assert [
+        action["tool_name"] for action in context["suggested_next_actions"]
+    ] == [
+        "describe_profile_run",
+        "draft_query_plan",
+    ]
+
+    profile_action = context["suggested_next_actions"][0]
+    assert profile_action["action_label"] == "Inspect profile run evidence"
+    assert profile_action["arguments"] == {
+        "dataset_iri": dataset,
+        "evidence_iri": shared_evidence,
+    }
+    profile_run = describe_profile_run_tool(db, **profile_action["arguments"])
+    assert profile_run["returned_profile_count"] == 2
+    assert profile_run["returned_dataset_profile_count"] == 1
+    assert profile_run["returned_mapped_column_profile_count"] == 1
+
+    draft_action = context["suggested_next_actions"][1]
+    assert draft_action["action_label"] == "Draft review-gated query plan"
+    assert draft_action["arguments"] == {"iri": dataset, "candidate_index": 0}
+    draft = draft_query_plan_tool(db, **draft_action["arguments"])
+    assert draft["handoff_kind"] == "metadata_review_required"
+    assert draft["source_context"]["selection_mode"] == "candidate_index"
+    assert draft["source_context"]["selected_candidate_index"] == 0
+    assert draft["scan"]["uri_template"] == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
 
 
 def test_draft_query_plan_tool_accepts_explicit_storage_selection(

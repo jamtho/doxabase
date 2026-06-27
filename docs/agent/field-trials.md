@@ -1326,6 +1326,17 @@ few useful gaps:
   of manufacturing a no-op. The direct restage helper now rejects the same route
   for future calls. This is deliberately not `already_applied`; only an applied
   revision event records durable review lineage.
+- Post-rebuild workflow trials found four handoff polish points. Query contexts
+  with both profile-run evidence and a real query target now have regression
+  coverage for the intended action order: inspect `describe_profile_run` before
+  drafting the selected query plan. Systematisation drafts now warn about an
+  invalid first alternative anchor only when a later framing actually
+  default-linked to it; per-framing `alternative_to` is the route for ready
+  siblings that should point elsewhere. Resource lineage misses now tell callers
+  when `include_patch_mentions=False` prevented patch-payload discovery. Grouped
+  staged-revision Markdown now includes `Count Basis Context` for mixed or
+  seed-expanded patch bases so reviewers see that ontology/shape preview counts
+  include seed graphs while revision snapshots remain role-local.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

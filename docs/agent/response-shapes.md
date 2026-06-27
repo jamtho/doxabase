@@ -1750,7 +1750,9 @@ warning.suggested_rerun_arguments
 
 For that invalid-anchor case, `warning.warning_code` is
 `first_alternative_anchor_not_ready` and
-`warning.suggested_rerun_arguments == {"link_alternatives": False}`. Use the
+`warning.suggested_rerun_arguments == {"link_alternatives": False}`. The warning
+only fires when a sibling actually default-linked to the first framing; use
+per-framing `alternative_to` when ready siblings should point elsewhere. Use the
 structured fields for automation; keep `warnings` for readable handoffs.
 
 Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:

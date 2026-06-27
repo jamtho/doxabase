@@ -792,10 +792,11 @@ The returned `SystematisationDraftRecord` carries
 `suggested_next_actions` / `suggested_next_calls`. The queue uses the same
 apply-check grouping as staged-revision exports, so callers can separate
 `repair_or_replace` framings from `apply_after_review` framings immediately
-after staging. When later framings were linked to a first framing that did not
-route to `apply_after_review`, `structured_warnings` includes
+after staging. When later framings actually default-linked to a first framing
+that did not route to `apply_after_review`, `structured_warnings` includes
 `warning_code="first_alternative_anchor_not_ready"` and
-`suggested_rerun_arguments={"link_alternatives": False}`.
+`suggested_rerun_arguments={"link_alternatives": False}`. Per-framing
+`alternative_to` values reroute siblings without that warning.
 
 `stage_pattern_promotion()` stages one or more caller-authored RDF framings
 supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;

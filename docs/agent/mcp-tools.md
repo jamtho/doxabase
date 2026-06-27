@@ -833,10 +833,11 @@ decide the ontology design for the agent. The result has
 `result_kind="systematisation_draft"`, `warnings`, `structured_warnings`,
 `next_action_queue`, `suggested_next_actions`, and `suggested_next_calls`, so
 automation can route validation-failed framings to repair and ready framings to
-review/apply checks before writing a Markdown bundle. If later framings were
-linked to a first framing that did not route to `apply_after_review`,
+review/apply checks before writing a Markdown bundle. If later framings actually
+default-linked to a first framing that did not route to `apply_after_review`,
 `structured_warnings` includes `first_alternative_anchor_not_ready` with
-`suggested_rerun_arguments={"link_alternatives": False}`.
+`suggested_rerun_arguments={"link_alternatives": False}`. Per-framing
+`alternative_to` values reroute siblings without that warning.
 
 `doxabase.stage_pattern_promotion`
 
