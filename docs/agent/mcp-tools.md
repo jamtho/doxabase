@@ -357,8 +357,11 @@ for caveats that matter after a query can be planned, planning notes, columns,
 path templates, derived `query_target_decision` and `query_target_candidates`,
 physical layouts, storage access descriptions, partition schemes,
 dataset/layout verification status and note, caveats, and structured
-`suggested_next_actions` for drafting the selected route. It also returns
-`ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
+`suggested_next_actions` for drafting the selected route. It returns
+`profile_summary` beside `row_count_snapshot`, so a planner can follow profile
+evidence IRIs and `profile_run_candidates` without a separate
+`describe_dataset` call when row counts or metric context came from profiling.
+It also returns `ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
 `direct_clean_candidate_indexes`, and
 `unselected_direct_clean_candidate_indexes` so callers can see peer strict-ready
 routes and peer direct-clean routes before drafting. Use it before

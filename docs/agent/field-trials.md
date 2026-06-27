@@ -1157,6 +1157,10 @@ few useful gaps:
   updates compose cleanly. It also found that undefined project metric IRIs can
   appear as `referenced_only` in context slices; use
   `draft_profile_map_updates.metric_advisories` for vocabulary status.
+- A query-planning/profile handoff trial found `describe_query_context` used
+  profile-derived row-count snapshots but did not expose the evidence/run
+  entrypoint behind them. Query contexts now carry `profile_summary` beside
+  `row_count_snapshot`.
 - A multi-patch staged-revision trial found count drift rows for the same graph
   can show different expected counts because each patch records its own staged
   replay point. Count-drift rows now expose `patch_sequence_index` and

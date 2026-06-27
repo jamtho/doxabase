@@ -1304,6 +1304,7 @@ class QueryPlanningContext:
     analysis_warnings: list[QueryPlanningIssue]
     planning_notes: list[str]
     row_count_snapshot: int | None
+    profile_summary: ProfileSummary
     layout_verification_status: ResourceSummary | None
     layout_verification_note: str | None
     columns: list[ColumnDescription]
@@ -8827,6 +8828,7 @@ class DoxaBase:
                 ),
             ],
             row_count_snapshot=dataset.row_count_snapshot,
+            profile_summary=dataset.profile_summary,
             layout_verification_status=dataset.layout_verification_status,
             layout_verification_note=dataset.layout_verification_note,
             columns=dataset.columns,

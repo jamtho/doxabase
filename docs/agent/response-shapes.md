@@ -1217,6 +1217,7 @@ query.issues
 query.analysis_warnings
 query.planning_notes
 query.row_count_snapshot
+query.profile_summary
 query.layout_verification_status
 query.layout_verification_note
 query.columns
@@ -1235,6 +1236,11 @@ query.upstream_caveats
 query.suggested_next_actions
 query.suggested_next_calls
 ```
+
+`query.profile_summary` has the same shape as `dataset.profile_summary`.
+Use it with `row_count_snapshot` when query planning depends on profiler output:
+it exposes the evidence IRIs and `profile_run_candidates` behind the observed
+row-count/profile handoff without requiring a separate `describe_dataset` call.
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
 `insufficient_metadata`, or `blocked_by_contradiction`. It is about physical

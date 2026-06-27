@@ -271,7 +271,8 @@ physical metadata, `analysis_warnings` for caveats that matter after a query
 can be planned, planning notes, columns, path templates, physical layouts,
 derived `query_target_decision` and `query_target_candidates`, dataset/layout
 verification status and note, storage access descriptions, partition schemes,
-direct/upstream caveats, `ready_candidate_indexes`,
+direct/upstream caveats, `row_count_snapshot`, `profile_summary`,
+`ready_candidate_indexes`,
 `unselected_ready_candidate_indexes`, `direct_clean_candidate_indexes`,
 `unselected_direct_clean_candidate_indexes`, and structured `suggested_next_actions`
 for drafting the selected route. It does not generate SQL or resolve credentials;
@@ -284,6 +285,9 @@ absent. `selected_candidate_direct_clean` is true when the selected candidate
 has no direct blocker of its own. When such a selected candidate is blocked by
 sibling metadata, the suggested `draft_query_plan` action includes the explicit
 `candidate_index` and `allow_context_blocked_candidate=True`.
+When `row_count_snapshot` or profile metrics matter to the query handoff,
+`profile_summary.profile_run_candidates` gives the evidence IRIs to inspect with
+`describe_profile_run()` without first switching to `describe_dataset()`.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
 when candidate order selected a different route than intended.

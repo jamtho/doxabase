@@ -19,15 +19,19 @@ Start with `describe_query_context(dataset_iri)`:
    case read `direct_clean_candidate_indexes` and
    `unselected_direct_clean_candidate_indexes` before choosing an explicit
    candidate with `allow_context_blocked_candidate=True`.
-3. `query_target_candidates` explain the physical path, relation, template
+3. Read `row_count_snapshot` with `profile_summary` when profiler evidence
+   informs planning. `profile_summary.profile_run_candidates` gives the
+   evidence IRI(s) to inspect with `describe_profile_run` before treating a
+   profile-derived count as fresh enough for a query handoff.
+4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
-4. Always compare `readiness` and `issues` with the selected candidate. Broader
+5. Always compare `readiness` and `issues` with the selected candidate. Broader
    context blockers, including sibling storage facts, can make the whole
    context review-required even when `query_target_decision.status == "ready"`
    for a direct-clean selected candidate.
    `query_target_decision.selected_candidate_direct_clean` is the compact
    boolean for "the selected candidate itself has no direct blocker."
-5. Use `suggested_next_actions` when scripting the next step. In the
+6. Use `suggested_next_actions` when scripting the next step. In the
    context-blocked direct-clean case it gives a `draft_query_plan` call with the
    explicit `candidate_index` and `allow_context_blocked_candidate=True`.
 

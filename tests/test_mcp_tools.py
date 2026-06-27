@@ -3507,6 +3507,15 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
             "shared_by_all_returned_profiles": True,
         }
     ]
+    query_context = describe_query_context_tool(db, table)
+    assert query_context["row_count_snapshot"] == 1000
+    assert query_context["profile_summary"]["evidence_iris"] == [shared_evidence]
+    assert query_context["profile_summary"]["profile_run_candidates"] == (
+        dataset["profile_summary"]["profile_run_candidates"]
+    )
+    assert "Profile lore is observed evidence" in (
+        query_context["profile_summary"]["handoff_note"]
+    )
     profile_run = describe_profile_run_tool(
         db,
         dataset_iri=table,
