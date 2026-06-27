@@ -1278,6 +1278,7 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert result["resource"]["iri"] == orders
     assert "items" not in result
     assert "total_count" not in result
+    assert result["current_staged_work_only"] is False
     assert result["patch_mention_scan"] == {
         "status": "complete",
         "unreadable_patch_count": 0,
@@ -1305,6 +1306,15 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert by_iri[applied["applied_revision_iri"]][
         "applied_source_patch_mentions_incomplete"
     ] is False
+    live_only = list_resource_revisions_tool(
+        db,
+        resource_iri=orders,
+        current_staged_work_only=True,
+        include_apply_checks=False,
+    )
+    assert live_only["current_staged_work_only"] is True
+    assert live_only["include_apply_checks"] is True
+    assert live_only["count"] == 0
     lineage = describe_resource_revision_lineage_tool(
         db,
         resource_iri=orders,

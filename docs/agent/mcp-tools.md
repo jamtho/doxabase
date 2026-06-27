@@ -190,8 +190,11 @@ the normal revision list row under `revision` and adds
 `applied_source_patch_mentions`. `patch_mention_scan` and per-row incomplete
 flags report missing or unparseable patch payloads; when
 `omitted_match_risk=true`, unanchored patch-only matches may be absent from the
-filtered list. Top-level unreadable revision counts are distinct pre-pagination
-source/staged revision counts, not returned-row counts. Patch mentions are
+filtered list. Pass `current_staged_work_only=True` for the resource-scoped live
+mutation-review queue; keep `include_patch_mentions=True` when patch-only
+current work should remain discoverable. Top-level unreadable revision counts
+are distinct pre-pagination source/staged revision counts, not returned-row
+counts. Patch mentions are
 compact flags, not full patch content: patch IRI, target graph, operation,
 role, sequence, `matched_term_roles`, `matched_triples`, and total
 `triple_count`. Use

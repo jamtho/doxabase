@@ -1057,6 +1057,7 @@ class ResourceRevisionList:
     count: int
     limit: int
     offset: int
+    current_staged_work_only: bool
     include_patch_mentions: bool
     patch_mention_scan: ResourceRevisionPatchMentionScanSummary
     include_apply_checks: bool
@@ -4703,6 +4704,7 @@ class DoxaBase:
         include_patch_mentions: bool = True,
         include_apply_checks: bool = True,
         drift_detail: TypingLiteral["summary", "exact"] = "summary",
+        current_staged_work_only: bool = False,
         limit: int = 50,
         offset: int = 0,
     ) -> ResourceRevisionList:
@@ -4710,6 +4712,7 @@ class DoxaBase:
             raise DoxaBaseError("drift_detail must be 'summary' or 'exact'")
         self._ensure_non_negative("limit", limit)
         self._ensure_non_negative("offset", offset)
+        include_apply_checks = include_apply_checks or current_staged_work_only
         resource_value = self._required_iri("resource_iri", resource_iri)
         data_graphs = self._expand_graphs([graph] if graph else None)
         lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
@@ -4718,6 +4721,7 @@ class DoxaBase:
             graph=graph,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
+            current_staged_work_only=current_staged_work_only,
             limit=1_000_000,
         )
         matched: list[ResourceRevisionListItem] = []
@@ -4867,6 +4871,7 @@ class DoxaBase:
             count=len(matched),
             limit=limit,
             offset=offset,
+            current_staged_work_only=current_staged_work_only,
             include_patch_mentions=include_patch_mentions,
             patch_mention_scan=ResourceRevisionPatchMentionScanSummary(
                 status=(

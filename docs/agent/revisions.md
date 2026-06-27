@@ -453,6 +453,10 @@ patches whose parsed RDF payload mentions the resource as subject, predicate, or
 object, and applied events whose staged source matched. Patch mention summaries
 are role-aware flags with matched triple counts; call
 `describe_staged_revision()` for full patch content.
+Use `current_staged_work_only=True` when you want only this resource's live
+staged mutation-review queue before pagination. Keep patch mention scanning on
+unless you intentionally want anchor-only matching; disabling it can hide
+unanchored patch-only current work.
 
 For a stale-restage-apply handoff between capsules:
 
@@ -488,6 +492,8 @@ changed this resource, why, and what review action remains?":
 
 1. Call `list_resource_revisions(resource_iri, include_patch_mentions=True,
    include_apply_checks=True, drift_detail="summary")`.
+   Add `current_staged_work_only=True` when the first question is only "what
+   live work still touches this resource?"
 2. Inspect `match_types`, patch mention flags, `revision.application_status`,
    `revision.stale_resolution_state`, `revision.next_action`, and the top-level
    `next_action_queue` before opening large payloads.

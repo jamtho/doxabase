@@ -207,6 +207,7 @@ def list_resource_revisions_tool(
     include_patch_mentions: bool = True,
     include_apply_checks: bool = True,
     drift_detail: str = "summary",
+    current_staged_work_only: bool = False,
     limit: int = 50,
     offset: int = 0,
 ) -> dict[str, Any]:
@@ -217,6 +218,7 @@ def list_resource_revisions_tool(
             include_patch_mentions=include_patch_mentions,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,  # type: ignore[arg-type]
+            current_staged_work_only=current_staged_work_only,
             limit=limit,
             offset=offset,
         )

@@ -1645,6 +1645,11 @@ few useful gaps:
   RDF-only then snapshot JSON handoff imports. The remaining ergonomic friction
   is payload size: resource lists omit patch `content`, but rich per-row routing
   can still be large; use queue items first when only live work matters.
+- A resource-list payload trial showed `include_patch_mentions=False` can hide
+  unanchored patch-only live work, so it is not a safe way to shrink a
+  resource-first mutation queue. `list_resource_revisions()` now has
+  `current_staged_work_only=True` to mirror the graph-list live-work filter
+  while preserving patch mention discovery before pagination.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

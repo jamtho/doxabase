@@ -973,6 +973,11 @@ matched the resource. It filters before pagination and wraps each normal
 `applied_source_patch_mentions`. Patch mentions are compact role-aware flags,
 not patch content; call `describe_staged_revision()` for the full payload.
 The top-level collection is `revisions` and the total is `count`.
+Use `current_staged_work_only=True` for the resource-scoped live
+mutation-review queue. It filters before pagination and computes apply checks
+automatically, like the graph-level filter. Do not use
+`include_patch_mentions=False` as a live-work shortcut when unanchored
+patch-only work may exist; it can hide the very rows you are looking for.
 Rows also expose `patch_mentions_incomplete` /
 `applied_source_patch_mentions_incomplete` plus unreadable counts when stored
 patch payloads were missing or unparseable during resource matching. The

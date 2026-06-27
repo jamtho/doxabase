@@ -8415,6 +8415,84 @@ def test_list_resource_revisions_recovers_imported_applied_source_anchors(
     assert "Revision exists in history" in disabled_scan_message
 
 
+def test_list_resource_revisions_filters_current_staged_work_before_pagination(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    stale = db.stage_graph_revision(
+        summary="Add Orders stewardship note",
+        rationale="Patch-only source exercises resource live-work filtering.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Orders rdfs:comment "Owned by the operations team." .
+                """,
+            }
+        ],
+        created_at="2026-06-01T10:00:00Z",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#DriftMaker",
+        label="Drift maker",
+    )
+    restaged = db.restage_staged_revision(
+        stale.revision_iri,
+        created_at="2026-06-01T10:01:00Z",
+    )
+
+    full_listing = db.list_resource_revisions(
+        orders,
+        include_apply_checks=True,
+        limit=1,
+        offset=0,
+    )
+    assert full_listing.count == 2
+    assert len(full_listing.revisions) == 1
+    assert full_listing.revisions[0].revision.iri == restaged.revision_iri
+
+    live_listing = db.list_resource_revisions(
+        orders,
+        include_apply_checks=False,
+        current_staged_work_only=True,
+        limit=1,
+        offset=0,
+    )
+
+    assert live_listing.current_staged_work_only is True
+    assert live_listing.include_apply_checks is True
+    assert live_listing.count == 1
+    assert [item.revision.iri for item in live_listing.revisions] == [
+        restaged.revision_iri
+    ]
+    assert live_listing.revisions[0].revision.is_current_staged_work is True
+    assert live_listing.revisions[0].revision.application_status == "ready"
+    assert live_listing.next_action_queue == {
+        "apply_after_review": [restaged.revision_iri]
+    }
+
+    stale_lineage = db.describe_resource_revision_lineage(
+        orders,
+        stale.revision_iri,
+    )
+    assert stale_lineage.current_revision_iri == restaged.revision_iri
+    assert stale_lineage.latest_revision_iri == restaged.revision_iri
+    assert stale_lineage.latest_role == "current_staged_revision"
+
+    hidden_patch_only_live_work = db.list_resource_revisions(
+        orders,
+        include_patch_mentions=False,
+        current_staged_work_only=True,
+    )
+    assert hidden_patch_only_live_work.count == 0
+    assert hidden_patch_only_live_work.patch_mention_scan.status == "not_requested"
+
+
 def test_list_resource_revisions_marks_unreadable_patch_mentions_incomplete(
     tmp_path: Path,
 ) -> None:

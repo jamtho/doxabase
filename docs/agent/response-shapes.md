@@ -2541,6 +2541,7 @@ resource_revisions.revisions
 resource_revisions.count
 resource_revisions.limit
 resource_revisions.offset
+resource_revisions.current_staged_work_only
 resource_revisions.include_patch_mentions
 resource_revisions.patch_mention_scan
 resource_revisions.include_apply_checks
@@ -2551,6 +2552,10 @@ resource_revisions.next_action_queue
 The row collection is `revisions`, not `items`, and the top-level total is
 `count`, not `total_count`. Each row then wraps the normal revision-list row
 under `revision`.
+Use `current_staged_work_only=True` when the resource route should return only
+live staged work before pagination. The filter auto-enables apply checks and
+still depends on `include_patch_mentions=True` to discover unanchored patch-only
+work.
 
 Each `resource_revisions.revisions[]` item wraps a normal
 `GraphRevisionListItem` under `revision` and adds resource-match context:
