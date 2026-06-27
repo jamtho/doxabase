@@ -2783,6 +2783,26 @@ def test_mixed_staged_revision_uses_recorded_patch_sequence_for_apply_check(
     assert check.conflicts == []
     assert [patch.current_triple_count for patch in check.patch_checks] == [3, 4]
 
+    db.record_map_dataset(
+        "https://example.test/project#OtherDataset",
+        label="Other dataset",
+    )
+    stale_check = db.check_staged_revision_apply(staged.revision_iri)
+
+    assert stale_check.blocking_reasons == ["target_count_drift"]
+    assert [drift.patch_sequence_index for drift in stale_check.count_drifts] == [
+        1,
+        2,
+    ]
+    assert stale_check.count_drifts[0].expected_before_basis == (
+        "expected_before_triple_count is the original staged graph snapshot "
+        "before patch 1"
+    )
+    assert stale_check.count_drifts[1].expected_before_basis == (
+        "expected_before_triple_count is the staged replay count before patch 2, "
+        "after earlier patches in this revision"
+    )
+
 
 def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -2820,7 +2840,12 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert len(check.conflicts) == 1
     assert len(check.count_drifts) == 1
     assert check.count_drifts[0].target_graph == "map"
+    assert check.count_drifts[0].patch_sequence_index == 1
     assert check.count_drifts[0].expected_before_triple_count == 0
+    assert check.count_drifts[0].expected_before_basis == (
+        "expected_before_triple_count is the original staged graph snapshot "
+        "before patch 1"
+    )
     assert check.count_drifts[0].current_triple_count == db.triple_count("map")
     assert check.count_drifts[0].delta == db.triple_count("map")
     assert check.count_drifts[0].exact_changed_triples_available is True
@@ -2887,7 +2912,11 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert "- Blocking reasons: target_count_drift" in export_text
     assert "- Validation skipped: conflicts_present" in export_text
     assert "### Count Drift" in export_text
-    assert "| Patch | Graph | Expected before | Current | Delta |" in export_text
+    assert (
+        "| Patch | Sequence | Graph | Expected before | Expected basis | "
+        "Current | Delta |"
+    ) in export_text
+    assert "original staged graph snapshot before patch 1" in export_text
     assert "### Snapshot Drift" in export_text
     assert "#### Snapshot Drift Triples: map" in export_text
     assert "Added since snapshot" in export_text

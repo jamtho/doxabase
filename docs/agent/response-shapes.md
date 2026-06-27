@@ -2674,9 +2674,11 @@ current preview, not raw patch payload sizes. Each `patch_checks[]` row carries
 `effective_triples_to_add`, `effective_triples_to_remove`,
 `already_present_triples`, and `already_absent_triples` so agents can see
 partial or no-op replay before applying.
-`count_drifts` gives patch-level count drift context: target graph, expected
-before count, current count, delta, and whether exact changed triples are
-available. It also reports `patch_operation`, `patch_triples_checked`,
+`count_drifts` gives patch-level count drift context: target graph, patch
+sequence, expected-before count, current count, delta, and whether exact changed
+triples are available. `expected_before_basis` explains whether the expected
+count is the original staged graph snapshot before patch 1 or the staged replay
+point before a later patch. It also reports `patch_operation`, `patch_triples_checked`,
 `patch_triples_currently_present`, `patch_triples_currently_absent`, and
 `patch_triple_status` (`all_patch_triples_absent`,
 `all_patch_triples_present`, or `mixed_patch_triples_present`). In the current
@@ -2687,8 +2689,10 @@ Each `count_drifts[]` row uses these exact field names:
 
 ```python
 drift.patch_iri
+drift.patch_sequence_index
 drift.target_graph
 drift.expected_before_triple_count
+drift.expected_before_basis
 drift.current_triple_count
 drift.delta
 drift.exact_changed_triples_available

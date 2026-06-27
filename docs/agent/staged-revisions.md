@@ -576,8 +576,11 @@ stored target graph that is not exactly one concrete mutable graph role.
 Ordinary restaging is for count/digest drift and may not repair these cases, so
 stage a repaired or alternative candidate when the graph intent is still useful.
 `count_drifts` gives expected/current graph counts and deltas for count drift.
-It can also say whether the staged patch triples themselves are currently
-present, absent, or mixed in the target graph. When stored snapshot rows are
+Read `patch_sequence_index` and `expected_before_basis` when multiple patches
+touch the same graph: later patches use the staged replay count after earlier
+patches, not the original graph snapshot. It can also say whether the staged
+patch triples themselves are currently present, absent, or mixed in the target
+graph. When stored snapshot rows are
 available, `snapshot_drifts` carries the exact target graph triples added and
 removed since staging, plus a conservative `drift_relevance` hint and any
 patch-subject, patch-predicate, patch-object, or revision-anchor overlaps.

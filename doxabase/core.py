@@ -318,8 +318,10 @@ class StagedPatchApplyCheck:
 @dataclass(frozen=True)
 class StagedGraphCountDrift:
     patch_iri: str
+    patch_sequence_index: int | None
     target_graph: str
     expected_before_triple_count: int
+    expected_before_basis: str
     current_triple_count: int
     delta: int
     exact_changed_triples_available: bool
@@ -17348,9 +17350,11 @@ class DoxaBase:
             for drift in check.count_drifts:
                 lines.append(
                     "- "
-                    f"{drift.target_graph}: expected "
+                    f"{drift.target_graph} patch "
+                    f"{drift.patch_sequence_index or 'unknown'}: expected "
                     f"{drift.expected_before_triple_count}, current "
                     f"{drift.current_triple_count}, delta {drift.delta}; "
+                    f"{drift.expected_before_basis}; "
                     f"patch triples {drift.patch_triple_status or 'unknown'}."
                 )
         if check.snapshot_drifts:
@@ -18382,8 +18386,14 @@ class DoxaBase:
                     count_drifts.append(
                         StagedGraphCountDrift(
                             patch_iri=patch.iri,
+                            patch_sequence_index=patch.sequence_index,
                             target_graph=target_graph,
                             expected_before_triple_count=patch.before_triple_count,
+                            expected_before_basis=(
+                                self._count_drift_expected_before_basis(
+                                    patch.sequence_index
+                                )
+                            ),
                             current_triple_count=current_count,
                             delta=current_count - patch.before_triple_count,
                             exact_changed_triples_available=exact_graph_diff_available,
@@ -19145,6 +19155,26 @@ class DoxaBase:
         if patch_triples_present == patch_triples_checked:
             return "all_patch_triples_present"
         return "mixed_patch_triples_present"
+
+    @staticmethod
+    def _count_drift_expected_before_basis(
+        patch_sequence_index: int | None,
+    ) -> str:
+        if patch_sequence_index is None:
+            return (
+                "expected_before_triple_count is the count recorded for this "
+                "patch's staged replay point"
+            )
+        if patch_sequence_index <= 1:
+            return (
+                "expected_before_triple_count is the original staged graph "
+                "snapshot before patch 1"
+            )
+        return (
+            "expected_before_triple_count is the staged replay count before "
+            f"patch {patch_sequence_index}, after earlier patches in this "
+            "revision"
+        )
 
     @staticmethod
     def _patch_checks_have_no_effective_delta(
@@ -23648,10 +23678,11 @@ class DoxaBase:
                     "### Count Drift",
                     "",
                     (
-                        "| Patch | Graph | Expected before | Current | Delta | "
-                        "Patch triples | Status | Note |"
+                        "| Patch | Sequence | Graph | Expected before | "
+                        "Expected basis | Current | Delta | Patch triples | "
+                        "Status | Note |"
                     ),
-                    "|---|---|---:|---:|---:|---|---|---|",
+                    "|---|---:|---|---:|---|---:|---:|---|---|---|",
                 ]
             )
             for drift in check.count_drifts:
@@ -23672,8 +23703,16 @@ class DoxaBase:
                     + " | ".join(
                         [
                             self._markdown_table_cell(drift.patch_iri),
+                            (
+                                str(drift.patch_sequence_index)
+                                if drift.patch_sequence_index is not None
+                                else "unknown"
+                            ),
                             self._markdown_table_cell(drift.target_graph),
                             str(drift.expected_before_triple_count),
+                            self._markdown_table_cell(
+                                drift.expected_before_basis
+                            ),
                             str(drift.current_triple_count),
                             str(drift.delta),
                             self._markdown_table_cell(patch_triples),

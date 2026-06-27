@@ -880,8 +880,10 @@ successor and uses decision `inspect_current_successor`. When validation did not
 `validation_skipped_reason` explains why. `count_drifts` records
 expected/current graph counts and deltas for count conflicts, plus whether the
 staged patch triples themselves are currently present, absent, or mixed in the
-target graph. `patch_checks` records effective add/remove counts and
-already-present/absent payload triples for partial or no-op replay.
+target graph. `patch_sequence_index` and `expected_before_basis` explain
+sequence-based counts in multi-patch revisions. `patch_checks` records
+effective add/remove counts and already-present/absent payload triples for
+partial or no-op replay.
 When stale count/digest drift remains a `conflict` but every patch already has
 zero effective add/remove delta, compact `next_action` routes to
 `inspect_no_effective_change` in the `informational` queue and mutation

@@ -1125,6 +1125,10 @@ few useful gaps:
   caveats, profile evidence, metric advisories, and draft query planning compose
   cleanly. It also caught a docs-shape trap: `describe_pattern.evidence` is a
   list, even when exactly one evidence resource is linked.
+- A multi-patch staged-revision trial found count drift rows for the same graph
+  can show different expected counts because each patch records its own staged
+  replay point. Count-drift rows now expose `patch_sequence_index` and
+  `expected_before_basis`; exports show the same cue.
 - A staged-revision list-routing trial confirmed full revision lists can show
   historical handled rows as `application_status="conflict"`. Treat
   `is_current_staged_work=False` with
