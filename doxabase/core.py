@@ -1777,9 +1777,11 @@ class ProfileMapUpdateDraft:
     representative_recommendation_indexes: list[int]
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
     metric_advisory_count: int
+    representative_metric_advisory_indexes: list[int]
     metric_advisory_status_counts: dict[str, int]
     type_advisories: list[ProfileTypeFindingAdvisory]
     type_advisory_count: int
+    representative_type_advisory_indexes: list[int]
     type_advisory_status_counts: dict[str, int]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -8210,6 +8212,12 @@ class DoxaBase:
         representative_recommendation_indexes = (
             self._profile_update_representative_indexes(recommendations)
         )
+        representative_metric_advisory_indexes = (
+            self._profile_advisory_representative_indexes(metric_advisories)
+        )
+        representative_type_advisory_indexes = (
+            self._profile_advisory_representative_indexes(type_advisories)
+        )
         default_stageable_representative_indexes = [
             index
             for index in representative_recommendation_indexes
@@ -8259,9 +8267,15 @@ class DoxaBase:
             representative_recommendation_indexes=representative_recommendation_indexes,
             metric_advisories=metric_advisories,
             metric_advisory_count=len(metric_advisories),
+            representative_metric_advisory_indexes=(
+                representative_metric_advisory_indexes
+            ),
             metric_advisory_status_counts=metric_advisory_status_counts,
             type_advisories=type_advisories,
             type_advisory_count=len(type_advisories),
+            representative_type_advisory_indexes=(
+                representative_type_advisory_indexes
+            ),
             type_advisory_status_counts=type_advisory_status_counts,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
@@ -8666,6 +8680,22 @@ class DoxaBase:
                 continue
             seen_group_keys.add(group_key)
             representatives.append(recommendation.recommendation_index)
+        return representatives
+
+    @staticmethod
+    def _profile_advisory_representative_indexes(
+        advisories: Iterable[
+            ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory
+        ],
+    ) -> list[int]:
+        representatives: list[int] = []
+        seen_group_keys: set[str] = set()
+        for index, advisory in enumerate(advisories):
+            group_key = advisory.duplicate_group_key or f"advisory:{index}"
+            if group_key in seen_group_keys:
+                continue
+            seen_group_keys.add(group_key)
+            representatives.append(index)
         return representatives
 
     def _with_profile_update_default_staging_metadata(

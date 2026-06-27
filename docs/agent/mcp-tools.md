@@ -326,12 +326,15 @@ advisories also name related `unmapped_profiled_column` recommendation indexes
 so agents can stage the column shell before reviewing type assertions.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
-`metric_advisory_count`, `metric_advisory_status_counts`,
-`type_advisory_count`, `type_advisory_status_counts`, and top-level
-`suggested_next_actions` / `suggested_next_calls` for compatibility. Prefer
-`suggested_next_action_groups` / `suggested_next_call_groups` for quick routing;
-non-empty lanes are grouped as `profile_map_updates`,
-`metric_vocabulary_review`, and `profile_type_review`.
+`metric_advisory_count`, `representative_metric_advisory_indexes`,
+`metric_advisory_status_counts`, `type_advisory_count`,
+`representative_type_advisory_indexes`, `type_advisory_status_counts`, and
+top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
+Prefer `suggested_next_action_groups` / `suggested_next_call_groups` for quick
+routing; non-empty lanes are grouped as `profile_map_updates`,
+`metric_vocabulary_review`, and `profile_type_review`. Use representative
+advisory indexes when you need one review row per duplicate metric or type
+advisory group.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
 `default_skip_reason`, and duplicate-group fields; metric and type advisories
 carry duplicate-group fields too.

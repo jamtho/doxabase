@@ -16551,6 +16551,7 @@ def test_profile_type_advisory_duplicate_actions_preserve_support(
     draft = db.draft_profile_map_updates(dataset, evidence)
 
     assert draft.type_advisory_count == 2
+    assert draft.representative_type_advisory_indexes == [0]
     assert draft.type_advisory_status_counts == {
         "type_finding_missing_map_type": 2,
     }
@@ -16638,6 +16639,7 @@ def test_profile_type_review_lane_is_representative_action_queue(
 
     assert draft.recommendation_count == 0
     assert draft.type_advisory_count == 4
+    assert draft.representative_type_advisory_indexes == [0, 1]
     assert draft.type_advisory_status_counts == {
         "type_finding_missing_map_type": 2,
         "type_finding_conflicts_current_map": 2,
@@ -17523,10 +17525,12 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
     assert full_draft.metric_advisory_status_counts == {
         "project_metric_undefined": 2,
     }
+    assert full_draft.representative_metric_advisory_indexes == [0]
     assert full_draft.type_advisory_status_counts == {
         "type_finding_conflicts_current_map": 2,
         "type_finding_unmapped_column": 2,
     }
+    assert full_draft.representative_type_advisory_indexes == [0, 2]
     assert all(
         advisory.duplicate_advisory_indexes == [0, 1]
         and advisory.promotion_patterns[0].iri == metric_pattern.pattern_iri

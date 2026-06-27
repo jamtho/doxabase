@@ -430,12 +430,13 @@ project-specific metric kinds that need vocabulary review. It returns
 `recommendations` with `helper_name`/`helper_arguments` for accepted map-helper
 updates, `metric_advisories` for project-specific profile metrics,
 `type_advisories` for observed profile type findings, and a `review_note`. It
-also includes `recommendation_count`, metric advisory counts, type advisory
-counts, grouped `suggested_next_action_groups` / `suggested_next_call_groups`,
-and flat top-level `suggested_next_actions` / `suggested_next_calls` for
-compatibility. Prefer grouped routing: `profile_map_updates`,
-`metric_vocabulary_review`, and `profile_type_review` are present only when that
-lane has actions.
+also includes `recommendation_count`, `representative_recommendation_indexes`,
+metric advisory counts plus `representative_metric_advisory_indexes`, type
+advisory counts plus `representative_type_advisory_indexes`, grouped
+`suggested_next_action_groups` / `suggested_next_call_groups`, and flat
+top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
+Prefer grouped routing: `profile_map_updates`, `metric_vocabulary_review`, and
+`profile_type_review` are present only when that lane has actions.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and
@@ -448,15 +449,16 @@ such as sampled row-count recommendations that default staging will skip unless
 the caller opts in. It does not mutate or stage graph changes, and it skips
 sampled zero-null promotions. Metric advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
-`promotion_patterns`, duplicate-group metadata, and structured
-`suggested_next_actions` for ontology/context review. Undefined or ambiguously
-typed metrics with a same-evidence pattern that names the metric as a target or
-map implication also get a reviewable `stage_pattern_promotion` skeleton for an
-ontology `rc:ProfileMetricKind`; ambiguous metrics keep the existing-definition
-inspection action ahead of the repair skeleton. The skeleton seeds its
-`rdfs:comment` from that pattern's text, rationale, or summary when available;
-review and tighten units, calculation, and comparison semantics before applying
-it unchanged.
+`promotion_patterns`, `context_patterns`, duplicate-group metadata, and
+structured `suggested_next_actions` for ontology/context review. Undefined or
+ambiguously typed metrics with a same-evidence pattern that names the metric as
+a target or map implication also get a reviewable `stage_pattern_promotion`
+skeleton for an ontology `rc:ProfileMetricKind`; ambiguous metrics keep the
+existing-definition inspection action ahead of the repair skeleton. Prose-only
+same-evidence patterns that mention the metric appear as context patterns only.
+The skeleton seeds its `rdfs:comment` from the promotion pattern's text,
+rationale, or summary when available; review and tighten units, calculation,
+and comparison semantics before applying it unchanged.
 Type findings are outside the accepted recommendation-index set:
 `physical_type` and `value_type` are persisted on profile observations as
 observed evidence, and observation-only profile records now produce

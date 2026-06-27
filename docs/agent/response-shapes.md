@@ -804,9 +804,11 @@ draft.recommendation_count
 draft.representative_recommendation_indexes
 draft.metric_advisories
 draft.metric_advisory_count
+draft.representative_metric_advisory_indexes
 draft.metric_advisory_status_counts
 draft.type_advisories
 draft.type_advisory_count
+draft.representative_type_advisory_indexes
 draft.type_advisory_status_counts
 draft.suggested_next_actions
 draft.suggested_next_calls
@@ -908,7 +910,11 @@ Duplicate fields are populated for every recommendation and advisory. Count `1`
 means the row is unique in this draft; higher counts mean repeated profile
 observations produced the same review row. Agents can accept one representative
 recommendation index from a duplicate group when the modelling judgement is the
-same for all siblings.
+same for all siblings. For advisory lanes, start with
+`representative_metric_advisory_indexes` and
+`representative_type_advisory_indexes` when you need one review row per
+duplicate group, then read each representative advisory's duplicate fields when
+you need the grouped profile observation support.
 
 `type_advisories[]` rows surface observation-only `physical_type` and
 `value_type` findings. They are not accepted recommendation indexes and are not
@@ -960,8 +966,9 @@ and are ordered by those lanes. `profile_type_review` is a representative action
 queue, not the grouping source; labels such as `Inspect profile type context`
 and `Stage physical type assertion` can repeat across advisory groups. Scripts
 that need per-column grouping should iterate `type_advisories[]` by
-`duplicate_group_key` / `duplicate_advisory_indexes` and use each advisory's
-own `suggested_next_actions`.
+`representative_type_advisory_indexes` first, then use each representative
+advisory's `duplicate_group_key` / `duplicate_advisory_indexes` and
+`suggested_next_actions`.
 Drafts with at least one default-stageable representative recommendation include
 a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled

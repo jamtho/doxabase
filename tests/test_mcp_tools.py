@@ -4138,6 +4138,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["recommendations"][1]["default_stageable"] is True
     assert result["recommendations"][1]["default_skip_reason"] is None
     assert result["metric_advisory_count"] == 1
+    assert result["representative_metric_advisory_indexes"] == [0]
     assert result["metric_advisory_status_counts"] == {
         "project_metric_undefined": 1,
     }
@@ -4158,6 +4159,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         "tool_name"
     ] == "describe_context_slice"
     assert result["type_advisory_count"] == 1
+    assert result["representative_type_advisory_indexes"] == [0]
     assert result["type_advisory_status_counts"] == {
         "type_finding_missing_map_type": 1,
     }
