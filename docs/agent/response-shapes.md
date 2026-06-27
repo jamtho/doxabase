@@ -3264,6 +3264,9 @@ check.suggested_next_calls
 
 `revision_iri` is an alias of `staged_revision_iri` so copied check payloads
 carry the checked resource under the same name used by list and export rows.
+Use `check.status` on the direct apply-check object. Revision list rows, grouped
+export summaries, and compact nested description rows use `application_status`
+for the live or summarized apply-check status.
 Each `check.patch_checks[]` row summarizes one staged patch replay:
 
 ```python
