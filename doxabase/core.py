@@ -1097,6 +1097,7 @@ class ResourceRevisionLineageDescription:
     restage_chain_iris: list[str]
     alternative_revision_iris: list[str]
     related_revision_iris: list[str]
+    warnings: list[str]
     patch_mention_scan: ResourceRevisionPatchMentionScanSummary
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
@@ -4906,6 +4907,7 @@ class DoxaBase:
             restage_chain_iris=graph_lineage.restage_chain_iris,
             alternative_revision_iris=graph_lineage.alternative_revision_iris,
             related_revision_iris=related_revision_iris,
+            warnings=graph_lineage.warnings,
             patch_mention_scan=lineage.patch_mention_scan,
             next_action=lineage_next_action,
             suggested_next_actions=lineage_suggested_next_actions,

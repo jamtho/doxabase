@@ -7515,6 +7515,7 @@ def test_describe_revision_lineage_warns_about_imported_odd_history(
     parallel_applied_iri = "https://example.test/project#parallel-applied-event"
     missing_source_iri = "https://example.test/project#missing-applied-source"
     applied_iri = "https://example.test/project#applied-event-missing-source"
+    source_dataset_iri = "https://example.test/project#SourceDataset"
 
     source = db.stage_graph_revision(
         summary="Source proposal",
@@ -7610,6 +7611,22 @@ def test_describe_revision_lineage_warns_about_imported_odd_history(
         and manual_iri in warning
         and "history_record" in warning
         for warning in source_lineage.warnings
+    )
+    resource_lineage = db.describe_resource_revision_lineage(
+        source_dataset_iri,
+        source.revision_iri,
+    )
+    assert {
+        successor_a.revision_iri,
+        successor_z_iri,
+        manual_iri,
+        parallel_applied_iri,
+    }.issubset(set(resource_lineage.related_revision_iris))
+    assert any(
+        "multiple visible successors" in warning
+        and successor_a.revision_iri in warning
+        and successor_z_iri in warning
+        for warning in resource_lineage.warnings
     )
     export = db.export_staged_revisions(
         [source.revision_iri],

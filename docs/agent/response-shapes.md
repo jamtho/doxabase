@@ -2281,6 +2281,7 @@ lineage.latest_role
 lineage.restage_chain_iris
 lineage.alternative_revision_iris
 lineage.related_revision_iris
+lineage.warnings
 lineage.patch_mention_scan
 lineage.next_action
 lineage.suggested_next_actions
@@ -2357,6 +2358,9 @@ inspecting the applied event in that case.
 lineage helper for the selected revision, so resource-first callers can see
 sibling alternatives without a second generic lineage call. `related_revision_iris`
 merges the local resource staged/applied route with the generic lineage family.
+`warnings` mirrors graph lineage integrity warnings, including imported oddities
+such as non-staged rows in a restage chain, missing applied-source links,
+parallel restage successors, and snapshot handoff gaps.
 
 `db.describe_graph_revision(revision_iri)` returns `GraphRevisionDescription`:
 

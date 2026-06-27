@@ -1330,7 +1330,10 @@ few useful gaps:
   lineage card still hid sibling alternatives unless the caller made a separate
   generic lineage call. Resource lineage now mirrors graph lineage
   `restage_chain_iris` and `alternative_revision_iris`, and merges generic
-  related revision IRIs into its local resource route.
+  related revision IRIs into its local resource route. A follow-up
+  resource-first parallel-branch trial found the related IRIs alone were too
+  quiet; resource lineage now also carries graph-lineage warnings so applied
+  sibling branches and other imported oddities are visible in the resource card.
 - A mixed staged-work queue trial confirmed current-work queues classify ready,
   stale, validation-failed, and already-applied rows correctly, but found that
   staged-time validation failures could drift into live `conflict` and lose
