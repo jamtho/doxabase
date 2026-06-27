@@ -389,6 +389,7 @@ class StagedGraphSnapshotDrift:
 @dataclass(frozen=True)
 class AppliedRevisionGraphSnapshotDiff:
     graph_role: str
+    count_basis: str
     before_revision_iri: str
     after_revision_iri: str
     before_triple_count: int | None
@@ -1029,6 +1030,7 @@ class ResourceRevisionList:
 @dataclass(frozen=True)
 class ResourceAppliedRevisionGraphDiffSummary:
     graph_role: str
+    count_basis: str
     before_revision_iri: str
     after_revision_iri: str
     before_triple_count: int | None
@@ -3373,6 +3375,7 @@ class DoxaBase:
 
         return AppliedRevisionGraphSnapshotDiff(
             graph_role=graph_role,
+            count_basis="target_graph_only",
             before_revision_iri=before_revision_iri,
             after_revision_iri=after_revision_iri,
             before_triple_count=(
@@ -4920,6 +4923,7 @@ class DoxaBase:
 
         return ResourceAppliedRevisionGraphDiffSummary(
             graph_role=graph_role,
+            count_basis="target_graph_only",
             before_revision_iri=before_revision_iri,
             after_revision_iri=after_revision_iri,
             before_triple_count=(

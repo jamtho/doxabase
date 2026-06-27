@@ -2120,6 +2120,9 @@ optional triple arrays:
 
 ```python
 graph_diff.graph_role
+graph_diff.count_basis
+graph_diff.before_triple_count
+graph_diff.after_triple_count
 graph_diff.exact_changed_triples_available
 graph_diff.exact_changed_triples_included
 graph_diff.resource_triples_added_count
@@ -2127,6 +2130,10 @@ graph_diff.resource_triples_removed_count
 graph_diff.resource_triples_added
 graph_diff.resource_triples_removed
 ```
+
+`graph_diff.count_basis` is `target_graph_only`: applied revision snapshot rows
+store role-local graph counts. This can differ from staged patch preview counts
+for `ontology` and `shapes`, which include immutable seed context.
 
 This helper is a compact resource-centric lineage card, not full graph-version
 browsing. It avoids requiring full staged patch payloads for imported applied
@@ -2323,6 +2330,7 @@ Each `diff.graph_diffs[]` row is an
 
 ```python
 graph_diff.graph_role
+graph_diff.count_basis
 graph_diff.before_revision_iri
 graph_diff.after_revision_iri
 graph_diff.before_triple_count
@@ -2340,6 +2348,10 @@ graph_diff.triples_added
 graph_diff.triples_removed
 graph_diff.note
 ```
+
+`graph_diff.count_basis` is `target_graph_only`: applied revision snapshot rows
+store role-local graph counts. This can differ from staged patch preview counts
+for `ontology` and `shapes`, which include immutable seed context.
 
 This helper only works for applied staged revision events. It compares the
 staged source's stored before-snapshot rows with the applied event's stored

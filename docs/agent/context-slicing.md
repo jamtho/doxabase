@@ -28,6 +28,11 @@ is durable ontology; define labelled project metric kinds in `ontology` when
 the vocabulary should be shared. Metric-kind seed expansion is capped and emits
 a warning when many observed metrics match; use a dataset, profile observation,
 or observed metric node seed for a narrower complete handoff.
+When a project metric kind is only mentioned as a profile metric kind, its
+resource row may be `referenced_only` without a warning. Treat that as slice
+surface context, not vocabulary status. For profile metric vocabulary review,
+use `draft_profile_map_updates.metric_advisories[].advisory_status` and
+`definition_found`.
 The `seed_profile_observations` field preserves structured profile summaries
 selected by profile-observation, observed-profile-metric, or metric-kind seeds
 even when those rows are older than the bounded dataset profile lists.

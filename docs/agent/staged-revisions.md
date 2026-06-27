@@ -529,6 +529,9 @@ against the expanded role graph (`target_graph_plus_base_ontology` or
 `target_graph_plus_base_shapes`) because normal reads include immutable seed
 context. Applied revision snapshot rows remain role-local, so compare staged
 preview counts and applied snapshot counts only after checking `count_basis`.
+`describe_applied_revision_diff().graph_diffs[]` and resource-lineage
+`applied_diff.graph_diffs[]` report `count_basis="target_graph_only"` for this
+reason.
 
 After an apply, treat `post_apply_recheck_revisions` as the affected-sibling
 queue for the mutation that just happened. For each row, inspect

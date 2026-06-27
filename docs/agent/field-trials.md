@@ -1152,6 +1152,11 @@ few useful gaps:
   caveats, profile evidence, metric advisories, and draft query planning compose
   cleanly. It also caught a docs-shape trap: `describe_pattern.evidence` is a
   list, even when exactly one evidence resource is linked.
+- A profile-bundle trial confirmed observation-only profile bundles, profile
+  map-update drafts, metric advisories, type advisories, and staged profile map
+  updates compose cleanly. It also found that undefined project metric IRIs can
+  appear as `referenced_only` in context slices; use
+  `draft_profile_map_updates.metric_advisories` for vocabulary status.
 - A multi-patch staged-revision trial found count drift rows for the same graph
   can show different expected counts because each patch records its own staged
   replay point. Count-drift rows now expose `patch_sequence_index` and

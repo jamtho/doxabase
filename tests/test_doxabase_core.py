@@ -1977,6 +1977,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert len(diff.graph_diffs) == 1
     map_diff = diff.graph_diffs[0]
     assert map_diff.graph_role == "map"
+    assert map_diff.count_basis == "target_graph_only"
     assert map_diff.before_revision_iri == staged.revision_iri
     assert map_diff.after_revision_iri == result.applied_revision_iri
     assert map_diff.before_triple_count == 0
@@ -1998,6 +1999,7 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     )
     exact_map_diff = exact_diff.graph_diffs[0]
     assert exact_diff.include_triples is True
+    assert exact_map_diff.count_basis == "target_graph_only"
     assert exact_map_diff.exact_changed_triples_included is True
     assert exact_map_diff.triples_added_truncated is False
     assert {triple.subject for triple in exact_map_diff.triples_added} == {
@@ -7197,6 +7199,7 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert lineage.applied_diff.include_triples is True
     map_diff = lineage.applied_diff.graph_diffs[0]
     assert map_diff.graph_role == "map"
+    assert map_diff.count_basis == "target_graph_only"
     assert map_diff.exact_changed_triples_available is True
     assert map_diff.exact_changed_triples_included is True
     assert map_diff.resource_triples_added_count == 1

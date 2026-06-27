@@ -292,6 +292,10 @@ nearby metric vocabulary before recording claims/patterns/promotions. When an
 undefined metric has a same-evidence pattern naming it as a target or map
 implication, the advisory also suggests `describe_pattern` and a reviewable
 `stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
+Do not infer metric vocabulary status from `describe_context_slice` alone:
+metric-kind resources that are only profile-metric objects can appear as
+`referenced_only`. Use `metric_advisories[].advisory_status` and
+`definition_found` for the authoritative review cue.
 Type findings are not accepted profile-map recommendation indexes.
 `physical_type` and `value_type` are persisted on profile observations as
 observed evidence; when they differ from or fill gaps in current map column
@@ -487,6 +491,10 @@ raw triples; those fields explain why each resource entered the slice.
 Read `resources[].surface_role` as the compact trust cue for whether a resource
 is current map context, observation context, pattern synthesis, evidence support,
 revision history, vocabulary context, mixed context, or a referenced-only object.
+For project profile metric kinds, `referenced_only` means the slice reached the
+IRI as an object/reference; it does not answer whether the metric vocabulary is
+defined. Pair metric-oriented slices with `draft_profile_map_updates` when that
+status matters.
 `reading_order` and `route_legend` provide the static reading protocol and
 meanings for the routes present in the response. Set `include_trig=true` when
 you need importable TriG text, and raise
