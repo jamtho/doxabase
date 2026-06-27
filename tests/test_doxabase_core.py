@@ -135,6 +135,69 @@ def test_import_trig_maps_patterns_graph_role(tmp_path: Path) -> None:
     assert db.validate_graph(scope="all").conforms
 
 
+def test_import_parse_errors_are_doxabase_errors(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    malformed_turtle = (
+        "@prefix ex: <https://example.test/project#> .\n"
+        "@prefix rc: <https://richcanopy.org/ns/rc#> .\n"
+        "ex:Messages a rc:Dataset\n"
+        "ex:Other a rc:Dataset ."
+    )
+
+    with pytest.raises(DoxaBaseError) as turtle_exc:
+        db.import_turtle(malformed_turtle, graph="map")
+
+    turtle_message = str(turtle_exc.value)
+    assert "Could not parse import_turtle source as turtle" in turtle_message
+    assert "at line" in turtle_message
+    assert db.triple_count("map") == 0
+
+    malformed_trig = """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rcg: <https://richcanopy.org/graph/> .
+
+        rcg:map {
+            ex:Messages a rc:Dataset
+            ex:Other a rc:Dataset .
+        }
+    """
+
+    with pytest.raises(DoxaBaseError) as trig_exc:
+        db.import_trig(malformed_trig)
+
+    trig_message = str(trig_exc.value)
+    assert "Could not parse import_trig source as trig" in trig_message
+    assert "at line" in trig_message
+    assert db.triple_count("map") == 0
+
+
+def test_import_trig_rejects_unknown_rich_canopy_graph_roles(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    with pytest.raises(DoxaBaseError) as exc_info:
+        db.import_trig(
+            """
+            @prefix ex: <https://example.test/project#> .
+            @prefix rc: <https://richcanopy.org/ns/rc#> .
+            @prefix rcg: <https://richcanopy.org/graph/> .
+
+            rcg:typo_map {
+                ex:Messages a rc:Dataset .
+            }
+            """
+        )
+
+    message = str(exc_info.value)
+    assert "Unknown Rich Canopy graph role" in message
+    assert "typo_map" in message
+    assert "typo_map" not in {
+        graph.name for graph in db.graph_overview().named_graphs
+    }
+
+
 def test_to_dict_serializes_api_dataclasses(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(POLYMARKET_FIXTURE)
@@ -13183,6 +13246,32 @@ def test_validate_graph_uses_base_and_project_shapes(tmp_path: Path) -> None:
     assert result.result_count == 0
 
 
+def test_validate_graph_wraps_malformed_project_shapes(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+        ex:BadDatasetShape a sh:NodeShape ;
+            sh:targetClass rc:Dataset ;
+            sh:property [
+                sh:path rc:label, rc:summary ;
+                sh:minCount 1
+            ] .
+        """,
+        graph="shapes",
+    )
+
+    with pytest.raises(DoxaBaseError) as exc_info:
+        db.validate_graph(scope="all")
+
+    message = str(exc_info.value)
+    assert "Could not run SHACL validation for scope 'all'" in message
+    assert "ShapeLoadError" in message or "ConstraintLoadError" in message
+
+
 def test_record_observation_writes_observation_and_evidence_graphs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)
@@ -14808,6 +14897,38 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert all(
         "add its pattern_iri to supporting_patterns" in action.arguments["review_note"]
         for action in staged_type_actions
+    )
+
+    recorded_pattern = db.record_pattern(
+        **advisory.suggested_next_actions[1].arguments,
+    )
+    related_pattern = db.record_pattern(
+        summary="Orders status type assertions already have nearby lore.",
+        pattern_text=(
+            "Prior map review notes say Orders.status type changes should carry "
+            "nearby column lore into staged map assertions."
+        ),
+        rationale="The assertion-support scan should merge related column patterns.",
+        pattern_targets=[status_column],
+        evidence_iri=evidence,
+    )
+    physical_type_action = staged_type_actions[0]
+    physical_type_arguments = dict(physical_type_action.arguments)
+    physical_type_arguments["supporting_patterns"] = [recorded_pattern.pattern_iri]
+    staged_type = db.stage_map_assertion_change(**physical_type_arguments)
+    staged_type_description = db.describe_staged_revision(
+        staged_type.staged_revision.revision_iri,
+    )
+
+    assert profile.iri in {
+        item.iri for item in staged_type_description.supporting_observations
+    }
+    assert evidence in {item.iri for item in staged_type_description.evidence}
+    assert {
+        recorded_pattern.pattern_iri,
+        related_pattern.pattern_iri,
+    }.issubset(
+        {item.iri for item in staged_type_description.supporting_patterns},
     )
     assert [action.tool_name for action in draft.suggested_next_actions] == [
         "describe_context_slice",

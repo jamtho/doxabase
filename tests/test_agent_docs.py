@@ -31,3 +31,13 @@ def test_get_agent_doc_can_truncate_content() -> None:
     assert doc["id"] == "overview"
     assert doc["truncated"] is True
     assert len(str(doc["content"])) == 20
+
+
+def test_start_here_names_exact_discovery_tools() -> None:
+    doc = get_agent_doc("start_here", max_chars=50_000)
+    content = str(doc["content"])
+
+    assert "exact discovery" in content
+    assert "doxabase.get_doc" in content
+    assert "doxabase.list_entities" in content
+    assert "doxabase.describe_context_slice" in content

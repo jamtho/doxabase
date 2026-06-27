@@ -22950,6 +22950,12 @@ class DoxaBase:
             return f"{lines[0]}: {reason}"
         return lines[0].split(" at ^ in", 1)[0][:500]
 
+    def _exception_type_and_message(self, exc: Exception) -> str:
+        message = str(exc).strip().split(" at ^ in", 1)[0]
+        if message:
+            return f"{exc.__class__.__name__}: {message[:500]}"
+        return exc.__class__.__name__
+
     def _required_staged_patch_target_graph(
         self,
         patch: StagedGraphPatchDescription,
@@ -24507,12 +24513,12 @@ class DoxaBase:
         allow_immutable: bool = False,
     ) -> int:
         self._ensure_mutable(graph, allow_immutable=allow_immutable)
-        rdf_graph = Graph()
-        path = _existing_path(source)
-        if path is not None:
-            rdf_graph.parse(path, format=format)
-        else:
-            rdf_graph.parse(data=str(source), format=format)
+        rdf_graph = self._parse_rdf_payload(
+            source,
+            format=format,
+            payload_name="source",
+            parser_context="import_turtle",
+        )
         if replace:
             self.clear_graph(graph, allow_immutable=allow_immutable)
         self._ensure_graph(graph)
@@ -24526,12 +24532,11 @@ class DoxaBase:
         replace: bool = False,
         allow_immutable: bool = False,
     ) -> dict[str, int]:
-        dataset = Dataset()
-        path = _existing_path(source)
-        if path is not None:
-            dataset.parse(path, format="trig")
-        else:
-            dataset.parse(data=str(source), format="trig")
+        dataset = self._parse_rdf_dataset(
+            source,
+            format="trig",
+            parser_context="import_trig",
+        )
 
         imported: dict[str, int] = {}
         for context in dataset.graphs():
@@ -24813,11 +24818,10 @@ class DoxaBase:
         shape_graphs = self._expand_graphs(["shapes"])
         data = self.to_graph(data_graphs)
         shapes = self.to_graph(shape_graphs)
-        conforms, report_graph, report_text = validate(
-            data_graph=data,
-            shacl_graph=shapes,
-            inference="rdfs",
-            advanced=False,
+        conforms, report_graph, report_text = self._run_shacl_validation(
+            data,
+            shapes,
+            context=f"scope '{scope}'",
         )
         diagnostics = self._validation_diagnostics_from_report_graph(
             report_graph,
@@ -24864,11 +24868,10 @@ class DoxaBase:
                 source = self.to_graph([graph_name])
             for triple in source:
                 shapes.add(triple)
-        conforms, report_graph, report_text = validate(
-            data_graph=data,
-            shacl_graph=shapes,
-            inference="rdfs",
-            advanced=False,
+        conforms, report_graph, report_text = self._run_shacl_validation(
+            data,
+            shapes,
+            context=f"preview scope '{scope}'",
         )
         diagnostics = self._validation_diagnostics_from_report_graph(
             report_graph,
@@ -24887,6 +24890,27 @@ class DoxaBase:
             scope=scope,
             results=diagnostics,
         )
+
+    def _run_shacl_validation(
+        self,
+        data: Graph,
+        shapes: Graph,
+        *,
+        context: str,
+    ) -> tuple[bool, Graph, str]:
+        try:
+            conforms, report_graph, report_text = validate(
+                data_graph=data,
+                shacl_graph=shapes,
+                inference="rdfs",
+                advanced=False,
+            )
+        except Exception as exc:
+            detail = self._exception_type_and_message(exc)
+            raise DoxaBaseError(
+                f"Could not run SHACL validation for {context}: {detail}"
+            ) from exc
+        return bool(conforms), report_graph, str(report_text)
 
     def _validation_result_count(self, report_graph: Graph) -> int:
         return sum(
@@ -25565,6 +25589,7 @@ class DoxaBase:
         *,
         format: str,
         payload_name: str,
+        parser_context: str = "replace_graph_triples",
     ) -> Graph:
         if source is None:
             return Graph()
@@ -25581,10 +25606,33 @@ class DoxaBase:
             else:
                 rdf_graph.parse(data=str(source), format=format)
         except Exception as exc:
+            detail = self._rdf_parse_error_detail(exc)
             raise DoxaBaseError(
-                f"Could not parse replace_graph_triples {payload_name} as {format}"
+                f"Could not parse {parser_context} {payload_name} as "
+                f"{format}: {detail}"
             ) from exc
         return rdf_graph
+
+    def _parse_rdf_dataset(
+        self,
+        source: str | Path,
+        *,
+        format: str,
+        parser_context: str,
+    ) -> Dataset:
+        dataset = Dataset()
+        path = _existing_path(source)
+        try:
+            if path is not None:
+                dataset.parse(path, format=format)
+            else:
+                dataset.parse(data=str(source), format=format)
+        except Exception as exc:
+            detail = self._rdf_parse_error_detail(exc)
+            raise DoxaBaseError(
+                f"Could not parse {parser_context} source as {format}: {detail}"
+            ) from exc
+        return dataset
 
     def _rdf_graph_storage_rows(self, rdf_graph: Graph) -> list[GraphStorageRow]:
         rows: list[GraphStorageRow] = []
@@ -26410,7 +26458,14 @@ class DoxaBase:
         if graph_map and identifier in graph_map:
             return graph_map[identifier]
         if identifier.startswith(RCG_PREFIX):
-            return identifier.removeprefix(RCG_PREFIX)
+            graph_name = identifier.removeprefix(RCG_PREFIX)
+            if graph_name not in self._known_graph_names():
+                raise DoxaBaseError(
+                    "Unknown Rich Canopy graph role in TriG import: "
+                    f"{identifier!r}. Pass graph_map to map this named graph "
+                    "explicitly, or use a known graph role."
+                )
+            return graph_name
         return identifier
 
     def _export_graph_identifier(self, graph: str, graph_iri_prefix: str) -> str:

@@ -95,6 +95,9 @@ assertion suggestions. Review those advisories before turning type evidence into
 current map facts. If you follow the suggested `record_pattern` action first,
 copy the returned `pattern_iri` into the following
 `stage_map_assertion_change(..., supporting_patterns=[...])` call.
+That staged assertion also merges related assertion-support lore, so the final
+revision may include both the pattern you just recorded and broader patterns or
+evidence already attached to the column or assertion.
 
 Use `stage_profile_map_updates(..., accepted_recommendation_indexes=[...])` when
 accepted profile-derived changes should be reviewed before apply. It stages one

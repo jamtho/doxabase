@@ -1077,6 +1077,20 @@ few useful gaps:
   diffs. Stale apply-check snapshot-import suggestions now mark the example
   `/tmp/revision-snapshots.json` path as a placeholder, matching
   `describe_revision_snapshot_evidence`.
+- An import/validation boundary trial found malformed Turtle/TriG and malformed
+  project SHACL shapes could leak raw parser/pySHACL exceptions, while a
+  `rcg:` typo such as `rcg:typo_map` silently created an out-of-scope graph.
+  Imports and validation now wrap those failures as `DoxaBaseError`, and Rich
+  Canopy graph IRIs must name known roles unless explicitly mapped by
+  `graph_map`.
+- A cold-start ergonomics trial found broad deferred-tool searches may still
+  under-return central route helpers. In lazy environments, search exact MCP
+  names such as `doxabase.get_doc`, `doxabase.list_entities`, and
+  `doxabase.describe_context_slice` before treating them as missing.
+- A profile type-review follow-through trial confirmed staged type assertions
+  preserve profile observation/evidence support and also merge related
+  assertion-support patterns. Expect the final revision to carry nearby column
+  lore in addition to the specific pattern you just recorded.
 - An awkward systematisation trial confirmed caller-authored competing framings,
   shared shapes, validation failures, support roll-up, and grouped exports worked.
   Docs now remind agents that later framings default to alternatives of the first
