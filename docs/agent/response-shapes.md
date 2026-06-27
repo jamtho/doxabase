@@ -2300,6 +2300,8 @@ snapshot_evidence.exact_snapshot_graph_roles
 snapshot_evidence.missing_snapshot_row_graph_roles
 snapshot_evidence.orphan_snapshot_row_graph_roles
 snapshot_evidence.note
+snapshot_evidence.suggested_next_actions
+snapshot_evidence.suggested_next_calls
 ```
 
 Status values are `history_missing`, `history_only_count_digest`,
@@ -2653,6 +2655,10 @@ current.semantic_risk_reasons
 current.blocking_reasons
 current.recommended_resolution
 current.already_applied_by
+current.restaged_by
+current.current_restaged_by
+current.stale_resolution_state
+current.alternative_gate
 current.changed_graphs
 current.validation_scope
 current.validation_conforms
@@ -3120,8 +3126,9 @@ Review Queues instead of treating the stale source as an active restage target.
 When any grouped row lacks full exact snapshot rows, grouped Markdown also
 includes a `Snapshot Evidence` section. It summarizes snapshot-evidence status
 counts and lists each row's status, completeness (`complete`, `partial`,
-`history-only`, `snapshot-only`, or `missing`), RDF snapshot graph roles, stored
-snapshot row roles, exact roles, missing/orphan roles, and suggested next calls.
+`partial-extra-rows`, `history-only`, `snapshot-only`, or `missing`), RDF
+snapshot graph roles, stored snapshot row roles, exact roles, missing/orphan
+roles, and suggested next calls.
 This is a review-artifact shortcut over each row's `snapshot_evidence` /
 `describe_revision_snapshot_evidence()` payload.
 `validation_failed_revision_iris` lists rows whose patch counts

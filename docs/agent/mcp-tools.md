@@ -1062,8 +1062,8 @@ separate from the live apply status fields. Each item also carries
 `source_snapshot_evidence` / `source_snapshot_evidence_completeness` and
 `current_snapshot_evidence` / `current_snapshot_evidence_completeness`, using
 the same completeness labels as grouped Markdown, so scripts can tell whether
-exact drift evidence is complete, partial, history-only, snapshot-only, or
-missing before mutating.
+exact drift evidence is complete, partial, partial-extra-rows, history-only,
+snapshot-only, or missing before mutating.
 Guarded same-slot conflicts that already carry a
 `stage_map_assertion_change` replacement suggestion are also
 `skipped_not_restageable`, with

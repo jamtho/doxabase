@@ -1413,6 +1413,14 @@ few useful gaps:
   `scan` as the first ordered blocker, or `None` when no execution-attempt
   blocker remains. Treat it as a compact queue key while preserving the full
   ordered list for review detail.
+- Staged-revision recovery trials confirmed the public routing fields are
+  enough for both ordinary count-drift restage/apply/snapshot browsing and
+  same-slot replacement repair via the suggested `stage_map_assertion_change`
+  payload. The main follow-up is regression confidence and docs fidelity:
+  response-shape docs should list the live `current_apply_check` and
+  snapshot-evidence fields scripts actually route from, and grouped snapshot
+  completeness labels should include `partial-extra-rows` for imported bundles
+  with extra stored snapshot roles.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -2600,6 +2600,44 @@ def test_grouped_export_marks_partial_snapshot_evidence(
     )
     assert "import_revision_snapshots" in grouped_export_text
 
+    full_snapshot_path = tmp_path / "full-plus-extra-snapshots.json"
+    db.export_revision_snapshots(
+        full_snapshot_path,
+        revision_iris=[staged.revision_iri],
+    )
+    full_snapshot_bundle = json.loads(full_snapshot_path.read_text(encoding="utf-8"))
+    extra_snapshot = {
+        "revision_iri": staged.revision_iri,
+        "graph_role": "evidence",
+        "stored_at": "2026-06-25T00:00:00+00:00",
+        "triple_count": 0,
+        "content_digest": "sha256:empty-extra-evidence",
+        "quads": [],
+    }
+    full_snapshot_bundle["snapshots"].append(extra_snapshot)
+    full_plus_extra = DoxaBase.create(tmp_path / "full-plus-extra.sqlite")
+    full_plus_extra.import_trig(project_path)
+    full_plus_extra.import_revision_snapshots(json.dumps(full_snapshot_bundle))
+
+    extra_status = full_plus_extra.describe_revision_snapshot_evidence(
+        staged.revision_iri
+    )
+    assert extra_status.missing_snapshot_row_graph_roles == []
+    assert extra_status.orphan_snapshot_row_graph_roles == ["evidence"]
+    extra_grouped_export_path = tmp_path / "partial-extra-snapshot-review.md"
+    full_plus_extra.export_staged_revisions(
+        [staged.revision_iri],
+        extra_grouped_export_path,
+    )
+    extra_grouped_export_text = extra_grouped_export_path.read_text(
+        encoding="utf-8"
+    )
+
+    assert "history_plus_snapshot_rows | partial-extra-rows" in (
+        extra_grouped_export_text
+    )
+    assert "| evidence |" in extra_grouped_export_text
+
 
 def test_stale_project_import_suggests_snapshot_json_before_restaging(
     tmp_path: Path,
