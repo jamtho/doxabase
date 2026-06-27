@@ -355,8 +355,11 @@ advisory indexes when you need one review row per duplicate metric or type
 advisory group; each row also carries `metric_advisory_index` or
 `type_advisory_index` for row-local routing. Group lanes may de-duplicate shared
 actions, such as one `describe_pattern` call supporting several metric
-advisories; use each `metric_advisories[]` row's own `suggested_next_actions`
-for per-metric follow-through.
+advisories; grouped metric/type actions carry `source_profile_advisory` with
+the source advisory kind, index field, represented advisory indexes, duplicate
+group keys, duplicate advisory indexes, and duplicate profile-observation IRIs.
+Use that source block for direct lane routing, or use each advisory row's own
+`suggested_next_actions` for per-metric or per-column follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
 `default_skip_reason`, and duplicate-group fields; metric and type advisories
 carry duplicate-group fields too.

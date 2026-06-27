@@ -17009,6 +17009,21 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         "describe_pattern",
         "stage_pattern_promotion",
     ]
+    metric_action_sources = [
+        action.source_profile_advisory
+        for action in draft.suggested_next_action_groups[
+            "metric_vocabulary_review"
+        ]
+    ]
+    assert {
+        tuple(source["advisory_indexes"]) for source in metric_action_sources
+    } == {(0,)}
+    assert {
+        source["advisory_kind"] for source in metric_action_sources
+    } == {"metric_vocabulary_review"}
+    assert {
+        source["index_field"] for source in metric_action_sources
+    } == {"metric_advisory_index"}
     assert draft.suggested_next_call_groups["profile_map_updates"] == [
         draft.suggested_next_calls[0]
     ]
@@ -17723,6 +17738,22 @@ def test_profile_type_review_lane_is_representative_action_queue(
         "record_pattern",
         "stage_map_assertion_change",
     ]
+    assert [
+        action.source_profile_advisory["advisory_kind"]
+        for action in profile_type_actions
+    ] == ["profile_type_review"] * 6
+    assert [
+        action.source_profile_advisory["index_field"]
+        for action in profile_type_actions
+    ] == ["type_advisory_index"] * 6
+    assert [
+        action.source_profile_advisory["advisory_indexes"]
+        for action in profile_type_actions
+    ] == [[0, 2], [0, 2], [0, 2], [1, 3], [1, 3], [1, 3]]
+    assert [
+        action.source_profile_advisory["duplicate_advisory_indexes"]
+        for action in profile_type_actions
+    ] == [[0, 2], [0, 2], [0, 2], [1, 3], [1, 3], [1, 3]]
 
 
 def test_profile_map_update_duplicate_groups_preserve_representative_support(

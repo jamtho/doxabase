@@ -1039,16 +1039,26 @@ present only when non-empty and currently use `profile_map_updates`,
 mirrors those groups with display call strings. The flat top-level
 `suggested_next_actions` / `suggested_next_calls` fields remain for compatibility
 and are ordered by those lanes. Group lanes may de-duplicate shared actions, such
-as one `describe_pattern` action used by several metric advisories. Scripts that
-need per-metric follow-through should iterate `metric_advisories[]` and use each
-advisory's own `suggested_next_actions`. `profile_type_review` is a
-representative action queue, not the grouping source; labels such as
-`Inspect profile type context` and `Stage physical type assertion` can repeat
-across advisory groups. Scripts that need per-column grouping should iterate
-`type_advisories[]` by
-`representative_type_advisory_indexes` first, then use each representative
-advisory's `type_advisory_index`, `duplicate_group_key` /
-`duplicate_advisory_indexes`, and `suggested_next_actions`.
+as one `describe_pattern` action used by several metric advisories. Grouped
+metric/type actions are `ProfileAdvisorySuggestedNextAction` rows and carry
+source metadata:
+
+```python
+action.source_profile_advisory["advisory_kind"]
+action.source_profile_advisory["index_field"]
+action.source_profile_advisory["advisory_indexes"]
+action.source_profile_advisory["duplicate_group_keys"]
+action.source_profile_advisory["duplicate_advisory_indexes"]
+action.source_profile_advisory["duplicate_profile_observation_iris"]
+```
+
+Use `source_profile_advisory` when routing directly from grouped lanes. Scripts
+that need per-metric or per-column follow-through can still iterate
+`metric_advisories[]` or `type_advisories[]` by the representative advisory
+indexes first, then use each representative advisory's row-local index,
+duplicate-group fields, and own `suggested_next_actions`. `profile_type_review`
+is a representative action queue; labels such as `Inspect profile type context`
+and `Stage physical type assertion` can repeat across advisory groups.
 Drafts with at least one default-stageable representative recommendation include
 a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled
@@ -1158,14 +1168,18 @@ reported in `skipped_recommendation_indexes`; metric advisories stay in
 `metric_vocabulary_review_required` is true,
 `metric_advisory_suggested_next_actions` is the separate vocabulary-review lane;
 follow it in addition to the map revision apply check, not as a replacement for
-the apply check. The same advisory count and status summary appears in the
-staging response and staged revision review note, so later reviewers can see
-whether undefined, defined, or ambiguous project metric vocabulary was present.
+the apply check. These grouped actions also carry `source_profile_advisory` so
+automation can see which metric advisory rows and duplicate support they cover.
+The same advisory count and status summary appears in the staging response and
+staged revision review note, so later reviewers can see whether undefined,
+defined, or ambiguous project metric vocabulary was present.
 When `type_review_required` is true,
 `type_advisory_suggested_next_actions` is the separate profile-type review lane;
 use it to inspect, record support patterns, or stage focused type assertions
-after reviewing the map update. It is not part of the grouped map patch and is
-not a replacement for the staged revision apply check.
+after reviewing the map update. These grouped actions carry the same
+`source_profile_advisory` metadata for type advisory rows. The type-review lane
+is not part of the grouped map patch and is not a replacement for the staged
+revision apply check.
 When no accepted recommendation produces a staged patch,
 `result.staged_revision is None` and `suggested_next_actions` is empty.
 An accepted recommendation index can therefore appear under either `staged` or

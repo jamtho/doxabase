@@ -2142,6 +2142,11 @@ class SuggestedNextAction:
 
 
 @dataclass(frozen=True)
+class ProfileAdvisorySuggestedNextAction(SuggestedNextAction):
+    source_profile_advisory: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class RevisionNextAction:
     action_type: str
     queue: str
@@ -8922,16 +8927,11 @@ class DoxaBase:
     def _profile_metric_advisory_suggested_actions(
         metric_advisories: list[ProfileMetricVocabularyAdvisory],
     ) -> list[SuggestedNextAction]:
-        actions: list[SuggestedNextAction] = []
-        seen_actions: set[tuple[str, str]] = set()
-        for advisory in metric_advisories:
-            for action in advisory.suggested_next_actions:
-                key = (action.tool_name, action.call)
-                if key in seen_actions:
-                    continue
-                seen_actions.add(key)
-                actions.append(action)
-        return actions
+        return DoxaBase._profile_advisory_suggested_actions(
+            metric_advisories,
+            advisory_kind="metric_vocabulary_review",
+            index_field="metric_advisory_index",
+        )
 
     def _profile_update_accepted_indexes(
         self,
@@ -13302,16 +13302,11 @@ class DoxaBase:
     def _profile_type_advisory_suggested_actions(
         advisories: list[ProfileTypeFindingAdvisory],
     ) -> list[SuggestedNextAction]:
-        actions: list[SuggestedNextAction] = []
-        seen_actions: set[tuple[str, str]] = set()
-        for advisory in advisories:
-            for action in advisory.suggested_next_actions:
-                key = (action.tool_name, action.call)
-                if key in seen_actions:
-                    continue
-                seen_actions.add(key)
-                actions.append(action)
-        return actions
+        return DoxaBase._profile_advisory_suggested_actions(
+            advisories,
+            advisory_kind="profile_type_review",
+            index_field="type_advisory_index",
+        )
 
     def _profile_type_advisory_actions(
         self,
@@ -13916,6 +13911,88 @@ class DoxaBase:
             json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
         ).hexdigest()[:12]
         return f"profile-metric-advisory:{digest}"
+
+    @staticmethod
+    def _profile_advisory_suggested_actions(
+        advisories: Iterable[
+            ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory
+        ],
+        *,
+        advisory_kind: str,
+        index_field: str,
+    ) -> list[SuggestedNextAction]:
+        actions_by_key: dict[tuple[str, str], SuggestedNextAction] = {}
+        source_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+        action_order: list[tuple[str, str]] = []
+
+        for advisory in advisories:
+            advisory_index = getattr(advisory, index_field)
+            duplicate_advisory_indexes = (
+                advisory.duplicate_advisory_indexes or [advisory_index]
+            )
+            duplicate_profile_observation_iris = (
+                advisory.duplicate_profile_observation_iris
+                or [advisory.profile_observation_iri]
+            )
+            for action in advisory.suggested_next_actions:
+                key = (action.tool_name, action.call)
+                if key not in actions_by_key:
+                    actions_by_key[key] = action
+                    action_order.append(key)
+                    source_by_key[key] = {
+                        "advisory_kind": advisory_kind,
+                        "index_field": index_field,
+                        "advisory_indexes": [],
+                        "duplicate_group_keys": [],
+                        "duplicate_advisory_indexes": [],
+                        "duplicate_profile_observation_iris": [],
+                    }
+                source = source_by_key[key]
+                DoxaBase._append_unique(source["advisory_indexes"], advisory_index)
+                if advisory.duplicate_group_key:
+                    DoxaBase._append_unique(
+                        source["duplicate_group_keys"],
+                        advisory.duplicate_group_key,
+                    )
+                for duplicate_index in duplicate_advisory_indexes:
+                    DoxaBase._append_unique(
+                        source["duplicate_advisory_indexes"],
+                        duplicate_index,
+                    )
+                for observation_iri in duplicate_profile_observation_iris:
+                    DoxaBase._append_unique(
+                        source["duplicate_profile_observation_iris"],
+                        observation_iri,
+                    )
+
+        return [
+            DoxaBase._profile_advisory_suggested_action(
+                actions_by_key[key],
+                source_profile_advisory=source_by_key[key],
+            )
+            for key in action_order
+        ]
+
+    @staticmethod
+    def _append_unique(values: list[Any], value: Any) -> None:
+        if value not in values:
+            values.append(value)
+
+    @staticmethod
+    def _profile_advisory_suggested_action(
+        action: SuggestedNextAction,
+        *,
+        source_profile_advisory: dict[str, Any],
+    ) -> ProfileAdvisorySuggestedNextAction:
+        return ProfileAdvisorySuggestedNextAction(
+            action_label=action.action_label,
+            tool_name=action.tool_name,
+            mcp_tool_name=action.mcp_tool_name,
+            arguments=action.arguments,
+            reason=action.reason,
+            call=action.call,
+            source_profile_advisory=source_profile_advisory,
+        )
 
     def _profile_metric_advisory_actions(
         self,

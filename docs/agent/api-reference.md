@@ -447,7 +447,12 @@ top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
 Each metric/type advisory row also carries its row-local
 `metric_advisory_index` or `type_advisory_index`.
 Prefer grouped routing: `profile_map_updates`, `metric_vocabulary_review`, and
-`profile_type_review` are present only when that lane has actions.
+`profile_type_review` are present only when that lane has actions. Grouped
+metric/type actions carry `source_profile_advisory` with the source advisory
+kind, index field, represented advisory indexes, duplicate group keys, duplicate
+advisory indexes, and duplicate profile-observation IRIs, so scripts can route
+directly from the grouped lane without rejoining every action to the advisory
+rows first.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and

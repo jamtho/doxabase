@@ -4222,10 +4222,24 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
             "metric_vocabulary_review"
         ]
     ] == ["describe_context_slice", "list_entities"]
+    metric_action_source = result["suggested_next_action_groups"][
+        "metric_vocabulary_review"
+    ][0]["source_profile_advisory"]
+    assert metric_action_source["advisory_kind"] == "metric_vocabulary_review"
+    assert metric_action_source["index_field"] == "metric_advisory_index"
+    assert metric_action_source["advisory_indexes"] == [0]
+    assert metric_action_source["duplicate_advisory_indexes"] == [0]
     assert [
         action["tool_name"]
         for action in result["suggested_next_action_groups"]["profile_type_review"]
     ] == ["describe_context_slice", "record_pattern", "stage_map_assertion_change"]
+    type_action_source = result["suggested_next_action_groups"][
+        "profile_type_review"
+    ][0]["source_profile_advisory"]
+    assert type_action_source["advisory_kind"] == "profile_type_review"
+    assert type_action_source["index_field"] == "type_advisory_index"
+    assert type_action_source["advisory_indexes"] == [0]
+    assert type_action_source["duplicate_advisory_indexes"] == [0]
     assert result["suggested_next_call_groups"]["profile_map_updates"] == [
         result["suggested_next_calls"][0]
     ]

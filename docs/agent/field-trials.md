@@ -1528,6 +1528,12 @@ few useful gaps:
   routed away from mechanical restage. Apply checks and batch restage items now
   expose `routing_decision` fields as the effective next route while preserving
   `decision` as the replay/status explanation.
+- A profile/systematisation follow-up trial found grouped metric/type review
+  lanes were mechanically correct but made agents cross-reference repeated
+  action labels back to advisory rows. Grouped profile advisory actions now
+  carry `source_profile_advisory`, naming the advisory kind, row-local index
+  field, represented advisory indexes, duplicate groups, and duplicate
+  profile-observation support.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
