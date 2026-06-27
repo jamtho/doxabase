@@ -1660,6 +1660,11 @@ few useful gaps:
   for a multi-step recovery. The remaining small routing gap was lineage
   row-vs-target clarity, so graph and resource lineage responses now expose a
   `next_action_queue_item` companion for their selected row.
+- A profile metrics/map trial confirmed full-scan profile findings, sampled
+  row-count guardrails, defined/undefined metric advisories, and mixed-support
+  warnings are routing well. The durable review lesson is that staged revision
+  `supporting_patterns` are direct support, while `impacts[].related_patterns`
+  may include nearby metric/type advisory lore.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

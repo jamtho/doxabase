@@ -18165,6 +18165,17 @@ def test_profile_map_update_support_omits_type_review_patterns(
     assert type_pattern.pattern_iri not in {
         item.iri for item in staged_description.supporting_patterns
     }
+    nullable_impact = next(
+        impact
+        for impact in staged_description.impacts
+        if impact.impact_type == "changed_nullable"
+    )
+    assert type_pattern.pattern_iri in {
+        item.iri for item in nullable_impact.related_patterns
+    }
+    assert map_pattern.pattern_iri in {
+        item.iri for item in nullable_impact.related_patterns
+    }
 
 
 def test_draft_profile_map_updates_surfaces_profile_type_advisories(

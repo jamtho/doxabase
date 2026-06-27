@@ -148,6 +148,10 @@ lane. Keep the auto-filled patterns unless review shows one is unrelated to the
 accepted map changes. Profiled-column-only type rationale belongs in the
 `profile_type_review` lane unless you explicitly pass it as support to a focused
 type assertion change.
+When reviewing the staged revision, treat `supporting_patterns` as direct
+rationale for the map patch. `impacts[].related_patterns` is broader nearby
+context and may include metric/type advisory lore that was intentionally kept
+out of direct staged-revision support.
 Representative duplicate staging preserves every grouped profile observation as
 staged-revision support, so accepting one duplicate row does not discard sibling
 evidence.

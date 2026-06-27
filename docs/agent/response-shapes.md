@@ -1348,7 +1348,10 @@ feed those lists into the grouped revision support. Use
 `describe_staged_revision()` to inspect caller claim/pattern support, revision
 anchors, shared evidence, and the final grouped staged-revision support because
 the immediate staging response
-stays compact. If an accepted representative belongs to a duplicate group, the
+stays compact. In staged revision detail, `supporting_patterns` is the direct
+support set for the map patch, while `impacts[].related_patterns` is broader
+nearby context and may include metric/type advisory patterns that were not used
+as direct support. If an accepted representative belongs to a duplicate group, the
 staged revision preserves all `duplicate_profile_observation_iris` from that
 group as supporting observations even though only the accepted index appears as
 `staged`. Sampled row-count
