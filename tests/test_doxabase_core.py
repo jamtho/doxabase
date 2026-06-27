@@ -10389,7 +10389,7 @@ def test_query_target_candidates_surface_global_blockers(
         archive_index,
     ]
     assert context.unselected_direct_clean_candidate_indexes == [archive_index]
-    assert len(context.suggested_next_actions) == 1
+    assert len(context.suggested_next_actions) == 2
     query_action = context.suggested_next_actions[0]
     assert query_action.tool_name == "draft_query_plan"
     assert query_action.action_label == (
@@ -10404,7 +10404,20 @@ def test_query_target_candidates_surface_global_blockers(
         f"Other direct-clean candidate indexes exist ({archive_index})"
         in query_action.reason
     )
-    assert context.suggested_next_calls == [query_action.call]
+    peer_action = context.suggested_next_actions[1]
+    assert peer_action.tool_name == "draft_query_plan"
+    assert peer_action.action_label == (
+        "Draft peer direct-clean candidate with context allowance"
+    )
+    assert peer_action.arguments == {
+        "iri": dataset,
+        "candidate_index": archive_index,
+        "allow_context_blocked_candidate": True,
+    }
+    assert "peer candidate has no direct warning or error" in peer_action.reason
+    assert context.suggested_next_calls == [
+        action.call for action in context.suggested_next_actions
+    ]
     plan = db.draft_query_plan(dataset)
     assert plan.handoff_kind == "context_review_required"
     assert plan.source_context.selection_mode == "automatic"
@@ -10593,6 +10606,17 @@ def test_draft_query_plan_rejects_ambiguous_or_invalid_candidate_selection(
     assert "Other direct-ready candidate indexes exist (1)" in (
         context.suggested_next_actions[0].reason
     )
+    assert [action.action_label for action in context.suggested_next_actions] == [
+        "Draft ready query plan",
+        "Draft peer ready query plan",
+    ]
+    assert context.suggested_next_actions[1].arguments == {
+        "iri": dataset,
+        "candidate_index": 1,
+    }
+    assert context.suggested_next_calls == [
+        action.call for action in context.suggested_next_actions
+    ]
 
     automatic_plan = db.draft_query_plan(dataset)
 

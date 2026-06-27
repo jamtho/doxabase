@@ -2908,10 +2908,40 @@ def test_draft_query_plan_tool_handles_explicit_context_allowed_database_relatio
         for index, candidate in enumerate(context["query_target_candidates"])
         if candidate["relation_identifier"] == "mart.orders"
     )
+    archive_candidate_index = next(
+        index
+        for index, candidate in enumerate(context["query_target_candidates"])
+        if candidate["relation_identifier"] == "mart.orders_archive"
+    )
 
     assert context["query_target_decision"]["status"] == "context_blocked"
     assert context["ready_candidate_indexes"] == []
     assert relation_candidate_index in context["direct_clean_candidate_indexes"]
+    assert archive_candidate_index in context["unselected_direct_clean_candidate_indexes"]
+    assert [
+        action["arguments"]
+        for action in context["suggested_next_actions"]
+        if action["tool_name"] == "draft_query_plan"
+    ] == [
+        {
+            "iri": dataset,
+            "candidate_index": relation_candidate_index,
+            "allow_context_blocked_candidate": True,
+        },
+        {
+            "iri": dataset,
+            "candidate_index": archive_candidate_index,
+            "allow_context_blocked_candidate": True,
+        },
+    ]
+    assert [
+        action["action_label"]
+        for action in context["suggested_next_actions"]
+        if action["tool_name"] == "draft_query_plan"
+    ] == [
+        "Draft direct-clean candidate with context allowance",
+        "Draft peer direct-clean candidate with context allowance",
+    ]
 
     result = draft_query_plan_tool(
         db,

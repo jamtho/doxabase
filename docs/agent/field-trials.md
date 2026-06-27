@@ -1445,6 +1445,12 @@ few useful gaps:
   answer subtle promotion questions through structured resources and route
   counts; they now expose `suggested_next_actions` that narrow to linked
   `pattern_brief` slices before offering a higher-`max_triples` raw RDF retry.
+- Storage/query handoff trials found peer ready candidates were visible through
+  index lists, but scripts still had to parse prose or storage-selector
+  ambiguity errors to draft them. `describe_query_context.suggested_next_actions`
+  now includes explicit `draft_query_plan(candidate_index=...)` actions for peer
+  ready and peer context-blocked direct-clean candidates, including
+  `allow_context_blocked_candidate=True` where needed.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

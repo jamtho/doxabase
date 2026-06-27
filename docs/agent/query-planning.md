@@ -38,9 +38,11 @@ Start with `describe_query_context(dataset_iri)`:
 6. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, the first action inspects the profile evidence; when a
    query target candidate is also available, the draft-query-plan action follows.
-   In the
-   context-blocked direct-clean case it gives a `draft_query_plan` call with the
-   explicit `candidate_index` and `allow_context_blocked_candidate=True`.
+   Peer ready or context-blocked direct-clean candidates are also exposed as
+   explicit `draft_query_plan(candidate_index=...)` actions, so scripts should
+   follow actions instead of parsing peer indexes from prose or storage-selector
+   ambiguity errors. In the context-blocked direct-clean case, draft actions
+   include `allow_context_blocked_candidate=True`.
 
 Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
 

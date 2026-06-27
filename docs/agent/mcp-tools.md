@@ -438,8 +438,9 @@ an explicit `candidate_index` or `storage_access_iri`; selectorless automatic
 drafts keep the context review gate and report
 `context_blocked_candidate_allowed=true` /
 `context_blocked_candidate_used=false`. If `storage_access_iri` matches
-multiple candidate paths, rerun with
-`candidate_index` using the returned candidate snippets. `source_context`
+multiple candidate paths, prefer the explicit peer `draft_query_plan` actions
+returned by `describe_query_context`; otherwise rerun with `candidate_index`
+using the returned candidate snippets. `source_context`
 also reports `candidate_count`, `ready_candidate_indexes`, and
 `unselected_ready_candidate_indexes`, plus direct-clean peer indexes, so
 automatic plans reveal peer ready or context-blocked-direct-clean candidates

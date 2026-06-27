@@ -1376,6 +1376,11 @@ info-only notes.
 into `draft_query_plan`. In a context-blocked but direct-clean candidate case,
 it includes `candidate_index` and `allow_context_blocked_candidate=True` so a
 script can draft the selected route while keeping the context issues visible.
+When peer ready candidates or peer context-blocked direct-clean candidates
+exist, `suggested_next_actions` also includes one explicit
+`draft_query_plan(candidate_index=...)` action for each peer. Use those actions
+instead of parsing peer indexes from prose or from
+`storage_access_iri` ambiguity errors.
 When `ambiguous_physical_layout` blocks the selected candidate,
 `suggested_next_actions` also includes one `draft_query_plan` action per linked
 layout signature with `candidate_index` and `physical_layout_iri`; follow the
@@ -1595,7 +1600,9 @@ If the source context is globally blocked, use
 direct blockers but still need review-gated drafting.
 `storage_access_iri` must identify exactly one query target candidate; when one
 storage access has multiple candidate paths, the error includes compact
-candidate snippets and callers should rerun with `candidate_index`. If a
+candidate snippets and callers should rerun with `candidate_index`. Prefer the
+explicit candidate-index actions from `describe_query_context()` when available
+so automation does not have to parse those snippets. If a
 matching `physical_layout_iri` was also supplied, the error says the layout was
 matched but the storage selector still spans multiple path/relation candidates.
 `plan.scan` gives a best-effort scan

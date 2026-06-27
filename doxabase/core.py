@@ -9396,6 +9396,56 @@ class DoxaBase:
                 call=self._suggested_call_string("draft_query_plan", arguments),
             )
         )
+        peer_action_indexes: list[int] = []
+        peer_action_allowance = False
+        if decision.status == "ready":
+            peer_action_indexes = unselected_ready_candidate_indexes
+        elif (
+            readiness != "ready_for_query_planning"
+            and candidate.direct_review_required is False
+        ):
+            peer_action_indexes = unselected_direct_clean_candidate_indexes
+            peer_action_allowance = True
+        for peer_index in peer_action_indexes:
+            if peer_index < 0 or peer_index >= len(candidates):
+                continue
+            peer_arguments: dict[str, Any] = {
+                "iri": dataset_iri,
+                "candidate_index": peer_index,
+            }
+            if graph is not None and graph != "map":
+                peer_arguments["graph"] = graph
+            peer_candidate = candidates[peer_index]
+            if peer_action_allowance and peer_candidate.direct_review_required is False:
+                peer_arguments["allow_context_blocked_candidate"] = True
+                peer_label = "Draft peer direct-clean candidate with context allowance"
+                peer_reason = (
+                    "A peer candidate has no direct warning or error, but "
+                    "sibling or broader context blockers make the whole context "
+                    "review-required. Draft this reviewed peer with an explicit "
+                    "candidate_index and allow_context_blocked_candidate=True "
+                    "instead of parsing peer indexes from prose."
+                )
+            else:
+                peer_label = "Draft peer ready query plan"
+                peer_reason = (
+                    "A peer candidate is also direct-ready. Draft this explicit "
+                    "candidate_index when candidate review shows this path or "
+                    "relation is the intended handoff."
+                )
+            actions.append(
+                SuggestedNextAction(
+                    action_label=peer_label,
+                    tool_name="draft_query_plan",
+                    mcp_tool_name="doxabase.draft_query_plan",
+                    arguments=peer_arguments,
+                    reason=peer_reason,
+                    call=self._suggested_call_string(
+                        "draft_query_plan",
+                        peer_arguments,
+                    ),
+                )
+            )
         actions.extend(
             self._query_context_physical_layout_selection_actions(
                 dataset_iri=dataset_iri,
