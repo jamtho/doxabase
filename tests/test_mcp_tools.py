@@ -1329,6 +1329,13 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert lineage["latest_role"] == "applied_event"
     assert lineage["restage_chain_iris"] == [staged["revision_iri"]]
     assert lineage["alternative_revision_iris"] == []
+    assert lineage["next_action_queue_item"]["row_iri"] == (
+        applied["applied_revision_iri"]
+    )
+    assert lineage["next_action_queue_item"]["resolved_target_iri"] == (
+        applied["applied_revision_iri"]
+    )
+    assert lineage["next_action_queue_item"]["row_is_target"] is True
     assert lineage["applied_diff_status"] == "available"
     assert lineage["applied_diff"]["graph_diffs"][0][
         "resource_triples_added_count"
@@ -1351,6 +1358,10 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert generic_lineage["latest_revision_iri"] == applied["applied_revision_iri"]
     assert generic_lineage["latest_role"] == "applied_event"
     assert generic_lineage["restage_chain_iris"] == [staged["revision_iri"]]
+    assert generic_lineage["next_action_queue_item"]["resolved_target_iri"] == (
+        applied["applied_revision_iri"]
+    )
+    assert generic_lineage["next_action_queue_item"]["row_is_target"] is True
     assert generic_lineage["related_revision_iris"] == [
         applied["applied_revision_iri"],
         staged["revision_iri"],

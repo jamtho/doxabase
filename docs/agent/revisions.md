@@ -486,6 +486,9 @@ After the successor is applied, direct routes from the older stale source keep
 rows can put `next_action.arguments["iri"]` on the applied event. Use lineage
 when you need the full chain; use row-local `next_action` when you just need the
 next inspection call.
+Lineage responses also expose `next_action_queue_item`, scoped to the selected
+row and lineage-level `next_action`; use its `resolved_target_iri` and
+`row_is_target` fields before mutating stale rows with successors.
 
 Use the full provenance recipe when an autonomous agent needs to answer "what
 changed this resource, why, and what review action remains?":
@@ -528,6 +531,7 @@ has been applied. If a restage successor has already been applied, follow
 the lineage `next_action` / `suggested_next_actions`; they prefer inspecting
 the applied event while keeping the stale source and successor discoverable in
 `related_revision_iris`.
+`next_action_queue_item` is the compact row-vs-target card for that same route.
 
 Call `describe_applied_revision_diff(applied_iri)` when you need stored
 before/after snapshot counts and digests for an applied staged revision. Pass

@@ -2495,6 +2495,7 @@ lineage.restage_chain_iris
 lineage.alternative_revision_iris
 lineage.related_revision_iris
 lineage.next_action
+lineage.next_action_queue_item
 lineage.suggested_next_actions
 lineage.suggested_next_calls
 lineage.warnings
@@ -2519,6 +2520,10 @@ applied-event IRIs reachable from alternative staged rows, and every visible
 restage successor for rows in the lineage when imported history contains
 parallel successor links. It also includes applied events attached to those
 visible parallel successor branches.
+`next_action_queue_item` mirrors the list/export queue-item shape for the
+selected lineage row and the lineage-level `next_action`. Use its
+`resolved_target_iri`, `resolved_target_record_kind`, and `row_is_target` fields
+when a stale selected row routes to a current successor or applied event.
 
 `warnings` reports broken restage links and top-level snapshot handoff hazards.
 It also warns when an applied event points to a missing staged source, when a
@@ -2649,6 +2654,7 @@ lineage.related_revision_iris
 lineage.warnings
 lineage.patch_mention_scan
 lineage.next_action
+lineage.next_action_queue_item
 lineage.suggested_next_actions
 lineage.suggested_next_calls
 lineage.applied_diff_status
@@ -2665,6 +2671,8 @@ see the applied event after a successor has been applied. When the selected row
 is an old stale source whose restaged successor has already been applied,
 `applied_revision_iri` and `applied_diff` follow that applied successor while
 `staged_revision_iri` names the staged source that was actually applied.
+`next_action_queue_item` names the selected row and exposes the resolved applied
+or current target without requiring a separate resource list join.
 `restage_chain_iris` preserves the original source route. `applied_diff_status`
 is `available`, `unavailable`, `omitted`, or `not_applicable`. When present,
 `applied_diff.graph_diffs[]` contains resource-filtered added/removed counts

@@ -178,6 +178,8 @@ callers to import companion revision snapshot JSON before expecting exact
 applied diffs or stale drift triples. It is a read-only routing helper, not a
 diff browser; call `describe_staged_revision` for patch content and
 `describe_applied_revision_diff` for stored before/after diffs.
+`next_action_queue_item` mirrors list queue items for the selected row and
+exposes the resolved next-call target.
 
 `doxabase.list_resource_revisions`
 
@@ -215,9 +217,10 @@ row is an old stale source whose restaged successor has already been applied,
 `applied_revision_iri` and the diff summary follow that applied successor while
 `restage_chain_iris` preserves the original source route. This is not full
 graph-version browsing; call `describe_staged_revision` when patch content is
-needed. RDF-only imports can preserve resource route and staged/applied pairing,
-but exact resource-level applied diffs need the companion revision snapshot JSON
-import.
+needed. `next_action_queue_item` is the same row-vs-target card for the selected
+resource row. RDF-only imports can preserve resource route and staged/applied
+pairing, but exact resource-level applied diffs need the companion revision
+snapshot JSON import.
 
 `doxabase.search`
 

@@ -998,6 +998,7 @@ class RevisionLineageDescription:
     alternative_revision_iris: list[str]
     related_revision_iris: list[str]
     next_action: RevisionNextAction | None
+    next_action_queue_item: RevisionNextActionQueueItem | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     warnings: list[str]
@@ -1121,6 +1122,7 @@ class ResourceRevisionLineageDescription:
     warnings: list[str]
     patch_mention_scan: ResourceRevisionPatchMentionScanSummary
     next_action: RevisionNextAction | None
+    next_action_queue_item: RevisionNextActionQueueItem | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     applied_diff_status: str
@@ -4336,6 +4338,16 @@ class DoxaBase:
         )
         if snapshot_next_action is not None:
             next_action = snapshot_next_action
+        next_action_queue_item = self._revision_next_action_queue_item(
+            row_iri=selected.iri,
+            next_action=next_action,
+            record_kind=selected.record_kind,
+            application_status=selected.application_status,
+            application_decision=selected.application_decision,
+            stale_resolution_state=selected.stale_resolution_state,
+            staged_validation_status=selected.staged_validation_status,
+            alternative_gate=selected.alternative_gate,
+        )
         alternative_revision_iris = self._revision_lineage_alternative_revision_iris(
             selected=selected,
             restage_chain=restage_chain,
@@ -4397,6 +4409,7 @@ class DoxaBase:
                 by_iri=by_iri,
             ),
             next_action=next_action,
+            next_action_queue_item=next_action_queue_item,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
@@ -5104,6 +5117,16 @@ class DoxaBase:
         )
         if snapshot_next_action is not None:
             lineage_next_action = snapshot_next_action
+        lineage_next_action_queue_item = self._revision_next_action_queue_item(
+            row_iri=selected.revision.iri,
+            next_action=lineage_next_action,
+            record_kind=selected.revision.record_kind,
+            application_status=selected.revision.application_status,
+            application_decision=selected.revision.application_decision,
+            stale_resolution_state=selected.revision.stale_resolution_state,
+            staged_validation_status=selected.revision.staged_validation_status,
+            alternative_gate=selected.revision.alternative_gate,
+        )
 
         return ResourceRevisionLineageDescription(
             resource=lineage.resource,
@@ -5127,6 +5150,7 @@ class DoxaBase:
             warnings=graph_lineage.warnings,
             patch_mention_scan=lineage.patch_mention_scan,
             next_action=lineage_next_action,
+            next_action_queue_item=lineage_next_action_queue_item,
             suggested_next_actions=lineage_suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in lineage_suggested_next_actions

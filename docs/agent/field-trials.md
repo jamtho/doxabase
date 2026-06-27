@@ -1655,6 +1655,11 @@ few useful gaps:
   `storage_protocol_location_mismatch` still needed issue-specific repair code.
   Those issues now carry `details.repair_hint.actions` for reviewed protocol,
   root, bucket, prefix, and exact path-template staged repairs.
+- A staged conflict/rebase trial found current helpers route same-slot repair,
+  mechanical restage, lineage inspection, and current-work queues well enough
+  for a multi-step recovery. The remaining small routing gap was lineage
+  row-vs-target clarity, so graph and resource lineage responses now expose a
+  `next_action_queue_item` companion for their selected row.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

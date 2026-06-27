@@ -966,7 +966,9 @@ read-only and does not include patch payloads or arbitrary graph-version
 snapshots; use staged, applied-diff, or snapshot helpers for those. Exact diff
 availability still comes from the nested row `snapshot_evidence`, but lineage
 warnings call out count/digest-only or orphan snapshot states so agents do not
-miss import-recovery work.
+miss import-recovery work. `next_action_queue_item` mirrors list queue items for
+the selected row, including `resolved_target_iri` when the lineage next action
+points at a successor or applied event.
 `list_resource_revisions(resource_iri)` returns revision rows that explicitly
 touch one resource through `rc:revisionAnchor`, exact subject/predicate/object
 URI mentions in staged patch payloads, or an applied event whose staged source
@@ -999,7 +1001,8 @@ or restage successor is still current staged work, matching batch-restage naming
 pointer and can name an applied event after the current staged successor has
 been applied. It also carries graph-level `restage_chain_iris` and
 `alternative_revision_iris`, so a resource-first handoff can see sibling
-alternatives without a separate generic lineage call.
+alternatives without a separate generic lineage call. `next_action_queue_item`
+provides the selected row's compact resolved-target card.
 It is not a full graph-version browser and does not replace
 `describe_staged_revision()` when patch content is needed.
 `application_status="validation_failed"` means the current replay reached SHACL

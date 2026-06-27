@@ -7795,6 +7795,17 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     assert second_restaged.revision_iri in source_lineage.alternative_revision_iris
     assert source_lineage.next_action is not None
     assert source_lineage.next_action.queue == "inspect_already_applied"
+    assert source_lineage.next_action_queue_item is not None
+    assert source_lineage.next_action_queue_item.row_iri == first.revision_iri
+    assert (
+        source_lineage.next_action_queue_item.resolved_target_iri
+        == applied.applied_revision_iri
+    )
+    assert source_lineage.next_action_queue_item.row_is_target is False
+    assert (
+        source_lineage.next_action_queue_item.resolved_target_record_kind
+        == "applied_event"
+    )
     assert source_lineage.suggested_next_calls == [
         (
             "describe_graph_revision(iri='"
@@ -8160,6 +8171,17 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert source_lineage.paired_revision.revision.iri == applied.applied_revision_iri
     assert source_lineage.latest_revision_iri == applied.applied_revision_iri
     assert source_lineage.latest_role == "applied_event"
+    assert source_lineage.next_action_queue_item is not None
+    assert source_lineage.next_action_queue_item.row_iri == unanchored.revision_iri
+    assert (
+        source_lineage.next_action_queue_item.resolved_target_iri
+        == applied.applied_revision_iri
+    )
+    assert source_lineage.next_action_queue_item.row_is_target is False
+    assert (
+        source_lineage.next_action_queue_item.resolved_target_record_kind
+        == "applied_event"
+    )
     assert source_lineage.applied_diff_status == "omitted"
     assert source_lineage.applied_diff is None
 
@@ -8250,6 +8272,16 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     assert applied_source_lineage.next_action.action_type == (
         "inspect_applied_event"
     )
+    assert applied_source_lineage.next_action_queue_item is not None
+    assert (
+        applied_source_lineage.next_action_queue_item.row_iri
+        == original.revision_iri
+    )
+    assert (
+        applied_source_lineage.next_action_queue_item.resolved_target_iri
+        == applied.applied_revision_iri
+    )
+    assert applied_source_lineage.next_action_queue_item.row_is_target is False
     assert applied_source_lineage.next_action.arguments == {
         "iri": applied.applied_revision_iri,
     }
