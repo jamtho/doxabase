@@ -7809,8 +7809,15 @@ def test_apply_check_reports_validation_failed_status(tmp_path: Path) -> None:
     )
     assert "Inspect validation_results" in exported
 
-    with pytest.raises(DoxaBaseError, match="Applying staged revision would fail"):
+    with pytest.raises(
+        DoxaBaseError,
+        match="Applying staged revision would fail",
+    ) as excinfo:
         db.apply_staged_revision(staged.revision_iri)
+    error = str(excinfo.value)
+    assert staged.revision_iri in error
+    assert "describe_staged_revision(" in error
+    assert "include_current_apply_check=True" in error
 
 
 def test_staged_row_semantics_validation_hint_guides_clean_recipe(

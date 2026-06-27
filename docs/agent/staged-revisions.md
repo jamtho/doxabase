@@ -260,7 +260,7 @@ them may be stale:
 | `ready` | Review/export, apply at most one, then regenerate checks before siblings. |
 | `target_count_drift` or `target_digest_drift` | Review/export the conflict, then restage against current graph state. |
 | `patch_conflict` | Inspect patch diagnostics or export; stage a repaired or alternative proposal. |
-| `validation_failed` | Inspect `validation_results`; stage a repaired or alternative proposal. For overlapping single assertions, prefer removal+addition or `stage_map_assertion_change` replacement over another restage. |
+| `validation_failed` | Inspect `validation_results`; stage a repaired or alternative proposal. If `apply_staged_revision()` raises this route, use the `describe_staged_revision(..., include_current_apply_check=True)` call in the error. For overlapping single assertions, prefer removal+addition or `stage_map_assertion_change` replacement over another restage. |
 | `noop` | Inspect/export; do not apply unless the no-op is exactly the intended durable event. |
 | `already_applied` | Inspect the applied event and staged source; do not replay it. |
 

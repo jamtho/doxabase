@@ -1389,8 +1389,8 @@ few useful gaps:
   reachable through context slices but is not direct staged-revision evidence
   unless passed explicitly or linked directly on the pattern. A staged-revision
   trial also confirmed restage/apply/snapshot lineage works on realistic stale
-  caveat proposals; its remaining polish candidate is a more actionable
-  validation-blocked `apply_staged_revision` error.
+  caveat proposals; validation-blocked `apply_staged_revision` errors now name
+  the staged IRI and exact inspect call.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

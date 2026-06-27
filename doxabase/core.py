@@ -18683,9 +18683,14 @@ class DoxaBase:
                 "successor; inspect the current successor instead."
             )
         if check.validation_conforms is False and not allow_validation_failure:
+            inspect_call = (
+                "describe_staged_revision("
+                f"iri={staged.iri!r}, include_current_apply_check=True)"
+            )
             raise DoxaBaseError(
                 "Applying staged revision would fail validation; inspect "
-                "validation_results or pass allow_validation_failure=True."
+                f"validation_results for staged revision '{staged.iri}' with "
+                f"{inspect_call}, or pass allow_validation_failure=True."
             )
         if check.status == "noop":
             raise DoxaBaseError(

@@ -2811,6 +2811,9 @@ means the stored patch cannot currently be replayed, not merely that the target
 graph count or digest drifted. Suggested actions for `patch_conflict` omit
 `restage_staged_revision`.
 For `validation_failed`, inspect `validation_results` before staging a repair.
+If `apply_staged_revision()` raises this status, the exception includes the
+staged revision IRI and an exact `describe_staged_revision(...,
+include_current_apply_check=True)` call.
 If the failure appears after restaging overlapping single-assertion proposals,
 do not restage the same patch again; use a removal+addition patch or
 `stage_map_assertion_change` replacement to make the intended replacement
