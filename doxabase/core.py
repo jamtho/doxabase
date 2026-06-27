@@ -529,6 +529,9 @@ class SystematisationDraftRecord:
     framings: list[SystematisationFramingRecord]
     staged_revisions: list[StagedGraphRevisionRecord]
     next_action_queue: dict[str, list[str]]
+    next_action_queue_items: list[RevisionNextActionQueueItem]
+    next_action_queue_item_counts: dict[str, int]
+    semantic_review_required_queue_counts: dict[str, int]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
 
@@ -679,6 +682,7 @@ class StagedGraphRevisionBatchRestageItem:
     current_restaged_by: str | None
     current_revision_iri: str
     next_action_after: RevisionNextAction | None
+    next_action_queue_item_after: RevisionNextActionQueueItem | None
     suggested_next_actions_after: list[SuggestedNextAction]
     note: str
 
@@ -2188,6 +2192,7 @@ class RevisionNextActionQueueItem:
     mcp_tool_name: str | None
     resolved_target_iri: str | None
     resolved_target_iri_source: str | None
+    resolved_target_record_kind: str | None
     row_is_target: bool
     call: str | None
     source: str
@@ -5773,6 +5778,35 @@ class DoxaBase:
         if revision_type == self.expand_iri("rc:ImportRevision"):
             return "import_record"
         return "history_record"
+
+    def _graph_revision_record_kind_for_iri(
+        self,
+        revision_iri: str | None,
+    ) -> str | None:
+        if revision_iri is None:
+            return None
+        data_graphs = self._expand_graphs(["history"])
+        if self.expand_iri("rc:GraphRevision") not in self._types_from_graphs(
+            data_graphs,
+            revision_iri,
+        ):
+            return None
+        revision_type = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:revisionType",
+        )
+        patch_iris = self._objects(data_graphs, revision_iri, "rc:hasGraphPatch")
+        applies_staged_revision = self._first_object(
+            data_graphs,
+            revision_iri,
+            "rc:appliesStagedRevision",
+        )
+        return self._graph_revision_record_kind(
+            revision_type,
+            has_patch_payload=bool(patch_iris),
+            applies_staged_revision=applies_staged_revision,
+        )
 
     def describe_staged_revision(
         self,
@@ -19582,6 +19616,18 @@ class DoxaBase:
                 current_check.decision,
                 next_action_after,
             )
+            next_action_queue_item_after = self._revision_next_action_queue_item(
+                row_iri=current_revision_iri,
+                next_action=next_action_after,
+                record_kind=self._graph_revision_record_kind_for_iri(
+                    current_revision_iri
+                ),
+                application_status=current_check.status,
+                application_decision=current_check.decision,
+                stale_resolution_state=stale_resolution_state_after,
+                staged_validation_status=current_staged_validation_status,
+                alternative_gate=current_check.alternative_gate,
+            )
             if (
                 action == "skipped_already_handled"
                 and stale_resolution_state_after
@@ -19657,6 +19703,7 @@ class DoxaBase:
                     current_restaged_by=current_restaged_by,
                     current_revision_iri=current_revision_iri,
                     next_action_after=next_action_after,
+                    next_action_queue_item_after=next_action_queue_item_after,
                     suggested_next_actions_after=suggested_next_actions_after,
                     note=note,
                 )
@@ -20006,9 +20053,10 @@ class DoxaBase:
                 )
             )
 
-        next_action_queue, suggested_next_actions = (
+        bundle_summary, suggested_next_actions = (
             self._systematisation_draft_routing(staged_revisions)
         )
+        next_action_queue = bundle_summary.next_action_queue
         if first_anchor_default_linked_revision_iris:
             warnings.append(
                 "Multiple framings were staged; at least one later revision "
@@ -20068,6 +20116,13 @@ class DoxaBase:
             framings=framing_records,
             staged_revisions=staged_revisions,
             next_action_queue=next_action_queue,
+            next_action_queue_items=bundle_summary.next_action_queue_items,
+            next_action_queue_item_counts=(
+                bundle_summary.next_action_queue_item_counts
+            ),
+            semantic_review_required_queue_counts=(
+                bundle_summary.semantic_review_required_queue_counts
+            ),
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
@@ -20075,7 +20130,7 @@ class DoxaBase:
     def _systematisation_draft_routing(
         self,
         staged_revisions: list[StagedGraphRevisionRecord],
-    ) -> tuple[dict[str, list[str]], list[SuggestedNextAction]]:
+    ) -> tuple[StagedGraphRevisionBundleSummary, list[SuggestedNextAction]]:
         revision_iris = [revision.revision_iri for revision in staged_revisions]
         descriptions = [
             self.describe_staged_revision(revision_iri)
@@ -20091,7 +20146,7 @@ class DoxaBase:
         )
         bundle_summary = self._staged_revisions_bundle_summary(revision_summaries)
         return (
-            bundle_summary.next_action_queue,
+            bundle_summary,
             self._systematisation_draft_next_actions(revision_iris),
         )
 
@@ -23023,6 +23078,9 @@ class DoxaBase:
                 "next_action.arguments.iri"
                 if resolved_target_iri is not None
                 else None
+            ),
+            resolved_target_record_kind=(
+                self._graph_revision_record_kind_for_iri(resolved_target_iri)
             ),
             row_is_target=resolved_target_iri == row_iri,
             call=next_action.call,

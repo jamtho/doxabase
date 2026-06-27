@@ -136,8 +136,9 @@ the live staged work queue, excluding applied sources and stale rows already
 handled by restage. Responses include page-scoped `next_action_queue_items`,
 `next_action_queue_item_counts`, and `semantic_review_required_queue_counts`.
 Queue items preserve the old row-IRI queue while adding
-`resolved_target_iri`, `row_is_target`, status fields, and alternative-gate
-fields for automation. Non-current rows include `not_current_staged_work_reason`,
+`resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
+fields, and alternative-gate fields for automation. Non-current rows include
+`not_current_staged_work_reason`,
 such as
 `already_applied_source`, `superseded_by_restage`, or `applied_event_record`.
 Do not route full-list `application_status="conflict"` rows directly: a handled
@@ -982,9 +983,11 @@ systematisation intent, anchors, rationale, optional review notes and
 recommendations, validation preview, and linked staged revisions; it does not
 decide the ontology design for the agent. The result has
 `result_kind="systematisation_draft"`, `warnings`, `structured_warnings`,
-`next_action_queue`, `suggested_next_actions`, and `suggested_next_calls`, so
-automation can route validation-failed framings to repair and ready framings to
-review/apply checks before writing a Markdown bundle. If later framings actually
+`next_action_queue`, `next_action_queue_items`, queue counts, suggested next
+actions, and suggested next calls, so automation can route validation-failed
+framings to repair and ready framings to review/apply checks before writing a
+Markdown bundle. Queue items expose resolved targets and semantic-gate fields
+without requiring a grouped export first. If later framings actually
 default-linked to a first framing that did not route to `apply_after_review`,
 `structured_warnings` includes `first_alternative_anchor_not_ready` with
 `suggested_rerun_arguments={"link_alternatives": False}`. Per-framing
@@ -1211,8 +1214,10 @@ If the bundle also lists a ready successor in
 alternative to an already-applied staged source; treat that as semantic review
 gating even when the row's next action is `apply_after_review`.
 Each item also carries `next_action_after` and
-`suggested_next_actions_after` for that `current_revision_iri`, which is the
-direct row-level route to follow after the batch decision.
+`next_action_queue_item_after` / `suggested_next_actions_after` for that
+`current_revision_iri`, which is the direct row-level route to follow after the
+batch decision. `next_action_queue_item_after` is scoped to
+`current_revision_iri`, not the original source row.
 Each item also carries `restaged_from` when its source is itself a refreshed
 successor. It does not apply refreshed revisions; review and apply
 remain explicit follow-up steps. In dry-run mode, passing `path` still writes

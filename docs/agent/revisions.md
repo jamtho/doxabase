@@ -218,8 +218,8 @@ For fast routing, prefer the queue fields in this order:
    class.
 2. Use `next_action_queue_items` when you need machine-readable row-vs-target
    routing or semantic gate state. Each item includes the queued `row_iri`,
-   `resolved_target_iri`, `row_is_target`, status fields, and alternative-gate
-   fields. `next_action_queue_item_counts` and
+   `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`,
+   status fields, and alternative-gate fields. `next_action_queue_item_counts` and
    `semantic_review_required_queue_counts` are scoped to the same returned
    rows as `next_action_queue`.
 3. Use each row's `next_action.queue`, `next_action.action_label`, and

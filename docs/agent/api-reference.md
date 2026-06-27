@@ -860,11 +860,14 @@ on each staged revision and are also repeated in rationale text for readability.
 The returned `SystematisationDraftRecord` carries
 `result_kind="systematisation_draft"`, readable `warnings`, machine-readable
 `structured_warnings`, a draft-level `next_action_queue`, and
-`suggested_next_actions` / `suggested_next_calls`. The queue uses the same
-apply-check grouping as staged-revision exports, so callers can separate
-`repair_or_replace` framings from `apply_after_review` framings immediately
-after staging. When later framings actually default-linked to a first framing
-that did not route to `apply_after_review`, `structured_warnings` includes
+`next_action_queue_items` / `next_action_queue_item_counts` /
+`semantic_review_required_queue_counts`, plus `suggested_next_actions` /
+`suggested_next_calls`. The queue uses the same apply-check grouping as
+staged-revision exports, so callers can separate `repair_or_replace` framings
+from `apply_after_review` framings immediately after staging. Queue items expose
+the same resolved-target and semantic-gate fields as grouped export summaries.
+When later framings actually default-linked to a first framing that did not
+route to `apply_after_review`, `structured_warnings` includes
 `warning_code="first_alternative_anchor_not_ready"` and
 `suggested_rerun_arguments={"link_alternatives": False}`. Per-framing
 `alternative_to` values reroute siblings without that warning.
@@ -915,12 +918,13 @@ suggested actions. The response-level `next_action_queue` groups returned rows
 into queues such as `apply_after_review`, `restage_after_review`,
 `repair_or_replace`, `inspect_already_applied`, and `informational`.
 `next_action_queue_items` is the machine-readable companion: each item names the
-queued `row_iri`, `resolved_target_iri`, whether `row_is_target`, the selected
-tool/call, row status fields, and alternative-gate fields. Use it when a queued
-stale source redirects to a refreshed successor or applied event, or when an
-`apply_after_review` row still requires semantic review. The
-`next_action_queue_item_counts` and `semantic_review_required_queue_counts`
-dictionaries are scoped to the same returned page as `next_action_queue`.
+queued `row_iri`, `resolved_target_iri`, `resolved_target_record_kind`, whether
+`row_is_target`, the selected tool/call, row status fields, and alternative-gate
+fields. Use it when a queued stale source redirects to a refreshed successor or
+applied event, or when an `apply_after_review` row still requires semantic
+review. The `next_action_queue_item_counts` and
+`semantic_review_required_queue_counts` dictionaries are scoped to the same
+returned page as `next_action_queue`.
 Most count/digest-drift conflicts stay in `restage_after_review`, but stale
 single-assertion adds or authored replacements for curated singleton slots with
 exact same-slot drift route to `repair_or_replace` and include a
@@ -1259,9 +1263,10 @@ ready. The same condition is visible in `bundle_summary.next_action_queue_items`
 through `alternative_semantic_review_required=True` and the applied-source /
 applied-revision fields.
 Each row also carries `next_action_after` and
-`suggested_next_actions_after` for that `current_revision_iri`, so autonomous
-scripts can route the post-batch current revision without a separate listing
-join.
+`next_action_queue_item_after` / `suggested_next_actions_after` for that
+`current_revision_iri`, so autonomous scripts can route the post-batch current
+revision without a separate listing join. The item-local queue item is scoped to
+`current_revision_iri`; bundle-level queue items remain scoped to review rows.
 Each item also carries
 `restaged_from` when its source is itself a refreshed successor. The helper
 deliberately does not apply anything; applying one successor can make sibling

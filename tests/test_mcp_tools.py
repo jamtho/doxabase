@@ -742,12 +742,28 @@ def test_restage_staged_revisions_tool_exports_grouped_review(
     assert result["items"][0]["next_action_after"]["arguments"] == {
         "iri": already_restaged["revision_iri"]
     }
+    assert result["items"][0]["next_action_queue_item_after"]["row_iri"] == (
+        already_restaged["revision_iri"]
+    )
+    assert result["items"][0]["next_action_queue_item_after"][
+        "resolved_target_iri"
+    ] == already_restaged["revision_iri"]
+    assert result["items"][0]["next_action_queue_item_after"][
+        "resolved_target_record_kind"
+    ] == "staged_patch"
+    assert result["items"][0]["next_action_queue_item_after"]["row_is_target"] is True
     assert result["items"][1]["next_action_after"]["action_type"] == (
         "apply_after_review"
     )
     assert result["items"][1]["next_action_after"]["arguments"] == {
         "iri": restaged_second
     }
+    assert result["items"][1]["next_action_queue_item_after"]["row_iri"] == (
+        restaged_second
+    )
+    assert result["items"][1]["next_action_queue_item_after"][
+        "resolved_target_iri"
+    ] == restaged_second
     assert result["items"][1]["suggested_next_actions_after"][-1]["tool_name"] == (
         "apply_staged_revision"
     )
@@ -977,6 +993,7 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export_queue_item["row_iri"] == staged["revision_iri"]
     assert export_queue_item["queue"] == "apply_after_review"
     assert export_queue_item["resolved_target_iri"] == staged["revision_iri"]
+    assert export_queue_item["resolved_target_record_kind"] == "staged_patch"
     assert export_queue_item["row_is_target"] is True
     assert export_queue_item["alternative_semantic_review_required"] is False
     assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]
@@ -1078,6 +1095,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert queue_item["action_type"] == "apply_after_review"
     assert queue_item["resolved_target_iri"] == staged["revision_iri"]
     assert queue_item["resolved_target_iri_source"] == "next_action.arguments.iri"
+    assert queue_item["resolved_target_record_kind"] == "staged_patch"
     assert queue_item["row_is_target"] is True
     assert queue_item["record_kind"] == "staged_patch"
     assert queue_item["application_status"] == "ready"
@@ -1210,6 +1228,7 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     second_queue_item = second_page["next_action_queue_items"][0]
     assert second_queue_item["row_iri"] == applied["applied_revision_iri"]
     assert second_queue_item["resolved_target_iri"] == applied["applied_revision_iri"]
+    assert second_queue_item["resolved_target_record_kind"] == "applied_event"
     assert second_queue_item["row_is_target"] is True
     assert second_queue_item["record_kind"] == "applied_event"
     applied_row = second_page["revisions"][0]
@@ -1997,6 +2016,15 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
         revision["revision_iri"] for revision in result["staged_revisions"]
     ]
     assert result["next_action_queue"] == {"apply_after_review": revision_iris}
+    assert result["next_action_queue_item_counts"] == {"apply_after_review": 2}
+    assert result["semantic_review_required_queue_counts"] == {}
+    assert [
+        item["row_iri"] for item in result["next_action_queue_items"]
+    ] == revision_iris
+    assert [
+        item["resolved_target_iri"] for item in result["next_action_queue_items"]
+    ] == revision_iris
+    assert all(item["row_is_target"] for item in result["next_action_queue_items"])
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "export_staged_revisions"
     )

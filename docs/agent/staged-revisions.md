@@ -185,8 +185,11 @@ classification without creating refreshed successors; unhandled conflicts report
 created during that run, not as an apply queue. Each item's `status_after`,
 `decision_after`, `routing_decision_after`, `stale_resolution_state_after`, and
 `blocking_reasons_after` describe `current_revision_iri` after the batch decision; use
-`next_action_after` and `suggested_next_actions_after` for the concrete
-post-batch route, then use `check_staged_revision_apply()` before each apply.
+`next_action_after`, `next_action_queue_item_after`, and
+`suggested_next_actions_after` for the concrete post-batch route, then use
+`check_staged_revision_apply()` before each apply. The item-local queue item is
+scoped to `current_revision_iri`, which avoids having to join the batch item to
+`bundle_summary.next_action_queue_items` manually.
 Guarded same-slot conflicts that already suggest a
 `stage_map_assertion_change` replacement are skipped by batch restage with
 `not_restageable_reason="same_slot_replacement"` and rejected by direct
@@ -458,13 +461,16 @@ db.export_staged_revisions(
 
 The staging result already carries the first routing surface:
 `result.result_kind == "systematisation_draft"`, `result.next_action_queue`,
-`result.suggested_next_actions`, and `result.suggested_next_calls`.
+`result.next_action_queue_items`, `result.suggested_next_actions`, and
+`result.suggested_next_calls`.
 Use `next_action_queue` before writing an export when an autonomous script only
 needs to separate mechanically ready framings from validation failures. The
 queue groups rows by next move; it is not a preference or comparison order for
 alternatives. Use `revision_summaries`, `review_recommendation`,
 `alternative_to`, and `current_alternative_to` to understand alternative
-meaning and review order.
+meaning and review order. Use `next_action_queue_items` when a script needs the
+resolved target IRI, row-vs-target flag, or semantic alternative gate state
+without first exporting the grouped review.
 The suggested actions include a grouped `export_staged_revisions` call and one
 `check_staged_revision_apply` call per staged revision; re-run those checks
 before applying, repairing, or restaging if any graph changes may have happened

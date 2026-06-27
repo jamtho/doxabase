@@ -2215,6 +2215,9 @@ draft.structured_warnings
 draft.framings
 draft.staged_revisions
 draft.next_action_queue
+draft.next_action_queue_items
+draft.next_action_queue_item_counts
+draft.semantic_review_required_queue_counts
 draft.suggested_next_actions
 draft.suggested_next_calls
 ```
@@ -2224,8 +2227,11 @@ same shape because it delegates to `stage_systematisation`. Use
 `next_action_queue` for first-pass routing immediately after staging. It is
 derived from the same apply-check summary logic as grouped staged-revision
 exports, so validation-failed framings land in `repair_or_replace` while
-mechanically ready framings land in `apply_after_review`. The suggested actions
-include a grouped `export_staged_revisions` call plus per-revision
+mechanically ready framings land in `apply_after_review`.
+`next_action_queue_items` mirrors the grouped export queue-item shape, including
+`resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
+fields, and alternative-gate fields for each staged framing. The suggested
+actions include a grouped `export_staged_revisions` call plus per-revision
 `check_staged_revision_apply` calls for fresh live routing. Suggested export
 paths include a readable revision slug and short hash to reduce collisions
 across concurrent scratch runs; callers can still pass their own run-specific
@@ -2370,10 +2376,10 @@ RDF/snapshot handoff; follow the promoted `import_revision_snapshots` or
 triples.
 `next_action_queue_items` mirrors the same returned-row scope with one compact
 row per routed item. It preserves the queued `row_iri`, adds
-`resolved_target_iri` and `row_is_target`, and carries row status plus
-alternative-gate fields. `next_action_queue_item_counts` counts those items by
-queue, while `semantic_review_required_queue_counts` counts queued rows whose
-alternative gate still requires semantic review.
+`resolved_target_iri`, `resolved_target_record_kind`, and `row_is_target`, and
+carries row status plus alternative-gate fields. `next_action_queue_item_counts`
+counts those items by queue, while `semantic_review_required_queue_counts`
+counts queued rows whose alternative gate still requires semantic review.
 It is a routing surface, not a preference order for competing alternatives; use
 row details such as `review_recommendation`, `alternative_to`, and
 `current_alternative_to` when comparing alternative framings.
@@ -3754,7 +3760,8 @@ Each `batch.items` row reports `source_revision_iri`, `summary`,
 `triples_to_add_after`, `triples_to_remove_after`, `action`,
 `not_restageable_reason`, `restaged_revision_iri`,
 `restaged_from`, `current_restaged_by`, `current_revision_iri`,
-`next_action_after`, `suggested_next_actions_after`, and `note`.
+`next_action_after`, `next_action_queue_item_after`,
+`suggested_next_actions_after`, and `note`.
 The snapshot evidence fields use the same status object as revision list rows,
 and the completeness labels match grouped Markdown (`complete`, `partial`,
 `partial-extra-rows`, `history-only`, `snapshot-only`, or `missing`). Read them
@@ -3776,9 +3783,12 @@ is still the stale source. In real batch runs, top-level
 `current_revision_by_source` is recomputed after the whole batch, so stale
 ancestors map to the latest successor even when an intermediate successor was
 also processed. Use `next_action_after` as row-local explanation for
-`current_revision_iri`; for automation after a mixed batch, route from
-`bundle_summary.next_action_queue` or top-level `current_revision_by_source`
-before following per-item next actions. Read `suggested_next_actions_after`
+`current_revision_iri`; `next_action_queue_item_after` is the matching compact
+queue item for that same current revision, including resolved target and target
+record kind. For automation after a mixed batch, route from
+`bundle_summary.next_action_queue` / `bundle_summary.next_action_queue_items` or
+top-level `current_revision_by_source` before following per-item next actions.
+Read `suggested_next_actions_after`
 when a script needs concrete follow-up calls without joining back through
 `list_graph_revisions`.
 For single-row or per-item batch-restage automation, prefer

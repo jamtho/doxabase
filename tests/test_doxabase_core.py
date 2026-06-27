@@ -4017,6 +4017,10 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
         applied_source_queue_item.resolved_target_iri
         == result.applied_revision_iri
     )
+    assert (
+        applied_source_queue_item.resolved_target_record_kind
+        == "applied_event"
+    )
     assert applied_source_queue_item.row_is_target is False
     assert applied_source_queue_item.stale_resolution_state == (
         "stale_handled_by_restage"
@@ -4101,6 +4105,7 @@ def test_list_graph_revisions_routes_handled_stale_to_applied_successor(
     assert source_queue_item.queue == "inspect_already_applied"
     assert source_queue_item.action_type == "inspect_already_applied"
     assert source_queue_item.resolved_target_iri == applied.applied_revision_iri
+    assert source_queue_item.resolved_target_record_kind == "applied_event"
     assert source_queue_item.resolved_target_iri_source == (
         "next_action.arguments.iri"
     )
@@ -5776,9 +5781,27 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert batch.items[0].next_action_after.arguments == {
         "iri": already_restaged.revision_iri
     }
+    assert batch.items[0].next_action_queue_item_after is not None
+    assert batch.items[0].next_action_queue_item_after.row_iri == (
+        already_restaged.revision_iri
+    )
+    assert batch.items[0].next_action_queue_item_after.resolved_target_iri == (
+        already_restaged.revision_iri
+    )
+    assert batch.items[0].next_action_queue_item_after.row_is_target is True
+    assert batch.items[0].next_action_queue_item_after.record_kind == "staged_patch"
+    assert (
+        batch.items[0].next_action_queue_item_after.resolved_target_record_kind
+        == "staged_patch"
+    )
     assert batch.items[1].next_action_after is not None
     assert batch.items[1].next_action_after.action_type == "apply_after_review"
     assert batch.items[1].next_action_after.arguments == {"iri": restaged_second}
+    assert batch.items[1].next_action_queue_item_after is not None
+    assert batch.items[1].next_action_queue_item_after.row_iri == restaged_second
+    assert batch.items[1].next_action_queue_item_after.resolved_target_iri == (
+        restaged_second
+    )
     assert batch.items[1].suggested_next_actions_after[-1].tool_name == (
         "apply_staged_revision"
     )
@@ -5786,6 +5809,8 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
     assert batch.items[2].next_action_after is not None
     assert batch.items[2].next_action_after.action_type == "apply_after_review"
     assert batch.items[2].next_action_after.arguments == {"iri": ready.revision_iri}
+    assert batch.items[2].next_action_queue_item_after is not None
+    assert batch.items[2].next_action_queue_item_after.row_iri == ready.revision_iri
     assert batch.review_revision_iris == [
         first.revision_iri,
         already_restaged.revision_iri,
@@ -8836,6 +8861,13 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert draft.framings[1].review_recommendation == "Preferred for now."
     revision_iris = [revision.revision_iri for revision in draft.staged_revisions]
     assert draft.next_action_queue == {"apply_after_review": revision_iris}
+    assert draft.next_action_queue_item_counts == {"apply_after_review": 2}
+    assert draft.semantic_review_required_queue_counts == {}
+    assert [item.row_iri for item in draft.next_action_queue_items] == revision_iris
+    assert [
+        item.resolved_target_iri for item in draft.next_action_queue_items
+    ] == revision_iris
+    assert all(item.row_is_target for item in draft.next_action_queue_items)
     assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
     assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
     draft_export_path = draft.suggested_next_actions[0].arguments["path"]
@@ -9384,6 +9416,18 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         "repair_or_replace": [revision_iris[0]],
         "apply_after_review": [revision_iris[1], revision_iris[2]],
     }
+    assert draft.next_action_queue_item_counts == {
+        "repair_or_replace": 1,
+        "apply_after_review": 2,
+    }
+    assert draft.semantic_review_required_queue_counts == {}
+    assert [
+        item.application_status for item in draft.next_action_queue_items
+    ] == [
+        "validation_failed",
+        "ready",
+        "ready",
+    ]
     assert any(
         "First framing 'Incomplete map scope without timezone evidence'" in warning
         and "failed staged validation" in warning
@@ -9448,6 +9492,61 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     ) in exported
     assert f"- Repair review: `{revision_iris[0]}`" in exported
     assert "Temporal scopes must name the timezone evidence column." in exported
+
+
+def test_stage_systematisation_queue_items_surface_applied_alternative_gate(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    source = db.stage_graph_revision(
+        summary="Model message rows as raw events",
+        rationale="Seed an applied framing for a later systematisation alternative.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    applied = db.apply_staged_revision(source.revision_iri)
+
+    draft = db.stage_systematisation(
+        summary="Explore message row alternatives",
+        intent="Stage a ready alternative after the event framing was applied.",
+        framings=[
+            {
+                "label": "Conversation entities",
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:MessageThreads a rc:Dataset .
+                """,
+                "alternative_to": source.revision_iri,
+            }
+        ],
+    )
+
+    revision_iri = draft.staged_revisions[0].revision_iri
+    assert draft.next_action_queue == {"apply_after_review": [revision_iri]}
+    assert draft.next_action_queue_item_counts == {"apply_after_review": 1}
+    assert draft.semantic_review_required_queue_counts == {
+        "apply_after_review": 1
+    }
+    queue_item = draft.next_action_queue_items[0]
+    assert queue_item.row_iri == revision_iri
+    assert queue_item.resolved_target_iri == revision_iri
+    assert queue_item.resolved_target_record_kind == "staged_patch"
+    assert queue_item.alternative_gate_status == "alternative_to_applied_source"
+    assert queue_item.alternative_semantic_review_required is True
+    assert queue_item.alternative_applied_source_iri == source.revision_iri
+    assert queue_item.alternative_applied_revision_iri == applied.applied_revision_iri
 
 
 def test_stage_systematisation_shared_context_validates_each_framing(
