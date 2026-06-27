@@ -339,6 +339,44 @@ need to match a literal that contains a colon. Pass `object_datatype` such as
 `object_lang` such as `"en"` to target or author a language-tagged literal.
 Do not pass both on the same literal.
 
+## Resource Context
+
+`db.describe_resource(iri, graph=None, limit=50)` returns a `ResourceContext`:
+
+```python
+resource.iri
+resource.graph
+resource.label
+resource.description
+resource.types
+resource.claim
+resource.outgoing
+resource.incoming
+resource.limit
+```
+
+`outgoing[]` and `incoming[]` rows are `ResourceTriple` summaries:
+
+```python
+triple.graph
+triple.subject
+triple.subject_kind
+triple.subject_label
+triple.subject_types
+triple.predicate
+triple.predicate_label
+triple.object
+triple.object_kind
+triple.object_label
+triple.object_types
+triple.object_datatype
+triple.object_lang
+```
+
+Use this helper when a specific resource needs a local RDF neighborhood rather
+than a route-explained context slice. The `claim` field is populated for claim
+resources and has the normal claim-description shape.
+
 ## Staged Map Assertion Changes
 
 `db.stage_map_assertion_change(subject, predicate, object, rationale, ...)`
@@ -750,7 +788,11 @@ that mixed-history case, use `evidence_profile_counts` to spot evidence IRIs
 that support several profiles from the same run. `profile_run_candidates`
 contains the count-ranked evidence IRIs that support more than one returned
 profile; each candidate has `evidence_iri`, `returned_profile_count`,
-`profile_observation_iris`, and `shared_by_all_returned_profiles`. Use
+`profile_observation_iris`, `dataset_profile_row_counts`,
+`row_count_snapshot_matches`, and `shared_by_all_returned_profiles`.
+Candidates are ordered by returned profile count, then by whether a returned
+dataset-profile `row_count` matches `row_count_snapshot`, then by evidence IRI.
+Use
 `profile_observation_iris` to seed `describe_context_slice` or inspect the
 returned observations that make up the candidate run. It is a bounded response
 convenience, not a separate persisted profile-run node. `handoff_note` is a
@@ -2216,16 +2258,33 @@ from `applied_revision_iri`. `applied_diff_status` is `available`,
 optional triple arrays:
 
 ```python
+applied_diff.applied_revision_iri
+applied_diff.staged_revision_iri
+applied_diff.snapshot_evidence
+applied_diff.source_snapshot_evidence
+applied_diff.changed_graphs
+applied_diff.include_triples
+applied_diff.max_triples
+applied_diff.graph_diffs
+
 graph_diff.graph_role
 graph_diff.count_basis
+graph_diff.before_revision_iri
+graph_diff.after_revision_iri
 graph_diff.before_triple_count
 graph_diff.after_triple_count
+graph_diff.before_content_digest
+graph_diff.after_content_digest
 graph_diff.exact_changed_triples_available
 graph_diff.exact_changed_triples_included
 graph_diff.resource_triples_added_count
 graph_diff.resource_triples_removed_count
+graph_diff.resource_triples_added_truncated
+graph_diff.resource_triples_removed_truncated
+graph_diff.max_triples
 graph_diff.resource_triples_added
 graph_diff.resource_triples_removed
+graph_diff.note
 ```
 
 `graph_diff.count_basis` is `target_graph_only`: applied revision snapshot rows
@@ -3138,7 +3197,10 @@ counts and lists each row's status, completeness (`complete`, `partial`,
 snapshot graph roles, stored snapshot row roles, exact roles, missing/orphan
 roles, and suggested next calls.
 This is a review-artifact shortcut over each row's `snapshot_evidence` /
-`describe_revision_snapshot_evidence()` payload.
+`describe_revision_snapshot_evidence()` payload. The section is warning-oriented:
+when every included row has complete exact snapshot rows, it may be absent. Use
+`describe_revision_snapshot_evidence()` or the JSON `snapshot_evidence` fields
+for positive machine-readable confirmation.
 `validation_failed_revision_iris` lists rows whose patch counts
 replay but whose current preview validation does not conform.
 `staged_validation_failed_revision_iris` lists rows whose stored staged-time

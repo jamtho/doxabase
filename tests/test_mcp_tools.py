@@ -3949,6 +3949,8 @@ def test_record_profile_bundle_tool_returns_json_like_payload(tmp_path: Path) ->
                 result["dataset_profile"]["observation"]["observation_iri"],
                 result["column_profiles"][0]["observation"]["observation_iri"],
             ],
+            "dataset_profile_row_counts": [1000],
+            "row_count_snapshot_matches": True,
             "shared_by_all_returned_profiles": True,
         }
     ]

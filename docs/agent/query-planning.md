@@ -22,10 +22,11 @@ Start with `describe_query_context(dataset_iri)`:
 3. Read `row_count_snapshot` with `profile_summary` when profiler evidence
    informs planning. `profile_summary.profile_run_candidates` gives the
    evidence IRI(s) to inspect with `describe_profile_run` before treating a
-   profile-derived count as fresh enough for a query handoff. In mixed profile
-   history, inspect candidate runs and match the dataset-profile `row_count`
-   to `row_count_snapshot` instead of assuming the first evidence bundle is the
-   current snapshot source.
+   profile-derived count as fresh enough for a query handoff. Candidates are
+   count-ranked; ties prefer evidence whose dataset-profile `row_count` matches
+   `row_count_snapshot`, then fall back to evidence IRI order. In mixed profile
+   history, still inspect the candidate run before treating the profile-derived
+   count as current.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
 5. Always compare `readiness` and `issues` with the selected candidate. Broader

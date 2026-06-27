@@ -75,6 +75,8 @@ There is no `route_explained` profile; route explanations are returned through
 
 Useful fields:
 
+- `profile` and `seeds`: the selected profile name and normalized seed resource
+  summaries that produced the slice.
 - `reading_order`: a short static protocol for reading a slice: seeds,
   warnings, structured contexts including `seed_profile_observations`, routes,
   resources, then raw RDF when needed.
@@ -107,6 +109,8 @@ Useful fields:
 - `resource_count`, `candidate_triple_count`, `returned_triple_count`, and
   `omitted_triple_count`: size signals for the selected resource set and raw
   triple payload.
+- `graph_counts` and `triple_count`: graph-role counts for returned triples and
+  the compact total returned triple count.
 - `truncated`: true when `max_triples` cut off the selected triples. The
   truncation scope is `triples_only`: resources, route counts, and structured
   contexts still describe the full selected slice.

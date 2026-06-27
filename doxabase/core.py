@@ -1638,6 +1638,8 @@ class ProfileRunCandidate:
     evidence_iri: str
     returned_profile_count: int
     profile_observation_iris: list[str]
+    dataset_profile_row_counts: list[int]
+    row_count_snapshot_matches: bool
     shared_by_all_returned_profiles: bool
 
 
@@ -7801,6 +7803,11 @@ class DoxaBase:
             )
         )
 
+        row_count_snapshot = self._int_object(
+            data_graphs,
+            dataset_iri,
+            "rc:rowCountSnapshot",
+        )
         description = DatasetDescription(
             iri=dataset_iri,
             graph=graph,
@@ -7823,11 +7830,7 @@ class DoxaBase:
                 lookup_graphs,
                 self._first_object(data_graphs, dataset_iri, "rc:schemaStability"),
             ),
-            row_count_snapshot=self._int_object(
-                data_graphs,
-                dataset_iri,
-                "rc:rowCountSnapshot",
-            ),
+            row_count_snapshot=row_count_snapshot,
             layout_verification_status=self._optional_resource_summary(
                 lookup_graphs,
                 self._first_object(
@@ -7852,6 +7855,7 @@ class DoxaBase:
                 total_unmapped_column_profile_count=(
                     total_unmapped_column_profile_count
                 ),
+                row_count_snapshot=row_count_snapshot,
             ),
             profile_observations=profile_observations,
             unmapped_column_profile_observations=unmapped_column_profile_observations,
@@ -12517,6 +12521,7 @@ class DoxaBase:
         total_dataset_profile_count: int,
         total_mapped_column_profile_count: int,
         total_unmapped_column_profile_count: int,
+        row_count_snapshot: int | None = None,
     ) -> ProfileSummary:
         mapped_column_profile_count = sum(
             len(column.profile_observations) for column in columns
@@ -12576,11 +12581,30 @@ class DoxaBase:
             if returned_profile_count > 0
             and evidence_profile_counts[evidence_iri] == returned_profile_count
         ]
+        dataset_profile_row_counts_by_evidence: dict[str, list[int]] = {}
+        for profile in dataset_profiles:
+            if profile.row_count is None:
+                continue
+            for evidence_iri in {
+                evidence.iri for evidence in profile.evidence if evidence.iri
+            }:
+                dataset_profile_row_counts_by_evidence.setdefault(
+                    evidence_iri,
+                    [],
+                ).append(profile.row_count)
         profile_run_candidates = [
             ProfileRunCandidate(
                 evidence_iri=evidence_iri,
                 returned_profile_count=evidence_profile_counts[evidence_iri],
                 profile_observation_iris=evidence_profile_iris[evidence_iri],
+                dataset_profile_row_counts=sorted(
+                    set(dataset_profile_row_counts_by_evidence.get(evidence_iri, []))
+                ),
+                row_count_snapshot_matches=(
+                    row_count_snapshot is not None
+                    and row_count_snapshot
+                    in dataset_profile_row_counts_by_evidence.get(evidence_iri, [])
+                ),
                 shared_by_all_returned_profiles=(
                     returned_profile_count > 0
                     and evidence_profile_counts[evidence_iri]
@@ -12593,6 +12617,7 @@ class DoxaBase:
         profile_run_candidates.sort(
             key=lambda candidate: (
                 -candidate.returned_profile_count,
+                not candidate.row_count_snapshot_matches,
                 candidate.evidence_iri,
             )
         )

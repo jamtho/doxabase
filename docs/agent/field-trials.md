@@ -1428,6 +1428,23 @@ few useful gaps:
   `stage_pattern_promotion` alternatives expose usable routing queues. Treat
   `next_action_queue` as next-move grouping, not preference order among ready
   alternatives.
+- A query-planning profile-history trial found count-ranked profile run
+  candidates needed one more freshness cue: when candidates tie on returned
+  profile count, prefer evidence whose returned dataset-profile `row_count`
+  matches the map `row_count_snapshot`. Candidates now expose
+  `dataset_profile_row_counts` and `row_count_snapshot_matches` so agents can
+  see the tie-break and still inspect `describe_profile_run` before treating a
+  profile-derived count as current.
+- Handoff recovery and context-lineage trials found the existing recovery
+  mechanics mostly held up. RDF-only imports route to companion snapshot JSON
+  when exact triples are unavailable, and full RDF+snapshot imports recover
+  applied diffs and resource lineage. Grouped Markdown's `Snapshot Evidence`
+  panel is warning-oriented and can be absent when evidence is complete; use
+  `describe_revision_snapshot_evidence` or JSON `snapshot_evidence` fields for
+  positive script checks. Truncated column-seeded `deep_lore` slices can still
+  answer subtle promotion questions through structured resources and route
+  counts, but a future pass should add a clearer narrowing cue when raw triples
+  are truncated.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

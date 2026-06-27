@@ -15411,6 +15411,18 @@ def test_record_profile_bundle_writes_dataset_and_column_profiles(
     assert (
         description.profile_summary.profile_run_candidates[
             0
+        ].dataset_profile_row_counts
+        == [100]
+    )
+    assert (
+        description.profile_summary.profile_run_candidates[
+            0
+        ].row_count_snapshot_matches
+        is True
+    )
+    assert (
+        description.profile_summary.profile_run_candidates[
+            0
         ].shared_by_all_returned_profiles
         is True
     )
@@ -15631,6 +15643,8 @@ def test_profile_summary_surfaces_run_candidates_in_mixed_profile_history(
     ] == [newer_evidence]
     run_candidate = description.profile_summary.profile_run_candidates[0]
     assert run_candidate.returned_profile_count == 3
+    assert run_candidate.dataset_profile_row_counts == [100]
+    assert run_candidate.row_count_snapshot_matches is False
     assert set(run_candidate.profile_observation_iris) == {
         bundle.dataset_profile.observation.observation_iri,
         *(
@@ -15692,17 +15706,108 @@ def test_profile_run_candidates_are_count_ranked_and_ignore_singletons(
     candidates = db.describe_dataset(dataset).profile_summary.profile_run_candidates
 
     assert [
-        (candidate.evidence_iri, candidate.returned_profile_count)
+        (
+            candidate.evidence_iri,
+            candidate.returned_profile_count,
+            candidate.dataset_profile_row_counts,
+            candidate.row_count_snapshot_matches,
+        )
         for candidate in candidates
     ] == [
-        (evidence_a, 3),
-        (evidence_b, 2),
-        (evidence_c, 2),
+        (evidence_a, 3, [], False),
+        (evidence_b, 2, [], False),
+        (evidence_c, 2, [], False),
     ]
     assert all(
         not candidate.shared_by_all_returned_profiles for candidate in candidates
     )
     assert all(candidate.profile_observation_iris for candidate in candidates)
+
+
+def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    old_evidence = "https://example.test/project#AOldProfileEvidence"
+    matching_evidence = "https://example.test/project#ZMatchingProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=120,
+        path_templates=["orders/dt={date}.parquet"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+    )
+    db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Older profile run with stale row count.",
+        evidence_summary="Older profile evidence.",
+        evidence_sources=["test://orders-profile-old"],
+        shared_evidence_iri=old_evidence,
+        row_count=80,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status was profiled in the older run.",
+            }
+        ],
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Matching profile run with current row count.",
+        evidence_summary="Matching profile evidence.",
+        evidence_sources=["test://orders-profile-current"],
+        shared_evidence_iri=matching_evidence,
+        row_count=120,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status was profiled in the matching run.",
+            }
+        ],
+    )
+
+    description = db.describe_dataset(dataset)
+
+    assert [
+        (
+            candidate.evidence_iri,
+            candidate.returned_profile_count,
+            candidate.dataset_profile_row_counts,
+            candidate.row_count_snapshot_matches,
+        )
+        for candidate in description.profile_summary.profile_run_candidates
+    ] == [
+        (matching_evidence, 2, [120], True),
+        (old_evidence, 2, [80], False),
+    ]
+
+    context = db.describe_query_context(dataset)
+
+    assert context.suggested_next_actions[0].tool_name == "describe_profile_run"
+    assert context.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": matching_evidence,
+    }
 
 
 def test_describe_profile_run_returns_wide_shared_evidence_run(
