@@ -117,6 +117,10 @@ call. Check `status_counts` first, then item reasons.
 When a profile-derived change is backed by synthesized lore, pass
 `supporting_claims`, `supporting_patterns`, or extra `revision_anchors`; these
 links are recorded on the staged revision for later review.
+The default `profile_map_updates` suggested action pre-fills
+`supporting_patterns` when same-evidence profile patterns clearly overlap the
+profile run's dataset, profiled columns, or recommendation resources. Keep those
+unless review shows the pattern is unrelated to the accepted map changes.
 Representative duplicate staging preserves every grouped profile observation as
 staged-revision support, so accepting one duplicate row does not discard sibling
 evidence.

@@ -428,7 +428,9 @@ alternatives. It is a resource-centric helper, not full graph-version browsing.
 Its
 `current_staged_revision_iri` names only still-current staged work, and
 `current_revision_iri` is the same value under the batch-restage current-row
-name. If a restage successor has already been applied, follow
+name. `latest_revision_iri` / `latest_role` name the latest visible revision in
+the selected staged/apply family, including an applied event after a successor
+has been applied. If a restage successor has already been applied, follow
 the lineage `next_action` / `suggested_next_actions`; they prefer inspecting
 the applied event while keeping the stale source and successor discoverable in
 `related_revision_iris`.

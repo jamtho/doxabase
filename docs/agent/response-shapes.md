@@ -943,9 +943,12 @@ recommendation include a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled
 row-count recommendations can still appear in
 `representative_recommendation_indexes` for review, but the default staging
-action omits them unless the caller explicitly opts in. Pass only the indexes
-actually accepted after reviewing sample scope and modelling intent; include
-duplicate sibling indexes only when they need distinct review treatment.
+action omits them unless the caller explicitly opts in. When same-evidence
+profile patterns overlap the profile run, the suggested staging arguments also
+include `supporting_patterns` so the staged map revision carries the synthesis
+without a second pattern lookup. Pass only the indexes actually accepted after
+reviewing sample scope and modelling intent; include duplicate sibling indexes
+only when they need distinct review treatment.
 When `draft.recommendations` is empty and either metric or type advisories are
 present, the draft is advisory-only. The grouped and flat suggested actions are
 the deduped advisory actions for vocabulary/context/type review; do not call
@@ -2111,6 +2114,8 @@ lineage.applied_revision_iri
 lineage.staged_revision_iri
 lineage.current_staged_revision_iri
 lineage.current_revision_iri
+lineage.latest_revision_iri
+lineage.latest_role
 lineage.restage_chain_iris
 lineage.alternative_revision_iris
 lineage.related_revision_iris
@@ -2126,7 +2131,10 @@ lineage.applied_diff
 `selected_revision` and `paired_revision` are `ResourceRevisionListItem` rows.
 `selected_role` / `paired_role` values include `applied_event`,
 `applied_source`, `restaged_source`, `current_staged_revision`,
-`staged_revision`, and `history_record`. `applied_diff_status` is `available`,
+`staged_revision`, and `history_record`. `latest_revision_iri` / `latest_role`
+mirror graph lineage's latest family pointer, so a resource-first handoff can
+see the applied event after a successor has been applied without inferring it
+from `applied_revision_iri`. `applied_diff_status` is `available`,
 `unavailable`, `omitted`, or `not_applicable`. When present,
 `applied_diff.graph_diffs[]` contains resource-filtered added/removed counts and
 optional triple arrays:

@@ -687,6 +687,16 @@ def test_stage_graph_revision_exposes_seed_expanded_count_basis(
                     ex:SeedAwareThing rdfs:label "Seed-aware thing" .
                 """,
             },
+            {
+                "graph": "shapes",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+                    ex:SeedAwareThingShape a sh:NodeShape ;
+                        sh:targetNode ex:SeedAwareThing .
+                """,
+            },
         ],
         validation_scope="all",
     )
@@ -694,12 +704,17 @@ def test_stage_graph_revision_exposes_seed_expanded_count_basis(
     patches_by_graph = {patch.target_graph: patch for patch in staged.patches}
     ontology_patch = patches_by_graph["ontology"]
     map_patch = patches_by_graph["map"]
+    shapes_patch = patches_by_graph["shapes"]
     assert ontology_patch.count_basis == "target_graph_plus_base_ontology"
     assert map_patch.count_basis == "target_graph_only"
+    assert shapes_patch.count_basis == "target_graph_plus_base_shapes"
     assert ontology_patch.before_triple_count == (
         db.triple_count("base_ontology") + db.triple_count("ontology")
     )
     assert map_patch.before_triple_count == db.triple_count("map")
+    assert shapes_patch.before_triple_count == (
+        db.triple_count("base_shapes") + db.triple_count("shapes")
+    )
 
     description = db.describe_staged_revision(staged.revision_iri)
     description_patches = {patch.target_graph: patch for patch in description.patches}
@@ -708,6 +723,9 @@ def test_stage_graph_revision_exposes_seed_expanded_count_basis(
         == "target_graph_plus_base_ontology"
     )
     assert description_patches["map"].count_basis == "target_graph_only"
+    assert (
+        description_patches["shapes"].count_basis == "target_graph_plus_base_shapes"
+    )
 
     check = db.check_staged_revision_apply(staged.revision_iri)
     check_patches = {patch.target_graph: patch for patch in check.patch_checks}
@@ -716,11 +734,13 @@ def test_stage_graph_revision_exposes_seed_expanded_count_basis(
         == "target_graph_plus_base_ontology"
     )
     assert check_patches["map"].count_basis == "target_graph_only"
+    assert check_patches["shapes"].count_basis == "target_graph_plus_base_shapes"
 
     export_path = tmp_path / "staged-review.md"
     db.export_staged_revision(staged.revision_iri, export_path)
     export_text = export_path.read_text()
     assert "- Count basis: `target_graph_plus_base_ontology`" in export_text
+    assert "- Count basis: `target_graph_plus_base_shapes`" in export_text
     assert "| Count basis |" in export_text
 
     grouped_export_path = tmp_path / "grouped-staged-review.md"
@@ -733,6 +753,28 @@ def test_stage_graph_revision_exposes_seed_expanded_count_basis(
         in grouped_export_text
     )
     assert "| 1 | map | 2 | target_graph_only |" in grouped_export_text
+    assert "| 1 | shapes | 3 | target_graph_plus_base_shapes |" in grouped_export_text
+
+    map_only = db.stage_graph_revision(
+        summary="Stage map-only role-local patch",
+        rationale="Grouped exports should stay quiet for simple role-local patches.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:RoleLocalThing rdfs:label "Role-local thing" .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    map_only_export_path = tmp_path / "map-only-grouped-review.md"
+    db.export_staged_revisions([map_only.revision_iri], map_only_export_path)
+    map_only_export_text = map_only_export_path.read_text()
+    assert "## Count Basis Context" not in map_only_export_text
 
 
 def test_stage_graph_revision_parse_errors_include_parser_detail(
@@ -7208,6 +7250,8 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert lineage.staged_revision_iri == unanchored.revision_iri
     assert lineage.current_staged_revision_iri is None
     assert lineage.current_revision_iri is None
+    assert lineage.latest_revision_iri == applied.applied_revision_iri
+    assert lineage.latest_role == "applied_event"
     assert lineage.restage_chain_iris == [unanchored.revision_iri]
     assert lineage.alternative_revision_iris == []
     assert lineage.related_revision_iris == [
@@ -7237,6 +7281,8 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert source_lineage.selected_role == "applied_source"
     assert source_lineage.paired_revision is not None
     assert source_lineage.paired_revision.revision.iri == applied.applied_revision_iri
+    assert source_lineage.latest_revision_iri == applied.applied_revision_iri
+    assert source_lineage.latest_role == "applied_event"
     assert source_lineage.applied_diff_status == "omitted"
     assert source_lineage.applied_diff is None
 
@@ -7287,6 +7333,8 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     assert stale_lineage.selected_role == "restaged_source"
     assert stale_lineage.current_staged_revision_iri == restaged.revision_iri
     assert stale_lineage.current_revision_iri == restaged.revision_iri
+    assert stale_lineage.latest_revision_iri == restaged.revision_iri
+    assert stale_lineage.latest_role == "current_staged_revision"
     assert stale_lineage.restage_chain_iris == [
         original.revision_iri,
         restaged.revision_iri,
@@ -7308,6 +7356,8 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     assert applied_source_lineage.selected_role == "restaged_source"
     assert applied_source_lineage.current_staged_revision_iri is None
     assert applied_source_lineage.current_revision_iri is None
+    assert applied_source_lineage.latest_revision_iri == applied.applied_revision_iri
+    assert applied_source_lineage.latest_role == "applied_event"
     assert applied_source_lineage.restage_chain_iris == [
         original.revision_iri,
         restaged.revision_iri,
@@ -7343,6 +7393,8 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
         original.revision_iri,
         restaged.revision_iri,
     ]
+    assert applied_event_lineage.latest_revision_iri == applied.applied_revision_iri
+    assert applied_event_lineage.latest_role == "applied_event"
     assert applied_event_lineage.related_revision_iris == [
         applied.applied_revision_iri,
         restaged.revision_iri,
@@ -15271,7 +15323,7 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         nullable=False,
     )
 
-    db.record_profile_bundle(
+    bundle = db.record_profile_bundle(
         dataset,
         dataset_summary="Payments were profiled with a full-table scan.",
         evidence_summary="Synthetic profile run.",
@@ -15314,6 +15366,21 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
             },
         ],
     )
+    profile_pattern = db.record_pattern(
+        summary="Payments profile run supports map updates.",
+        pattern_text=(
+            "The Payments profile run observed row-count and column-nullability "
+            "findings that should travel with staged map updates."
+        ),
+        rationale=(
+            "The profile map update lane should preserve same-evidence "
+            "profile-pattern support instead of requiring a second lookup."
+        ),
+        pattern_targets=[dataset, status_column],
+        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
+        evidence_iri=evidence,
+        map_implications=[dataset, status_column, settlement_column],
+    )
 
     draft = db.draft_profile_map_updates(dataset, evidence)
 
@@ -15342,6 +15409,7 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         "dataset_iri": dataset,
         "evidence_iri": evidence,
         "accepted_recommendation_indexes": [0, 1, 2],
+        "supporting_patterns": [profile_pattern.pattern_iri],
     }
     assert draft.suggested_next_calls[0].startswith("stage_profile_map_updates(")
     assert list(draft.suggested_next_action_groups) == [
@@ -15365,6 +15433,16 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert draft.suggested_next_call_groups["profile_map_updates"] == [
         draft.suggested_next_calls[0]
     ]
+    staged_from_suggestion = db.stage_profile_map_updates(
+        **draft.suggested_next_actions[0].arguments
+    )
+    assert staged_from_suggestion.staged_revision is not None
+    described_staged = db.describe_staged_revision(
+        staged_from_suggestion.staged_revision.revision_iri
+    )
+    assert {item.iri for item in described_staged.supporting_patterns} == {
+        profile_pattern.pattern_iri
+    }
 
     row_count = draft.recommendations[0]
     assert row_count.action == "replace_map_value"

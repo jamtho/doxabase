@@ -1072,6 +1072,8 @@ class ResourceRevisionLineageDescription:
     staged_revision_iri: str | None
     current_staged_revision_iri: str | None
     current_revision_iri: str | None
+    latest_revision_iri: str | None
+    latest_role: str | None
     restage_chain_iris: list[str]
     alternative_revision_iris: list[str]
     related_revision_iris: list[str]
@@ -4648,6 +4650,8 @@ class DoxaBase:
             staged_revision_iri=staged_revision_iri,
             current_staged_revision_iri=current_staged_revision_iri,
             current_revision_iri=current_staged_revision_iri,
+            latest_revision_iri=graph_lineage.latest_revision_iri,
+            latest_role=graph_lineage.latest_role,
             restage_chain_iris=graph_lineage.restage_chain_iris,
             alternative_revision_iris=graph_lineage.alternative_revision_iris,
             related_revision_iris=related_revision_iris,
@@ -7990,6 +7994,12 @@ class DoxaBase:
         type_advisory_status_counts = self._profile_type_advisory_status_counts(
             type_advisories
         )
+        profile_supporting_pattern_iris = (
+            self._profile_map_update_supporting_pattern_iris(
+                profile_run,
+                recommendations=recommendations,
+            )
+        )
         suggested_next_action_groups = (
             self._profile_map_update_draft_action_groups(
                 dataset_iri=dataset_value,
@@ -7997,6 +8007,7 @@ class DoxaBase:
                 default_stageable_representative_indexes=(
                     default_stageable_representative_indexes
                 ),
+                supporting_patterns=profile_supporting_pattern_iris,
                 metric_advisories=metric_advisories,
                 type_advisories=type_advisories,
             )
@@ -8045,6 +8056,7 @@ class DoxaBase:
         dataset_iri: str,
         evidence_iri: str,
         default_stageable_representative_indexes: list[int],
+        supporting_patterns: list[str],
         metric_advisories: list[ProfileMetricVocabularyAdvisory],
         type_advisories: list[ProfileTypeFindingAdvisory],
     ) -> dict[str, list[SuggestedNextAction]]:
@@ -8055,6 +8067,7 @@ class DoxaBase:
             default_stageable_representative_indexes=(
                 default_stageable_representative_indexes
             ),
+            supporting_patterns=supporting_patterns,
         )
         if profile_map_actions:
             groups["profile_map_updates"] = profile_map_actions
@@ -8348,6 +8361,7 @@ class DoxaBase:
         dataset_iri: str,
         evidence_iri: str,
         default_stageable_representative_indexes: list[int],
+        supporting_patterns: list[str],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         if default_stageable_representative_indexes:
@@ -8358,6 +8372,8 @@ class DoxaBase:
                     default_stageable_representative_indexes
                 ),
             }
+            if supporting_patterns:
+                arguments["supporting_patterns"] = supporting_patterns
             actions.append(
                 SuggestedNextAction(
                     action_label="Review and stage profile map updates",
@@ -8380,6 +8396,48 @@ class DoxaBase:
             )
 
         return actions
+
+    def _profile_map_update_supporting_pattern_iris(
+        self,
+        profile_run: ProfileRunDescription,
+        *,
+        recommendations: list[ProfileMapUpdateRecommendation],
+    ) -> list[str]:
+        pattern_graphs = ["patterns"]
+        same_evidence_patterns = set(
+            self._subjects(pattern_graphs, "rc:evidence", profile_run.evidence_iri)
+        )
+        if not same_evidence_patterns:
+            return []
+
+        profile_observation_iris = set(profile_run.profile_observation_iris)
+        relevant_resource_iris = {profile_run.dataset.iri}
+        for recommendation in recommendations:
+            relevant_resource_iris.add(recommendation.resource.iri)
+        for profile in [
+            *profile_run.dataset_profile_observations,
+            *profile_run.mapped_column_profile_observations,
+            *profile_run.unmapped_column_profile_observations,
+        ]:
+            if profile.observed_asset is not None:
+                relevant_resource_iris.add(profile.observed_asset.iri)
+            if profile.observed_column is not None:
+                relevant_resource_iris.add(profile.observed_column.iri)
+
+        pattern_iris: list[str] = []
+        for pattern_iri in sorted(same_evidence_patterns):
+            pattern_resources = {
+                *self._objects(pattern_graphs, pattern_iri, "rc:patternTarget"),
+                *self._objects(pattern_graphs, pattern_iri, "rc:mapImplication"),
+            }
+            pattern_support = set(
+                self._objects(pattern_graphs, pattern_iri, "rc:supportingObservation")
+            )
+            if pattern_resources & relevant_resource_iris or (
+                pattern_support & profile_observation_iris
+            ):
+                pattern_iris.append(pattern_iri)
+        return pattern_iris
 
     @staticmethod
     def _profile_update_representative_indexes(

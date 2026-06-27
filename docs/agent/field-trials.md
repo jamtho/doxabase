@@ -1337,6 +1337,16 @@ few useful gaps:
   staged-revision Markdown now includes `Count Basis Context` for mixed or
   seed-expanded patch bases so reviewers see that ontology/shape preview counts
   include seed graphs while revision snapshots remain role-local.
+- Follow-up staged workflow trials confirmed the count-basis panel is quiet for
+  simple map-only bundles and useful for mixed ontology/shapes/map bundles; test
+  coverage now pins both cases. A staged conflict/rebase trial found the core
+  recovery loop sound but resource-first lineage still made agents infer the
+  latest applied version after a current successor was applied; resource lineage
+  now exposes `latest_revision_iri` and `latest_role` from graph lineage. A
+  profile workflow trial found agents following only the `profile_map_updates`
+  lane could miss same-evidence profile-pattern support; default
+  `stage_profile_map_updates` suggestions now prefill overlapping
+  `supporting_patterns` while keeping metric and type advisories review-only.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
