@@ -4410,12 +4410,16 @@ for the row's current status, such as validation repair or restage advice.
 guidance and `prior_source_apply_check_context` when a handled stale source
 keeps its old apply-check guidance for provenance. The Markdown summary table
 uses `item.summary_recommendation`, which redirects handled stale rows to their
-current successor, otherwise prefers live `item.apply_recommended_resolution`,
+current successor, then prefers staged-validation repair wording when a stale
+count/digest conflict is repair-routed because the original staged preview
+failed validation. Otherwise it uses live `item.apply_recommended_resolution`
 and only falls back to authored review recommendations when no current
-mechanical guidance is available.
+mechanical guidance is available. In that repair-routed stale-validation case,
+`item.summary_recommendation_source` is `staged_validation_repair_route`.
 `item.summary_recommendation_source` names that provenance
 (`review_recommendation`, `stale_resolution_redirect`,
-`apply_recommended_resolution`, or `none`). Structured consumers should follow
+`staged_validation_repair_route`, `apply_recommended_resolution`, or `none`).
+Structured consumers should follow
 `item.active_recommendation_field`, which is `summary_recommendation` for these
 grouped rows, unless they are deliberately inspecting raw apply-check context.
 `alternative_to`, `current_alternative_to`, `restaged_from`, `restaged_by`,

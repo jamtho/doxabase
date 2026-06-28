@@ -28532,24 +28532,12 @@ class DoxaBase:
                 if apply_check is not None
                 else None
             )
-            summary_recommendation = (
-                self._staged_revisions_effective_recommendation(
-                    review_recommendation=description.review_recommendation,
-                    stale_resolution_state=stale_resolution_state,
-                    restaged_by=restaged_by,
-                    current_restaged_by=current_restaged_by,
-                    apply_recommended_resolution=apply_recommended_resolution,
-                )
-            )
-            summary_recommendation_source = (
-                self._staged_revisions_effective_recommendation_source(
-                    review_recommendation=description.review_recommendation,
-                    stale_resolution_state=stale_resolution_state,
-                    apply_recommended_resolution=apply_recommended_resolution,
-                )
-            )
             suggested_next_actions = (
                 apply_check.suggested_next_actions if apply_check is not None else []
+            )
+            staged_validation_status = self._staged_validation_status(
+                conforms=description.validation_conforms,
+                result_count=description.validation_result_count,
             )
             next_action = self._revision_next_action(
                 description.iri,
@@ -28561,10 +28549,39 @@ class DoxaBase:
                 suggested_next_actions=suggested_next_actions,
                 restaged_by=restaged_by,
                 current_restaged_by=current_restaged_by,
-                staged_validation_status=self._staged_validation_status(
-                    conforms=description.validation_conforms,
-                    result_count=description.validation_result_count,
-                ),
+                staged_validation_status=staged_validation_status,
+            )
+            summary_recommendation = (
+                self._staged_revisions_effective_recommendation(
+                    review_recommendation=description.review_recommendation,
+                    stale_resolution_state=stale_resolution_state,
+                    restaged_by=restaged_by,
+                    current_restaged_by=current_restaged_by,
+                    apply_status=(
+                        apply_check.status if apply_check is not None else None
+                    ),
+                    apply_decision=(
+                        apply_check.decision if apply_check is not None else None
+                    ),
+                    apply_recommended_resolution=apply_recommended_resolution,
+                    staged_validation_status=staged_validation_status,
+                    next_action=next_action,
+                )
+            )
+            summary_recommendation_source = (
+                self._staged_revisions_effective_recommendation_source(
+                    review_recommendation=description.review_recommendation,
+                    stale_resolution_state=stale_resolution_state,
+                    apply_status=(
+                        apply_check.status if apply_check is not None else None
+                    ),
+                    apply_decision=(
+                        apply_check.decision if apply_check is not None else None
+                    ),
+                    apply_recommended_resolution=apply_recommended_resolution,
+                    staged_validation_status=staged_validation_status,
+                    next_action=next_action,
+                )
             )
             summaries.append(
                 StagedGraphRevisionExportSummary(
@@ -33188,7 +33205,11 @@ class DoxaBase:
         stale_resolution_state: str | None,
         restaged_by: str | None,
         current_restaged_by: str | None,
+        apply_status: str | None,
+        apply_decision: str | None,
         apply_recommended_resolution: str | None,
+        staged_validation_status: str,
+        next_action: RevisionNextAction | None,
     ) -> str:
         if stale_resolution_state == "stale_handled_by_restage":
             successor_iri = current_restaged_by or restaged_by
@@ -33198,6 +33219,18 @@ class DoxaBase:
                     f"inspect `{successor_iri}`."
             )
             return "Handled by refreshed successor; follow Review Queues."
+        if (
+            staged_validation_status == "failed"
+            and next_action is not None
+            and next_action.queue == "repair_or_replace"
+            and apply_status == "conflict"
+            and apply_decision == "restage_against_current_graph"
+        ):
+            return (
+                "Stored staged-time validation failed; inspect validation "
+                "diagnostics and stage a repaired or alternative proposal before "
+                "restaging or applying this row."
+            )
         if apply_recommended_resolution:
             return apply_recommended_resolution
         if review_recommendation:
@@ -33209,10 +33242,22 @@ class DoxaBase:
         *,
         review_recommendation: str | None,
         stale_resolution_state: str | None,
+        apply_status: str | None,
+        apply_decision: str | None,
         apply_recommended_resolution: str | None,
+        staged_validation_status: str,
+        next_action: RevisionNextAction | None,
     ) -> str:
         if stale_resolution_state == "stale_handled_by_restage":
             return "stale_resolution_redirect"
+        if (
+            staged_validation_status == "failed"
+            and next_action is not None
+            and next_action.queue == "repair_or_replace"
+            and apply_status == "conflict"
+            and apply_decision == "restage_against_current_graph"
+        ):
+            return "staged_validation_repair_route"
         if apply_recommended_resolution:
             return "apply_recommended_resolution"
         if review_recommendation:

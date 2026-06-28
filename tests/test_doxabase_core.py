@@ -7173,6 +7173,30 @@ def test_restage_from_staged_validation_failure_routes_to_repair_when_current_st
     assert "same-payload mechanical restage" in dry_item.repair_first_warning
     assert dry_item.repair_first_warning in dry_item.note
 
+    conflict_export = db.export_staged_revisions(
+        [source.revision_iri],
+        tmp_path / "staged-validation-conflict-review.md",
+    )
+    conflict_summary = conflict_export.revision_summaries[0]
+    assert conflict_summary.apply_status == "conflict"
+    assert conflict_summary.apply_decision == "restage_against_current_graph"
+    assert conflict_summary.next_action is not None
+    assert conflict_summary.next_action.queue == "repair_or_replace"
+    assert conflict_summary.summary_recommendation == (
+        "Stored staged-time validation failed; inspect validation diagnostics "
+        "and stage a repaired or alternative proposal before restaging or "
+        "applying this row."
+    )
+    assert (
+        conflict_summary.summary_recommendation_source
+        == "staged_validation_repair_route"
+    )
+    conflict_markdown = (
+        tmp_path / "staged-validation-conflict-review.md"
+    ).read_text(encoding="utf-8")
+    assert "Repair or discard" in conflict_markdown
+    assert "Stored staged-time validation failed" in conflict_markdown
+
     restaged = db.restage_staged_revision(source.revision_iri)
     check = db.check_staged_revision_apply(restaged.revision_iri)
 
