@@ -821,8 +821,11 @@ some graph roles have exact snapshot rows. Use that panel to decide whether a
 companion revision snapshot JSON bundle is still needed before relying on exact
 stale drift or applied-diff triples. The panel is warning-oriented and may be
 absent when every included row has complete exact snapshot rows; use
-`describe_revision_snapshot_evidence()` or row-level JSON `snapshot_evidence`
-when a script needs positive confirmation.
+`bundle_summary.snapshot_evidence`, `describe_revision_snapshot_evidence()`, or
+row-level JSON `snapshot_evidence` when a script needs positive confirmation.
+Grouped export JSON keeps `next_action_queue` focused on review/apply routing;
+the snapshot import gate is `bundle_summary.snapshot_evidence.complete` plus the
+row-level `suggested_next_actions` there.
 When a same-payload mechanical restaged successor is ready only because current
 graph state filled a source validation gap, its decision is
 `inspect_restaged_source_validation_failure` and its compact queue is

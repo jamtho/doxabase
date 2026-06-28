@@ -2184,6 +2184,12 @@ few useful gaps:
   `snapshot`, and `trial` from project-specific token matches, and always
   surfaces `linked_to_other_dataset` with `linked_dataset_iris`, while still
   requiring reviewed selection.
+- A revision-snapshot handoff trial confirmed project TriG alone correctly
+  routes imported rows through `complete_handoff_import` until companion
+  snapshot JSON is imported. Grouped review export JSON now exposes
+  `bundle_summary.snapshot_evidence` so unattended consumers can see the same
+  snapshot import gate as the Markdown `Snapshot Evidence` panel without parsing
+  Markdown or changing review/apply queue semantics.
 - An assertion-support/caveat trial confirmed that support routes correctly pull
   direct and owner-dataset caveats plus mixed supporting and contradictory lore,
   but related claims/patterns are contextual, not endorsement. Read claim text,

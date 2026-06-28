@@ -1591,6 +1591,10 @@ and `recommended_applied_inspection_iris`. Prefer
 direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.next_action_queue_items` adds the resolved target IRI,
 row-vs-target flag, and semantic alternative gate fields for each queued row;
+`bundle_summary.snapshot_evidence` separately summarizes whether the included
+rows have complete stored snapshot rows. Its `complete=false` rows carry the
+same `import_revision_snapshots` suggested actions as the Markdown `Snapshot
+Evidence` panel, while `next_action_queue` keeps normal review/apply routing.
 `semantic_review_required_queue_counts` flags gated alternative rows by queue.
 `semantic_risk_queue_counts` separately counts queued rows with apply-check
 semantic risk (`attention` or `high`), including repair queues when semantic

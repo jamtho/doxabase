@@ -1249,6 +1249,12 @@ When the concrete follow-up target can differ from the queued row, use
 point at an applied event. The bundle also exposes
 `next_action_queue_item_counts` and `semantic_review_required_queue_counts`, so
 queue-only scripts can notice semantic review gates inside `apply_after_review`.
+For RDF handoffs imported without companion snapshot JSON,
+`bundle_summary.snapshot_evidence` is the structured import gate: `complete`
+false means at least one included row lacks exact stored snapshot rows, and row
+`suggested_next_actions` point at `import_revision_snapshots` just like the
+Markdown `Snapshot Evidence` panel. This does not change `next_action_queue`,
+which remains focused on review/apply routing.
 `bundle_summary.warnings` calls out sequencing hazards, including grouped
 ready/no-op reviews on the same changed graph that should be re-checked after
 each apply, and source-only bundles whose recommended review target is outside

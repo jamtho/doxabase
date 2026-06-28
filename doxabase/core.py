@@ -903,6 +903,32 @@ class StagedGraphRevisionExportSummary:
 
 
 @dataclass(frozen=True)
+class StagedGraphRevisionSnapshotEvidenceRow:
+    row_index: int
+    revision_iri: str
+    summary: str | None
+    status: str
+    completeness: str
+    rdf_snapshot_graph_roles: list[str]
+    stored_snapshot_graph_roles: list[str]
+    exact_snapshot_graph_roles: list[str]
+    missing_snapshot_row_graph_roles: list[str]
+    orphan_snapshot_row_graph_roles: list[str]
+    note: str
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
+class StagedGraphRevisionSnapshotEvidenceSummary:
+    complete: bool
+    total_revision_count: int
+    incomplete_revision_iris: list[str]
+    status_counts: dict[str, int]
+    rows: list[StagedGraphRevisionSnapshotEvidenceRow]
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionBundleSummary:
     total_revisions: int
     apply_status_counts: dict[str, int]
@@ -924,6 +950,7 @@ class StagedGraphRevisionBundleSummary:
     next_action_queue: dict[str, list[str]]
     next_action_queue_items: list[RevisionNextActionQueueItem]
     next_action_queue_item_counts: dict[str, int]
+    snapshot_evidence: StagedGraphRevisionSnapshotEvidenceSummary
     mutation_frontier_iris: list[str]
     requires_recheck_after_each_apply: bool
     semantic_risk_queue_counts: dict[str, int]
@@ -25432,7 +25459,12 @@ class DoxaBase:
                 apply_checks=review_apply_checks,
             )
             bundle_summary = self._staged_revisions_bundle_summary(
-                revision_summaries
+                revision_summaries,
+                snapshot_evidence=(
+                    self._staged_revisions_snapshot_evidence_summary(
+                        review_descriptions
+                    )
+                ),
             )
 
         return StagedGraphRevisionBatchRestageRecord(
@@ -26457,7 +26489,12 @@ class DoxaBase:
             descriptions,
             apply_checks=apply_checks,
         )
-        bundle_summary = self._staged_revisions_bundle_summary(revision_summaries)
+        bundle_summary = self._staged_revisions_bundle_summary(
+            revision_summaries,
+            snapshot_evidence=(
+                self._staged_revisions_snapshot_evidence_summary(descriptions)
+            ),
+        )
         return (
             bundle_summary,
             self._systematisation_draft_next_actions(revision_iris),
@@ -30160,12 +30197,19 @@ class DoxaBase:
             descriptions,
             apply_checks=apply_checks,
         )
-        bundle_summary = self._staged_revisions_bundle_summary(revision_summaries)
+        snapshot_evidence_summary = (
+            self._staged_revisions_snapshot_evidence_summary(descriptions)
+        )
+        bundle_summary = self._staged_revisions_bundle_summary(
+            revision_summaries,
+            snapshot_evidence=snapshot_evidence_summary,
+        )
         data = self._staged_revisions_markdown(
             descriptions,
             apply_checks=apply_checks,
             revision_summaries=revision_summaries,
             bundle_summary=bundle_summary,
+            snapshot_evidence_summary=snapshot_evidence_summary,
             title=title,
             executive_summary=executive_summary,
         )
@@ -30417,6 +30461,8 @@ class DoxaBase:
     def _staged_revisions_bundle_summary(
         self,
         summaries: list[StagedGraphRevisionExportSummary],
+        *,
+        snapshot_evidence: StagedGraphRevisionSnapshotEvidenceSummary,
     ) -> StagedGraphRevisionBundleSummary:
         apply_status_counts: dict[str, int] = {}
         state_counts: dict[str, int] = {}
@@ -30628,6 +30674,7 @@ class DoxaBase:
                     next_action_queue_items
                 )
             ),
+            snapshot_evidence=snapshot_evidence,
             mutation_frontier_iris=mutation_frontier_iris,
             requires_recheck_after_each_apply=bool(post_apply_recheck),
             semantic_risk_queue_counts=self._semantic_risk_queue_counts(summaries),
@@ -34470,6 +34517,7 @@ class DoxaBase:
         apply_checks: list[tuple[StagedRevisionApplyCheck | None, str | None]],
         revision_summaries: list[StagedGraphRevisionExportSummary],
         bundle_summary: StagedGraphRevisionBundleSummary,
+        snapshot_evidence_summary: StagedGraphRevisionSnapshotEvidenceSummary,
         title: str | None,
         executive_summary: str | None,
     ) -> str:
@@ -34556,7 +34604,7 @@ class DoxaBase:
             lines.extend(["", "## Count Basis Context", ""])
             lines.extend(count_basis_context)
         snapshot_evidence = self._staged_revisions_snapshot_evidence_markdown(
-            descriptions
+            snapshot_evidence_summary
         )
         if snapshot_evidence:
             lines.extend(["", "## Snapshot Evidence", ""])
@@ -34801,31 +34849,63 @@ class DoxaBase:
             return summary.apply_summary
         return summary.summary_recommendation
 
-    def _staged_revisions_snapshot_evidence_markdown(
+    def _staged_revisions_snapshot_evidence_summary(
         self,
         descriptions: list[StagedGraphRevisionDescription],
-    ) -> list[str]:
+    ) -> StagedGraphRevisionSnapshotEvidenceSummary:
         history_graphs = self._expand_graphs(["history"])
-        rows = [
-            (
-                index,
-                description,
-                self._revision_snapshot_evidence_status(
-                    description.iri,
-                    history_graphs,
-                ),
+        rows: list[StagedGraphRevisionSnapshotEvidenceRow] = []
+        status_counts: dict[str, int] = {}
+        incomplete_revision_iris: list[str] = []
+        for index, description in enumerate(descriptions, start=1):
+            evidence = self._revision_snapshot_evidence_status(
+                description.iri,
+                history_graphs,
             )
-            for index, description in enumerate(descriptions, start=1)
-        ]
-        if not rows or all(
-            self._snapshot_evidence_completeness_label(evidence) == "complete"
-            for _, _, evidence in rows
-        ):
+            completeness = self._snapshot_evidence_completeness_label(evidence)
+            status_counts[evidence.status] = (
+                status_counts.get(evidence.status, 0) + 1
+            )
+            if completeness != "complete":
+                incomplete_revision_iris.append(description.iri)
+            rows.append(
+                StagedGraphRevisionSnapshotEvidenceRow(
+                    row_index=index,
+                    revision_iri=description.iri,
+                    summary=description.summary,
+                    status=evidence.status,
+                    completeness=completeness,
+                    rdf_snapshot_graph_roles=evidence.rdf_snapshot_graph_roles,
+                    stored_snapshot_graph_roles=(
+                        evidence.stored_snapshot_graph_roles
+                    ),
+                    exact_snapshot_graph_roles=evidence.exact_snapshot_graph_roles,
+                    missing_snapshot_row_graph_roles=(
+                        evidence.missing_snapshot_row_graph_roles
+                    ),
+                    orphan_snapshot_row_graph_roles=(
+                        evidence.orphan_snapshot_row_graph_roles
+                    ),
+                    note=evidence.note,
+                    suggested_next_actions=evidence.suggested_next_actions,
+                    suggested_next_calls=evidence.suggested_next_calls,
+                )
+            )
+        return StagedGraphRevisionSnapshotEvidenceSummary(
+            complete=not incomplete_revision_iris,
+            total_revision_count=len(rows),
+            incomplete_revision_iris=incomplete_revision_iris,
+            status_counts=status_counts,
+            rows=rows,
+        )
+
+    def _staged_revisions_snapshot_evidence_markdown(
+        self,
+        snapshot_evidence: StagedGraphRevisionSnapshotEvidenceSummary,
+    ) -> list[str]:
+        if not snapshot_evidence.rows or snapshot_evidence.complete:
             return []
 
-        counts: dict[str, int] = {}
-        for _, _, evidence in rows:
-            counts[evidence.status] = counts.get(evidence.status, 0) + 1
         status_order = [
             "history_plus_snapshot_rows",
             "history_only_count_digest",
@@ -34833,9 +34913,9 @@ class DoxaBase:
             "history_missing",
         ]
         count_text = ", ".join(
-            f"{status}: {counts[status]}"
+            f"{status}: {snapshot_evidence.status_counts[status]}"
             for status in status_order
-            if status in counts
+            if status in snapshot_evidence.status_counts
         )
         lines = [
             f"- Status counts: {count_text}",
@@ -34852,47 +34932,43 @@ class DoxaBase:
             ),
             "|---:|---|---|---|---|---|---|---|---|---|---|",
         ]
-        for index, description, evidence in rows:
+        for row in snapshot_evidence.rows:
             lines.append(
                 "| "
                 + " | ".join(
                     [
-                        str(index),
-                        self._markdown_table_cell(f"`{description.iri}`"),
-                        self._markdown_table_cell(
-                            description.summary or description.iri
-                        ),
-                        self._markdown_table_cell(evidence.status),
-                        self._markdown_table_cell(
-                            self._snapshot_evidence_completeness_label(evidence)
-                        ),
+                        str(row.row_index),
+                        self._markdown_table_cell(f"`{row.revision_iri}`"),
+                        self._markdown_table_cell(row.summary or row.revision_iri),
+                        self._markdown_table_cell(row.status),
+                        self._markdown_table_cell(row.completeness),
                         self._markdown_table_cell(
                             self._markdown_graph_role_list(
-                                evidence.rdf_snapshot_graph_roles
+                                row.rdf_snapshot_graph_roles
                             )
                         ),
                         self._markdown_table_cell(
                             self._markdown_graph_role_list(
-                                evidence.stored_snapshot_graph_roles
+                                row.stored_snapshot_graph_roles
                             )
                         ),
                         self._markdown_table_cell(
                             self._markdown_graph_role_list(
-                                evidence.exact_snapshot_graph_roles
+                                row.exact_snapshot_graph_roles
                             )
                         ),
                         self._markdown_table_cell(
                             self._markdown_graph_role_list(
-                                evidence.missing_snapshot_row_graph_roles
+                                row.missing_snapshot_row_graph_roles
                             )
                         ),
                         self._markdown_table_cell(
                             self._markdown_graph_role_list(
-                                evidence.orphan_snapshot_row_graph_roles
+                                row.orphan_snapshot_row_graph_roles
                             )
                         ),
                         self._markdown_table_cell(
-                            "; ".join(evidence.suggested_next_calls) or "(none)"
+                            "; ".join(row.suggested_next_calls) or "(none)"
                         ),
                     ]
                 )

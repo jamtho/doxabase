@@ -3508,9 +3508,30 @@ def test_grouped_export_marks_partial_snapshot_evidence(
     assert status.exact_snapshot_graph_roles == ["map"]
     assert status.missing_snapshot_row_graph_roles == ["ontology"]
     grouped_export_path = tmp_path / "partial-multigraph-review.md"
-    partial.export_staged_revisions([staged.revision_iri], grouped_export_path)
+    export = partial.export_staged_revisions(
+        [staged.revision_iri],
+        grouped_export_path,
+    )
     grouped_export_text = grouped_export_path.read_text(encoding="utf-8")
 
+    snapshot_summary = export.bundle_summary.snapshot_evidence
+    assert snapshot_summary.complete is False
+    assert snapshot_summary.total_revision_count == 1
+    assert snapshot_summary.incomplete_revision_iris == [staged.revision_iri]
+    assert snapshot_summary.status_counts == {"history_plus_snapshot_rows": 1}
+    assert len(snapshot_summary.rows) == 1
+    snapshot_row = snapshot_summary.rows[0]
+    assert snapshot_row.row_index == 1
+    assert snapshot_row.revision_iri == staged.revision_iri
+    assert snapshot_row.status == "history_plus_snapshot_rows"
+    assert snapshot_row.completeness == "partial"
+    assert snapshot_row.rdf_snapshot_graph_roles == ["map", "ontology"]
+    assert snapshot_row.stored_snapshot_graph_roles == ["map"]
+    assert snapshot_row.exact_snapshot_graph_roles == ["map"]
+    assert snapshot_row.missing_snapshot_row_graph_roles == ["ontology"]
+    assert snapshot_row.suggested_next_actions[0].tool_name == (
+        "import_revision_snapshots"
+    )
     assert "## Snapshot Evidence" in grouped_export_text
     assert "history_plus_snapshot_rows: 1" in grouped_export_text
     assert "| 1 |" in grouped_export_text

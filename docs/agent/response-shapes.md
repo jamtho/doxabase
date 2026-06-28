@@ -4646,11 +4646,42 @@ bundle.recommended_applied_inspection_iris
 bundle.next_action_queue
 bundle.next_action_queue_items
 bundle.next_action_queue_item_counts
+bundle.snapshot_evidence
 bundle.mutation_frontier_iris
 bundle.requires_recheck_after_each_apply
 bundle.semantic_risk_queue_counts
 bundle.semantic_review_required_queue_counts
 ```
+
+`bundle.snapshot_evidence` is a
+`StagedGraphRevisionSnapshotEvidenceSummary` for the same rows included in the
+grouped export:
+
+```python
+bundle.snapshot_evidence.complete
+bundle.snapshot_evidence.total_revision_count
+bundle.snapshot_evidence.incomplete_revision_iris
+bundle.snapshot_evidence.status_counts
+bundle.snapshot_evidence.rows[].row_index
+bundle.snapshot_evidence.rows[].revision_iri
+bundle.snapshot_evidence.rows[].summary
+bundle.snapshot_evidence.rows[].status
+bundle.snapshot_evidence.rows[].completeness
+bundle.snapshot_evidence.rows[].rdf_snapshot_graph_roles
+bundle.snapshot_evidence.rows[].stored_snapshot_graph_roles
+bundle.snapshot_evidence.rows[].exact_snapshot_graph_roles
+bundle.snapshot_evidence.rows[].missing_snapshot_row_graph_roles
+bundle.snapshot_evidence.rows[].orphan_snapshot_row_graph_roles
+bundle.snapshot_evidence.rows[].note
+bundle.snapshot_evidence.rows[].suggested_next_actions
+bundle.snapshot_evidence.rows[].suggested_next_calls
+```
+
+Grouped export JSON keeps `bundle.next_action_queue` focused on the review/apply
+route. For RDF-only handoffs, use `bundle.snapshot_evidence.complete`,
+`incomplete_revision_iris`, and row `suggested_next_actions` as the structured
+snapshot-import gate before relying on exact stale drift or applied-diff
+triples.
 
 Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
 still need restaging. `stale_handled_by_restage` means the source already

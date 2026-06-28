@@ -1915,6 +1915,13 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["bundle_summary"]["apply_status_counts"] == {"ready": 1}
     assert export["bundle_summary"]["stale_resolution_state_counts"] == {"ready": 1}
     assert export["bundle_summary"]["post_apply_recheck_revision_iris"] == []
+    snapshot_evidence = export["bundle_summary"]["snapshot_evidence"]
+    assert snapshot_evidence["complete"] is True
+    assert snapshot_evidence["total_revision_count"] == 1
+    assert snapshot_evidence["status_counts"] == {"history_plus_snapshot_rows": 1}
+    assert snapshot_evidence["rows"][0]["revision_iri"] == staged["revision_iri"]
+    assert snapshot_evidence["rows"][0]["completeness"] == "complete"
+    assert snapshot_evidence["rows"][0]["suggested_next_actions"] == []
     assert export["bundle_summary"]["recommended_review_iris"] == [
         staged["revision_iri"]
     ]
