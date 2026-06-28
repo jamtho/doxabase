@@ -11760,6 +11760,62 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert context.query_target_decision.reason_codes == []
 
 
+def test_describe_query_context_marks_non_tabular_asset_not_applicable(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    asset = "https://example.test/project#SalesReadme"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#sales_readme_storage",
+        label="Sales README storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=str(tmp_path / "sales-readme.md"),
+        layout_verification_status="rc:CandidateLayout",
+    )
+    db.record_map_dataset(
+        asset,
+        label="Sales README",
+        is_table=False,
+        storage_accesses=[storage.iri],
+        layout_verification_status="rc:CandidateLayout",
+    )
+
+    context = db.describe_query_context(asset)
+
+    assert context.readiness == "not_applicable_non_tabular_asset"
+    assert context.query_target_candidates == []
+    assert context.ready_candidate_indexes == []
+    assert context.suggested_repair_action_groups == []
+    assert context.query_target_decision.status == (
+        "not_applicable_non_tabular_asset"
+    )
+    assert context.query_target_decision.reason_codes == [
+        "non_tabular_asset_query_not_applicable"
+    ]
+    assert [issue.code for issue in context.issues] == [
+        "non_tabular_asset_query_not_applicable"
+    ]
+    assert context.issues[0].severity == "info"
+    assert context.storage_accesses[0].iri == storage.iri
+    assert context.suggested_next_actions[0].tool_name == "describe_context_slice"
+
+    plan = db.draft_query_plan(asset)
+
+    assert plan.handoff_kind == "not_applicable_non_tabular_asset"
+    assert plan.source_context.readiness == "not_applicable_non_tabular_asset"
+    assert plan.source_context.selection_mode == "not_applicable"
+    assert plan.selected_candidate is None
+    assert plan.scan.function is None
+    assert plan.scan.uri_template is None
+    assert plan.review_gate.status == "not_applicable_non_tabular_asset"
+    assert plan.review_gate.ready_for_execution_attempt is False
+    assert plan.review_gate.primary_execution_attempt_blocking_reason_code == (
+        "non_tabular_asset_query_not_applicable"
+    )
+    assert plan.issues[0].code == "non_tabular_asset_query_not_applicable"
+
+
 def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     tmp_path: Path,
 ) -> None:
@@ -18342,6 +18398,34 @@ def test_record_dataset_profile_keeps_sampled_row_count_out_of_map_snapshot(
     )
 
     assert db.describe_dataset(override_dataset).row_count_snapshot == 1000
+
+
+def test_draft_profile_map_updates_skips_row_count_for_non_table_asset(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    asset = "https://example.test/project#SalesReadme"
+    evidence = "https://example.test/project#SalesReadmeProfileEvidence"
+    db.record_map_dataset(asset, label="Sales README", is_table=False)
+    db.record_dataset_profile(
+        asset,
+        summary="Sales README asset was profiled as a document.",
+        evidence_summary="Synthetic document profile output.",
+        evidence_sources=["test://sales-readme-profile"],
+        evidence_iri=evidence,
+        sample_scope="The single README asset, not table rows.",
+        sample_method="Markdown heading scan.",
+        row_count=1,
+        update_map_snapshot=False,
+    )
+
+    draft = db.draft_profile_map_updates(asset, evidence)
+
+    assert draft.map_dataset_found is True
+    assert draft.recommendations == []
+    assert draft.recommendation_count == 0
+    assert draft.suggested_next_action_groups == {}
+    assert db.describe_dataset(asset).row_count_snapshot is None
 
 
 def test_describe_dataset_profile_without_value_frequencies_returns_empty_list(

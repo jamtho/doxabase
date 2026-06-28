@@ -19,6 +19,10 @@ null counts, distinct counts, and row counts as observed evidence. They are not
 constraints, SHACL shapes, allowed values, or durable map assertions by
 themselves. Use `sample_scope` and `sample_method` so later agents know whether
 the profile covered a full population, a sample, or an unknown slice.
+For assets explicitly recorded with `is_table=false`, profile row counts remain
+profile evidence; `draft_profile_map_updates` does not propose
+`rc:rowCountSnapshot` map updates for them because the count may mean one
+document, object, endpoint, or model artifact rather than table rows.
 
 Bundled column-profile rows use `physical_type` and `value_type` for observed
 type findings. The `observed_physical_type` and `observed_value_type` field
@@ -100,6 +104,10 @@ flat `suggested_next_actions`.
 Sampled row-count updates are skipped by default unless the caller explicitly
 allows sampled row-count updates and the sample scope really is the durable
 population.
+For non-table assets, row-count observations are not drafted as
+`dataset_row_count_snapshot` recommendations at all; preserve them as profile
+evidence or model a more precise project-specific metric when asset counts
+matter.
 
 ## Advisory Lanes
 

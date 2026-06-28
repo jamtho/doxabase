@@ -2842,7 +2842,7 @@ class DoxaBase:
 
         for entity_index, entity in enumerate(dataset_entities):
             description = self.describe_dataset(entity.iri)
-            is_table = self.expand_iri("rc:Table") in description.types
+            is_table = self._dataset_description_is_table(description)
             query_summary = (
                 self._project_brief_query_summary(description.iri)
                 if is_table
@@ -2949,6 +2949,9 @@ class DoxaBase:
             suggested_next_actions=query_context.suggested_next_actions[:3],
             suggested_next_calls=query_context.suggested_next_calls[:3],
         )
+
+    def _dataset_description_is_table(self, dataset: DatasetDescription) -> bool:
+        return self.expand_iri("rc:Table") in dataset.types
 
     @staticmethod
     def _project_brief_non_tabular_query_summary() -> ProjectBriefDatasetQuerySummary:
@@ -10001,6 +10004,11 @@ class DoxaBase:
         for profile in profile_run.dataset_profile_observations:
             if profile.row_count is None:
                 continue
+            if (
+                dataset_description is not None
+                and not self._dataset_description_is_table(dataset_description)
+            ):
+                continue
             current_row_count = (
                 dataset_description.row_count_snapshot
                 if dataset_description is not None
@@ -11496,6 +11504,8 @@ class DoxaBase:
             label=dataset.label or self._local_name(dataset.iri),
             description=dataset.description,
         )
+        if not self._dataset_description_is_table(dataset):
+            return self._non_tabular_query_context(dataset, dataset_summary)
         direct_path_templates = self._objects(data_graphs, dataset.iri, "rc:pathTemplate")
         issues = self._sort_query_planning_issues(
             [
@@ -11584,6 +11594,87 @@ class DoxaBase:
             unselected_direct_clean_candidate_indexes=(
                 unselected_direct_clean_candidate_indexes
             ),
+            physical_layouts=dataset.physical_layouts,
+            storage_accesses=dataset.storage_accesses,
+            partition_schemes=dataset.partition_schemes,
+            caveats=dataset.caveats,
+            upstream_caveats=dataset.upstream_caveats,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+        )
+
+    def _non_tabular_query_context(
+        self,
+        dataset: DatasetDescription,
+        dataset_summary: ResourceSummary,
+    ) -> QueryPlanningContext:
+        issue = QueryPlanningIssue(
+            code="non_tabular_asset_query_not_applicable",
+            severity="info",
+            message=(
+                "This map dataset is not typed as rc:Table, so DoxaBase will "
+                "not treat it as a table query-planning target."
+            ),
+            resource=dataset_summary,
+            details={
+                "dataset_iri": dataset.iri,
+                "is_table": False,
+                "suggested_profile": "deep_lore",
+                "query_readiness": "not_applicable_non_tabular_asset",
+            },
+        )
+        suggested_next_actions = [
+            self._project_brief_describe_context_slice_action(dataset.iri)
+        ]
+        return QueryPlanningContext(
+            dataset=dataset_summary,
+            readiness="not_applicable_non_tabular_asset",
+            readiness_note=(
+                "This map dataset is not typed as rc:Table; use resource or "
+                "context-slice handoffs unless an explicit queryable table "
+                "route is modeled."
+            ),
+            issues=[issue],
+            analysis_warnings=[],
+            suggested_repair_action_groups=[],
+            suggested_repair_action_group_count=0,
+            planning_notes=[
+                (
+                    "DoxaBase does not draft table query plans for map assets "
+                    "that are not typed as rc:Table."
+                ),
+                (
+                    "Use describe_context_slice or describe_resource to inspect "
+                    "non-tabular map context, caveats, observations, patterns, "
+                    "and evidence."
+                ),
+            ],
+            row_count_snapshot=dataset.row_count_snapshot,
+            profile_summary=dataset.profile_summary,
+            layout_verification_status=dataset.layout_verification_status,
+            layout_verification_note=dataset.layout_verification_note,
+            columns=dataset.columns,
+            path_templates=dataset.path_templates,
+            query_target_decision=QueryTargetDecision(
+                status="not_applicable_non_tabular_asset",
+                summary=(
+                    "Dataset is not typed as rc:Table; no query target "
+                    "candidate is selected."
+                ),
+                candidate_index=None,
+                candidate_path=None,
+                candidate_path_status=None,
+                direct_review_required=None,
+                selected_candidate_direct_clean=None,
+                reason_codes=[issue.code],
+            ),
+            query_target_candidates=[],
+            ready_candidate_indexes=[],
+            unselected_ready_candidate_indexes=[],
+            direct_clean_candidate_indexes=[],
+            unselected_direct_clean_candidate_indexes=[],
             physical_layouts=dataset.physical_layouts,
             storage_accesses=dataset.storage_accesses,
             partition_schemes=dataset.partition_schemes,
@@ -12023,6 +12114,15 @@ class DoxaBase:
         if engine_value != "duckdb":
             raise DoxaBaseError("draft_query_plan currently supports engine='duckdb'")
         context = self.describe_query_context(iri=iri, graph=graph)
+        if context.readiness == "not_applicable_non_tabular_asset":
+            return self._non_tabular_draft_query_plan(
+                context,
+                engine=engine_value,
+                candidate_index=candidate_index,
+                storage_access_iri=storage_access_iri,
+                physical_layout_iri=physical_layout_iri,
+                allow_context_blocked_candidate=allow_context_blocked_candidate,
+            )
         selected_physical_layout, requested_physical_layout_iri = (
             self._draft_query_plan_selected_physical_layout(
                 context,
@@ -12206,6 +12306,149 @@ class DoxaBase:
                     "This draft is not executable code and does not resolve "
                     "endpoint profiles, credentials, object existence, or "
                     "runtime settings."
+                ),
+            ],
+        )
+
+    def _non_tabular_draft_query_plan(
+        self,
+        context: QueryPlanningContext,
+        *,
+        engine: str,
+        candidate_index: int | None,
+        storage_access_iri: str | None,
+        physical_layout_iri: str | None,
+        allow_context_blocked_candidate: bool,
+    ) -> DraftQueryPlan:
+        reason_code = "non_tabular_asset_query_not_applicable"
+        scan = DraftQueryPlanScan(
+            function=None,
+            uri_template=None,
+            relation_identifier=None,
+            connection_reference=None,
+            file_format=None,
+            compression=None,
+            candidate_path_status=None,
+            dataset_verification_status=context.layout_verification_status,
+            dataset_verification_note=context.layout_verification_note,
+            template=None,
+            template_source=None,
+            template_source_resource=None,
+            template_source_verification_status=None,
+            template_source_verification_note=None,
+            template_lineage=None,
+            composition=None,
+            physical_layout=None,
+            physical_layout_selection_note=None,
+            non_executed_note=(
+                "No scan is drafted because the dataset is not typed as "
+                "rc:Table."
+            ),
+            execution_attempt_ready=False,
+            primary_execution_attempt_blocking_reason_code=reason_code,
+            execution_attempt_blocking_reason_codes=[reason_code],
+        )
+        storage_environment = DraftQueryPlanStorageEnvironment(
+            storage_protocol=None,
+            storage_root=None,
+            bucket_name=None,
+            key_prefix=None,
+            region=None,
+            endpoint_profile=None,
+            credential_reference=None,
+            access_mode=None,
+            path_style_access=None,
+            requires_endpoint_profile=False,
+            runtime_resolution_required=False,
+            duckdb_settings_from_context=[],
+            runtime_resolution_note=(
+                "No runtime storage environment is drafted for a non-tabular "
+                "asset."
+            ),
+        )
+        review_gate = DraftQueryPlanReviewGate(
+            executable_without_review=False,
+            runtime_resolution_required=False,
+            binding_values_required=False,
+            ready_for_execution_attempt=False,
+            status="not_applicable_non_tabular_asset",
+            direct_review_required=None,
+            candidate_path_status=None,
+            blocking_reason_codes=[reason_code],
+            execution_attempt_blocking_reason_codes=[reason_code],
+            primary_execution_attempt_blocking_reason_code=reason_code,
+            all_issue_codes=self._query_issue_codes(context.issues),
+            reason_codes=[reason_code],
+            review_note=(
+                "DoxaBase does not draft table query plans for map assets that "
+                "are not typed as rc:Table. Inspect the asset with resource or "
+                "context-slice handoffs instead."
+            ),
+            selection_overridden=(
+                candidate_index is not None
+                or storage_access_iri is not None
+                or physical_layout_iri is not None
+            ),
+            context_blocked_candidate_allowed=allow_context_blocked_candidate,
+            context_blocked_candidate_used=False,
+            direct_blocking_reason_codes=[reason_code],
+            context_blocking_reason_codes=[],
+        )
+        return DraftQueryPlan(
+            helper="draft_query_plan",
+            mode="non_executed_review_draft",
+            handoff_kind="not_applicable_non_tabular_asset",
+            engine=DraftQueryPlanEngine(
+                name=engine,
+                source="caller_requested_target_engine",
+            ),
+            dataset=context.dataset,
+            source_context=DraftQueryPlanSourceContext(
+                api="DoxaBase.describe_query_context",
+                readiness=context.readiness,
+                readiness_note=context.readiness_note,
+                query_target_decision=context.query_target_decision,
+                selected_candidate_index=None,
+                candidate_count=0,
+                ready_candidate_indexes=[],
+                unselected_ready_candidate_indexes=[],
+                direct_clean_candidate_indexes=[],
+                unselected_direct_clean_candidate_indexes=[],
+                selection_mode="not_applicable",
+                requested_candidate_index=candidate_index,
+                requested_storage_access_iri=storage_access_iri,
+                requested_physical_layout_iri=physical_layout_iri,
+                selection_status="not_applicable_non_tabular_asset",
+                selection_note=(
+                    "Candidate selection is not applicable because the dataset "
+                    "is not typed as rc:Table."
+                ),
+                selected_candidate_note=(
+                    "No query target candidate is selected for a non-tabular "
+                    "asset."
+                ),
+                allow_context_blocked_candidate=allow_context_blocked_candidate,
+            ),
+            selected_candidate=None,
+            scan=scan,
+            required_bindings=[],
+            binding_requirements=[],
+            binding_note=(
+                "No path-template bindings are inferred because no table query "
+                "plan is drafted for this non-tabular asset."
+            ),
+            storage_environment=storage_environment,
+            review_gate=review_gate,
+            issues=context.issues,
+            analysis_warnings=context.analysis_warnings,
+            caveats=context.caveats,
+            upstream_caveats=context.upstream_caveats,
+            planning_notes=[
+                *context.planning_notes,
+                (
+                    "This draft is intentionally not a query handoff. Model an "
+                    "explicit table/queryable relation first if query planning "
+                    "is genuinely intended."
                 ),
             ],
         )

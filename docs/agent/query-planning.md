@@ -4,6 +4,14 @@ Use this as the compact route from map metadata to a query-planning handoff.
 For the fuller model, read `executable_catalog`; for exact field shapes, read
 `response_shapes`.
 
+Direct query helpers are table-oriented. For map datasets recorded with
+`is_table=false`, `describe_query_context` returns
+`readiness="not_applicable_non_tabular_asset"` with no query target candidates,
+and `draft_query_plan` returns
+`handoff_kind="not_applicable_non_tabular_asset"` rather than a file/database
+scan. Use `describe_context_slice` or `describe_resource` for those assets
+unless a separate queryable table route has been modeled.
+
 Before fixture query-planning trials against the active MCP capsule, sanity-check
 `graph_overview.key_counts`. If AIS or Polymarket tables exist but
 `storage_accesses == 0`, treat that capsule as stale or intentionally reduced

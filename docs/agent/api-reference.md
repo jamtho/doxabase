@@ -524,6 +524,8 @@ without losing sibling support. `default_stageable=False` previews guardrails
 such as sampled row-count recommendations that default staging will skip unless
 the caller opts in, and same-evidence scalar conflicts where profile
 observations propose multiple values for one row-count or nullable assertion.
+For explicit non-table assets, profile row counts remain observation evidence
+and are not drafted as `dataset_row_count_snapshot` map recommendations.
 Those conflicts are also summarized in `scalar_conflict_groups[]`, where each
 option carries one explicit `stage_profile_map_updates` action for a chosen
 observed value. Option actions are exposed in the grouped

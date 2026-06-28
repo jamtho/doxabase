@@ -2866,6 +2866,41 @@ def test_describe_query_context_tool_returns_planning_projection(
     assert "non-secret planning metadata" in result["planning_notes"][0]
 
 
+def test_query_tools_mark_non_tabular_asset_not_applicable(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    asset = "https://example.test/project#SalesReadme"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#sales_readme_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=str(tmp_path / "sales-readme.md"),
+    )
+    db.record_map_dataset(
+        asset,
+        label="Sales README",
+        is_table=False,
+        storage_accesses=[storage.iri],
+    )
+
+    context = describe_query_context_tool(db, iri=asset)
+
+    assert context["readiness"] == "not_applicable_non_tabular_asset"
+    assert context["query_target_candidates"] == []
+    assert context["issues"][0]["code"] == "non_tabular_asset_query_not_applicable"
+    assert context["suggested_next_actions"][0]["tool_name"] == (
+        "describe_context_slice"
+    )
+
+    plan = draft_query_plan_tool(db, iri=asset)
+
+    assert plan["handoff_kind"] == "not_applicable_non_tabular_asset"
+    assert plan["selected_candidate"] is None
+    assert plan["scan"]["function"] is None
+    assert plan["review_gate"]["status"] == "not_applicable_non_tabular_asset"
+
+
 def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)

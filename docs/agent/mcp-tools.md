@@ -463,10 +463,10 @@ revision is created, `suggested_next_actions` points to
 `check_staged_revision_apply` for the read-only pre-apply check. The helper uses
 helper-equivalent RDF for dataset and column shells, keeps metric advisories as
 review prompts, keeps type advisories separate from staged map patches,
-preserves every grouped profile observation when one duplicate representative is accepted, and skips
-accepted sampled row-count
-recommendations unless
-`allow_sampled_row_count_updates=true`. It also skips accepted scalar
+preserves every grouped profile observation when one duplicate representative
+is accepted, skips accepted sampled row-count recommendations unless
+`allow_sampled_row_count_updates=true`, and has no row-count recommendations to
+stage for explicit non-table assets. It also skips accepted scalar
 recommendations when the accepted set contains multiple disagreeing
 same-evidence values for the same map assertion; rerun the call with one chosen
 value after review. Optional `supporting_claims`,

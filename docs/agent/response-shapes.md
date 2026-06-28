@@ -1265,7 +1265,10 @@ Current recommendation kinds cover `dataset_row_count_snapshot`,
 from positive-null findings, full-scan zero-null findings, profile row counts,
 and unmapped profiled columns. It intentionally skips sampled zero-null
 promotion because a sample with no nulls does not prove a full-population
-non-null constraint. `default_stageable` and `default_skip_reason` preview what
+non-null constraint. For assets explicitly modeled with `is_table=false`, row
+counts stay profile evidence and are not drafted as
+`dataset_row_count_snapshot` recommendations. `default_stageable` and
+`default_skip_reason` preview what
 `stage_profile_map_updates` will do with default options; sampled row-count
 recommendations remain review candidates but are skipped by default unless
 `allow_sampled_row_count_updates=True`. Same-evidence scalar conflicts, such as
@@ -1876,9 +1879,12 @@ profile-derived count, and check
 treating the matching count as full-scan evidence.
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
-`insufficient_metadata`, or `blocked_by_contradiction`. It is about physical
-query-planning metadata, not analytical safety. `readiness_note` says that
-explicitly and points to analysis caveats when present.
+`insufficient_metadata`, `blocked_by_contradiction`, or
+`not_applicable_non_tabular_asset`. It is about physical query-planning
+metadata, not analytical safety. `readiness_note` says that explicitly and
+points to analysis caveats when present. For non-table assets,
+`query_target_candidates` is empty and `suggested_next_actions` points back to a
+resource/context-slice handoff instead of query repair.
 
 Missing, risky, or informational physical metadata notes are returned in
 `query.issues`; there is no `query.missing_or_risky_metadata` field. An issue

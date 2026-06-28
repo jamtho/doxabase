@@ -1965,6 +1965,13 @@ few useful gaps:
   inspect. `resource_brief` now climbs from blank-node seeds to named URI owners,
   including nested blank-node shape fragments, but route-cap ordering and common
   predicate seeds still need separate trials before changing behavior.
+- A profile/query frontier trial found that `project_brief` routed non-tabular
+  assets correctly, but direct `describe_query_context` and `draft_query_plan`
+  could still draft a review-gated file handoff for an `is_table=false`
+  document asset with storage metadata. Direct query helpers now return
+  `not_applicable_non_tabular_asset` for non-table map datasets, and
+  `draft_profile_map_updates` leaves their profile row counts as evidence
+  instead of proposing table `rc:rowCountSnapshot` map updates.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
