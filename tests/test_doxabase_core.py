@@ -13713,6 +13713,118 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     )
 
 
+def test_local_csv_query_handoff_can_record_result_artifact(
+    tmp_path: Path,
+) -> None:
+    csv_path = tmp_path / "orders.csv"
+    csv_path.write_text(
+        "order_id,status,amount_cents\n"
+        "1,paid,1200\n"
+        "2,pending,800\n"
+        "3,paid,3100\n"
+        "4,refunded,700\n",
+        encoding="utf-8",
+    )
+    query_path = tmp_path / "orders_status_aggregate.sql"
+    query_path.write_text(
+        "select status, count(*) as row_count, "
+        "sum(amount_cents) as amount_cents from orders group by status;\n",
+        encoding="utf-8",
+    )
+    result_path = tmp_path / "orders_status_aggregate.result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "row_count": 4,
+                "status_counts": {
+                    "paid": 2,
+                    "pending": 1,
+                    "refunded": 1,
+                },
+                "paid_amount_cents": 4300,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    columns = [
+        db.record_map_column(
+            f"https://example.test/project#orders__{name}",
+            table_iri=dataset,
+            column_name=name,
+        )
+        for name in ("order_id", "status", "amount_cents")
+    ]
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_csv_storage",
+        label="Orders CSV storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="object",
+        storage_root=str(csv_path),
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=4,
+        columns=[column.iri for column in columns],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+    plan = db.draft_query_plan(dataset)
+
+    assert context.readiness == "ready_for_query_planning"
+    assert context.issues == []
+    assert plan.handoff_kind == "execution_attempt_ready"
+    assert plan.scan.function == "read_csv_auto"
+    assert plan.scan.uri_template == str(csv_path)
+    assert plan.scan.execution_attempt_ready is True
+    assert plan.review_gate.ready_for_execution_attempt is True
+
+    result = db.record_query_result(
+        summary=(
+            "Orders CSV status aggregate ran with a Python CSV fallback after "
+            "the draft query handoff."
+        ),
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(query_path),
+        result_sources=[str(result_path)],
+        sample_size=4,
+        sample_scope="All rows in the reviewed local Orders CSV.",
+        sample_method="External read-only aggregate after draft_query_plan.",
+        row_count=4,
+    )
+
+    assert result.observation_type == "profile"
+    assert result.execution_status == "succeeded"
+    assert result.engine == "python-csv"
+    assert result.result_sources == [str(result_path)]
+    assert result.source_span_iri is not None
+    observation = db.describe_resource(result.observation_iri, graph="observations")
+    assert (
+        RC + "rowCount",
+        "4",
+    ) in {(triple.predicate, triple.object) for triple in observation.outgoing}
+    assert db.validate_graph(scope="all").conforms
+    matches = db.search("Python CSV fallback", graph="observations")
+    assert result.observation_iri in {match.iri for match in matches.matches}
+
+
 def test_object_root_candidate_stays_visible_with_partition_templates(
     tmp_path: Path,
 ) -> None:

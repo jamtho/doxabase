@@ -316,6 +316,12 @@ result = db.record_query_result(
 )
 ```
 
+Use `result_sources` for arbitrary result-table or aggregate payloads such as
+grouped counts, sums, or JSON output. The structured `row_count`, `null_count`,
+`distinct_count`, value-frequency, and metric fields are profile-shaped
+observation fields; only fill them when their meaning is clear in `summary`,
+`sample_scope`, and `sample_method`.
+
 For failed attempts, set `execution_status="failed"` and include
 `failure_summary` plus a query source or result/log source; do not pass row,
 null, distinct, value-frequency, or metric fields.

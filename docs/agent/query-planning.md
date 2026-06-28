@@ -303,6 +303,14 @@ For downstream consumers, keep the routing order simple:
 4. Treat `binding_requirements`, partition hints, and candidate column matches
    as review hints. They do not supply runtime values.
 
+If a reviewed plan is executed by an external runtime, record the result or
+failure with `record_query_result`. Use `result_sources` for arbitrary aggregate
+payloads such as grouped counts or JSON output; fill profile-shaped fields such
+as `row_count` only when `summary`, `sample_scope`, and `sample_method` make
+their meaning unambiguous. For local smoke tests, a Python CSV fallback is fine
+when DuckDB is unavailable as long as `engine` and `sample_method` say what
+actually ran.
+
 When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call
 `draft_query_plan(..., candidate_index=..., allow_context_blocked_candidate=True)`
