@@ -165,6 +165,17 @@ Run tests:
 uv run pytest
 ```
 
+Run the smallest end-to-end example:
+
+```bash
+uv run python examples/first-workflow.py
+```
+
+It creates a scratch capsule under `/tmp`, loads the bundled fixtures, prints a
+few table/search/query-readiness cues, records one observation, and validates
+the graph. Use `examples/adversarial-field-trial.py` after that when you want a
+more demanding staged-revision and systematisation exercise.
+
 ## Python Capsule Example
 
 ```python

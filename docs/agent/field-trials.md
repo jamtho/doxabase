@@ -69,7 +69,16 @@ When running a trial through Codex sub-agents, keep the harness explicit:
   capsule exists; inspect the capsule for partial work, but record that the
   agent did not complete the handoff loop.
 
-For a tiny local smoke trial, run the copyable example from the repository root:
+For a first successful local workflow, run the copyable example from the
+repository root:
+
+```bash
+./.venv/bin/python examples/first-workflow.py
+```
+
+It creates a scratch capsule under `/tmp`, loads the bundled fixtures, prints
+graph/table/search/query-readiness cues, records one observation, and validates
+the graph. For a more adversarial staging trial, run:
 
 ```bash
 ./.venv/bin/python examples/adversarial-field-trial.py
@@ -78,6 +87,22 @@ For a tiny local smoke trial, run the copyable example from the repository root:
 It creates a scratch capsule and report under `/tmp`, records an uncertain
 identity hunch as a claim and pattern, stages competing systematisations, and
 expects one deliberately premature map candidate to fail validation.
+
+Interleave ordinary polish loops with broader expeditions. Local API-friction
+trials are good at improving response shapes, repair hints, and staged-review
+routing, but they can underexplore project-wide product questions. Every few
+loops, aim a wave at one or more of:
+
+- real-data pressure, such as an AIS or Polymarket question-to-handoff run;
+- cold-start/onboarding, including the first successful workflow;
+- architecture gaps that need a new primitive, such as durable graph versions
+  or executable query/result capture;
+- human-facing workflow shape, including project briefs, recovery narratives,
+  CLI affordances, and review-bundle readability.
+
+Treat those expedition reports as product signal even when they do not produce
+an immediate code patch. The goal is to stop the loop from polishing only the
+paths it already knows how to walk.
 
 ## Safety
 
