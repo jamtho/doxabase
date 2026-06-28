@@ -34127,19 +34127,24 @@ class DoxaBase:
             parser_context="import_trig",
         )
 
-        imported: dict[str, int] = {}
+        contexts_by_graph: dict[str, list[Graph]] = {}
         for context in dataset.graphs():
             if len(context) == 0:
                 continue
             graph_name = self._local_graph_name(str(context.identifier), graph_map)
             self._ensure_mutable(graph_name, allow_immutable=allow_immutable)
+            contexts_by_graph.setdefault(graph_name, []).append(context)
+
+        imported: dict[str, int] = {}
+        for graph_name, contexts in contexts_by_graph.items():
             if replace:
                 self.clear_graph(graph_name, allow_immutable=allow_immutable)
             self._ensure_graph(graph_name)
-            imported[graph_name] = imported.get(graph_name, 0) + self._insert_graph(
-                graph_name,
-                context,
-            )
+            for context in contexts:
+                imported[graph_name] = imported.get(
+                    graph_name,
+                    0,
+                ) + self._insert_graph(graph_name, context)
         return imported
 
     def export_revision_snapshots(

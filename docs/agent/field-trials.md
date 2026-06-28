@@ -2082,6 +2082,12 @@ few useful gaps:
   warning examples used pre-insertion line numbers. Markdown privacy warning
   examples now report final artifact line numbers, after the inserted warning
   block, so reviewers can jump directly to the preserved patch literal.
+- An import/export handoff trial found that an all-with-seeds TriG bundle could
+  partially populate mutable project graphs before a later protected seed graph
+  raised `ImmutableGraphError`. `import_trig()` now preflights every non-empty
+  named graph before clearing, creating, or inserting graph storage, so failed
+  normal imports for immutable seeds or unknown Rich Canopy roles leave target
+  graph counts unchanged.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

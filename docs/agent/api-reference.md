@@ -35,7 +35,11 @@ db.import_revision_snapshots("path/to/revision-snapshots.json")
 `import_turtle()` writes all triples to one graph.
 
 `import_trig()` preserves named graph roles and maps
-`https://richcanopy.org/graph/{role}` to `{role}`.
+`https://richcanopy.org/graph/{role}` to `{role}`. It preflights all non-empty
+named graphs before writing, so an import that later hits an immutable seed graph
+or unknown Rich Canopy role leaves the target capsule unchanged. Normal imports
+still reject `base_ontology` and `base_shapes`; import all-with-seeds bundles
+only with deliberate seed-handling.
 
 `import_revision_snapshots()` restores an opt-in JSON bundle of SQLite-side
 revision snapshot rows. Use it after an RDF project/history import when exact

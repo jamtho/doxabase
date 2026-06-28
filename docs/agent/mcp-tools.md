@@ -1584,7 +1584,11 @@ normalized absolute paths.
 
 `doxabase.import_trig`
 
-Imports a TriG file into graph roles. Fixture graph IRIs such as `https://richcanopy.org/graph/map` map to local role names like `map`.
+Imports a TriG file into graph roles. Fixture graph IRIs such as
+`https://richcanopy.org/graph/map` map to local role names like `map`. The
+import preflights every non-empty named graph before mutating storage; normal
+imports that encounter immutable seed roles such as `base_ontology` or
+`base_shapes`, or an unknown Rich Canopy role, fail without partial graph writes.
 
 `doxabase.import_revision_snapshots`
 

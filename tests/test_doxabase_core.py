@@ -510,6 +510,47 @@ def test_import_trig_rejects_unknown_rich_canopy_graph_roles(
     }
 
 
+def test_import_trig_preflights_all_graphs_before_mutation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    map_graph = Graph(identifier=URIRef("https://richcanopy.org/graph/map"))
+    map_graph.add(
+        (
+            URIRef("https://example.test/project#Messages"),
+            RDF.type,
+            URIRef(f"{RC}Dataset"),
+        )
+    )
+    seed_graph = Graph(identifier=URIRef("https://richcanopy.org/graph/base_ontology"))
+    seed_graph.add(
+        (
+            URIRef("https://example.test/project#SeedTerm"),
+            RDF.type,
+            URIRef(f"{RC}Dataset"),
+        )
+    )
+
+    class OrderedDataset:
+        def graphs(self) -> list[Graph]:
+            return [map_graph, seed_graph]
+
+    monkeypatch.setattr(
+        db,
+        "_parse_rdf_dataset",
+        lambda *args, **kwargs: OrderedDataset(),
+    )
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(ImmutableGraphError, match="base_ontology"):
+        db.import_trig("ignored.trig")
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.triple_count("map") == 0
+
+
 def test_to_dict_serializes_api_dataclasses(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(POLYMARKET_FIXTURE)
@@ -843,8 +884,10 @@ def test_export_trig_all_with_seeds_requires_explicit_seed_import(tmp_path: Path
     assert result.graph_counts["base_shapes"] == db.triple_count("base_shapes")
 
     round_trip = DoxaBase.create(tmp_path / "round-trip-with-seeds.sqlite")
+    before_counts = _mutable_graph_counts(round_trip)
     with pytest.raises(ImmutableGraphError, match="base_(ontology|shapes)"):
         round_trip.import_trig(export_path)
+    assert _mutable_graph_counts(round_trip) == before_counts
 
 
 def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
