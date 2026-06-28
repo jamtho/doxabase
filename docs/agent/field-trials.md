@@ -2190,6 +2190,11 @@ few useful gaps:
   `bundle_summary.snapshot_evidence` so unattended consumers can see the same
   snapshot import gate as the Markdown `Snapshot Evidence` panel without parsing
   Markdown or changing review/apply queue semantics.
+- A review/export handoff follow-up found agents could still follow the top
+  staged-recovery route into `apply_after_review` without noticing RDF-only
+  snapshot evidence. Recovery plans and grouped review bundle warnings now repeat
+  the snapshot-import preflight before mutation queues while keeping
+  `next_action_queue` as the post-preflight route.
 - An assertion-support/caveat trial confirmed that support routes correctly pull
   direct and owner-dataset caveats plus mixed supporting and contradictory lore,
   but related claims/patterns are contextual, not endorsement. Read claim text,

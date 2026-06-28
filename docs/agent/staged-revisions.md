@@ -212,8 +212,11 @@ mechanical restage list, and treat `repair_first_revision_iris` /
 `repair_or_replace` lanes as repair or replacement work before any same-payload
 restage. If `requires_recheck_after_each_apply` is true, apply at most one ready
 row, then rerun the planner.
-When `would_restage_revision_iris` is non-empty, top-level
-`suggested_next_actions` starts with a batch
+When RDF/history handoffs have incomplete snapshot evidence, top-level
+`suggested_next_actions` starts with `import_revision_snapshots` or `import_trig`
+preflight before apply/restage actions. After those preflight actions, when
+`would_restage_revision_iris` is non-empty, top-level `suggested_next_actions`
+includes a batch
 `restage_staged_revisions(revision_iris=[...], dry_run=true)` action over that
 worklist. Use it before creating successors; row-level `restage_staged_revision`
 actions remain available for focused single-row review.
@@ -839,7 +842,10 @@ absent when every included row has complete exact snapshot rows; use
 row-level JSON `snapshot_evidence` when a script needs positive confirmation.
 Grouped export JSON keeps `next_action_queue` focused on review/apply routing;
 the snapshot import gate is `bundle_summary.snapshot_evidence.complete` plus the
-row-level `suggested_next_actions` there.
+row-level `suggested_next_actions` there. When snapshot evidence is incomplete,
+`bundle_summary.warnings` and grouped Markdown `Bundle Warnings` repeat the
+handoff preflight before `Review Queues`; the queue entries remain post-preflight
+mutation routes.
 When a same-payload mechanical restaged successor is ready only because current
 graph state filled a source validation gap, its decision is
 `inspect_restaged_source_validation_failure` and its compact queue is

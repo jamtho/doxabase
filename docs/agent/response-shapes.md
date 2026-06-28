@@ -4430,7 +4430,10 @@ manual replacement should come before another same-payload restage. If
 row, then rerun `plan_staged_revision_recovery()` before the next mutation.
 `requires_recheck_after_each_apply` is the boolean form of that same sequencing
 hazard.
-When `would_restage_revision_iris` is non-empty,
+When lane snapshot evidence is incomplete, `plan.suggested_next_actions` promotes
+`import_revision_snapshots` or `import_trig` before mutation actions. Treat
+normal lane queues as post-preflight routes until that import is complete. When
+handoff evidence is complete and `would_restage_revision_iris` is non-empty,
 `plan.suggested_next_actions[0]` is a batch
 `restage_staged_revisions` dry-run action with
 `arguments.revision_iris == would_restage_revision_iris` and
@@ -4735,7 +4738,8 @@ Grouped export JSON keeps `bundle.next_action_queue` focused on the review/apply
 route. For RDF-only handoffs, use `bundle.snapshot_evidence.complete`,
 `incomplete_revision_iris`, and row `suggested_next_actions` as the structured
 snapshot-import gate before relying on exact stale drift or applied-diff
-triples.
+triples. When the gate is incomplete, `bundle.warnings` repeats that handoff
+preflight so Markdown readers see it before the review/apply queues.
 
 Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
 still need restaging. `stale_handled_by_restage` means the source already
@@ -4783,7 +4787,9 @@ This is a review-artifact shortcut over each row's `snapshot_evidence` /
 `describe_revision_snapshot_evidence()` payload. The section is warning-oriented:
 when every included row has complete exact snapshot rows, it may be absent. Use
 `describe_revision_snapshot_evidence()` or the JSON `snapshot_evidence` fields
-for positive machine-readable confirmation.
+for positive machine-readable confirmation. Incomplete evidence is also repeated
+in `Bundle Warnings` before `Review Queues`; those queues still describe the
+post-preflight apply/restage/repair route.
 `validation_failed_revision_iris` lists rows whose patch counts
 replay but whose current preview validation does not conform.
 `staged_validation_failed_revision_iris` lists rows whose stored staged-time

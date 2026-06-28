@@ -1395,6 +1395,50 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert result["note"].startswith("Read-only staged revision recovery plan")
 
 
+def test_plan_staged_revision_recovery_tool_promotes_handoff_snapshot_import(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "source.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage live messages table",
+        rationale="Exercise RDF-only handoff planning through the MCP wrapper.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:LiveMessages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    project_path = tmp_path / "project.trig"
+    export_trig_tool(db, path=str(project_path), graphs="project")
+    imported = DoxaBase.create(tmp_path / "rdf-only.sqlite")
+    imported.import_trig(project_path)
+
+    result = plan_staged_revision_recovery_tool(
+        imported,
+        revision_iris=[staged["revision_iri"]],
+    )
+
+    assert result["lane_counts"] == {"apply_after_review": 1}
+    assert result["next_action_queue"] == {
+        "apply_after_review": [staged["revision_iri"]]
+    }
+    assert result["bundle_summary"]["snapshot_evidence"]["complete"] is False
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "import_revision_snapshots"
+    )
+    assert result["lanes"][0]["suggested_next_actions"][0]["tool_name"] == (
+        "import_revision_snapshots"
+    )
+    assert "Snapshot evidence is incomplete" in result["warnings"][0]
+
+
 def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
     tmp_path: Path,
 ) -> None:

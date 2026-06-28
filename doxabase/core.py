@@ -26175,13 +26175,21 @@ class DoxaBase:
                     "Could not draft staged revision repair for "
                     f"'{item.current_revision_iri}': {exc}"
                 )
-        suggested_next_actions = item.suggested_next_actions_after
+        suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+            item.suggested_next_actions_after,
+            item.source_snapshot_evidence,
+            item.current_snapshot_evidence,
+        )
         if self._staged_recovery_should_use_embedded_draft_route(repair_draft):
             if repair_draft.next_action is not None:
                 next_action = repair_draft.next_action
             if repair_draft.next_action_queue_item is not None:
                 queue_item = repair_draft.next_action_queue_item
-            suggested_next_actions = repair_draft.suggested_next_actions
+            suggested_next_actions = self._with_revision_snapshot_evidence_actions(
+                repair_draft.suggested_next_actions,
+                item.source_snapshot_evidence,
+                item.current_snapshot_evidence,
+            )
             lane = (
                 queue_item.queue
                 if queue_item is not None
@@ -26317,6 +26325,7 @@ class DoxaBase:
         *,
         would_restage_revision_iris: list[str],
     ) -> list[SuggestedNextAction]:
+        handoff_preflight_actions: list[SuggestedNextAction] = []
         review_first_actions: list[SuggestedNextAction] = []
         mutation_actions: list[SuggestedNextAction] = []
         if would_restage_revision_iris:
@@ -26328,6 +26337,11 @@ class DoxaBase:
         for lane in lanes:
             for action in lane.suggested_next_actions:
                 if action.tool_name in {
+                    "import_revision_snapshots",
+                    "import_trig",
+                }:
+                    handoff_preflight_actions.append(action)
+                elif action.tool_name in {
                     "describe_staged_revision",
                     "export_staged_revision",
                     "export_staged_revisions",
@@ -26340,7 +26354,7 @@ class DoxaBase:
                 else:
                     mutation_actions.append(action)
         return self._dedupe_suggested_next_actions(
-            [*review_first_actions, *mutation_actions]
+            [*handoff_preflight_actions, *review_first_actions, *mutation_actions]
         )
 
     def _staged_recovery_batch_restage_dry_run_action(
@@ -31072,6 +31086,7 @@ class DoxaBase:
             sequential_apply_recheck_candidate_iris=post_apply_recheck,
             warnings=self._staged_revisions_bundle_warnings(
                 post_apply_recheck,
+                snapshot_evidence=snapshot_evidence,
                 external_recommended_review_iris=external_recommended_review,
                 ready_restage_successor_alternative_to_applied_source_iris=(
                     ready_applied_alternative_successors
@@ -31181,6 +31196,7 @@ class DoxaBase:
         self,
         post_apply_recheck_revision_iris: list[str],
         *,
+        snapshot_evidence: StagedGraphRevisionSnapshotEvidenceSummary | None = None,
         external_recommended_review_iris: list[str] | None = None,
         ready_restage_successor_alternative_to_applied_source_iris: (
             list[str] | None
@@ -31190,6 +31206,18 @@ class DoxaBase:
         ) = None,
     ) -> list[str]:
         warnings: list[str] = []
+        if (
+            snapshot_evidence is not None
+            and snapshot_evidence.rows
+            and not snapshot_evidence.complete
+        ):
+            warnings.append(
+                "Snapshot evidence is incomplete for staged review row(s): "
+                f"{', '.join(snapshot_evidence.incomplete_revision_iris)}. "
+                "Import companion revision snapshot JSON before relying on exact "
+                "applied-diff or stale-drift triples; Review Queues and Resolved "
+                "Targets remain post-preflight mutation routes."
+            )
         if post_apply_recheck_revision_iris:
             warnings.append(
                 "Ready/no-op staged revisions sharing a changed graph are "

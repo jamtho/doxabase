@@ -3426,6 +3426,72 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert staged.revision_iri in mixed_export_message
 
 
+def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "source.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage live messages table",
+        rationale="Exercise RDF-only handoff planning for live staged work.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:LiveMessages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    project_path = tmp_path / "project.trig"
+    db.export_trig(project_path, graphs="project")
+
+    imported = DoxaBase.create(tmp_path / "rdf-only.sqlite")
+    imported.import_trig(project_path)
+
+    plan = imported.plan_staged_revision_recovery([staged.revision_iri])
+
+    assert plan.lane_counts == {"apply_after_review": 1}
+    assert plan.next_action_queue == {"apply_after_review": [staged.revision_iri]}
+    assert plan.bundle_summary is not None
+    assert plan.bundle_summary.snapshot_evidence.complete is False
+    assert plan.bundle_summary.snapshot_evidence.incomplete_revision_iris == [
+        staged.revision_iri
+    ]
+    assert plan.bundle_summary.warnings == plan.warnings
+    assert "Snapshot evidence is incomplete" in plan.warnings[0]
+    assert "post-preflight mutation routes" in plan.warnings[0]
+    lane = plan.lanes[0]
+    assert lane.lane == "apply_after_review"
+    assert lane.next_action is not None
+    assert lane.next_action.tool_name == "apply_staged_revision"
+    assert lane.current_snapshot_evidence.status == "history_only_count_digest"
+    assert lane.current_snapshot_evidence_completeness == "history-only"
+    assert lane.suggested_next_actions[0].tool_name == "import_revision_snapshots"
+    assert lane.suggested_next_actions[0].arguments == {
+        "path": "/tmp/revision-snapshots.json",
+        "path_is_placeholder": True,
+    }
+    assert plan.suggested_next_actions[0].tool_name == "import_revision_snapshots"
+
+    grouped_export_path = tmp_path / "rdf-only-grouped-review.md"
+    grouped_export = imported.export_staged_revisions(
+        [staged.revision_iri],
+        grouped_export_path,
+    )
+    grouped_text = grouped_export_path.read_text(encoding="utf-8")
+
+    assert grouped_export.bundle_summary.warnings == plan.bundle_summary.warnings
+    assert "## Bundle Warnings" in grouped_text
+    assert "Snapshot evidence is incomplete" in grouped_text
+    assert "Next action - apply after review" in grouped_text
+    assert grouped_text.index("Snapshot evidence is incomplete") < grouped_text.index(
+        "## Review Queues"
+    )
+
+
 def test_revision_lineage_warns_when_restage_ancestor_lacks_snapshots(
     tmp_path: Path,
 ) -> None:

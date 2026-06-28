@@ -1406,6 +1406,9 @@ If the embedded draft finds no safe automatic repair and has already filtered
 out the self-call to `draft_staged_revision_rebase`, the lane and top-level plan
 suggestions follow the draft's inspect/export route instead of recommending the
 same draft call again.
+When lane snapshot evidence is incomplete, the lane and top-level
+`suggested_next_actions` promote `import_revision_snapshots` or `import_trig`
+before apply/restage actions. The lane queue remains the post-preflight route.
 
 Read `lanes[]` first. Each lane names the `source_revision_iri`,
 `current_revision_iri`, `lane`, `batch_action`, status/decision before and
@@ -1613,6 +1616,8 @@ row-vs-target flag, and semantic alternative gate fields for each queued row;
 rows have complete stored snapshot rows. Its `complete=false` rows carry the
 same `import_revision_snapshots` suggested actions as the Markdown `Snapshot
 Evidence` panel, while `next_action_queue` keeps normal review/apply routing.
+`bundle_summary.warnings` repeats incomplete snapshot evidence as a handoff
+preflight so grouped Markdown readers see it before `Review Queues`.
 `semantic_review_required_queue_counts` flags gated alternative rows by queue.
 `semantic_risk_queue_counts` separately counts queued rows with apply-check
 semantic risk (`attention` or `high`), including repair queues when semantic

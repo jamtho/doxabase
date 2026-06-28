@@ -1260,7 +1260,9 @@ For RDF handoffs imported without companion snapshot JSON,
 false means at least one included row lacks exact stored snapshot rows, and row
 `suggested_next_actions` point at `import_revision_snapshots` just like the
 Markdown `Snapshot Evidence` panel. This does not change `next_action_queue`,
-which remains focused on review/apply routing.
+which remains focused on review/apply routing. The same condition is repeated in
+`bundle_summary.warnings`, so grouped Markdown shows the handoff preflight before
+`Review Queues`.
 `bundle_summary.warnings` calls out sequencing hazards, including grouped
 ready/no-op reviews on the same changed graph that should be re-checked after
 each apply, and source-only bundles whose recommended review target is outside
