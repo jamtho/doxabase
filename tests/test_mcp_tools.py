@@ -901,6 +901,8 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert result["next_action_queue_item_counts"] == {
         "apply_after_review": 1
     }
+    assert result["mutation_frontier_iris"] == [staged["revision_iri"]]
+    assert result["requires_recheck_after_each_apply"] is False
     lane = result["lanes"][0]
     assert lane["source_revision_iri"] == staged["revision_iri"]
     assert lane["row_iri"] == staged["revision_iri"]
@@ -912,6 +914,10 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert result["bundle_summary"]["next_action_queue"] == {
         "apply_after_review": [staged["revision_iri"]]
     }
+    assert result["bundle_summary"]["mutation_frontier_iris"] == [
+        staged["revision_iri"]
+    ]
+    assert result["bundle_summary"]["requires_recheck_after_each_apply"] is False
     assert result["note"].startswith("Read-only staged revision recovery plan")
 
 
@@ -1576,6 +1582,10 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["bundle_summary"]["next_action_queue_item_counts"] == {
         "apply_after_review": 1
     }
+    assert export["bundle_summary"]["mutation_frontier_iris"] == [
+        staged["revision_iri"]
+    ]
+    assert export["bundle_summary"]["requires_recheck_after_each_apply"] is False
     assert export["bundle_summary"]["semantic_review_required_queue_counts"] == {}
     export_queue_item = export["bundle_summary"]["next_action_queue_items"][0]
     assert export_queue_item["row_iri"] == staged["revision_iri"]

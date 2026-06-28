@@ -2112,6 +2112,12 @@ few useful gaps:
   mutation when sample/null details differed. Profile map-update duplicate keys
   now group unmapped shells by their helper mutation, while preserving all
   supporting profile observations on the accepted representative.
+- A staged-recovery frontier trial found grouped queues still made agents work
+  backward from row IRIs to current mutation targets, especially when handled
+  stale rows pointed at refreshed successors or applied events. Grouped exports
+  and recovery plans now expose `mutation_frontier_iris` for deduped resolved
+  apply/restage/repair targets plus `requires_recheck_after_each_apply` as the
+  boolean apply-one-then-recheck hazard.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

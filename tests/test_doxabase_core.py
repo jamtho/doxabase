@@ -5336,6 +5336,12 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         "repair_or_replace": 1,
         "inspect_already_applied": 1,
     }
+    assert plan.mutation_frontier_iris == [
+        ready.revision_iri,
+        stale.revision_iri,
+        handled_successor.revision_iri,
+    ]
+    assert plan.requires_recheck_after_each_apply is True
     assert set(plan.sequential_apply_recheck_candidate_iris) == {
         ready.revision_iri,
         handled_successor.revision_iri,
@@ -7975,12 +7981,19 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         first_restaged.revision_iri,
         second_restaged.revision_iri,
     ]
+    assert export.bundle_summary.mutation_frontier_iris == [
+        first_restaged.revision_iri,
+        second_restaged.revision_iri,
+    ]
+    assert export.bundle_summary.requires_recheck_after_each_apply is True
     assert export.bundle_summary.recommended_repair_review_iris == []
     assert export.bundle_summary.recommended_applied_inspection_iris == []
     assert "## Bundle Warnings" in exported
     assert exported.index("## Bundle Warnings") < exported.index("## Restage Context")
     assert "## Review Queues" in exported
     assert exported.index("## Review Queues") < exported.index("## Restage Context")
+    assert "Mutation frontier:" in exported
+    assert "requires rechecking the remaining ready candidates" in exported
     assert "## Alternative Context" in exported
     assert (
         "Stored alternative to Revision 1: Model order rows as raw events"
@@ -8023,6 +8036,10 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert recheck_export.bundle_summary.next_action_queue == {
         "restage_after_review": [second_restaged.revision_iri],
     }
+    assert recheck_export.bundle_summary.mutation_frontier_iris == [
+        second_restaged.revision_iri
+    ]
+    assert recheck_export.bundle_summary.requires_recheck_after_each_apply is False
     assert recheck_export.revision_summaries[0].next_action is not None
     assert recheck_export.revision_summaries[0].next_action.arguments == (
         recheck.next_action.arguments
@@ -8170,6 +8187,10 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
         "informational": 1,
         "apply_after_review": 1,
     }
+    assert applied_alternative_summary.mutation_frontier_iris == [
+        recovered_second.revision_iri
+    ]
+    assert applied_alternative_summary.requires_recheck_after_each_apply is False
     assert applied_alternative_summary.semantic_review_required_queue_counts == {
         "informational": 1,
         "apply_after_review": 1,

@@ -870,6 +870,8 @@ class StagedGraphRevisionBundleSummary:
     next_action_queue: dict[str, list[str]]
     next_action_queue_items: list[RevisionNextActionQueueItem]
     next_action_queue_item_counts: dict[str, int]
+    mutation_frontier_iris: list[str]
+    requires_recheck_after_each_apply: bool
     semantic_risk_queue_counts: dict[str, int]
     semantic_review_required_queue_counts: dict[str, int]
 
@@ -1046,6 +1048,8 @@ class StagedRevisionRecoveryPlan:
     next_action_queue: dict[str, list[str]]
     next_action_queue_items: list[RevisionNextActionQueueItem]
     next_action_queue_item_counts: dict[str, int]
+    mutation_frontier_iris: list[str]
+    requires_recheck_after_each_apply: bool
     semantic_review_required_queue_counts: dict[str, int]
     would_restage_revision_iris: list[str]
     repair_first_revision_iris: list[str]
@@ -24678,6 +24682,10 @@ class DoxaBase:
             for lane in lanes
             if lane.next_action_queue_item is not None
         ]
+        mutation_frontier_iris = self._revision_mutation_frontier_iris(queue_items)
+        requires_recheck_after_each_apply = bool(
+            batch.bundle_summary.sequential_apply_recheck_candidate_iris
+        )
         suggested_next_actions = self._staged_recovery_suggested_next_actions(lanes)
         return StagedRevisionRecoveryPlan(
             result_kind="staged_revision_recovery_plan",
@@ -24704,6 +24712,8 @@ class DoxaBase:
             next_action_queue_item_counts=(
                 self._revision_next_action_queue_item_counts(queue_items)
             ),
+            mutation_frontier_iris=mutation_frontier_iris,
+            requires_recheck_after_each_apply=requires_recheck_after_each_apply,
             semantic_review_required_queue_counts=(
                 self._semantic_review_required_queue_counts(queue_items)
             ),
@@ -24782,6 +24792,8 @@ class DoxaBase:
             next_action_queue={},
             next_action_queue_items=[],
             next_action_queue_item_counts={},
+            mutation_frontier_iris=[],
+            requires_recheck_after_each_apply=False,
             semantic_review_required_queue_counts={},
             would_restage_revision_iris=[],
             repair_first_revision_iris=[],
@@ -28644,6 +28656,24 @@ class DoxaBase:
         return counts
 
     @staticmethod
+    def _revision_mutation_frontier_iris(
+        queue_items: Iterable[RevisionNextActionQueueItem],
+    ) -> list[str]:
+        mutation_queues = {
+            "apply_after_review",
+            "restage_after_review",
+            "repair_or_replace",
+        }
+        frontier: list[str] = []
+        for item in queue_items:
+            if item.queue not in mutation_queues:
+                continue
+            if item.resolved_target_iri is None:
+                continue
+            DoxaBase._append_unique(frontier, item.resolved_target_iri)
+        return frontier
+
+    @staticmethod
     def _semantic_review_required_queue_counts(
         queue_items: Iterable[RevisionNextActionQueueItem],
     ) -> dict[str, int]:
@@ -29593,6 +29623,9 @@ class DoxaBase:
             )
             if queue_item is not None:
                 next_action_queue_items.append(queue_item)
+        mutation_frontier_iris = self._revision_mutation_frontier_iris(
+            next_action_queue_items
+        )
         return StagedGraphRevisionBundleSummary(
             total_revisions=len(summaries),
             apply_status_counts=apply_status_counts,
@@ -29633,6 +29666,8 @@ class DoxaBase:
                     next_action_queue_items
                 )
             ),
+            mutation_frontier_iris=mutation_frontier_iris,
+            requires_recheck_after_each_apply=bool(post_apply_recheck),
             semantic_risk_queue_counts=self._semantic_risk_queue_counts(summaries),
             semantic_review_required_queue_counts=(
                 self._semantic_review_required_queue_counts(
@@ -34048,6 +34083,7 @@ class DoxaBase:
                 "Recommended mutation review",
                 bundle_summary.recommended_mutation_review_iris,
             ),
+            ("Mutation frontier", bundle_summary.mutation_frontier_iris),
             *(
                 (label, bundle_summary.next_action_queue.get(queue, []))
                 for label, queue in next_action_labels
@@ -34068,11 +34104,21 @@ class DoxaBase:
         ]
         if not any(iris for _, iris in queues):
             return []
-        return [
+        notes = [
             (
                 "Queue values are returned row IRIs; read each row's "
-                "`next_action.arguments` for the actual follow-up target."
-            ),
+                "`next_action.arguments` for the actual follow-up target. "
+                "`Mutation frontier` lists deduped resolved targets for "
+                "apply/restage/repair queues."
+            )
+        ]
+        if bundle_summary.requires_recheck_after_each_apply:
+            notes.append(
+                "This bundle requires rechecking the remaining ready candidates "
+                "after each apply."
+            )
+        return [
+            *notes,
             "",
             *(
                 f"- {label}: {self._markdown_iri_list(iris)}"

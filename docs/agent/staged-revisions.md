@@ -202,10 +202,13 @@ batch classification and optional rebase drafts to return one lane per source
 revision. Read `lanes[].lane`, `current_revision_iri`, `next_action`, and
 `next_action_queue_item.resolved_target_iri` before mutating. Queue values are
 row IRIs, while resolved targets may point at refreshed successors or applied
-events. Treat `would_restage_revision_iris` as the post-review mechanical
-restage list, and treat `repair_first_revision_iris` / `repair_or_replace`
-lanes as repair or replacement work before any same-payload restage. If
-`sequential_apply_recheck_candidate_iris` is non-empty, apply at most one ready
+events. Use `mutation_frontier_iris` as the compact deduped set of resolved
+apply/restage/repair targets; it excludes informational handled-stale rows,
+already-applied inspection targets, and repair helper calls that do not resolve
+to an existing IRI. Treat `would_restage_revision_iris` as the post-review
+mechanical restage list, and treat `repair_first_revision_iris` /
+`repair_or_replace` lanes as repair or replacement work before any same-payload
+restage. If `requires_recheck_after_each_apply` is true, apply at most one ready
 row, then rerun the planner.
 Use `repair_or_replace_source_revision_iris` as the broad top-level repair
 worklist. It includes every lane currently routing to `repair_or_replace`,
@@ -778,6 +781,11 @@ whose apply check reports semantic risk from linked support, judgement panels,
 review notes, impacts, or related context. List, recovery, and grouped export
 queue items also carry `semantic_risk_level` and `semantic_risk_reasons` when
 the row's apply check has already computed semantic risk.
+Use `bundle_summary.mutation_frontier_iris` when a script needs the active
+resolved targets only; it omits informational redirects and already-applied
+inspection work. If `bundle_summary.requires_recheck_after_each_apply` is true,
+apply one frontier target at most, then rerun the export or recovery planner
+before acting on siblings.
 Grouped Markdown also includes a `Resolved Targets` table derived from those
 queue items, so Markdown-only reviewers can see each row's queue, action,
 resolved target IRI, target kind, and whether the row itself is the target

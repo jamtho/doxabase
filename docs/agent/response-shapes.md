@@ -4182,6 +4182,8 @@ plan.lane_counts
 plan.next_action_queue
 plan.next_action_queue_items
 plan.next_action_queue_item_counts
+plan.mutation_frontier_iris
+plan.requires_recheck_after_each_apply
 plan.semantic_review_required_queue_counts
 plan.would_restage_revision_iris
 plan.repair_first_revision_iris
@@ -4276,6 +4278,10 @@ same as the mutation or inspection target. Repair lanes may include
 `repair_draft`; when the suggested repair creates a new successor,
 `resolved_target_iri` can be `None`, so drive the reviewed repair from
 `repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
+`mutation_frontier_iris` is the compact deduped set of resolved targets in
+apply/restage/repair queues; it intentionally excludes informational rows,
+already-applied inspection targets, and repair helper calls that do not resolve
+to an existing target IRI.
 When `include_drafts=True` and a no-repair embedded draft already removed
 `draft_staged_revision_rebase` from its own suggestions, the lane and top-level
 plan suggestions use that draft's inspection/export route too. Do not call the
@@ -4289,6 +4295,8 @@ marks stale sources whose staged validation history means a repair draft or
 manual replacement should come before another same-payload restage. If
 `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one ready
 row, then rerun `plan_staged_revision_recovery()` before the next mutation.
+`requires_recheck_after_each_apply` is the boolean form of that same sequencing
+hazard.
 
 ### Staged Revision Rebase Draft
 
@@ -4552,6 +4560,8 @@ bundle.recommended_applied_inspection_iris
 bundle.next_action_queue
 bundle.next_action_queue_items
 bundle.next_action_queue_item_counts
+bundle.mutation_frontier_iris
+bundle.requires_recheck_after_each_apply
 bundle.semantic_risk_queue_counts
 bundle.semantic_review_required_queue_counts
 ```
@@ -4571,6 +4581,11 @@ groups the returned row IRIs by action class; inspect each row's
 point to an applied event even though the queued row is the stale source.
 `next_action_queue_items[].resolved_target_iri` exposes that target directly,
 and `row_is_target=False` flags redirected rows.
+`mutation_frontier_iris` is the deduped resolved-target worklist for
+apply/restage/repair queues. Use it when an unattended script needs current
+mutation targets rather than returned row IRIs; it omits informational handled
+stale rows, already-applied inspection targets, and repair helpers whose action
+does not name an existing `iri`.
 `semantic_risk_queue_counts` counts queued rows whose row summary carries
 `semantic_risk_level` of `attention` or `high`. This is separate from
 `semantic_review_required_queue_counts`, which only counts alternative-gate
@@ -4609,6 +4624,7 @@ or no-op candidates that share changed graphs and should be rechecked after any
 one of them is applied. Grouped Markdown labels this queue as sequential apply
 recheck candidates, because it is a pre-apply hazard list rather than the
 post-apply result from one completed mutation.
+`requires_recheck_after_each_apply` is true when that hazard is present.
 `recommended_mutation_review_iris` is the broad compatibility review queue for
 staged revisions that may still need restage, repair, apply, or manual mutation
 decisions. Use `recommended_apply_or_restage_review_iris` for rows that need
