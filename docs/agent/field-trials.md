@@ -1768,7 +1768,23 @@ few useful gaps:
   layout, but `describe_query_context` reports blocking physical metadata
   issues. Treat that lane as a priority cue before using profile-derived map
   updates for query-planning work; it does not discard the profile
-  recommendations.
+  recommendations. A logical/profile-only retest confirmed the inverse:
+  insufficient physical query metadata alone should not add that lane unless the
+  map already records physical-query intent.
+- Follow-up trials found no product-code fix in three harder workflow slices,
+  but left useful regression targets. Mixed local, S3, and database query
+  candidates proved that automatic selection can choose a direct-clean local
+  route while sibling metadata still keeps the global context review-gated; use
+  the explicit `candidate_index` and `allow_context_blocked_candidate` actions
+  instead of treating automatic selection as execution-ready. Staged-revision
+  handoff retests confirmed TriG-only imports should route exact diffs to
+  `import_revision_snapshots` before snapshot JSON import restores exact
+  triples. Profile metric/type retests confirmed mixed-support patterns belong
+  in both advisory lanes while `stage_profile_map_updates` keeps metric and
+  type vocabulary IRIs out of `map`. A cold-start docs trial showed the compact
+  profiling and query-planning docs should spell out bundled column-profile
+  `physical_type` / `value_type` fields and link missing-storage repair back to
+  the executable-catalog recipe.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -20,12 +20,41 @@ constraints, SHACL shapes, allowed values, or durable map assertions by
 themselves. Use `sample_scope` and `sample_method` so later agents know whether
 the profile covered a full population, a sample, or an unknown slice.
 
+Bundled column-profile rows use `physical_type` and `value_type` for observed
+type findings. The `observed_physical_type` and `observed_value_type` field
+names belong to `record_observation`, not to `record_profile_bundle` rows.
+
+```python
+db.record_profile_bundle(
+    dataset_iri,
+    dataset_summary="Full table profile.",
+    evidence_summary="Profiler output from the current warehouse snapshot.",
+    evidence_sources=["file:///tmp/profile.json"],
+    shared_evidence_iri=evidence_iri,
+    sample_size=1000,
+    sample_scope="All rows in the current table snapshot.",
+    sample_method="DuckDB full-table profile.",
+    column_profiles=[
+        {
+            "column_iri": column_iri,
+            "column_name": "status",
+            "null_count": 0,
+            "physical_type": "rc:Varchar",
+            "value_type": "project:StatusCodeValue",
+        }
+    ],
+)
+```
+
 ## Retrieve The Run
 
 Start from `describe_dataset`. Its `profile_summary.profile_run_candidates`
 lists shared evidence IRIs that support several returned profile observations.
 Then call `describe_profile_run(dataset_iri, evidence_iri)` when bounded dataset
 context omitted rows or when you need the full run before drafting map changes.
+For exact response fields, read the `response_shapes` section
+"Describe Profile Run"; count fields are named `returned_profile_count` and
+`total_profile_count`.
 
 For route-explained handoffs, use `describe_context_slice` with
 `profile="dataset_brief"` for table/profile summaries or seed the slice with a
@@ -86,5 +115,5 @@ profile recommendations, such as nullability, that should go through
 `profile_map_updates` before you treat the run as advisory-only.
 
 For exact response fields, read `response_shapes` sections "Profile Helper
-Records" and "Profile Map Update Drafts". For broader map-authoring rationale,
-read `map_authoring`.
+Records", "Describe Profile Run", and "Profile Map Update Drafts". For broader
+map-authoring rationale, read `map_authoring`.

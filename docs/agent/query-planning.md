@@ -59,6 +59,10 @@ Start with `describe_query_context(dataset_iri)`:
    or partition already carries the reviewed path template; duplicating it can
    create equivalent ready candidates. Database relation identifiers are the
    important exception and should be recorded as storage-access-owned templates.
+   For controlled field examples, read the `executable_catalog` storage-access
+   recipe; a local read-only directory access uses
+   `storage_protocol="rc:LocalFilesystemStorage"`,
+   `access_mode="rc:ReadOnlyAccess"`, and `location_kind="directory"`.
 6. Use `suggested_repair_action_groups` when scripting metadata repairs. It is a
    top-level `query_repair_review` lane over existing
    `issues[].details.repair_hint.actions[]`, preserving issue index/code/resource

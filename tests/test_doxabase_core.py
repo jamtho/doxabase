@@ -20182,6 +20182,50 @@ def test_profile_map_update_query_blocker_routes_before_default_stage_action(
     assert "query_context_review" in draft.review_note
 
 
+def test_profile_map_update_logical_only_dataset_omits_query_context_lane(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-logical#"
+    dataset = f"{base}Customers"
+    evidence = f"{base}CustomersProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Customers",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Customers logical profile pass.",
+        evidence_summary="Customers full profile evidence.",
+        evidence_sources=["test://customers/full"],
+        shared_evidence_iri=evidence,
+        sample_size=120,
+        sample_scope="All rows in the logical Customers table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=120,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+    )
+
+    query_context = db.describe_query_context(dataset)
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert query_context.readiness == "insufficient_metadata"
+    assert "missing_storage_access" in [
+        issue.code for issue in query_context.issues
+    ]
+    assert list(draft.suggested_next_action_groups) == [
+        "profile_map_updates",
+    ]
+    assert draft.suggested_next_actions
+    assert draft.suggested_next_actions[0].tool_name == "stage_profile_map_updates"
+    assert "query_context_review" not in draft.suggested_next_action_groups
+    assert "query_context_review" not in draft.review_note
+
+
 def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
     tmp_path: Path,
 ) -> None:
