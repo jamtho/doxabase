@@ -5341,6 +5341,13 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         action["tool_name"]
         for action in result["suggested_next_action_groups"]["profile_map_updates"]
     ] == ["stage_profile_map_updates"]
+    map_action_source = result["suggested_next_action_groups"][
+        "profile_map_updates"
+    ][0]["source_profile_map_update"]
+    assert map_action_source["review_lane"] == "profile_map_updates"
+    assert map_action_source["route_group_key"].startswith("profile_map_updates:")
+    assert map_action_source["route_step_key"].startswith("profile-route-step:")
+    assert map_action_source["recommendation_indexes"] == [0, 1]
     assert [
         action["tool_name"]
         for action in result["suggested_next_action_groups"][
@@ -5354,6 +5361,10 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert metric_action_source["index_field"] == "metric_advisory_index"
     assert metric_action_source["advisory_indexes"] == [0]
     assert metric_action_source["duplicate_advisory_indexes"] == [0]
+    assert metric_action_source["route_group_key"].startswith(
+        "metric_vocabulary_review:"
+    )
+    assert metric_action_source["route_step_key"].startswith("profile-route-step:")
     assert metric_action_source["observed_metric_iris"] == [
         result["metric_advisories"][0]["observed_metric_iri"]
     ]
@@ -5368,6 +5379,8 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert type_action_source["index_field"] == "type_advisory_index"
     assert type_action_source["advisory_indexes"] == [0]
     assert type_action_source["duplicate_advisory_indexes"] == [0]
+    assert type_action_source["route_group_key"].startswith("profile_type_review:")
+    assert type_action_source["route_step_key"].startswith("profile-route-step:")
     assert result["suggested_next_call_groups"]["profile_map_updates"] == [
         result["suggested_next_calls"][0]
     ]
@@ -5488,6 +5501,12 @@ def test_draft_profile_map_updates_tool_surfaces_scalar_conflict_review_lane(
     assert result["suggested_next_call_groups"]["profile_scalar_conflict_review"] == [
         action["call"] for action in conflict_actions
     ]
+    assert len(
+        {
+            action["source_scalar_conflict"]["route_step_key"]
+            for action in conflict_actions
+        }
+    ) == len(conflict_actions)
     actions_by_value = {
         action["source_scalar_conflict"]["observed_value"]: action
         for action in conflict_actions
@@ -5495,6 +5514,8 @@ def test_draft_profile_map_updates_tool_surfaces_scalar_conflict_review_lane(
     assert set(actions_by_value) == {120, 121}
     source = actions_by_value[120]["source_scalar_conflict"]
     assert source["review_lane"] == "profile_scalar_conflict_review"
+    assert source["route_group_key"].startswith("profile_scalar_conflict_review:")
+    assert source["route_step_key"].startswith("profile-route-step:")
     assert (
         source["selection_rule"]
         == "choose_at_most_one_option_per_conflict_group"
@@ -6071,13 +6092,18 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
         staged["staged_revision"]["revision_iri"]
     ]
     assert result["candidate_count"] == 1
+    assert result["candidates"][0]["profile_route_keys"]
+    assert result["candidates"][0]["profile_route_groups"][0][
+        "review_lane"
+    ] == "profile_map_updates"
     assert result["export"]["path"] == str(export_path)
     assert result["export"]["revision_iris"] == result["candidate_revision_iris"]
     assert result["candidates"][0]["relation_reasons"]
     assert export_path.exists()
-    assert "Profile insight review: Orders" in export_path.read_text(
-        encoding="utf-8"
-    )
+    exported = export_path.read_text(encoding="utf-8")
+    assert "Profile insight review: Orders" in exported
+    assert "### Profile Route Bridge" in exported
+    assert result["candidates"][0]["profile_route_keys"][0] in exported
 
 
 def test_stage_profile_map_updates_tool_marks_rerun_precondition(

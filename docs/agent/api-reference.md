@@ -520,7 +520,12 @@ choose-one decision. Grouped metric/type actions carry
 represented advisory indexes, duplicate group keys, duplicate advisory indexes,
 duplicate profile-observation IRIs, and optional metric-only
 `observed_metric_iris`, so scripts can route directly from the grouped lane
-without rejoining every action to the advisory rows first. If
+without rejoining every action to the advisory rows first. Grouped profile
+map-update actions carry `source_profile_map_update` with represented
+recommendation indexes, duplicate group keys, duplicate profile-observation
+IRIs, route anchors, and route patterns. All grouped profile action source
+blocks carry stable `route_group_key` and `route_step_key` fields; use the group
+key to bridge draft lanes to profile insight bundle candidates. If
 `source_profile_advisory.mixed_support` is present on promotion or assertion
 actions in both metric and type lanes, review or export those generated drafts
 together before applying either lane independently.
@@ -541,8 +546,8 @@ Those conflicts are also summarized in `scalar_conflict_groups[]`, where each
 option carries one explicit `stage_profile_map_updates` action for a chosen
 observed value. Option actions are exposed in the grouped
 `profile_scalar_conflict_review` lane with `source_scalar_conflict` metadata,
-but are not copied into the default flat `suggested_next_actions`. It does not
-mutate or stage graph changes, and it
+including route group/step keys, but are not copied into the default flat
+`suggested_next_actions`. It does not mutate or stage graph changes, and it
 skips sampled zero-null promotions. Metric advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
 `promotion_patterns`, `context_patterns`, duplicate-group metadata, and
@@ -627,7 +632,10 @@ supporting profile observations, related patterns, and profile-derived anchors,
 then delegates the Markdown body to `export_staged_revisions()`. Use it after
 staging the profile map-update revision plus any metric vocabulary,
 type-review, or caveat/systematisation alternatives that should be reviewed
-together. It does not stage missing advisory-lane work for you.
+together. Returned candidates expose `profile_route_keys` and
+`profile_route_groups`, and the Markdown review summary includes a `Profile
+Route Bridge` table when candidates match draft route groups. It does not stage
+missing advisory-lane work for you.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from

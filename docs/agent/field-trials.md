@@ -2052,6 +2052,14 @@ few useful gaps:
   cannot inspect their blank-node property constraints. Use
   `describe_staged_revision` or grouped staged exports for proposed shape
   review, and pause before adding preview-resource inspection APIs.
+- A profile route-identity trial found that duplicate groups and advisory
+  grouping worked, but agents had to reverse-join grouped actions back to draft
+  rows and profile insight bundles back to draft lanes. Grouped profile action
+  source blocks now carry stable `route_group_key` and `route_step_key` fields;
+  profile map-update actions expose `source_profile_map_update`; metric/type
+  actions keep `source_profile_advisory` with route keys; and profile insight
+  bundle candidates plus Markdown expose a `Profile Route Bridge` so reviewers
+  can see which draft route produced or motivated each staged row.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

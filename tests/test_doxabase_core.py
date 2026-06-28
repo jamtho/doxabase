@@ -20767,6 +20767,22 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         action.tool_name
         for action in draft.suggested_next_action_groups["profile_map_updates"]
     ] == ["stage_profile_map_updates"]
+    profile_map_action = draft.suggested_next_action_groups[
+        "profile_map_updates"
+    ][0]
+    map_source = profile_map_action.source_profile_map_update
+    assert map_source["review_lane"] == "profile_map_updates"
+    assert map_source["route_group_key"].startswith("profile_map_updates:")
+    assert map_source["route_step_key"].startswith("profile-route-step:")
+    assert map_source["recommendation_indexes"] == [0, 1, 2]
+    assert map_source["duplicate_group_keys"] == [
+        draft.recommendations[index].duplicate_group_key for index in [0, 1, 2]
+    ]
+    assert map_source["route_anchor_iris"] == [
+        dataset,
+        status_column,
+        settlement_column,
+    ]
     assert [
         action.tool_name
         for action in draft.suggested_next_action_groups[
@@ -20793,6 +20809,17 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert {
         source["index_field"] for source in metric_action_sources
     } == {"metric_advisory_index"}
+    assert {
+        source["route_group_key"] for source in metric_action_sources
+    } == {metric_action_sources[0]["route_group_key"]}
+    assert all(
+        source["route_group_key"].startswith("metric_vocabulary_review:")
+        for source in metric_action_sources
+    )
+    assert all(
+        source["route_step_key"].startswith("profile-route-step:")
+        for source in metric_action_sources
+    )
     assert {
         tuple(source["observed_metric_iris"]) for source in metric_action_sources
     } == {(draft.metric_advisories[0].observed_metric_iri,)}
@@ -20975,6 +21002,9 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     )
 
     draft = db.draft_profile_map_updates(dataset, evidence)
+    profile_map_route_key = draft.suggested_next_action_groups[
+        "profile_map_updates"
+    ][0].source_profile_map_update["route_group_key"]
     staged_map = db.stage_profile_map_updates(
         dataset,
         evidence,
@@ -20986,6 +21016,7 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
         for action in draft.suggested_next_action_groups["metric_vocabulary_review"]
         if action.tool_name == "stage_pattern_promotion"
     )
+    metric_route_key = promotion_action.source_profile_advisory["route_group_key"]
     metric_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
     caveat_draft = db.stage_systematisation(
         summary="Review workflow flip caveat",
@@ -21059,6 +21090,20 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert result.candidate_count == 3
     assert result.export is not None
     assert set(result.export.revision_iris) == expected_revision_iris
+    candidates_by_iri = {
+        candidate.revision_iri: candidate for candidate in result.candidates
+    }
+    assert profile_map_route_key in candidates_by_iri[
+        staged_map.staged_revision.revision_iri
+    ].profile_route_keys
+    assert metric_route_key in candidates_by_iri[
+        metric_promotion.staged_revisions[0].revision_iri
+    ].profile_route_keys
+    assert all(
+        group["route_step_keys"]
+        for candidate in result.candidates
+        for group in candidate.profile_route_groups
+    )
     assert result.export.sensitive_literal_count == 1
     assert result.export.privacy_warnings
     assert fake_secret not in " ".join(result.export.privacy_warnings)
@@ -21074,6 +21119,9 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert "Profile insight review: Support Events" in exported
     assert "## Privacy Warning" in exported
     assert "## Reviewer Decision Matrix" in exported
+    assert "### Profile Route Bridge" in exported
+    assert profile_map_route_key in exported
+    assert metric_route_key in exported
     assert "Workflow flip denominator caveat" in exported
     assert secret_text in exported
     assert "WorkflowFlipRate" in exported
@@ -22426,6 +22474,24 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
         == "choose_at_most_one_option_per_conflict_group"
         for action in scalar_conflict_actions
     )
+    assert all(
+        action.source_scalar_conflict["route_group_key"].startswith(
+            "profile_scalar_conflict_review:"
+        )
+        for action in scalar_conflict_actions
+    )
+    assert all(
+        action.source_scalar_conflict["route_step_key"].startswith(
+            "profile-route-step:"
+        )
+        for action in scalar_conflict_actions
+    )
+    assert len(
+        {
+            action.source_scalar_conflict["route_step_key"]
+            for action in scalar_conflict_actions
+        }
+    ) == len(scalar_conflict_actions)
 
     conflicting_scalar_indexes = [
         recommendation.recommendation_index
@@ -22711,7 +22777,12 @@ def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
     assert conflict_review_action.arguments == (
         duplicate_option.suggested_next_action.arguments
     )
-    assert conflict_review_action.source_scalar_conflict == {
+    conflict_source = dict(conflict_review_action.source_scalar_conflict)
+    route_group_key = conflict_source.pop("route_group_key")
+    route_step_key = conflict_source.pop("route_step_key")
+    assert route_group_key.startswith("profile_scalar_conflict_review:")
+    assert route_step_key.startswith("profile-route-step:")
+    assert conflict_source == {
         "review_lane": "profile_scalar_conflict_review",
         "selection_rule": "choose_at_most_one_option_per_conflict_group",
         "conflict_group_index": 0,

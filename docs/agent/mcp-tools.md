@@ -438,8 +438,13 @@ advisories; grouped metric/type actions carry `source_profile_advisory` with
 the source advisory kind, index field, represented advisory indexes, duplicate
 group keys, duplicate advisory indexes, duplicate profile-observation IRIs, and
 optional metric-only `observed_metric_iris` plus optional `mixed_support`.
-Use that source block for direct lane routing, or use each advisory row's own
-`suggested_next_actions` for per-metric or per-column follow-through.
+Grouped profile map-update actions carry `source_profile_map_update` with
+represented recommendation indexes, duplicate group keys, duplicate profile
+observation IRIs, route anchors, and route patterns. All grouped profile action
+source blocks include `route_group_key` and `route_step_key`; use the group key
+to bridge draft actions to profile insight bundle candidates, and the step key
+to distinguish individual actions within one route group. Use each advisory
+row's own `suggested_next_actions` for per-metric or per-column follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
 `default_skip_reason`, and duplicate-group fields; metric and type advisories
 carry duplicate-group fields too.
@@ -458,8 +463,8 @@ structured choose-one options; each option carries a
 those option actions are exposed through the
 `profile_scalar_conflict_review` lane rather than the default
 `profile_map_updates` lane or flat `suggested_next_actions`. Each lane action
-has `source_scalar_conflict` metadata and is mutually exclusive with sibling
-options from the same conflict group. If
+has `source_scalar_conflict` metadata with route group/step keys and is mutually
+exclusive with sibling options from the same conflict group. If
 `recommendation_count == 0` and either metric or type advisories are present,
 handle the result as advisory-only: follow advisory grouped suggested actions and
 do not call `doxabase.stage_profile_map_updates`. When recommendations and
@@ -524,11 +529,13 @@ and any metric vocabulary, type-review, or caveat/systematisation alternatives
 you want reviewed together.
 
 The returned payload includes `candidates[]` with `relation_reasons`, matched
-support/evidence/anchor fields, `candidate_revision_iris`, and the nested
-`export_staged_revisions` record when a bundle was written. Same evidence alone
-does not make an unrelated pattern a related pattern; support should connect
-through profile observations, targets, map implications, or explicit
-`revision_iris`.
+support/evidence/anchor fields, `profile_route_keys`,
+`profile_route_groups`, `candidate_revision_iris`, and the nested
+`export_staged_revisions` record when a bundle was written. The grouped
+Markdown review summary includes a `Profile Route Bridge` table when candidates
+match draft route groups. Same evidence alone does not make an unrelated
+pattern a related pattern; support should connect through profile observations,
+targets, map implications, or explicit `revision_iris`.
 
 ### doxabase.describe_query_context
 

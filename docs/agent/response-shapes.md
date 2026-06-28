@@ -1483,6 +1483,8 @@ review actions carry `source_query_context`:
 
 ```python
 action.source_query_context["review_lane"]
+action.source_query_context["route_group_key"]
+action.source_query_context["route_step_key"]
 action.source_query_context["readiness"]
 action.source_query_context["readiness_note"]
 action.source_query_context["blocking_issue_codes"]
@@ -1490,30 +1492,52 @@ action.source_query_context["issue_codes"]
 action.source_query_context["suggested_repair_action_group_count"]
 ```
 
+Grouped profile map-update actions are `ProfileMapUpdateSuggestedNextAction`
+rows and carry `source_profile_map_update`:
+
+```python
+action.source_profile_map_update["review_lane"]
+action.source_profile_map_update["route_group_key"]
+action.source_profile_map_update["route_step_key"]
+action.source_profile_map_update["recommendation_indexes"]
+action.source_profile_map_update["duplicate_group_keys"]
+action.source_profile_map_update["duplicate_recommendation_indexes"]
+action.source_profile_map_update["duplicate_profile_observation_iris"]
+action.source_profile_map_update["route_anchor_iris"]
+action.source_profile_map_update["route_pattern_iris"]
+```
+
 Grouped metric/type actions are `ProfileAdvisorySuggestedNextAction` rows and
 carry source metadata:
 
 ```python
+action.source_profile_advisory["review_lane"]
+action.source_profile_advisory["route_group_key"]
+action.source_profile_advisory["route_step_key"]
 action.source_profile_advisory["advisory_kind"]
 action.source_profile_advisory["index_field"]
 action.source_profile_advisory["advisory_indexes"]
 action.source_profile_advisory["duplicate_group_keys"]
 action.source_profile_advisory["duplicate_advisory_indexes"]
 action.source_profile_advisory["duplicate_profile_observation_iris"]
+action.source_profile_advisory["route_anchor_iris"]
+action.source_profile_advisory["route_pattern_iris"]
 action.source_profile_advisory["observed_metric_iris"]
 action.source_profile_advisory["mixed_support"]
 ```
 
-Use `source_profile_advisory` when routing directly from grouped lanes. Scripts
-should inspect optional metric-only `observed_metric_iris` before choosing a
-context seed, and optional `mixed_support` before applying grouped promotion or
-assertion actions; it names shared promotion pattern IRIs, the other review
-lane, and the review note. When both lanes generate staged promotion/assertion
-drafts from the same pattern, review or export those drafts together before
-applying either lane independently. Scripts that need per-metric or per-column
-follow-through can still iterate `metric_advisories[]` or `type_advisories[]`
-by the representative advisory indexes first, then use each representative
-advisory's row-local index, duplicate-group fields, and own
+Use `route_group_key` to connect grouped draft actions to later profile insight
+bundle candidates, and `route_step_key` to distinguish individual actions within
+the same duplicate/advisory group. Scripts should inspect optional metric-only
+`observed_metric_iris` before choosing a context seed, and optional
+`mixed_support` before applying grouped promotion or assertion actions; it names
+shared promotion pattern IRIs, the other review lane, and the review note. When
+both lanes generate staged promotion/assertion drafts from the same pattern,
+review or export those drafts together before applying either lane independently.
+Scripts that need per-metric or per-column follow-through can still iterate
+`metric_advisories[]` or `type_advisories[]` by the representative advisory
+indexes first, then use each representative advisory's row-local index,
+duplicate-group fields, and own
 `suggested_next_actions`. `profile_type_review`
 is a representative action queue; labels such as `Inspect profile type context`
 and `Stage physical type assertion` can repeat across advisory groups.
@@ -1528,6 +1552,8 @@ action. Their option actions appear in the
 `profile_scalar_conflict_review` lane and carry `source_scalar_conflict`:
 
 ```python
+action.source_scalar_conflict["route_group_key"]
+action.source_scalar_conflict["route_step_key"]
 action.source_scalar_conflict["selection_rule"]
 action.source_scalar_conflict["conflict_group_index"]
 action.source_scalar_conflict["kind"]
@@ -1538,6 +1564,8 @@ action.source_scalar_conflict["representative_recommendation_index"]
 action.source_scalar_conflict["duplicate_profile_observation_iris"]
 ```
 
+Use `route_group_key` to keep all options for one choose-one decision together
+and `route_step_key` to distinguish the individual explicit staging actions.
 Use that lane for discovery, then pick at most one chosen value for each
 row-count or nullable conflict group. These option actions are intentionally not
 copied into flat `suggested_next_actions`.
@@ -1725,6 +1753,8 @@ candidate.revision_iri
 candidate.summary
 candidate.changed_graphs
 candidate.relation_reasons
+candidate.profile_route_keys
+candidate.profile_route_groups
 candidate.matched_evidence_iris
 candidate.matched_profile_observation_iris
 candidate.matched_supporting_pattern_iris
@@ -1738,6 +1768,10 @@ candidate.explicit
 does not make an unrelated pattern related; patterns are discovered through
 supporting profile observations, profile-derived targets/map implications, or
 advisory patterns from `draft_profile_map_updates`.
+`profile_route_keys` names matched draft `route_group_key` values; each
+`profile_route_groups[]` row has `route_group_key`, `review_lane`,
+`route_step_keys`, and `matched_by`. The Markdown export includes a `Profile
+Route Bridge` table in the review summary when candidates match draft routes.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:

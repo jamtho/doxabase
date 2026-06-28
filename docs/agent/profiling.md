@@ -80,6 +80,11 @@ Use `suggested_next_action_groups` instead of flattening every review lane into
 one mutation queue. If the draft has no recommendations but metric or type
 advisories are present, it is advisory-only: do not call
 `stage_profile_map_updates` just to clear the draft.
+Grouped action source blocks expose stable `route_group_key` and
+`route_step_key` fields. Use the group key to connect a draft lane, such as a
+profile map-update duplicate group or metric/type advisory group, to later
+`export_profile_insight_review_bundle().candidates[].profile_route_keys`.
+Use the step key when several actions belong to the same group.
 When the dataset already has physical-query metadata such as a path template or
 layout but `describe_query_context` reports blocking metadata issues, the draft
 adds a leading `query_context_review` lane. Follow that lane before relying on
@@ -117,6 +122,9 @@ staging the related work. It scans current staged revisions and exports a
 grouped Markdown review bundle for revisions connected to the profile run by
 profile evidence, supporting profile observations, related support patterns, or
 profile-derived anchors.
+The returned candidates and Markdown `Profile Route Bridge` table preserve
+matched profile route keys, so reviewers can see which draft duplicate/advisory
+group led to each staged row without reverse-joining action indexes by hand.
 
 When `stage_profile_map_updates` creates a staged revision, its
 `suggested_next_actions` includes an `export_profile_insight_review_bundle`
