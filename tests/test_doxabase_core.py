@@ -16830,6 +16830,15 @@ def test_map_helpers_reject_prose_for_resource_fields(
             "layout_verification_status must be one of: .*rc:ContradictedLayout",
             id="partition-layout-status",
         ),
+        pytest.param(
+            lambda db: db.record_map_caveat(
+                "https://example.test/project#body_caveat",
+                description="Body text is cleaned text, not raw source text.",
+                severity="rc:High",
+            ),
+            "severity must be one of: .*rc:Minor.*rc:Moderate.*rc:Severe",
+            id="caveat-severity",
+        ),
     ],
 )
 def test_map_helpers_reject_unknown_controlled_values_before_write(

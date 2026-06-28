@@ -56,7 +56,9 @@ and relationship endpoints. Put ordinary explanation in `description`,
 `rc:VariableSchema`. `layout_verification_status` accepts
 `rc:UnverifiedLayout`, `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
 `rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`, or
-`rc:ContradictedLayout`.
+`rc:ContradictedLayout`. Caveat `severity` accepts `rc:Minor`,
+`rc:Moderate`, or `rc:Severe`; do not use confidence terms such as
+`rc:HighConfidence` or ad hoc values such as `rc:High`.
 For partition schemes, `granularity` is SHACL-checked against
 `rc:Daily`, `rc:Hourly`, `rc:Monthly`, and `rc:ByValue`; use a project term
 only after extending the project shapes accordingly. `redundant_partition_key`

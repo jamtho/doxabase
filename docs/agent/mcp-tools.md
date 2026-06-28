@@ -41,12 +41,12 @@ revision review counts, per-queue task counts, and bounded recommended next
 tasks. Use it when arriving cold or when a loop may be over-polishing one
 workflow while missing another active queue. If `limit_crowded_queue_types` is
 non-empty, rerun with a larger `limit` or inspect `queue_counts` and
-	`omitted_queue_counts` before choosing the next task.
-	When current staged work exists, a `staged_frontier_review` task points to
-	`plan_staged_revision_recovery`; follow that first before staging duplicate
-	profile or query repair work.
-	Tasks labelled `query_repair_review` point back to `describe_query_context`,
-	not directly to `draft_query_plan`, so agents can inspect reviewed repair
+`omitted_queue_counts` before choosing the next task.
+When current staged work exists, a `staged_frontier_review` task points to
+`plan_staged_revision_recovery`; follow that first before staging duplicate
+profile or query repair work.
+Tasks labelled `query_repair_review` point back to `describe_query_context`,
+not directly to `draft_query_plan`, so agents can inspect reviewed repair
 templates before drafting or executing any route.
 
 `doxabase.list_entities`
@@ -77,7 +77,9 @@ absence note, scoped caveat-link metadata, grouped route summaries and raw route
 explanations for related lore, and structured suggested next actions plus
 display call strings. Use it for questions like "why is this caveat link here?"
 or "what lore supports this column type?" It is retrieval context, not proof
-that the assertion is correct.
+that the assertion is correct. Related claims and patterns can include
+counter-evidence or reconsidered claims; read the claim text, lifecycle, and
+route explanation before treating related lore as positive support.
 When an exact requested object is absent, inspect
 `same_subject_predicate_triples` and `absence_note` before deciding whether the
 current map already contains a more careful value. For column subjects, follow
@@ -1018,7 +1020,8 @@ and `table_iri` expect IRIs or CURIEs, not prose.
 
 Records or updates a `rc:KnownCaveat` and can link it to affected datasets.
 Use prose for the caveat description, and use IRIs or CURIEs for `severity` and
-`targets`.
+`targets`. `severity` is a closed project control: use `rc:Minor`,
+`rc:Moderate`, or `rc:Severe`.
 
 `doxabase.record_map_storage_access`
 
@@ -1662,8 +1665,11 @@ summaries, while this bundle preserves the exact rows used by
 `doxabase.describe_applied_revision_diff(include_triples=true)`. Filter with
 `revision_iris=[applied_iri]` and `graph_roles` when a handoff only needs one
 applied diff; applied-event filters include the staged source snapshot rows
-needed for before/after reconstruction. The bundle may include historical
-triples that are no longer current graph facts.
+needed for before/after reconstruction. That applied-event shortcut does not
+include older restage-chain ancestors, so use a full snapshot export or include
+those ancestor IRIs explicitly when the receiving agent needs exact full-chain
+lineage recovery. The bundle may include historical triples that are no longer
+current graph facts.
 
 `doxabase.load_example_fixtures`
 

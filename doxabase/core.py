@@ -109,6 +109,12 @@ LAYOUT_VERIFICATION_STATUSES = (
     "rc:ContradictedLayout",
 )
 
+CAVEAT_SEVERITY_LEVELS = (
+    "rc:Minor",
+    "rc:Moderate",
+    "rc:Severe",
+)
+
 PROFILE_SCALAR_MAP_UPDATE_KINDS = frozenset(
     {
         "dataset_row_count_snapshot",
@@ -22127,7 +22133,11 @@ class DoxaBase:
             raise DoxaBaseError("description must not be empty")
         target_values = self._string_values("targets", targets)
         severity_ref = (
-            self._resource_ref("severity", severity)
+            self._controlled_resource_ref(
+                "severity",
+                severity,
+                CAVEAT_SEVERITY_LEVELS,
+            )
             if severity is not None
             else None
         )

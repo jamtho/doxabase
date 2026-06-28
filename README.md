@@ -218,9 +218,10 @@ Useful first tool calls for an agent:
 1. `doxabase.list_docs`
 2. `doxabase.get_doc` with `doc_id="start_here"`
 3. `doxabase.get_doc` with `doc_id="graph_roles"` when graph placement rules matter
-4. `doxabase.load_example_fixtures`
-5. `doxabase.project_brief` for a read-only summary of datasets and active
+4. `doxabase.project_brief` for a read-only summary of datasets and active
    review queues
+5. `doxabase.plan_staged_revision_recovery` when `project_brief` reports
+   `staged_frontier_review`
 6. `doxabase.graph_overview`
 7. `doxabase.search` for remembered terms, caveats, observations, or evidence
 8. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
@@ -273,54 +274,13 @@ Useful first tool calls for an agent:
     preserved in `history`
 36. `doxabase.describe_graph_revision` when reviewing a history record
 
-Current MCP tools:
+Use `doxabase.load_example_fixtures` only in a fresh scratch or example capsule,
+after confirming you are not attached to a real project capsule.
 
-- `doxabase.list_docs`
-- `doxabase.get_doc`
-- `doxabase.graph_overview`
-- `doxabase.project_brief`
-- `doxabase.search`
-- `doxabase.list_entities`
-- `doxabase.describe_resource`
-- `doxabase.describe_pattern`
-- `doxabase.describe_graph_revision`
-- `doxabase.list_graph_revisions`
-- `doxabase.describe_staged_revision`
-- `doxabase.describe_dataset`
-- `doxabase.describe_profile_run`
-- `doxabase.describe_query_context`
-- `doxabase.describe_context_slice`
-- `doxabase.record_observation`
-- `doxabase.record_query_result`
-- `doxabase.record_claim_observation`
-- `doxabase.record_claim_reconsideration`
-- `doxabase.record_pattern`
-- `doxabase.record_dataset_profile`
-- `doxabase.record_column_profile`
-- `doxabase.record_profile_bundle`
-- `doxabase.record_map_dataset`
-- `doxabase.record_map_column`
-- `doxabase.record_map_caveat`
-- `doxabase.record_map_storage_access`
-- `doxabase.record_map_physical_layout`
-- `doxabase.record_map_partition_scheme`
-- `doxabase.record_map_relationship`
-- `doxabase.import_trig`
-- `doxabase.export_graph`
-- `doxabase.export_staged_revision`
-- `doxabase.export_staged_revisions`
-- `doxabase.export_trig`
-- `doxabase.record_graph_revision`
-- `doxabase.stage_graph_revision`
-- `doxabase.stage_systematisation`
-- `doxabase.stage_pattern_promotion`
-- `doxabase.check_staged_revision_apply`
-- `doxabase.draft_staged_revision_rebase`
-- `doxabase.restage_staged_revision`
-- `doxabase.describe_applied_revision_diff`
-- `doxabase.apply_staged_revision`
-- `doxabase.load_example_fixtures`
-- `doxabase.validate_graph`
+For the maintained MCP surface, read `docs/agent/mcp-tools.md` or call
+`doxabase.list_docs` and `doxabase.get_doc(doc_id="mcp_tools")`. The server
+instructions also summarize the current tool families at startup. Avoid treating
+the first-call route above as an exhaustive tool list.
 
 ## Graph Roles
 

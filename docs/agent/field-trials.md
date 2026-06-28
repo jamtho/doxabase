@@ -2154,6 +2154,18 @@ few useful gaps:
   candidates could outrank a nearby dataset-specific access. Missing-storage
   candidate ranking now uses dataset-token overlap and demotes generic accesses
   already linked to another dataset, while still requiring reviewed selection.
+- An assertion-support/caveat trial confirmed that support routes correctly pull
+  direct and owner-dataset caveats plus mixed supporting and contradictory lore,
+  but related claims/patterns are contextual, not endorsement. Read claim text,
+  reconsiderations, caveat scopes, and route explanations before staging or
+  applying assertion changes. The same trial found `record_map_caveat` should
+  fail closed on severity: use only `rc:Minor`, `rc:Moderate`, or `rc:Severe`.
+- A revision snapshot lineage handoff trial confirmed project TriG plus full
+  revision snapshot JSON preserves exact applied diffs, staged/applied pairing,
+  resource lineage, and restage-chain lineage. Exporting snapshots with only an
+  applied event includes that event and its direct staged source, which is enough
+  for exact applied diff reconstruction; use a full snapshot export or explicit
+  older restage-chain ancestor IRIs when exact full-chain recovery matters.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -33,14 +33,17 @@ When arriving cold, use this route before reading every reference doc.
 3. Call `doxabase.project_brief` to see datasets, query-readiness buckets,
    profile draft counts, staged review queues, and bounded recommended next
    tasks.
-4. Call `doxabase.graph_overview` to see graph roles, counts, classes, and
+4. If `project_brief.recommended_next_tasks[]` includes
+   `staged_frontier_review`, call `doxabase.plan_staged_revision_recovery`
+   before staging more profile or query repair work.
+5. Call `doxabase.graph_overview` to see graph roles, counts, classes, and
    predicates.
-5. Call `doxabase.search` for remembered terms, dataset names, caveats, source
+6. Call `doxabase.search` for remembered terms, dataset names, caveats, source
    notes, columns, or question-shaped keywords.
-6. Call `doxabase.list_entities` for likely entry points, usually
+7. Call `doxabase.list_entities` for likely entry points, usually
    `type="rc:Dataset"` or `type="rc:Table"` in `graph="map"`.
-7. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.
-8. Call `doxabase.describe_assertion_support` when you need to ask why a
+8. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.
+9. Call `doxabase.describe_assertion_support` when you need to ask why a
    specific map assertion or caveat link is present. If your requested object is
    absent, check `same_subject_predicate_triples` and `absence_note` before
    proposing a cleanup. For column assertions, follow owner-dataset suggested
@@ -49,23 +52,25 @@ When arriving cold, use this route before reading every reference doc.
    treating the assertion as executable planning context. Prefer
    `suggested_next_actions` over parsing display call strings, and scan
    `related_route_summaries` before raw `related_routes` when there is a lot of
-   lore attached. Check `nearby_caveat_links.scope` before treating an
+   lore attached. Related claims and patterns are context, not endorsement; read
+   claim text, reconsiderations, and route explanations before treating them as
+   support. Check `nearby_caveat_links.scope` before treating an
    owner-dataset caveat as a direct caveat on one column.
-9. Call `doxabase.describe_query_context` when the task is physical query
+10. Call `doxabase.describe_query_context` when the task is physical query
    planning and you need storage/layout/path/caveat readiness. For
    database-backed storage, prefer candidate or draft-plan
    `relation_identifier` plus `connection_reference` over treating
    `candidate_path` as a file URI.
-10. Call `doxabase.describe_context_slice` when you need a route-explained slice
+11. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread. Use `profile="dataset_brief"` for
    dataset/table/profile/metric handoffs, `profile="pattern_brief"` for pattern
    handoffs, and `profile="deep_lore"` when revision/history links or broader
    lore may matter. Use `profile="resource_brief"` for arbitrary RDF resources
    such as ontology terms, SHACL shapes, evidence, source spans, and
    non-dataset map resources.
-11. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
+12. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
    `doxabase.describe_pattern` when the map points to synthesized lore.
-12. Use the smallest write helper that fits the work, then validate before
+13. Use the smallest write helper that fits the work, then validate before
    finishing.
 
 If the MCP docs tools are not exposed in the current session, follow the same
@@ -132,6 +137,10 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 - Pattern-supported graph change that should be reviewed before becoming
   durable state: use `stage_pattern_promotion`.
 - Generic reviewable graph patch: use `stage_graph_revision`.
+- Current staged frontier from `project_brief`: use
+  `plan_staged_revision_recovery` first. Follow `mutation_frontier_iris`,
+  row-level resolved targets, and repair lanes; apply at most one ready row,
+  then rerun the planner before the next mutation.
 - Staged patch that may be ready to apply: use `check_staged_revision_apply`
   before `apply_staged_revision`.
 - Staged patch blocked by count drift or digest drift but still semantically
