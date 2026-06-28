@@ -277,6 +277,7 @@ class ProjectBriefStagedReviewItem:
     application_status: str | None
     queue: str | None
     resolved_target_iri: str | None
+    revision_anchor_iris: list[str]
     suggested_next_action: SuggestedNextAction | None
 
 
@@ -299,6 +300,7 @@ class ProjectBriefRecommendedTask:
     reason: str
     suggested_next_action: SuggestedNextAction | None
     suggested_next_call: str | None
+    pending_staged_repair_iris: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -3048,6 +3050,7 @@ class DoxaBase:
         returned_readiness_counts: dict[str, int] = {}
         recommended_tasks: list[ProjectBriefRecommendedTask] = []
         all_dataset_summaries: list[ProjectBriefDatasetSummary] = []
+        staged_review = self._project_brief_staged_review(limit=limit)
 
         for entity_index, entity in enumerate(dataset_entities):
             description = self.describe_dataset(entity.iri)
@@ -3082,10 +3085,12 @@ class DoxaBase:
                     + 1
                 )
             recommended_tasks.extend(
-                self._project_brief_dataset_tasks(dataset_summary)
+                self._project_brief_dataset_tasks(
+                    dataset_summary,
+                    staged_review=staged_review,
+                )
             )
 
-        staged_review = self._project_brief_staged_review(limit=limit)
         recommended_tasks.extend(
             self._project_brief_staged_tasks(staged_review)
         )
@@ -3283,6 +3288,11 @@ class DoxaBase:
                         if queue_item is not None
                         else None
                     ),
+                    revision_anchor_iris=self._objects(
+                        ["history"],
+                        revision.iri,
+                        "rc:revisionAnchor",
+                    ),
                     suggested_next_action=(
                         revision.suggested_next_actions[0]
                         if revision.suggested_next_actions
@@ -3306,6 +3316,8 @@ class DoxaBase:
     def _project_brief_dataset_tasks(
         self,
         dataset: ProjectBriefDatasetSummary,
+        *,
+        staged_review: ProjectBriefStagedReviewSummary,
     ) -> list[ProjectBriefRecommendedTask]:
         tasks: list[ProjectBriefRecommendedTask] = []
         if not dataset.is_table:
@@ -3336,18 +3348,31 @@ class DoxaBase:
                 repair_action = self._project_brief_describe_query_context_action(
                     dataset.dataset.iri
                 )
+                pending_staged_repair_iris = (
+                    self._project_brief_pending_staged_repair_iris(
+                        dataset.dataset.iri,
+                        staged_review,
+                    )
+                )
+                pending_note = (
+                    " Pending staged repair(s) already anchor this dataset; "
+                    "review the staged work before staging a duplicate repair."
+                    if pending_staged_repair_iris
+                    else ""
+                )
                 tasks.append(
                     ProjectBriefRecommendedTask(
-                        priority=10,
+                        priority=45 if pending_staged_repair_iris else 10,
                         task_type="query_repair_review",
                         source="describe_query_context",
                         resource=dataset.dataset,
                         reason=(
                             "Dataset query context exposes reviewed repair "
-                            "action groups."
+                            f"action groups.{pending_note}"
                         ),
                         suggested_next_action=repair_action,
                         suggested_next_call=repair_action.call,
+                        pending_staged_repair_iris=pending_staged_repair_iris,
                     )
                 )
             elif dataset.query.readiness not in {
@@ -3541,6 +3566,25 @@ class DoxaBase:
                 draft.type_advisory_count for draft in drafts
             ),
         }
+
+    def _project_brief_pending_staged_repair_iris(
+        self,
+        dataset_iri: str,
+        staged_review: ProjectBriefStagedReviewSummary,
+    ) -> list[str]:
+        dataset_value = self.expand_iri(dataset_iri)
+        ignored_queues = {
+            None,
+            "informational",
+            "inspect_already_applied",
+        }
+        return [
+            item.revision_iri
+            for item in staged_review.items
+            if item.suggested_next_action is not None
+            and item.queue not in ignored_queues
+            and dataset_value in item.revision_anchor_iris
+        ]
 
     def _project_brief_staged_tasks(
         self,

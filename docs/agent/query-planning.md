@@ -168,6 +168,11 @@ Start with `describe_query_context(dataset_iri)`:
    call-ready `suggested_next_actions`: fill placeholders, add required fields
    such as `rationale`, and check each `condition` before calling the named
    tool.
+   If `project_brief.recommended_next_tasks[]` reports
+   `pending_staged_repair_iris` for a query repair task, review the corresponding
+   `staged_review` item before staging another repair. The pending staged row is
+   already anchored to the same dataset and may resolve the query repair queue
+   after apply/recheck.
 7. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, profile evidence inspection actions come before query-plan
    drafting; when multiple candidate runs need review, several

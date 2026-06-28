@@ -15406,6 +15406,69 @@ def test_database_relation_repair_hint_prioritizes_remove_when_relation_exists(
     assert repair_group.pending_required_extra_arguments == ["rationale"]
 
 
+def test_project_brief_prioritizes_pending_staged_query_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    relation = "mart.orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_database_storage",
+        label="Orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=[relation],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=[relation],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    context = db.describe_query_context(dataset)
+    repair_group = context.suggested_repair_action_groups[0]
+    remove_action = repair_group.actions[0]
+    remove_arguments = dict(remove_action["arguments"])
+    remove_arguments["rationale"] = (
+        "Reviewed dataset path template as misplaced database relation metadata."
+    )
+    staged = db.stage_map_assertion_change(**remove_arguments)
+
+    brief = db.project_brief(limit=2)
+
+    assert brief.queue_counts["query_repair_review"] == 1
+    assert brief.queue_counts["staged_review"] == 1
+    assert [task.task_type for task in brief.recommended_next_tasks] == [
+        "staged_review",
+        "query_repair_review",
+    ]
+    staged_task, query_task = brief.recommended_next_tasks
+    assert staged_task.suggested_next_action is not None
+    assert staged_task.suggested_next_action.tool_name == "describe_staged_revision"
+    assert staged_task.resource is not None
+    assert staged_task.resource.iri == staged.revision_iri
+    assert query_task.priority == 45
+    assert query_task.pending_staged_repair_iris == [staged.revision_iri]
+    assert "Pending staged repair(s)" in query_task.reason
+    assert query_task.suggested_next_action is not None
+    assert query_task.suggested_next_action.tool_name == "describe_query_context"
+    assert to_dict(query_task)["pending_staged_repair_iris"] == [staged.revision_iri]
+    assert brief.staged_review.items[0].queue == "apply_after_review"
+    assert brief.staged_review.items[0].revision_anchor_iris == [dataset]
+
+
 @pytest.mark.parametrize("location_kind", ["object", "connection"])
 def test_database_root_only_storage_requires_relation_template(
     tmp_path: Path,

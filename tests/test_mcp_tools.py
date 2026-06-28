@@ -404,6 +404,54 @@ def test_project_brief_tool_routes_query_repair_tasks_to_context(
     )
 
 
+def test_project_brief_tool_marks_pending_staged_query_repairs(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    relation = "mart.orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_database_storage",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=[relation],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=[relation],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    repair_group = db.describe_query_context(
+        dataset,
+    ).suggested_repair_action_groups[0]
+    remove_arguments = dict(repair_group.actions[0]["arguments"])
+    remove_arguments["rationale"] = (
+        "Reviewed dataset path template as misplaced database relation metadata."
+    )
+    staged = db.stage_map_assertion_change(**remove_arguments)
+
+    result = project_brief_tool(db, limit=2)
+
+    assert result["staged_review"]["items"][0]["revision_anchor_iris"] == [dataset]
+    assert [
+        task["task_type"] for task in result["recommended_next_tasks"]
+    ] == ["staged_review", "query_repair_review"]
+    repair_task = result["recommended_next_tasks"][1]
+    assert repair_task["pending_staged_repair_iris"] == [staged.revision_iri]
+    assert "Pending staged repair(s)" in repair_task["reason"]
+
+
 def test_project_brief_tool_serializes_hidden_staged_review_counts(
     tmp_path: Path,
 ) -> None:

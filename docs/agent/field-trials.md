@@ -2101,6 +2101,12 @@ few useful gaps:
   predicate-usage caps at graph export/narrowing until a paged predicate browser
   exists. Pattern seeds also warn when `resource_brief` should be replaced by
   `pattern_brief` or `deep_lore` for support/evidence routes.
+- A query-planning frontier trial found `project_brief` could keep routing a
+  dataset to `query_repair_review` even after the reviewed cleanup had already
+  been staged for the same dataset. Staged review rows now expose
+  `revision_anchor_iris`; query repair tasks with matching pending staged work
+  include `pending_staged_repair_iris` and are sorted behind `staged_review` so
+  agents review the pending mutation before staging a duplicate repair.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

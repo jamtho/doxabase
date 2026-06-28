@@ -180,7 +180,15 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "omitted_count": 0,
         "application_status_counts": {},
         "next_action_queue_item_counts": {},
-        "items": [],
+        "items": [
+            {
+                "revision_iri": "https://...",
+                "queue": "apply_after_review",
+                "resolved_target_iri": "https://...",
+                "revision_anchor_iris": ["https://..."],
+                "suggested_next_action": {...},
+            }
+        ],
     },
     "recommended_next_tasks": [
         {
@@ -191,6 +199,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "reason": "...",
             "suggested_next_action": {...},
             "suggested_next_call": "describe_query_context(...)",
+            "pending_staged_repair_iris": [],
         },
     ],
     "limit": 20,
@@ -206,6 +215,11 @@ inspection helper before making durable graph changes.
 are computed across scanned table/dataset entities. For staged work,
 `queue_counts["staged_review"]` uses `staged_review.count`, while
 `staged_review.items` and `returned_queue_counts` stay bounded by `limit`.
+`staged_review.items[].revision_anchor_iris` lists graph revision anchors for
+the returned staged row. When a query repair task already has staged work
+anchored to the same dataset, `pending_staged_repair_iris` names those staged
+revision IRIs and the task is lowered behind `staged_review` so unattended agents
+review/apply the pending repair before staging another one.
 `datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue
