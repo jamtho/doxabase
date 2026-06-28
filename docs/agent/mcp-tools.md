@@ -163,7 +163,8 @@ handled by restage. Responses include page-scoped `next_action_queue_items`,
 `next_action_queue_item_counts`, and `semantic_review_required_queue_counts`.
 Queue items preserve the old row-IRI queue while adding
 `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
-fields, and alternative-gate fields for automation. Non-current rows include
+fields, semantic-risk fields when populated, and alternative-gate fields for
+automation. Non-current rows include
 `not_current_staged_work_reason`,
 such as
 `already_applied_source`, `superseded_by_restage`, or `applied_event_record`.
@@ -1527,7 +1528,11 @@ and `recommended_applied_inspection_iris`. Prefer
 direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.next_action_queue_items` adds the resolved target IRI,
 row-vs-target flag, and semantic alternative gate fields for each queued row;
-`semantic_review_required_queue_counts` flags gated rows by queue.
+`semantic_review_required_queue_counts` flags gated alternative rows by queue.
+`semantic_risk_queue_counts` separately counts queued rows with apply-check
+semantic risk (`attention` or `high`), including repair queues when semantic
+risk coexists with validation or conflict blockers. Grouped export queue items
+copy row-local `semantic_risk_level` and `semantic_risk_reasons`.
 `bundle_summary.warnings` calls out
 bundle-level sequencing hazards such as ready/no-op reviews sharing a changed
 graph that should be re-checked after each apply, plus source-only bundles whose

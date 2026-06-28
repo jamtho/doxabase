@@ -2716,7 +2716,8 @@ exports, so validation-failed framings land in `repair_or_replace` while
 mechanically ready framings land in `apply_after_review`.
 `next_action_queue_items` mirrors the grouped export queue-item shape, including
 `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
-fields, and alternative-gate fields for each staged framing. The suggested
+fields, semantic-risk fields when populated, and alternative-gate fields for
+each staged framing. The suggested
 actions normally include a grouped `export_staged_revisions` call plus
 per-revision `check_staged_revision_apply` calls for fresh live routing. When
 `first_alternative_anchor_not_ready` fires, the first suggested action is a
@@ -2876,9 +2877,13 @@ triples.
 `next_action_queue_items` mirrors the same returned-row scope with one compact
 row per routed item. It preserves the queued `row_iri`, adds
 `resolved_target_iri`, `resolved_target_record_kind`, and `row_is_target`, and
-carries row status plus alternative-gate fields. `next_action_queue_item_counts`
-counts those items by queue, while `semantic_review_required_queue_counts`
-counts queued rows whose alternative gate still requires semantic review.
+carries row status, semantic-risk fields when available, and alternative-gate
+fields. `next_action_queue_item_counts` counts those items by queue.
+`semantic_review_required_queue_counts` counts queued rows whose alternative
+gate still requires semantic review; it does not count ordinary semantic-risk
+review cues. Grouped export bundle summaries also expose
+`semantic_risk_queue_counts` for queued rows whose apply check reported
+`semantic_risk_level` of `attention` or `high`.
 It is a routing surface, not a preference order for competing alternatives; use
 row details such as `review_recommendation`, `alternative_to`, and
 `current_alternative_to` when comparing alternative framings.
@@ -3715,6 +3720,10 @@ review` and names the already-applied source when known. On list and bundle
 responses, `semantic_review_required_queue_counts` and
 `next_action_queue_items[].alternative_semantic_review_required` make the same
 gate visible without opening the full row.
+For grouped export bundles, use `bundle_summary.semantic_risk_queue_counts`
+when ordinary linked-support or judgement-panel risk also needs a
+machine-readable queue aggregate; grouped export queue items also copy
+`semantic_risk_level` and `semantic_risk_reasons` from the row summary.
 Call `check_staged_revision_apply()` when you need full `patch_checks`,
 `conflicts`, `validation_results`, or exact snapshot drift triples.
 
@@ -4386,6 +4395,8 @@ item.apply_validation_conforms
 item.apply_validation_skipped_reason
 item.apply_validation_result_count
 item.apply_check_error
+item.semantic_risk_level
+item.semantic_risk_reasons
 item.current_validation
 item.staged_validation
 item.staged_validation_conforms
@@ -4458,6 +4469,10 @@ bundle.recommended_apply_or_restage_review_iris
 bundle.recommended_repair_review_iris
 bundle.recommended_applied_inspection_iris
 bundle.next_action_queue
+bundle.next_action_queue_items
+bundle.next_action_queue_item_counts
+bundle.semantic_risk_queue_counts
+bundle.semantic_review_required_queue_counts
 ```
 
 Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
@@ -4475,6 +4490,12 @@ groups the returned row IRIs by action class; inspect each row's
 point to an applied event even though the queued row is the stale source.
 `next_action_queue_items[].resolved_target_iri` exposes that target directly,
 and `row_is_target=False` flags redirected rows.
+`semantic_risk_queue_counts` counts queued rows whose row summary carries
+`semantic_risk_level` of `attention` or `high`. This is separate from
+`semantic_review_required_queue_counts`, which only counts alternative-gate
+semantic-review requirements. Semantic risk can coexist with validation or
+conflict blockers, so risk counts can appear under repair queues as well as
+`apply_after_review`.
 `ready_restage_successor_alternative_to_applied_source_iris` lists ready
 refreshed successors whose `current_alternative_to` / `alternative_to` target is
 already applied. Treat these rows as semantic review targets, not automatic

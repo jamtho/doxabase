@@ -766,7 +766,12 @@ applied event reached through a restaged successor. For automation, prefer the
 machine-readable `bundle_summary.next_action_queue_items`: each item includes
 `row_iri`, `resolved_target_iri`, `row_is_target`, row status fields, and the
 selected tool/call. `next_action_queue_item_counts` mirrors queue sizes, and
-`semantic_review_required_queue_counts` highlights gated rows by queue.
+`semantic_review_required_queue_counts` highlights alternative-gated rows by
+queue. Use `semantic_risk_queue_counts` for the separate count of queued rows
+whose apply check reports semantic risk from linked support, judgement panels,
+review notes, impacts, or related context. Grouped export queue items also carry
+`semantic_risk_level` and `semantic_risk_reasons` when that row summary has
+semantic risk.
 Grouped Markdown also includes a `Resolved Targets` table derived from those
 queue items, so Markdown-only reviewers can see each row's queue, action,
 resolved target IRI, target kind, and whether the row itself is the target

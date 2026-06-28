@@ -826,6 +826,8 @@ class StagedGraphRevisionExportSummary:
     apply_validation_skipped_reason: str | None
     apply_validation_result_count: int | None
     apply_check_error: str | None
+    semantic_risk_level: str | None
+    semantic_risk_reasons: list[str]
     current_validation: str
     staged_validation: str
     staged_validation_conforms: bool | None
@@ -866,6 +868,7 @@ class StagedGraphRevisionBundleSummary:
     next_action_queue: dict[str, list[str]]
     next_action_queue_items: list[RevisionNextActionQueueItem]
     next_action_queue_item_counts: dict[str, int]
+    semantic_risk_queue_counts: dict[str, int]
     semantic_review_required_queue_counts: dict[str, int]
 
 
@@ -2664,6 +2667,8 @@ class RevisionNextActionQueueItem:
     application_decision: str | None
     stale_resolution_state: str | None
     staged_validation_status: str | None
+    semantic_risk_level: str | None
+    semantic_risk_reasons: list[str]
     alternative_gate_status: str | None
     alternative_semantic_review_required: bool
     alternative_applied_source_iri: str | None
@@ -28021,6 +28026,8 @@ class DoxaBase:
         application_decision: str | None = None,
         stale_resolution_state: str | None = None,
         staged_validation_status: str | None = None,
+        semantic_risk_level: str | None = None,
+        semantic_risk_reasons: Iterable[str] = (),
         alternative_gate: StagedRevisionAlternativeGate | None = None,
     ) -> RevisionNextActionQueueItem | None:
         if next_action is None:
@@ -28052,6 +28059,8 @@ class DoxaBase:
             application_decision=application_decision,
             stale_resolution_state=stale_resolution_state,
             staged_validation_status=staged_validation_status,
+            semantic_risk_level=semantic_risk_level,
+            semantic_risk_reasons=list(semantic_risk_reasons),
             alternative_gate_status=(
                 alternative_gate.status if alternative_gate is not None else None
             ),
@@ -28090,6 +28099,21 @@ class DoxaBase:
             if not item.alternative_semantic_review_required:
                 continue
             counts[item.queue] = counts.get(item.queue, 0) + 1
+        return counts
+
+    @staticmethod
+    def _semantic_risk_queue_counts(
+        summaries: Iterable[StagedGraphRevisionExportSummary],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for summary in summaries:
+            if summary.semantic_risk_level not in {"attention", "high"}:
+                continue
+            if summary.next_action is None:
+                continue
+            counts[summary.next_action.queue] = (
+                counts.get(summary.next_action.queue, 0) + 1
+            )
         return counts
 
     def export_staged_revision(
@@ -28638,6 +28662,16 @@ class DoxaBase:
                         else None
                     ),
                     apply_check_error=apply_check_error,
+                    semantic_risk_level=(
+                        apply_check.semantic_risk_level
+                        if apply_check is not None
+                        else None
+                    ),
+                    semantic_risk_reasons=(
+                        apply_check.semantic_risk_reasons
+                        if apply_check is not None
+                        else []
+                    ),
                     current_validation=self._staged_apply_check_validation_cell(
                         apply_check,
                         apply_check_error=apply_check_error,
@@ -28834,6 +28868,8 @@ class DoxaBase:
                     conforms=summary.staged_validation_conforms,
                     result_count=summary.staged_validation_result_count,
                 ),
+                semantic_risk_level=summary.semantic_risk_level,
+                semantic_risk_reasons=summary.semantic_risk_reasons,
                 alternative_gate=summary.alternative_gate,
             )
             if queue_item is not None:
@@ -28878,6 +28914,7 @@ class DoxaBase:
                     next_action_queue_items
                 )
             ),
+            semantic_risk_queue_counts=self._semantic_risk_queue_counts(summaries),
             semantic_review_required_queue_counts=(
                 self._semantic_review_required_queue_counts(
                     next_action_queue_items

@@ -1939,6 +1939,19 @@ def test_stage_map_assertion_change_packages_support_context(
     assert "Proposed matches" in exported
     assert "Why Current Value May Be Intentional" in exported
 
+    grouped_export = db.export_staged_revisions(
+        [staged_change.staged_revision.revision_iri],
+        tmp_path / "price-change-grouped-review.md",
+    )
+    assert grouped_export.bundle_summary.semantic_risk_queue_counts == {
+        "apply_after_review": 1
+    }
+    assert grouped_export.bundle_summary.semantic_review_required_queue_counts == {}
+    assert grouped_export.revision_summaries[0].semantic_risk_level == "high"
+    grouped_queue_item = grouped_export.bundle_summary.next_action_queue_items[0]
+    assert grouped_queue_item.semantic_risk_level == "high"
+    assert grouped_queue_item.semantic_risk_reasons == panel.semantic_risk_reasons
+
     comment_change = db.stage_map_assertion_change(
         subject="https://example.test/project#px_price",
         predicate="rdfs:comment",
@@ -10775,6 +10788,11 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         "repair_or_replace": [revision_iris[0]],
         "apply_after_review": [revision_iris[1], revision_iris[2]],
     }
+    assert export.bundle_summary.semantic_risk_queue_counts == {
+        "repair_or_replace": 1,
+        "apply_after_review": 2,
+    }
+    assert export.bundle_summary.semantic_review_required_queue_counts == {}
     assert export.bundle_summary.recommended_repair_review_iris == [
         revision_iris[0]
     ]
@@ -10787,6 +10805,24 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         "ready",
         "ready",
     ]
+    assert [
+        summary.semantic_risk_level for summary in export.revision_summaries
+    ] == [
+        "attention",
+        "attention",
+        "attention",
+    ]
+    assert [
+        item.semantic_risk_level
+        for item in export.bundle_summary.next_action_queue_items
+    ] == [
+        "attention",
+        "attention",
+        "attention",
+    ]
+    assert all(
+        summary.semantic_risk_reasons for summary in export.revision_summaries
+    )
     assert "## Review Queues" in exported
     assert (
         "- Next action - apply after review: "
