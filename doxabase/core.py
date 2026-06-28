@@ -284,6 +284,7 @@ class ProjectBriefStagedReviewItem:
 class ProjectBriefStagedReviewSummary:
     count: int
     returned_count: int
+    omitted_count: int
     application_status_counts: dict[str, int]
     next_action_queue_item_counts: dict[str, int]
     items: list[ProjectBriefStagedReviewItem]
@@ -3070,6 +3071,11 @@ class DoxaBase:
             limit=limit,
         )
         queue_counts = self._project_brief_task_type_counts(recommended_tasks)
+        if staged_review.count:
+            queue_counts["staged_review"] = max(
+                staged_review.count,
+                queue_counts.get("staged_review", 0),
+            )
         returned_queue_counts = self._project_brief_task_type_counts(selected_tasks)
         omitted_queue_counts = {
             task_type: count - returned_queue_counts.get(task_type, 0)
@@ -3263,6 +3269,7 @@ class DoxaBase:
         return ProjectBriefStagedReviewSummary(
             count=listing.count,
             returned_count=listing.returned_count,
+            omitted_count=max(0, listing.count - listing.returned_count),
             application_status_counts=(
                 listing.returned_application_status_counts
             ),

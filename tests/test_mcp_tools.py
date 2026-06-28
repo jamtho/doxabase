@@ -360,6 +360,40 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert isinstance(result["recommended_next_tasks"], list)
 
 
+def test_project_brief_tool_serializes_hidden_staged_review_counts(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    for index in range(3):
+        db.stage_graph_revision(
+            summary=f"Stage review bundle item {index}",
+            rationale="The MCP project brief should expose hidden staged work.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:McpCaveat{index} a rc:KnownCaveat ;
+                        rdfs:label "MCP caveat {index}" ;
+                        rc:caveatDescription "Synthetic caveat {index}." .
+                    """,
+                }
+            ],
+        )
+
+    result = project_brief_tool(db, limit=1)
+
+    assert result["staged_review"]["count"] == 3
+    assert result["staged_review"]["returned_count"] == 1
+    assert result["staged_review"]["omitted_count"] == 2
+    assert result["queue_counts"]["staged_review"] == 3
+    assert result["returned_queue_counts"]["staged_review"] == 1
+    assert result["omitted_queue_counts"]["staged_review"] == 2
+
+
 def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

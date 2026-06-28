@@ -192,6 +192,41 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     assert brief.limit_crowded_queue_types == []
 
 
+def test_project_brief_counts_staged_review_rows_hidden_by_limit(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    for index in range(4):
+        db.stage_graph_revision(
+            summary=f"Stage caveat {index}",
+            rationale="The project brief should count hidden staged work.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Caveat{index} a rc:KnownCaveat ;
+                        rdfs:label "Caveat {index}" ;
+                        rc:caveatDescription "Synthetic caveat {index}." .
+                    """,
+                }
+            ],
+        )
+
+    brief = db.project_brief(limit=2)
+
+    assert brief.staged_review.count == 4
+    assert brief.staged_review.returned_count == 2
+    assert brief.staged_review.omitted_count == 2
+    assert len(brief.staged_review.items) == 2
+    assert brief.queue_counts["staged_review"] == 4
+    assert brief.returned_queue_counts["staged_review"] == 2
+    assert brief.omitted_queue_counts["staged_review"] == 2
+
+
 def test_project_brief_reports_limit_crowded_queue_types(
     tmp_path: Path,
 ) -> None:

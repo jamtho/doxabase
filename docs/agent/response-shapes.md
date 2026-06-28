@@ -177,6 +177,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
     "staged_review": {
         "count": 0,
         "returned_count": 0,
+        "omitted_count": 0,
         "application_status_counts": {},
         "next_action_queue_item_counts": {},
         "items": [],
@@ -202,7 +203,10 @@ its suggested actions into `describe_query_context`,
 `draft_profile_map_updates`, `list_graph_revisions`, or the relevant focused
 inspection helper before making durable graph changes.
 `dataset_query_readiness_counts`, `profile_queue_counts`, and `queue_counts`
-are computed across scanned table/dataset entities, while `datasets` and
+are computed across scanned table/dataset entities. For staged work,
+`queue_counts["staged_review"]` uses `staged_review.count`, while
+`staged_review.items` and `returned_queue_counts` stay bounded by `limit`.
+`datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue
 when the limit allows, then fills remaining slots by priority.
