@@ -480,7 +480,13 @@ Each metric/type advisory row also carries its row-local
 `metric_advisory_index` or `type_advisory_index`.
 Prefer grouped routing: `profile_map_updates`,
 `profile_scalar_conflict_review`, `metric_vocabulary_review`, and
-`profile_type_review` are present only when that lane has actions. The scalar
+`profile_type_review` are present only when that lane has actions.
+`query_context_review` can appear before those lanes when the dataset already
+has physical-query metadata such as a path template or layout, but
+`describe_query_context` still reports blocking physical metadata issues. Its
+action points to `describe_query_context` and carries `source_query_context`
+with readiness, blocking issue codes, and repair group count; follow it before
+treating profile-derived map updates as query-ready context. The scalar
 conflict lane is present when same-evidence scalar recommendations require a
 choose-one decision. Grouped metric/type actions carry
 `source_profile_advisory` with the source advisory kind, index field,

@@ -379,16 +379,23 @@ also includes `recommendation_count`, `representative_recommendation_indexes`,
 `representative_type_advisory_indexes`, `type_advisory_status_counts`, and
 top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
 Prefer `suggested_next_action_groups` / `suggested_next_call_groups` for quick
-routing; non-empty lanes are grouped as `profile_map_updates`,
-`profile_scalar_conflict_review`, `metric_vocabulary_review`, and
-`profile_type_review`. Use representative advisory indexes when you need one
-review row per duplicate metric or type advisory group; each row also carries
-`metric_advisory_index` or `type_advisory_index` for row-local routing. Group
-lanes may de-duplicate shared actions, such as one `describe_pattern` call
-supporting several metric advisories; grouped metric/type actions carry
-`source_profile_advisory` with the source advisory kind, index field,
-represented advisory indexes, duplicate group keys, duplicate advisory indexes,
-duplicate profile-observation IRIs, and optional `mixed_support`.
+routing; non-empty lanes are grouped as `query_context_review`,
+`profile_map_updates`, `profile_scalar_conflict_review`,
+`metric_vocabulary_review`, and `profile_type_review`.
+`query_context_review` appears first when the dataset already has physical-query
+metadata such as a path template or layout, but `describe_query_context` still
+reports blocking physical metadata issues. Its action points to
+`describe_query_context` and carries `source_query_context` with readiness,
+blocking issue codes, and repair group count; follow it before treating
+profile-derived map updates as query-ready context.
+Use representative advisory indexes when you need one review row per duplicate
+metric or type advisory group; each row also carries `metric_advisory_index` or
+`type_advisory_index` for row-local routing. Group lanes may de-duplicate shared
+actions, such as one `describe_pattern` call supporting several metric
+advisories; grouped metric/type actions carry `source_profile_advisory` with
+the source advisory kind, index field, represented advisory indexes, duplicate
+group keys, duplicate advisory indexes, duplicate profile-observation IRIs, and
+optional `mixed_support`.
 Use that source block for direct lane routing, or use each advisory row's own
 `suggested_next_actions` for per-metric or per-column follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,

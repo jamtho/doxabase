@@ -2292,6 +2292,11 @@ class ProfileScalarConflictSuggestedNextAction(SuggestedNextAction):
 
 
 @dataclass(frozen=True)
+class ProfileQueryContextSuggestedNextAction(SuggestedNextAction):
+    source_query_context: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class RevisionNextAction:
     action_type: str
     queue: str
@@ -8840,10 +8845,19 @@ class DoxaBase:
                 type_advisories=type_advisories,
             )
         )
+        query_context_review_actions = (
+            self._profile_query_context_review_actions(
+                dataset_description,
+                graph=graph,
+            )
+            if dataset_description is not None
+            else []
+        )
         suggested_next_action_groups = (
             self._profile_map_update_draft_action_groups(
                 dataset_iri=dataset_value,
                 evidence_iri=evidence_value,
+                query_context_review_actions=query_context_review_actions,
                 default_stageable_representative_indexes=(
                     default_stageable_representative_indexes
                 ),
@@ -8892,10 +8906,9 @@ class DoxaBase:
             suggested_next_action_groups=suggested_next_action_groups,
             suggested_next_call_groups=suggested_next_call_groups,
             review_note=(
-                "This draft is read-only review context derived from profile "
-                "observations and current map facts. Apply accepted changes "
-                "through map helpers or staged revisions after checking sample "
-                "scope, evidence, caveats, and project modelling intent."
+                self._profile_map_update_draft_review_note(
+                    query_context_review_actions=query_context_review_actions
+                )
             ),
         )
 
@@ -8904,6 +8917,7 @@ class DoxaBase:
         *,
         dataset_iri: str,
         evidence_iri: str,
+        query_context_review_actions: list[SuggestedNextAction],
         default_stageable_representative_indexes: list[int],
         scalar_conflict_groups: list[ProfileScalarConflictGroup],
         supporting_patterns: list[str],
@@ -8911,6 +8925,8 @@ class DoxaBase:
         type_advisories: list[ProfileTypeFindingAdvisory],
     ) -> dict[str, list[SuggestedNextAction]]:
         groups: dict[str, list[SuggestedNextAction]] = {}
+        if query_context_review_actions:
+            groups["query_context_review"] = query_context_review_actions
         profile_map_actions = self._profile_map_update_draft_profile_map_actions(
             dataset_iri=dataset_iri,
             evidence_iri=evidence_iri,
@@ -8938,12 +8954,99 @@ class DoxaBase:
             groups["profile_type_review"] = type_actions
         return groups
 
+    def _profile_query_context_review_actions(
+        self,
+        dataset: DatasetDescription,
+        *,
+        graph: str | None,
+    ) -> list[SuggestedNextAction]:
+        if not self._profile_query_context_has_physical_intent(dataset):
+            return []
+        context = self.describe_query_context(dataset.iri, graph=graph)
+        if context.readiness not in {
+            "insufficient_metadata",
+            "blocked_by_contradiction",
+        }:
+            return []
+        blocking_issues = [
+            issue
+            for issue in context.issues
+            if issue.severity == "error" or issue.code == "contradicted_layout"
+        ]
+        if not blocking_issues:
+            return []
+        issue_codes = self._query_issue_codes(blocking_issues)
+        arguments: dict[str, Any] = {"iri": dataset.iri}
+        if graph is not None and graph != "map":
+            arguments["graph"] = graph
+        issue_summary = ", ".join(issue_codes)
+        reason = (
+            "Query context has blocking physical metadata issue(s) "
+            f"({issue_summary}) and readiness "
+            f"'{context.readiness}'. Review or repair query context before "
+            "treating profile-derived map updates as query-ready context."
+        )
+        return [
+            ProfileQueryContextSuggestedNextAction(
+                action_label="Review query context blockers",
+                tool_name="describe_query_context",
+                mcp_tool_name="doxabase.describe_query_context",
+                arguments=arguments,
+                reason=reason,
+                call=self._suggested_call_string(
+                    "describe_query_context",
+                    arguments,
+                ),
+                source_query_context={
+                    "review_lane": "query_context_review",
+                    "readiness": context.readiness,
+                    "readiness_note": context.readiness_note,
+                    "blocking_issue_codes": issue_codes,
+                    "issue_codes": self._query_issue_codes(context.issues),
+                    "suggested_repair_action_group_count": (
+                        context.suggested_repair_action_group_count
+                    ),
+                },
+            )
+        ]
+
+    @staticmethod
+    def _profile_query_context_has_physical_intent(
+        dataset: DatasetDescription,
+    ) -> bool:
+        return bool(
+            dataset.path_templates
+            or dataset.physical_layouts
+            or dataset.storage_accesses
+            or dataset.partition_schemes
+        )
+
+    @staticmethod
+    def _profile_map_update_draft_review_note(
+        *,
+        query_context_review_actions: list[SuggestedNextAction],
+    ) -> str:
+        note = (
+            "This draft is read-only review context derived from profile "
+            "observations and current map facts. Apply accepted changes "
+            "through map helpers or staged revisions after checking sample "
+            "scope, evidence, caveats, and project modelling intent."
+        )
+        if query_context_review_actions:
+            return (
+                f"{note} Query context has blocking physical metadata issues; "
+                "follow query_context_review before relying on profile-derived "
+                "map updates for query-planning work."
+            )
+        return note
+
     @staticmethod
     def _profile_map_update_draft_actions_from_groups(
         groups: dict[str, list[SuggestedNextAction]],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         for group_name in (
+            "query_context_review",
             "profile_map_updates",
             "metric_vocabulary_review",
             "profile_type_review",

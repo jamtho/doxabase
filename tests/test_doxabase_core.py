@@ -20081,6 +20081,107 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
     ).status == "ready"
 
 
+def test_profile_map_update_query_blocker_routes_before_default_stage_action(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-query#"
+    dataset = f"{base}Tickets"
+    status_column = f"{base}TicketsStatus"
+    risk_column = f"{base}TicketsRiskScore"
+    evidence = f"{base}TicketsProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Tickets",
+        is_table=True,
+        row_count_snapshot=1000,
+        path_templates=["tickets/date={date}/*.parquet"],
+    )
+    db.record_map_physical_layout(
+        f"{base}TicketsParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+    )
+
+    for index, (row_count, status_null_count) in enumerate(
+        (
+            (1200, 0),
+            (1210, 12),
+        )
+    ):
+        column_profiles = [
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status nullability came from the full profile.",
+                "null_count": status_null_count,
+            }
+        ]
+        if index == 0:
+            column_profiles.append(
+                {
+                    "column_iri": risk_column,
+                    "column_name": "risk_score",
+                    "summary": "Risk score was observed but is unmapped.",
+                    "null_count": 0,
+                }
+            )
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary=f"Tickets full profile pass {index}.",
+            evidence_summary="Tickets full profile evidence.",
+            evidence_sources=[f"test://tickets/full/{index}"],
+            shared_evidence_iri=evidence,
+            sample_size=row_count,
+            sample_scope="All rows in the local Tickets table.",
+            sample_method="DuckDB full-table profile.",
+            row_count=row_count,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+            column_profiles=column_profiles,
+        )
+
+    query_context = db.describe_query_context(dataset)
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert query_context.readiness == "insufficient_metadata"
+    assert "missing_storage_access" in [
+        issue.code for issue in query_context.issues
+    ]
+    assert [group for group in draft.suggested_next_action_groups] == [
+        "query_context_review",
+        "profile_map_updates",
+        "profile_scalar_conflict_review",
+    ]
+    query_action = draft.suggested_next_action_groups["query_context_review"][0]
+    assert query_action.tool_name == "describe_query_context"
+    assert query_action.arguments == {"iri": dataset}
+    assert query_action.source_query_context["readiness"] == (
+        "insufficient_metadata"
+    )
+    assert query_action.source_query_context["blocking_issue_codes"] == [
+        "missing_storage_access"
+    ]
+    assert query_action.source_query_context[
+        "suggested_repair_action_group_count"
+    ] == 1
+    assert draft.suggested_next_actions[0] == query_action
+    assert draft.suggested_next_actions[1].tool_name == "stage_profile_map_updates"
+    assert draft.suggested_next_actions[1].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+        "accepted_recommendation_indexes": [4],
+    }
+    assert "query_context_review" in draft.review_note
+
+
 def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
     tmp_path: Path,
 ) -> None:

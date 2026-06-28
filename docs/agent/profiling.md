@@ -47,6 +47,12 @@ Use `suggested_next_action_groups` instead of flattening every review lane into
 one mutation queue. If the draft has no recommendations but metric or type
 advisories are present, it is advisory-only: do not call
 `stage_profile_map_updates` just to clear the draft.
+When the dataset already has physical-query metadata such as a path template or
+layout but `describe_query_context` reports blocking metadata issues, the draft
+adds a leading `query_context_review` lane. Follow that lane before relying on
+profile-derived map updates for query-planning work. The profile update lanes
+remain available for explicit review; the query lane is an ordering cue, not a
+rejection of the profile evidence.
 
 ## Stage Accepted Facts
 

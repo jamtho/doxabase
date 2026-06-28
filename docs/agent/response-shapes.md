@@ -1246,16 +1246,34 @@ action set, the representative pattern/staged-assertion actions preserve every
 grouped profile observation in `supporting_observations`.
 
 Use `suggested_next_action_groups` for first-pass machine routing. Groups are
-present only when non-empty and currently use `profile_map_updates`,
-`profile_scalar_conflict_review`, `metric_vocabulary_review`, and
-`profile_type_review`. `suggested_next_call_groups`
+present only when non-empty and currently use `query_context_review`,
+`profile_map_updates`, `profile_scalar_conflict_review`,
+`metric_vocabulary_review`, and `profile_type_review`.
+`query_context_review` appears first when the dataset already has physical-query
+metadata such as a path template or layout, but `describe_query_context` still
+reports blocking physical metadata issues such as `missing_storage_access`.
+Follow that lane before treating profile-derived map updates as query-ready
+context; the profile recommendations remain available for explicit review.
+`suggested_next_call_groups`
 mirrors those groups with display call strings. The flat top-level
 `suggested_next_actions` / `suggested_next_calls` fields remain for compatibility
-and include only bulk-safe default map/advisory lanes; scalar-conflict option
-actions stay grouped only. Group lanes may de-duplicate shared actions, such
-as one `describe_pattern` action used by several metric advisories. Grouped
-metric/type actions are `ProfileAdvisorySuggestedNextAction` rows and carry
-source metadata:
+and include only bulk-safe default map/advisory lanes plus the leading
+query-context review action when present; scalar-conflict option actions stay
+grouped only. Group lanes may de-duplicate shared actions, such as one
+`describe_pattern` action used by several metric advisories. Query-context
+review actions carry `source_query_context`:
+
+```python
+action.source_query_context["review_lane"]
+action.source_query_context["readiness"]
+action.source_query_context["readiness_note"]
+action.source_query_context["blocking_issue_codes"]
+action.source_query_context["issue_codes"]
+action.source_query_context["suggested_repair_action_group_count"]
+```
+
+Grouped metric/type actions are `ProfileAdvisorySuggestedNextAction` rows and
+carry source metadata:
 
 ```python
 action.source_profile_advisory["advisory_kind"]

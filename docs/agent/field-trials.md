@@ -1760,6 +1760,15 @@ few useful gaps:
   `would_restage`: inspect validation diagnostics or call
   `draft_staged_revision_rebase()` before creating another same-payload
   successor.
+- A profile/query integration trial showed a draft with scalar conflicts and a
+  default-stageable unmapped column could still put the profile map-update
+  action first while query context had a hard `missing_storage_access` blocker.
+  Profile drafts now add a leading `query_context_review` lane when the dataset
+  already has physical-query intent recorded, such as a path template or
+  layout, but `describe_query_context` reports blocking physical metadata
+  issues. Treat that lane as a priority cue before using profile-derived map
+  updates for query-planning work; it does not discard the profile
+  recommendations.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
