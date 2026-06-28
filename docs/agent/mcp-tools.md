@@ -31,6 +31,11 @@ may contain secrets. This is a conservative audit helper, not a proof that the
 graph is secret-free. Export helpers report `sensitive_literal_count` and
 `privacy_warnings` when this scan finds matches, but exports remain faithful RDF
 and do not redact automatically.
+The scan is not a general path/shareability hygiene check: non-secret local
+paths, object-store URIs, endpoint URLs, and relative paths are preserved in
+exports and do not by themselves trigger `privacy_warnings`. Keep user-specific
+paths or endpoint details that should not travel outside the project out of the
+graph, or replace them with collaborator-safe references before export.
 
 `doxabase.project_brief`
 

@@ -77,6 +77,10 @@ stop-and-review signal: exports remain faithful RDF and are not redacted
 automatically. For unattended or shareable exports, pass
 `fail_on_sensitive=true` so DoxaBase raises before writing when the selected
 graph roles contain potential sensitive literals.
+This scan does not decide whether non-secret paths are appropriate to share:
+local paths, object-store URIs, endpoint URLs, and relative paths are preserved
+unless you keep them out of the graph or replace them with collaborator-safe
+references before export.
 
 ## How Agents Should Use It
 

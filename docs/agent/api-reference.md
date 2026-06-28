@@ -75,6 +75,12 @@ automatically. For unattended or shareable exports, pass
 `fail_on_sensitive=True` to scan selected graph roles first and raise before
 creating or overwriting the artifact when potential sensitive literals are
 found.
+Non-secret path-shaped values such as local paths, object-store URIs, endpoint
+URLs, and relative paths remain ordinary graph content: they are preserved in
+faithful RDF exports and do not by themselves trigger `privacy_warnings`.
+Review artifact shareability separately from sensitive-literal scanning; keep
+user-specific paths or endpoint details that should not travel out of the graph
+or replace them with collaborator-safe references before export.
 
 `export_trig()` writes a named-graph bundle with graph role IRIs so another
 DoxaBase capsule can import it again. The default exports mutable project

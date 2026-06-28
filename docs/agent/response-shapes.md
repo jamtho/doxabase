@@ -3696,7 +3696,10 @@ credential-like literal scan over the selected export graph roles. They warn
 before sharing; they do not redact the exported RDF. Pass
 `fail_on_sensitive=True` to block before creating or overwriting an RDF export
 when the selected graph roles scan dirty. Call `scan_sensitive_literals(graphs=...)`
-for redacted match rows.
+for redacted match rows. These fields are not a path/shareability hygiene
+signal: non-secret local paths, object-store URIs, endpoint URLs, and relative
+paths remain in faithful exports unless the caller keeps them out of the graph
+or replaces them before export.
 
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
 returns `RevisionSnapshotBundleExportRecord`:
