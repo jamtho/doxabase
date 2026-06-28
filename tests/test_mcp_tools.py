@@ -144,6 +144,8 @@ def test_doc_tools_return_json_like_payloads() -> None:
     assert "overview" in doc_ids
     assert "graph_roles" in doc_ids
     assert "response_shapes" in doc_ids
+    assert "profiling" in doc_ids
+    assert "systematisation" in doc_ids
     assert response_shapes_doc["size_chars"] > 0
     assert {
         section["anchor"]

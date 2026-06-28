@@ -85,6 +85,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "map-authoring.md",
     ),
     AgentDoc(
+        id="profiling",
+        title="Profiling Workflows",
+        description="How to record profile observations, inspect profile runs, and stage profile-derived map updates.",
+        path=DOCS_DIR / "profiling.md",
+    ),
+    AgentDoc(
         id="revisions",
         title="Revision History",
         description="How to record graph revision metadata and review-bundle rationale.",
@@ -95,6 +101,12 @@ DOCS: tuple[AgentDoc, ...] = (
         title="Staged Revisions",
         description="How to propose reviewable graph changes without applying them.",
         path=DOCS_DIR / "staged-revisions.md",
+    ),
+    AgentDoc(
+        id="systematisation",
+        title="Systematisation Workflows",
+        description="How to stage reviewable RDF framings and pattern-supported graph promotions.",
+        path=DOCS_DIR / "systematisation.md",
     ),
     AgentDoc(
         id="lexical_search",

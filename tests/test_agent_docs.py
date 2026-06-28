@@ -16,8 +16,10 @@ def test_list_agent_docs_contains_operational_docs() -> None:
     assert "observation_rdf" in doc_ids
     assert "patterns" in doc_ids
     assert "map_authoring" in doc_ids
+    assert "profiling" in doc_ids
     assert "revisions" in doc_ids
     assert "staged_revisions" in doc_ids
+    assert "systematisation" in doc_ids
     assert "lexical_search" in doc_ids
     assert "context_slicing" in doc_ids
     assert "executable_catalog" in doc_ids
@@ -41,6 +43,8 @@ def test_start_here_names_exact_discovery_tools() -> None:
     assert "doxabase.get_doc" in content
     assert "doxabase.list_entities" in content
     assert "doxabase.describe_context_slice" in content
+    assert "profiling" in content
+    assert "systematisation" in content
 
 
 def test_storage_access_docs_distinguish_protocol_from_location_kind() -> None:
@@ -121,3 +125,27 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     assert "duplicating it can create equivalent ready query candidates" in (
         query_context_content
     )
+
+
+def test_profiling_doc_names_core_workflow_tools() -> None:
+    doc = get_agent_doc("profiling", max_chars=20_000)
+    content = str(doc["content"])
+
+    assert "record_profile_bundle" in content
+    assert "describe_profile_run" in content
+    assert "draft_profile_map_updates" in content
+    assert "stage_profile_map_updates" in content
+    assert "profile_type_review" in content
+    assert "profile_scalar_conflict_review" in content
+
+
+def test_systematisation_doc_names_core_workflow_tools() -> None:
+    doc = get_agent_doc("systematisation", max_chars=20_000)
+    content = str(doc["content"])
+
+    assert "stage_systematisation" in content
+    assert "stage_pattern_promotion" in content
+    assert "shared_additions" in content
+    assert "alternative_to" in content
+    assert "next_action_queue" in content
+    assert "shared_semantic_context_applies_to_all_framings" in content

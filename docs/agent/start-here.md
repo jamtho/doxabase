@@ -76,6 +76,9 @@ If you are scripting directly against the Python API, read `response_shapes`
 before assuming returned field names. Large docs expose section headings through
 `doxabase.list_docs`; use `doxabase.get_doc(section="...")` or `start_char` to
 jump past the default prefix.
+Use the topic docs `profiling`, `systematisation`, and `query_planning` when a
+task obviously lives in one of those workflows; they point to the relevant
+helpers and response-shape sections without requiring a full-doc scan.
 
 ## If You Are Resuming After Compaction
 
