@@ -616,6 +616,52 @@ def test_project_brief_routes_non_tabular_assets_to_context_review(
     }
 
 
+def test_context_slice_skips_query_context_action_for_non_tabular_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    api = "https://example.test/project#RiskSignalsAPI"
+    storage = "https://example.test/project#RiskSignalsHTTPSAccess"
+    layout = "https://example.test/project#RiskSignalsJSONLayout"
+
+    db.record_map_storage_access(
+        storage,
+        label="Risk signals HTTPS access",
+        storage_protocol="rc:HTTPSStorage",
+        location_kind="object",
+        storage_root="https://api.example.test/risk/signals",
+        path_templates=["latest.json"],
+        layout_verification_status="rc:CandidateLayout",
+    )
+    db.record_map_physical_layout(
+        layout,
+        file_format="https://example.test/project#JSONDocument",
+        layout_verification_status="rc:CandidateLayout",
+    )
+    db.record_map_dataset(
+        api,
+        label="Risk signals API",
+        is_table=False,
+        path_templates=["risk/signals/latest.json"],
+        storage_accesses=[storage],
+        physical_layouts=[layout],
+        layout_verification_status="rc:CandidateLayout",
+    )
+
+    context = db.describe_query_context(api)
+    slice_context = db.describe_context_slice([api], profile="deep_lore")
+
+    assert context.readiness == "not_applicable_non_tabular_asset"
+    assert {
+        issue.code
+        for dataset in slice_context.dataset_contexts
+        for issue in dataset.operational_warnings
+    } == {"layout_needs_verification"}
+    assert [
+        action.tool_name for action in slice_context.suggested_next_actions
+    ] == []
+
+
 def test_immutable_seed_graphs_reject_normal_imports(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

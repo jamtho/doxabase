@@ -414,6 +414,7 @@ endpoint or credential profile left for DoxaBase to resolve; it is not a
 database connectivity guarantee.
 
 Current `handoff_kind` values are `no_query_target`,
-`metadata_review_required`, `context_review_required`,
-`runtime_resolution_required`, `database_relation_handoff`,
-`binding_values_required`, and `execution_attempt_ready`.
+`not_applicable_non_tabular_asset`, `metadata_review_required`,
+`context_review_required`, `runtime_resolution_required`,
+`database_relation_handoff`, `binding_values_required`, and
+`execution_attempt_ready`.

@@ -164,7 +164,7 @@ Useful fields:
   to retry, for example rerunning an `rc:Pattern` seed with `pattern_brief` or
   `deep_lore`.
 - `suggested_next_actions` and `suggested_next_calls`: structured follow-up
-  routes. When a seed dataset/table carries operational query-planning warnings,
+  routes. When a seed table carries operational query-planning warnings,
   a `describe_query_context` action points to readiness, target candidates, and
   repair hints even if raw triples were not truncated. When raw triples are
   truncated, pattern narrowing actions come before the same-seed

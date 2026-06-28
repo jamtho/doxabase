@@ -807,10 +807,12 @@ caps point to paged `describe_resource` calls, blank-node reference caps point t
 caps point to graph export/narrowing because there is no paged predicate-usage
 browser yet. Raising `max_triples` does not recover route-capped resources; it
 only returns more raw triples for resources already selected.
-`suggested_next_actions` can include `describe_query_context` for seed
-datasets/tables whose nested `dataset_contexts[].operational_warnings` contain
-query-planning errors or warnings. Use that route to inspect readiness, target
-candidates, and repair hints before drafting a query. When `truncated=true`,
+`suggested_next_actions` can include `describe_query_context` for seed tables
+whose nested `dataset_contexts[].operational_warnings` contain query-planning
+errors or warnings. Non-table dataset seeds stay on context-slice/resource
+routes even when they carry storage or layout metadata. Use that route to
+inspect readiness, target candidates, and repair hints before drafting a query.
+When `truncated=true`,
 the remaining actions first offer narrower
 `describe_context_slice(..., profile="pattern_brief")` calls for linked pattern
 contexts, then a same-seed retry with `max_triples` raised to

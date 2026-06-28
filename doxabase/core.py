@@ -9299,6 +9299,8 @@ class DoxaBase:
         for dataset in dataset_context_list:
             if dataset.iri not in seed_iris_set or dataset.iri in seen_dataset_iris:
                 continue
+            if self.expand_iri("rc:Table") not in dataset.types:
+                continue
             issue_codes = sorted(
                 {
                     issue.code
