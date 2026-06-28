@@ -20334,6 +20334,183 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     }
 
 
+def test_export_profile_insight_review_bundle_discovers_related_staged_revisions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/profile-review#SupportEvents"
+    status_column = "https://example.test/profile-review#SupportEventsState"
+    evidence = "https://example.test/profile-review#SupportEventsProfileEvidence"
+    metric = "https://example.test/profile-review#WorkflowFlipRate"
+    caveat = "https://example.test/profile-review#WorkflowFlipRateCaveat"
+
+    db.record_map_dataset(
+        dataset,
+        label="Support Events",
+        is_table=True,
+        row_count_snapshot=8,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="workflow_state",
+        nullable=False,
+    )
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Support Events were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run for profile insight review.",
+        evidence_sources=["test://support-events-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=10,
+        sample_scope="All rows in the Support Events table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=10,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": metric,
+                "target": dataset,
+                "value": "0.217",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "workflow_state",
+                "summary": "Workflow state had nulls in the full scan.",
+                "null_count": 1,
+                "distinct_count": 4,
+                "physical_type": "rc:Varchar",
+            }
+        ],
+    )
+    related_pattern = db.record_pattern(
+        summary="Workflow flip rate needs scoped review.",
+        pattern_text=(
+            "Workflow flip rate is useful only when replay and backfill rows "
+            "are scoped out of the denominator."
+        ),
+        rationale=(
+            "The same profile evidence supports map drift review, metric "
+            "vocabulary review, and a caveat alternative."
+        ),
+        pattern_targets=[dataset, metric],
+        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
+        evidence_iri=evidence,
+        map_implications=[metric, caveat],
+    )
+    unrelated_pattern = db.record_pattern(
+        summary="Unrelated same-evidence note.",
+        pattern_text="This note intentionally shares evidence but targets refunds.",
+        rationale="It should not make unrelated staged work part of the bundle.",
+        pattern_targets=["https://example.test/profile-review#Refunds"],
+        evidence_iri=evidence,
+        map_implications=["https://example.test/profile-review#RefundReason"],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    staged_map = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[0, 1],
+        supporting_patterns=[related_pattern.pattern_iri],
+    )
+    promotion_action = next(
+        action
+        for action in draft.suggested_next_action_groups["metric_vocabulary_review"]
+        if action.tool_name == "stage_pattern_promotion"
+    )
+    metric_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
+    caveat_draft = db.stage_systematisation(
+        summary="Review workflow flip caveat",
+        intent="Keep the denominator caveat reviewable beside profile map updates.",
+        rationale=(
+            "The caveat is profile-derived but should remain a staged semantic "
+            "choice rather than being hidden in the row-count update."
+        ),
+        anchors=[dataset, metric, caveat],
+        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
+        supporting_patterns=[related_pattern.pattern_iri],
+        evidence=[evidence],
+        framings=[
+            {
+                "label": "Map caveat",
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <{caveat}> a rc:KnownCaveat ;
+                        rdfs:label "Workflow flip denominator caveat" ;
+                        rc:caveatDescription "Workflow flip rate excludes replay and backfill rows." .
+
+                    <{dataset}> rc:hasKnownCaveat <{caveat}> .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    unrelated_draft = db.stage_systematisation(
+        summary="Unrelated refunds review",
+        intent="Provide an unrelated same-evidence staged row.",
+        rationale="This row shares no profile-derived anchors or related pattern.",
+        supporting_patterns=[unrelated_pattern.pattern_iri],
+        framings=[
+            {
+                "label": "Refund note",
+                "graph": "patterns",
+                "content": """
+                    @prefix ex: <https://example.test/profile-review#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:RefundReviewPattern a rc:Pattern ;
+                        rc:summary "Refunds need separate review." ;
+                        rc:patternText "Refunds are not part of the support event profile insight." ;
+                        rc:rationale "Synthetic unrelated row." ;
+                        rc:patternTarget ex:Refunds .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    export_path = tmp_path / "profile-insight-review.md"
+    result = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        export_path,
+    )
+
+    expected_revision_iris = {
+        staged_map.staged_revision.revision_iri,
+        metric_promotion.staged_revisions[0].revision_iri,
+        caveat_draft.staged_revisions[0].revision_iri,
+    }
+    assert set(result.candidate_revision_iris) == expected_revision_iris
+    assert unrelated_draft.staged_revisions[0].revision_iri not in (
+        result.candidate_revision_iris
+    )
+    assert result.candidate_count == 3
+    assert result.export is not None
+    assert set(result.export.revision_iris) == expected_revision_iris
+    assert related_pattern.pattern_iri in result.related_pattern_iris
+    assert unrelated_pattern.pattern_iri not in result.related_pattern_iris
+    assert all(candidate.relation_reasons for candidate in result.candidates)
+    assert any(
+        "supporting_profile_observation" in candidate.relation_reasons
+        for candidate in result.candidates
+    )
+    assert export_path.exists()
+    exported = export_path.read_text(encoding="utf-8")
+    assert "Profile insight review: Support Events" in exported
+    assert "## Reviewer Decision Matrix" in exported
+    assert "Workflow flip denominator caveat" in exported
+    assert "WorkflowFlipRate" in exported
+
+
 def test_profile_map_update_support_omits_type_review_patterns(
     tmp_path: Path,
 ) -> None:

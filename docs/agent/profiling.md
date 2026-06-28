@@ -109,6 +109,21 @@ For non-table assets, row-count observations are not drafted as
 evidence or model a more precise project-specific metric when asset counts
 matter.
 
+## Export A Profile Insight Review
+
+When a profile run leads to several staged lanes, use
+`export_profile_insight_review_bundle(dataset_iri, evidence_iri, path)` after
+staging the related work. It scans current staged revisions and exports a
+grouped Markdown review bundle for revisions connected to the profile run by
+profile evidence, supporting profile observations, related support patterns, or
+profile-derived anchors.
+
+This helper is a review bundler, not a staging shortcut. It will include the
+profile map-update revision plus already-staged metric vocabulary promotions,
+caveat/systematisation alternatives, or type-review assertions when they carry
+the relevant support links. Follow remaining metric/type advisory lanes first
+when expected review rows are not staged yet.
+
 ## Advisory Lanes
 
 Metric advisories and type advisories are review prompts, not accepted map

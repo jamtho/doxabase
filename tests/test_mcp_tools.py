@@ -28,6 +28,7 @@ from doxabase.mcp_tools import (
     draft_query_plan_tool,
     draft_staged_revision_rebase_tool,
     export_graph_tool,
+    export_profile_insight_review_bundle_tool,
     export_revision_snapshots_tool,
     export_staged_revision_tool,
     export_staged_revisions_tool,
@@ -123,6 +124,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
+    assert "doxabase.export_profile_insight_review_bundle" in tool_names
     assert "doxabase.export_revision_snapshots" in tool_names
     assert "doxabase.import_revision_snapshots" in tool_names
     assert "doxabase.replace_graph_triples" in tool_names
@@ -5763,6 +5765,64 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
         status_column,
     }
     assert db.describe_dataset(table).row_count_snapshot == 8
+
+
+def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    record_map_dataset_tool(
+        db,
+        table,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=8,
+    )
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        sample_size=10,
+        sample_scope="All rows in the Orders table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=10,
+        update_map_snapshot=False,
+    )
+    staged = stage_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        accepted_recommendation_indexes=[0],
+    )
+
+    export_path = tmp_path / "orders-profile-review.md"
+    result = export_profile_insight_review_bundle_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        path=str(export_path),
+    )
+
+    assert result["result_kind"] == "profile_insight_review_bundle"
+    assert result["dataset"]["iri"] == table
+    assert result["evidence_iri"] == shared_evidence
+    assert result["candidate_revision_iris"] == [
+        staged["staged_revision"]["revision_iri"]
+    ]
+    assert result["candidate_count"] == 1
+    assert result["export"]["path"] == str(export_path)
+    assert result["export"]["revision_iris"] == result["candidate_revision_iris"]
+    assert result["candidates"][0]["relation_reasons"]
+    assert export_path.exists()
+    assert "Profile insight review: Orders" in export_path.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_stage_profile_map_updates_tool_marks_rerun_precondition(

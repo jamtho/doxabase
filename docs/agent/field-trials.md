@@ -288,6 +288,12 @@ few useful gaps:
   evidence. `project_brief` now returns `active_queue_type_count`,
   `returned_queue_type_count`, and `limit_crowded_queue_types`; when crowding is
   reported, rerun with a higher limit before deciding the next loop frontier.
+- A profile/pattern frontier trial showed agents could stage profile map
+  updates, metric vocabulary proposals, and caveat alternatives, but had to
+  manually stitch the related staged revisions into one review bundle. Use
+  `export_profile_insight_review_bundle` after staging the related lanes; it
+  discovers current staged revisions connected by profile observations,
+  profile-derived anchors, and related support patterns.
 - Claim lifecycle needed first-class support. Agents could record an initial
   hunch and a later correction, but they needed an explicit
   `record_claim_reconsideration` move to mark the earlier claim as weakened,

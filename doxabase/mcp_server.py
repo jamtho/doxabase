@@ -28,6 +28,7 @@ from doxabase.mcp_tools import (
     draft_query_plan_tool,
     draft_staged_revision_rebase_tool,
     export_graph_tool,
+    export_profile_insight_review_bundle_tool,
     export_staged_revision_tool,
     export_staged_revisions_tool,
     export_trig_tool,
@@ -75,7 +76,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -1676,6 +1677,35 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             db,
             revision_iris=revision_iris,
             path=path,
+            title=title,
+            executive_summary=executive_summary,
+            format=format,
+            overwrite=overwrite,
+        )
+
+    @server.tool(name="doxabase.export_profile_insight_review_bundle")
+    def export_profile_insight_review_bundle(
+        dataset_iri: str,
+        evidence_iri: str,
+        path: str,
+        revision_iris: list[str] | None = None,
+        include_current_staged_work: bool = True,
+        current_staged_work_limit: int = 100,
+        title: str | None = None,
+        executive_summary: str | None = None,
+        format: str = "markdown",
+        overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Export staged revisions connected to one profile evidence run."""
+
+        return export_profile_insight_review_bundle_tool(
+            db,
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            path=path,
+            revision_iris=revision_iris,
+            include_current_staged_work=include_current_staged_work,
+            current_staged_work_limit=current_staged_work_limit,
             title=title,
             executive_summary=executive_summary,
             format=format,

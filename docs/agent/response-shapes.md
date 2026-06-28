@@ -1675,6 +1675,52 @@ An accepted recommendation index can therefore appear under either `staged` or
 for this staging call. Use `status_counts` for quick routing summaries before
 reading per-item reasons.
 
+### Profile Insight Review Bundle
+
+`db.export_profile_insight_review_bundle(dataset_iri, evidence_iri, path, ...)`
+returns a `ProfileInsightReviewBundleRecord`:
+
+```python
+result.result_kind
+result.dataset
+result.evidence
+result.evidence_iri
+result.profile_observation_iris
+result.related_pattern_iris
+result.candidate_revision_iris
+result.candidate_count
+result.candidates
+result.export
+result.warnings
+result.review_note
+```
+
+`result_kind` is `profile_insight_review_bundle`. `export` is the nested
+`StagedGraphRevisionsExportRecord` when at least one related staged revision was
+found; otherwise it is `None` and `warnings` explains that no bundle was
+written.
+
+Each `result.candidates[]` row explains why one staged revision was included:
+
+```python
+candidate.revision_iri
+candidate.summary
+candidate.changed_graphs
+candidate.relation_reasons
+candidate.matched_evidence_iris
+candidate.matched_profile_observation_iris
+candidate.matched_supporting_pattern_iris
+candidate.matched_revision_anchor_iris
+candidate.explicit
+```
+
+`relation_reasons` can include `explicit_revision_iri`,
+`shared_profile_evidence`, `supporting_profile_observation`,
+`supporting_related_pattern`, and `profile_derived_anchor`. Same evidence alone
+does not make an unrelated pattern related; patterns are discovered through
+supporting profile observations, profile-derived targets/map implications, or
+advisory patterns from `draft_profile_map_updates`.
+
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:
 

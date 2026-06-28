@@ -504,6 +504,24 @@ revision apply-check action, with
 applied first. That rerun is what turns related type advisories into map-present
 `rc:physicalType` / `rc:valueType` assertion actions.
 
+### doxabase.export_profile_insight_review_bundle
+
+Exports one grouped Markdown review bundle for current staged revisions connected
+to a profile run. Pass `dataset_iri`, `evidence_iri`, and `path`. The helper
+discovers staged revisions by shared profile evidence, supporting profile
+observations, related support patterns, and profile-derived anchors such as the
+dataset, metric IRIs, columns, and observed types from
+`draft_profile_map_updates`. Use it after staging accepted profile map updates
+and any metric vocabulary, type-review, or caveat/systematisation alternatives
+you want reviewed together.
+
+The returned payload includes `candidates[]` with `relation_reasons`, matched
+support/evidence/anchor fields, `candidate_revision_iris`, and the nested
+`export_staged_revisions` record when a bundle was written. Same evidence alone
+does not make an unrelated pattern a related pattern; support should connect
+through profile observations, targets, map implications, or explicit
+`revision_iris`.
+
 ### doxabase.describe_query_context
 
 Returns a compact read-only projection for query planning around one dataset:

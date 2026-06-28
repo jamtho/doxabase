@@ -611,6 +611,15 @@ patterns that target or imply the dataset or recommended map resources. Keep
 metric-only and type-only patterns in their advisory lanes unless you explicitly
 want them to support the map patch.
 
+`export_profile_insight_review_bundle(dataset_iri, evidence_iri, path)` writes a
+grouped Markdown review bundle for already-staged revisions connected to one
+profile run. It discovers current staged work through profile evidence,
+supporting profile observations, related patterns, and profile-derived anchors,
+then delegates the Markdown body to `export_staged_revisions()`. Use it after
+staging the profile map-update revision plus any metric vocabulary,
+type-review, or caveat/systematisation alternatives that should be reviewed
+together. It does not stage missing advisory-lane work for you.
+
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
 dataset/table map context, bounded profile observations/metrics, and linked

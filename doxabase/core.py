@@ -877,6 +877,35 @@ class StagedGraphRevisionsExportRecord:
 
 
 @dataclass(frozen=True)
+class ProfileInsightReviewCandidate:
+    revision_iri: str
+    summary: str | None
+    changed_graphs: list[str]
+    relation_reasons: list[str]
+    matched_evidence_iris: list[str]
+    matched_profile_observation_iris: list[str]
+    matched_supporting_pattern_iris: list[str]
+    matched_revision_anchor_iris: list[str]
+    explicit: bool
+
+
+@dataclass(frozen=True)
+class ProfileInsightReviewBundleRecord:
+    result_kind: str
+    dataset: ResourceSummary
+    evidence: EvidenceDescription
+    evidence_iri: str
+    profile_observation_iris: list[str]
+    related_pattern_iris: list[str]
+    candidate_revision_iris: list[str]
+    candidate_count: int
+    candidates: list[ProfileInsightReviewCandidate]
+    export: StagedGraphRevisionsExportRecord | None
+    warnings: list[str]
+    review_note: str
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionBatchRestageItem:
     source_revision_iri: str
     summary: str | None
@@ -27799,6 +27828,277 @@ class DoxaBase:
             format=format,
             revision_iri=description.iri,
             bytes_written=bytes_written,
+        )
+
+    def export_profile_insight_review_bundle(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+        path: str | Path,
+        *,
+        revision_iris: Iterable[str] | str | None = None,
+        include_current_staged_work: bool = True,
+        current_staged_work_limit: int = 100,
+        title: str | None = None,
+        executive_summary: str | None = None,
+        format: TypingLiteral["markdown"] = "markdown",
+        overwrite: bool = False,
+    ) -> ProfileInsightReviewBundleRecord:
+        if format != "markdown":
+            raise DoxaBaseError(
+                "Only markdown profile insight review exports are supported"
+            )
+        if current_staged_work_limit < 1:
+            raise DoxaBaseError("current_staged_work_limit must be at least 1")
+        profile = self.describe_profile_run(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            limit=None,
+        )
+        draft = self.draft_profile_map_updates(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+        )
+        evidence_value = self.expand_iri(evidence_iri)
+        profile_observation_iris = list(dict.fromkeys(profile.profile_observation_iris))
+        profile_observation_set = set(profile_observation_iris)
+        anchor_seed_iris = self._profile_insight_anchor_seed_iris(profile, draft)
+        related_pattern_iris = self._profile_insight_related_pattern_iris(
+            profile_observation_set,
+            anchor_seed_iris,
+            draft,
+        )
+        related_pattern_set = set(related_pattern_iris)
+
+        candidates: list[ProfileInsightReviewCandidate] = []
+        seen_revision_iris: set[str] = set()
+
+        for revision_iri in self._string_values("revision_iris", revision_iris):
+            description = self.describe_staged_revision(revision_iri)
+            candidate = self._profile_insight_review_candidate(
+                description,
+                evidence_iri=evidence_value,
+                profile_observation_iris=profile_observation_set,
+                related_pattern_iris=related_pattern_set,
+                anchor_seed_iris=anchor_seed_iris,
+                explicit=True,
+            )
+            candidates.append(candidate)
+            seen_revision_iris.add(candidate.revision_iri)
+
+        warnings: list[str] = []
+        if include_current_staged_work:
+            listing = self.list_graph_revisions(
+                current_staged_work_only=True,
+                limit=current_staged_work_limit,
+            )
+            if listing.total_count > listing.returned_count:
+                warnings.append(
+                    "Only the first "
+                    f"{listing.returned_count} of {listing.total_count} current "
+                    "staged revisions were scanned; rerun with a higher "
+                    "current_staged_work_limit if profile-related revisions may "
+                    "have been omitted."
+                )
+            for item in listing.revisions:
+                if item.iri in seen_revision_iris or not item.has_patch_payload:
+                    continue
+                description = self.describe_staged_revision(item.iri)
+                candidate = self._profile_insight_review_candidate(
+                    description,
+                    evidence_iri=evidence_value,
+                    profile_observation_iris=profile_observation_set,
+                    related_pattern_iris=related_pattern_set,
+                    anchor_seed_iris=anchor_seed_iris,
+                    explicit=False,
+                )
+                if not candidate.relation_reasons:
+                    continue
+                candidates.append(candidate)
+                seen_revision_iris.add(candidate.revision_iri)
+
+        candidate_revision_iris = [candidate.revision_iri for candidate in candidates]
+        export: StagedGraphRevisionsExportRecord | None = None
+        if candidate_revision_iris:
+            export = self.export_staged_revisions(
+                candidate_revision_iris,
+                path,
+                title=title
+                or self._profile_insight_review_title(profile.dataset),
+                executive_summary=executive_summary
+                or self._profile_insight_review_executive_summary(
+                    profile.dataset,
+                    evidence_value,
+                ),
+                format=format,
+                overwrite=overwrite,
+            )
+        else:
+            warnings.append(
+                "No staged revisions linked to this profile run were found; "
+                "stage profile map updates, metric promotions, or caveat "
+                "alternatives before exporting a profile insight review bundle."
+            )
+
+        return ProfileInsightReviewBundleRecord(
+            result_kind="profile_insight_review_bundle",
+            dataset=profile.dataset,
+            evidence=profile.evidence,
+            evidence_iri=evidence_value,
+            profile_observation_iris=profile_observation_iris,
+            related_pattern_iris=related_pattern_iris,
+            candidate_revision_iris=candidate_revision_iris,
+            candidate_count=len(candidates),
+            candidates=candidates,
+            export=export,
+            warnings=warnings,
+            review_note=(
+                "Export groups current staged revisions connected to the profile "
+                "run by evidence, profile observations, supporting patterns, or "
+                "profile-derived anchors. Follow remaining draft advisory lanes "
+                "separately if expected metric or type review revisions are "
+                "not staged yet."
+            ),
+        )
+
+    def _profile_insight_anchor_seed_iris(
+        self,
+        profile: ProfileRunDescription,
+        draft: ProfileMapUpdateDraft,
+    ) -> set[str]:
+        seed_iris = {
+            profile.dataset.iri,
+            profile.evidence_iri,
+            *profile.profile_observation_iris,
+        }
+        for recommendation in draft.recommendations:
+            seed_iris.add(recommendation.resource.iri)
+        for advisory in draft.metric_advisories:
+            seed_iris.add(advisory.observed_metric_iri)
+            seed_iris.add(advisory.metric.iri)
+            if advisory.target is not None:
+                seed_iris.add(advisory.target.iri)
+        for advisory in draft.type_advisories:
+            seed_iris.add(advisory.observed_column.iri)
+            if advisory.observed_physical_type is not None:
+                seed_iris.add(advisory.observed_physical_type.iri)
+            if advisory.observed_value_type is not None:
+                seed_iris.add(advisory.observed_value_type.iri)
+            if advisory.current_physical_type is not None:
+                seed_iris.add(advisory.current_physical_type.iri)
+            if advisory.current_value_type is not None:
+                seed_iris.add(advisory.current_value_type.iri)
+        return seed_iris
+
+    def _profile_insight_related_pattern_iri_candidates(
+        self,
+        draft: ProfileMapUpdateDraft,
+    ) -> set[str]:
+        pattern_iris: set[str] = set()
+        for advisory in draft.metric_advisories:
+            for pattern in [
+                *advisory.promotion_patterns,
+                *advisory.mixed_support_patterns,
+                *advisory.context_patterns,
+            ]:
+                pattern_iris.add(pattern.iri)
+        for advisory in draft.type_advisories:
+            for pattern in [
+                *advisory.promotion_patterns,
+                *advisory.mixed_support_patterns,
+            ]:
+                pattern_iris.add(pattern.iri)
+        return pattern_iris
+
+    def _profile_insight_related_pattern_iris(
+        self,
+        profile_observation_iris: set[str],
+        anchor_seed_iris: set[str],
+        draft: ProfileMapUpdateDraft,
+    ) -> list[str]:
+        pattern_graphs = self._expand_graphs(["patterns"])
+        pattern_iris = self._profile_insight_related_pattern_iri_candidates(draft)
+        for observation_iri in profile_observation_iris:
+            pattern_iris.update(
+                self._subjects(
+                    pattern_graphs,
+                    "rc:supportingObservation",
+                    observation_iri,
+                )
+            )
+        for seed_iri in anchor_seed_iris:
+            pattern_iris.update(
+                self._subjects(pattern_graphs, "rc:patternTarget", seed_iri)
+            )
+            pattern_iris.update(
+                self._subjects(pattern_graphs, "rc:mapImplication", seed_iri)
+            )
+        return sorted(pattern_iris)
+
+    def _profile_insight_review_candidate(
+        self,
+        description: StagedGraphRevisionDescription,
+        *,
+        evidence_iri: str,
+        profile_observation_iris: set[str],
+        related_pattern_iris: set[str],
+        anchor_seed_iris: set[str],
+        explicit: bool,
+    ) -> ProfileInsightReviewCandidate:
+        matched_evidence = sorted(
+            {item.iri for item in description.evidence} & {evidence_iri}
+        )
+        matched_observations = sorted(
+            {item.iri for item in description.supporting_observations}
+            & profile_observation_iris
+        )
+        matched_patterns = sorted(
+            {item.iri for item in description.supporting_patterns}
+            & related_pattern_iris
+        )
+        matched_anchors = sorted(
+            {item.iri for item in description.revision_anchors} & anchor_seed_iris
+        )
+        relation_reasons: list[str] = []
+        if explicit:
+            relation_reasons.append("explicit_revision_iri")
+        if matched_evidence:
+            relation_reasons.append("shared_profile_evidence")
+        if matched_observations:
+            relation_reasons.append("supporting_profile_observation")
+        if matched_patterns:
+            relation_reasons.append("supporting_related_pattern")
+        if matched_anchors:
+            relation_reasons.append("profile_derived_anchor")
+        return ProfileInsightReviewCandidate(
+            revision_iri=description.iri,
+            summary=description.summary,
+            changed_graphs=description.changed_graphs,
+            relation_reasons=relation_reasons,
+            matched_evidence_iris=matched_evidence,
+            matched_profile_observation_iris=matched_observations,
+            matched_supporting_pattern_iris=matched_patterns,
+            matched_revision_anchor_iris=matched_anchors,
+            explicit=explicit,
+        )
+
+    @staticmethod
+    def _profile_insight_review_title(dataset: ResourceSummary) -> str:
+        label = dataset.label or dataset.iri
+        return f"Profile insight review: {label}"
+
+    @staticmethod
+    def _profile_insight_review_executive_summary(
+        dataset: ResourceSummary,
+        evidence_iri: str,
+    ) -> str:
+        label = dataset.label or dataset.iri
+        return (
+            f"Review staged revisions linked to profile evidence `{evidence_iri}` "
+            f"for {label}. This bundle is intended to compare profile map "
+            "updates, metric vocabulary proposals, type/caveat alternatives, and "
+            "other already-staged profile-derived graph changes before applying "
+            "any one lane."
         )
 
     def export_staged_revisions(

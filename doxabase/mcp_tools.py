@@ -1596,6 +1596,35 @@ def export_staged_revisions_tool(
     return to_dict(result)
 
 
+def export_profile_insight_review_bundle_tool(
+    db: DoxaBase,
+    dataset_iri: str,
+    evidence_iri: str,
+    path: str,
+    revision_iris: list[str] | None = None,
+    include_current_staged_work: bool = True,
+    current_staged_work_limit: int = 100,
+    title: str | None = None,
+    executive_summary: str | None = None,
+    format: str = "markdown",
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    resolved_path = _resolve_path(path)
+    result = db.export_profile_insight_review_bundle(
+        dataset_iri=dataset_iri,
+        evidence_iri=evidence_iri,
+        path=resolved_path,
+        revision_iris=revision_iris,
+        include_current_staged_work=include_current_staged_work,
+        current_staged_work_limit=current_staged_work_limit,
+        title=title,
+        executive_summary=executive_summary,
+        format=format,  # type: ignore[arg-type]
+        overwrite=overwrite,
+    )
+    return to_dict(result)
+
+
 def load_example_fixtures_tool(db: DoxaBase, replace: bool = False) -> dict[str, Any]:
     results = []
     totals: dict[str, int] = {}
