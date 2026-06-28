@@ -84,6 +84,18 @@ call `describe_query_context()` for the selected table, follow the first
 `draft_query_plan` action, and stop before any network/S3 access unless the
 trial explicitly approves it.
 
+For a small profile-frontier workflow, run:
+
+```bash
+./.venv/bin/python examples/profile-frontier-workflow.py
+```
+
+It creates a scratch capsule from bundled fixtures, records one synthetic
+full-scan profile bundle, drafts and stages representative profile map updates,
+runs `plan_staged_revision_recovery()` over the staged profile revision, and
+validates the graph. Use this when you need a reproducible profile-derived
+map-update frontier without relying on a preexisting local capsule.
+
 For a local query-result capture trial, create a tiny CSV or Parquet file under
 `/tmp`, model it with `record_map_dataset`, `record_map_column`,
 `record_map_storage_access`, and `record_map_physical_layout`, then call
@@ -2183,6 +2195,11 @@ few useful gaps:
   row-local `alternative_to` gate. Queue items now add `alternative_set_iris`,
   `alternative_set_source_iri`, and `alternative_set_role` for every returned
   member of an unresolved alternative set.
+- A profile fixture/frontier trial reproduced that bundled AIS/Polymarket
+  fixtures have zero profile queues after `load_example_fixtures(replace=True)`.
+  Use `examples/profile-frontier-workflow.py` when a scratch run needs
+  deterministic profile-derived map-update recommendations, staging, and
+  recovery planning without changing fixture RDF.
 - A query/storage ranking follow-up found complete-but-unrelated storage access
   candidates could outrank a nearby dataset-specific access. Missing-storage
   candidate ranking now splits weak generic tokens such as `data`, `parquet`,

@@ -140,6 +140,7 @@ Not implemented yet:
 - `ontology/rc_core.ttl` - draft immutable `rc:` base ontology seed graph.
 - `ontology/rc_shapes.ttl` - draft immutable open SHACL shape seed graph.
 - `examples/manifest-prototype-rc/` - representative AIS and Polymarket fixtures converted from Manifest vocabulary to `rc:`.
+- `examples/profile-frontier-workflow.py` - scratch workflow for profile-derived map updates and staged-frontier review.
 - `examples/adversarial-field-trial.py` - tiny scratch-capsule trial for checking the docs and staging workflow.
 - `tests/` - parser, validation, capsule, and MCP helper tests.
 - `tools/validate_rdf.py` - parser, term-definition, and SHACL validation checks.
@@ -173,8 +174,10 @@ uv run python examples/first-workflow.py
 
 It creates a scratch capsule under `/tmp`, loads the bundled fixtures, prints a
 few table/search/query-readiness cues, records one observation, and validates
-the graph. Use `examples/adversarial-field-trial.py` after that when you want a
-more demanding staged-revision and systematisation exercise.
+the graph. Use `examples/profile-frontier-workflow.py` after that to exercise
+profile-derived map updates and staged-frontier recovery. Use
+`examples/adversarial-field-trial.py` when you want a more demanding
+staged-revision and systematisation exercise.
 
 ## Python Capsule Example
 

@@ -50,3 +50,29 @@ def test_first_workflow_example_runs() -> None:
     assert "Search matches:" in output
     assert "Recorded observation:" in output
     assert "Validation conforms: True" in output
+
+
+def test_profile_frontier_workflow_example_runs() -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "examples" / "profile-frontier-workflow.py")],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    output = result.stdout
+
+    assert "# DoxaBase Profile Frontier Workflow" in output
+    assert "Loaded fixture triples:" in output
+    assert (
+        "Baseline profile queues: {'profile_observations': 0, "
+        "'profile_evidence': 0"
+        in output
+    )
+    assert "Profile observations: 3" in output
+    assert "Profile draft recommendations: 3" in output
+    assert "Representative recommendations: [0, 1, 2]" in output
+    assert "Staged profile revision:" in output
+    assert "Recovery queue counts: {'apply_after_review': 1}" in output
+    assert "Validation conforms: True" in output
