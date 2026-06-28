@@ -2223,6 +2223,12 @@ few useful gaps:
   `already_pending_candidate_count`, `already_pending_storage_access_iris`, and
   `pending_staged_repair_iris` on the repair context and compact
   stage-existing-link option.
+- A review/export handoff trial confirmed grouped staged Markdown and profile
+  insight bridges are self-contained for decision matrices and resolved targets,
+  but Markdown-only handoffs should not be expected to carry every query-context
+  candidate summary. When pending query repairs matter, include
+  `describe_query_context` output or default project TriG plus revision snapshot
+  JSON with the Markdown bundle.
 - A profile/query-blocker handoff trial confirmed the intended route:
   `missing_storage_access` keeps DailyIndex profile review on query-context
   repair first; after storage repair, profile tasks point to

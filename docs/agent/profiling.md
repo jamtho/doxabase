@@ -148,6 +148,12 @@ Read each route group's `match_strength`: `direct_action` marks the lane a
 staged row appears to implement, while `strong_support` and `related_support`
 mean the row is included because it shares profile observations, support
 patterns, or anchors with that lane.
+If a profile-review handoff depends on a pending query repair such as
+`missing_storage_access`, include the relevant `describe_query_context` output
+or a default project TriG plus `export_revision_snapshots()` JSON alongside the
+Markdown bundle. The profile Markdown bridge shows the staged row and route, but
+compact candidate-pending fields such as `already_pending_candidate_count` live
+in the query-context payload or recovered project-history capsule.
 
 When `stage_profile_map_updates` creates a staged revision, its
 `suggested_next_actions` includes an `export_profile_insight_review_bundle`

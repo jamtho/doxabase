@@ -808,6 +808,13 @@ Grouped Markdown also includes a `Resolved Targets` table derived from those
 queue items, so Markdown-only reviewers can see each row's queue, action,
 resolved target IRI, target kind, and whether the row itself is the target
 without opening every row's detailed apply check.
+If a staged-review handoff turns on pending query-repair candidate state, for
+example a `missing_storage_access` storage candidate marked
+`already_pending`, attach the relevant `describe_query_context` output or a
+default project TriG plus `export_revision_snapshots()` JSON. The grouped
+Markdown identifies the staged repair and resolved targets, but compact
+candidate-pending summaries live in the query-context response or recovered
+project-history capsule rather than in every staged Markdown artifact.
 Treat `next_action` as the compact route for the row, not as permission to run a
 mutating tool immediately. For review-first automation, follow
 `suggested_next_actions` / `suggested_next_calls` in order; ready and stale rows
