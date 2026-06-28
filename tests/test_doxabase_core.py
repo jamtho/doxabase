@@ -13144,8 +13144,24 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     assert pending_candidate["storage_access_iri"] == storage.iri
     assert pending_candidate["candidate_status"] == "already_pending"
     assert pending_candidate["pending_staged_repair_iris"] == [staged.revision_iri]
+    assert pending_repair_hint["already_pending_candidate_count"] == 1
+    assert pending_repair_hint["already_pending_storage_access_iris"] == [
+        storage.iri
+    ]
+    assert pending_repair_hint["pending_staged_repair_iris"] == [
+        staged.revision_iri
+    ]
     pending_repair_group = pending_context.suggested_repair_action_groups[0]
     assert pending_repair_group.choice_mode == "choose_one"
+    assert pending_repair_group.repair_context[
+        "already_pending_candidate_count"
+    ] == 1
+    assert pending_repair_group.repair_context[
+        "already_pending_storage_access_iris"
+    ] == [storage.iri]
+    assert pending_repair_group.repair_context["pending_staged_repair_iris"] == [
+        staged.revision_iri
+    ]
     assert pending_repair_group.action_status_counts == {
         "pending_review": 1,
         "already_pending": 1,
@@ -13163,6 +13179,10 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     pending_link_action = pending_action_by_type["stage_existing_storage_access_link"]
     assert pending_link_action["action_status"] == "already_pending"
     assert pending_link_action["skip_when_already_pending"] is True
+    assert pending_link_action["already_pending_candidate_count"] == 1
+    assert pending_link_action["already_pending_storage_access_iris"] == [
+        storage.iri
+    ]
     assert pending_link_action["pending_staged_repair_iris"] == [
         staged.revision_iri
     ]
@@ -13328,6 +13348,60 @@ def test_missing_storage_access_downweights_generic_token_candidates(
     assert "linked_to_other_dataset" in linked_candidate["match_reasons"]
     assert linked_candidate["linked_dataset_iris"] == [
         "https://example.test/project#GenericTrialSnapshotArchive"
+    ]
+
+    link_action = next(
+        action
+        for action in missing_storage.details["repair_hint"]["actions"]
+        if action["action_type"] == "stage_existing_storage_access_link"
+    )
+    arguments = dict(link_action["arguments_template"])
+    arguments["object"] = intended_storage.iri
+    arguments["rationale"] = "Reviewed the Alpha storage candidate."
+    staged = db.stage_map_assertion_change(**arguments)
+
+    pending_context = db.describe_query_context(target)
+    pending_missing_storage = next(
+        issue
+        for issue in pending_context.issues
+        if issue.code == "missing_storage_access"
+    )
+    assert pending_missing_storage.details is not None
+    pending_repair_hint = pending_missing_storage.details["repair_hint"]
+    assert pending_repair_hint["already_pending_candidate_count"] == 1
+    assert pending_repair_hint["already_pending_storage_access_iris"] == [
+        intended_storage.iri
+    ]
+    assert pending_repair_hint["pending_staged_repair_iris"] == [
+        staged.revision_iri
+    ]
+    pending_repair_group = pending_context.suggested_repair_action_groups[0]
+    assert pending_repair_group.action_status_counts == {"pending_review": 2}
+    assert pending_repair_group.pending_action_count == 2
+    assert pending_repair_group.skippable_action_count == 0
+    assert pending_repair_group.repair_context[
+        "already_pending_candidate_count"
+    ] == 1
+    assert pending_repair_group.repair_context[
+        "already_pending_storage_access_iris"
+    ] == [intended_storage.iri]
+    assert pending_repair_group.repair_context["pending_staged_repair_iris"] == [
+        staged.revision_iri
+    ]
+    pending_options_by_type = {
+        option["action_type"]: option
+        for option in pending_repair_group.pending_action_options
+    }
+    pending_link_option = pending_options_by_type[
+        "stage_existing_storage_access_link"
+    ]
+    assert pending_link_option["action_status"] == "pending_review"
+    assert pending_link_option["already_pending_candidate_count"] == 1
+    assert pending_link_option["already_pending_storage_access_iris"] == [
+        intended_storage.iri
+    ]
+    assert pending_link_option["pending_staged_repair_iris"] == [
+        staged.revision_iri
     ]
 
 

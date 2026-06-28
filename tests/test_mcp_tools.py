@@ -4731,6 +4731,34 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         "<reviewed existing storage access IRI>"
     )
 
+    link_arguments = dict(link_action["arguments_template"])
+    link_arguments["object"] = storage["iri"]
+    link_arguments["rationale"] = "Reviewed the existing Messages storage route."
+    staged = stage_map_assertion_change_tool(db, **link_arguments)
+
+    pending_result = describe_query_context_tool(db, iri=dataset)
+    pending_group = pending_result["suggested_repair_action_groups"][0]
+    assert pending_group["repair_context"]["already_pending_candidate_count"] == 1
+    assert pending_group["repair_context"][
+        "already_pending_storage_access_iris"
+    ] == [storage["iri"]]
+    assert pending_group["repair_context"]["pending_staged_repair_iris"] == [
+        staged["revision_iri"]
+    ]
+    pending_action_by_type = {
+        action["action_type"]: action for action in pending_group["actions"]
+    }
+    pending_link_action = pending_action_by_type[
+        "stage_existing_storage_access_link"
+    ]
+    assert pending_link_action["already_pending_candidate_count"] == 1
+    assert pending_link_action["already_pending_storage_access_iris"] == [
+        storage["iri"]
+    ]
+    assert pending_link_action["pending_staged_repair_iris"] == [
+        staged["revision_iri"]
+    ]
+
 
 def test_describe_query_context_tool_surfaces_root_only_targets(
     tmp_path: Path,

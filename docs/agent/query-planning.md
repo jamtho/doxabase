@@ -140,11 +140,15 @@ Start with `describe_query_context(dataset_iri)`:
    `candidate_existing_storage_accesses` when current map storage accesses exist;
    use those ranked candidates for review only. A candidate can carry
    `pending_staged_repair_iris` and `candidate_status="already_pending"` when
-   the exact dataset/storage link is already staged. Candidate ranking now includes
-   exact path-template matches, dataset-token overlap with labels/IRIs/locations,
-   weaker separately reported generic-token overlap, and a linked-dataset
-   caution when an access is already attached elsewhere. Do not auto-link the
-   first candidate just because it is listed; fill
+   the exact dataset/storage link is already staged. When any visible candidate
+   is already pending, the repair hint and lifted repair group also expose
+   `already_pending_candidate_count`, `already_pending_storage_access_iris`, and
+   `pending_staged_repair_iris`; review those staged rows before choosing the
+   same candidate again. Candidate ranking now includes exact path-template
+   matches, dataset-token overlap with labels/IRIs/locations, weaker separately
+   reported generic-token overlap, and a linked-dataset caution when an access
+   is already attached elsewhere. Do not auto-link the first candidate just
+   because it is listed; fill
    the staged link's `object` with the chosen reviewed access IRI. When recording
    a new storage access, omit the
    optional storage-owned `path_templates` field if the dataset
@@ -181,6 +185,11 @@ Start with `describe_query_context(dataset_iri)`:
    `suggested_next_actions`: fill placeholders, add required fields such as
    `rationale`, skip actions marked `already_satisfied` or `already_pending`,
    and check each `condition` before calling the named tool.
+   In multiple-candidate missing-storage groups, the group-level
+   `stage_existing_storage_access_link` action may still be pending because a
+   different non-pending candidate could be chosen after review; use the
+   pending-candidate summary fields on its compact action option to avoid
+   staging a duplicate link to a candidate that is already pending.
    If `project_brief.recommended_next_tasks[]` reports
    `pending_staged_repair_iris` for a query repair task, review the corresponding
    `staged_frontier_review` / `staged_review` item before staging another

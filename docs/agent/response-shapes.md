@@ -2163,6 +2163,12 @@ arguments, placeholder fields, and reviewed value fields so scripts can choose a
 branch without parsing every full action template. Actions marked
 `action_status="already_pending"` with `skip_when_already_pending=true` are
 skippable too. These summaries do not remove the review requirement.
+When a missing-storage group has visible storage candidates that are already
+pending, `repair_context.already_pending_candidate_count`,
+`repair_context.already_pending_storage_access_iris`, and
+`repair_context.pending_staged_repair_iris` summarize them. The compact
+`stage_existing_storage_access_link` pending option repeats those fields when it
+remains pending because other candidate choices are still available.
 
 Read `query.query_target_decision` before choosing from
 `query_target_candidates`. It is a derived handoff hint, not a new graph fact.
@@ -2398,6 +2404,9 @@ repair_hint.candidate_existing_storage_access_total_count
 repair_hint.candidate_existing_storage_accesses_truncated
 repair_hint.candidate_existing_storage_accesses[].candidate_status
 repair_hint.candidate_existing_storage_accesses[].pending_staged_repair_iris
+repair_hint.already_pending_candidate_count
+repair_hint.already_pending_storage_access_iris
+repair_hint.pending_staged_repair_iris
 repair_hint.source
 repair_hint.target
 repair_hint.candidate_relation_identifier

@@ -2216,6 +2216,13 @@ few useful gaps:
   `pending_staged_repair_iris`, and the staged existing-link action is marked
   `already_pending` when every visible reviewed candidate already has a current
   staged link.
+- A follow-up active query-repair trial showed the multiple-candidate case needs
+  a softer signal: the group-level existing-link action should remain pending
+  while non-pending alternatives exist, but scripts need to see which candidates
+  already have staged links. Missing-storage repair hints now expose
+  `already_pending_candidate_count`, `already_pending_storage_access_iris`, and
+  `pending_staged_repair_iris` on the repair context and compact
+  stage-existing-link option.
 - A profile/query-blocker handoff trial confirmed the intended route:
   `missing_storage_access` keeps DailyIndex profile review on query-context
   repair first; after storage repair, profile tasks point to

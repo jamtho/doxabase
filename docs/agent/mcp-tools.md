@@ -682,8 +682,12 @@ the repair hint carries `choice_mode="choose_one"` plus
 available for review. A candidate can carry
 `pending_staged_repair_iris` and `candidate_status="already_pending"` when a
 current staged `rc:hasStorageAccess` add already proposes that exact
-dataset/storage link; review the staged row before staging a duplicate. For the
-record-new-storage action,
+dataset/storage link; review the staged row before staging a duplicate. When
+some visible candidates are already pending, the repair context and compact
+stage-existing-link option expose `already_pending_candidate_count`,
+`already_pending_storage_access_iris`, and `pending_staged_repair_iris`; the
+link action can still be pending if other non-pending candidates remain
+available for review. For the record-new-storage action,
 include the optional `path_templates` field only when the storage access itself
 owns the path or database relation template. Omit it when a dataset or partition
 already carries the reviewed file/object path template, or you can create

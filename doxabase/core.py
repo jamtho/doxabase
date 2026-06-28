@@ -13072,6 +13072,20 @@ class DoxaBase:
                         str(field) for field in reviewed_value_fields
                     ],
                 }
+                for key in (
+                    "pending_staged_repair_iris",
+                    "already_pending_storage_access_iris",
+                ):
+                    values = action.get(key)
+                    if isinstance(values, list):
+                        action_option[key] = [str(value) for value in values]
+                pending_candidate_count = action.get(
+                    "already_pending_candidate_count"
+                )
+                if isinstance(pending_candidate_count, int):
+                    action_option["already_pending_candidate_count"] = (
+                        pending_candidate_count
+                    )
 
             action_status_counts[status] = action_status_counts.get(status, 0) + 1
             if status == "already_satisfied":
@@ -17134,7 +17148,27 @@ class DoxaBase:
                 for staged_iri in candidate.get("pending_staged_repair_iris", [])
             )
         )
-        if (
+        pending_candidate_storage_access_iris = [
+            str(candidate["storage_access_iri"])
+            for candidate in candidate_existing_storage_accesses
+            if candidate.get("pending_staged_repair_iris")
+            and candidate.get("storage_access_iri") is not None
+        ]
+        if pending_candidate_repair_iris:
+            link_action = actions[1]
+            link_action["already_pending_candidate_count"] = len(
+                pending_candidate_storage_access_iris
+            )
+            link_action["already_pending_storage_access_iris"] = (
+                pending_candidate_storage_access_iris
+            )
+            link_action["pending_staged_repair_iris"] = pending_candidate_repair_iris
+            link_action["condition"] = (
+                "Do not stage another link for candidates whose "
+                "candidate_status is already_pending; review the staged row "
+                "first. Choose only a non-pending candidate after review."
+            )
+        all_visible_candidates_pending = (
             candidate_existing_storage_accesses
             and candidate_existing_storage_access_total
             == len(candidate_existing_storage_accesses)
@@ -17142,11 +17176,11 @@ class DoxaBase:
                 candidate.get("pending_staged_repair_iris")
                 for candidate in candidate_existing_storage_accesses
             )
-        ):
+        )
+        if all_visible_candidates_pending:
             link_action = actions[1]
             link_action["action_status"] = "already_pending"
             link_action["skip_when_already_pending"] = True
-            link_action["pending_staged_repair_iris"] = pending_candidate_repair_iris
             link_action["reason"] = (
                 "Skip while current staged work already proposes linking this "
                 "dataset to each visible reviewed existing storage access."
@@ -17179,6 +17213,16 @@ class DoxaBase:
                 "actions": actions,
             },
         }
+        if pending_candidate_repair_iris:
+            details["repair_hint"]["already_pending_candidate_count"] = len(
+                pending_candidate_storage_access_iris
+            )
+            details["repair_hint"]["already_pending_storage_access_iris"] = (
+                pending_candidate_storage_access_iris
+            )
+            details["repair_hint"]["pending_staged_repair_iris"] = (
+                pending_candidate_repair_iris
+            )
         fixture_hint = self._known_fixture_missing_storage_access_hint(
             dataset_resource,
             storage_access_count=storage_access_count,
