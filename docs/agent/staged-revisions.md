@@ -161,7 +161,9 @@ recommendations before the technical tables. Its summary table then includes
 the current apply status and decision, plus current and staged-time validation
 state for each staged revision. When competing alternatives are bundled
 together, the decision matrix warns reviewers to apply at most one before
-regenerating or rechecking the bundle. When the bundle contains restaged
+regenerating or rechecking the bundle and labels every row in the included
+alternative group as a choose-one candidate, including the source row another
+alternative points to. When the bundle contains restaged
 revisions, a `Restage Context` section appears near the top before the detailed
 revision bodies. When an
 alternative points to a stale revision whose successor is also in play, an

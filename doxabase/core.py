@@ -34608,6 +34608,9 @@ class DoxaBase:
                 f"Rows {rows} are competing alternatives. Apply at most one "
                 "before regenerating or rechecking the bundle."
             )
+        alternative_row_indexes = {
+            row_index for group in alternative_groups for row_index in group
+        }
         if alternative_groups:
             lines.append("")
         lines.extend(
@@ -34632,10 +34635,20 @@ class DoxaBase:
                             description.summary or description.iri
                         ),
                         self._markdown_table_cell(
-                            self._staged_revisions_human_action(summary)
+                            self._staged_revisions_human_action(
+                                summary,
+                                included_alternative_row=(
+                                    index in alternative_row_indexes
+                                ),
+                            )
                         ),
                         self._markdown_table_cell(
-                            self._staged_revisions_human_action_reason(summary)
+                            self._staged_revisions_human_action_reason(
+                                summary,
+                                included_alternative_row=(
+                                    index in alternative_row_indexes
+                                ),
+                            )
                         ),
                         self._markdown_table_cell(
                             summary.review_recommendation or "(none)"
@@ -34676,6 +34689,8 @@ class DoxaBase:
     @staticmethod
     def _staged_revisions_human_action(
         summary: StagedGraphRevisionExportSummary,
+        *,
+        included_alternative_row: bool = False,
     ) -> str:
         if summary.next_action is not None and summary.next_action.queue == (
             "repair_or_replace"
@@ -34700,7 +34715,8 @@ class DoxaBase:
         if summary.stale_resolution_state in {"noop", "restaged_successor_noop"}:
             return "Review no-op"
         if (
-            summary.alternative_gate.semantic_review_required
+            included_alternative_row
+            or summary.alternative_gate.semantic_review_required
             or summary.current_alternative_to is not None
             or summary.alternative_to is not None
         ):
@@ -34714,6 +34730,8 @@ class DoxaBase:
     @staticmethod
     def _staged_revisions_human_action_reason(
         summary: StagedGraphRevisionExportSummary,
+        *,
+        included_alternative_row: bool = False,
     ) -> str:
         diagnostic = summary.validation_diagnostic_headline.strip()
         if diagnostic and diagnostic != "none":
@@ -34724,6 +34742,8 @@ class DoxaBase:
             or summary.alternative_to is not None
         ):
             return summary.alternative_gate.note or "Competing alternative in this bundle."
+        if included_alternative_row:
+            return "Competing alternative in this bundle."
         if summary.apply_summary:
             return summary.apply_summary
         return summary.summary_recommendation

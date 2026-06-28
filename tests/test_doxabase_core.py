@@ -10878,7 +10878,15 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         "| Row | Candidate | Suggested human action | Why | "
         "Authored recommendation |"
     ) in exported
-    assert "Choose only if this alternative is preferred" in exported
+    decision_matrix = exported.split(
+        "## Reviewer Decision Matrix",
+        1,
+    )[1].split("## Summary", 1)[0]
+    assert (
+        decision_matrix.count("Choose only if this alternative is preferred")
+        == 2
+    )
+    assert "Apply after semantic review" not in decision_matrix
     assert "## Summary" in exported
     assert "Apply status" in exported
     assert "Current validation" in exported
