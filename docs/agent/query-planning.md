@@ -37,9 +37,10 @@ Start with `describe_query_context(dataset_iri)`:
    count-ranked; ties prefer evidence whose dataset-profile `row_count` matches
    `row_count_snapshot`, then fall back to evidence IRI order. In mixed profile
    history, still inspect the candidate run before treating the profile-derived
-   count as current, and read `row_count_snapshot_basis` /
-   `dataset_profile_row_count_bases` to distinguish full-scan, sampled, and
-   unknown-scope count support.
+   count as current, and read
+   `profile_summary.profile_run_candidates[].row_count_snapshot_basis` with
+   each candidate's `dataset_profile_row_count_bases` to distinguish full-scan,
+   sampled, and unknown-scope count support.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
 5. Always compare `readiness` and `issues` with the selected candidate. Broader

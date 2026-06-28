@@ -9288,6 +9288,9 @@ class DoxaBase:
 
         suggested_next_actions = self._profile_update_staging_actions(
             staged_revision,
+            items=items,
+            dataset_iri=draft.dataset.iri,
+            evidence_iri=draft.evidence_iri,
         )
         metric_advisory_suggested_next_actions = (
             self._profile_metric_advisory_suggested_actions(
@@ -9355,11 +9358,16 @@ class DoxaBase:
     def _profile_update_staging_actions(
         self,
         staged_revision: StagedGraphRevisionRecord | None,
+        *,
+        items: list[ProfileMapUpdateStagingItem],
+        dataset_iri: str,
+        evidence_iri: str,
     ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
         if staged_revision is None:
-            return []
+            return actions
         arguments = {"iri": staged_revision.revision_iri}
-        return [
+        actions.append(
             SuggestedNextAction(
                 action_label="Check staged profile map updates",
                 tool_name="check_staged_revision_apply",
@@ -9374,7 +9382,35 @@ class DoxaBase:
                     arguments,
                 ),
             )
-        ]
+        )
+        if any(
+            item.status == "staged" and item.kind == "unmapped_profiled_column"
+            for item in items
+        ):
+            rerun_arguments = {
+                "dataset_iri": dataset_iri,
+                "evidence_iri": evidence_iri,
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Rerun profile map update draft",
+                    tool_name="draft_profile_map_updates",
+                    mcp_tool_name="doxabase.draft_profile_map_updates",
+                    arguments=rerun_arguments,
+                    reason=(
+                        "After reviewing and applying the staged unmapped "
+                        "column shell(s), rerun the profile map-update draft "
+                        "for the same dataset and evidence so type advisories "
+                        "and follow-up map recommendations can reclassify "
+                        "against map-present columns."
+                    ),
+                    call=self._suggested_call_string(
+                        "draft_profile_map_updates",
+                        rerun_arguments,
+                    ),
+                )
+            )
+        return actions
 
     def _profile_map_update_draft_profile_map_actions(
         self,

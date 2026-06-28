@@ -65,6 +65,5 @@ relationship, project vocabulary term, shape, or map assertion. If the exact
 graph move is not yet clear, keep the synthesis in `patterns` and stage several
 candidate framings instead of forcing one current-best fact.
 
-For exact response fields, read `response_shapes` section "Systematisation
-Drafts". For staged revision apply/restage/rebase behaviour, read
-`staged_revisions`.
+For exact response fields, read `response_shapes` section "Staged Revisions".
+For staged revision apply/restage/rebase behaviour, read `staged_revisions`.

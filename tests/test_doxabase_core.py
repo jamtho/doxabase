@@ -21296,7 +21296,8 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.staged_revision.validation_conforms is True
     assert staged.staged_revision.changed_graphs == ["map"]
     assert [action.tool_name for action in staged.suggested_next_actions] == [
-        "check_staged_revision_apply"
+        "check_staged_revision_apply",
+        "draft_profile_map_updates",
     ]
     assert staged.suggested_next_actions[0].arguments == {
         "iri": staged.staged_revision.revision_iri
@@ -21304,8 +21305,19 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.suggested_next_actions[0].mcp_tool_name == (
         "doxabase.check_staged_revision_apply"
     )
+    assert staged.suggested_next_actions[1].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+    }
+    assert staged.suggested_next_actions[1].mcp_tool_name == (
+        "doxabase.draft_profile_map_updates"
+    )
     assert staged.suggested_next_calls == [
-        f"check_staged_revision_apply(iri={staged.staged_revision.revision_iri!r})"
+        f"check_staged_revision_apply(iri={staged.staged_revision.revision_iri!r})",
+        (
+            "draft_profile_map_updates("
+            f"dataset_iri={dataset!r}, evidence_iri={evidence!r})"
+        ),
     ]
     assert [patch.target_graph for patch in staged.staged_revision.patches] == [
         "map",
@@ -21501,6 +21513,19 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
         "skipped": 0,
         "not_selected": 3,
     }
+    assert [
+        action.tool_name for action in staged_updates.suggested_next_actions
+    ] == [
+        "check_staged_revision_apply",
+        "draft_profile_map_updates",
+    ]
+    assert staged_updates.suggested_next_actions[1].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": full_evidence,
+    }
+    assert "After reviewing and applying" in (
+        staged_updates.suggested_next_actions[1].reason
+    )
     assert staged_updates.staged_revision is not None
     assert db.check_staged_revision_apply(
         staged_updates.staged_revision.revision_iri

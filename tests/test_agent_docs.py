@@ -102,6 +102,16 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     )
     assert "draft.repair_candidates" in str(rebase_response_doc["content"])
 
+    staged_response_doc = get_agent_doc(
+        "response_shapes",
+        section="Staged Revisions",
+        max_chars=4_000,
+    )
+    assert staged_response_doc["selected_section"]["heading"] == (
+        "Staged Revisions"
+    )
+    assert "systematisation_draft" in str(staged_response_doc["content"])
+
     query_context_doc = get_agent_doc(
         "response_shapes",
         section="Query Context",
@@ -149,3 +159,5 @@ def test_systematisation_doc_names_core_workflow_tools() -> None:
     assert "alternative_to" in content
     assert "next_action_queue" in content
     assert "shared_semantic_context_applies_to_all_framings" in content
+    assert 'response_shapes` section "Staged Revisions"' in content
+    assert "Systematisation Drafts" not in content

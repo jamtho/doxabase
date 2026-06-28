@@ -315,8 +315,9 @@ When `row_count_snapshot` or profile metrics matter to the query handoff,
 `profile_summary.profile_run_candidates` gives the evidence IRIs to inspect with
 `describe_profile_run()` without first switching to `describe_dataset()`.
 Candidate rows expose `dataset_profile_row_count_bases` and
-`row_count_snapshot_basis`, so a count that matches the map snapshot can still
-be recognized as full-scan, sampled, or unknown-scope support.
+`row_count_snapshot_basis` under `profile_summary.profile_run_candidates[]`, so
+a count that matches the map snapshot can still be recognized as full-scan,
+sampled, or unknown-scope support.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
 when candidate order selected a different route than intended. These indexes

@@ -1787,6 +1787,15 @@ few useful gaps:
   profiling and query-planning docs should spell out bundled column-profile
   `physical_type` / `value_type` fields and link missing-storage repair back to
   the executable-catalog recipe.
+- A mini-project/product-gap wave found the main profile friction was after
+  staging unmapped column shells: the review note told agents to rerun
+  `draft_profile_map_updates`, but the response lacked a structured action.
+  `stage_profile_map_updates()` now appends that rerun action after the staged
+  revision apply-check action when a staged item is an
+  `unmapped_profiled_column`. The same wave found two doc-only issues:
+  systematisation docs pointed at a non-addressable response-shapes section,
+  and query-planning docs implied `row_count_snapshot_basis` was top-level
+  instead of under `profile_summary.profile_run_candidates[]`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -1415,7 +1415,10 @@ When at least one accepted recommendation passes safety checks,
 `result.staged_revision` is a normal `StagedGraphRevisionRecord` for one grouped
 `map` revision. `suggested_next_actions` then points to
 `check_staged_revision_apply` for that staged revision; run the read-only check
-before reviewing, exporting, or applying. Each item echoes the profile
+before reviewing, exporting, or applying. When the staged patch added an
+unmapped column shell, `suggested_next_actions` also includes a
+`draft_profile_map_updates` rerun for the same dataset/evidence; follow it
+after the staged shell has been reviewed and applied. Each item echoes the profile
 observation IRIs that support that recommendation, including duplicate sibling
 observations when the row belongs to a duplicate group; accepted staged rows
 feed those lists into the grouped revision support. Use
@@ -1451,9 +1454,9 @@ after reviewing the map update. These grouped actions carry the same
 is not part of the grouped map patch and is not a replacement for the staged
 revision apply check. If the staged map patch added an unmapped column shell and
 the review note mentions `type_finding_unmapped_column`, apply the shell after
-review, then rerun `draft_profile_map_updates` for the same dataset/evidence so
-the type advisories can reclassify against a map-present column and expose
-focused `stage_map_assertion_change` actions.
+review, then use the structured `draft_profile_map_updates` rerun action so the
+type advisories can reclassify against a map-present column and expose focused
+`stage_map_assertion_change` actions.
 When no accepted recommendation produces a staged patch,
 `result.staged_revision is None` and `suggested_next_actions` is empty.
 An accepted recommendation index can therefore appear under either `staged` or
@@ -1663,7 +1666,8 @@ When candidates exist, `suggested_next_actions` includes a
 `describe_profile_run` action first; a draft-plan action follows when a query
 target candidate is available. In mixed profile history, match the
 dataset-profile `row_count` in candidate runs to `row_count_snapshot` before
-relying on a profile-derived count, and check `row_count_snapshot_basis` before
+relying on a profile-derived count, and check
+`profile_summary.profile_run_candidates[].row_count_snapshot_basis` before
 treating the matching count as full-scan evidence.
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,

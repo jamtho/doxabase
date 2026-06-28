@@ -112,7 +112,10 @@ context slices, `record_pattern`, related column shells, or focused
 After applying unmapped column shells, rerun `draft_profile_map_updates` for the
 same dataset and evidence. Newly map-present columns can expose ordinary
 profile recommendations, such as nullability, that should go through
-`profile_map_updates` before you treat the run as advisory-only.
+`profile_map_updates` before you treat the run as advisory-only. When
+`stage_profile_map_updates` staged an unmapped column shell, its
+`suggested_next_actions` includes this `draft_profile_map_updates` rerun after
+the staged revision apply-check action.
 
 For exact response fields, read `response_shapes` sections "Profile Helper
 Records", "Describe Profile Run", and "Profile Map Update Drafts". For broader

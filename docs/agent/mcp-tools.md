@@ -459,9 +459,10 @@ support.
 When accepted recommendations stage unmapped column shells and current type
 advisories are still `type_finding_unmapped_column`, the returned and stored
 review note tells agents to apply the shell after review and rerun
-`draft_profile_map_updates` for the same dataset/evidence. That rerun is what
-turns related type advisories into map-present `rc:physicalType` /
-`rc:valueType` assertion actions.
+`draft_profile_map_updates` for the same dataset/evidence; the returned
+`suggested_next_actions` includes that structured rerun action after the staged
+revision apply-check action. That rerun is what turns related type advisories
+into map-present `rc:physicalType` / `rc:valueType` assertion actions.
 
 ### doxabase.describe_query_context
 
@@ -482,8 +483,9 @@ When profile run candidates exist, `suggested_next_actions` includes
 candidate is available. In mixed profile history, match the dataset-profile
 `row_count` in candidate runs to `row_count_snapshot` before relying on a
 profile-derived count. Also read `row_count_snapshot_basis` and
-`dataset_profile_row_count_bases`; a matching row count can still come from
-sampled or unknown-scope profile evidence.
+`dataset_profile_row_count_bases` on
+`profile_summary.profile_run_candidates[]`; a matching row count can still come
+from sampled or unknown-scope profile evidence.
 It also returns `ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
 `direct_clean_candidate_indexes`, and
 `unselected_direct_clean_candidate_indexes` so callers can see peer strict-ready

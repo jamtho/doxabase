@@ -138,7 +138,9 @@ After applying unmapped column shells, rerun
 `draft_profile_map_updates(dataset_iri, evidence_iri)` before treating the
 profile pass as advisory-only. The newly map-present column may surface ordinary
 map recommendations, such as nullability, that should go through
-`profile_map_updates` first.
+`profile_map_updates` first. When `stage_profile_map_updates` staged the shell,
+its `suggested_next_actions` includes this rerun after the staged revision
+apply-check action.
 An accepted index is still routed through guardrails: it may be `staged` or
 `skipped`, while `not_selected` means the draft row was not accepted for that
 call. Accepted sampled row counts can be skipped by default, and accepted
