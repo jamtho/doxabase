@@ -250,7 +250,9 @@ path composition warnings are only guaranteed in `describe_query_context().issue
 and `query_target_candidates[].review_reasons`. These warnings carry
 `domain="query_planning"` so their severity is not confused with profile
 recording or graph validation status. Query-context `analysis_warnings` carry
-`domain="analysis"`.
+`domain="analysis"` and, for caveat warnings, preserve the original caveat
+severity in `details.caveat_severity_iri` /
+`details.caveat_severity_label`.
 `linked_pattern_reasons` explains whether a pattern matched through a direct
 target, map implication, supporting claim, or supporting observation. Each
 reason uses `iri` for the pattern IRI and also exposes the same value as
@@ -968,7 +970,9 @@ fields. Use it when a queued stale source redirects to a refreshed successor or
 applied event, or when an `apply_after_review` row still requires semantic
 review. The `next_action_queue_item_counts` and
 `semantic_review_required_queue_counts` dictionaries are scoped to the same
-returned page as `next_action_queue`.
+returned page as `next_action_queue`. `count` and `total_count` are the
+filtered total before pagination, while `returned_count` is the returned page
+length; prefer the explicit alias fields in generic pagination scripts.
 Most count/digest-drift conflicts stay in `restage_after_review`, but stale
 single-assertion adds or authored replacements for curated singleton slots with
 exact same-slot drift route to `repair_or_replace` and include a
@@ -1019,7 +1023,9 @@ matched the resource. It filters before pagination and wraps each normal
 `patch_mentions`, `applied_source_revision_iri`, and
 `applied_source_patch_mentions`. Patch mentions are compact role-aware flags,
 not patch content; call `describe_staged_revision()` for the full payload.
-The top-level collection is `revisions` and the total is `count`.
+The top-level collection is `revisions`; `count` and `total_count` are the
+filtered total before pagination, and `returned_count` is the returned page
+length.
 Use `current_staged_work_only=True` for the resource-scoped live
 mutation-review queue. It filters before pagination and computes apply checks
 automatically, like the graph-level filter. Do not use

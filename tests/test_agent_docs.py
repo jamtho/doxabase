@@ -82,6 +82,16 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     )
     assert "non_executed_review_draft" in str(rebase_mcp_doc["content"])
 
+    profile_run_mcp_doc = get_agent_doc(
+        "mcp_tools",
+        section="doxabase.describe_profile_run",
+        max_chars=2_000,
+    )
+    assert profile_run_mcp_doc["selected_section"]["heading"] == (
+        "doxabase.describe_profile_run"
+    )
+    assert "profile_run_candidates" in str(profile_run_mcp_doc["content"])
+
     response_doc = get_agent_doc(
         "response_shapes",
         section="Profile Map Update Drafts",
@@ -101,6 +111,18 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
         "Staged Revision Rebase Draft"
     )
     assert "draft.repair_candidates" in str(rebase_response_doc["content"])
+
+    profile_run_response_doc = get_agent_doc(
+        "response_shapes",
+        section="Describe Profile Run",
+        max_chars=3_000,
+    )
+    assert profile_run_response_doc["selected_section"]["heading"] == (
+        "Describe Profile Run"
+    )
+    assert "profile_run.returned_profile_count" in str(
+        profile_run_response_doc["content"]
+    )
 
     staged_response_doc = get_agent_doc(
         "response_shapes",

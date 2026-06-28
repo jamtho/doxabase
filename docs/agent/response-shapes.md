@@ -977,6 +977,8 @@ compact reading cue for profile-only handoffs: profile lore is observed
 evidence, while storage/path/layout warnings remain physical query-planning
 metadata gaps.
 
+### Describe Profile Run
+
 `db.describe_profile_run(dataset_iri, evidence_iri, limit=None)` returns a
 `ProfileRunDescription`:
 
@@ -1686,6 +1688,22 @@ metadata exists but no explicit verification status has been recorded.
 `query.analysis_warnings` returns caveat-shaped interpretation warnings that
 matter after a query can be planned, such as deduplication, mixed payload
 coercion, or JSON parsing caveats. These warnings do not change `readiness`.
+For caveat warnings, `warning.details` preserves the original caveat metadata:
+
+```python
+warning.details.scope
+warning.details.caveat_iri
+warning.details.caveat_label
+warning.details.caveat_description
+warning.details.caveat_impact
+warning.details.caveat_severity_iri
+warning.details.caveat_severity_label
+```
+
+Use these detail fields, especially `caveat_severity_iri`, when deciding
+whether an otherwise plan-ready query should pause for semantic review. The
+warning's own `severity` is still the query-planning issue level, not a full
+copy of the caveat severity taxonomy.
 
 `query.suggested_repair_action_groups` is a read-only top-level lane over
 existing `issues[].details.repair_hint.actions[]`. It is meant for automation
@@ -2464,6 +2482,8 @@ patch.after_triple_count
 ```python
 revisions.revisions
 revisions.count
+revisions.returned_count
+revisions.total_count
 revisions.limit
 revisions.offset
 revisions.revision_type
@@ -2546,9 +2566,13 @@ counts queued rows whose alternative gate still requires semantic review.
 It is a routing surface, not a preference order for competing alternatives; use
 row details such as `review_recommendation`, `alternative_to`, and
 `current_alternative_to` when comparing alternative framings.
+`count` and `total_count` are the filtered total before pagination;
+`returned_count` is `len(revisions)` for the current page. Prefer
+`returned_count` / `total_count` in generic pagination scripts and keep `count`
+for compatibility with older DoxaBase-aware callers.
 The `returned_*_counts` dictionaries summarize the returned page, matching
-`next_action_queue`; raise `limit` or paginate when `count > len(revisions)` and
-you need whole-result counts. Full pages can include handled historical rows
+`next_action_queue`; raise `limit` or paginate when
+`total_count > returned_count` and you need whole-result counts. Full pages can include handled historical rows
 such as stale originals with `application_status="conflict"`.
 `returned_current_staged_work_application_status_counts` is the same returned
 page narrowed to rows where `is_current_staged_work=True`, which is useful when a
@@ -2713,6 +2737,8 @@ include_apply_checks=True)` returns `ResourceRevisionList`:
 resource_revisions.resource
 resource_revisions.revisions
 resource_revisions.count
+resource_revisions.returned_count
+resource_revisions.total_count
 resource_revisions.limit
 resource_revisions.offset
 resource_revisions.current_staged_work_only
@@ -2723,9 +2749,9 @@ resource_revisions.drift_detail
 resource_revisions.next_action_queue
 ```
 
-The row collection is `revisions`, not `items`, and the top-level total is
-`count`, not `total_count`. Each row then wraps the normal revision-list row
-under `revision`.
+The row collection is `revisions`, not `items`. `count` and `total_count` are
+the filtered total before pagination; `returned_count` is the returned page
+length. Each row then wraps the normal revision-list row under `revision`.
 Use `current_staged_work_only=True` when the resource route should return only
 live staged work before pagination. The filter auto-enables apply checks and
 still depends on `include_patch_mentions=True` to discover unanchored patch-only

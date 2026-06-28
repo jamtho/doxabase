@@ -1030,6 +1030,8 @@ class GraphRevisionListItem:
 class GraphRevisionList:
     revisions: list[GraphRevisionListItem]
     count: int
+    returned_count: int
+    total_count: int
     limit: int
     offset: int
     revision_type: str | None
@@ -1126,6 +1128,8 @@ class ResourceRevisionList:
     resource: ResourceSummary
     revisions: list[ResourceRevisionListItem]
     count: int
+    returned_count: int
+    total_count: int
     limit: int
     offset: int
     current_staged_work_only: bool
@@ -4248,6 +4252,8 @@ class DoxaBase:
         return GraphRevisionList(
             revisions=sliced_items,
             count=len(items),
+            returned_count=len(sliced_items),
+            total_count=len(items),
             limit=limit,
             offset=offset,
             revision_type=revision_type_filter,
@@ -5038,6 +5044,8 @@ class DoxaBase:
             resource=self._resource_summary(lookup_graphs, resource_value),
             revisions=sliced,
             count=len(matched),
+            returned_count=len(sliced),
+            total_count=len(matched),
             limit=limit,
             offset=offset,
             current_staged_work_only=current_staged_work_only,
@@ -14015,6 +14023,23 @@ class DoxaBase:
                         message=message,
                         domain="analysis",
                         resource=summary,
+                        details={
+                            "scope": scope,
+                            "caveat_iri": caveat.iri,
+                            "caveat_label": caveat.label,
+                            "caveat_description": caveat.description,
+                            "caveat_impact": caveat.impact,
+                            "caveat_severity_iri": (
+                                caveat.severity.iri
+                                if caveat.severity is not None
+                                else None
+                            ),
+                            "caveat_severity_label": (
+                                caveat.severity.label
+                                if caveat.severity is not None
+                                else None
+                            ),
+                        },
                     )
                 )
         severity_rank = {"warning": 0, "info": 1}

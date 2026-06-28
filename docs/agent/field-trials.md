@@ -1573,6 +1573,14 @@ few useful gaps:
   fresh fixture imports have the expected storage metadata. Keep the
   `graph_overview.key_counts` sanity check in the query-planning path, not only
   in cold-start/runtime gotchas.
+- Follow-up profile, revision, and query-context trials found three script-facing
+  polish gaps. Profile-run docs now have addressable `mcp_tools` and
+  `response_shapes` sections. Revision list payloads keep legacy `count` while
+  also exposing explicit `returned_count` and `total_count` aliases for generic
+  pagination scripts. Query analysis caveat warnings now preserve the original
+  caveat severity in `details.caveat_severity_iri` and
+  `details.caveat_severity_label`; route severe caveats as semantic review even
+  when the query target is mechanically plan-ready.
 - A grouped profile-advisory retest confirmed `source_profile_advisory` is
   sufficient for routing duplicate metric/type lanes. It also showed an
   authoring nuance: metric-vocabulary patterns that target the dataset can be

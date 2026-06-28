@@ -121,7 +121,9 @@ Lists `rc:GraphRevision` resources from `history`, newest first. Use
 `revision_type` such as `rc:StagedRevision` to narrow the list. Set
 `include_apply_checks=True` when you need staged proposal status without already
 knowing which proposals are ready, stale, or already applied. Apply checks are
-only populated for revisions with graph patch payloads. Rows include
+only populated for revisions with graph patch payloads. `total_count` aliases
+the legacy total `count`, and `returned_count` is the returned page length;
+prefer those explicit fields in generic pagination scripts. Rows include
 `record_kind`, `has_patch_payload`, `patch_count`, revision relation links,
 selected apply-check blockers/drift summaries, and review-first suggested next
 actions. Rows also include `snapshot_evidence` for the same history/snapshot-row
@@ -190,7 +192,8 @@ payloads, or an applied event whose staged source matched the resource. The
 response top-level collection is `revisions` with total `count`; each row wraps
 the normal revision list row under `revision` and adds
 `match_types`, `patch_mentions`, `applied_source_revision_iri`, and
-`applied_source_patch_mentions`. `patch_mention_scan` and per-row incomplete
+`applied_source_patch_mentions`. `total_count` aliases `count`, and
+`returned_count` is the returned page length. `patch_mention_scan` and per-row incomplete
 flags report missing or unparseable patch payloads; when
 `omitted_match_risk=true`, unanchored patch-only matches may be absent from the
 filtered list. Pass `current_staged_work_only=True` for the resource-scoped live
@@ -282,7 +285,9 @@ Info-level issues such as
 `verification_status_not_recorded` make missing verification status visible
 without changing query-planning readiness. Query-context `analysis_warnings`
 are separate caveat warnings for analytical interpretation after a query can be
-planned and carry `domain="analysis"`.
+planned and carry `domain="analysis"`. For caveat warnings, read
+`details.caveat_severity_iri` / `details.caveat_severity_label` before routing
+an executable handoff; `severity` remains the query-planning warning level.
 Within each linked-pattern reason, `iri` and `pattern_iri` both name the linked
 pattern. Scan `match_groups` first for relevance tiers, route labels, resource
 kinds, and supporting resources; use raw `matches` when every route matters.
@@ -293,7 +298,7 @@ strongest local relevance signals, while claim/observation-supported groups
 explain the surrounding lore. Call `doxabase.describe_pattern` before using a
 pattern as a decision rule.
 
-`doxabase.describe_profile_run`
+### doxabase.describe_profile_run
 
 Returns the profile observations for one dataset that link to one evidence IRI.
 Use it after `describe_dataset().profile_summary.profile_run_candidates` points

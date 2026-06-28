@@ -1235,6 +1235,8 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     )
 
     assert result["count"] == 1
+    assert result["returned_count"] == 1
+    assert result["total_count"] == 1
     assert result["include_apply_checks"] is True
     assert result["drift_detail"] == "summary"
     assert result["revision_type"] == "https://richcanopy.org/ns/rc#StagedRevision"
@@ -1300,6 +1302,8 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert ready_result["application_status"] == "ready"
     assert ready_result["returned_application_status_counts"] == {"ready": 1}
     assert ready_result["count"] == 1
+    assert ready_result["returned_count"] == 1
+    assert ready_result["total_count"] == 1
     assert ready_result["revisions"][0]["iri"] == staged["revision_iri"]
 
     staged_patch_result = list_graph_revisions_tool(
@@ -1312,6 +1316,8 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert staged_patch_result["current_staged_work_only"] is True
     assert staged_patch_result["include_apply_checks"] is True
     assert staged_patch_result["count"] == 1
+    assert staged_patch_result["returned_count"] == 1
+    assert staged_patch_result["total_count"] == 1
     assert staged_patch_result["revisions"][0]["iri"] == staged["revision_iri"]
 
     stored_conforms_result = list_graph_revisions_tool(
@@ -1323,6 +1329,8 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     assert stored_conforms_result["include_apply_checks"] is False
     assert stored_conforms_result["staged_validation_status"] == "conforms"
     assert stored_conforms_result["count"] == 1
+    assert stored_conforms_result["returned_count"] == 1
+    assert stored_conforms_result["total_count"] == 1
     assert stored_conforms_result["revisions"][0]["iri"] == staged["revision_iri"]
     assert (
         staged_patch_result["revisions"][0]["not_current_staged_work_reason"]
@@ -1359,6 +1367,8 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
     )
 
     assert mixed_page["count"] == 3
+    assert mixed_page["returned_count"] == 1
+    assert mixed_page["total_count"] == 3
     assert len(mixed_page["revisions"]) == 1
     assert mixed_page["revisions"][0]["iri"] == sibling["revision_iri"]
     assert mixed_page["returned_application_status_counts"] == {"conflict": 1}
@@ -1379,6 +1389,8 @@ def test_list_graph_revisions_tool_returns_json_like_payload(
         offset=1,
     )
     assert second_page["count"] == 3
+    assert second_page["returned_count"] == 1
+    assert second_page["total_count"] == 3
     assert second_page["revisions"][0]["iri"] == applied["applied_revision_iri"]
     assert second_page["returned_application_status_counts"] == {
         "applied_event": 1
@@ -1442,7 +1454,6 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
 
     assert result["resource"]["iri"] == orders
     assert "items" not in result
-    assert "total_count" not in result
     assert result["current_staged_work_only"] is False
     assert result["patch_mention_scan"] == {
         "status": "complete",
@@ -1451,6 +1462,8 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         "omitted_match_risk": False,
     }
     assert result["count"] == 2
+    assert result["returned_count"] == 2
+    assert result["total_count"] == 2
     assert len(result["revisions"]) == 2
     by_iri = {item["revision"]["iri"]: item for item in result["revisions"]}
     assert by_iri[staged["revision_iri"]]["match_types"] == ["patch_subject"]
@@ -1480,6 +1493,8 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert live_only["current_staged_work_only"] is True
     assert live_only["include_apply_checks"] is True
     assert live_only["count"] == 0
+    assert live_only["returned_count"] == 0
+    assert live_only["total_count"] == 0
     lineage = describe_resource_revision_lineage_tool(
         db,
         resource_iri=orders,

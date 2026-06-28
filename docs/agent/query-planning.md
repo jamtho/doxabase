@@ -49,6 +49,10 @@ Start with `describe_query_context(dataset_iri)`:
    for a direct-clean selected candidate.
    `query_target_decision.selected_candidate_direct_clean` is the compact
    boolean for "the selected candidate itself has no direct blocker."
+   `analysis_warnings` are separate caveat warnings for interpretation after a
+   plan is physically possible. For caveat warnings, read
+   `details.caveat_severity_iri`; pause or narrow scope on severe caveats even
+   when physical query planning is ready.
    When `missing_storage_access` appears, read its `details.repair_hint` before
    guessing at a path: either record reviewed non-secret storage access metadata
    and link it to the dataset, or stage a reviewed `rc:hasStorageAccess` link to

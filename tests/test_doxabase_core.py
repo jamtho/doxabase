@@ -7632,6 +7632,8 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
         include_apply_checks=True,
     )
     assert staged_listing.count == 1
+    assert staged_listing.returned_count == 1
+    assert staged_listing.total_count == 1
     assert staged_listing.drift_detail == "summary"
     assert staged_listing.record_kind is None
     assert staged_listing.application_status is None
@@ -7672,6 +7674,8 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     listing = db.list_graph_revisions(include_apply_checks=True)
 
     assert listing.count == 2
+    assert listing.returned_count == 2
+    assert listing.total_count == 2
     by_iri = {item.iri: item for item in listing.revisions}
     assert by_iri[staged.revision_iri].applied_by == applied.applied_revision_iri
     assert by_iri[staged.revision_iri].application_status == "already_applied"
@@ -7785,6 +7789,8 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     )
     assert current_work_listing.current_staged_work_only is True
     assert current_work_listing.include_apply_checks is True
+    assert current_work_listing.returned_count == 1
+    assert current_work_listing.total_count == 1
     assert [item.iri for item in current_work_listing.revisions] == [
         restaged.revision_iri
     ]
@@ -7878,6 +7884,12 @@ def test_list_graph_revisions_summarizes_history_and_apply_status(
     )
     assert first_page.count == full_page.count
     assert second_page.count == full_page.count
+    assert full_page.returned_count == len(full_page.revisions)
+    assert full_page.total_count == full_page.count
+    assert first_page.returned_count == 2
+    assert first_page.total_count == full_page.count
+    assert second_page.returned_count == 2
+    assert second_page.total_count == full_page.count
     assert len(first_page.revisions) == 2
     assert len(second_page.revisions) == 2
     assert first_page.returned_application_status_counts == page_counts(
@@ -8834,6 +8846,8 @@ def test_list_resource_revisions_filters_noisy_patch_only_current_work(
         offset=0,
     )
     assert full_page.count == 9
+    assert full_page.returned_count == 1
+    assert full_page.total_count == 9
     assert full_page.revisions[0].revision.iri == manual_history.revision_iri
     full_listing = db.list_resource_revisions(
         orders,
@@ -8864,6 +8878,8 @@ def test_list_resource_revisions_filters_noisy_patch_only_current_work(
     assert live_listing.current_staged_work_only is True
     assert live_listing.include_apply_checks is True
     assert live_listing.count == 2
+    assert live_listing.returned_count == 2
+    assert live_listing.total_count == 2
     assert [item.revision.iri for item in live_listing.revisions] == [
         semantic_current.revision_iri,
         simple_current.revision_iri,
@@ -8910,6 +8926,10 @@ def test_list_resource_revisions_filters_noisy_patch_only_current_work(
     )
     assert first_live_page.count == 2
     assert second_live_page.count == 2
+    assert first_live_page.returned_count == 1
+    assert first_live_page.total_count == 2
+    assert second_live_page.returned_count == 1
+    assert second_live_page.total_count == 2
     assert first_live_page.revisions[0].revision.iri == semantic_current.revision_iri
     assert second_live_page.revisions[0].revision.iri == simple_current.revision_iri
 
@@ -14547,10 +14567,118 @@ def test_describe_query_context_separates_analysis_caveats(
         and warning.severity == "warning"
         and warning.resource is not None
         and warning.resource.iri == mixed_price_caveat
+        and warning.details is not None
+        and warning.details["caveat_severity_iri"] == RC + "Moderate"
+        and warning.details["caveat_severity_label"] == "moderate"
+        and warning.details["scope"] == "direct"
         and "Price analysis must filter" in warning.message
         and ".. Impact:" not in warning.message
         for warning in context.analysis_warnings
     )
+
+
+def test_query_analysis_warnings_preserve_caveat_severity_details(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/query-caveats#"
+    dataset = f"{base}Orders"
+    storage = f"{base}OrdersStorage"
+    layout = f"{base}OrdersParquetLayout"
+    minor_caveat = f"{base}MinorCaveat"
+    moderate_caveat = f"{base}ModerateCaveat"
+    severe_caveat = f"{base}SevereCaveat"
+
+    db.record_map_storage_access(
+        storage,
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "warehouse"),
+        path_templates=["orders/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+        datasets=[dataset],
+    )
+    db.record_map_physical_layout(
+        layout,
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage],
+        physical_layouts=[layout],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_caveat(
+        minor_caveat,
+        label="Minor orders caveat",
+        description="Minor caveat affects cosmetic query interpretation.",
+        impact="Review only when comparing display strings.",
+        severity="rc:Minor",
+        targets=[dataset],
+    )
+    db.record_map_caveat(
+        moderate_caveat,
+        label="Moderate orders caveat",
+        description="Moderate caveat affects aggregate interpretation.",
+        impact="Review before publishing aggregate totals.",
+        severity="rc:Moderate",
+        targets=[dataset],
+    )
+    db.record_map_caveat(
+        severe_caveat,
+        label="Severe orders caveat",
+        description="Severe caveat affects scoped execution.",
+        impact="Pause unless the query scope explicitly excludes bad rows.",
+        severity="rc:Severe",
+        targets=[dataset],
+    )
+
+    context = db.describe_query_context(dataset)
+
+    warnings_by_iri = {
+        warning.resource.iri: warning
+        for warning in context.analysis_warnings
+        if warning.resource is not None
+    }
+    assert set(warnings_by_iri) == {
+        minor_caveat,
+        moderate_caveat,
+        severe_caveat,
+    }
+    assert warnings_by_iri[minor_caveat].severity == "info"
+    assert warnings_by_iri[moderate_caveat].severity == "warning"
+    assert warnings_by_iri[severe_caveat].severity == "warning"
+    assert warnings_by_iri[minor_caveat].details == {
+        "scope": "direct",
+        "caveat_iri": minor_caveat,
+        "caveat_label": "Minor orders caveat",
+        "caveat_description": (
+            "Minor caveat affects cosmetic query interpretation."
+        ),
+        "caveat_impact": "Review only when comparing display strings.",
+        "caveat_severity_iri": RC + "Minor",
+        "caveat_severity_label": "minor",
+    }
+    assert warnings_by_iri[moderate_caveat].details is not None
+    assert warnings_by_iri[moderate_caveat].details["caveat_severity_iri"] == (
+        RC + "Moderate"
+    )
+    assert warnings_by_iri[moderate_caveat].details["caveat_severity_label"] == (
+        "moderate"
+    )
+    assert warnings_by_iri[severe_caveat].details is not None
+    assert warnings_by_iri[severe_caveat].details["caveat_severity_iri"] == (
+        RC + "Severe"
+    )
+    assert warnings_by_iri[severe_caveat].details["caveat_severity_label"] == (
+        "severe"
+    )
+    assert "Pause unless" in warnings_by_iri[severe_caveat].message
 
 
 def test_describe_dataset_reports_missing_dataset(tmp_path: Path) -> None:
