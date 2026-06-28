@@ -206,6 +206,10 @@ restage list, and treat `repair_first_revision_iris` / `repair_or_replace`
 lanes as repair or replacement work before any same-payload restage. If
 `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one ready
 row, then rerun the planner.
+Use `repair_or_replace_source_revision_iris` as the broad top-level repair
+worklist. It includes every lane currently routing to `repair_or_replace`,
+including same-slot replacement cases that may not be listed in
+`repair_first_revision_iris`.
 When `include_drafts=True`, a repair lane whose embedded draft finds no safe
 automatic repair uses the draft's inspection/export route instead of asking the
 agent to call `draft_staged_revision_rebase()` again for the same row. If the

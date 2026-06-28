@@ -4162,6 +4162,7 @@ plan.next_action_queue_item_counts
 plan.semantic_review_required_queue_counts
 plan.would_restage_revision_iris
 plan.repair_first_revision_iris
+plan.repair_or_replace_source_revision_iris
 plan.not_restageable_revision_iris_by_reason
 plan.current_revision_by_source
 plan.review_revision_iris
@@ -4258,9 +4259,11 @@ plan suggestions use that draft's inspection/export route too. Do not call the
 draft helper again unless it still appears in `lane.suggested_next_actions`.
 
 `would_restage_revision_iris` is a mechanical restage worklist after review, not
-an apply queue. `repair_first_revision_iris` marks stale sources whose staged
-validation history means a repair draft or manual replacement should come before
-another same-payload restage. If
+an apply queue. `repair_or_replace_source_revision_iris` lists source rows whose
+effective lane is `repair_or_replace`, including same-slot repair routes that
+may not appear in `repair_first_revision_iris`. `repair_first_revision_iris`
+marks stale sources whose staged validation history means a repair draft or
+manual replacement should come before another same-payload restage. If
 `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one ready
 row, then rerun `plan_staged_revision_recovery()` before the next mutation.
 

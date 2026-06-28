@@ -1047,6 +1047,7 @@ class StagedRevisionRecoveryPlan:
     semantic_review_required_queue_counts: dict[str, int]
     would_restage_revision_iris: list[str]
     repair_first_revision_iris: list[str]
+    repair_or_replace_source_revision_iris: list[str]
     not_restageable_revision_iris_by_reason: dict[str, list[str]]
     current_revision_by_source: dict[str, str]
     review_revision_iris: list[str]
@@ -24469,6 +24470,11 @@ class DoxaBase:
             ),
             would_restage_revision_iris=batch.would_restage_revision_iris,
             repair_first_revision_iris=batch.repair_first_revision_iris,
+            repair_or_replace_source_revision_iris=[
+                lane.source_revision_iri
+                for lane in lanes
+                if lane.lane == "repair_or_replace"
+            ],
             not_restageable_revision_iris_by_reason=(
                 batch.not_restageable_revision_iris_by_reason
             ),
@@ -24540,6 +24546,7 @@ class DoxaBase:
             semantic_review_required_queue_counts={},
             would_restage_revision_iris=[],
             repair_first_revision_iris=[],
+            repair_or_replace_source_revision_iris=[],
             not_restageable_revision_iris_by_reason={},
             current_revision_by_source={},
             review_revision_iris=[],

@@ -5238,6 +5238,10 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         handled_successor.revision_iri
     )
     assert plan.would_restage_revision_iris == [stale.revision_iri]
+    assert plan.repair_first_revision_iris == []
+    assert plan.repair_or_replace_source_revision_iris == [
+        repair_source.revision_iri
+    ]
     lanes_by_source = {lane.source_revision_iri: lane for lane in plan.lanes}
     assert lanes_by_source[ready.revision_iri].lane == "apply_after_review"
     assert lanes_by_source[ready.revision_iri].status_after == "ready"

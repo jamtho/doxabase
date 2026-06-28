@@ -834,6 +834,7 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert result["selection_mode"] == "current_staged_work"
     assert result["processed_revision_iris"] == [staged["revision_iri"]]
     assert result["lane_counts"] == {"apply_after_review": 1}
+    assert result["repair_or_replace_source_revision_iris"] == []
     assert result["next_action_queue_item_counts"] == {
         "apply_after_review": 1
     }
@@ -882,6 +883,9 @@ def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     )
 
     assert result["repair_first_revision_iris"] == [staged["revision_iri"]]
+    assert result["repair_or_replace_source_revision_iris"] == [
+        staged["revision_iri"]
+    ]
     lane = result["lanes"][0]
     assert lane["repair_draft"]["draft_kind"] == "validation_repair_needed"
     assert lane["next_action"]["tool_name"] != "draft_staged_revision_rebase"

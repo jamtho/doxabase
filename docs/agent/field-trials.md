@@ -2071,6 +2071,12 @@ few useful gaps:
   toward another review-gated plan before they inspected the lifted repair
   templates. Project brief repair tasks now point to `describe_query_context`
   so the repair lane is explicit before plan drafting.
+- A staged-recovery trial found that mixed recovery plans exposed same-slot
+  repair lanes correctly in `lanes[]` and queue items, but top-level
+  `repair_first_revision_iris` could be empty for `repair_or_replace` routes.
+  `plan_staged_revision_recovery()` now also returns
+  `repair_or_replace_source_revision_iris` as the broad source-row worklist for
+  repair/replacement lanes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

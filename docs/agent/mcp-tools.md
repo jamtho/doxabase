@@ -1354,8 +1354,11 @@ refreshed successor or applied event, while repair actions can create a new
 successor and therefore have no existing resolved target.
 
 `would_restage_revision_iris` is the post-review mechanical-restage list, not an
-apply queue. `repair_first_revision_iris` and lanes with
-`lane="repair_or_replace"` should be inspected or drafted before any restage.
+apply queue. `repair_or_replace_source_revision_iris` is the broad source-row
+worklist for lanes currently routing to `repair_or_replace`; it includes
+same-slot replacement routes that may not appear in `repair_first_revision_iris`.
+`repair_first_revision_iris` and lanes with `lane="repair_or_replace"` should be
+inspected or drafted before any restage.
 If `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one
 ready row, then rerun this helper before taking the next mutation.
 
