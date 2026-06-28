@@ -982,6 +982,10 @@ same diagnostics before the patch payloads. In API and MCP JSON, these
 diagnostics are always exposed as `validation_results`; prose that says
 "diagnostics" and Markdown sections titled `Validation Results` refer to the
 same SHACL result records. Each diagnostic uses `messages[]`, not `message`.
+For staged `rc:Pattern` resources, support linked to the revision metadata does
+not satisfy the pattern shape. If the diagnostic says the pattern lacks support,
+add `rc:supportingObservation`, `rc:supportingClaim`, or `rc:evidence` in the
+pattern Turtle itself.
 
 ## Repair Loop Example
 

@@ -60,6 +60,10 @@ intentionally incomplete or diagnostic sibling. Keep the diagnostic sibling
 reviewable, set `link_alternatives=False` when the first framing is not the
 preferred comparison anchor, and use stored validation results to explain what
 the shape would require before choosing the durable model.
+If a staged `rc:Pattern` fails validation for missing support even though the
+staged revision has linked support metadata, add support inside the pattern
+framing Turtle itself: `rc:supportingObservation`, `rc:supportingClaim`, or
+`rc:evidence`. Revision-level support does not satisfy `rc:PatternShape`.
 
 ## Route The Draft
 

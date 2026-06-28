@@ -10200,6 +10200,94 @@ def test_staged_row_semantics_validation_hint_guides_clean_recipe(
     assert clean_check.status == "ready"
 
 
+def test_staged_pattern_support_hint_distinguishes_revision_metadata(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Tickets"
+    supported_pattern = "https://example.test/project#SupportedWorkflowPattern"
+    db.record_map_dataset(dataset, label="Tickets", is_table=True)
+    observation = db.record_observation(
+        summary="Tickets profile showed workflow-state ambiguity.",
+        observed_asset=dataset,
+        evidence_sources=["test://tickets/profile"],
+    )
+    unsupported = db.stage_graph_revision(
+        summary="Stage unsupported workflow pattern",
+        rationale=(
+            "The staged revision has support metadata, but the pattern Turtle "
+            "itself omits support triples."
+        ),
+        additions=[
+            {
+                "graph": "patterns",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:WorkflowPattern a rc:Pattern ;
+                        rc:summary "Workflow-state ambiguity pattern" ;
+                        rc:patternText "Workflow state interpretation varies." ;
+                        rc:rationale "Observed in profile evidence." ;
+                        rc:patternTarget <{dataset}> ;
+                        rc:patternStability rc:EmergingPattern .
+                """,
+            }
+        ],
+        supporting_observations=[observation.observation_iri],
+        evidence=[observation.evidence_iri],
+        validation_scope="all",
+    )
+
+    assert unsupported.validation_conforms is False
+    staged_diagnostic = unsupported.validation_results[0]
+    assert staged_diagnostic.source_shape == RC + "PatternShape"
+    assert staged_diagnostic.hint is not None
+    assert "Revision-level support metadata does not satisfy" in (
+        staged_diagnostic.hint
+    )
+    assert "rc:supportingObservation" in staged_diagnostic.hint
+    assert "pattern framing Turtle" in staged_diagnostic.hint
+
+    check = db.check_staged_revision_apply(unsupported.revision_iri)
+    description = db.describe_staged_revision(unsupported.revision_iri)
+    assert check.validation_results[0].hint == staged_diagnostic.hint
+    assert description.validation_results[0].hint == staged_diagnostic.hint
+    export_path = tmp_path / "unsupported-pattern.md"
+    db.export_staged_revision(unsupported.revision_iri, export_path)
+    assert "Hint: Revision-level support metadata" in export_path.read_text()
+
+    repaired = db.stage_graph_revision(
+        summary="Stage supported workflow pattern",
+        rationale="The pattern Turtle carries the support required by PatternShape.",
+        additions=[
+            {
+                "graph": "patterns",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:SupportedWorkflowPattern a rc:Pattern ;
+                        rc:summary "Workflow-state ambiguity pattern" ;
+                        rc:patternText "Workflow state interpretation varies." ;
+                        rc:rationale "Observed in profile evidence." ;
+                        rc:patternTarget <{dataset}> ;
+                        rc:supportingObservation <{observation.observation_iri}> ;
+                        rc:evidence <{observation.evidence_iri}> ;
+                        rc:patternStability rc:EmergingPattern .
+                """,
+            }
+        ],
+        supporting_observations=[observation.observation_iri],
+        evidence=[observation.evidence_iri],
+        revision_anchors=[supported_pattern],
+        validation_scope="all",
+    )
+
+    assert repaired.validation_conforms is True
+    assert db.check_staged_revision_apply(repaired.revision_iri).status == "ready"
+
+
 def test_list_graph_revisions_filters_staged_validation_after_live_conflict(
     tmp_path: Path,
 ) -> None:

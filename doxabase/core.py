@@ -23686,6 +23686,19 @@ class DoxaBase:
 
         stance_iri = self.expand_iri(stance)
         self._ensure_revision_stance(stance_iri)
+        supporting_observation_values = self._string_values(
+            "supporting_observations",
+            supporting_observations,
+        )
+        supporting_claim_values = self._string_values(
+            "supporting_claims",
+            supporting_claims,
+        )
+        supporting_pattern_values = self._string_values(
+            "supporting_patterns",
+            supporting_patterns,
+        )
+        evidence_values = self._string_values("evidence", evidence)
 
         changed_graph_values = list(
             dict.fromkeys(patch["target_graph"] for patch in parsed_patches)
@@ -23756,9 +23769,15 @@ class DoxaBase:
         ]
         validation = replace(
             validation,
-            results=self._enrich_staged_row_semantics_validation_hints(
+            results=self._enrich_staged_validation_hints(
                 validation.results,
                 patches=patch_descriptions,
+                revision_has_support_metadata=bool(
+                    supporting_observation_values
+                    or supporting_claim_values
+                    or supporting_pattern_values
+                    or evidence_values
+                ),
             ),
         )
         revision_subject = (
@@ -23794,11 +23813,11 @@ class DoxaBase:
             revision_iri=revision_subject,
             created_at=created_at,
             created_by=created_by,
-            supporting_observations=supporting_observations,
-            supporting_claims=supporting_claims,
-            supporting_patterns=supporting_patterns,
+            supporting_observations=supporting_observation_values,
+            supporting_claims=supporting_claim_values,
+            supporting_patterns=supporting_pattern_values,
             revision_anchors=revision_anchors,
-            evidence=evidence,
+            evidence=evidence_values,
             graph_counts=graph_counts,
             validation_scope=validation.scope,
             validation_conforms=validation.conforms,
@@ -27080,9 +27099,15 @@ class DoxaBase:
             )
             validation_conforms = validation.conforms
             validation_result_count = validation.result_count
-            validation_results = self._enrich_staged_row_semantics_validation_hints(
+            validation_results = self._enrich_staged_validation_hints(
                 validation.results,
                 patches=[patch for patch, _ in parsed_patches],
+                revision_has_support_metadata=bool(
+                    staged.supporting_observations
+                    or staged.supporting_claims
+                    or staged.supporting_patterns
+                    or staged.evidence
+                ),
             )
 
         has_effective_patch_triples = (triples_to_add + triples_to_remove) > 0
@@ -35918,6 +35943,23 @@ class DoxaBase:
             )
         return None
 
+    def _enrich_staged_validation_hints(
+        self,
+        diagnostics: list[ValidationDiagnostic],
+        *,
+        patches: list[StagedGraphPatchDescription],
+        revision_has_support_metadata: bool,
+    ) -> list[ValidationDiagnostic]:
+        diagnostics = self._enrich_staged_row_semantics_validation_hints(
+            diagnostics,
+            patches=patches,
+        )
+        return self._enrich_staged_pattern_support_validation_hints(
+            diagnostics,
+            patches=patches,
+            revision_has_support_metadata=revision_has_support_metadata,
+        )
+
     def _enrich_staged_row_semantics_validation_hints(
         self,
         diagnostics: list[ValidationDiagnostic],
@@ -35966,6 +36008,81 @@ class DoxaBase:
             )
             enriched.append(replace(diagnostic, hint=hint or diagnostic.hint))
         return enriched
+
+    def _enrich_staged_pattern_support_validation_hints(
+        self,
+        diagnostics: list[ValidationDiagnostic],
+        *,
+        patches: list[StagedGraphPatchDescription],
+        revision_has_support_metadata: bool,
+    ) -> list[ValidationDiagnostic]:
+        if not diagnostics or not patches or not revision_has_support_metadata:
+            return diagnostics
+        pattern_shape = self.expand_iri("rc:PatternShape")
+        or_constraint = PREFIXES["sh"] + "OrConstraintComponent"
+        missing_support_focus_nodes = {
+            diagnostic.focus_node
+            for diagnostic in diagnostics
+            if diagnostic.focus_node is not None
+            and diagnostic.source_shape == pattern_shape
+            and diagnostic.source_constraint_component == or_constraint
+            and any(
+                "supported by observations, claims, or evidence" in message
+                for message in diagnostic.messages
+            )
+        }
+        if not missing_support_focus_nodes:
+            return diagnostics
+        staged_focus_nodes = self._staged_pattern_support_patch_focus_nodes(
+            patches,
+            focus_nodes=missing_support_focus_nodes,
+        )
+        if not staged_focus_nodes:
+            return diagnostics
+        hint = (
+            "Revision-level support metadata does not satisfy support "
+            "requirements for a newly staged rc:Pattern resource. Add at least "
+            "one rc:supportingObservation, rc:supportingClaim, or rc:evidence "
+            "triple inside the pattern framing Turtle itself."
+        )
+        enriched: list[ValidationDiagnostic] = []
+        for diagnostic in diagnostics:
+            if (
+                diagnostic.focus_node in staged_focus_nodes
+                and diagnostic.source_shape == pattern_shape
+                and diagnostic.source_constraint_component == or_constraint
+                and diagnostic.hint is None
+            ):
+                enriched.append(replace(diagnostic, hint=hint))
+            else:
+                enriched.append(diagnostic)
+        return enriched
+
+    def _staged_pattern_support_patch_focus_nodes(
+        self,
+        patches: list[StagedGraphPatchDescription],
+        *,
+        focus_nodes: set[str],
+    ) -> set[str]:
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        found: set[str] = set()
+        for patch in patches:
+            try:
+                operation = self._required_staged_patch_field(
+                    patch,
+                    "operation",
+                    patch.operation,
+                )
+                if operation != addition_operation:
+                    continue
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                continue
+            for focus_node in focus_nodes:
+                focus_ref = URIRef(focus_node)
+                if any(patch_graph.triples((focus_ref, None, None))):
+                    found.add(focus_node)
+        return found
 
     def _staged_row_semantics_patch_value_context(
         self,
@@ -39387,9 +39504,19 @@ class DoxaBase:
                     ),
                 )
             )
-        diagnostics = self._enrich_staged_row_semantics_validation_hints(
+        diagnostics = self._enrich_staged_validation_hints(
             diagnostics,
             patches=patches or [],
+            revision_has_support_metadata=bool(
+                self._objects(
+                    graphs,
+                    revision_iri,
+                    "rc:revisionSupportingObservation",
+                )
+                or self._objects(graphs, revision_iri, "rc:revisionSupportingClaim")
+                or self._objects(graphs, revision_iri, "rc:revisionSupportingPattern")
+                or self._objects(graphs, revision_iri, "rc:evidence")
+            ),
         )
         return sorted(diagnostics, key=self._validation_diagnostic_sort_key)
 
