@@ -5728,7 +5728,7 @@ def test_post_apply_recheck_preserves_staged_validation_repair_signal(
     assert recheck.next_action is not None
     assert recheck.next_action.action_type == "repair_or_replace"
     assert recheck.next_action.queue == "repair_or_replace"
-    assert recheck.next_action.tool_name == "describe_staged_revision"
+    assert recheck.next_action.tool_name == "draft_staged_revision_rebase"
 
 
 def test_post_apply_recheck_includes_validation_dependency_drift(
@@ -6518,11 +6518,20 @@ def test_restage_from_staged_validation_failure_routes_to_repair_when_current_st
     dry_run = db.restage_staged_revisions([source.revision_iri], dry_run=True)
     dry_item = dry_run.items[0]
     assert dry_item.action == "would_restage"
-    assert dry_run.would_restage_revision_iris == [source.revision_iri]
+    assert dry_run.would_restage_revision_iris == []
+    assert dry_run.repair_first_revision_iris == [source.revision_iri]
     assert dry_item.source_staged_validation_status == "failed"
     assert dry_item.routing_decision_after == "repair_or_replace"
     assert dry_item.next_action_after is not None
     assert dry_item.next_action_after.queue == "repair_or_replace"
+    assert any(
+        action.tool_name == "draft_staged_revision_rebase"
+        for action in dry_item.suggested_next_actions_after
+    )
+    assert not any(
+        action.tool_name == "restage_staged_revision"
+        for action in dry_item.suggested_next_actions_after
+    )
     assert dry_item.repair_first_warning is not None
     assert "Repair-first warning" in dry_item.repair_first_warning
     assert "same-payload mechanical restage" in dry_item.repair_first_warning
@@ -9258,7 +9267,7 @@ def test_list_graph_revisions_filters_staged_validation_after_live_conflict(
     assert conflict_row.next_action is not None
     assert conflict_row.next_action.action_type == "repair_or_replace"
     assert conflict_row.next_action.queue == "repair_or_replace"
-    assert conflict_row.next_action.tool_name == "describe_staged_revision"
+    assert conflict_row.next_action.tool_name == "draft_staged_revision_rebase"
 
     export = db.export_staged_revisions(
         [staged.revision_iri],

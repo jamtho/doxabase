@@ -1077,8 +1077,18 @@ def test_restage_staged_revisions_tool_serializes_repair_first_warning(
 
     item = result["items"][0]
     assert item["action"] == "would_restage"
+    assert result["would_restage_revision_iris"] == []
+    assert result["repair_first_revision_iris"] == [source.revision_iri]
     assert item["source_staged_validation_status"] == "failed"
     assert item["routing_decision_after"] == "repair_or_replace"
+    assert any(
+        action["tool_name"] == "draft_staged_revision_rebase"
+        for action in item["suggested_next_actions_after"]
+    )
+    assert not any(
+        action["tool_name"] == "restage_staged_revision"
+        for action in item["suggested_next_actions_after"]
+    )
     assert item["repair_first_warning"] is not None
     assert "Repair-first warning" in item["repair_first_warning"]
     assert item["repair_first_warning"] in item["note"]

@@ -206,9 +206,12 @@ Each item also carries `source_staged_validation_status` /
 staged-time validation failures without joining against the grouped summaries.
 When the source failed staged-time validation and the item route after the
 batch decision is `repair_or_replace`, `repair_first_warning` is populated.
-Treat that warning as stronger than `action="would_restage"`: inspect
-`validation_results` or call `draft_staged_revision_rebase()` before creating
-another same-payload mechanical successor.
+Those dry-run sources are withheld from `would_restage_revision_iris` and listed
+in `repair_first_revision_iris` instead, so that top-level bulk restage list
+stays mechanical-restage-safe. Treat the warning as stronger than
+`action="would_restage"`: inspect `validation_results` or call
+`draft_staged_revision_rebase()` before creating another same-payload
+mechanical successor.
 It also carries `source_snapshot_evidence` /
 `source_snapshot_evidence_completeness` and `current_snapshot_evidence` /
 `current_snapshot_evidence_completeness`; read those before trusting exact

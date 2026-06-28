@@ -761,6 +761,7 @@ class StagedGraphRevisionBatchRestageRecord:
     processed_revision_iris: list[str]
     dry_run: bool
     would_restage_revision_iris: list[str]
+    repair_first_revision_iris: list[str]
     restaged_revision_iris: list[str]
     skipped_revision_iris: list[str]
     already_handled_revision_iris: list[str]
@@ -20878,6 +20879,7 @@ class DoxaBase:
         )
         processed_revision_iris = list(dict.fromkeys(requested_revision_iris))
         would_restage_revision_iris: list[str] = []
+        repair_first_revision_iris: list[str] = []
         restaged_revision_iris: list[str] = []
         skipped_revision_iris: list[str] = []
         already_handled_revision_iris: list[str] = []
@@ -20956,7 +20958,6 @@ class DoxaBase:
                 and not already_effective_route
             ):
                 if dry_run:
-                    would_restage_revision_iris.append(source.iri)
                     action = "would_restage"
                     note = (
                         "Dry run: would create a refreshed staged revision "
@@ -21139,6 +21140,10 @@ class DoxaBase:
                 )
             if repair_first_warning is not None:
                 note = f"{note} {repair_first_warning}"
+                if action == "would_restage":
+                    repair_first_revision_iris.append(source.iri)
+            elif action == "would_restage":
+                would_restage_revision_iris.append(source.iri)
             items.append(
                 StagedGraphRevisionBatchRestageItem(
                     source_revision_iri=source.iri,
@@ -21233,6 +21238,7 @@ class DoxaBase:
             processed_revision_iris=processed_revision_iris,
             dry_run=dry_run,
             would_restage_revision_iris=would_restage_revision_iris,
+            repair_first_revision_iris=repair_first_revision_iris,
             restaged_revision_iris=restaged_revision_iris,
             skipped_revision_iris=skipped_revision_iris,
             already_handled_revision_iris=already_handled_revision_iris,
@@ -23827,6 +23833,9 @@ class DoxaBase:
                     blocking_reasons or []
                 )
             )
+            staged_validation_failed = (
+                staged is not None and staged.validation_conforms is False
+            )
             already_effective_stale = (
                 is_restageable_conflict
                 and self._patch_checks_have_no_effective_delta(patch_checks or [])
@@ -23861,6 +23870,19 @@ class DoxaBase:
                     "proposal and current patch-triple presence."
                 )
                 export_label = "Export already-effective stale bundle"
+            elif is_restageable_conflict and staged_validation_failed:
+                review_reason = (
+                    "Inspect the staged-time validation diagnostics before "
+                    "deciding how to repair this stale proposal; a mechanical "
+                    "restage may only create another repair candidate."
+                )
+                review_label = "Review staged validation failure"
+                export_slug = "staged-revision-validation-conflict"
+                export_reason = (
+                    "Write a review bundle that captures the stale proposal, "
+                    "current conflict, and stored validation diagnostics."
+                )
+                export_label = "Export validation conflict bundle"
             elif is_restageable_conflict:
                 review_reason = (
                     "Review the original patch payloads, count previews, "
@@ -23936,6 +23958,23 @@ class DoxaBase:
             if same_slot_replacement_action is not None:
                 actions.append(same_slot_replacement_action)
             if (
+                restaged_by is None
+                and is_restageable_conflict
+                and staged_validation_failed
+            ):
+                draft_arguments: dict[str, Any] = {"iri": staged_revision_iri}
+                if validation_scope is not None:
+                    draft_arguments["validation_scope"] = validation_scope
+                add_action(
+                    "draft_staged_revision_rebase",
+                    draft_arguments,
+                    (
+                        "Draft a repair/rebase plan from the stored validation "
+                        "failure before creating another restaged successor."
+                    ),
+                    action_label="Draft repair plan",
+                )
+            elif (
                 restaged_by is None
                 and is_restageable_conflict
                 and not already_effective_stale

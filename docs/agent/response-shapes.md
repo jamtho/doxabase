@@ -4007,6 +4007,7 @@ batch.requested_revision_iris
 batch.processed_revision_iris
 batch.dry_run
 batch.would_restage_revision_iris
+batch.repair_first_revision_iris
 batch.restaged_revision_iris
 batch.skipped_revision_iris
 batch.already_handled_revision_iris
@@ -4044,7 +4045,10 @@ of an older stale proposal. Current actions are
 `skipped_not_restageable`. `would_restage` only appears when `dry_run=True`; in
 that case no successor is created, `restaged_revision_iris` stays empty, and
 `would_restage_revision_iris` lists the stale source revisions that a real run
-would refresh. `restaged_revision_iris` is a creation list, not an apply queue;
+can mechanically refresh after review. Sources whose stored staged-time
+validation failed and whose post-batch route is repair-first are withheld from
+that bulk list and reported in `repair_first_revision_iris` instead.
+`restaged_revision_iris` is a creation list, not an apply queue;
 created successors can still be `validation_failed`, `noop`, or otherwise not
 ready. For those would-restage rows, `current_revision_by_source` still points
 at the stale source because no current successor exists yet. For all rows, the
@@ -4089,9 +4093,9 @@ Rows with failed staged-time validation keep a `repair_or_replace` compact route
 when no successor exists, even when later drift makes `status_after` a live
 conflict. In that case, or when a same-payload real restage still routes to
 repair, `repair_first_warning` names the hazard directly. Treat a non-empty
-warning as stronger than `action="would_restage"`: inspect validation results or
-call `draft_staged_revision_rebase()` before creating another mechanical
-successor.
+warning as stronger than `action="would_restage"`: use
+`repair_first_revision_iris`, inspect validation results, or call
+`draft_staged_revision_rebase()` before creating another mechanical successor.
 `stale_resolution_state_after == "restaged_successor_stale_unresolved"` means a
 skipped already-handled source points to a current successor that is itself
 stale; inspect or restage `current_revision_iri` before applying anything.

@@ -1242,7 +1242,12 @@ and non-restageable rows, and returns per-source actions, old-to-current mapping
 to write the grouped Markdown bundle over stale sources and current refreshed
 successors. Pass `dry_run=true` to classify the same batch without creating
 successors; restageable drift conflicts return `action="would_restage"` and are
-listed in `would_restage_revision_iris`. `patch_conflict` rows are
+listed in `would_restage_revision_iris` only when they remain safe mechanical
+restage candidates. Stale sources whose staged-time validation failed and whose
+post-batch route is repair-first are withheld from that bulk list and returned
+in `repair_first_revision_iris`; inspect their validation diagnostics or call
+`draft_staged_revision_rebase` before creating another same-payload successor.
+`patch_conflict` rows are
 `skipped_not_restageable` with `not_restageable_reason="patch_conflict"` and
 should be repaired or replaced with a new staged candidate. Ready,
 already-applied, and validation-failed rows use the same action with their own

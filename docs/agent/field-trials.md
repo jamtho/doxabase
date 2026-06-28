@@ -1752,9 +1752,13 @@ few useful gaps:
   next route is repair-first. This remains intentionally permissive because
   later graph state can sometimes fill a source validation gap, but batch items
   now expose `repair_first_warning` when the source failed staged-time
-  validation and `routing_decision_after="repair_or_replace"`. Treat that
-  warning as stronger than `would_restage`: inspect validation diagnostics or
-  call `draft_staged_revision_rebase()` before creating another same-payload
+  validation and `routing_decision_after="repair_or_replace"`. A follow-up
+  trial showed prose was not enough for scripts that use
+  `would_restage_revision_iris` as a worklist, so repair-first dry-run sources
+  are now withheld from that safe mechanical-restage list and reported in
+  `repair_first_revision_iris`. Treat that warning/lane as stronger than
+  `would_restage`: inspect validation diagnostics or call
+  `draft_staged_revision_rebase()` before creating another same-payload
   successor.
 
 Use later trials to check whether these gaps still matter after each change.

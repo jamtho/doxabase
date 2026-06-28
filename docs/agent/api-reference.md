@@ -1292,7 +1292,12 @@ grouped exports. Pass `path` to also write the grouped Markdown bundle over
 stale sources and their current refreshed successors. Pass `dry_run=True` to get
 the same per-source classifications without creating refreshed successors;
 unhandled conflicts then report `action="would_restage"` and appear in
-`would_restage_revision_iris`. In dry-run rows that would be restaged,
+`would_restage_revision_iris` only when they remain safe mechanical restage
+candidates. Stale sources whose staged-time validation failed and whose
+post-batch route is repair-first are withheld from that bulk list and returned
+in `repair_first_revision_iris`; inspect their validation diagnostics or call
+`draft_staged_revision_rebase` before creating another same-payload successor.
+In dry-run rows that would be restaged,
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. `skipped_not_restageable` rows may be ready,
 validation-failed, already applied, or blocked by a stored patch conflict; each
