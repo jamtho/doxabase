@@ -31,6 +31,11 @@ evidence that search found. Use `describe_resource()` for a quick resource card,
 but do not treat it as high-degree lore recovery; it does not carry slice route
 counts, omitted counts, or offset-style browsing.
 
+For claim seeds, `describe_resource(graph="observations")` includes claim
+lifecycle status and nested reconsideration evidence/source spans. Use
+`pattern_brief` or `deep_lore` when you need the broader support trail across
+patterns, observations, and revision history.
+
 For arbitrary project RDF, such as ontology terms, SHACL shapes, evidence
 resources, source spans, or non-dataset map resources, start with
 `list_entities()` or `search()`, then use

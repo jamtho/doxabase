@@ -38117,7 +38117,11 @@ class DoxaBase:
                 else None
             ),
             evidence=[
-                self._describe_evidence(evidence_iri, graphs, lookup_graphs)
+                self._describe_evidence(
+                    evidence_iri,
+                    self._evidence_detail_graphs(graphs),
+                    lookup_graphs,
+                )
                 for evidence_iri in self._objects(
                     graphs,
                     reconsideration_iri,
@@ -38135,6 +38139,9 @@ class DoxaBase:
                 "rc:reconsideredBy",
             ),
         )
+
+    def _evidence_detail_graphs(self, graphs: list[str]) -> list[str]:
+        return list(dict.fromkeys([*graphs, *self._expand_graphs(["evidence"])]))
 
     def _describe_evidence(
         self,

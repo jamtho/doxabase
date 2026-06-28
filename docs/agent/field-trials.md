@@ -2088,6 +2088,12 @@ few useful gaps:
   named graph before clearing, creating, or inserting graph storage, so failed
   normal imports for immutable seeds or unknown Rich Canopy roles leave target
   graph counts unchanged.
+- A claim-reconsideration retrieval trial showed that direct claim resource
+  cards exposed lifecycle links but nested reconsideration evidence appeared
+  empty when the caller scoped `describe_resource()` to `observations`.
+  Reconsideration descriptions now hydrate their evidence details from the
+  `evidence` graph too, so the direct claim card shows the source strings and
+  source spans behind the reconsideration.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

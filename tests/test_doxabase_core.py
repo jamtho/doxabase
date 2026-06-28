@@ -18460,6 +18460,16 @@ def test_record_claim_reconsideration_links_claim_lifecycle(
     assert older_context.claim.lifecycle_summary is not None
     assert "Current status: weakened." in older_context.claim.lifecycle_summary
     assert "1 weakening." in older_context.claim.lifecycle_summary
+    nested_reconsideration = older_context.claim.incoming_reconsiderations[0]
+    assert nested_reconsideration.evidence[0].sources == [
+        'DoxaBase search("MMSI vessel")'
+    ]
+    assert nested_reconsideration.evidence[0].source_spans[0].source_path == (
+        "/tmp/doxabase-search-mmsi-vessel.json"
+    )
+    assert nested_reconsideration.evidence[0].source_spans[0].source_kind == (
+        RC + "DoxaBaseAPISource"
+    )
     older_statuses = [
         triple.object
         for triple in older_context.outgoing

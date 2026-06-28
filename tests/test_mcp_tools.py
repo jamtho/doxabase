@@ -6394,6 +6394,16 @@ def test_record_claim_reconsideration_tool_returns_json_like_payload(
     assert context["claim"]["lifecycle_summary"] == (
         "Current status: weakened. Later claims reconsider this claim: 1 weakening."
     )
+    nested_reconsideration = context["claim"]["incoming_reconsiderations"][0]
+    assert nested_reconsideration["evidence"][0]["sources"] == [
+        'DoxaBase search("MMSI vessel")'
+    ]
+    assert nested_reconsideration["evidence"][0]["source_spans"][0]["source_path"] == (
+        "/tmp/doxabase-search-mmsi-vessel.json"
+    )
+    assert nested_reconsideration["evidence"][0]["source_spans"][0]["source_kind"] == (
+        "https://richcanopy.org/ns/rc#DoxaBaseAPISource"
+    )
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 
