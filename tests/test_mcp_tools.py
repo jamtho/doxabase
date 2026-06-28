@@ -144,6 +144,22 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
 
 
 @pytest.mark.anyio
+async def test_server_get_doc_serves_query_planning_doc(
+    tmp_path: Path,
+) -> None:
+    server = build_server(tmp_path / "mcp.sqlite")
+
+    _, result = await server.call_tool(
+        "doxabase.get_doc",
+        {"doc_id": "query_planning", "max_chars": 80},
+    )
+
+    assert result["id"] == "query_planning"
+    assert result["title"] == "Query Planning"
+    assert result["content"].startswith("# Query Planning")
+
+
+@pytest.mark.anyio
 async def test_profile_mcp_tools_expose_sampled_snapshot_gate(
     tmp_path: Path,
 ) -> None:
