@@ -376,6 +376,27 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert isinstance(result["recommended_next_tasks"], list)
 
 
+def test_project_brief_tool_routes_query_repair_tasks_to_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+
+    result = project_brief_tool(db, limit=1)
+
+    repair_task = result["recommended_next_tasks"][0]
+    assert repair_task["task_type"] == "query_repair_review"
+    assert repair_task["source"] == "describe_query_context"
+    assert repair_task["suggested_next_action"]["tool_name"] == (
+        "describe_query_context"
+    )
+    assert repair_task["suggested_next_action"]["arguments"] == {"iri": dataset}
+    assert repair_task["suggested_next_call"] == (
+        "describe_query_context(iri='https://example.test/project#Orders')"
+    )
+
+
 def test_project_brief_tool_serializes_hidden_staged_review_counts(
     tmp_path: Path,
 ) -> None:

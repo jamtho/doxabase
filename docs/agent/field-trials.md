@@ -2066,6 +2066,11 @@ few useful gaps:
   insight bundle without connecting back to the query-context lane.
   `source_query_context.route_anchor_iris` now names the dataset, and the
   Profile Route Bridge can show the query-context route for those repairs.
+- A query-planning project-brief trial found a first-hop routing mismatch:
+  `query_repair_review` tasks could point at `draft_query_plan`, sending agents
+  toward another review-gated plan before they inspected the lifted repair
+  templates. Project brief repair tasks now point to `describe_query_context`
+  so the repair lane is explicit before plan drafting.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

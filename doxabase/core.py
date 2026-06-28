@@ -3332,6 +3332,9 @@ class DoxaBase:
                 dataset.query.suggested_next_actions,
             )
             if dataset.query.repair_action_group_count:
+                repair_action = self._project_brief_describe_query_context_action(
+                    dataset.dataset.iri
+                )
                 tasks.append(
                     ProjectBriefRecommendedTask(
                         priority=10,
@@ -3342,12 +3345,8 @@ class DoxaBase:
                             "Dataset query context exposes reviewed repair "
                             "action groups."
                         ),
-                        suggested_next_action=first_query_action,
-                        suggested_next_call=(
-                            first_query_action.call
-                            if first_query_action is not None
-                            else None
-                        ),
+                        suggested_next_action=repair_action,
+                        suggested_next_call=repair_action.call,
                     )
                 )
             elif dataset.query.readiness not in {

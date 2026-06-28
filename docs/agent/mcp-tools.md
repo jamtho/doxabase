@@ -42,6 +42,9 @@ tasks. Use it when arriving cold or when a loop may be over-polishing one
 workflow while missing another active queue. If `limit_crowded_queue_types` is
 non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
+Tasks labelled `query_repair_review` point back to `describe_query_context`,
+not directly to `draft_query_plan`, so agents can inspect reviewed repair
+templates before drafting or executing any route.
 
 `doxabase.list_entities`
 

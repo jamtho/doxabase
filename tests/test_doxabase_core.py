@@ -187,6 +187,15 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     assert [
         task.task_type for task in brief.recommended_next_tasks
     ] == ["query_repair_review", "staged_review"]
+    repair_task = brief.recommended_next_tasks[0]
+    assert repair_task.suggested_next_action is not None
+    assert repair_task.suggested_next_action.tool_name == "describe_query_context"
+    assert repair_task.suggested_next_action.arguments == {
+        "iri": "https://example.test/project#Alpha"
+    }
+    assert repair_task.suggested_next_call == (
+        "describe_query_context(iri='https://example.test/project#Alpha')"
+    )
     assert brief.active_queue_type_count == 2
     assert brief.returned_queue_type_count == 2
     assert brief.limit_crowded_queue_types == []
