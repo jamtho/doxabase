@@ -1058,13 +1058,18 @@ few useful gaps:
   scalar-only conflict trial found that safe choose-one staging was too hidden;
   `draft_profile_map_updates.scalar_conflict_groups` now exposes per-value
   representative indexes, grouped observation support, and explicit option
-  stage actions outside the default `profile_map_updates` lane.
+  stage actions outside the default `profile_map_updates` lane. A later
+  queue-following trial found conflict-only drafts still looked actionless to
+  agents that read only grouped lanes, so those option actions now also appear
+  in `profile_scalar_conflict_review` with `source_scalar_conflict` metadata,
+  while remaining out of the flat `suggested_next_actions` list.
 - A profile action-queue trial found mixed map, metric, and type follow-ups were
   mechanically followable but noisy when flattened together. Draft profile-map
   responses now expose `suggested_next_action_groups` and
   `suggested_next_call_groups` with separate `profile_map_updates`,
-  `metric_vocabulary_review`, and `profile_type_review` lanes while preserving
-  the flat `suggested_next_actions` compatibility list.
+  `profile_scalar_conflict_review`, `metric_vocabulary_review`, and
+  `profile_type_review` lanes while preserving the flat `suggested_next_actions`
+  compatibility list.
 - A staged-revision recovery trial followed
   `post_apply_recheck_revisions[].next_action.arguments["iri"]` into
   `restage_staged_revision`, checked the successor, applied it, and ended with

@@ -380,15 +380,15 @@ also includes `recommendation_count`, `representative_recommendation_indexes`,
 top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
 Prefer `suggested_next_action_groups` / `suggested_next_call_groups` for quick
 routing; non-empty lanes are grouped as `profile_map_updates`,
-`metric_vocabulary_review`, and `profile_type_review`. Use representative
-advisory indexes when you need one review row per duplicate metric or type
-advisory group; each row also carries `metric_advisory_index` or
-`type_advisory_index` for row-local routing. Group lanes may de-duplicate shared
-actions, such as one `describe_pattern` call supporting several metric
-advisories; grouped metric/type actions carry `source_profile_advisory` with
-the source advisory kind, index field, represented advisory indexes, duplicate
-group keys, duplicate advisory indexes, duplicate profile-observation IRIs, and
-optional `mixed_support`.
+`profile_scalar_conflict_review`, `metric_vocabulary_review`, and
+`profile_type_review`. Use representative advisory indexes when you need one
+review row per duplicate metric or type advisory group; each row also carries
+`metric_advisory_index` or `type_advisory_index` for row-local routing. Group
+lanes may de-duplicate shared actions, such as one `describe_pattern` call
+supporting several metric advisories; grouped metric/type actions carry
+`source_profile_advisory` with the source advisory kind, index field,
+represented advisory indexes, duplicate group keys, duplicate advisory indexes,
+duplicate profile-observation IRIs, and optional `mixed_support`.
 Use that source block for direct lane routing, or use each advisory row's own
 `suggested_next_actions` for per-metric or per-column follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
@@ -406,7 +406,11 @@ same column, also get `default_stageable=False`; review the observations and
 choose at most one value explicitly. Use `scalar_conflict_groups[]` for the
 structured choose-one options; each option carries a
 `stage_profile_map_updates` action for one representative observed value, but
-those option actions are not part of the default `profile_map_updates` lane. If
+those option actions are exposed through the
+`profile_scalar_conflict_review` lane rather than the default
+`profile_map_updates` lane or flat `suggested_next_actions`. Each lane action
+has `source_scalar_conflict` metadata and is mutually exclusive with sibling
+options from the same conflict group. If
 `recommendation_count == 0` and either metric or type advisories are present,
 handle the result as advisory-only: follow advisory grouped suggested actions and
 do not call `doxabase.stage_profile_map_updates`. When recommendations and

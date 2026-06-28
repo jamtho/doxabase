@@ -4765,6 +4765,87 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     ] == "describe_context_slice"
 
 
+def test_draft_profile_map_updates_tool_surfaces_scalar_conflict_review_lane(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/profile-conflict#Invoices"
+    shared_evidence = "https://example.test/profile-conflict#InvoicesProfileEvidence"
+
+    db.record_map_dataset(
+        table,
+        label="Invoices",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    for index, row_count in enumerate((120, 121)):
+        record_profile_bundle_tool(
+            db,
+            dataset_iri=table,
+            dataset_summary=f"Invoices full profile pass {index}.",
+            evidence_summary="Invoices full profile evidence.",
+            evidence_sources=[f"test://invoices/full/{index}"],
+            shared_evidence_iri=shared_evidence,
+            sample_size=row_count,
+            sample_scope="All rows in the Invoices table.",
+            sample_method="DuckDB full-table profile.",
+            row_count=row_count,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+        )
+
+    result = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+
+    assert result["suggested_next_actions"] == []
+    assert list(result["suggested_next_action_groups"]) == [
+        "profile_scalar_conflict_review"
+    ]
+    conflict_actions = result["suggested_next_action_groups"][
+        "profile_scalar_conflict_review"
+    ]
+    assert [action["tool_name"] for action in conflict_actions] == [
+        "stage_profile_map_updates",
+        "stage_profile_map_updates",
+    ]
+    assert result["suggested_next_call_groups"]["profile_scalar_conflict_review"] == [
+        action["call"] for action in conflict_actions
+    ]
+    actions_by_value = {
+        action["source_scalar_conflict"]["observed_value"]: action
+        for action in conflict_actions
+    }
+    assert set(actions_by_value) == {120, 121}
+    source = actions_by_value[120]["source_scalar_conflict"]
+    assert source["review_lane"] == "profile_scalar_conflict_review"
+    assert (
+        source["selection_rule"]
+        == "choose_at_most_one_option_per_conflict_group"
+    )
+    assert source["conflict_group_index"] == 0
+    assert source["kind"] == "dataset_row_count_snapshot"
+    assert source["resource_iri"] == table
+    assert source["current_value"] == 100
+    assert source["recommendation_indexes"] == [
+        source["representative_recommendation_index"]
+    ]
+    assert source["duplicate_recommendation_indexes"] == (
+        source["recommendation_indexes"]
+    )
+    assert actions_by_value[120]["arguments"] == {
+        "dataset_iri": table,
+        "evidence_iri": shared_evidence,
+        "accepted_recommendation_indexes": [
+            source["representative_recommendation_index"]
+        ],
+    }
+    assert result["scalar_conflict_group_count"] == 1
+    assert result["scalar_conflict_groups"][0]["option_count"] == 2
+
+
 def test_draft_profile_map_updates_tool_omits_undefined_value_type_seed(
     tmp_path: Path,
 ) -> None:

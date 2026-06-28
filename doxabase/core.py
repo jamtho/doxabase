@@ -2285,6 +2285,11 @@ class ProfileAdvisorySuggestedNextAction(SuggestedNextAction):
 
 
 @dataclass(frozen=True)
+class ProfileScalarConflictSuggestedNextAction(SuggestedNextAction):
+    source_scalar_conflict: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class RevisionNextAction:
     action_type: str
     queue: str
@@ -8840,6 +8845,7 @@ class DoxaBase:
                 default_stageable_representative_indexes=(
                     default_stageable_representative_indexes
                 ),
+                scalar_conflict_groups=scalar_conflict_groups,
                 supporting_patterns=profile_supporting_pattern_iris,
                 metric_advisories=metric_advisories,
                 type_advisories=type_advisories,
@@ -8897,6 +8903,7 @@ class DoxaBase:
         dataset_iri: str,
         evidence_iri: str,
         default_stageable_representative_indexes: list[int],
+        scalar_conflict_groups: list[ProfileScalarConflictGroup],
         supporting_patterns: list[str],
         metric_advisories: list[ProfileMetricVocabularyAdvisory],
         type_advisories: list[ProfileTypeFindingAdvisory],
@@ -8912,6 +8919,11 @@ class DoxaBase:
         )
         if profile_map_actions:
             groups["profile_map_updates"] = profile_map_actions
+        scalar_conflict_actions = self._profile_scalar_conflict_suggested_actions(
+            scalar_conflict_groups,
+        )
+        if scalar_conflict_actions:
+            groups["profile_scalar_conflict_review"] = scalar_conflict_actions
         metric_actions = self._profile_metric_advisory_suggested_actions(
             metric_advisories
         )
@@ -8935,6 +8947,55 @@ class DoxaBase:
             "profile_type_review",
         ):
             actions.extend(groups.get(group_name, []))
+        return actions
+
+    @staticmethod
+    def _profile_scalar_conflict_suggested_actions(
+        scalar_conflict_groups: list[ProfileScalarConflictGroup],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        for group in scalar_conflict_groups:
+            for option_index, option in enumerate(group.options):
+                action = option.suggested_next_action
+                actions.append(
+                    ProfileScalarConflictSuggestedNextAction(
+                        action_label=action.action_label,
+                        tool_name=action.tool_name,
+                        mcp_tool_name=action.mcp_tool_name,
+                        arguments=action.arguments,
+                        reason=action.reason,
+                        call=action.call,
+                        source_scalar_conflict={
+                            "review_lane": "profile_scalar_conflict_review",
+                            "selection_rule": (
+                                "choose_at_most_one_option_per_conflict_group"
+                            ),
+                            "conflict_group_index": group.conflict_group_index,
+                            "evidence_iri": group.evidence_iri,
+                            "resource_iri": group.resource.iri,
+                            "resource_label": group.resource.label,
+                            "predicate": group.predicate,
+                            "kind": group.kind,
+                            "current_value": group.current_value,
+                            "option_index": option_index,
+                            "option_count": group.option_count,
+                            "observed_value": option.observed_value,
+                            "representative_recommendation_index": (
+                                option.representative_recommendation_index
+                            ),
+                            "recommendation_indexes": (
+                                option.recommendation_indexes
+                            ),
+                            "duplicate_recommendation_indexes": (
+                                option.duplicate_recommendation_indexes
+                            ),
+                            "duplicate_profile_observation_iris": (
+                                option.duplicate_profile_observation_iris
+                            ),
+                            "review_note": group.review_note,
+                        },
+                    )
+                )
         return actions
 
     def stage_profile_map_updates(

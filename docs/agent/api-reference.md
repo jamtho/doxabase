@@ -478,15 +478,18 @@ plus `representative_metric_advisory_indexes`, type advisory counts plus
 top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
 Each metric/type advisory row also carries its row-local
 `metric_advisory_index` or `type_advisory_index`.
-Prefer grouped routing: `profile_map_updates`, `metric_vocabulary_review`, and
-`profile_type_review` are present only when that lane has actions. Grouped
-metric/type actions carry `source_profile_advisory` with the source advisory
-kind, index field, represented advisory indexes, duplicate group keys, duplicate
-advisory indexes, and duplicate profile-observation IRIs, so scripts can route
-directly from the grouped lane without rejoining every action to the advisory
-rows first. If `source_profile_advisory.mixed_support` is present on promotion
-or assertion actions in both metric and type lanes, review or export those
-generated drafts together before applying either lane independently.
+Prefer grouped routing: `profile_map_updates`,
+`profile_scalar_conflict_review`, `metric_vocabulary_review`, and
+`profile_type_review` are present only when that lane has actions. The scalar
+conflict lane is present when same-evidence scalar recommendations require a
+choose-one decision. Grouped metric/type actions carry
+`source_profile_advisory` with the source advisory kind, index field,
+represented advisory indexes, duplicate group keys, duplicate advisory indexes,
+and duplicate profile-observation IRIs, so scripts can route directly from the
+grouped lane without rejoining every action to the advisory rows first. If
+`source_profile_advisory.mixed_support` is present on promotion or assertion
+actions in both metric and type lanes, review or export those generated drafts
+together before applying either lane independently.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and
@@ -500,8 +503,10 @@ the caller opts in, and same-evidence scalar conflicts where profile
 observations propose multiple values for one row-count or nullable assertion.
 Those conflicts are also summarized in `scalar_conflict_groups[]`, where each
 option carries one explicit `stage_profile_map_updates` action for a chosen
-observed value. Option actions are not copied into the default flat
-`suggested_next_actions`. It does not mutate or stage graph changes, and it
+observed value. Option actions are exposed in the grouped
+`profile_scalar_conflict_review` lane with `source_scalar_conflict` metadata,
+but are not copied into the default flat `suggested_next_actions`. It does not
+mutate or stage graph changes, and it
 skips sampled zero-null promotions. Metric advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
 `promotion_patterns`, `context_patterns`, duplicate-group metadata, and
@@ -533,8 +538,8 @@ so agents do not have to stage duplicate siblings just to preserve observation
 support or accidentally stage sampled row-count or conflicting scalar rows.
 Sampled row-count and same-evidence scalar-conflict representatives remain in
 `representative_recommendation_indexes` for explicit review/override; for a
-conflict, use `scalar_conflict_groups[].options[]` to choose at most one
-observed value. If
+conflict, use `profile_scalar_conflict_review` or
+`scalar_conflict_groups[].options[]` to choose at most one observed value. If
 `recommendation_count == 0` and either metric or type advisories are present,
 treat the draft as advisory-only: follow metric/type review lanes and do not
 call `stage_profile_map_updates`, because advisory rows are not accepted

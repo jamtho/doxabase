@@ -1108,9 +1108,10 @@ option.suggested_next_call
 
 Each option's suggested action is a `stage_profile_map_updates` call for one
 representative recommendation index for that observed value. These option
-actions are intentionally not copied into the draft's flat
-`suggested_next_actions`; review the group and choose at most one option before
-calling one explicitly.
+actions also appear in the grouped `profile_scalar_conflict_review` lane with
+`source_scalar_conflict` metadata, but are intentionally not copied into the
+draft's flat `suggested_next_actions`; review the group and choose at most one
+option before calling one explicitly.
 
 `metric_advisories[]` rows name project-specific profile metric IRIs observed
 in the run and recommend vocabulary review before reusable comparison or map
@@ -1246,10 +1247,12 @@ grouped profile observation in `supporting_observations`.
 
 Use `suggested_next_action_groups` for first-pass machine routing. Groups are
 present only when non-empty and currently use `profile_map_updates`,
-`metric_vocabulary_review`, and `profile_type_review`. `suggested_next_call_groups`
+`profile_scalar_conflict_review`, `metric_vocabulary_review`, and
+`profile_type_review`. `suggested_next_call_groups`
 mirrors those groups with display call strings. The flat top-level
 `suggested_next_actions` / `suggested_next_calls` fields remain for compatibility
-and are ordered by those lanes. Group lanes may de-duplicate shared actions, such
+and include only bulk-safe default map/advisory lanes; scalar-conflict option
+actions stay grouped only. Group lanes may de-duplicate shared actions, such
 as one `describe_pattern` action used by several metric advisories. Grouped
 metric/type actions are `ProfileAdvisorySuggestedNextAction` rows and carry
 source metadata:
@@ -1283,8 +1286,23 @@ row-count recommendations can still appear in
 `representative_recommendation_indexes` for review, but the default staging
 action omits them unless the caller explicitly opts in. Same-evidence scalar
 conflicts also stay visible for review but are omitted from the default staging
-action; use `scalar_conflict_groups[].options[]` to pick at most one chosen
-value for each row-count or nullable assertion.
+action. Their option actions appear in the
+`profile_scalar_conflict_review` lane and carry `source_scalar_conflict`:
+
+```python
+action.source_scalar_conflict["selection_rule"]
+action.source_scalar_conflict["conflict_group_index"]
+action.source_scalar_conflict["kind"]
+action.source_scalar_conflict["resource_iri"]
+action.source_scalar_conflict["predicate"]
+action.source_scalar_conflict["observed_value"]
+action.source_scalar_conflict["representative_recommendation_index"]
+action.source_scalar_conflict["duplicate_profile_observation_iris"]
+```
+
+Use that lane for discovery, then pick at most one chosen value for each
+row-count or nullable conflict group. These option actions are intentionally not
+copied into flat `suggested_next_actions`.
 When same-evidence
 profile patterns target or imply the dataset or recommendation resources, the
 suggested staging arguments also include `supporting_patterns` so the staged map

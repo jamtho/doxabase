@@ -20,10 +20,11 @@ compaction, read `start_here` first.
    metric or type advisories are present, treat it as advisory-only and do not
    call `stage_profile_map_updates`. Prefer
    `suggested_next_action_groups`: use `profile_map_updates` for accepted map
-   facts, `metric_vocabulary_review` for metric vocabulary, and
-   `profile_type_review` for type evidence. Metric advisories may include a
-   reviewable `stage_pattern_promotion` skeleton, while type advisories may
-   include context, pattern, related column shell, or focused
+   facts, `profile_scalar_conflict_review` for choose-one scalar conflicts,
+   `metric_vocabulary_review` for metric vocabulary, and `profile_type_review`
+   for type evidence. Metric advisories may include a reviewable
+   `stage_pattern_promotion` skeleton, while type advisories may include
+   context, pattern, related column shell, or focused
    `stage_map_assertion_change` routes.
 8. Call `doxabase.describe_query_context` when the task is physical query planning and you need storage/layout/path/caveat readiness without the full handoff.
 9. Call `doxabase.describe_context_slice` when you need a route-explained subgraph around a dataset, pattern, or lore thread.

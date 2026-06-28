@@ -19927,6 +19927,27 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
             unmapped_recommendations[0].recommendation_index
         ],
     }
+    scalar_conflict_actions = draft.suggested_next_action_groups[
+        "profile_scalar_conflict_review"
+    ]
+    assert [
+        action.source_scalar_conflict["kind"]
+        for action in scalar_conflict_actions
+    ] == [
+        "dataset_row_count_snapshot",
+        "dataset_row_count_snapshot",
+        "column_nullable",
+        "column_nullable",
+    ]
+    assert all(
+        action.tool_name == "stage_profile_map_updates"
+        for action in scalar_conflict_actions
+    )
+    assert all(
+        action.source_scalar_conflict["selection_rule"]
+        == "choose_at_most_one_option_per_conflict_group"
+        for action in scalar_conflict_actions
+    )
 
     conflicting_scalar_indexes = [
         recommendation.recommendation_index
@@ -20022,7 +20043,16 @@ def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
         recommendation.default_stageable is False
         for recommendation in draft.recommendations
     )
-    assert draft.suggested_next_action_groups == {}
+    assert list(draft.suggested_next_action_groups) == [
+        "profile_scalar_conflict_review"
+    ]
+    conflict_actions = draft.suggested_next_action_groups[
+        "profile_scalar_conflict_review"
+    ]
+    assert len(conflict_actions) == 2
+    assert draft.suggested_next_call_groups["profile_scalar_conflict_review"] == [
+        action.call for action in conflict_actions
+    ]
     assert draft.suggested_next_actions == []
     assert draft.scalar_conflict_group_count == 1
     conflict_group = draft.scalar_conflict_groups[0]
@@ -20035,6 +20065,11 @@ def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
     }
     assert set(options_by_value) == {120, 121}
     duplicate_option = options_by_value[120]
+    duplicate_option_index = next(
+        index
+        for index, option in enumerate(conflict_group.options)
+        if option.observed_value == duplicate_option.observed_value
+    )
     assert len(duplicate_option.duplicate_recommendation_indexes) == 2
     assert len(duplicate_option.duplicate_profile_observation_iris) == 2
     assert duplicate_option.suggested_next_action.arguments == {
@@ -20043,6 +20078,40 @@ def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
         "accepted_recommendation_indexes": [
             duplicate_option.representative_recommendation_index
         ],
+    }
+    conflict_review_action = next(
+        action
+        for action in conflict_actions
+        if action.source_scalar_conflict["observed_value"]
+        == duplicate_option.observed_value
+    )
+    assert conflict_review_action.arguments == (
+        duplicate_option.suggested_next_action.arguments
+    )
+    assert conflict_review_action.source_scalar_conflict == {
+        "review_lane": "profile_scalar_conflict_review",
+        "selection_rule": "choose_at_most_one_option_per_conflict_group",
+        "conflict_group_index": 0,
+        "evidence_iri": evidence,
+        "resource_iri": dataset,
+        "resource_label": "Invoices",
+        "predicate": "rc:rowCountSnapshot",
+        "kind": "dataset_row_count_snapshot",
+        "current_value": 100,
+        "option_index": duplicate_option_index,
+        "option_count": 2,
+        "observed_value": 120,
+        "representative_recommendation_index": (
+            duplicate_option.representative_recommendation_index
+        ),
+        "recommendation_indexes": duplicate_option.recommendation_indexes,
+        "duplicate_recommendation_indexes": (
+            duplicate_option.duplicate_recommendation_indexes
+        ),
+        "duplicate_profile_observation_iris": (
+            duplicate_option.duplicate_profile_observation_iris
+        ),
+        "review_note": conflict_group.review_note,
     }
 
     staged = db.stage_profile_map_updates(
