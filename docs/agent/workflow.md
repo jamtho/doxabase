@@ -32,7 +32,9 @@ compaction, read `start_here` first.
 10. Call `doxabase.describe_context_slice` when you need a route-explained subgraph around a dataset, pattern, or lore thread.
    Use `profile="dataset_brief"` for dataset/table/profile/metric handoffs,
    `profile="pattern_brief"` for pattern handoffs, and `profile="deep_lore"`
-   when revision/history links or broader lore may matter.
+   when revision/history links or broader lore may matter. Use
+   `profile="resource_brief"` for arbitrary RDF resources such as ontology
+   terms, SHACL shapes, evidence, source spans, and non-dataset map resources.
 10. Use `doxabase.list_entities` with `type="rc:Pattern"` followed by `doxabase.describe_pattern` when you need the full handoff behind a linked pattern.
 11. Use `doxabase.list_entities` with types such as `rc:Claim`, `rc:Evidence`, or `rc:SourceSpan`, then `doxabase.describe_resource`, when you need generic type-aware retrieval instead of lexical search.
 12. Use `doxabase.record_observation` when you discover a simple point-in-time finding that should remain available to later agents.

@@ -16022,11 +16022,140 @@ def test_describe_context_slice_invalid_profile_points_to_route_fields(
         db.describe_context_slice(dataset, profile="route_explained")  # type: ignore[arg-type]
 
     error_message = str(exc.value)
-    assert "profile must be 'dataset_brief', 'pattern_brief', or 'deep_lore'" in (
-        error_message
-    )
+    assert (
+        "profile must be 'dataset_brief', 'pattern_brief', or 'deep_lore', "
+        "or 'resource_brief'"
+    ) in error_message
     assert "routes and route_legend" in error_message
     assert "'route_explained' profile" in error_message
+
+
+def test_resource_brief_context_slice_expands_shape_and_predicate_routes(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shape = "https://example.test/project#SignalShape"
+    score = "https://example.test/project#score"
+    reading = "https://example.test/project#Reading"
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        ex:score a rdf:Property ;
+            rdfs:label "score" ;
+            rdfs:range xsd:decimal .
+        """,
+        graph="ontology",
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:SignalShape a sh:NodeShape ;
+            rdfs:label "Signal shape" ;
+            sh:targetClass ex:Signal ;
+            sh:property [
+                sh:path ex:score ;
+                sh:datatype xsd:decimal
+            ] .
+        """,
+        graph="shapes",
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        ex:Reading ex:score "0.91"^^xsd:decimal .
+        """,
+        graph="map",
+    )
+
+    shape_slice = db.describe_context_slice(
+        shape,
+        profile="resource_brief",
+        max_triples=50,
+    )
+
+    assert shape_slice.profile == "resource_brief"
+    assert shape_slice.dataset_contexts == []
+    assert shape_slice.pattern_contexts == []
+    assert shape_slice.route_counts["seed"] == 1
+    assert shape_slice.route_counts["resource_type"] == 1
+    assert shape_slice.route_counts["blank_node_reference"] >= 2
+    resources = {resource.iri: resource for resource in shape_slice.resources}
+    assert resources[shape].surface_role == "validation_shape_context"
+    assert score in resources
+    assert any(
+        triple.graph == "shapes"
+        and triple.subject_kind == "bnode"
+        and triple.predicate == "http://www.w3.org/ns/shacl#path"
+        and triple.object == score
+        for triple in shape_slice.triples
+    )
+
+    score_slice = db.describe_context_slice(
+        score,
+        profile="resource_brief",
+        max_triples=50,
+    )
+
+    score_routes = {
+        route.route
+        for resource in score_slice.resources
+        if resource.iri == shape
+        for route in resource.routes
+    }
+    assert "incoming_blank_node_owner" in score_routes
+    reading_routes = {
+        route.route
+        for resource in score_slice.resources
+        if resource.iri == reading
+        for route in resource.routes
+    }
+    assert "predicate_usage_subject" in reading_routes
+
+
+def test_resource_brief_context_slice_expands_evidence_handoff(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+    claim_record = db.record_claim_observation(
+        summary="Messages need source-backed review.",
+        claim_text="The message export should be checked against its source notes.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=[dataset],
+        evidence_summary="Synthetic source note.",
+        source_path="/tmp/messages-source-note.md",
+        source_kind="rc:DocumentationSource",
+    )
+
+    context_slice = db.describe_context_slice(
+        claim_record.evidence_iri,
+        profile="resource_brief",
+    )
+
+    assert context_slice.route_counts["seed"] == 1
+    assert context_slice.route_counts["outgoing_reference"] >= 1
+    assert context_slice.route_counts["incoming_reference"] >= 1
+    assert claim_record.source_span_iri in {
+        resource.iri for resource in context_slice.resources
+    }
+    assert claim_record.observation_iri in {
+        resource.iri for resource in context_slice.resources
+    }
+    route_legend = {row.route: row for row in context_slice.route_legend}
+    assert route_legend["incoming_reference"].meaning == (
+        "A URI subject that directly references a resource-brief seed."
+    )
 
 
 def test_describe_context_slice_includes_profile_observations_and_metrics(

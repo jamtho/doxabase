@@ -608,10 +608,13 @@ want them to support the map patch.
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
 dataset/table map context, bounded profile observations/metrics, and linked
 lore, `pattern_brief` starts from pattern support, and `deep_lore` also
-includes directly relevant revision metadata. Dataset/deep-lore slices can also
-start from mapped column IRIs, profile observations, observed profile metric
-nodes, or metric-kind IRIs used by profile metrics. Deep-lore slices can start
-from `rc:GraphRevision` seeds to inspect revision support, evidence, anchors,
+includes directly relevant revision metadata. `resource_brief` starts from
+arbitrary RDF resources and returns a bounded route-explained one-hop handoff
+across map, ontology, shape, observation, pattern, evidence, and history graph
+roles. Dataset/deep-lore slices can also start from mapped column IRIs, profile
+observations, observed profile metric nodes, or metric-kind IRIs used by profile
+metrics. Deep-lore slices can start from `rc:GraphRevision` seeds to inspect
+revision support, evidence, anchors,
 application, restage, and alternative links. Column seeds expand to their owning
 dataset plus directly targeting claims, patterns, observations, and
 reconsideration lore. Profile-only column IRIs recorded with

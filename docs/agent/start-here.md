@@ -60,7 +60,9 @@ When arriving cold, use this route before reading every reference doc.
    around a dataset, pattern, or lore thread. Use `profile="dataset_brief"` for
    dataset/table/profile/metric handoffs, `profile="pattern_brief"` for pattern
    handoffs, and `profile="deep_lore"` when revision/history links or broader
-   lore may matter.
+   lore may matter. Use `profile="resource_brief"` for arbitrary RDF resources
+   such as ontology terms, SHACL shapes, evidence, source spans, and
+   non-dataset map resources.
 11. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
    `doxabase.describe_pattern` when the map points to synthesized lore.
 11. Use the smallest write helper that fits the work, then validate before

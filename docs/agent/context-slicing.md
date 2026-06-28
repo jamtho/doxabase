@@ -17,6 +17,12 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
   revision metadata when history records directly support selected patterns,
   claims, or observations. It can also start from an `rc:GraphRevision` seed
   when the revision itself is the handoff entry point.
+- `resource_brief` starts from arbitrary RDF resources. It includes direct
+  resource types, direct outgoing URI references, bounded blank-node URI
+  references, direct incoming URI subjects, URI owners of incoming blank-node
+  references, and subjects that use the seed as an RDF predicate. It includes
+  project and base shape graphs, but stays seed-centered rather than crawling
+  recursively.
 
 When lexical search finds a likely pattern, seed that pattern directly with
 `profile="pattern_brief"` before trying a broad dataset slice. Pattern seeds
@@ -27,17 +33,17 @@ counts, omitted counts, or offset-style browsing.
 
 For arbitrary project RDF, such as ontology terms, SHACL shapes, evidence
 resources, source spans, or non-dataset map resources, start with
-`list_entities()` or `search()`, then inspect specific IRIs with
-`describe_resource(include_incoming=True)`. For SHACL node shapes or other
-resources whose details sit behind blank-node objects, call
+`list_entities()` or `search()`, then use
+`describe_context_slice(..., profile="resource_brief")` when you need a
+route-explained handoff across graph roles. Use `describe_resource()` when you
+need paged direct triples or exact blank-node closure controls. For SHACL node
+shapes or other resources whose details sit behind blank-node objects, call
 `describe_resource(graph="shapes", include_blank_node_closure=True)` and read
 `blank_node_triples`, `blank_node_total_count`, and
 `blank_node_omitted_count`. When `blank_node_depth_exhausted=true`, rerun with
 a larger `blank_node_depth`; when only `blank_node_omitted_count` is non-zero,
 raise `blank_node_limit`. Use `export_graph()` or `export_trig()` when
-reviewers need complete Turtle for a graph role. Current context-slice profiles
-are not a generic RDF neighborhood browser, and shape seeds may not carry
-blank-node closure through the slice.
+reviewers need complete Turtle for a graph role.
 
 Dataset and deep-lore slices also understand profile seeds. A seed
 `rc:ProfileObservation` expands to its observed asset/column, evidence, value

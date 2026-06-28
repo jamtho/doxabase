@@ -7170,6 +7170,7 @@ class DoxaBase:
             "dataset_brief",
             "pattern_brief",
             "deep_lore",
+            "resource_brief",
         ] = "dataset_brief",
         max_triples: int = 500,
         include_trig: bool = False,
@@ -7177,11 +7178,16 @@ class DoxaBase:
     ) -> ContextSlice:
         if max_triples < 1:
             raise DoxaBaseError("max_triples must be at least 1")
-        if profile not in {"dataset_brief", "pattern_brief", "deep_lore"}:
+        if profile not in {
+            "dataset_brief",
+            "pattern_brief",
+            "deep_lore",
+            "resource_brief",
+        }:
             raise DoxaBaseError(
                 "profile must be 'dataset_brief', 'pattern_brief', or "
-                "'deep_lore'; route explanations are returned as routes and "
-                "route_legend on every valid profile, not as a "
+                "'deep_lore', or 'resource_brief'; route explanations are "
+                "returned as routes and route_legend on every valid profile, not as a "
                 "'route_explained' profile"
             )
 
@@ -7202,6 +7208,8 @@ class DoxaBase:
         described_evidence: set[str] = set()
         described_revisions: set[str] = set()
         warnings: list[str] = []
+        resource_brief_graphs = self._context_slice_graphs(profile="resource_brief")
+        resource_brief_route_limit = 25
 
         def add_resource(
             iri: str | None,
@@ -8042,6 +8050,139 @@ class DoxaBase:
             for linked_pattern in dataset.linked_patterns:
                 add_pattern(linked_pattern.iri, dataset_iri, depth + 1)
 
+        def add_resource_brief(seed_iri: str) -> None:
+            for type_iri in self._types_from_graphs(resource_brief_graphs, seed_iri):
+                add_resource(
+                    type_iri,
+                    "resource_type",
+                    "resource type",
+                    source_iri=seed_iri,
+                    depth=1,
+                )
+
+            outgoing_refs, outgoing_total = self._resource_brief_outgoing_references(
+                resource_brief_graphs,
+                subject=seed_iri,
+                limit=resource_brief_route_limit,
+            )
+            for resource_iri in outgoing_refs:
+                add_resource(
+                    resource_iri,
+                    "outgoing_reference",
+                    "outgoing reference",
+                    source_iri=seed_iri,
+                    depth=1,
+                )
+            if outgoing_total > len(outgoing_refs):
+                warnings.append(
+                    "resource_brief omitted "
+                    f"{outgoing_total - len(outgoing_refs)} outgoing reference(s) "
+                    f"for '{seed_iri}' after the route cap of "
+                    f"{resource_brief_route_limit}."
+                )
+
+            (
+                blank_node_refs,
+                blank_node_total,
+                blank_node_depth_exhausted,
+            ) = self._resource_brief_blank_node_references(
+                resource_brief_graphs,
+                subject=seed_iri,
+                limit=resource_brief_route_limit,
+            )
+            for resource_iri in blank_node_refs:
+                add_resource(
+                    resource_iri,
+                    "blank_node_reference",
+                    "blank-node reference",
+                    source_iri=seed_iri,
+                    depth=2,
+                )
+            if blank_node_total > len(blank_node_refs):
+                warnings.append(
+                    "resource_brief omitted "
+                    f"{blank_node_total - len(blank_node_refs)} blank-node "
+                    f"reference(s) for '{seed_iri}' after the route cap of "
+                    f"{resource_brief_route_limit}."
+                )
+            if blank_node_depth_exhausted:
+                warnings.append(
+                    "resource_brief blank-node expansion for "
+                    f"'{seed_iri}' reached the bounded depth. Use "
+                    "describe_resource(..., include_blank_node_closure=True) "
+                    "with a larger blank_node_depth when exact shape closure "
+                    "is needed."
+                )
+
+            incoming_refs, incoming_total = self._resource_brief_incoming_subjects(
+                resource_brief_graphs,
+                object_iri=seed_iri,
+                limit=resource_brief_route_limit,
+            )
+            for resource_iri in incoming_refs:
+                add_resource(
+                    resource_iri,
+                    "incoming_reference",
+                    "incoming reference",
+                    source_iri=seed_iri,
+                    depth=1,
+                )
+            if incoming_total > len(incoming_refs):
+                warnings.append(
+                    "resource_brief omitted "
+                    f"{incoming_total - len(incoming_refs)} incoming reference(s) "
+                    f"for '{seed_iri}' after the route cap of "
+                    f"{resource_brief_route_limit}."
+                )
+
+            (
+                blank_node_owners,
+                blank_node_owner_total,
+            ) = self._resource_brief_incoming_blank_node_owners(
+                resource_brief_graphs,
+                object_iri=seed_iri,
+                limit=resource_brief_route_limit,
+            )
+            for resource_iri in blank_node_owners:
+                add_resource(
+                    resource_iri,
+                    "incoming_blank_node_owner",
+                    "incoming blank-node owner",
+                    source_iri=seed_iri,
+                    depth=2,
+                )
+            if blank_node_owner_total > len(blank_node_owners):
+                warnings.append(
+                    "resource_brief omitted "
+                    f"{blank_node_owner_total - len(blank_node_owners)} incoming "
+                    f"blank-node owner(s) for '{seed_iri}' after the route cap of "
+                    f"{resource_brief_route_limit}."
+                )
+
+            (
+                predicate_users,
+                predicate_user_total,
+            ) = self._resource_brief_predicate_usage_subjects(
+                resource_brief_graphs,
+                predicate_iri=seed_iri,
+                limit=resource_brief_route_limit,
+            )
+            for resource_iri in predicate_users:
+                add_resource(
+                    resource_iri,
+                    "predicate_usage_subject",
+                    "predicate usage subject",
+                    source_iri=seed_iri,
+                    depth=1,
+                )
+            if predicate_user_total > len(predicate_users):
+                warnings.append(
+                    "resource_brief omitted "
+                    f"{predicate_user_total - len(predicate_users)} predicate "
+                    f"usage subject(s) for '{seed_iri}' after the route cap of "
+                    f"{resource_brief_route_limit}."
+                )
+
         metric_kind_seed_limit = 25
         for seed in seeds:
             seed_is_subject = self._subject_exists(seed, all_graphs)
@@ -8055,6 +8196,10 @@ class DoxaBase:
                 "rc:observedColumn",
                 seed,
             )
+            seed_is_resource_brief_target = (
+                profile == "resource_brief"
+                and self._resource_brief_seed_exists(resource_brief_graphs, seed)
+            )
             seed_is_observed_column_only = (
                 profile in {"dataset_brief", "deep_lore"}
                 and not seed_is_subject
@@ -8064,11 +8209,14 @@ class DoxaBase:
                 not seed_is_subject
                 and not metric_kind_metric_iris
                 and not seed_is_observed_column_only
+                and not seed_is_resource_brief_target
             ):
                 raise DoxaBaseError(f"Seed resource '{seed}' was not found")
             add_resource(seed, "seed", "seed resource", depth=0)
             seed_types = self._types_from_graphs(all_graphs, seed)
-            if (
+            if profile == "resource_brief":
+                add_resource_brief(seed)
+            elif (
                 profile in {"dataset_brief", "deep_lore"}
                 and (
                     self.expand_iri("rc:Dataset") in seed_types
@@ -8178,7 +8326,7 @@ class DoxaBase:
 
         resource_iris = self._context_slice_resource_order(resources, all_lookup_graphs)
         triples, candidate_triple_count = self._context_slice_triples(
-            self._context_slice_graphs(),
+            self._context_slice_graphs(profile=profile),
             resource_iris,
             max_triples=max_triples,
         )
@@ -8228,7 +8376,12 @@ class DoxaBase:
             ],
             reading_order=self._context_slice_reading_order(),
             resources=[
-                self._context_slice_resource(iri, routes, all_lookup_graphs)
+                self._context_slice_resource(
+                    iri,
+                    routes,
+                    all_lookup_graphs,
+                    profile=profile,
+                )
                 for iri, routes in self._context_slice_ordered_resources(
                     resources,
                     all_lookup_graphs,
@@ -8547,6 +8700,200 @@ class DoxaBase:
             )
         return base
 
+    def _resource_brief_seed_exists(self, graphs: list[str], seed: str) -> bool:
+        return (
+            self._subject_exists(seed, graphs)
+            or self._resource_triple_count(
+                graphs,
+                object_value=seed,
+                object_kind="uri",
+            )
+            > 0
+            or self._resource_brief_predicate_usage_count(
+                graphs,
+                predicate_iri=seed,
+            )
+            > 0
+        )
+
+    def _resource_brief_outgoing_references(
+        self,
+        graphs: list[str],
+        *,
+        subject: str,
+        limit: int,
+    ) -> tuple[list[str], int]:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        where = """
+            q.subject = ?
+            AND q.object_kind = 'uri'
+            AND q.predicate != ?
+        """
+        params: list[Any] = [subject, str(RDF.type), *graph_params]
+        return self._resource_brief_distinct_iris(
+            where,
+            params,
+            graph_filter=graph_filter,
+            select_column="q.object",
+            limit=limit,
+        )
+
+    def _resource_brief_incoming_subjects(
+        self,
+        graphs: list[str],
+        *,
+        object_iri: str,
+        limit: int,
+    ) -> tuple[list[str], int]:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        where = """
+            q.object = ?
+            AND q.object_kind = 'uri'
+            AND q.subject_kind = 'uri'
+        """
+        params: list[Any] = [object_iri, *graph_params]
+        return self._resource_brief_distinct_iris(
+            where,
+            params,
+            graph_filter=graph_filter,
+            select_column="q.subject",
+            limit=limit,
+        )
+
+    def _resource_brief_predicate_usage_subjects(
+        self,
+        graphs: list[str],
+        *,
+        predicate_iri: str,
+        limit: int,
+    ) -> tuple[list[str], int]:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        where = """
+            q.predicate = ?
+            AND q.subject_kind = 'uri'
+        """
+        params: list[Any] = [predicate_iri, *graph_params]
+        return self._resource_brief_distinct_iris(
+            where,
+            params,
+            graph_filter=graph_filter,
+            select_column="q.subject",
+            limit=limit,
+        )
+
+    def _resource_brief_predicate_usage_count(
+        self,
+        graphs: list[str],
+        *,
+        predicate_iri: str,
+    ) -> int:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        row = self._conn.execute(
+            f"""
+            SELECT COUNT(DISTINCT q.subject) AS count
+            FROM quads q
+            WHERE q.predicate = ?
+              AND q.subject_kind = 'uri'
+              {graph_filter}
+            """,
+            [predicate_iri, *graph_params],
+        ).fetchone()
+        return int(row["count"])
+
+    def _resource_brief_incoming_blank_node_owners(
+        self,
+        graphs: list[str],
+        *,
+        object_iri: str,
+        limit: int,
+    ) -> tuple[list[str], int]:
+        path_graph_filter, path_graph_params = self._graph_filter(graphs, alias="p")
+        owner_graph_filter, owner_graph_params = self._graph_filter(graphs, alias="o")
+        base_params: list[Any] = [
+            object_iri,
+            *path_graph_params,
+            *owner_graph_params,
+        ]
+        base_query = f"""
+            SELECT DISTINCT o.subject AS iri
+            FROM quads p
+            JOIN quads o
+              ON o.object = p.subject
+             AND o.object_kind = 'bnode'
+             AND o.subject_kind = 'uri'
+            WHERE p.object = ?
+              AND p.object_kind = 'uri'
+              AND p.subject_kind = 'bnode'
+              {path_graph_filter}
+              {owner_graph_filter}
+        """
+        rows = self._conn.execute(
+            f"""
+            {base_query}
+            ORDER BY iri
+            LIMIT ?
+            """,
+            [*base_params, limit],
+        ).fetchall()
+        count_row = self._conn.execute(
+            f"SELECT COUNT(*) AS count FROM ({base_query})",
+            base_params,
+        ).fetchone()
+        return [row["iri"] for row in rows], int(count_row["count"])
+
+    def _resource_brief_blank_node_references(
+        self,
+        graphs: list[str],
+        *,
+        subject: str,
+        limit: int,
+    ) -> tuple[list[str], int, bool]:
+        closure_triples, _total_count, depth_exhausted, _unvisited_count = (
+            self._resource_blank_node_closure(
+                graphs,
+                subject=subject,
+                max_depth=2,
+                limit=max(limit * 20, 100),
+            )
+        )
+        refs = sorted(
+            {
+                triple.object
+                for triple in closure_triples
+                if triple.object_kind == "uri"
+            }
+        )
+        return refs[:limit], len(refs), depth_exhausted
+
+    def _resource_brief_distinct_iris(
+        self,
+        where: str,
+        params: list[Any],
+        *,
+        graph_filter: str,
+        select_column: str,
+        limit: int,
+    ) -> tuple[list[str], int]:
+        base_query = f"""
+            SELECT DISTINCT {select_column} AS iri
+            FROM quads q
+            WHERE {where}
+              {graph_filter}
+        """
+        rows = self._conn.execute(
+            f"""
+            {base_query}
+            ORDER BY iri
+            LIMIT ?
+            """,
+            [*params, limit],
+        ).fetchall()
+        count_row = self._conn.execute(
+            f"SELECT COUNT(*) AS count FROM ({base_query})",
+            params,
+        ).fetchone()
+        return [row["iri"] for row in rows], int(count_row["count"])
+
     def _add_revision_context_for_slice(
         self,
         resources: dict[str, list[ContextSliceRoute]],
@@ -8586,8 +8933,8 @@ class DoxaBase:
                             depth=4,
                         )
 
-    def _context_slice_graphs(self) -> list[str]:
-        return [
+    def _context_slice_graphs(self, *, profile: str | None = None) -> list[str]:
+        graphs = [
             "base_ontology",
             "ontology",
             "map",
@@ -8596,16 +8943,25 @@ class DoxaBase:
             "evidence",
             "history",
         ]
+        if profile == "resource_brief":
+            graphs.insert(1, "base_shapes")
+            graphs.insert(3, "shapes")
+        return graphs
 
     def _context_slice_resource(
         self,
         iri: str,
         routes: list[ContextSliceRoute],
         lookup_graphs: list[str],
+        *,
+        profile: str | None = None,
     ) -> ContextSliceResource:
         summary = self._resource_summary(lookup_graphs, iri, display_label=True)
         sorted_routes = self._context_slice_sorted_routes(routes)
-        graphs = self._graphs_for_subject(self._context_slice_graphs(), iri)
+        graphs = self._graphs_for_subject(
+            self._context_slice_graphs(profile=profile),
+            iri,
+        )
         return ContextSliceResource(
             iri=iri,
             label=summary.label,
@@ -8622,7 +8978,9 @@ class DoxaBase:
     def _context_slice_surface_role(graphs: Iterable[str]) -> str:
         role_by_graph = {
             "base_ontology": "vocabulary_context",
+            "base_shapes": "validation_shape_context",
             "ontology": "vocabulary_context",
+            "shapes": "validation_shape_context",
             "map": "current_map_context",
             "observations": "observation_context",
             "patterns": "pattern_synthesis",
@@ -8690,6 +9048,12 @@ class DoxaBase:
             "seed_observed_column": 2,
             "seed_revision": 2,
             "linked_pattern": 2,
+            "resource_type": 3,
+            "outgoing_reference": 4,
+            "blank_node_reference": 5,
+            "incoming_reference": 6,
+            "incoming_blank_node_owner": 7,
+            "predicate_usage_subject": 8,
             "pattern_target": 3,
             "map_implication": 4,
             "dataset_column": 5,
@@ -8822,6 +9186,16 @@ class DoxaBase:
                 "A seed IRI found only as an observed column in profile observations."
             ),
             "seed_revision": "A seed resource expanded as revision-history metadata.",
+            "resource_type": "A direct rdf:type resource attached to a resource-brief seed.",
+            "outgoing_reference": "A URI resource directly referenced by a resource-brief seed.",
+            "blank_node_reference": (
+                "A URI resource reached through bounded outgoing blank-node closure from a resource-brief seed."
+            ),
+            "incoming_reference": "A URI subject that directly references a resource-brief seed.",
+            "incoming_blank_node_owner": (
+                "A URI subject that owns a blank node which references a resource-brief seed."
+            ),
+            "predicate_usage_subject": "A URI subject using a resource-brief seed as an RDF predicate.",
             "related_column": (
                 "A column reached from a selected column seed or lore route."
             ),

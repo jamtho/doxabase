@@ -727,6 +727,11 @@ beyond the exact seed while avoiding unrelated dataset leakage.
 for explicit profile-observation seeds and profile observations reached from
 observed-profile-metric, metric-kind, or observed-column seeds, even when those
 rows are older than the bounded `dataset_contexts[].profile_observations` slice.
+`resource_brief` slices are generic one-hop resource handoffs. Their route
+counts may include `resource_type`, `outgoing_reference`,
+`blank_node_reference`, `incoming_reference`, `incoming_blank_node_owner`, and
+`predicate_usage_subject`. Use raw `triples`/`trig` to read the exact
+predicates behind those generic routes.
 `suggested_next_actions` can include `describe_query_context` for seed
 datasets/tables whose nested `dataset_contexts[].operational_warnings` contain
 query-planning errors or warnings. Use that route to inspect readiness, target

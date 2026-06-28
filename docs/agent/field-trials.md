@@ -1954,6 +1954,12 @@ few useful gaps:
   bounded blank-node closure triples for SHACL/property-shape handoffs. Use that
   local card before reaching for graph export; keep the future generic slice for
   durable multi-resource handoffs that need routes and cross-graph context.
+- A retest showed that counted `describe_resource` is enough for single-resource
+  handoffs, but mixed arbitrary resources still need route explanation across
+  graph roles. `describe_context_slice(profile="resource_brief")` now gives a
+  bounded seed-centered handoff for ontology terms, SHACL shapes, evidence,
+  source spans, non-dataset map resources, incoming references, blank-node
+  owners, and predicate usage without becoming a recursive graph crawler.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
