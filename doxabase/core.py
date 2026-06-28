@@ -32813,10 +32813,16 @@ class DoxaBase:
     ) -> RevisionSnapshotBundleImportRecord:
         path = _existing_path(source)
         source_label = str(path) if path is not None else "<string>"
-        if path is not None:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        else:
-            payload = json.loads(str(source))
+        try:
+            if path is not None:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            else:
+                payload = json.loads(str(source))
+        except json.JSONDecodeError as exc:
+            raise DoxaBaseError(
+                "Could not parse revision snapshot bundle JSON from "
+                f"{source_label}: {exc.msg} at line {exc.lineno} column {exc.colno}"
+            ) from exc
         if not isinstance(payload, MappingABC):
             raise DoxaBaseError("Revision snapshot bundle must be a JSON object")
         format_value = payload.get("format")

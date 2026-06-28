@@ -93,6 +93,22 @@ after the RDF import. Keep the source capsule or explicit before/after exports
 when a downstream agent will only receive an RDF bundle. For controlled
 replacements, record the exact removed/added assertions in the rationale or
 preserve before/after exports when no snapshot bundle is available.
+Choose the export artifact by the receiving task:
+
+- `export_trig(graphs="workflow")` / `graphs="review_bundle"` is for review
+  context only. It preserves map, observation, pattern, and evidence context,
+  but not revision history. Importing snapshot JSON after a workflow-only RDF
+  bundle leaves `snapshot_rows_without_history` until project/history RDF is
+  imported.
+- Default project TriG preserves ontology, shapes, history metadata, graph
+  counts, digests, support links, and staged/applied pairing. It is enough for
+  lineage triage, but exact changed triples remain unavailable as
+  `history_only_count_digest`.
+- Project TriG plus companion `export_revision_snapshots()` JSON is the
+  portable handoff for exact applied diffs, graph snapshots, and stale-drift
+  reconstruction. Import order is recoverable: snapshot JSON can arrive before
+  project RDF, but normal revision helpers become complete only after both
+  artifacts are present.
 Use `describe_revision_graph_snapshot(revision_iri, graph_role,
 include_triples=True)` when you need the full stored contents of one revision
 snapshot role. It is narrower than historical graph browsing: pair it with

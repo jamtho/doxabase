@@ -3148,6 +3148,36 @@ def test_import_revision_snapshots_validates_bundle_before_writing(
     assert not empty_bnode_db._graph_snapshot_storage_exists(valid_revision, "map")
 
 
+def test_import_revision_snapshots_wraps_malformed_json(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    malformed_path = tmp_path / "bad-snapshots.json"
+    malformed_path.write_text(
+        '{"format": "doxabase.revision_snapshot_bundle.v1", "snapshots": [',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        DoxaBaseError,
+        match=(
+            "Could not parse revision snapshot bundle JSON from <string>: "
+            "Expecting value at line 1 column"
+        ),
+    ):
+        db.import_revision_snapshots(
+            '{"format": "doxabase.revision_snapshot_bundle.v1", "snapshots": ['
+        )
+
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.import_revision_snapshots(malformed_path)
+
+    message = str(excinfo.value)
+    assert "Could not parse revision snapshot bundle JSON from" in message
+    assert str(malformed_path) in message
+    assert "Expecting value at line 1 column" in message
+
+
 def test_apply_staged_revision_removes_existing_triples(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     messages = """
