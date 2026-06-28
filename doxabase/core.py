@@ -11766,6 +11766,12 @@ class DoxaBase:
         ready_candidate_indexes = self._query_ready_candidate_indexes(
             query_target_candidates
         )
+        issues = self._query_context_repair_hinted_issues(
+            issues,
+            dataset=dataset,
+            decision=query_target_decision,
+            candidates=query_target_candidates,
+        )
         suggested_repair_action_groups = self._query_repair_action_groups(issues)
         unselected_ready_candidate_indexes = [
             index
@@ -11978,6 +11984,151 @@ class DoxaBase:
                 )
             )
         return groups
+
+    def _query_context_repair_hinted_issues(
+        self,
+        issues: list[QueryPlanningIssue],
+        *,
+        dataset: DatasetDescription,
+        decision: QueryTargetDecision,
+        candidates: list[QueryTargetCandidate],
+    ) -> list[QueryPlanningIssue]:
+        if (
+            decision.status != "context_blocked"
+            or decision.candidate_index is None
+            or decision.selected_candidate_direct_clean is not True
+            or decision.candidate_index >= len(candidates)
+        ):
+            return issues
+        selected_candidate = candidates[decision.candidate_index]
+        blocker_iris = self._query_context_blocker_resource_iris(
+            selected_candidate
+        )
+        if not blocker_iris:
+            return issues
+        partitions_by_iri = {
+            partition.iri: partition for partition in dataset.partition_schemes
+        }
+        repair_partitions = [
+            partitions_by_iri[iri] for iri in blocker_iris if iri in partitions_by_iri
+        ]
+        if not repair_partitions:
+            return issues
+
+        repair_partition_iris = {partition.iri for partition in repair_partitions}
+        updated: list[QueryPlanningIssue] = []
+        for issue in issues:
+            resource_iri = issue.resource.iri if issue.resource is not None else None
+            if (
+                issue.code == "layout_needs_verification"
+                and resource_iri in repair_partition_iris
+            ):
+                partition = partitions_by_iri[resource_iri]
+                details = copy.deepcopy(issue.details) if issue.details else {}
+                details["repair_hint"] = self._query_partition_context_blocker_repair_hint(
+                    dataset,
+                    partition,
+                    decision=decision,
+                    selected_candidate=selected_candidate,
+                )
+                updated.append(
+                    QueryPlanningIssue(
+                        code=issue.code,
+                        severity=issue.severity,
+                        message=issue.message,
+                        domain=issue.domain,
+                        resource=issue.resource,
+                        details=details,
+                    )
+                )
+                continue
+            updated.append(issue)
+        return updated
+
+    @staticmethod
+    def _query_context_blocker_resource_iris(
+        candidate: QueryTargetCandidate,
+    ) -> list[str]:
+        blocker_iris: list[str] = []
+        for reason in candidate.review_reasons:
+            if reason.code != "query_context_has_other_blockers":
+                continue
+            details = reason.details or {}
+            values = details.get("excluded_blocker_resource_iris")
+            if not isinstance(values, list):
+                continue
+            for value in values:
+                iri = str(value)
+                if iri not in blocker_iris:
+                    blocker_iris.append(iri)
+        return blocker_iris
+
+    def _query_partition_context_blocker_repair_hint(
+        self,
+        dataset: DatasetDescription,
+        partition: PartitionDescription,
+        *,
+        decision: QueryTargetDecision,
+        selected_candidate: QueryTargetCandidate,
+    ) -> dict[str, Any]:
+        storage_access_iri = (
+            selected_candidate.storage_access.iri
+            if selected_candidate.storage_access is not None
+            else None
+        )
+        return {
+            "action_type": "remove_stale_partition_scheme_link",
+            "requires_review": True,
+            "target_dataset_iri": dataset.iri,
+            "partition_scheme": {
+                "iri": partition.iri,
+                "label": partition.label,
+                "path_template": partition.path_template,
+            },
+            "selected_candidate": {
+                "candidate_index": decision.candidate_index,
+                "candidate_path": selected_candidate.candidate_path,
+                "candidate_path_status": selected_candidate.candidate_path_status,
+                "template_source": selected_candidate.template_source,
+                "source_resource_iri": selected_candidate.source_resource.iri,
+                "storage_access_iri": storage_access_iri,
+            },
+            "actions": [
+                {
+                    "action_type": "remove_stale_partition_scheme_link",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "action_label": "Stage stale partition-scheme removal",
+                    "reason": (
+                        "Use after review confirms the selected direct-clean "
+                        "query target supersedes this partition scheme for the "
+                        "dataset."
+                    ),
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed stale partition-scheme link for "
+                        f"{dataset.iri}; selected query target "
+                        f"{selected_candidate.candidate_path!r} should be the "
+                        "planning route."
+                    ),
+                    "arguments": {
+                        "subject": dataset.iri,
+                        "predicate": "rc:partitionedBy",
+                        "object": partition.iri,
+                        "object_kind": "iri",
+                        "change_kind": "remove",
+                        "graph": "map",
+                        "validation_scope": "all",
+                    },
+                    "condition": (
+                        "Only after review confirms this partition scheme is a "
+                        "stale blocker for the selected direct-clean candidate, "
+                        "not merely an unverified alternate route that should "
+                        "remain linked."
+                    ),
+                }
+            ],
+        }
 
     @staticmethod
     def _query_repair_action_group_summary(

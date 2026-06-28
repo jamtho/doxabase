@@ -70,6 +70,10 @@ of these reviewed map moves:
    `ais:DailyIndex rc:partitionedBy ais:daily_date_partition` assertion. If
    that old link remains, the corrected index candidates stay context-blocked
    by the stale broadcast partition even when selected explicitly.
+   `describe_query_context` exposes this as a reviewed
+   `suggested_repair_action_groups` row with
+   `repair_action_type="remove_stale_partition_scheme_link"` when a
+   direct-clean selected candidate is blocked by the stale partition scheme.
 
 After those moves, the wildcard index candidate should draft as
 `handoff_kind="runtime_resolution_required"` with
@@ -158,10 +162,12 @@ Start with `describe_query_context(dataset_iri)`:
    `skippable_action_count`, `action_status_counts`, and
    `pending_required_extra_arguments` before routing a group; mixed database
    relation repairs can include an already-satisfied action that should be
-   skipped after the pending cleanup is reviewed. These are reviewed templates,
-   not call-ready `suggested_next_actions`: fill placeholders, add required
-   fields such as `rationale`, and check each `condition` before calling the
-   named tool.
+   skipped after the pending cleanup is reviewed. Context-blocked direct-clean
+   routes can also expose a `remove_stale_partition_scheme_link` template for a
+   stale `rc:partitionedBy` assertion. These are reviewed templates, not
+   call-ready `suggested_next_actions`: fill placeholders, add required fields
+   such as `rationale`, and check each `condition` before calling the named
+   tool.
 7. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, profile evidence inspection actions come before query-plan
    drafting; when multiple candidate runs need review, several

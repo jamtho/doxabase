@@ -292,7 +292,9 @@ ordered action templates. Each group also reports `action_status_counts`,
 already-satisfied repair groups before reviewing the templates. These repair
 rows are reviewed templates rather than call-ready next actions: fill
 placeholders, add required extra arguments such as `rationale`, and check
-conditions before calling the named tool. For database
+conditions before calling the named tool. Context-blocked direct-clean routes
+can expose `remove_stale_partition_scheme_link` for reviewed removal of a stale
+`rc:partitionedBy` assertion. For database
 template-source mismatches and
 storage protocol/location mismatches, `issues[].details.repair_hint` gives
 ordered, review-gated repair templates; follow `repair_hint.actions` order.

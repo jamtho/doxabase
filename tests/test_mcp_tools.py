@@ -3415,6 +3415,79 @@ def test_draft_query_plan_tool_accepts_explicit_storage_selection(
     assert date_binding["candidate_column_match_status"] == "single"
 
 
+def test_describe_query_context_tool_suggests_stale_partition_link_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#DailyIndex"
+    date_column = record_map_column_tool(
+        db,
+        iri="https://example.test/project#daily_index__date",
+        table_iri=dataset,
+        column_name="date",
+    )
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#daily_index_object_store_access",
+        label="Daily index object-store access",
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root="s3://ais-noaa/",
+        endpoint_profile="local-minio",
+        credential_reference="profile:ais-readonly",
+        path_templates=["index/*/*.parquet"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    stale_partition = record_map_partition_scheme_tool(
+        db,
+        iri="https://example.test/project#broadcast_date_partition",
+        path_template="broadcasts/{year}/ais-{date}.parquet",
+        partition_columns=[date_column["iri"]],
+        granularity="rc:Daily",
+        layout_verification_status="rc:CandidateLayout",
+        datasets=[dataset],
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#daily_index_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Daily index",
+        is_table=True,
+        columns=[date_column["iri"]],
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["query_target_decision"]["status"] == "context_blocked"
+    assert result["suggested_repair_action_group_count"] == 1
+    repair_group = result["suggested_repair_action_groups"][0]
+    assert repair_group["issue_code"] == "layout_needs_verification"
+    assert repair_group["issue_resource"]["iri"] == stale_partition["iri"]
+    assert repair_group["repair_action_type"] == (
+        "remove_stale_partition_scheme_link"
+    )
+    assert repair_group["action_status_counts"] == {"pending_review": 1}
+    assert repair_group["pending_required_extra_arguments"] == ["rationale"]
+    action = repair_group["actions"][0]
+    assert action["tool_name"] == "stage_map_assertion_change"
+    assert action["arguments"] == {
+        "subject": dataset,
+        "predicate": "rc:partitionedBy",
+        "object": stale_partition["iri"],
+        "object_kind": "iri",
+        "change_kind": "remove",
+        "graph": "map",
+        "validation_scope": "all",
+    }
+
+
 def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(
     tmp_path: Path,
 ) -> None:

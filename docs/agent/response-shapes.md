@@ -2225,6 +2225,13 @@ identifiers are the storage-owned exception. A fixture staleness hint means
 known AIS or Polymarket fixture tables are present while the capsule has zero
 `rc:StorageAccess` resources; use a fresh scratch fixture load before drawing
 query-target conclusions.
+When a direct-clean selected query target is context-blocked by a stale
+partition scheme linked to the dataset, the blocking `layout_needs_verification`
+issue can carry `details.repair_hint.action_type =
+"remove_stale_partition_scheme_link"`. Its single reviewed action is a
+`stage_map_assertion_change` template that removes
+`<dataset> rc:partitionedBy <partition scheme>`, with `rationale` required
+before calling the tool.
 `database_relation_template_source_mismatch` includes the
 template, template source, source resource IRI, storage access IRI, storage
 protocol IRI, the allowed relation-template source list, and `repair_hint`.

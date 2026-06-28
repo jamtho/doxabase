@@ -623,6 +623,10 @@ are templates, not flat call-ready `suggested_next_actions`. Fill placeholders,
 add required extra arguments such as `rationale`, skip actions explicitly marked
 already satisfied, and review each action's condition before calling the named
 tool.
+Context-blocked direct-clean routes can expose
+`repair_action_type="remove_stale_partition_scheme_link"` to stage reviewed
+removal of a stale `rc:partitionedBy` link that is blocking an otherwise clean
+query target.
 When `missing_storage_access` appears, read `issues[].details.repair_hint` for
 reviewed repair templates: record a non-secret storage access and link it to the
 dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing
