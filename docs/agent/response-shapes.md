@@ -2991,8 +2991,10 @@ drift_detail="summary")` returns `RevisionLineageDescription`:
 
 ```python
 lineage.selected_revision
+lineage.selected_revision_iri
 lineage.selected_role
 lineage.paired_revision
+lineage.paired_revision_iri
 lineage.paired_role
 lineage.applied_revision_iri
 lineage.staged_revision_iri
@@ -3015,7 +3017,9 @@ lineage.drift_detail
 ```
 
 `selected_revision`, `paired_revision`, and `restage_chain[]` are normal
-`GraphRevisionListItem` rows. `selected_role` / `paired_role` values include
+`GraphRevisionListItem` rows. Use `selected_revision_iri` and
+`paired_revision_iri` for first-pass routing when you do not need to inspect the
+nested rows. `selected_role` / `paired_role` values include
 `applied_event`, `applied_source`, `restaged_source`,
 `current_staged_revision`, `staged_revision`, and other record kinds for
 non-patch history. `restage_chain_iris` walks from the oldest visible source to
@@ -3090,6 +3094,7 @@ Each `resource_revisions.revisions[]` item wraps a normal
 
 ```python
 item.revision
+item.revision_iri
 item.match_types
 item.revision_anchor_match
 item.patch_mention_match
@@ -3102,6 +3107,9 @@ item.applied_source_patch_mentions
 item.applied_source_patch_mentions_incomplete
 item.applied_source_patch_mentions_unreadable_count
 ```
+
+Use `item.revision_iri` for routing scripts; use `item.revision` when you need
+the full graph-revision row.
 
 `patch_mention_scan` summarizes whether patch payload scanning was complete
 across all candidate revisions before pagination:
@@ -3157,8 +3165,10 @@ include_applied_diff=True, include_triples=False, max_triples=100)` returns
 ```python
 lineage.resource
 lineage.selected_revision
+lineage.selected_revision_iri
 lineage.selected_role
 lineage.paired_revision
+lineage.paired_revision_iri
 lineage.paired_role
 lineage.applied_revision_iri
 lineage.staged_revision_iri
@@ -3181,6 +3191,8 @@ lineage.applied_diff
 ```
 
 `selected_revision` and `paired_revision` are `ResourceRevisionListItem` rows.
+Use `selected_revision_iri` and `paired_revision_iri` for first-pass routing;
+use the nested resource-revision rows when match types or patch mentions matter.
 `selected_role` / `paired_role` values include `applied_event`,
 `applied_source`, `restaged_source`, `current_staged_revision`,
 `staged_revision`, and `history_record`. `latest_revision_iri` / `latest_role`

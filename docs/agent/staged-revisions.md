@@ -123,9 +123,10 @@ drift triples are present. Warnings also call out imported oddities such as
 missing applied-source links, non-staged rows inside restage chains, and
 parallel restage successors.
 First-read field names are intentionally specific: lineage exposes
-`selected_revision.iri` and `staged_revision_iri`, not a top-level
-`selected_revision_iri`; applied records use `applied_revision_iri`; revision
-list rows use `application_decision`, while direct apply checks use `decision`.
+`selected_revision_iri`, `paired_revision_iri`, and `staged_revision_iri`;
+applied records use `applied_revision_iri`; resource revision list rows expose
+`revision_iri` beside the nested `revision`; graph revision list rows use
+`application_decision`, while direct apply checks use `decision`.
 For automation over grouped/list queues, prefer
 `next_action_queue_items[].resolved_target_iri` and row-local `next_action`
 arguments over raw `next_action_queue` values, because handled stale rows may

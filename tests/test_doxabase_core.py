@@ -8696,7 +8696,9 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     source_lineage = db.describe_revision_lineage(first.revision_iri)
 
     assert source_lineage.selected_role == "restaged_source"
+    assert source_lineage.selected_revision_iri == first.revision_iri
     assert source_lineage.paired_revision is None
+    assert source_lineage.paired_revision_iri is None
     assert source_lineage.applied_revision_iri == applied.applied_revision_iri
     assert source_lineage.staged_revision_iri == first.revision_iri
     assert source_lineage.applied_source_revision_iri == first_restaged.revision_iri
@@ -8741,8 +8743,10 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     staged_lineage = db.describe_revision_lineage(first_restaged.revision_iri)
 
     assert staged_lineage.selected_role == "applied_source"
+    assert staged_lineage.selected_revision_iri == first_restaged.revision_iri
     assert staged_lineage.paired_revision is not None
     assert staged_lineage.paired_revision.iri == applied.applied_revision_iri
+    assert staged_lineage.paired_revision_iri == applied.applied_revision_iri
     assert staged_lineage.paired_role == "applied_event"
     assert staged_lineage.staged_revision_iri == first_restaged.revision_iri
     assert staged_lineage.applied_source_revision_iri == first_restaged.revision_iri
@@ -8751,8 +8755,10 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     applied_lineage = db.describe_revision_lineage(applied.applied_revision_iri)
 
     assert applied_lineage.selected_role == "applied_event"
+    assert applied_lineage.selected_revision_iri == applied.applied_revision_iri
     assert applied_lineage.paired_revision is not None
     assert applied_lineage.paired_revision.iri == first_restaged.revision_iri
+    assert applied_lineage.paired_revision_iri == first_restaged.revision_iri
     assert applied_lineage.paired_role == "applied_source"
     assert applied_lineage.applied_source_revision_iri == first_restaged.revision_iri
     assert applied_lineage.restage_chain_iris == [
@@ -9016,6 +9022,7 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     assert listing.include_apply_checks is True
     assert listing.count == 3
     by_iri = {item.revision.iri: item for item in listing.revisions}
+    assert {item.revision_iri for item in listing.revisions} == set(by_iri)
     assert set(by_iri) == {
         anchored.revision_iri,
         unanchored.revision_iri,
@@ -9057,9 +9064,11 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
     )
     assert lineage.resource.iri == orders
     assert lineage.selected_revision.revision.iri == applied.applied_revision_iri
+    assert lineage.selected_revision_iri == applied.applied_revision_iri
     assert lineage.selected_role == "applied_event"
     assert lineage.paired_revision is not None
     assert lineage.paired_revision.revision.iri == unanchored.revision_iri
+    assert lineage.paired_revision_iri == unanchored.revision_iri
     assert lineage.paired_role == "applied_source"
     assert lineage.applied_revision_iri == applied.applied_revision_iri
     assert lineage.staged_revision_iri == unanchored.revision_iri
@@ -9094,8 +9103,10 @@ def test_list_resource_revisions_finds_anchors_patches_and_applied_sources(
         include_applied_diff=False,
     )
     assert source_lineage.selected_role == "applied_source"
+    assert source_lineage.selected_revision_iri == unanchored.revision_iri
     assert source_lineage.paired_revision is not None
     assert source_lineage.paired_revision.revision.iri == applied.applied_revision_iri
+    assert source_lineage.paired_revision_iri == applied.applied_revision_iri
     assert source_lineage.latest_revision_iri == applied.applied_revision_iri
     assert source_lineage.latest_role == "applied_event"
     assert source_lineage.next_action_queue_item is not None

@@ -1801,6 +1801,7 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert result["total_count"] == 2
     assert len(result["revisions"]) == 2
     by_iri = {item["revision"]["iri"]: item for item in result["revisions"]}
+    assert {item["revision_iri"] for item in result["revisions"]} == set(by_iri)
     assert by_iri[staged["revision_iri"]]["match_types"] == ["patch_subject"]
     assert by_iri[staged["revision_iri"]]["patch_mentions_incomplete"] is False
     assert by_iri[staged["revision_iri"]]["patch_mentions_unreadable_count"] == 0
@@ -1837,7 +1838,9 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         include_triples=True,
     )
     assert lineage["selected_role"] == "applied_event"
+    assert lineage["selected_revision_iri"] == applied["applied_revision_iri"]
     assert lineage["paired_revision"]["revision"]["iri"] == staged["revision_iri"]
+    assert lineage["paired_revision_iri"] == staged["revision_iri"]
     assert lineage["current_staged_revision_iri"] is None
     assert lineage["current_revision_iri"] is None
     assert lineage["latest_revision_iri"] == applied["applied_revision_iri"]
@@ -1863,10 +1866,14 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         iri=applied["applied_revision_iri"],
     )
     assert generic_lineage["selected_role"] == "applied_event"
+    assert generic_lineage["selected_revision_iri"] == (
+        applied["applied_revision_iri"]
+    )
     assert generic_lineage["selected_revision"]["iri"] == (
         applied["applied_revision_iri"]
     )
     assert generic_lineage["paired_revision"]["iri"] == staged["revision_iri"]
+    assert generic_lineage["paired_revision_iri"] == staged["revision_iri"]
     assert generic_lineage["paired_role"] == "applied_source"
     assert generic_lineage["applied_revision_iri"] == applied["applied_revision_iri"]
     assert generic_lineage["staged_revision_iri"] == staged["revision_iri"]

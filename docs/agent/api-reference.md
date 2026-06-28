@@ -1057,10 +1057,11 @@ computes apply checks for patch-backed revisions, as does
 `current_staged_work_only=True`.
 `describe_revision_lineage(revision_iri)` takes one staged source, restaged
 successor, or applied event IRI and returns the compact graph-level relationship
-card around it: selected row/role, paired staged/applied row when visible,
-applied and staged revision IRIs, `applied_source_revision_iri` for the staged
-row that actually applied, restage chain, alternatives, related revision IRIs,
-latest/current pointers, warnings, and next-action routing. Use it when the
+card around it: selected row/role, `selected_revision_iri`, paired
+staged/applied row when visible, `paired_revision_iri`, applied and staged
+revision IRIs, `applied_source_revision_iri` for the staged row that actually
+applied, restage chain, alternatives, related revision IRIs, latest/current
+pointers, warnings, and next-action routing. Use it when the
 question starts from a revision IRI rather than a resource IRI. It is
 read-only and does not include patch payloads or arbitrary graph-version
 snapshots; use staged, applied-diff, or snapshot helpers for those. Exact diff
@@ -1073,8 +1074,8 @@ points at a successor or applied event.
 touch one resource through `rc:revisionAnchor`, exact subject/predicate/object
 URI mentions in staged patch payloads, or an applied event whose staged source
 matched the resource. It filters before pagination and wraps each normal
-`list_graph_revisions()` row under `revision`, adding `match_types`,
-`patch_mentions`, `applied_source_revision_iri`, and
+`list_graph_revisions()` row under `revision`, adding `revision_iri`,
+`match_types`, `patch_mentions`, `applied_source_revision_iri`, and
 `applied_source_patch_mentions`. Patch mentions are compact role-aware flags,
 not patch content; call `describe_staged_revision()` for the full payload.
 The top-level collection is `revisions`; `count` and `total_count` are the
@@ -1095,8 +1096,9 @@ distinct staged/source revision count across the pre-pagination scan, not a
 returned-row count, and `omitted_match_risk` is a coarse absence-risk signal.
 `describe_resource_revision_lineage(resource_iri, revision_iri)` takes one of
 those rows and returns a compact resource-centric lineage card with the selected
-row, visible paired staged/applied row, related revision IRIs, selected next
-action, patch scan status, and optional resource-filtered applied diff summary.
+row, `selected_revision_iri`, visible paired staged/applied row,
+`paired_revision_iri`, related revision IRIs, selected next action, patch scan
+status, and optional resource-filtered applied diff summary.
 `current_revision_iri` mirrors `current_staged_revision_iri` when the lineage row
 or restage successor is still current staged work, matching batch-restage naming.
 `latest_revision_iri` / `latest_role` mirror graph lineage's latest family

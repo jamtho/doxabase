@@ -189,8 +189,9 @@ call `check_staged_revision_apply` when you need the actual changed triples.
 Describes one graph revision's staged/applied lineage by revision IRI. Use it
 when you already have a staged source, restaged successor, or applied event IRI
 and need the compact relationship card without opening patch payloads. The
-response includes the selected list row, selected role, visible paired
-staged/applied row, applied and staged revision IRIs,
+response includes the selected list row, `selected_revision_iri`, selected
+role, visible paired staged/applied row, `paired_revision_iri`, applied and
+staged revision IRIs,
 `applied_source_revision_iri` for the staged row that actually applied, current
 staged successor when one is still live, latest applied/current revision,
 restage chain IRIs, alternative revision IRIs, related revision IRIs, warnings
@@ -215,7 +216,8 @@ Lists revisions that explicitly touch one resource. Matches come from
 `rc:revisionAnchor`, exact subject/predicate/object URI mentions in staged patch
 payloads, or an applied event whose staged source matched the resource. The
 response top-level collection is `revisions` with total `count`; each row wraps
-the normal revision list row under `revision` and adds
+the normal revision list row under `revision`, exposes `revision_iri` for
+first-pass routing, and adds
 `match_types`, `patch_mentions`, `applied_source_revision_iri`, and
 `applied_source_patch_mentions`. `total_count` aliases `count`, and
 `returned_count` is the returned page length. `patch_mention_scan` and per-row incomplete
@@ -236,7 +238,8 @@ role, sequence, `matched_term_roles`, `matched_triples`, and total
 Describes one `resource_iri` / `revision_iri` match from
 `list_resource_revisions` and adds immediate staged/applied context. Use it when
 a resource revision row needs a compact lineage card: selected row, paired
-staged/applied row when visible, graph-level `restage_chain_iris`,
+staged/applied row when visible, `selected_revision_iri`,
+`paired_revision_iri`, graph-level `restage_chain_iris`,
 `alternative_revision_iris`, merged `related_revision_iris`, graph-lineage
 warnings, selected next action, and the same patch scan status used by
 `list_resource_revisions`. When

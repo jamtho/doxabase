@@ -521,7 +521,10 @@ staged successor that actually applied; use row-local `next_action` when you
 just need the next inspection call.
 Lineage responses also expose `next_action_queue_item`, scoped to the selected
 row and lineage-level `next_action`; use its `resolved_target_iri` and
-`row_is_target` fields before mutating stale rows with successors.
+`row_is_target` fields before mutating stale rows with successors. Use
+lineage-level `selected_revision_iri` / `paired_revision_iri` for first-pass
+routing, then open the nested `selected_revision` / `paired_revision` rows when
+you need status, snapshot, or support context.
 
 Use the full provenance recipe when an autonomous agent needs to answer "what
 changed this resource, why, and what review action remains?":
@@ -535,8 +538,8 @@ changed this resource, why, and what review action remains?":
    `next_action_queue` before opening large payloads.
    Resource listings intentionally omit patch `content`, but they can still be
    verbose for a resource with many stale, applied, and current successor rows.
-   Use `next_action_queue_items` as the compact live routing table before
-   opening individual row detail.
+   Use row-local `revision_iri` and `next_action_queue_items` as the compact
+   live routing table before opening individual row detail.
 3. Open the relevant row with
    `describe_resource_revision_lineage(resource_iri, revision_iri,
    include_applied_diff=True)`.
@@ -552,7 +555,8 @@ Use `describe_resource_revision_lineage(resource_iri, revision_iri)` after that
 when one row needs a compact handoff card. It pairs applied events with their
 staged source when visible, carries the selected row's next action, and can
 summarize exact applied-diff triples filtered to the resource. It also exposes
-the selected revision family's `restage_chain_iris` and
+`selected_revision_iri`, `paired_revision_iri`, the selected revision family's
+`restage_chain_iris`, and
 `alternative_revision_iris` so resource-first workflows can notice sibling
 alternatives. It is a resource-centric helper, not full graph-version browsing.
 Its

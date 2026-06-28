@@ -1343,8 +1343,10 @@ class GraphRevisionList:
 @dataclass(frozen=True)
 class RevisionLineageDescription:
     selected_revision: GraphRevisionListItem
+    selected_revision_iri: str
     selected_role: str
     paired_revision: GraphRevisionListItem | None
+    paired_revision_iri: str | None
     paired_role: str | None
     applied_revision_iri: str | None
     staged_revision_iri: str | None
@@ -1398,6 +1400,7 @@ class ResourceRevisionPatchMentionScanSummary:
 @dataclass(frozen=True)
 class ResourceRevisionListItem:
     revision: GraphRevisionListItem
+    revision_iri: str
     match_types: list[str]
     revision_anchor_match: bool
     patch_mention_match: bool
@@ -1469,8 +1472,10 @@ class ResourceAppliedRevisionDiffSummary:
 class ResourceRevisionLineageDescription:
     resource: ResourceSummary
     selected_revision: ResourceRevisionListItem
+    selected_revision_iri: str
     selected_role: str
     paired_revision: ResourceRevisionListItem | None
+    paired_revision_iri: str | None
     paired_role: str | None
     applied_revision_iri: str | None
     staged_revision_iri: str | None
@@ -5514,8 +5519,12 @@ class DoxaBase:
         )
         return RevisionLineageDescription(
             selected_revision=selected,
+            selected_revision_iri=selected.iri,
             selected_role=self._revision_lineage_role(selected),
             paired_revision=paired_revision,
+            paired_revision_iri=(
+                paired_revision.iri if paired_revision is not None else None
+            ),
             paired_role=(
                 self._revision_lineage_role(paired_revision)
                 if paired_revision is not None
@@ -6000,6 +6009,7 @@ class DoxaBase:
             matched.append(
                 ResourceRevisionListItem(
                     revision=item,
+                    revision_iri=item.iri,
                     match_types=match_types,
                     revision_anchor_match=revision_anchor_match,
                     patch_mention_match=patch_mention_match,
@@ -6294,8 +6304,12 @@ class DoxaBase:
         return ResourceRevisionLineageDescription(
             resource=lineage.resource,
             selected_revision=selected,
+            selected_revision_iri=selected.revision.iri,
             selected_role=self._resource_revision_lineage_role(selected),
             paired_revision=paired,
+            paired_revision_iri=(
+                paired.revision.iri if paired is not None else None
+            ),
             paired_role=(
                 self._resource_revision_lineage_role(paired)
                 if paired is not None
