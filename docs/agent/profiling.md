@@ -118,6 +118,13 @@ grouped Markdown review bundle for revisions connected to the profile run by
 profile evidence, supporting profile observations, related support patterns, or
 profile-derived anchors.
 
+When `stage_profile_map_updates` creates a staged revision, its
+`suggested_next_actions` includes an `export_profile_insight_review_bundle`
+action seeded with that revision. Use it for the first focused review bundle,
+then rerun the export after staging metric vocabulary, type-review, or
+caveat/systematisation alternatives that should be compared with the map
+update.
+
 This helper is a review bundler, not a staging shortcut. It will include the
 profile map-update revision plus already-staged metric vocabulary promotions,
 caveat/systematisation alternatives, or type-review assertions when they carry
@@ -143,7 +150,8 @@ profile recommendations, such as nullability, that should go through
 `profile_map_updates` before you treat the run as advisory-only. When
 `stage_profile_map_updates` staged an unmapped column shell, its
 `suggested_next_actions` includes this `draft_profile_map_updates` rerun after
-the staged revision apply-check action. The rerun action carries a
+the staged revision apply-check and review-bundle export actions. The rerun
+action carries a
 `preconditions.staged_revision_applied` field naming the staged revision that
 must be reviewed and applied before the rerun will show map-present follow-up
 recommendations.

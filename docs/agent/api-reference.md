@@ -583,8 +583,11 @@ reviewable `map` revision, and returns explicit staged/skipped/not-selected
 item statuses plus `status_counts`, metric advisory counts, and type advisory
 counts. Use it when profile-derived map changes need review before application.
 When staging creates a revision, follow
-`suggested_next_actions` to `check_staged_revision_apply` before reviewing,
-exporting, or applying it. The staged patch uses helper-equivalent RDF:
+`suggested_next_actions` to `check_staged_revision_apply`, then export the
+seeded `export_profile_insight_review_bundle` action before reviewing or
+applying it. Re-run that export after staging related metric vocabulary,
+type-review, or caveat/systematisation alternatives. The staged patch uses
+helper-equivalent RDF:
 missing dataset shells get `rdf:type rc:Dataset`, unmapped columns get
 `rdf:type rc:Column`, `rc:columnName`, and `rc:hasColumn`, and scalar
 row-count/nullability changes remove old helper-owned values before adding

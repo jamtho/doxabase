@@ -1622,10 +1622,14 @@ item.supporting_profile_observation_iris
 
 When at least one accepted recommendation passes safety checks,
 `result.staged_revision` is a normal `StagedGraphRevisionRecord` for one grouped
-`map` revision. `suggested_next_actions` then points to
-`check_staged_revision_apply` for that staged revision; run the read-only check
-before reviewing, exporting, or applying. When the staged patch added an
-unmapped column shell, `suggested_next_actions` also includes a
+`map` revision. `suggested_next_actions` then starts with
+`check_staged_revision_apply` for that staged revision, followed by an
+`export_profile_insight_review_bundle` action seeded with the same staged
+revision. Run the read-only check before reviewing or applying, and re-run the
+bundle export after staging related metric vocabulary, type-review, or
+caveat/systematisation alternatives that should be reviewed together. When the
+staged patch added an unmapped column shell, `suggested_next_actions` also
+includes a
 `draft_profile_map_updates` rerun for the same dataset/evidence; follow it
 after the staged shell has been reviewed and applied. That rerun action carries
 `preconditions.staged_revision_applied` so scripts can avoid firing it before

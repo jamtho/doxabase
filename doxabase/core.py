@@ -10957,6 +10957,34 @@ class DoxaBase:
                 ),
             )
         )
+        export_arguments = {
+            "dataset_iri": dataset_iri,
+            "evidence_iri": evidence_iri,
+            "path": self._suggested_review_export_path(
+                "profile-insight-review",
+                [staged_revision.revision_iri],
+            ),
+            "revision_iris": [staged_revision.revision_iri],
+            "overwrite": True,
+        }
+        actions.append(
+            SuggestedNextAction(
+                action_label="Export profile insight review bundle",
+                tool_name="export_profile_insight_review_bundle",
+                mcp_tool_name="doxabase.export_profile_insight_review_bundle",
+                arguments=export_arguments,
+                reason=(
+                    "Export a grouped review bundle for staged revisions tied "
+                    "to this profile run. Re-run this export after staging any "
+                    "related metric vocabulary, type-review, or caveat "
+                    "alternatives so the bundle can compare the lanes together."
+                ),
+                call=self._suggested_call_string(
+                    "export_profile_insight_review_bundle",
+                    export_arguments,
+                ),
+            )
+        )
         if any(
             item.status == "staged" and item.kind == "unmapped_profiled_column"
             for item in items

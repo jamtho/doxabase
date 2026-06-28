@@ -23090,6 +23090,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.staged_revision.changed_graphs == ["map"]
     assert [action.tool_name for action in staged.suggested_next_actions] == [
         "check_staged_revision_apply",
+        "export_profile_insight_review_bundle",
         "draft_profile_map_updates",
     ]
     assert staged.suggested_next_actions[0].arguments == {
@@ -23098,31 +23099,39 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.suggested_next_actions[0].mcp_tool_name == (
         "doxabase.check_staged_revision_apply"
     )
-    assert staged.suggested_next_actions[1].arguments == {
+    assert staged.suggested_next_actions[1].arguments["dataset_iri"] == dataset
+    assert staged.suggested_next_actions[1].arguments["evidence_iri"] == evidence
+    assert staged.suggested_next_actions[1].arguments["revision_iris"] == [
+        staged.staged_revision.revision_iri
+    ]
+    assert staged.suggested_next_actions[1].arguments["overwrite"] is True
+    assert staged.suggested_next_actions[1].arguments["path"].startswith(
+        "/tmp/profile-insight-review-"
+    )
+    assert staged.suggested_next_actions[1].mcp_tool_name == (
+        "doxabase.export_profile_insight_review_bundle"
+    )
+    assert staged.suggested_next_actions[2].arguments == {
         "dataset_iri": dataset,
         "evidence_iri": evidence,
     }
-    assert staged.suggested_next_actions[1].mcp_tool_name == (
+    assert staged.suggested_next_actions[2].mcp_tool_name == (
         "doxabase.draft_profile_map_updates"
     )
-    assert staged.suggested_next_actions[1].preconditions == {
+    assert staged.suggested_next_actions[2].preconditions == {
         "staged_revision_applied": staged.staged_revision.revision_iri,
         "why": (
             "The rerun only reflects the newly mapped column after the staged "
             "profile map-update revision has been reviewed and applied."
         ),
     }
+    assert staged.suggested_next_calls == [
+        action.call for action in staged.suggested_next_actions
+    ]
     staged_payload = to_jsonable(staged)
-    assert staged_payload["suggested_next_actions"][1]["preconditions"][
+    assert staged_payload["suggested_next_actions"][2]["preconditions"][
         "staged_revision_applied"
     ] == staged.staged_revision.revision_iri
-    assert staged.suggested_next_calls == [
-        f"check_staged_revision_apply(iri={staged.staged_revision.revision_iri!r})",
-        (
-            "draft_profile_map_updates("
-            f"dataset_iri={dataset!r}, evidence_iri={evidence!r})"
-        ),
-    ]
     assert [patch.target_graph for patch in staged.staged_revision.patches] == [
         "map",
         "map",
@@ -23321,14 +23330,24 @@ def test_profile_followthrough_mixes_duplicates_advisories_and_sampled_guardrail
         action.tool_name for action in staged_updates.suggested_next_actions
     ] == [
         "check_staged_revision_apply",
+        "export_profile_insight_review_bundle",
         "draft_profile_map_updates",
     ]
-    assert staged_updates.suggested_next_actions[1].arguments == {
+    assert staged_updates.suggested_next_actions[1].arguments["dataset_iri"] == (
+        dataset
+    )
+    assert staged_updates.suggested_next_actions[1].arguments["evidence_iri"] == (
+        full_evidence
+    )
+    assert staged_updates.suggested_next_actions[1].arguments[
+        "revision_iris"
+    ] == [staged_updates.staged_revision.revision_iri]
+    assert staged_updates.suggested_next_actions[2].arguments == {
         "dataset_iri": dataset,
         "evidence_iri": full_evidence,
     }
     assert "After reviewing and applying" in (
-        staged_updates.suggested_next_actions[1].reason
+        staged_updates.suggested_next_actions[2].reason
     )
     assert staged_updates.staged_revision is not None
     assert db.check_staged_revision_apply(

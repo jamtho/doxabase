@@ -5745,9 +5745,27 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     assert result["suggested_next_actions"][0]["arguments"] == {
         "iri": result["staged_revision"]["revision_iri"]
     }
+    assert result["suggested_next_actions"][1]["tool_name"] == (
+        "export_profile_insight_review_bundle"
+    )
+    assert result["suggested_next_actions"][1]["mcp_tool_name"] == (
+        "doxabase.export_profile_insight_review_bundle"
+    )
+    assert result["suggested_next_actions"][1]["arguments"]["dataset_iri"] == (
+        table
+    )
+    assert result["suggested_next_actions"][1]["arguments"]["evidence_iri"] == (
+        shared_evidence
+    )
+    assert result["suggested_next_actions"][1]["arguments"]["revision_iris"] == [
+        result["staged_revision"]["revision_iri"]
+    ]
+    assert result["suggested_next_actions"][1]["arguments"]["overwrite"] is True
+    assert result["suggested_next_actions"][1]["arguments"]["path"].startswith(
+        "/tmp/profile-insight-review-"
+    )
     assert result["suggested_next_calls"] == [
-        "check_staged_revision_apply("
-        f"iri={result['staged_revision']['revision_iri']!r})"
+        action["call"] for action in result["suggested_next_actions"]
     ]
     described = describe_staged_revision_tool(
         db,
@@ -5861,9 +5879,10 @@ def test_stage_profile_map_updates_tool_marks_rerun_precondition(
 
     assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
         "check_staged_revision_apply",
+        "export_profile_insight_review_bundle",
         "draft_profile_map_updates",
     ]
-    rerun_action = result["suggested_next_actions"][1]
+    rerun_action = result["suggested_next_actions"][2]
     assert rerun_action["preconditions"]["staged_revision_applied"] == (
         result["staged_revision"]["revision_iri"]
     )

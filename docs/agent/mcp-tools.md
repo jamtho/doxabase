@@ -471,8 +471,12 @@ grouped reviewable `map` revision. Pass `dataset_iri`, `evidence_iri`, and
 `not_selected_recommendation_indexes`, `status_counts`, metric advisories,
 type advisories, their status counts, and the staged revision when at least one
 accepted recommendation was staged. When a staged
-revision is created, `suggested_next_actions` points to
-`check_staged_revision_apply` for the read-only pre-apply check. The helper uses
+revision is created, `suggested_next_actions` starts with
+`check_staged_revision_apply` for the read-only pre-apply check, then an
+`export_profile_insight_review_bundle` action scoped to that staged revision.
+Run the export again after staging related metric vocabulary, type-review, or
+caveat/systematisation alternatives so the bundle can compare all lanes
+together. The helper uses
 helper-equivalent RDF for dataset and column shells, keeps metric advisories as
 review prompts, keeps type advisories separate from staged map patches,
 preserves every grouped profile observation when one duplicate representative
@@ -499,7 +503,7 @@ advisories are still `type_finding_unmapped_column`, the returned and stored
 review note tells agents to apply the shell after review and rerun
 `draft_profile_map_updates` for the same dataset/evidence; the returned
 `suggested_next_actions` includes that structured rerun action after the staged
-revision apply-check action, with
+revision apply-check and review-bundle export actions, with
 `preconditions.staged_revision_applied` naming the staged revision that must be
 applied first. That rerun is what turns related type advisories into map-present
 `rc:physicalType` / `rc:valueType` assertion actions.
