@@ -286,11 +286,13 @@ few useful gaps:
 - `deep_lore` is most valuable once claims, patterns, history, or
   reconsiderations exist. When it has no extra lore beyond `dataset_brief`, the
   response should ideally say so.
-- Derived and aggregate tables still need pressure testing. Aggregation
-  relationships now expose grouping columns, per-target aggregate mappings, and
-  source/upstream caveats, but agents should still check whether row-unit
-  semantics and layout-verification status are easy enough to carry into staged
-  map candidates.
+- A derived/aggregate relationship trial confirmed raw-to-derived-to-aggregate
+  chains can carry grouping columns, aggregate mappings, shared identifiers,
+  query-planning metadata, and source/upstream caveats through
+  `describe_dataset` and context slices. Remaining modeling pressure is around
+  composite row grain, conditional aggregate filters, and per-output derivation
+  formulas; use descriptions, caveats, claims, and patterns rather than forcing
+  those into misleading single-column `entityKey` or prose-valued map fields.
 - Relationship descriptions expose aggregation source/target columns, but
   cross-dataset partition/path ownership may still need clearer retrieval.
 - Staged systematisation drafts with failed, repaired, and alternative framings

@@ -297,6 +297,18 @@ record_map_relationship_tool(
 )
 ```
 
+For conditional aggregates, use a project-specific aggregation-function IRI
+such as `ex:ConditionalTrueCount` and define or label it in project ontology
+when it will be reused. Put the filter condition in the function description,
+the relationship description, evidence, or a supporting pattern. There is no
+structured `filter_column` / `filter_value` field on aggregate mappings yet.
+
+Derivation relationships can name `source_columns`, `derived_columns`,
+`derivation_function`, and `derivation_properties`. Treat those as relationship
+level context, not per-output formulas. When a derived column's exact expression
+or source-to-target mapping matters, record a claim/pattern or stage a richer
+project RDF framing instead of implying the helper captured the formula.
+
 ## Grain And Row Units
 
 DoxaBase does not yet have a single generic `grain` helper or ontology pattern.
@@ -309,6 +321,13 @@ Use the existing map signals together:
   `group_by_columns` when a target dataset has one row per source group.
 - `aggregated_columns` when target columns are computed from source columns.
 - Caveats when the row unit is only approximate, inferred, or source-dependent.
+
+For aggregate datasets with tuple grain, such as one row per
+`(customer_id, order_date)`, prefer `row_semantics="rc:AggregateRow"` plus an
+aggregation relationship whose `group_by_columns` names every grouping column.
+Do not squeeze a composite grain into `entity_key`; use `entity_key` only when
+one map column really behaves as the row identity. Put the tuple-grain wording
+in the dataset description or a pattern when future agents must not miss it.
 
 If an agent needs a richer grain concept, it should say so explicitly and stage
 or document the modelling hunch rather than forcing it into a misleading
