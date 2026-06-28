@@ -77,8 +77,26 @@ repository root:
 ```
 
 It creates a scratch capsule under `/tmp`, loads the bundled fixtures, prints
-graph/table/search/query-readiness cues, records one observation, and validates
-the graph. For a more adversarial staging trial, run:
+graph/table/search/query-readiness cues, prints the selected query-target
+decision and first query-planning action, records one observation, and validates
+the graph. To continue the local query handoff, reopen the scratch capsule,
+call `describe_query_context()` for the selected table, follow the first
+`draft_query_plan` action, and stop before any network/S3 access unless the
+trial explicitly approves it.
+
+For a local query-result capture trial, create a tiny CSV or Parquet file under
+`/tmp`, model it with `record_map_dataset`, `record_map_column`,
+`record_map_storage_access`, and `record_map_physical_layout`, then call
+`describe_query_context` and `draft_query_plan`. If
+`review_gate.ready_for_execution_attempt` is true, execute a read-only local
+count or aggregate with an external runtime such as DuckDB. If DuckDB is not
+available, a small Python CSV reader is an acceptable fallback for the trial as
+long as `engine` and `sample_method` say what actually ran. Record successful
+and failed attempts with `record_query_result`; include `query_source_path`,
+`query_hash`, and `result_sources` or a failure log so later agents can inspect
+the evidence. Do not record profile count fields for failed attempts.
+
+For a more adversarial staging trial, run:
 
 ```bash
 ./.venv/bin/python examples/adversarial-field-trial.py
@@ -1978,6 +1996,16 @@ few useful gaps:
   storage-access-owned wildcard. Query target selection now ranks otherwise
   ready candidates by fewer template bindings and route-specific storage access
   before falling back to returned order.
+- A local query-result capture trial showed the plan-to-result loop works with
+  a tiny `/tmp` CSV: `draft_query_plan` can reach
+  `execution_attempt_ready`, an external local aggregate can be recorded with
+  `record_query_result`, and a deliberate missing-path failure can be preserved
+  as ordinary observation evidence. DuckDB was not installed in that trial, so a
+  Python CSV fallback was acceptable because the recorded `engine`,
+  `sample_method`, query artifact, result artifact, and failure log made the
+  actual runtime clear. The main product signal was docs/onboarding, not a new
+  query engine: DoxaBase plans and records; it still does not execute queries
+  itself.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
