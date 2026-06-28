@@ -128,6 +128,9 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "staged_review": 1,
     },
     "omitted_queue_counts": {"query_repair_review": 1},
+    "active_queue_type_count": 3,
+    "returned_queue_type_count": 3,
+    "limit_crowded_queue_types": [],
     "datasets": [
         {
             "dataset": {"iri": "https://...", "label": "...", "description": ...},
@@ -203,6 +206,10 @@ are computed across scanned table/dataset entities, while `datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue
 when the limit allows, then fills remaining slots by priority.
+When `limit_crowded_queue_types` is non-empty, the current `limit` was too low
+to return a task from every active queue type. Rerun with a larger limit or
+inspect `queue_counts`/`omitted_queue_counts` before choosing the next loop
+target.
 Non-table `rc:Dataset` resources stay visible in `datasets` with
 `is_table=false`, but their query readiness is
 `not_applicable_non_tabular_asset`; project brief routes them to

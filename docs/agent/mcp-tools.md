@@ -39,7 +39,9 @@ combines key graph counts, project-wide dataset query-readiness summaries,
 profile-map-update draft counts for recent profile evidence, current staged
 revision review counts, per-queue task counts, and bounded recommended next
 tasks. Use it when arriving cold or when a loop may be over-polishing one
-workflow while missing another active queue.
+workflow while missing another active queue. If `limit_crowded_queue_types` is
+non-empty, rerun with a larger `limit` or inspect `queue_counts` and
+`omitted_queue_counts` before choosing the next task.
 
 `doxabase.list_entities`
 

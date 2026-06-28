@@ -187,6 +187,74 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     assert [
         task.task_type for task in brief.recommended_next_tasks
     ] == ["query_repair_review", "staged_review"]
+    assert brief.active_queue_type_count == 2
+    assert brief.returned_queue_type_count == 2
+    assert brief.limit_crowded_queue_types == []
+
+
+def test_project_brief_reports_limit_crowded_queue_types(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.record_map_dataset(
+        "https://example.test/project#RiskScores",
+        label="Risk Scores",
+        is_table=True,
+    )
+    db.record_map_dataset(
+        "https://example.test/project#WebhookAPI",
+        label="Webhook API",
+        is_table=False,
+    )
+    support_tickets = "https://example.test/project#SupportTickets"
+    support_profile = "https://example.test/project#SupportTicketsProfileEvidence"
+    db.record_map_dataset(
+        support_tickets,
+        label="Support Tickets",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_dataset_profile(
+        support_tickets,
+        summary="Support tickets profile drift.",
+        evidence_summary="Synthetic profile output with row-count drift.",
+        evidence_sources=["test://support-tickets-profile"],
+        evidence_iri=support_profile,
+        sample_size=12,
+        sample_scope="All local support tickets.",
+        sample_method="Synthetic aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
+    db.stage_graph_revision(
+        summary="Stage support ticket freshness caveat",
+        rationale="The project brief should expose staged review as an active queue.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:SupportTicketFreshnessCaveat a rc:KnownCaveat ;
+                    rdfs:label "Support ticket freshness caveat" ;
+                    rc:caveatDescription "Synthetic records may lag source intake." .
+                """,
+            }
+        ],
+    )
+
+    brief = db.project_brief(limit=3, profile_candidate_limit=1)
+
+    assert brief.active_queue_type_count == 4
+    assert brief.returned_queue_type_count == 3
+    assert brief.queue_counts["staged_review"] == 1
+    assert brief.omitted_queue_counts["staged_review"] == 1
+    assert brief.limit_crowded_queue_types == ["staged_review"]
+    assert [
+        task.task_type for task in brief.recommended_next_tasks
+    ] == ["query_repair_review", "non_tabular_asset_review", "profile_review"]
 
 
 def test_project_brief_routes_non_tabular_assets_to_context_review(

@@ -283,6 +283,11 @@ few useful gaps:
   now opens with a `Reviewer Decision Matrix` that gives row numbers, plain
   human actions, reasons, authored review recommendations, and a warning when
   bundled rows are competing alternatives.
+- A mixed-queue `project_brief` trial showed low limits can hide an active queue
+  type even though `queue_counts` and `omitted_queue_counts` preserve the
+  evidence. `project_brief` now returns `active_queue_type_count`,
+  `returned_queue_type_count`, and `limit_crowded_queue_types`; when crowding is
+  reported, rerun with a higher limit before deciding the next loop frontier.
 - Claim lifecycle needed first-class support. Agents could record an initial
   hunch and a later correction, but they needed an explicit
   `record_claim_reconsideration` move to mark the earlier claim as weakened,

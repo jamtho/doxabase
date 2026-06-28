@@ -311,6 +311,9 @@ class ProjectBrief:
     queue_counts: dict[str, int]
     returned_queue_counts: dict[str, int]
     omitted_queue_counts: dict[str, int]
+    active_queue_type_count: int
+    returned_queue_type_count: int
+    limit_crowded_queue_types: list[str]
     datasets: list[ProjectBriefDatasetSummary]
     staged_review: ProjectBriefStagedReviewSummary
     recommended_next_tasks: list[ProjectBriefRecommendedTask]
@@ -3034,6 +3037,11 @@ class DoxaBase:
         )
         queue_counts = self._project_brief_task_type_counts(recommended_tasks)
         returned_queue_counts = self._project_brief_task_type_counts(selected_tasks)
+        omitted_queue_counts = {
+            task_type: count - returned_queue_counts.get(task_type, 0)
+            for task_type, count in queue_counts.items()
+            if count > returned_queue_counts.get(task_type, 0)
+        }
 
         return ProjectBrief(
             key_counts=overview.key_counts,
@@ -3050,11 +3058,16 @@ class DoxaBase:
             ),
             queue_counts=queue_counts,
             returned_queue_counts=returned_queue_counts,
-            omitted_queue_counts={
-                task_type: count - returned_queue_counts.get(task_type, 0)
-                for task_type, count in queue_counts.items()
-                if count > returned_queue_counts.get(task_type, 0)
-            },
+            omitted_queue_counts=omitted_queue_counts,
+            active_queue_type_count=len(queue_counts),
+            returned_queue_type_count=len(returned_queue_counts),
+            limit_crowded_queue_types=(
+                self._project_brief_limit_crowded_queue_types(
+                    queue_counts,
+                    returned_queue_counts,
+                    limit=limit,
+                )
+            ),
             datasets=datasets,
             staged_review=staged_review,
             recommended_next_tasks=selected_tasks,
@@ -3414,6 +3427,21 @@ class DoxaBase:
         for task in tasks:
             counts[task.task_type] = counts.get(task.task_type, 0) + 1
         return counts
+
+    @staticmethod
+    def _project_brief_limit_crowded_queue_types(
+        queue_counts: dict[str, int],
+        returned_queue_counts: dict[str, int],
+        *,
+        limit: int,
+    ) -> list[str]:
+        if len(queue_counts) <= limit:
+            return []
+        return [
+            task_type
+            for task_type in queue_counts
+            if returned_queue_counts.get(task_type, 0) == 0
+        ]
 
     @staticmethod
     def _project_brief_profile_queue_counts(
