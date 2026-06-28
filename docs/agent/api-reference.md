@@ -120,6 +120,7 @@ the graph revision.
 
 ```python
 overview = db.graph_overview(limit=100)
+brief = db.project_brief(limit=20, profile_candidate_limit=2)
 tables = db.list_entities(type="rc:Table", graph="map", limit=100)
 dataset = db.describe_dataset(tables.entities[0].iri)
 context_slice = db.describe_context_slice(

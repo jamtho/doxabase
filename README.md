@@ -219,61 +219,64 @@ Useful first tool calls for an agent:
 2. `doxabase.get_doc` with `doc_id="start_here"`
 3. `doxabase.get_doc` with `doc_id="graph_roles"` when graph placement rules matter
 4. `doxabase.load_example_fixtures`
-5. `doxabase.graph_overview`
-6. `doxabase.search` for remembered terms, caveats, observations, or evidence
-7. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
-8. `doxabase.describe_dataset` with a table IRI from `list_entities`
-9. `doxabase.describe_profile_run` when a profile-summary candidate evidence
+5. `doxabase.project_brief` for a read-only summary of datasets and active
+   review queues
+6. `doxabase.graph_overview`
+7. `doxabase.search` for remembered terms, caveats, observations, or evidence
+8. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
+9. `doxabase.describe_dataset` with a table IRI from `list_entities`
+10. `doxabase.describe_profile_run` when a profile-summary candidate evidence
    IRI needs full profile-run retrieval
-10. `doxabase.describe_query_context` when you need storage, layout, path,
+11. `doxabase.describe_query_context` when you need storage, layout, path,
    partition, caveat, and readiness context before planning a query
-11. `doxabase.describe_context_slice` when a route-explained graph slice would
+12. `doxabase.describe_context_slice` when a route-explained graph slice would
    help a deeper handoff or review
-12. `doxabase.describe_pattern` for pattern handoff context after finding an
+13. `doxabase.describe_pattern` for pattern handoff context after finding an
    `rc:Pattern`
-13. `doxabase.describe_resource` for typed resources such as `rc:Claim`,
+14. `doxabase.describe_resource` for typed resources such as `rc:Claim`,
    `rc:Evidence`, or `rc:SourceSpan`
-14. `doxabase.list_graph_revisions` when you need to find staged, applied, or
+15. `doxabase.list_graph_revisions` when you need to find staged, applied, or
     historical revision records before inspecting a specific one
-15. `doxabase.record_observation` for useful point-in-time findings
-16. `doxabase.record_claim_observation` for structured claim observations
-17. `doxabase.record_dataset_profile` for profile outputs that should write an
+16. `doxabase.record_observation` for useful point-in-time findings
+17. `doxabase.record_claim_observation` for structured claim observations
+18. `doxabase.record_dataset_profile` for profile outputs that should write an
     observation and optionally update map/pattern context together
-18. `doxabase.record_column_profile` for column profile outputs that should
+19. `doxabase.record_column_profile` for column profile outputs that should
     write an observation and optionally update map/pattern context together
-19. `doxabase.record_profile_bundle` for a dataset profile plus related column
+20. `doxabase.record_profile_bundle` for a dataset profile plus related column
     profiles from one profiling pass
-20. `doxabase.record_pattern` for syntheses over related findings
-21. `doxabase.stage_graph_revision` for reviewable additions/removals that
+21. `doxabase.record_pattern` for syntheses over related findings
+22. `doxabase.stage_graph_revision` for reviewable additions/removals that
     should not be applied yet, including validation diagnostics for failed
     previews
-22. `doxabase.stage_systematisation` for alternative RDF framings of one
+23. `doxabase.stage_systematisation` for alternative RDF framings of one
     modelling hunch, optionally with shared proposed context
-23. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
+24. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
     should remain reviewable before becoming durable structure
-24. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
-25. `doxabase.check_staged_revision_apply` before turning a staged proposal
+25. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
+26. `doxabase.check_staged_revision_apply` before turning a staged proposal
     into durable graph state
-26. `doxabase.draft_staged_revision_rebase` when a staged proposal routes to
+27. `doxabase.draft_staged_revision_rebase` when a staged proposal routes to
     repair or replacement before a successor should be authored
-27. `doxabase.restage_staged_revision` when count or digest drift made a
+28. `doxabase.restage_staged_revision` when count or digest drift made a
     still-useful staged proposal stale
-28. `doxabase.describe_applied_revision_diff` when an applied staged revision
+29. `doxabase.describe_applied_revision_diff` when an applied staged revision
     needs stored before/after snapshot diff counts or opt-in exact triples
-29. `doxabase.apply_staged_revision` when a staged proposal should become
+30. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-30. `doxabase.record_map_dataset` and related map helpers for current-best facts
-31. `doxabase.validate_graph` with `scope="all"`
-32. `doxabase.export_trig` when you need a named-graph project review bundle
-33. `doxabase.record_graph_revision` when the bundle/change rationale should be
+31. `doxabase.record_map_dataset` and related map helpers for current-best facts
+32. `doxabase.validate_graph` with `scope="all"`
+33. `doxabase.export_trig` when you need a named-graph project review bundle
+34. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-34. `doxabase.describe_graph_revision` when reviewing a history record
+35. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
 - `doxabase.list_docs`
 - `doxabase.get_doc`
 - `doxabase.graph_overview`
+- `doxabase.project_brief`
 - `doxabase.search`
 - `doxabase.list_entities`
 - `doxabase.describe_resource`

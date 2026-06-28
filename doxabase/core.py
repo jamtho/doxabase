@@ -187,6 +187,93 @@ class GraphOverview:
 
 
 @dataclass(frozen=True)
+class ProjectBriefDatasetQuerySummary:
+    readiness: str
+    readiness_note: str
+    issue_codes: list[str]
+    repair_action_group_count: int
+    candidate_count: int
+    ready_candidate_indexes: list[int]
+    direct_clean_candidate_indexes: list[int]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
+class ProjectBriefProfileDraftSummary:
+    evidence_iri: str
+    profile_observation_count: int
+    recommendation_count: int
+    scalar_conflict_group_count: int
+    metric_advisory_count: int
+    metric_advisory_status_counts: dict[str, int]
+    type_advisory_count: int
+    type_advisory_status_counts: dict[str, int]
+    action_group_names: list[str]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
+class ProjectBriefDatasetProfileSummary:
+    profile_run_candidate_count: int
+    profile_run_evidence_iris: list[str]
+    draft_count: int
+    drafts: list[ProjectBriefProfileDraftSummary]
+
+
+@dataclass(frozen=True)
+class ProjectBriefDatasetSummary:
+    dataset: ResourceSummary
+    query: ProjectBriefDatasetQuerySummary
+    profile: ProjectBriefDatasetProfileSummary
+
+
+@dataclass(frozen=True)
+class ProjectBriefStagedReviewItem:
+    revision_iri: str
+    summary: str | None
+    record_kind: str
+    application_status: str | None
+    queue: str | None
+    resolved_target_iri: str | None
+    suggested_next_action: SuggestedNextAction | None
+
+
+@dataclass(frozen=True)
+class ProjectBriefStagedReviewSummary:
+    count: int
+    returned_count: int
+    application_status_counts: dict[str, int]
+    next_action_queue_item_counts: dict[str, int]
+    items: list[ProjectBriefStagedReviewItem]
+
+
+@dataclass(frozen=True)
+class ProjectBriefRecommendedTask:
+    priority: int
+    task_type: str
+    source: str
+    resource: ResourceSummary | None
+    reason: str
+    suggested_next_action: SuggestedNextAction | None
+    suggested_next_call: str | None
+
+
+@dataclass(frozen=True)
+class ProjectBrief:
+    key_counts: dict[str, int]
+    dataset_count: int
+    returned_dataset_count: int
+    dataset_query_readiness_counts: dict[str, int]
+    datasets: list[ProjectBriefDatasetSummary]
+    staged_review: ProjectBriefStagedReviewSummary
+    recommended_next_tasks: list[ProjectBriefRecommendedTask]
+    limit: int
+    profile_candidate_limit: int
+
+
+@dataclass(frozen=True)
 class GraphExportRecord:
     path: str
     format: str
@@ -2681,6 +2768,319 @@ class DoxaBase:
             predicate_counts=predicate_counts,
             key_counts=key_counts,
             namespaces=PREFIXES.copy(),
+        )
+
+    def project_brief(
+        self,
+        *,
+        limit: int = 20,
+        profile_candidate_limit: int = 2,
+    ) -> ProjectBrief:
+        """Summarize current project work queues without mutating the capsule."""
+        if limit < 1:
+            raise DoxaBaseError("limit must be at least 1")
+        if profile_candidate_limit < 0:
+            raise DoxaBaseError("profile_candidate_limit must be non-negative")
+
+        overview = self.graph_overview(limit=limit)
+        dataset_entities = self._project_brief_dataset_entities(limit)
+        datasets: list[ProjectBriefDatasetSummary] = []
+        readiness_counts: dict[str, int] = {}
+        recommended_tasks: list[ProjectBriefRecommendedTask] = []
+
+        for entity in dataset_entities[:limit]:
+            description = self.describe_dataset(entity.iri)
+            query_context = self.describe_query_context(entity.iri)
+            readiness_counts[query_context.readiness] = (
+                readiness_counts.get(query_context.readiness, 0) + 1
+            )
+            query_summary = ProjectBriefDatasetQuerySummary(
+                readiness=query_context.readiness,
+                readiness_note=query_context.readiness_note,
+                issue_codes=self._query_issue_codes(query_context.issues),
+                repair_action_group_count=(
+                    query_context.suggested_repair_action_group_count
+                ),
+                candidate_count=len(query_context.query_target_candidates),
+                ready_candidate_indexes=query_context.ready_candidate_indexes,
+                direct_clean_candidate_indexes=(
+                    query_context.direct_clean_candidate_indexes
+                ),
+                suggested_next_actions=query_context.suggested_next_actions[:3],
+                suggested_next_calls=query_context.suggested_next_calls[:3],
+            )
+            profile_summary = self._project_brief_profile_summary(
+                description,
+                profile_candidate_limit=profile_candidate_limit,
+            )
+            dataset_summary = ProjectBriefDatasetSummary(
+                dataset=ResourceSummary(
+                    iri=description.iri,
+                    label=description.label,
+                    description=description.description,
+                ),
+                query=query_summary,
+                profile=profile_summary,
+            )
+            datasets.append(dataset_summary)
+            recommended_tasks.extend(
+                self._project_brief_dataset_tasks(dataset_summary)
+            )
+
+        staged_review = self._project_brief_staged_review(limit=limit)
+        recommended_tasks.extend(
+            self._project_brief_staged_tasks(staged_review)
+        )
+        recommended_tasks.sort(key=lambda task: (task.priority, task.task_type))
+
+        return ProjectBrief(
+            key_counts=overview.key_counts,
+            dataset_count=max(
+                overview.key_counts.get("datasets", 0),
+                overview.key_counts.get("tables", 0),
+                len(dataset_entities),
+            ),
+            returned_dataset_count=len(datasets),
+            dataset_query_readiness_counts=readiness_counts,
+            datasets=datasets,
+            staged_review=staged_review,
+            recommended_next_tasks=recommended_tasks[:limit],
+            limit=limit,
+            profile_candidate_limit=profile_candidate_limit,
+        )
+
+    def _project_brief_dataset_entities(self, limit: int) -> list[EntityRow]:
+        entities_by_iri: dict[str, EntityRow] = {}
+        for type_iri in ("rc:Table", "rc:Dataset"):
+            for entity in self.list_entities(
+                type=type_iri,
+                graph="map",
+                limit=limit,
+            ).entities:
+                entities_by_iri.setdefault(entity.iri, entity)
+        return sorted(
+            entities_by_iri.values(),
+            key=lambda entity: (entity.label or entity.iri, entity.iri),
+        )
+
+    def _project_brief_profile_summary(
+        self,
+        dataset: DatasetDescription,
+        *,
+        profile_candidate_limit: int,
+    ) -> ProjectBriefDatasetProfileSummary:
+        candidates = dataset.profile_summary.profile_run_candidates
+        drafts: list[ProjectBriefProfileDraftSummary] = []
+        for candidate in candidates[:profile_candidate_limit]:
+            draft = self.draft_profile_map_updates(
+                dataset.iri,
+                candidate.evidence_iri,
+            )
+            drafts.append(
+                ProjectBriefProfileDraftSummary(
+                    evidence_iri=candidate.evidence_iri,
+                    profile_observation_count=len(
+                        candidate.profile_observation_iris
+                    ),
+                    recommendation_count=draft.recommendation_count,
+                    scalar_conflict_group_count=draft.scalar_conflict_group_count,
+                    metric_advisory_count=draft.metric_advisory_count,
+                    metric_advisory_status_counts=(
+                        draft.metric_advisory_status_counts
+                    ),
+                    type_advisory_count=draft.type_advisory_count,
+                    type_advisory_status_counts=draft.type_advisory_status_counts,
+                    action_group_names=list(draft.suggested_next_action_groups),
+                    suggested_next_actions=draft.suggested_next_actions[:3],
+                    suggested_next_calls=draft.suggested_next_calls[:3],
+                )
+            )
+        return ProjectBriefDatasetProfileSummary(
+            profile_run_candidate_count=len(candidates),
+            profile_run_evidence_iris=[
+                candidate.evidence_iri for candidate in candidates
+            ],
+            draft_count=len(drafts),
+            drafts=drafts,
+        )
+
+    def _project_brief_staged_review(
+        self,
+        *,
+        limit: int,
+    ) -> ProjectBriefStagedReviewSummary:
+        listing = self.list_graph_revisions(
+            current_staged_work_only=True,
+            include_apply_checks=True,
+            limit=limit,
+        )
+        queue_by_row = {
+            item.row_iri: item for item in listing.next_action_queue_items
+        }
+        items: list[ProjectBriefStagedReviewItem] = []
+        for revision in listing.revisions:
+            queue_item = queue_by_row.get(revision.iri)
+            items.append(
+                ProjectBriefStagedReviewItem(
+                    revision_iri=revision.iri,
+                    summary=revision.summary,
+                    record_kind=revision.record_kind,
+                    application_status=revision.application_status,
+                    queue=queue_item.queue if queue_item is not None else None,
+                    resolved_target_iri=(
+                        queue_item.resolved_target_iri
+                        if queue_item is not None
+                        else None
+                    ),
+                    suggested_next_action=(
+                        revision.suggested_next_actions[0]
+                        if revision.suggested_next_actions
+                        else None
+                    ),
+                )
+            )
+        return ProjectBriefStagedReviewSummary(
+            count=listing.count,
+            returned_count=listing.returned_count,
+            application_status_counts=(
+                listing.returned_application_status_counts
+            ),
+            next_action_queue_item_counts=(
+                listing.next_action_queue_item_counts
+            ),
+            items=items,
+        )
+
+    def _project_brief_dataset_tasks(
+        self,
+        dataset: ProjectBriefDatasetSummary,
+    ) -> list[ProjectBriefRecommendedTask]:
+        tasks: list[ProjectBriefRecommendedTask] = []
+        first_query_action = (
+            dataset.query.suggested_next_actions[0]
+            if dataset.query.suggested_next_actions
+            else None
+        )
+        if dataset.query.repair_action_group_count:
+            tasks.append(
+                ProjectBriefRecommendedTask(
+                    priority=10,
+                    task_type="query_repair_review",
+                    source="describe_query_context",
+                    resource=dataset.dataset,
+                    reason=(
+                        "Dataset query context exposes reviewed repair action "
+                        "groups."
+                    ),
+                    suggested_next_action=first_query_action,
+                    suggested_next_call=(
+                        first_query_action.call
+                        if first_query_action is not None
+                        else None
+                    ),
+                )
+            )
+        elif dataset.query.readiness not in {
+            "ready_for_query_planning",
+            "ready",
+        }:
+            tasks.append(
+                ProjectBriefRecommendedTask(
+                    priority=20,
+                    task_type="query_context_review",
+                    source="describe_query_context",
+                    resource=dataset.dataset,
+                    reason=(
+                        "Dataset query context is not ready for planning: "
+                        f"{dataset.query.readiness}."
+                    ),
+                    suggested_next_action=first_query_action,
+                    suggested_next_call=(
+                        first_query_action.call
+                        if first_query_action is not None
+                        else None
+                    ),
+                )
+            )
+
+        for draft in dataset.profile.drafts:
+            if (
+                draft.recommendation_count
+                or draft.scalar_conflict_group_count
+                or draft.metric_advisory_count
+                or draft.type_advisory_count
+            ):
+                action = (
+                    draft.suggested_next_actions[0]
+                    if draft.suggested_next_actions
+                    else self._project_brief_draft_profile_action(
+                        dataset.dataset.iri,
+                        draft.evidence_iri,
+                    )
+                )
+                tasks.append(
+                    ProjectBriefRecommendedTask(
+                        priority=30,
+                        task_type="profile_review",
+                        source="draft_profile_map_updates",
+                        resource=dataset.dataset,
+                        reason=(
+                            "Profile evidence has map updates, conflicts, "
+                            "metric vocabulary, or type findings to review."
+                        ),
+                        suggested_next_action=action,
+                        suggested_next_call=action.call,
+                    )
+                )
+        return tasks
+
+    def _project_brief_staged_tasks(
+        self,
+        staged_review: ProjectBriefStagedReviewSummary,
+    ) -> list[ProjectBriefRecommendedTask]:
+        tasks: list[ProjectBriefRecommendedTask] = []
+        for item in staged_review.items:
+            if item.suggested_next_action is None:
+                continue
+            tasks.append(
+                ProjectBriefRecommendedTask(
+                    priority=40,
+                    task_type="staged_review",
+                    source="list_graph_revisions",
+                    resource=ResourceSummary(
+                        iri=item.revision_iri,
+                        label=item.summary,
+                        description=None,
+                    ),
+                    reason=(
+                        "Current staged work has a review, repair, restage, "
+                        "or apply follow-up."
+                    ),
+                    suggested_next_action=item.suggested_next_action,
+                    suggested_next_call=item.suggested_next_action.call,
+                )
+            )
+        return tasks
+
+    def _project_brief_draft_profile_action(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+    ) -> SuggestedNextAction:
+        arguments = {
+            "dataset_iri": dataset_iri,
+            "evidence_iri": evidence_iri,
+        }
+        return SuggestedNextAction(
+            action_label="Review profile map updates",
+            tool_name="draft_profile_map_updates",
+            mcp_tool_name="doxabase.draft_profile_map_updates",
+            arguments=arguments,
+            reason="Review profile-derived map updates and advisory lanes.",
+            call=self._suggested_call_string(
+                "draft_profile_map_updates",
+                arguments,
+            ),
         )
 
     def list_entities(

@@ -83,6 +83,26 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     assert graphs["patterns"].mutable is True
 
 
+def test_project_brief_summarizes_datasets_and_active_queues(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_trig(AIS_FIXTURE)
+    db.import_trig(POLYMARKET_FIXTURE)
+
+    brief = db.project_brief(limit=4, profile_candidate_limit=1)
+
+    assert brief.key_counts["tables"] >= 7
+    assert brief.dataset_count >= 7
+    assert brief.returned_dataset_count == 4
+    assert brief.limit == 4
+    assert sum(brief.dataset_query_readiness_counts.values()) == 4
+    assert len(brief.datasets) == 4
+    assert brief.datasets[0].dataset.iri.startswith("https://")
+    assert brief.datasets[0].query.readiness
+    assert brief.datasets[0].profile.profile_run_candidate_count >= 0
+    assert brief.staged_review.returned_count == 0
+    assert isinstance(to_dict(brief)["recommended_next_tasks"], list)
+
+
 def test_immutable_seed_graphs_reject_normal_imports(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

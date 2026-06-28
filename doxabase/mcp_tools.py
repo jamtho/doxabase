@@ -43,6 +43,21 @@ def graph_overview_tool(db: DoxaBase, limit: int = 100) -> dict[str, Any]:
     }
 
 
+def project_brief_tool(
+    db: DoxaBase,
+    limit: int = 20,
+    profile_candidate_limit: int = 2,
+) -> dict[str, Any]:
+    """Return a read-only orientation brief over active project queues."""
+
+    return to_dict(
+        db.project_brief(
+            limit=limit,
+            profile_candidate_limit=profile_candidate_limit,
+        )
+    )
+
+
 def list_entities_tool(
     db: DoxaBase,
     type: str | None = None,

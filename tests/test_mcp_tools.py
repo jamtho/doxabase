@@ -39,6 +39,7 @@ from doxabase.mcp_tools import (
     list_graph_revisions_tool,
     list_resource_revisions_tool,
     load_example_fixtures_tool,
+    project_brief_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
     record_column_profile_tool,
@@ -77,6 +78,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.list_docs" in tool_names
     assert "doxabase.get_doc" in tool_names
     assert "doxabase.graph_overview" in tool_names
+    assert "doxabase.project_brief" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
     assert "doxabase.describe_profile_run" in tool_names
@@ -224,6 +226,7 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
         "https://richcanopy.org/example/manifest/polymarket#"
         "claim_price_payload_requires_filtering"
     )
+
     assert support["related_patterns"][0]["iri"] == (
         "https://richcanopy.org/example/manifest/polymarket#"
         "pattern_price_payload_boundary"
@@ -272,6 +275,24 @@ def test_fixture_loading_and_validation_tools(tmp_path: Path) -> None:
     assert mixed_price_links[0]["matched_resource"]["iri"] == (
         "https://richcanopy.org/example/manifest/polymarket#px_token_id"
     )
+
+
+def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+
+    result = project_brief_tool(db, limit=3, profile_candidate_limit=1)
+
+    assert result["dataset_count"] >= 3
+    assert result["returned_dataset_count"] == 3
+    assert result["limit"] == 3
+    assert result["profile_candidate_limit"] == 1
+    assert result["key_counts"]["tables"] >= 7
+    assert result["datasets"]
+    assert result["datasets"][0]["dataset"]["iri"].startswith("https://")
+    assert "readiness" in result["datasets"][0]["query"]
+    assert "profile_run_candidate_count" in result["datasets"][0]["profile"]
+    assert isinstance(result["recommended_next_tasks"], list)
 
 
 def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:

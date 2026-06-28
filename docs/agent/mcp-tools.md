@@ -22,6 +22,15 @@ compaction.
 
 Returns named graph counts, top classes, top predicates, key entity counts, and known namespaces.
 
+`doxabase.project_brief`
+
+Returns a read-only orientation brief over datasets and active queues. It
+combines key graph counts, dataset query-readiness summaries,
+profile-map-update draft counts for recent profile candidates, current staged
+revision review counts, and bounded recommended next tasks. Use it when
+arriving cold or when a loop may be over-polishing one workflow while missing
+another active queue.
+
 `doxabase.list_entities`
 
 Lists entities by RDF type, graph role, optional text filter, limit, and offset. Start with `type="rc:Table"` and `graph="map"`.

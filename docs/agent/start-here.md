@@ -30,14 +30,17 @@ When arriving cold, use this route before reading every reference doc.
 
 1. Call `doxabase.list_docs`.
 2. Read this doc with `doxabase.get_doc(doc_id="start_here")`.
-3. Call `doxabase.graph_overview` to see graph roles, counts, classes, and
+3. Call `doxabase.project_brief` to see datasets, query-readiness buckets,
+   profile draft counts, staged review queues, and bounded recommended next
+   tasks.
+4. Call `doxabase.graph_overview` to see graph roles, counts, classes, and
    predicates.
-4. Call `doxabase.search` for remembered terms, dataset names, caveats, source
+5. Call `doxabase.search` for remembered terms, dataset names, caveats, source
    notes, columns, or question-shaped keywords.
-5. Call `doxabase.list_entities` for likely entry points, usually
+6. Call `doxabase.list_entities` for likely entry points, usually
    `type="rc:Dataset"` or `type="rc:Table"` in `graph="map"`.
-6. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.
-7. Call `doxabase.describe_assertion_support` when you need to ask why a
+7. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.
+8. Call `doxabase.describe_assertion_support` when you need to ask why a
    specific map assertion or caveat link is present. If your requested object is
    absent, check `same_subject_predicate_triples` and `absence_note` before
    proposing a cleanup. For column assertions, follow owner-dataset suggested
@@ -48,17 +51,17 @@ When arriving cold, use this route before reading every reference doc.
    `related_route_summaries` before raw `related_routes` when there is a lot of
    lore attached. Check `nearby_caveat_links.scope` before treating an
    owner-dataset caveat as a direct caveat on one column.
-8. Call `doxabase.describe_query_context` when the task is physical query
+9. Call `doxabase.describe_query_context` when the task is physical query
    planning and you need storage/layout/path/caveat readiness. For
    database-backed storage, prefer candidate or draft-plan
    `relation_identifier` plus `connection_reference` over treating
    `candidate_path` as a file URI.
-9. Call `doxabase.describe_context_slice` when you need a route-explained slice
+10. Call `doxabase.describe_context_slice` when you need a route-explained slice
    around a dataset, pattern, or lore thread. Use `profile="dataset_brief"` for
    dataset/table/profile/metric handoffs, `profile="pattern_brief"` for pattern
    handoffs, and `profile="deep_lore"` when revision/history links or broader
    lore may matter.
-10. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
+11. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
    `doxabase.describe_pattern` when the map points to synthesized lore.
 11. Use the smallest write helper that fits the work, then validate before
    finishing.
@@ -86,9 +89,9 @@ Recover the thread of work before making new graph changes.
 
 1. Re-read the user's latest request and `AGENTS.md`.
 2. Check `git status` so you know what is already changed locally.
-3. Read this doc, then use `graph_overview`, `search`, `describe_dataset`,
-   `describe_query_context`, and `describe_context_slice` to reload only the
-   relevant graph context.
+3. Read this doc, then use `project_brief`, `graph_overview`, `search`,
+   `describe_dataset`, `describe_query_context`, and `describe_context_slice`
+   to reload only the relevant graph context.
 4. If a previous agent or sub-agent left a report under `/tmp`, read that report
    before rerunning the same trial.
 5. State uncertainty plainly if the compacted context does not contain enough

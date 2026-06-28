@@ -92,6 +92,80 @@ The Python `db.graph_overview()` object has the same `named_graphs` cards, but
 its `class_counts` and `predicate_counts` are tuple pairs; the MCP helper
 serializes those pairs as dictionaries with `class`/`predicate` and `count`.
 
+`project_brief_tool(db, limit=20, profile_candidate_limit=2)` returns:
+
+```python
+{
+    "key_counts": {"datasets": 7, "tables": 7, ...},
+    "dataset_count": 7,
+    "returned_dataset_count": 7,
+    "dataset_query_readiness_counts": {
+        "ready_for_query_planning": 3,
+        "needs_storage_access": 4,
+    },
+    "datasets": [
+        {
+            "dataset": {"iri": "https://...", "label": "...", "description": ...},
+            "query": {
+                "readiness": "ready_for_query_planning",
+                "readiness_note": "...",
+                "issue_codes": [],
+                "repair_action_group_count": 0,
+                "candidate_count": 1,
+                "ready_candidate_indexes": [0],
+                "direct_clean_candidate_indexes": [0],
+                "suggested_next_actions": [...],
+                "suggested_next_calls": [...],
+            },
+            "profile": {
+                "profile_run_candidate_count": 1,
+                "profile_run_evidence_iris": ["https://..."],
+                "draft_count": 1,
+                "drafts": [
+                    {
+                        "evidence_iri": "https://...",
+                        "recommendation_count": 2,
+                        "scalar_conflict_group_count": 0,
+                        "metric_advisory_count": 1,
+                        "metric_advisory_status_counts": {"proposed": 1},
+                        "type_advisory_count": 0,
+                        "type_advisory_status_counts": {},
+                        "action_group_names": ["profile_map_updates"],
+                        "suggested_next_actions": [...],
+                        "suggested_next_calls": [...],
+                    },
+                ],
+            },
+        },
+    ],
+    "staged_review": {
+        "count": 0,
+        "returned_count": 0,
+        "application_status_counts": {},
+        "next_action_queue_item_counts": {},
+        "items": [],
+    },
+    "recommended_next_tasks": [
+        {
+            "priority": 10,
+            "task_type": "query_repair_review",
+            "source": "describe_query_context",
+            "resource": {"iri": "https://...", "label": "...", "description": ...},
+            "reason": "...",
+            "suggested_next_action": {...},
+            "suggested_next_call": "describe_query_context(...)",
+        },
+    ],
+    "limit": 20,
+    "profile_candidate_limit": 2,
+}
+```
+
+`project_brief` is an orientation helper, not a proof of correctness. Follow
+its suggested actions into `describe_query_context`,
+`draft_profile_map_updates`, `list_graph_revisions`, or the relevant focused
+inspection helper before making durable graph changes.
+
 `db.replace_graph_triples(...)` returns `GraphTripleReplacementRecord`:
 
 ```python

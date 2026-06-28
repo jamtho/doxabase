@@ -41,6 +41,7 @@ from doxabase.mcp_tools import (
     list_graph_revisions_tool,
     list_resource_revisions_tool,
     load_example_fixtures_tool,
+    project_brief_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
     record_column_profile_tool,
@@ -70,7 +71,7 @@ from doxabase.mcp_tools import (
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
-Use graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
+Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
 Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
@@ -105,6 +106,19 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Return named graph counts, common classes, predicates, and key counts."""
 
         return graph_overview_tool(db, limit=limit)
+
+    @server.tool(name="doxabase.project_brief")
+    def project_brief(
+        limit: int = 20,
+        profile_candidate_limit: int = 2,
+    ) -> dict[str, Any]:
+        """Return a read-only brief over active project work queues."""
+
+        return project_brief_tool(
+            db,
+            limit=limit,
+            profile_candidate_limit=profile_candidate_limit,
+        )
 
     @server.tool(name="doxabase.list_entities")
     def list_entities(
