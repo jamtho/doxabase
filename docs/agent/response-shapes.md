@@ -3439,6 +3439,24 @@ handoff artifact path before executing them. Revision list/detail/lineage
 responses promote these actions to their top-level `suggested_next_actions`, and
 list/lineage `next_action` uses queue `complete_handoff_import`.
 
+`db.export_graph(...)` and `db.export_trig(...)` return `GraphExportRecord`:
+
+```python
+export.path
+export.format
+export.graphs
+export.graph_counts
+export.triples
+export.bytes_written
+export.sensitive_literal_count
+export.privacy_warnings
+```
+
+`sensitive_literal_count` and `privacy_warnings` come from a conservative
+credential-like literal scan over the selected export graph roles. They warn
+before sharing; they do not redact or block the exported RDF. Call
+`scan_sensitive_literals(graphs=...)` for redacted match rows.
+
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
 returns `RevisionSnapshotBundleExportRecord`:
 

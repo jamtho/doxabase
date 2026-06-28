@@ -61,6 +61,7 @@ from doxabase.mcp_tools import (
     replace_graph_triples_tool,
     restage_staged_revision_tool,
     restage_staged_revisions_tool,
+    scan_sensitive_literals_tool,
     search_tool,
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
@@ -81,6 +82,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.list_docs" in tool_names
     assert "doxabase.get_doc" in tool_names
     assert "doxabase.graph_overview" in tool_names
+    assert "doxabase.scan_sensitive_literals" in tool_names
     assert "doxabase.project_brief" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
@@ -399,6 +401,8 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     assert graph_result["graphs"] == ["map"]
     assert graph_result["graph_counts"] == {"map": db.triple_count("map")}
     assert graph_result["triples"] == db.triple_count("map")
+    assert graph_result["sensitive_literal_count"] == 0
+    assert graph_result["privacy_warnings"] == []
     assert graph_path.exists()
 
     assert trig_result["path"] == str(trig_path)
@@ -413,8 +417,39 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
         "history",
     ]
     assert "base_ontology" not in trig_result["graphs"]
+    assert trig_result["sensitive_literal_count"] == 0
+    assert trig_result["privacy_warnings"] == []
     assert trig_result["triples"] == sum(trig_result["graph_counts"].values())
     assert trig_path.exists()
+
+
+def test_scan_sensitive_literals_tool_returns_redacted_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_123"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root=f"/tmp/{fake_secret}/orders",
+        credential_reference=f"Bearer {fake_secret}",
+    )
+    record_map_dataset_tool(
+        db,
+        iri="https://example.test/project#Orders",
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+    )
+
+    result = scan_sensitive_literals_tool(db, graphs=["map"], limit=5)
+
+    assert result["graphs"] == ["map"]
+    assert result["match_count"] >= 2
+    assert result["returned_match_count"] >= 2
+    assert result["warnings"]
+    assert fake_secret not in str(result["matches"])
+    assert all("redacted_snippet" in match for match in result["matches"])
 
 
 def test_replace_graph_triples_tool_returns_json_like_payload(tmp_path: Path) -> None:

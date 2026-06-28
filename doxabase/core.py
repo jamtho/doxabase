@@ -61,6 +61,39 @@ PREFIXES = {
     "xsd": "http://www.w3.org/2001/XMLSchema#",
 }
 
+SENSITIVE_LITERAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "private_key_header",
+        re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", re.IGNORECASE),
+    ),
+    (
+        "bearer_token",
+        re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{8,}", re.IGNORECASE),
+    ),
+    (
+        "aws_access_key_id",
+        re.compile(r"\bA(?:KIA|SIA)[0-9A-Z]{16}\b"),
+    ),
+    (
+        "secret_parameter",
+        re.compile(
+            r"(?i)([?&]|\b)(access_token|api[_-]?key|password|passwd|pwd|secret|token|private[_-]?key)="
+            r"[^\s&#;]{4,}"
+        ),
+    ),
+    (
+        "secret_assignment",
+        re.compile(
+            r"(?i)\b(access[_-]?key|api[_-]?key|password|passwd|pwd|secret|token|private[_-]?key)"
+            r"\s*[:=]\s*[^\s,;]{4,}"
+        ),
+    ),
+    (
+        "fake_secret_marker",
+        re.compile(r"\bFAKE_(?:SECRET|TOKEN|PASSWORD|API_KEY)[A-Z0-9_:-]*\b"),
+    ),
+)
+
 SCHEMA_STABILITY_LEVELS = (
     "rc:FixedSchema",
     "rc:InferredSchema",
@@ -286,6 +319,27 @@ class ProjectBrief:
 
 
 @dataclass(frozen=True)
+class SensitiveLiteralMatch:
+    graph: str
+    subject: str
+    predicate: str
+    object_kind: str
+    match_kind: str
+    redacted_snippet: str
+
+
+@dataclass(frozen=True)
+class SensitiveLiteralScan:
+    graphs: list[str]
+    match_count: int
+    returned_match_count: int
+    omitted_match_count: int
+    limit: int
+    matches: list[SensitiveLiteralMatch]
+    warnings: list[str]
+
+
+@dataclass(frozen=True)
 class GraphExportRecord:
     path: str
     format: str
@@ -293,6 +347,8 @@ class GraphExportRecord:
     graph_counts: dict[str, int]
     triples: int
     bytes_written: int
+    sensitive_literal_count: int = 0
+    privacy_warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -32975,6 +33031,9 @@ class DoxaBase:
         rdf_graph = self._to_graph_roles(graph_names)
         data = rdf_graph.serialize(format=format)
         bytes_written = self._write_export(path, data, overwrite=overwrite)
+        sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
+            graph_names
+        )
         return GraphExportRecord(
             path=str(path),
             format=format,
@@ -32982,6 +33041,8 @@ class DoxaBase:
             graph_counts=self._graph_counts(graph_names),
             triples=len(rdf_graph),
             bytes_written=bytes_written,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
         )
 
     def export_trig(
@@ -32996,6 +33057,9 @@ class DoxaBase:
         dataset = self.to_dataset(graph_names, graph_iri_prefix=graph_iri_prefix)
         data = dataset.serialize(format="trig")
         bytes_written = self._write_export(path, data, overwrite=overwrite)
+        sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
+            graph_names
+        )
         return GraphExportRecord(
             path=str(path),
             format="trig",
@@ -33003,6 +33067,8 @@ class DoxaBase:
             graph_counts=self._graph_counts(graph_names),
             triples=len(dataset),
             bytes_written=bytes_written,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
         )
 
     def clear_graph(self, graph: str, *, allow_immutable: bool = False) -> None:
@@ -33040,6 +33106,138 @@ class DoxaBase:
             scope=scope,
             results=diagnostics,
         )
+
+    def scan_sensitive_literals(
+        self,
+        graphs: Iterable[str] | str | None = None,
+        *,
+        limit: int = 50,
+    ) -> SensitiveLiteralScan:
+        if limit < 1:
+            raise DoxaBaseError("limit must be at least 1")
+        graph_names = self._graph_names_for_export(
+            graphs,
+            default_preset="project",
+        )
+        rows = self._sensitive_literal_rows(graph_names)
+        matches: list[SensitiveLiteralMatch] = []
+        omitted = 0
+        for row in rows:
+            match_kind, redacted_snippet = self._sensitive_literal_match(
+                str(row["object"])
+            )
+            if match_kind is None or redacted_snippet is None:
+                continue
+            if len(matches) < limit:
+                matches.append(
+                    SensitiveLiteralMatch(
+                        graph=str(row["graph"]),
+                        subject=str(row["subject"]),
+                        predicate=str(row["predicate"]),
+                        object_kind=str(row["object_kind"]),
+                        match_kind=match_kind,
+                        redacted_snippet=redacted_snippet,
+                    )
+                )
+            else:
+                omitted += 1
+        warnings = self._sensitive_literal_warnings(
+            match_count=len(matches) + omitted,
+            omitted_match_count=omitted,
+        )
+        return SensitiveLiteralScan(
+            graphs=graph_names,
+            match_count=len(matches) + omitted,
+            returned_match_count=len(matches),
+            omitted_match_count=omitted,
+            limit=limit,
+            matches=matches,
+            warnings=warnings,
+        )
+
+    def _sensitive_literal_rows(self, graph_names: list[str]) -> list[sqlite3.Row]:
+        if not graph_names:
+            return []
+        placeholders = ", ".join("?" for _ in graph_names)
+        return list(
+            self._conn.execute(
+                f"""
+                SELECT graph, subject, predicate, object, object_kind
+                FROM quads
+                WHERE graph IN ({placeholders})
+                  AND object_kind IN ('literal', 'uri')
+                ORDER BY graph, subject, predicate, object
+                """,
+                graph_names,
+            )
+        )
+
+    def _sensitive_literal_match(
+        self,
+        value: str,
+    ) -> tuple[str | None, str | None]:
+        for match_kind, pattern in SENSITIVE_LITERAL_PATTERNS:
+            match = pattern.search(value)
+            if match is None:
+                continue
+            return match_kind, self._redacted_sensitive_snippet(
+                value,
+                match.start(),
+                match.end(),
+                match_kind,
+            )
+        return None, None
+
+    @staticmethod
+    def _redacted_sensitive_snippet(
+        value: str,
+        start: int,
+        end: int,
+        match_kind: str,
+    ) -> str:
+        del value, start, end
+        return f"[REDACTED:{match_kind}]"
+
+    @staticmethod
+    def _sensitive_literal_warnings(
+        *,
+        match_count: int,
+        omitted_match_count: int,
+    ) -> list[str]:
+        if match_count == 0:
+            return []
+        warning = (
+            "Potential sensitive literals detected. Review redacted scan results "
+            "before sharing exports; DoxaBase preserves caller-authored graph "
+            "literals and does not redact RDF automatically."
+        )
+        if omitted_match_count:
+            warning += f" {omitted_match_count} additional match(es) omitted by limit."
+        return [warning]
+
+    def _export_privacy_warnings(
+        self,
+        graph_names: list[str],
+    ) -> tuple[int, list[str]]:
+        scan = self.scan_sensitive_literals(graph_names, limit=5)
+        if scan.match_count == 0:
+            return 0, []
+        example_text = "; ".join(
+            (
+                f"{match.graph} {self._compact_iri(match.predicate)} "
+                f"{match.redacted_snippet}"
+            )
+            for match in scan.matches[:3]
+        )
+        warning = (
+            f"Export includes {scan.match_count} potential sensitive literal "
+            "match(es). Run scan_sensitive_literals on these graph roles before "
+            "sharing. Redacted examples: "
+            f"{example_text}"
+        )
+        if scan.omitted_match_count:
+            warning += f" ({scan.omitted_match_count} additional match(es) omitted.)"
+        return scan.match_count, [warning]
 
     def _validate_graph_preview(
         self,

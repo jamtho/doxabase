@@ -273,6 +273,11 @@ few useful gaps:
   tests exercise `doxabase.mcp_tools` directly. When helper arguments carry a
   safety gate or semantic option, inspect the actual FastMCP input schema and
   add server-boundary regression coverage, not only direct helper tests.
+- A privacy/export hygiene trial with fake credential-like values showed that
+  caller-authored literals travel through search, retrieval, and exports once
+  recorded. Use `scan_sensitive_literals` and export `privacy_warnings` before
+  sharing bundles; warnings are redacted audit signals, not automatic RDF
+  redaction or proof that the graph is secret-free.
 - Claim lifecycle needed first-class support. Agents could record an initial
   hunch and a later correction, but they needed an explicit
   `record_claim_reconsideration` move to mark the earlier claim as weakened,

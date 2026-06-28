@@ -22,6 +22,16 @@ compaction.
 
 Returns named graph counts, top classes, top predicates, key entity counts, and known namespaces.
 
+`doxabase.scan_sensitive_literals`
+
+Scans selected graph roles for suspicious credential-like literals or URI
+values and returns only redacted snippets. Use it before sharing `export_graph`
+or `export_trig` artifacts when storage, evidence, source paths, or descriptions
+may contain secrets. This is a conservative audit helper, not a proof that the
+graph is secret-free. Export helpers report `sensitive_literal_count` and
+`privacy_warnings` when this scan finds matches, but exports remain faithful RDF
+and do not redact automatically.
+
 `doxabase.project_brief`
 
 Returns a read-only orientation brief over datasets and active queues. It
@@ -1533,7 +1543,9 @@ follow its `import_trig` action.
 
 Exports one or more graph roles as one flattened RDF graph file. The default is
 the `map` graph in Turtle. Use it for quick single-graph review artifacts. The
-result includes per-graph triple counts.
+result includes per-graph triple counts plus privacy warning counts from
+`scan_sensitive_literals`. Warnings do not block export and the written RDF is
+not redacted.
 
 `doxabase.replace_graph_triples`
 
@@ -1562,6 +1574,9 @@ included too. Workflow/review-bundle exports do not include `history`, so use
 the default project export or an explicit history-bearing bundle for
 revision-lineage handoffs. All-with-seeds bundles may require special import
 handling because normal capsules protect `base_ontology` and `base_shapes`.
+`sensitive_literal_count` and `privacy_warnings` apply to the selected export
+graphs; workflow exports include evidence, so source paths and evidence source
+strings can trigger privacy warnings.
 
 `doxabase.export_revision_snapshots`
 

@@ -43,6 +43,15 @@ def graph_overview_tool(db: DoxaBase, limit: int = 100) -> dict[str, Any]:
     }
 
 
+def scan_sensitive_literals_tool(
+    db: DoxaBase,
+    graphs: list[str] | None = None,
+    limit: int = 50,
+) -> dict[str, Any]:
+    result = db.scan_sensitive_literals(graphs=graphs, limit=limit)
+    return to_dict(result)
+
+
 def project_brief_tool(
     db: DoxaBase,
     limit: int = 20,

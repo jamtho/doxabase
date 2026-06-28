@@ -445,6 +445,60 @@ def test_export_graph_writes_flattened_turtle(tmp_path: Path) -> None:
         db.export_graph(export_path, graphs="map")
 
 
+def test_sensitive_literal_scan_and_export_warnings(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_123"
+    private_key_body = "MII_FAKE_PRIVATE_BODY_SHOULD_NOT_LEAK"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        description=(
+            "Scratch credential paste: -----BEGIN PRIVATE KEY-----\n"
+            f"{private_key_body}\n"
+            "-----END PRIVATE KEY-----"
+        ),
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root=f"/tmp/{fake_secret}/orders",
+        credential_reference=f"Bearer {fake_secret}",
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+    )
+
+    scan = db.scan_sensitive_literals(graphs="map", limit=1)
+
+    assert scan.match_count >= 2
+    assert scan.returned_match_count == 1
+    assert scan.omitted_match_count >= 1
+    assert scan.matches[0].graph == "map"
+    assert scan.matches[0].match_kind in {
+        "bearer_token",
+        "fake_secret_marker",
+        "private_key_header",
+    }
+    assert fake_secret not in scan.matches[0].redacted_snippet
+    assert scan.warnings
+    full_scan = db.scan_sensitive_literals(graphs="map", limit=20)
+    assert private_key_body not in str(full_scan.matches)
+    assert all(match.redacted_snippet.startswith("[REDACTED:") for match in full_scan.matches)
+    with pytest.raises(DoxaBaseError, match="limit must be at least 1"):
+        db.scan_sensitive_literals(graphs="map", limit=0)
+
+    export_path = tmp_path / "map.ttl"
+    export = db.export_graph(export_path, graphs="map")
+
+    assert export.sensitive_literal_count == scan.match_count
+    assert export.privacy_warnings
+    assert fake_secret not in " ".join(export.privacy_warnings)
+    assert private_key_body not in " ".join(export.privacy_warnings)
+    assert fake_secret in export_path.read_text(encoding="utf-8")
+
+
 def test_replace_graph_triples_can_create_same_count_digest_drift(
     tmp_path: Path,
 ) -> None:

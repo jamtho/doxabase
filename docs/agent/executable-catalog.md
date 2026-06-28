@@ -69,6 +69,12 @@ Do not put secrets in DoxaBase:
 Use `rc:credentialReference` or `rc:endpointProfile` to point at local runtime
 configuration instead. The graph can say "use profile X"; the user's machine or
 agent runtime decides how profile X resolves.
+Before sharing exports, run `doxabase.scan_sensitive_literals` over the graph
+roles you intend to export. `export_graph` and `export_trig` also return
+`sensitive_literal_count` and `privacy_warnings` when their selected graphs
+contain suspicious credential-like values. Treat those warnings as a
+stop-and-review signal: exports remain faithful RDF and are not redacted
+automatically.
 
 ## How Agents Should Use It
 

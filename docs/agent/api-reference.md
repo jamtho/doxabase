@@ -51,10 +51,15 @@ using normal revision helpers.
 db.export_graph("/tmp/map.ttl", graphs="map")
 db.export_trig("/tmp/project-review-bundle.trig")
 db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
+db.scan_sensitive_literals(graphs=["map", "evidence"])
 db.export_revision_snapshots("/tmp/revision-snapshots.json")
 ```
 
 `export_graph()` writes one flattened RDF graph, usually Turtle.
+`scan_sensitive_literals()` returns redacted credential-like literal matches for
+selected graph roles. `export_graph()` and `export_trig()` include
+`sensitive_literal_count` and `privacy_warnings`; exports are not redacted
+automatically.
 
 `export_trig()` writes a named-graph bundle with graph role IRIs so another
 DoxaBase capsule can import it again. The default exports mutable project
