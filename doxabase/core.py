@@ -14081,17 +14081,17 @@ class DoxaBase:
             )
 
         indexed_candidates = list(enumerate(candidates))
-        ready_candidate = next(
-            (
-                item
-                for item in indexed_candidates
-                if item[1].candidate_path_status == "ready"
-                and not item[1].review_required
-            ),
-            None,
-        )
-        if ready_candidate is not None:
-            index, candidate = ready_candidate
+        ready_candidates = [
+            item
+            for item in indexed_candidates
+            if item[1].candidate_path_status == "ready"
+            and not item[1].review_required
+        ]
+        if ready_candidates:
+            index, candidate = min(
+                ready_candidates,
+                key=self._query_target_candidate_decision_rank,
+            )
             return self._query_target_decision_for_candidate(
                 candidate,
                 index=index,
@@ -14162,7 +14162,7 @@ class DoxaBase:
     def _query_target_candidate_decision_rank(
         self,
         item: tuple[int, QueryTargetCandidate],
-    ) -> tuple[int, int, int, int]:
+    ) -> tuple[int, int, int, int, int, int, int]:
         index, candidate = item
         path_status_rank = {
             "ready": 0,
@@ -14173,7 +14173,39 @@ class DoxaBase:
             candidate.direct_review_reasons
         ) or self._query_target_blocking_reasons(candidate.review_reasons)
         severity_rank = self._query_target_blocking_severity_rank(blocking_reasons)
-        return (path_status_rank, severity_rank, len(blocking_reasons), index)
+        return (
+            path_status_rank,
+            severity_rank,
+            len(blocking_reasons),
+            self._query_target_candidate_binding_count(candidate),
+            self._query_target_candidate_relation_rank(candidate),
+            self._query_target_candidate_source_rank(candidate),
+            index,
+        )
+
+    @staticmethod
+    def _query_target_candidate_binding_count(
+        candidate: QueryTargetCandidate,
+    ) -> int:
+        template = candidate.candidate_path or candidate.template or ""
+        return len(dict.fromkeys(re.findall(r"{([^{}]+)}", template)))
+
+    @staticmethod
+    def _query_target_candidate_relation_rank(
+        candidate: QueryTargetCandidate,
+    ) -> int:
+        return 1 if candidate.relation_identifier is not None else 0
+
+    @staticmethod
+    def _query_target_candidate_source_rank(
+        candidate: QueryTargetCandidate,
+    ) -> int:
+        return {
+            "storage_access_location": 0,
+            "storage_access": 1,
+            "partition_scheme": 2,
+            "dataset": 3,
+        }.get(candidate.template_source, 4)
 
     def _query_target_decision_reason_codes(
         self,

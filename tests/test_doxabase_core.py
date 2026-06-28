@@ -12072,6 +12072,96 @@ def test_describe_query_context_reports_storage_access_owned_target_candidate(
     ]
 
 
+def test_query_target_decision_prefers_ready_wildcard_without_bindings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#DailyIndex"
+    date_column = db.record_map_column(
+        "https://example.test/project#daily_index__date",
+        table_iri=dataset,
+        column_name="date",
+    )
+    shared_storage = db.record_map_storage_access(
+        "https://example.test/project#shared_object_store_access",
+        label="Shared object-store access",
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root="s3://ais-noaa/",
+        endpoint_profile="local-minio",
+        credential_reference="profile:ais-readonly",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    index_storage = db.record_map_storage_access(
+        "https://example.test/project#daily_index_object_store_access",
+        label="Daily index object-store access",
+        storage_protocol="rc:S3CompatibleStorage",
+        storage_root="s3://ais-noaa/",
+        endpoint_profile="local-minio",
+        credential_reference="profile:ais-readonly",
+        path_templates=["index/*/*.parquet"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    partition = db.record_map_partition_scheme(
+        "https://example.test/project#daily_index_date_partition",
+        path_template="index/{year}/ais-{date}.parquet",
+        partition_columns=[date_column.iri],
+        granularity="rc:Daily",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#daily_index_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Daily index",
+        is_table=True,
+        columns=[date_column.iri],
+        storage_accesses=[shared_storage.iri, index_storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    wildcard_index, wildcard_candidate = next(
+        (index, target)
+        for index, target in enumerate(context.query_target_candidates)
+        if target.template_source == "storage_access"
+        and target.storage_access is not None
+        and target.storage_access.iri == index_storage.iri
+    )
+    partition_indexes = [
+        index
+        for index, target in enumerate(context.query_target_candidates)
+        if target.source_resource.iri == partition.iri
+    ]
+    assert partition_indexes
+    assert wildcard_candidate.candidate_path == "s3://ais-noaa/index/*/*.parquet"
+    assert wildcard_candidate.candidate_path_status == "ready"
+    assert wildcard_candidate.review_required is False
+    assert context.query_target_decision.status == "ready"
+    assert context.query_target_decision.candidate_index == wildcard_index
+    assert context.ready_candidate_indexes == [
+        *partition_indexes,
+        wildcard_index,
+    ]
+    assert context.unselected_ready_candidate_indexes == partition_indexes
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template_source == "storage_access"
+    assert plan.scan.uri_template == "s3://ais-noaa/index/*/*.parquet"
+    assert plan.required_bindings == []
+    assert plan.review_gate.binding_values_required is False
+    assert plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "runtime_resolution_required"
+    ]
+
+
 def test_query_target_candidates_surface_global_blockers(
     tmp_path: Path,
 ) -> None:

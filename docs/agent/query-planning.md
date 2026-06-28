@@ -84,7 +84,11 @@ Start with `describe_query_context(dataset_iri)`:
 
 1. `query_target_decision` chooses the candidate. Its `candidate_index` points
    into `query_target_candidates`, and `status` routes the selected target's
-   direct state: ready, review-only, blocked, or absent.
+   direct state: ready, review-only, blocked, or absent. Automatic selection
+   prefers safer candidates first, then fewer required template bindings, then
+   file/object scans before database relation handoffs when otherwise tied, then
+   route-specific storage-access sources before broader partition or dataset
+   templates within that same shape of handoff.
 2. Read `unselected_ready_candidate_indexes`. If it is non-empty, the selected
    candidate has peer ready candidates; inspect `query_target_candidates` and
    pass an explicit `candidate_index` when a different route is intended.
@@ -199,8 +203,8 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    for a review-gated draft with an explicit selector even while
    `ready_candidate_indexes` is empty.
    Candidate order is not an authoring-preference contract. Treat
-   `candidate_index` as a pointer into the returned list, not proof that the
-   first ready relation/path is the preferred one.
+   `candidate_index` as a pointer into the returned list; use the selected
+   decision and peer indexes to compare materially different ready routes.
 3. Read `source_context.selected_candidate_note` for a compact handoff summary
    of the selected candidate, route kind, and sibling/context blocker codes
    that still remain in `review_gate.all_issue_codes`.

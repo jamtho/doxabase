@@ -1972,6 +1972,12 @@ few useful gaps:
   `not_applicable_non_tabular_asset` for non-table map datasets, and
   `draft_profile_map_updates` leaves their profile row counts as evidence
   instead of proposing table `rc:rowCountSnapshot` map updates.
+- An AIS query-handoff trial showed the corrected wildcard DailyIndex route was
+  reachable only by explicit candidate selection: automatic planning preferred
+  a partition template with `{year}`/`{date}` bindings over a verified
+  storage-access-owned wildcard. Query target selection now ranks otherwise
+  ready candidates by fewer template bindings and route-specific storage access
+  before falling back to returned order.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
