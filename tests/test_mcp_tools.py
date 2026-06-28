@@ -3753,6 +3753,14 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
     assert repair_group["repair_context"][
         "candidate_existing_storage_accesses_truncated"
     ] is False
+    record_action = action_by_type["record_reviewed_storage_access"]
+    assert "rc:DatabaseStorage" in record_action["protocol_guidance"]
+    assert "database_relation_template_source_mismatch" in (
+        record_action["condition"]
+    )
+    assert "does not record graph-revision rationale" in (
+        record_action["review_rationale_guidance"]
+    )
     link_action = action_by_type["stage_existing_storage_access_link"]
     assert link_action["placeholder_fields"] == ["object"]
     assert link_action["reviewed_value_fields"] == ["object"]
@@ -5521,6 +5529,51 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
         status_column,
     }
     assert db.describe_dataset(table).row_count_snapshot == 8
+
+
+def test_stage_profile_map_updates_tool_marks_rerun_precondition(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    channel_column = "https://example.test/project#OrdersChannel"
+    shared_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(table, label="Orders", is_table=True)
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled without changing the map.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": channel_column,
+                "column_name": "channel",
+                "summary": "Channel was observed before the map had a shell.",
+            }
+        ],
+    )
+
+    result = stage_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        accepted_recommendation_indexes=[0],
+    )
+
+    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+        "check_staged_revision_apply",
+        "draft_profile_map_updates",
+    ]
+    rerun_action = result["suggested_next_actions"][1]
+    assert rerun_action["preconditions"]["staged_revision_applied"] == (
+        result["staged_revision"]["revision_iri"]
+    )
+    assert "reviewed and applied" in rerun_action["preconditions"]["why"]
 
 
 def test_describe_dataset_tool_returns_unmapped_column_profiles(

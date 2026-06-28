@@ -244,6 +244,9 @@ The MCP docs tools expose these docs:
 - `observation_rdf`
 - `patterns`
 - `map_authoring`
+- `profiling`
+- `systematisation`
+- `query_planning`
 - `revisions`
 - `staged_revisions`
 - `lexical_search`

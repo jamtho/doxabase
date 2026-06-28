@@ -1825,6 +1825,16 @@ few useful gaps:
   groups work end-to-end from missing storage to ready database relation
   metadata; broader direct-repair rationale and protocol-aware database path
   guidance remain later design follow-ups rather than this checkpoint.
+- A follow-up routing wave found three small autonomy hazards rather than a
+  broad workflow break. Profile map-update rerun actions now carry
+  `preconditions.staged_revision_applied` so agents do not rerun before the
+  staged unmapped-column shell is durable. Missing-storage repair templates now
+  spell out database-storage relation-template follow-up and direct-write
+  rationale guidance. `draft_staged_revision_rebase()` no longer points
+  no-repair drafts back at itself; validation-failed stale work should follow
+  the remaining inspection/export route or manual repair path, with
+  `apply_check.routing_decision`, `draft_kind`, `next_action.queue`, and batch
+  `repair_first_revision_iris` overriding broad restage wording.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

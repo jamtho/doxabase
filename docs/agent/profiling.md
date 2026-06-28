@@ -115,7 +115,10 @@ profile recommendations, such as nullability, that should go through
 `profile_map_updates` before you treat the run as advisory-only. When
 `stage_profile_map_updates` staged an unmapped column shell, its
 `suggested_next_actions` includes this `draft_profile_map_updates` rerun after
-the staged revision apply-check action.
+the staged revision apply-check action. The rerun action carries a
+`preconditions.staged_revision_applied` field naming the staged revision that
+must be reviewed and applied before the rerun will show map-present follow-up
+recommendations.
 
 For exact response fields, read `response_shapes` sections "Profile Helper
 Records", "Describe Profile Run", and "Profile Map Update Drafts". For broader

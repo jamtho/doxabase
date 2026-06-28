@@ -562,7 +562,12 @@ include the optional `path_templates` field only when the storage access itself
 owns the path or database relation template. Omit it when a dataset or partition
 already carries the reviewed file/object path template, or you can create
 duplicate equivalent query target candidates. Database relation identifiers are
-the important storage-owned exception. If
+the important storage-owned exception. After direct database-storage repair,
+rerun `describe_query_context`; if the same relation-like value remains on the
+dataset or partition, follow the `database_relation_template_source_mismatch`
+repair group. The direct `record_map_storage_access` template carries
+`review_rationale_guidance` because the helper writes current-best map facts
+without recording graph-revision rationale. If
 `issues[].details.fixture_staleness_hint` is present,
 known AIS or Polymarket fixture tables exist but the capsule has zero
 `rc:StorageAccess` resources; treat that as a stale/reduced fixture capsule and

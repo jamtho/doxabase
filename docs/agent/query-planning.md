@@ -66,6 +66,13 @@ Start with `describe_query_context(dataset_iri)`:
    or partition already carries the reviewed path template; duplicating it can
    create equivalent ready candidates. Database relation identifiers are the
    important exception and should be recorded as storage-access-owned templates.
+   After direct database-storage repair, rerun `describe_query_context`; if the
+   same relation-like value still lives on the dataset or partition, follow the
+   `database_relation_template_source_mismatch` repair group to remove or move
+   that misplaced template. Direct `record_map_storage_access` repairs do not
+   record graph-revision rationale, so preserve the reviewed rationale in the
+   calling workflow or use staged assertion helpers when durable review history
+   matters.
    For controlled field examples, read the `executable_catalog` storage-access
    recipe; a local read-only directory access uses
    `storage_protocol="rc:LocalFilesystemStorage"`,

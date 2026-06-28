@@ -2306,6 +2306,11 @@ class ProfileQueryContextSuggestedNextAction(SuggestedNextAction):
 
 
 @dataclass(frozen=True)
+class ProfileMapUpdateRerunSuggestedNextAction(SuggestedNextAction):
+    preconditions: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class RevisionNextAction:
     action_type: str
     queue: str
@@ -9434,7 +9439,7 @@ class DoxaBase:
                 "evidence_iri": evidence_iri,
             }
             actions.append(
-                SuggestedNextAction(
+                ProfileMapUpdateRerunSuggestedNextAction(
                     action_label="Rerun profile map update draft",
                     tool_name="draft_profile_map_updates",
                     mcp_tool_name="doxabase.draft_profile_map_updates",
@@ -9450,6 +9455,14 @@ class DoxaBase:
                         "draft_profile_map_updates",
                         rerun_arguments,
                     ),
+                    preconditions={
+                        "staged_revision_applied": staged_revision.revision_iri,
+                        "why": (
+                            "The rerun only reflects the newly mapped column "
+                            "after the staged profile map-update revision has "
+                            "been reviewed and applied."
+                        ),
+                    },
                 )
             )
         return actions
@@ -13791,7 +13804,34 @@ class DoxaBase:
                             "template; duplicating it can create equivalent "
                             "query target candidates. Database relation "
                             "identifiers are the important exception and should "
-                            "be storage-access-owned."
+                            "be storage-access-owned. For database storage, "
+                            "rerun describe_query_context after recording the "
+                            "relation; if the same relation-like value remains "
+                            "on the dataset or partition, follow the "
+                            "database_relation_template_source_mismatch repair "
+                            "group to remove or move the misplaced template."
+                        ),
+                        "protocol_guidance": {
+                            "file_or_object_storage": (
+                                "Omit storage-owned path_templates when the "
+                                "dataset or partition already owns the reviewed "
+                                "file/object template."
+                            ),
+                            "rc:DatabaseStorage": (
+                                "Use storage-owned path_templates for reviewed "
+                                "database relation identifiers. Then rerun "
+                                "describe_query_context and follow "
+                                "database_relation_template_source_mismatch if "
+                                "a dataset or partition still carries the same "
+                                "relation-like template."
+                            ),
+                        },
+                        "review_rationale_guidance": (
+                            "record_map_storage_access writes current-best map "
+                            "facts directly and does not record graph-revision "
+                            "rationale. Preserve the reviewed rationale in the "
+                            "calling workflow, or use a staged assertion helper "
+                            "when durable review history is needed."
                         ),
                     },
                     {
@@ -20412,13 +20452,23 @@ class DoxaBase:
                 repair_actions.append(candidate.action)
 
         preferred_action = repair_actions[0] if repair_actions else None
+        action_candidates = [*repair_actions, *check.suggested_next_actions]
+        if not repair_actions:
+            action_candidates = [
+                action
+                for action in action_candidates
+                if action.tool_name != "draft_staged_revision_rebase"
+            ]
         suggested_next_actions = self._dedupe_suggested_next_actions(
-            [*repair_actions, *check.suggested_next_actions]
+            action_candidates
         )
         draft_next_action = (
             self._revision_next_action_from_rebase_repair(preferred_action)
             if preferred_action is not None
-            else check.next_action
+            else self._revision_next_action_from_rebase_fallback(
+                check,
+                suggested_next_actions,
+            )
         )
         current_revision_iri = self._staged_rebase_current_revision_iri(source)
         next_action_queue_item = self._revision_next_action_queue_item(
@@ -20653,6 +20703,68 @@ class DoxaBase:
             arguments=action.arguments,
             reason=action.reason,
             call=action.call,
+            source="draft_staged_revision_rebase",
+        )
+
+    @staticmethod
+    def _revision_next_action_from_rebase_fallback(
+        check: StagedRevisionApplyCheck,
+        suggested_next_actions: list[SuggestedNextAction],
+    ) -> RevisionNextAction | None:
+        if (
+            check.next_action is not None
+            and check.next_action.tool_name != "draft_staged_revision_rebase"
+        ):
+            return check.next_action
+        selected_action = next(
+            (
+                action
+                for action in suggested_next_actions
+                if action.tool_name
+                in {
+                    "describe_staged_revision",
+                    "export_staged_revision",
+                    "export_staged_revisions",
+                    "describe_revision_lineage",
+                }
+            ),
+            suggested_next_actions[0] if suggested_next_actions else None,
+        )
+        action_type = (
+            check.next_action.action_type
+            if check.next_action is not None
+            else "repair_or_replace"
+        )
+        queue = (
+            check.next_action.queue
+            if check.next_action is not None
+            else "repair_or_replace"
+        )
+        if selected_action is not None:
+            return RevisionNextAction(
+                action_type=action_type,
+                queue=queue,
+                action_label=selected_action.action_label,
+                tool_name=selected_action.tool_name,
+                mcp_tool_name=selected_action.mcp_tool_name,
+                arguments=selected_action.arguments,
+                reason=selected_action.reason,
+                call=selected_action.call,
+                source="draft_staged_revision_rebase",
+            )
+        return RevisionNextAction(
+            action_type=action_type,
+            queue=queue,
+            action_label="Inspect manual repair",
+            tool_name=None,
+            mcp_tool_name=None,
+            arguments={},
+            reason=(
+                "This rebase draft did not recognize a safe automatic repair; "
+                "inspect validation and patch diagnostics before authoring a "
+                "manual repair or replacement."
+            ),
+            call=None,
             source="draft_staged_revision_rebase",
         )
 

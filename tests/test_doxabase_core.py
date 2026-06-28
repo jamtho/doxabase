@@ -4718,6 +4718,11 @@ def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
     assert draft.repair_candidates == []
     assert draft.next_action is not None
     assert draft.next_action.queue == "repair_or_replace"
+    assert draft.next_action.tool_name != "draft_staged_revision_rebase"
+    assert all(
+        action.tool_name != "draft_staged_revision_rebase"
+        for action in draft.suggested_next_actions
+    )
 
 
 def test_same_slot_replacement_preserves_applied_alternative_gate(
@@ -11496,6 +11501,18 @@ def test_describe_query_context_reports_missing_planning_metadata(
         repair_actions[0]["condition"]
     )
     assert "Database relation identifiers" in repair_actions[0]["condition"]
+    assert "database_relation_template_source_mismatch" in (
+        repair_actions[0]["condition"]
+    )
+    assert repair_actions[0]["protocol_guidance"][
+        "file_or_object_storage"
+    ].startswith("Omit storage-owned path_templates")
+    assert "database relation identifiers" in repair_actions[0][
+        "protocol_guidance"
+    ]["rc:DatabaseStorage"]
+    assert "record_map_storage_access writes current-best map facts directly" in (
+        repair_actions[0]["review_rationale_guidance"]
+    )
     assert repair_actions[1]["arguments_template"]["subject"] == dataset
     assert repair_actions[1]["arguments_template"]["predicate"] == (
         "rc:hasStorageAccess"
@@ -21521,6 +21538,17 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     assert staged.suggested_next_actions[1].mcp_tool_name == (
         "doxabase.draft_profile_map_updates"
     )
+    assert staged.suggested_next_actions[1].preconditions == {
+        "staged_revision_applied": staged.staged_revision.revision_iri,
+        "why": (
+            "The rerun only reflects the newly mapped column after the staged "
+            "profile map-update revision has been reviewed and applied."
+        ),
+    }
+    staged_payload = to_jsonable(staged)
+    assert staged_payload["suggested_next_actions"][1]["preconditions"][
+        "staged_revision_applied"
+    ] == staged.staged_revision.revision_iri
     assert staged.suggested_next_calls == [
         f"check_staged_revision_apply(iri={staged.staged_revision.revision_iri!r})",
         (

@@ -279,6 +279,9 @@ Use `mcp_tool_name` and `arguments` when driving MCP calls. `action_label` is a
 compact human label for the action's role in the route. `tool_name` is the local
 helper-style name, and `suggested_next_calls` contains equivalent bare call
 strings for older callers.
+Some specialized actions carry extra structured fields. For example, a
+profile-map rerun action can include `preconditions` naming the staged revision
+that must be applied before the rerun is useful.
 
 `RevisionNextAction` wraps the most relevant suggested action for queue routing:
 
@@ -965,10 +968,12 @@ profile; each candidate has `evidence_iri`, `returned_profile_count`,
 `row_count_snapshot_basis`, and `shared_by_all_returned_profiles`.
 Candidates are ordered by returned profile count, then by whether a returned
 dataset-profile `row_count` matches `row_count_snapshot`, then by evidence IRI.
-`dataset_profile_row_count_bases` is keyed by row-count string and records
-whether each count came from `full_scan`, `sample`, `unknown`, or mixed evidence.
-`row_count_snapshot_basis` tells you the basis for the matching map snapshot
-when there is one; a match can still be sampled or unknown-scope evidence.
+`dataset_profile_row_count_bases` is keyed by row-count string and records the
+per-observation basis labels behind that count, such as `full_scan`, `sample`,
+or `unknown`. `row_count_snapshot_basis` tells you the collapsed basis for the
+matching map snapshot when there is one; it can be `mixed` when the matching
+count has more than one basis. A match can still be sampled or unknown-scope
+evidence.
 Use
 `profile_observation_iris` to seed `describe_context_slice` or inspect the
 returned observations that make up the candidate run. It is a bounded response
@@ -1018,9 +1023,10 @@ profiles and leaves omitted counts non-zero.
 The row-count fields summarize all dataset-profile observations in the requested
 evidence run, not only the capped returned slice.
 `dataset_profile_row_count_bases` uses row-count strings as keys and records
-normalized basis labels such as `full_scan`, `sample`, `unknown`, or `mixed`;
-use `row_count_snapshot_basis` to keep the profile-run step aligned with the
-candidate warning from `profile_summary.profile_run_candidates[]`.
+per-observation basis labels such as `full_scan`, `sample`, or `unknown`; use
+`row_count_snapshot_basis` to see the collapsed matching-snapshot basis, which
+may be `mixed`, and keep the profile-run step aligned with the candidate warning
+from `profile_summary.profile_run_candidates[]`.
 
 ### Profile Map Update Drafts
 
@@ -1431,7 +1437,9 @@ When at least one accepted recommendation passes safety checks,
 before reviewing, exporting, or applying. When the staged patch added an
 unmapped column shell, `suggested_next_actions` also includes a
 `draft_profile_map_updates` rerun for the same dataset/evidence; follow it
-after the staged shell has been reviewed and applied. Each item echoes the profile
+after the staged shell has been reviewed and applied. That rerun action carries
+`preconditions.staged_revision_applied` so scripts can avoid firing it before
+the shell is durable. Each item echoes the profile
 observation IRIs that support that recommendation, including duplicate sibling
 observations when the row belongs to a duplicate group; accepted staged rows
 feed those lists into the grouped revision support. Use
@@ -3802,6 +3810,10 @@ They still require normal semantic review; the helper only drafts the action.
 For drafted repairs, `suggested_next_actions[0]` may also be that mutating
 staging call. Treat it as the chosen post-review repair action, not as the
 review-first ordering used by plain apply checks.
+When no safe repair is drafted, the helper filters out its own
+`draft_staged_revision_rebase` action from `next_action` and
+`suggested_next_actions`; follow the remaining inspection/export action or
+author a manual repair instead of calling the same helper in a loop.
 
 Top-level `current_revision_iri` is the current route target for the selected
 row; it can be an applied event IRI for redirect cases. Use `draft.lineage` when
@@ -3866,6 +3878,11 @@ literals are left as manual validation repair work.
 would remove, and `proposed_triples` shows the staged value that would be made
 current. If no candidate appears, inspect `validation_results`, `patch_checks`,
 and `suggested_next_actions` before authoring a repair.
+For validation-failed stale work, `apply_check.recommended_resolution` may still
+describe the mechanical restage route in broad terms; treat
+`draft.apply_check.routing_decision`, `draft.draft_kind`, `next_action.queue`,
+and batch `repair_first_revision_iris` as the authoritative repair-first
+routing fields.
 
 `export_staged_revision()` and `export_staged_revisions()` embed this live apply
 check into the Markdown artifact at export time. Treat the `Current Apply Check`
