@@ -15076,6 +15076,28 @@ class DoxaBase:
                     for reason in review_reasons
                 ):
                     review_reasons.append(candidate_metadata_issue)
+                format_issue = (
+                    self._query_candidate_path_extension_physical_layout_issue(
+                        candidate_path=candidate_path,
+                        template=template,
+                        template_source=template_source,
+                        source_resource=source_resource,
+                        physical_layouts=dataset.physical_layouts,
+                    )
+                )
+                if format_issue is not None and not any(
+                    reason.code == format_issue.code
+                    and (
+                        reason.resource.iri if reason.resource is not None else None
+                    )
+                    == (
+                        format_issue.resource.iri
+                        if format_issue.resource is not None
+                        else None
+                    )
+                    for reason in review_reasons
+                ):
+                    review_reasons.append(format_issue)
             if (
                 storage_access is not None
                 and template_source == "storage_access_location"
@@ -15096,6 +15118,28 @@ class DoxaBase:
                     for reason in review_reasons
                 ):
                     review_reasons.append(location_issue)
+                format_issue = (
+                    self._query_candidate_path_extension_physical_layout_issue(
+                        candidate_path=candidate_path,
+                        template=template,
+                        template_source=template_source,
+                        source_resource=source_resource,
+                        physical_layouts=dataset.physical_layouts,
+                    )
+                )
+                if format_issue is not None and not any(
+                    reason.code == format_issue.code
+                    and (
+                        reason.resource.iri if reason.resource is not None else None
+                    )
+                    == (
+                        format_issue.resource.iri
+                        if format_issue.resource is not None
+                        else None
+                    )
+                    for reason in review_reasons
+                ):
+                    review_reasons.append(format_issue)
             review_required = any(
                 reason.severity in {"error", "warning"}
                 for reason in review_reasons
@@ -15662,6 +15706,124 @@ class DoxaBase:
             },
         )
 
+    def _query_candidate_path_extension_physical_layout_issue(
+        self,
+        *,
+        candidate_path: str | None,
+        template: str,
+        template_source: str,
+        source_resource: ResourceSummary,
+        physical_layouts: list[PhysicalLayoutDescription],
+    ) -> QueryPlanningIssue | None:
+        path_format = self._query_candidate_path_extension_format(candidate_path)
+        if path_format is None:
+            return None
+        layout = self._unique_physical_layout_for_query_plan(physical_layouts)
+        if layout is None:
+            return None
+        layout_format = self._query_physical_layout_format_kind(layout)
+        if layout_format is None or layout_format == path_format:
+            return None
+        layout_resource = self._summary_from_description(layout)
+        if layout.file_format is not None:
+            layout_label = (
+                layout.file_format.label
+                or self._compact_iri(layout.file_format.iri)
+                or layout.file_format.iri
+            )
+        else:
+            layout_label = layout_format
+        source_label = source_resource.label or source_resource.iri
+        return QueryPlanningIssue(
+            code="physical_layout_path_extension_mismatch",
+            severity="warning",
+            message=(
+                "Candidate path extension suggests "
+                f"{path_format.upper()} data, but the single linked physical "
+                f"layout records {layout_label} as the file format. Review "
+                "the physical layout and path metadata before executable use."
+            ),
+            resource=layout_resource,
+            details={
+                "candidate_path": candidate_path,
+                "path_extension_format": path_format,
+                "template": template,
+                "template_source": template_source,
+                "template_source_resource_iri": source_resource.iri,
+                "template_source_label": source_label,
+                "physical_layout_iri": layout.iri,
+                "physical_layout_file_format_iri": (
+                    layout.file_format.iri
+                    if layout.file_format is not None
+                    else None
+                ),
+                "physical_layout_file_format_label": (
+                    layout.file_format.label
+                    if layout.file_format is not None
+                    else None
+                ),
+                "physical_layout_format_kind": layout_format,
+                "review_note": (
+                    "This is a conservative extension/file-format guard for "
+                    "known CSV and Parquet mismatches. Correct either the "
+                    "path/template metadata or the physical layout file format "
+                    "before using the candidate as an executable handoff."
+                ),
+            },
+        )
+
+    @staticmethod
+    def _query_candidate_path_extension_format(
+        candidate_path: str | None,
+    ) -> str | None:
+        if candidate_path is None:
+            return None
+        text = candidate_path.strip()
+        if not text:
+            return None
+        text = re.split(r"[?#]", text, maxsplit=1)[0].rstrip("/")
+        if not text:
+            return None
+        suffixes = [suffix.lower() for suffix in Path(text).suffixes]
+        if not suffixes:
+            return None
+        compression_suffixes = {
+            ".bz2",
+            ".gz",
+            ".gzip",
+            ".snappy",
+            ".zip",
+            ".zst",
+            ".zstd",
+        }
+        data_suffix = suffixes[-1]
+        if data_suffix in compression_suffixes and len(suffixes) > 1:
+            data_suffix = suffixes[-2]
+        if data_suffix in {".parquet", ".pq"}:
+            return "parquet"
+        if data_suffix == ".csv":
+            return "csv"
+        return None
+
+    def _query_physical_layout_format_kind(
+        self,
+        layout: PhysicalLayoutDescription,
+    ) -> str | None:
+        if layout.file_format is None:
+            return None
+        values = [
+            layout.file_format.iri,
+            layout.file_format.label,
+            self._compact_iri(layout.file_format.iri),
+            self._local_name(layout.file_format.iri),
+        ]
+        text = " ".join(value for value in values if value).lower()
+        if "parquet" in text:
+            return "parquet"
+        if "csv" in text:
+            return "csv"
+        return None
+
     def _storage_protocol_location_repair_hint(
         self,
         storage_access: StorageAccessDescription,
@@ -15949,6 +16111,21 @@ class DoxaBase:
                 )
                 if issue is not None:
                     issues.append(issue)
+                candidate_path, _composition = self._query_candidate_path(
+                    template,
+                    storage_access,
+                )
+                format_issue = (
+                    self._query_candidate_path_extension_physical_layout_issue(
+                        candidate_path=candidate_path,
+                        template=template,
+                        template_source=template_source,
+                        source_resource=source_resource,
+                        physical_layouts=dataset.physical_layouts,
+                    )
+                )
+                if format_issue is not None:
+                    issues.append(format_issue)
             access_resource = self._summary_from_description(storage_access)
             for template in storage_access.path_templates:
                 object_location_issue = (
@@ -15968,10 +16145,41 @@ class DoxaBase:
                 )
                 if issue is not None:
                     issues.append(issue)
+                candidate_path, _composition = self._query_candidate_path(
+                    template,
+                    storage_access,
+                )
+                format_issue = (
+                    self._query_candidate_path_extension_physical_layout_issue(
+                        candidate_path=candidate_path,
+                        template=template,
+                        template_source="storage_access",
+                        source_resource=access_resource,
+                        physical_layouts=dataset.physical_layouts,
+                    )
+                )
+                if format_issue is not None:
+                    issues.append(format_issue)
             if not template_sources and not storage_access.path_templates:
                 issue = self._query_storage_access_location_kind_issue(storage_access)
                 if issue is not None:
                     issues.append(issue)
+                has_file_object_root = (
+                    storage_access.storage_root is not None
+                    and not self._is_database_storage(storage_access.storage_protocol)
+                )
+                if has_file_object_root:
+                    format_issue = (
+                        self._query_candidate_path_extension_physical_layout_issue(
+                            candidate_path=storage_access.storage_root,
+                            template=storage_access.storage_root,
+                            template_source="storage_access_location",
+                            source_resource=access_resource,
+                            physical_layouts=dataset.physical_layouts,
+                        )
+                    )
+                    if format_issue is not None:
+                        issues.append(format_issue)
         return issues
 
     def _query_storage_object_location_template_issue(
@@ -16199,6 +16407,7 @@ class DoxaBase:
     def _is_candidate_metadata_issue(self, issue: QueryPlanningIssue) -> bool:
         if issue.code in {
             "database_relation_template_source_mismatch",
+            "physical_layout_path_extension_mismatch",
             "storage_object_location_has_path_template",
         }:
             return True

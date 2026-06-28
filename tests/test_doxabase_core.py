@@ -14403,6 +14403,124 @@ def test_object_root_candidate_stays_visible_with_partition_templates(
     assert plan.handoff_kind == "execution_attempt_ready"
 
 
+def test_query_context_blocks_path_extension_layout_mismatch(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage_root = str(tmp_path / "orders.csv")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_local_storage",
+        label="Orders local object",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=storage_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert [issue.code for issue in context.issues] == [
+        "physical_layout_path_extension_mismatch"
+    ]
+    issue = context.issues[0]
+    assert issue.severity == "warning"
+    assert issue.resource is not None
+    assert issue.resource.iri == layout.iri
+    assert issue.details is not None
+    assert issue.details["candidate_path"] == storage_root
+    assert issue.details["path_extension_format"] == "csv"
+    assert issue.details["physical_layout_format_kind"] == "parquet"
+
+    target = context.query_target_candidates[0]
+    assert target.template_source == "storage_access_location"
+    assert target.candidate_path == storage_root
+    assert target.candidate_path_status == "orientation_only"
+    assert target.direct_review_required is True
+    assert [reason.code for reason in target.direct_review_reasons] == [
+        "physical_layout_path_extension_mismatch"
+    ]
+    assert context.query_target_decision.status == "candidate_needs_review"
+    assert context.query_target_decision.reason_codes == [
+        "physical_layout_path_extension_mismatch"
+    ]
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.scan.uri_template == storage_root
+    assert plan.scan.file_format == "Parquet"
+    assert plan.scan.function == "read_parquet"
+    assert plan.review_gate.ready_for_execution_attempt is False
+    assert plan.review_gate.blocking_reason_codes == [
+        "physical_layout_path_extension_mismatch"
+    ]
+    assert plan.review_gate.execution_attempt_blocking_reason_codes == [
+        "physical_layout_path_extension_mismatch"
+    ]
+    assert plan.scan.execution_attempt_ready is False
+    assert plan.handoff_kind == "metadata_review_required"
+
+
+def test_query_context_allows_matching_csv_extension_and_layout(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage_root = str(tmp_path / "orders.csv")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_local_storage",
+        label="Orders local object",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=storage_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "ready_for_query_planning"
+    assert context.issues == []
+    target = context.query_target_candidates[0]
+    assert target.candidate_path == storage_root
+    assert target.candidate_path_status == "ready"
+    assert target.review_reasons == []
+
+    plan = db.draft_query_plan(dataset)
+
+    assert plan.scan.uri_template == storage_root
+    assert plan.scan.file_format == "CSV"
+    assert plan.scan.function == "read_csv_auto"
+    assert plan.review_gate.ready_for_execution_attempt is True
+    assert plan.handoff_kind == "execution_attempt_ready"
+
+
 def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
     tmp_path: Path,
 ) -> None:

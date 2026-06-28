@@ -541,6 +541,13 @@ few useful gaps:
   until a path template narrows them. Context slices also now warn with a
   concrete rerun profile when a seed type does not match the chosen profile,
   for example an `rc:Pattern` seed sent through `dataset_brief`.
+- A query-planning storage trial showed that verified graph metadata can still
+  combine into a bad execution hint when an exact object path has one extension
+  but the single linked physical layout records another file format, for
+  example `.csv` with `rc:Parquet`. `describe_query_context` now surfaces
+  `physical_layout_path_extension_mismatch` as a candidate metadata blocker so
+  `draft_query_plan` stays metadata-review-required instead of becoming an
+  execution-attempt-ready `read_parquet` handoff.
 - A context-slice/profile-seed trial showed that a directly seeded old profile
   observation can be outside a dataset context's bounded recent profile lists,
   even though the resource and evidence are present in the slice. Context slices

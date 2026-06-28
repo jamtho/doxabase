@@ -720,7 +720,11 @@ environment hints, copied issues and analysis warnings, caveats, and a
 `review_gate.ready_for_execution_attempt=false` until the intended layout is
 modeled or selected with `physical_layout_iri`; selected drafts record the
 choice in `source_context.requested_physical_layout_iri`,
-`scan.physical_layout`, and `scan.physical_layout_selection_note`. Binding rows
+`scan.physical_layout`, and `scan.physical_layout_selection_note`. A single
+linked layout can also block execution when the candidate path extension
+conflicts with its file format; `physical_layout_path_extension_mismatch`
+keeps the draft metadata-review-required until the path/template or layout file
+format is corrected. Binding rows
 preserve the source text and say
 when DoxaBase has not inferred derivation or runtime values. When the selected
 template comes from partition metadata, binding rows also carry

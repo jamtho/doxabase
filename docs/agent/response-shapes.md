@@ -2399,7 +2399,10 @@ is present, `draft_query_plan` leaves `scan.function` unset instead of guessing
 from the first layout. After reviewing those layouts, pass
 `physical_layout_iri` to `draft_query_plan` to select one for that draft; the
 source context records the requested layout and the scan card reports the
-selected layout.
+selected layout. `physical_layout_path_extension_mismatch` means there is only
+one linked layout, but a clear candidate path extension such as `.csv` conflicts
+with that layout's file format such as `rc:Parquet`; keep the plan review-gated
+until the path/template or physical layout is corrected.
 
 Use `describe_query_context` when the task is physical query planning and you
 need the storage/layout/path/caveat projection without the full relationship and
@@ -2636,6 +2639,9 @@ plan handoff: they may include decision reasons,
 `query_context_has_other_blockers` when the selected candidate is clean but
 sibling metadata blocks the overall context, or `scan_function_not_inferred`
 when DuckDB has no file-scan function for the selected storage/layout shape.
+They may also include `physical_layout_path_extension_mismatch` when the
+candidate path extension conflicts with the single linked physical layout file
+format.
 After selecting `physical_layout_iri`, `status` may be `ready` while
 `ready_for_execution_attempt` and `scan.execution_attempt_ready` remain false;
 always route from the stricter execution-attempt fields before attempting a

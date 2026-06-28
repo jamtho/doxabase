@@ -250,6 +250,11 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    for the selected candidate, plus peer candidates whose only direct blocker
    is layout ambiguity, so scripts can choose a reviewed layout without parsing
    issue details by hand.
+   When a single linked physical layout is unambiguous but a clear candidate
+   path extension conflicts with it, for example `.csv` with `rc:Parquet`,
+   `physical_layout_path_extension_mismatch` keeps the candidate review-gated
+   and `ready_for_execution_attempt=false`. Treat the scan function as review
+   context until either the path/template or the layout file format is fixed.
 7. `required_bindings` and `binding_requirements` still need runtime values.
    `review_gate.binding_values_required=True` and
    `handoff_kind="binding_values_required"` make that case explicit. When a
