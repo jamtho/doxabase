@@ -131,6 +131,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
     "datasets": [
         {
             "dataset": {"iri": "https://...", "label": "...", "description": ...},
+            "is_table": true,
             "query": {
                 "readiness": "ready_for_query_planning",
                 "readiness_note": "...",
@@ -202,6 +203,11 @@ are computed across scanned table/dataset entities, while `datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue
 when the limit allows, then fills remaining slots by priority.
+Non-table `rc:Dataset` resources stay visible in `datasets` with
+`is_table=false`, but their query readiness is
+`not_applicable_non_tabular_asset`; project brief routes them to
+`non_tabular_asset_review` with a `describe_context_slice` action instead of
+query repair queues.
 
 `db.replace_graph_triples(...)` returns `GraphTripleReplacementRecord`:
 

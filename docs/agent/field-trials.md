@@ -1927,6 +1927,26 @@ few useful gaps:
   relevance tiers from dataset context. Agents should still seed a search-found
   pattern directly with `profile="pattern_brief"` when lexical search has
   already identified the synthesis they need.
+- A semantic rebase trial confirmed that staged-revision recovery mechanics
+  work across map and ontology drift, including batch dry-run, real restage,
+  grouped export, apply-one-and-recheck, same-slot rebase drafting, and reviewed
+  repair via `stage_map_assertion_change(restages_revision=...)`. The useful
+  follow-up was mostly doc steering: read item-local post-batch actions, apply
+  at most one ready successor, and recheck siblings because a single apply can
+  stale or no-op the rest of a bundle.
+- A generic RDF retrieval trial confirmed that `list_entities`, `search`,
+  `describe_resource(include_incoming=True)`, validation, and graph exports can
+  recover arbitrary ontology, evidence, source-span, and shape resources, but
+  `describe_context_slice` is still profile-based rather than a generic RDF
+  neighborhood browser. SHACL blank-node property shapes and arbitrary
+  ontology/domain-range neighborhoods still need manual stitching or export
+  until a future generic slice helper exists.
+- A non-tabular project-brief trial confirmed that API/document-like assets are
+  modelable with `record_map_dataset(is_table=False)`, project `extra_types`,
+  caveats, evidence, claims, and patterns. It also showed that `project_brief`
+  should not steer those assets into query repair: non-table datasets now carry
+  `is_table=false`, `not_applicable_non_tabular_asset` query readiness, and a
+  `non_tabular_asset_review` task pointing at a context-slice handoff.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

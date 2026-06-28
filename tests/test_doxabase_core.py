@@ -189,6 +189,93 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     ] == ["query_repair_review", "staged_review"]
 
 
+def test_project_brief_routes_non_tabular_assets_to_context_review(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    api = "https://example.test/project#RiskSignalsAPI"
+    docs = "https://example.test/project#RiskSignalsOpenAPI"
+    storage = "https://example.test/project#RiskSignalsHTTPSAccess"
+    caveat = "https://example.test/project#RiskSignalsCaveat"
+
+    db.record_map_storage_access(
+        storage,
+        label="Risk signals HTTPS access",
+        storage_protocol="rc:HTTPSStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="object",
+        storage_root="https://api.example.test/risk/signals",
+        datasets=[api],
+    )
+    db.record_map_caveat(
+        caveat,
+        label="rate limited endpoint",
+        description="The API is rate limited and should not be bulk queried.",
+        targets=[api],
+    )
+    db.record_map_dataset(
+        api,
+        label="Risk signals API",
+        is_table=False,
+        extra_types=["https://example.test/project#APIEndpoint"],
+        caveats=[caveat],
+        storage_accesses=[storage],
+    )
+    db.record_map_dataset(
+        docs,
+        label="Risk signals OpenAPI document",
+        is_table=False,
+        extra_types=["https://example.test/project#APIDocument"],
+    )
+    claim = db.record_claim_observation(
+        summary="Risk signals API has live-service semantics.",
+        claim_text="The API endpoint should be inspected as a live service, not a table.",
+        claim_kind="rc:CaveatClaim",
+        claim_targets=[api],
+        evidence_sources=["test://risk-signals-api-note"],
+    )
+    db.record_pattern(
+        summary="Risk signals assets need service-oriented handoff.",
+        pattern_text=(
+            "Use the API endpoint and OpenAPI document as non-tabular context "
+            "before planning any extraction."
+        ),
+        rationale="The endpoint and document describe a live API surface.",
+        pattern_targets=[api, docs],
+        supporting_claims=[claim.claim_iri],
+        evidence_sources=["test://risk-signals-openapi"],
+    )
+
+    brief = db.project_brief(limit=5)
+
+    datasets_by_label = {dataset.dataset.label: dataset for dataset in brief.datasets}
+    assert datasets_by_label["Risk signals API"].is_table is False
+    assert datasets_by_label["Risk signals OpenAPI document"].is_table is False
+    assert {
+        dataset.query.readiness for dataset in datasets_by_label.values()
+    } == {"not_applicable_non_tabular_asset"}
+    assert brief.dataset_query_readiness_counts == {
+        "not_applicable_non_tabular_asset": 2,
+    }
+    assert brief.queue_counts == {"non_tabular_asset_review": 2}
+    assert "query_repair_review" not in brief.queue_counts
+    assert "query_context_review" not in brief.queue_counts
+
+    tasks = {
+        task.resource.iri: task
+        for task in brief.recommended_next_tasks
+        if task.resource is not None
+    }
+    api_task = tasks[api]
+    assert api_task.task_type == "non_tabular_asset_review"
+    assert api_task.suggested_next_action is not None
+    assert api_task.suggested_next_action.tool_name == "describe_context_slice"
+    assert api_task.suggested_next_action.arguments == {
+        "seed_iris": [api],
+        "profile": "deep_lore",
+    }
+
+
 def test_immutable_seed_graphs_reject_normal_imports(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

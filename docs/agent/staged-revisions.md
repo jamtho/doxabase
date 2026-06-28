@@ -198,6 +198,15 @@ created during that run, not as an apply queue. Each item's `status_after`,
 `check_staged_revision_apply()` before each apply. The item-local queue item is
 scoped to `current_revision_iri`, which avoids having to join the batch item to
 `bundle_summary.next_action_queue_items` manually.
+
+For recovery scripts, use this short loop: dry-run batch restage, inspect
+item-local `next_action_after` and `next_action_queue_item_after`, create only
+the mechanical successors you intend to review, apply at most one ready
+successor, then feed `apply_staged_revision().post_apply_recheck_revision_iris`
+into the next check/export/restage pass. Applying one ready successor can make
+siblings stale or no-op, so never treat a pre-apply grouped bundle as a durable
+apply queue.
+
 Guarded same-slot conflicts that already suggest a
 `stage_map_assertion_change` replacement are skipped by batch restage with
 `not_restageable_reason="same_slot_replacement"` and rejected by direct

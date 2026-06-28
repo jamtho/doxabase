@@ -25,6 +25,15 @@ evidence that search found. Use `describe_resource()` for a quick resource card,
 but do not treat it as high-degree lore recovery; it does not carry slice route
 counts, omitted counts, or offset-style browsing.
 
+For arbitrary project RDF, such as ontology terms, SHACL shapes, evidence
+resources, source spans, or non-dataset map resources, start with
+`list_entities()` or `search()`, then inspect specific IRIs with
+`describe_resource(include_incoming=True)`. Use `export_graph()` or
+`export_trig()` when reviewers need complete Turtle for a graph role or when
+SHACL blank-node property shapes matter. Current context-slice profiles are not
+a generic RDF neighborhood browser, and shape seeds may not carry blank-node
+closure through the slice.
+
 Dataset and deep-lore slices also understand profile seeds. A seed
 `rc:ProfileObservation` expands to its observed asset/column, evidence, value
 frequencies, profile metric nodes, and the observed dataset when available. A

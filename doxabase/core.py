@@ -231,6 +231,7 @@ class ProjectBriefDatasetProfileSummary:
 @dataclass(frozen=True)
 class ProjectBriefDatasetSummary:
     dataset: ResourceSummary
+    is_table: bool
     query: ProjectBriefDatasetQuerySummary
     profile: ProjectBriefDatasetProfileSummary
 
@@ -2824,24 +2825,14 @@ class DoxaBase:
 
         for entity_index, entity in enumerate(dataset_entities):
             description = self.describe_dataset(entity.iri)
-            query_context = self.describe_query_context(entity.iri)
-            readiness_counts[query_context.readiness] = (
-                readiness_counts.get(query_context.readiness, 0) + 1
+            is_table = self.expand_iri("rc:Table") in description.types
+            query_summary = (
+                self._project_brief_query_summary(description.iri)
+                if is_table
+                else self._project_brief_non_tabular_query_summary()
             )
-            query_summary = ProjectBriefDatasetQuerySummary(
-                readiness=query_context.readiness,
-                readiness_note=query_context.readiness_note,
-                issue_codes=self._query_issue_codes(query_context.issues),
-                repair_action_group_count=(
-                    query_context.suggested_repair_action_group_count
-                ),
-                candidate_count=len(query_context.query_target_candidates),
-                ready_candidate_indexes=query_context.ready_candidate_indexes,
-                direct_clean_candidate_indexes=(
-                    query_context.direct_clean_candidate_indexes
-                ),
-                suggested_next_actions=query_context.suggested_next_actions[:3],
-                suggested_next_calls=query_context.suggested_next_calls[:3],
+            readiness_counts[query_summary.readiness] = (
+                readiness_counts.get(query_summary.readiness, 0) + 1
             )
             profile_summary = self._project_brief_profile_summary(
                 description,
@@ -2853,14 +2844,15 @@ class DoxaBase:
                     label=description.label,
                     description=description.description,
                 ),
+                is_table=is_table,
                 query=query_summary,
                 profile=profile_summary,
             )
             all_dataset_summaries.append(dataset_summary)
             if entity_index < limit:
                 datasets.append(dataset_summary)
-                returned_readiness_counts[query_context.readiness] = (
-                    returned_readiness_counts.get(query_context.readiness, 0)
+                returned_readiness_counts[query_summary.readiness] = (
+                    returned_readiness_counts.get(query_summary.readiness, 0)
                     + 1
                 )
             recommended_tasks.extend(
@@ -2918,6 +2910,45 @@ class DoxaBase:
         return sorted(
             entities_by_iri.values(),
             key=lambda entity: (entity.label or entity.iri, entity.iri),
+        )
+
+    def _project_brief_query_summary(
+        self,
+        dataset_iri: str,
+    ) -> ProjectBriefDatasetQuerySummary:
+        query_context = self.describe_query_context(dataset_iri)
+        return ProjectBriefDatasetQuerySummary(
+            readiness=query_context.readiness,
+            readiness_note=query_context.readiness_note,
+            issue_codes=self._query_issue_codes(query_context.issues),
+            repair_action_group_count=(
+                query_context.suggested_repair_action_group_count
+            ),
+            candidate_count=len(query_context.query_target_candidates),
+            ready_candidate_indexes=query_context.ready_candidate_indexes,
+            direct_clean_candidate_indexes=(
+                query_context.direct_clean_candidate_indexes
+            ),
+            suggested_next_actions=query_context.suggested_next_actions[:3],
+            suggested_next_calls=query_context.suggested_next_calls[:3],
+        )
+
+    @staticmethod
+    def _project_brief_non_tabular_query_summary() -> ProjectBriefDatasetQuerySummary:
+        return ProjectBriefDatasetQuerySummary(
+            readiness="not_applicable_non_tabular_asset",
+            readiness_note=(
+                "This map dataset is not typed as rc:Table; use resource or "
+                "context-slice handoffs unless an explicit queryable table "
+                "route is modeled."
+            ),
+            issue_codes=[],
+            repair_action_group_count=0,
+            candidate_count=0,
+            ready_candidate_indexes=[],
+            direct_clean_candidate_indexes=[],
+            suggested_next_actions=[],
+            suggested_next_calls=[],
         )
 
     def _project_brief_profile_summary(
@@ -3032,51 +3063,71 @@ class DoxaBase:
         dataset: ProjectBriefDatasetSummary,
     ) -> list[ProjectBriefRecommendedTask]:
         tasks: list[ProjectBriefRecommendedTask] = []
-        first_query_action = self._project_brief_query_task_action(
-            dataset.dataset.iri,
-            dataset.query.suggested_next_actions,
-        )
-        if dataset.query.repair_action_group_count:
+        if not dataset.is_table:
+            action = self._project_brief_describe_context_slice_action(
+                dataset.dataset.iri,
+            )
             tasks.append(
                 ProjectBriefRecommendedTask(
-                    priority=10,
-                    task_type="query_repair_review",
-                    source="describe_query_context",
+                    priority=25,
+                    task_type="non_tabular_asset_review",
+                    source="describe_context_slice",
                     resource=dataset.dataset,
                     reason=(
-                        "Dataset query context exposes reviewed repair action "
-                        "groups."
+                        "Dataset is not typed as rc:Table; inspect map context, "
+                        "caveats, patterns, observations, and evidence instead "
+                        "of query-planning repair lanes."
                     ),
-                    suggested_next_action=first_query_action,
-                    suggested_next_call=(
-                        first_query_action.call
-                        if first_query_action is not None
-                        else None
-                    ),
+                    suggested_next_action=action,
+                    suggested_next_call=action.call,
                 )
             )
-        elif dataset.query.readiness not in {
-            "ready_for_query_planning",
-            "ready",
-        }:
-            tasks.append(
-                ProjectBriefRecommendedTask(
-                    priority=20,
-                    task_type="query_context_review",
-                    source="describe_query_context",
-                    resource=dataset.dataset,
-                    reason=(
-                        "Dataset query context is not ready for planning: "
-                        f"{dataset.query.readiness}."
-                    ),
-                    suggested_next_action=first_query_action,
-                    suggested_next_call=(
-                        first_query_action.call
-                        if first_query_action is not None
-                        else None
-                    ),
-                )
+        else:
+            first_query_action = self._project_brief_query_task_action(
+                dataset.dataset.iri,
+                dataset.query.suggested_next_actions,
             )
+            if dataset.query.repair_action_group_count:
+                tasks.append(
+                    ProjectBriefRecommendedTask(
+                        priority=10,
+                        task_type="query_repair_review",
+                        source="describe_query_context",
+                        resource=dataset.dataset,
+                        reason=(
+                            "Dataset query context exposes reviewed repair "
+                            "action groups."
+                        ),
+                        suggested_next_action=first_query_action,
+                        suggested_next_call=(
+                            first_query_action.call
+                            if first_query_action is not None
+                            else None
+                        ),
+                    )
+                )
+            elif dataset.query.readiness not in {
+                "ready_for_query_planning",
+                "ready",
+            }:
+                tasks.append(
+                    ProjectBriefRecommendedTask(
+                        priority=20,
+                        task_type="query_context_review",
+                        source="describe_query_context",
+                        resource=dataset.dataset,
+                        reason=(
+                            "Dataset query context is not ready for planning: "
+                            f"{dataset.query.readiness}."
+                        ),
+                        suggested_next_action=first_query_action,
+                        suggested_next_call=(
+                            first_query_action.call
+                            if first_query_action is not None
+                            else None
+                        ),
+                    )
+                )
 
         for draft in dataset.profile.drafts:
             if (
@@ -3121,6 +3172,30 @@ class DoxaBase:
             if action.tool_name != "describe_profile_run":
                 return action
         return self._project_brief_describe_query_context_action(dataset_iri)
+
+    def _project_brief_describe_context_slice_action(
+        self,
+        dataset_iri: str,
+    ) -> SuggestedNextAction:
+        arguments = {
+            "seed_iris": [dataset_iri],
+            "profile": "deep_lore",
+        }
+        return SuggestedNextAction(
+            action_label="Inspect non-tabular asset context",
+            tool_name="describe_context_slice",
+            mcp_tool_name="doxabase.describe_context_slice",
+            arguments=arguments,
+            reason=(
+                "Inspect the non-tabular asset's map context, caveats, "
+                "patterns, observations, and evidence without treating it as a "
+                "table query target."
+            ),
+            call=self._suggested_call_string(
+                "describe_context_slice",
+                arguments,
+            ),
+        )
 
     def _project_brief_describe_query_context_action(
         self,
