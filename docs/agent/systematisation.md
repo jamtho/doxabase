@@ -25,6 +25,9 @@ validation, pass explicit `alternative_to` values or set
 `link_alternatives=False`.
 When a draft detects this mistake after staging, the first suggested next action
 is a complete `stage_systematisation(..., link_alternatives=False)` rerun call.
+That rerun can still report
+`shared_semantic_context_applies_to_all_framings` when shared ontology or shapes
+are intentionally global to every framing.
 
 ## Shared Context
 

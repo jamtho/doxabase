@@ -491,6 +491,10 @@ actions before treating a profile-derived count as current. Also read
 `row_count_snapshot_basis` and `dataset_profile_row_count_bases` on
 `profile_summary.profile_run_candidates[]`; a matching row count can still come
 from sampled, unknown, or mixed-basis profile evidence.
+Use `dataset_profile_row_counts`, `dataset_profile_row_count_bases`,
+`row_count_snapshot_matches`, and `row_count_snapshot_basis` on
+`describe_profile_run` results to preserve that normalized row-count context
+after following a profile-run action.
 It also returns `ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
 `direct_clean_candidate_indexes`, and
 `unselected_direct_clean_candidate_indexes` so callers can see peer strict-ready

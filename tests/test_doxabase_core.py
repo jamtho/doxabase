@@ -3966,6 +3966,21 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert (
         grouped_export_record.bundle_summary.recommended_applied_inspection_iris == []
     )
+    assert "## Review Queues" in grouped_export
+    assert "## Resolved Targets" in grouped_export
+    assert grouped_export.index("## Review Queues") < grouped_export.index(
+        "## Resolved Targets"
+    )
+    assert grouped_export.index("## Resolved Targets") < grouped_export.index(
+        "## Restage Context"
+    )
+    assert "| Queue | Row | Action | Resolved target | Target kind | Row is target |" in (
+        grouped_export
+    )
+    assert f"`{staged.revision_iri}`" in grouped_export
+    assert f"`{restaged.revision_iri}`" in grouped_export
+    assert "Inspect current refreshed successor" in grouped_export
+    assert "staged_patch | False |" in grouped_export
     assert "## Restage Context" in grouped_export
     assert grouped_export.index("## Restage Context") < grouped_export.index(
         "## Revisions"
@@ -18317,6 +18332,18 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
     assert "sampled, unknown, or mixed basis" in (
         context.suggested_next_actions[1].reason
     )
+    matching_run = db.describe_profile_run(dataset, matching_evidence)
+    old_run = db.describe_profile_run(dataset, old_evidence)
+    assert matching_run.row_count_snapshot == 120
+    assert matching_run.dataset_profile_row_counts == [120]
+    assert matching_run.dataset_profile_row_count_bases == {"120": ["unknown"]}
+    assert matching_run.row_count_snapshot_matches is True
+    assert matching_run.row_count_snapshot_basis == "unknown"
+    assert old_run.row_count_snapshot == 120
+    assert old_run.dataset_profile_row_counts == [80]
+    assert old_run.dataset_profile_row_count_bases == {"80": ["unknown"]}
+    assert old_run.row_count_snapshot_matches is False
+    assert old_run.row_count_snapshot_basis is None
 
 
 def test_describe_profile_run_returns_wide_shared_evidence_run(

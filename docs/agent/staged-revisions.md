@@ -532,7 +532,9 @@ reconstruct the original framings by hand. Multi-framing drafts with shared
 also emit `shared_semantic_context_applies_to_all_framings`; use its suggested
 rerun arguments as a cue to move those patches into per-framing additions or
 removals when fallback alternatives should not carry the provisional vocabulary
-or validation shape.
+or validation shape. That shared-context warning can remain after a
+`link_alternatives=False` rerun when the shared ontology or shapes still
+intentionally apply to every framing.
 
 ## Pattern-Supported Promotion
 
@@ -720,6 +722,10 @@ machine-readable `bundle_summary.next_action_queue_items`: each item includes
 `row_iri`, `resolved_target_iri`, `row_is_target`, row status fields, and the
 selected tool/call. `next_action_queue_item_counts` mirrors queue sizes, and
 `semantic_review_required_queue_counts` highlights gated rows by queue.
+Grouped Markdown also includes a `Resolved Targets` table derived from those
+queue items, so Markdown-only reviewers can see each row's queue, action,
+resolved target IRI, target kind, and whether the row itself is the target
+without opening every row's detailed apply check.
 Treat `next_action` as the compact route for the row, not as permission to run a
 mutating tool immediately. For review-first automation, follow
 `suggested_next_actions` / `suggested_next_calls` in order; ready and stale rows

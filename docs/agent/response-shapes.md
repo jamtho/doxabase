@@ -986,6 +986,11 @@ metadata gaps.
 profile_run.dataset
 profile_run.evidence
 profile_run.evidence_iri
+profile_run.row_count_snapshot
+profile_run.dataset_profile_row_counts
+profile_run.dataset_profile_row_count_bases
+profile_run.row_count_snapshot_matches
+profile_run.row_count_snapshot_basis
 profile_run.returned_dataset_profile_count
 profile_run.returned_mapped_column_profile_count
 profile_run.returned_unmapped_column_profile_count
@@ -1010,6 +1015,12 @@ a shared-evidence run that may be wider than the bounded `describe_dataset`
 profile lists. With `limit=None`, returned and total counts should match unless
 the run has no observations for that dataset. A positive `limit` caps returned
 profiles and leaves omitted counts non-zero.
+The row-count fields summarize all dataset-profile observations in the requested
+evidence run, not only the capped returned slice.
+`dataset_profile_row_count_bases` uses row-count strings as keys and records
+normalized basis labels such as `full_scan`, `sample`, `unknown`, or `mixed`;
+use `row_count_snapshot_basis` to keep the profile-run step aligned with the
+candidate warning from `profile_summary.profile_run_candidates[]`.
 
 ### Profile Map Update Drafts
 

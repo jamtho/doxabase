@@ -2987,6 +2987,11 @@ def test_describe_query_context_tool_routes_profile_evidence_before_query_draft(
     assert profile_run["returned_profile_count"] == 2
     assert profile_run["returned_dataset_profile_count"] == 1
     assert profile_run["returned_mapped_column_profile_count"] == 1
+    assert profile_run["row_count_snapshot"] == 42
+    assert profile_run["dataset_profile_row_counts"] == [42]
+    assert profile_run["dataset_profile_row_count_bases"] == {"42": ["full_scan"]}
+    assert profile_run["row_count_snapshot_matches"] is True
+    assert profile_run["row_count_snapshot_basis"] == "full_scan"
 
     draft_action = context["suggested_next_actions"][1]
     assert draft_action["action_label"] == "Draft review-gated query plan"

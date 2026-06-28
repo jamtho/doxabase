@@ -1788,6 +1788,11 @@ class ProfileRunDescription:
     dataset: ResourceSummary
     evidence: EvidenceDescription
     evidence_iri: str
+    row_count_snapshot: int | None
+    dataset_profile_row_counts: list[int]
+    dataset_profile_row_count_bases: dict[str, list[str]]
+    row_count_snapshot_matches: bool
+    row_count_snapshot_basis: str | None
     returned_dataset_profile_count: int
     returned_mapped_column_profile_count: int
     returned_unmapped_column_profile_count: int
@@ -8582,6 +8587,19 @@ class DoxaBase:
             total_unmapped_column_profile_count - len(returned_unmapped_column_profiles)
         )
         omitted_profile_count = total_profile_count - returned_profile_count
+        row_count_snapshot = self._int_object(
+            data_graphs,
+            dataset_value,
+            "rc:rowCountSnapshot",
+        )
+        dataset_profile_row_count_bases: dict[int, set[str]] = {}
+        for profile in dataset_profiles:
+            if profile.row_count is None:
+                continue
+            dataset_profile_row_count_bases.setdefault(
+                profile.row_count,
+                set(),
+            ).add(self._profile_observation_basis(profile))
 
         return ProfileRunDescription(
             dataset=self._resource_summary(lookup_graphs, dataset_value),
@@ -8591,6 +8609,22 @@ class DoxaBase:
                 lookup_graphs,
             ),
             evidence_iri=evidence_value,
+            row_count_snapshot=row_count_snapshot,
+            dataset_profile_row_counts=sorted(dataset_profile_row_count_bases),
+            dataset_profile_row_count_bases={
+                str(row_count): sorted(bases)
+                for row_count, bases in sorted(
+                    dataset_profile_row_count_bases.items()
+                )
+            },
+            row_count_snapshot_matches=(
+                row_count_snapshot is not None
+                and row_count_snapshot in dataset_profile_row_count_bases
+            ),
+            row_count_snapshot_basis=self._profile_row_count_snapshot_basis(
+                row_count_snapshot,
+                dataset_profile_row_count_bases,
+            ),
             returned_dataset_profile_count=len(returned_dataset_profiles),
             returned_mapped_column_profile_count=len(returned_mapped_column_profiles),
             returned_unmapped_column_profile_count=len(
@@ -29448,6 +29482,12 @@ class DoxaBase:
         if review_queues:
             lines.extend(["", "## Review Queues", ""])
             lines.extend(review_queues)
+        resolved_targets = self._staged_revisions_resolved_targets_markdown(
+            bundle_summary,
+        )
+        if resolved_targets:
+            lines.extend(["", "## Resolved Targets", ""])
+            lines.extend(resolved_targets)
         restage_context = []
         for index, description in enumerate(descriptions, start=1):
             if description.restage_reason is not None:
@@ -29851,6 +29891,41 @@ class DoxaBase:
         if not iris:
             return "(none)"
         return ", ".join(f"`{iri}`" for iri in iris)
+
+    def _staged_revisions_resolved_targets_markdown(
+        self,
+        bundle_summary: StagedGraphRevisionBundleSummary,
+    ) -> list[str]:
+        if not bundle_summary.next_action_queue_items:
+            return []
+        lines = [
+            "| Queue | Row | Action | Resolved target | Target kind | Row is target |",
+            "|---|---|---|---|---|---|",
+        ]
+        for item in bundle_summary.next_action_queue_items:
+            row = f"`{item.row_iri}`"
+            target = (
+                f"`{item.resolved_target_iri}`"
+                if item.resolved_target_iri is not None
+                else "(none)"
+            )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        self._markdown_table_cell(item.queue),
+                        self._markdown_table_cell(row),
+                        self._markdown_table_cell(item.action_label),
+                        self._markdown_table_cell(target),
+                        self._markdown_table_cell(
+                            item.resolved_target_record_kind or "(none)"
+                        ),
+                        str(item.row_is_target),
+                    ]
+                )
+                + " |"
+            )
+        return lines
 
     def _staged_revisions_alternative_context_markdown(
         self,

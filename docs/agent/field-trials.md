@@ -1814,6 +1814,17 @@ few useful gaps:
   count aliases and caveat severity details are clear, and added docs crib notes
   for lineage/list/apply field names such as `applied_revision_iri`,
   `application_decision`, and `next_action_queue_items[].resolved_target_iri`.
+- A retest wave after those routing changes confirmed the profile-run and
+  systematisation actions are executable in practice. `describe_profile_run`
+  now carries run-level row-count snapshot and basis fields so the sampled,
+  unknown, or mixed warning survives the handoff from query context to the
+  profile-run inspection step. Grouped staged-revision Markdown now includes a
+  `Resolved Targets` table mirroring `bundle_summary.next_action_queue_items`,
+  which gives Markdown-only reviewers the same row-vs-target routing cue that
+  JSON automation already had. The same wave confirmed query repair action
+  groups work end-to-end from missing storage to ready database relation
+  metadata; broader direct-repair rationale and protocol-aware database path
+  guidance remain later design follow-ups rather than this checkpoint.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
