@@ -19,6 +19,13 @@ This initializes the SQLite schema, registers default graph roles, and seeds
 immutable `base_ontology` and `base_shapes`.
 Use `DoxaBase(path)` to open an existing capsule. There is no `DoxaBase.open()`
 helper in the current API.
+`seed_base_graphs()` seeds only empty immutable seed graphs; it is not a seed
+refresh or migration helper for older non-empty capsules. If staging reports
+that immutable `base_ontology` is missing current staging vocabulary, export the
+mutable project graphs with the default `export_trig(...)`, create a fresh
+`DoxaBase.create(...)` capsule, then `import_trig(...)` there. Do not use a
+normal `all_with_seeds` import for this recovery path because immutable seed
+graphs are protected.
 
 Use `to_dict(result)` or `to_jsonable(results)` when a direct Python script
 needs serializable versions of returned dataclass-like API objects. MCP helpers

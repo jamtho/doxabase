@@ -115,6 +115,17 @@ CAVEAT_SEVERITY_LEVELS = (
     "rc:Severe",
 )
 
+REQUIRED_STAGING_ONTOLOGY_TERMS = (
+    "rc:GraphPatchRole",
+    "rc:FramingPatch",
+    "rc:SharedContextPatch",
+)
+
+REQUIRED_REVISION_STANCE_ONTOLOGY_TERMS = (
+    "rc:RevisionStance",
+    "rc:CandidateRevision",
+)
+
 PROFILE_SCALAR_MAP_UPDATE_KINDS = frozenset(
     {
         "dataset_row_count_snapshot",
@@ -23463,13 +23474,7 @@ class DoxaBase:
             raise DoxaBaseError("stage_graph_revision requires at least one patch")
 
         stance_iri = self.expand_iri(stance)
-        if self.expand_iri("rc:RevisionStance") not in self._types_from_graphs(
-            self._expand_graphs(["ontology"]),
-            stance_iri,
-        ):
-            raise DoxaBaseError(
-                "stance must be an rc:RevisionStance declared in base or project ontology"
-            )
+        self._ensure_revision_stance(stance_iri)
 
         changed_graph_values = list(
             dict.fromkeys(patch["target_graph"] for patch in parsed_patches)
@@ -32622,13 +32627,7 @@ class DoxaBase:
                     or "rc:FramingPatch"
                 ).strip()
                 patch_role_iri = self.expand_iri(patch_role)
-                if self.expand_iri("rc:GraphPatchRole") not in self._types_from_graphs(
-                    self._expand_graphs(["ontology"]),
-                    patch_role_iri,
-                ):
-                    raise DoxaBaseError(
-                        "patch_role must be an rc:GraphPatchRole declared in base or project ontology"
-                    )
+                self._ensure_graph_patch_role(patch_role_iri)
                 parsed.append(
                     {
                         "patch_iri": self._mint_iri("graph-patch"),
@@ -32641,6 +32640,76 @@ class DoxaBase:
                     }
                 )
         return parsed
+
+    def _ensure_revision_stance(self, stance_iri: str) -> None:
+        revision_stance_iri = self.expand_iri("rc:RevisionStance")
+        ontology_graphs = self._expand_graphs(["ontology"])
+        if revision_stance_iri in self._types_from_graphs(
+            ontology_graphs,
+            stance_iri,
+        ):
+            return
+        missing_seed_terms = self._missing_base_ontology_terms(
+            REQUIRED_REVISION_STANCE_ONTOLOGY_TERMS,
+        )
+        if missing_seed_terms:
+            raise DoxaBaseError(
+                "stance must be an rc:RevisionStance declared in base or "
+                "project ontology. "
+                + self._stale_seed_recovery_message(missing_seed_terms)
+            )
+        raise DoxaBaseError(
+            "stance must be an rc:RevisionStance declared in base or project "
+            "ontology. Use rc:CandidateRevision, another built-in revision "
+            "stance, or a project term typed as rc:RevisionStance."
+        )
+
+    def _ensure_graph_patch_role(self, patch_role_iri: str) -> None:
+        graph_patch_role_iri = self.expand_iri("rc:GraphPatchRole")
+        ontology_graphs = self._expand_graphs(["ontology"])
+        if graph_patch_role_iri in self._types_from_graphs(
+            ontology_graphs,
+            patch_role_iri,
+        ):
+            return
+        missing_seed_terms = self._missing_base_ontology_terms(
+            REQUIRED_STAGING_ONTOLOGY_TERMS,
+        )
+        if missing_seed_terms:
+            raise DoxaBaseError(
+                "patch_role must be an rc:GraphPatchRole declared in base or "
+                "project ontology. "
+                + self._stale_seed_recovery_message(missing_seed_terms)
+            )
+        raise DoxaBaseError(
+            "patch_role must be an rc:GraphPatchRole declared in base or "
+            "project ontology. Use rc:FramingPatch, rc:SharedContextPatch, or "
+            "a project term typed as rc:GraphPatchRole."
+        )
+
+    @staticmethod
+    def _stale_seed_recovery_message(missing_seed_terms: Iterable[str]) -> str:
+        missing_text = ", ".join(missing_seed_terms)
+        return (
+            "This capsule's immutable base_ontology is missing current staging "
+            f"vocabulary ({missing_text}), which usually means it was created "
+            "with an older DoxaBase seed. Reopening the capsule or calling "
+            "seed_base_graphs() only seeds empty immutable graphs and will not "
+            "update stale seed graphs. Export mutable project graphs and import "
+            "them into a fresh DoxaBase.create(...) capsule, or run an explicit "
+            "seed migration before staging."
+        )
+
+    def _missing_base_ontology_terms(
+        self,
+        terms: Iterable[str],
+    ) -> list[str]:
+        base_graphs = self._expand_graphs(["base_ontology"])
+        return [
+            term
+            for term in terms
+            if not self._subject_exists(self.expand_iri(term), base_graphs)
+        ]
 
     def _ordered_staged_patch_specs_from_descriptions(
         self,
@@ -32672,13 +32741,7 @@ class DoxaBase:
             )
             patch_role = patch.patch_role or "rc:FramingPatch"
             patch_role_iri = self.expand_iri(patch_role)
-            if self.expand_iri("rc:GraphPatchRole") not in self._types_from_graphs(
-                self._expand_graphs(["ontology"]),
-                patch_role_iri,
-            ):
-                raise DoxaBaseError(
-                    "patch_role must be an rc:GraphPatchRole declared in base or project ontology"
-                )
+            self._ensure_graph_patch_role(patch_role_iri)
             parsed.append(
                 {
                     "patch_iri": self._mint_iri("graph-patch"),

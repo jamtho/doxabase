@@ -77,6 +77,20 @@ def _corrupt_staged_patch_content(
     db._conn.commit()
 
 
+def _delete_base_ontology_seed_terms(db: DoxaBase, terms: list[str]) -> None:
+    for term in terms:
+        iri = db.expand_iri(term)
+        db._conn.execute(
+            """
+            DELETE FROM quads
+            WHERE graph = 'base_ontology'
+              AND (subject = ? OR object = ?)
+            """,
+            (iri, iri),
+        )
+    db._conn.commit()
+
+
 def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     overview = db.graph_overview()
@@ -88,6 +102,67 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
+
+
+def test_stage_graph_revision_reports_stale_seed_patch_role_vocabulary(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    _delete_base_ontology_seed_terms(
+        db,
+        ["rc:GraphPatchRole", "rc:FramingPatch", "rc:SharedContextPatch"],
+    )
+
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.stage_graph_revision(
+            summary="Stage stale-seed sample",
+            rationale="Exercise compatibility diagnostics for stale seed graphs.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    ex:s ex:p ex:o .
+                    """,
+                }
+            ],
+        )
+
+    message = str(excinfo.value)
+    assert "immutable base_ontology is missing current staging vocabulary" in message
+    assert "rc:GraphPatchRole" in message
+    assert "rc:FramingPatch" in message
+    assert "seed_base_graphs() only seeds empty immutable graphs" in message
+    assert "fresh DoxaBase.create(...) capsule" in message
+
+
+def test_stage_graph_revision_reports_stale_seed_revision_stance_vocabulary(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    _delete_base_ontology_seed_terms(db, ["rc:CandidateRevision"])
+
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.stage_graph_revision(
+            summary="Stage stale-stance sample",
+            rationale="Exercise compatibility diagnostics for stale stance terms.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    ex:s ex:p ex:o .
+                    """,
+                }
+            ],
+        )
+
+    message = str(excinfo.value)
+    assert "stance must be an rc:RevisionStance" in message
+    assert "immutable base_ontology is missing current staging vocabulary" in message
+    assert "rc:CandidateRevision" in message
+    assert "seed_base_graphs() only seeds empty immutable graphs" in message
+    assert "fresh DoxaBase.create(...) capsule" in message
 
 
 def test_project_brief_summarizes_datasets_and_active_queues(tmp_path: Path) -> None:

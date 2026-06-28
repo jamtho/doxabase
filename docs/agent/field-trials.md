@@ -2185,9 +2185,14 @@ few useful gaps:
   repair first; after storage repair, profile tasks point to
   `draft_profile_map_updates`; after staging profile work, `project_brief`
   points first to staged frontier recovery and avoids duplicate same
-  dataset/evidence staging. The same scratch run showed copied capsules with
-  stale seed ontology can fail staging with a low-level `GraphPatchRole` error;
-  a clearer seed-compatibility preflight remains a future hardening task.
+  dataset/evidence staging.
+- Stale-seed compatibility trials confirmed copied older capsules can have
+  non-empty immutable seed graphs that predate current staging vocabulary.
+  `seed_base_graphs()` does not refresh those graphs. Staging now reports a
+  clear stale-`base_ontology` recovery message when required patch-role or
+  default revision-stance terms are missing: export mutable project graphs,
+  create a fresh seeded capsule, and import the project bundle there. A broader
+  read-only seed freshness/status helper remains a future hardening task.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

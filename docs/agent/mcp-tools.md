@@ -1664,6 +1664,10 @@ capsules protect `base_ontology` and `base_shapes`.
 `sensitive_literal_count` and `privacy_warnings` apply to the selected export
 graphs; workflow exports include evidence, so source paths and evidence source
 strings can trigger privacy warnings.
+If a copied or older capsule fails staging because immutable `base_ontology`
+is missing current staging vocabulary, `seed_base_graphs()` will not refresh a
+non-empty seed graph. Export the mutable project graphs with the default project
+export, create a fresh seeded capsule, and import that project bundle there.
 
 `doxabase.export_revision_snapshots`
 
