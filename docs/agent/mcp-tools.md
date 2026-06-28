@@ -732,8 +732,9 @@ first full route object, so use `resources[].primary_route.route` when only the
 route id is needed.
 Read `resources[].surface_role` as the compact trust cue for whether a resource
 is current map context, observation context, pattern synthesis, evidence support,
-revision history, vocabulary context, mixed context, or a referenced-only object.
-For project profile metric kinds, `referenced_only` means the slice reached the
+revision history, vocabulary context, validation shape context, mixed context,
+or a referenced-only object. For project profile metric kinds,
+`referenced_only` means the slice reached the
 IRI as an object/reference; it does not answer whether the metric vocabulary is
 defined. Pair metric-oriented slices with `draft_profile_map_updates` when that
 status matters.

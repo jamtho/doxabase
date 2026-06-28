@@ -20,9 +20,9 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
 - `resource_brief` starts from arbitrary RDF resources. It includes direct
   resource types, direct outgoing URI references, bounded blank-node URI
   references, direct incoming URI subjects, URI owners of incoming blank-node
-  references, and subjects that use the seed as an RDF predicate. It includes
-  project and base shape graphs, but stays seed-centered rather than crawling
-  recursively.
+  references, named owners reached from blank-node seeds, and subjects that use
+  the seed as an RDF predicate. It includes project and base shape graphs, but
+  stays seed-centered rather than crawling recursively.
 
 When lexical search finds a likely pattern, seed that pattern directly with
 `profile="pattern_brief"` before trying a broad dataset slice. Pattern seeds
@@ -112,9 +112,10 @@ Useful fields:
   route object, not a scalar route id; read `primary_route.route` in Python or
   `primary_route["route"]` in MCP payloads. `surface_role` is the quick trust
   cue: current map context, observation context, pattern synthesis, evidence
-  support, revision history, vocabulary context, mixed context, or a
-  referenced-only object. `referenced_only=true` means the resource was selected
-  as an object/reference but has no subject triples in the selected graphs.
+  support, revision history, vocabulary context, validation shape context,
+  mixed context, or a referenced-only object. `referenced_only=true` means the
+  resource was selected as an object/reference but has no subject triples in the
+  selected graphs.
 - `route_legend`: list of route legend rows for the route names present in this
   slice, including `route`, `route_label`, `meaning`, `priority`, and `count`.
   Build a dict keyed by `route` if that is more convenient.

@@ -16123,6 +16123,57 @@ def test_resource_brief_context_slice_expands_shape_and_predicate_routes(
     assert "predicate_usage_subject" in reading_routes
 
 
+def test_resource_brief_context_slice_finds_owner_for_blank_node_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shape = "https://example.test/project#NestedShape"
+    inner_path = "https://example.test/project#innerPath"
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:NestedShape a sh:NodeShape ;
+            rdfs:label "Nested shape" ;
+            sh:property [
+                sh:path ex:outerPath ;
+                sh:qualifiedValueShape [
+                    sh:path ex:innerPath ;
+                    sh:datatype xsd:string ;
+                    sh:message "Inner path is text."
+                ]
+            ] .
+        """,
+        graph="shapes",
+    )
+    matches = db.search("Inner path", graph="shapes")
+    blank_node_seed = next(
+        match.iri
+        for match in matches.matches
+        if match.types == []
+    )
+
+    context_slice = db.describe_context_slice(
+        blank_node_seed,
+        profile="resource_brief",
+        max_triples=50,
+    )
+
+    shape_resource = next(
+        resource for resource in context_slice.resources if resource.iri == shape
+    )
+    assert any(
+        route.route == "blank_node_seed_owner"
+        for route in shape_resource.routes
+    )
+    assert inner_path in {resource.iri for resource in context_slice.resources}
+    assert "blank_node_seed_owner" in context_slice.route_counts
+    assert not any("owner lookup" in warning for warning in context_slice.warnings)
+
+
 def test_resource_brief_context_slice_expands_evidence_handoff(
     tmp_path: Path,
 ) -> None:

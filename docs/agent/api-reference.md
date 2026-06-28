@@ -631,8 +631,8 @@ the intended reading protocol without rediscovering route meanings.
 `resources[].routes`; use `resources[].primary_route.route` for the route id.
 `resources[].surface_role` is a compact first-pass cue for whether a resource is
 current map context, observation context, pattern synthesis, evidence support,
-revision history, vocabulary context, mixed context, or only referenced by the
-slice. Set
+revision history, vocabulary context, validation shape context, mixed context,
+or only referenced by the slice. Set
 `include_trig=True` when an agent needs importable TriG text for review or a
 scratch capsule. `max_triples` only truncates raw triples/TriG; top-level
 resources, routes, and structured contexts continue to describe the full

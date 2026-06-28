@@ -1960,6 +1960,11 @@ few useful gaps:
   bounded seed-centered handoff for ontology terms, SHACL shapes, evidence,
   source spans, non-dataset map resources, incoming references, blank-node
   owners, and predicate usage without becoming a recursive graph crawler.
+- Resource-brief retests found that lexical search may land on a SHACL
+  blank-node property shape rather than the named node shape an agent should
+  inspect. `resource_brief` now climbs from blank-node seeds to named URI owners,
+  including nested blank-node shape fragments, but route-cap ordering and common
+  predicate seeds still need separate trials before changing behavior.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

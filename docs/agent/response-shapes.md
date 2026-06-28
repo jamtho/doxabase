@@ -730,8 +730,8 @@ rows are older than the bounded `dataset_contexts[].profile_observations` slice.
 `resource_brief` slices are generic one-hop resource handoffs. Their route
 counts may include `resource_type`, `outgoing_reference`,
 `blank_node_reference`, `incoming_reference`, `incoming_blank_node_owner`, and
-`predicate_usage_subject`. Use raw `triples`/`trig` to read the exact
-predicates behind those generic routes.
+`blank_node_seed_owner`, and `predicate_usage_subject`. Use raw
+`triples`/`trig` to read the exact predicates behind those generic routes.
 `suggested_next_actions` can include `describe_query_context` for seed
 datasets/tables whose nested `dataset_contexts[].operational_warnings` contain
 query-planning errors or warnings. Use that route to inspect readiness, target
@@ -763,10 +763,11 @@ or MCP `resource["primary_route"]["route"]` when you only need the route name.
 
 `surface_role` is a compact graph-role cue for first-pass reading. Current
 values are `current_map_context`, `observation_context`, `pattern_synthesis`,
-`evidence_support`, `revision_history`, `vocabulary_context`, `mixed_context`,
-and `referenced_only`. Use it to separate current map/model context from
-point-in-time observations, pattern synthesis, evidence, revision metadata, and
-plain object references before inspecting raw triples.
+`evidence_support`, `revision_history`, `vocabulary_context`,
+`validation_shape_context`, `mixed_context`, and `referenced_only`. Use it to
+separate current map/model context from point-in-time observations, pattern
+synthesis, evidence, revision metadata, validation shapes, and plain object
+references before inspecting raw triples.
 
 `referenced_only=True` means the resource is mentioned by returned context but
 was not itself expanded into full resource detail in the slice. Do not treat that

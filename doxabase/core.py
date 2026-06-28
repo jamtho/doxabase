@@ -8158,6 +8158,37 @@ class DoxaBase:
                     f"blank-node owner(s) for '{seed_iri}' after the route cap of "
                     f"{resource_brief_route_limit}."
                 )
+            if self._is_blank_node_subject(resource_brief_graphs, seed_iri):
+                (
+                    seed_blank_node_owners,
+                    seed_blank_node_owner_total,
+                    seed_blank_node_depth_exhausted,
+                ) = self._resource_brief_blank_node_seed_owners(
+                    resource_brief_graphs,
+                    blank_node=seed_iri,
+                    limit=resource_brief_route_limit,
+                )
+                for resource_iri in seed_blank_node_owners:
+                    add_resource(
+                        resource_iri,
+                        "blank_node_seed_owner",
+                        "blank-node seed owner",
+                        source_iri=seed_iri,
+                        depth=1,
+                    )
+                if seed_blank_node_owner_total > len(seed_blank_node_owners):
+                    warnings.append(
+                        "resource_brief omitted "
+                        f"{seed_blank_node_owner_total - len(seed_blank_node_owners)} "
+                        f"blank-node seed owner(s) for '{seed_iri}' after the "
+                        f"route cap of {resource_brief_route_limit}."
+                    )
+                if seed_blank_node_depth_exhausted:
+                    warnings.append(
+                        "resource_brief owner lookup for blank-node seed "
+                        f"'{seed_iri}' reached the bounded depth. Use graph "
+                        "export when exact nested blank-node ownership is needed."
+                    )
 
             (
                 predicate_users,
@@ -8716,6 +8747,21 @@ class DoxaBase:
             > 0
         )
 
+    def _is_blank_node_subject(self, graphs: list[str], subject: str) -> bool:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        row = self._conn.execute(
+            f"""
+            SELECT 1
+            FROM quads q
+            WHERE q.subject = ?
+              AND q.subject_kind = 'bnode'
+              {graph_filter}
+            LIMIT 1
+            """,
+            [subject, *graph_params],
+        ).fetchone()
+        return row is not None
+
     def _resource_brief_outgoing_references(
         self,
         graphs: list[str],
@@ -8840,6 +8886,65 @@ class DoxaBase:
             base_params,
         ).fetchone()
         return [row["iri"] for row in rows], int(count_row["count"])
+
+    def _resource_brief_blank_node_seed_owners(
+        self,
+        graphs: list[str],
+        *,
+        blank_node: str,
+        limit: int,
+        max_depth: int = 4,
+    ) -> tuple[list[str], int, bool]:
+        frontier = [blank_node]
+        visited: set[str] = set()
+        owners: set[str] = set()
+        depth_exhausted = False
+        for _depth in range(max_depth):
+            if not frontier:
+                break
+            next_frontier: list[str] = []
+            for current_blank_node in frontier:
+                if current_blank_node in visited:
+                    continue
+                visited.add(current_blank_node)
+                uri_owners, blank_node_owners = self._blank_node_subject_owners(
+                    graphs,
+                    blank_node=current_blank_node,
+                )
+                owners.update(uri_owners)
+                for owner in blank_node_owners:
+                    if owner not in visited and owner not in next_frontier:
+                        next_frontier.append(owner)
+            frontier = next_frontier
+        depth_exhausted = bool(frontier)
+        ordered_owners = sorted(owners)
+        return ordered_owners[:limit], len(ordered_owners), depth_exhausted
+
+    def _blank_node_subject_owners(
+        self,
+        graphs: list[str],
+        *,
+        blank_node: str,
+    ) -> tuple[list[str], list[str]]:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        rows = self._conn.execute(
+            f"""
+            SELECT DISTINCT q.subject, q.subject_kind
+            FROM quads q
+            WHERE q.object = ?
+              AND q.object_kind = 'bnode'
+              {graph_filter}
+            ORDER BY q.subject
+            """,
+            [blank_node, *graph_params],
+        ).fetchall()
+        uri_owners = [
+            row["subject"] for row in rows if row["subject_kind"] == "uri"
+        ]
+        blank_node_owners = [
+            row["subject"] for row in rows if row["subject_kind"] == "bnode"
+        ]
+        return uri_owners, blank_node_owners
 
     def _resource_brief_blank_node_references(
         self,
@@ -9053,6 +9158,7 @@ class DoxaBase:
             "blank_node_reference": 5,
             "incoming_reference": 6,
             "incoming_blank_node_owner": 7,
+            "blank_node_seed_owner": 7,
             "predicate_usage_subject": 8,
             "pattern_target": 3,
             "map_implication": 4,
@@ -9194,6 +9300,9 @@ class DoxaBase:
             "incoming_reference": "A URI subject that directly references a resource-brief seed.",
             "incoming_blank_node_owner": (
                 "A URI subject that owns a blank node which references a resource-brief seed."
+            ),
+            "blank_node_seed_owner": (
+                "A URI subject reached by walking from a blank-node resource-brief seed through parent blank nodes."
             ),
             "predicate_usage_subject": "A URI subject using a resource-brief seed as an RDF predicate.",
             "related_column": (
