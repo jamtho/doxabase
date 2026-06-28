@@ -424,6 +424,14 @@ fallbacks that are meant to avoid the provisional vocabulary or shape. Evidence
 behind supporting observations or claims remains reachable through slice routes,
 but it is not direct staged-revision evidence unless passed explicitly or linked
 directly on a supporting pattern.
+Proposed ontology or SHACL resources inside staged patch Turtle are previewed
+for validation, but they are not materialized as normal graph resources until
+the staged revision is applied. `describe_context_slice(profile="resource_brief")`
+and `describe_resource(include_blank_node_closure=True)` can inspect durable
+shapes; they cannot yet produce a route-explained resource card for a proposed
+NodeShape inside a staged patch. Use `describe_staged_revision()` or
+`export_staged_revisions()` to review proposed shape Turtle, blank-node property
+constraints, and stored validation diagnostics.
 Because later framings are alternative-linked to the first framing by default,
 put the preferred comparison anchor first. If the first framing is intentionally
 invalid as a diagnostic repair probe, pass an explicit `alternative_to` or set

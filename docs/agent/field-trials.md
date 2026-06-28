@@ -2006,6 +2006,16 @@ few useful gaps:
   actual runtime clear. The main product signal was docs/onboarding, not a new
   query engine: DoxaBase plans and records; it still does not execute queries
   itself.
+- An ontology/SHACL frontier trial for late-arriving snapshot corrections
+  confirmed that pattern-only, map-only, and complete ontology+shape framings
+  can be staged side by side, while an intentionally incomplete shape-backed
+  sibling routes to `repair_or_replace` with a precise SHACL min-count
+  diagnostic. The key limitation is retrieval, not staging: proposed shapes
+  inside staged patch Turtle are not ordinary graph resources until applied, so
+  `resource_brief` and `describe_resource(include_blank_node_closure=True)`
+  cannot inspect their blank-node property constraints. Use
+  `describe_staged_revision` or grouped staged exports for proposed shape
+  review, and pause before adding preview-resource inspection APIs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

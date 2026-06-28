@@ -44,6 +44,13 @@ shapes or other resources whose details sit behind blank-node objects, call
 a larger `blank_node_depth`; when only `blank_node_omitted_count` is non-zero,
 raise `blank_node_limit`. Use `export_graph()` or `export_trig()` when
 reviewers need complete Turtle for a graph role.
+This applies to durable graph content. Proposed ontology or SHACL resources
+inside staged patch Turtle are not materialized as ordinary graph resources
+until the staged revision is applied, so `resource_brief` and
+`describe_resource()` cannot inspect a proposed shape's blank-node property
+constraints directly. For staged ontology/shape proposals, use
+`describe_staged_revision()` and grouped staged exports to read the patch
+payload, validation diagnostics, and review context.
 
 Dataset and deep-lore slices also understand profile seeds. A seed
 `rc:ProfileObservation` expands to its observed asset/column, evidence, value
