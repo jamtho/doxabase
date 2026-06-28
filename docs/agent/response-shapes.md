@@ -2081,6 +2081,7 @@ repair_group.repair_hint_path
 repair_group.repair_action_type
 repair_group.requires_review
 repair_group.repair_context
+repair_group.choice_mode
 repair_group.actions
 repair_group.action_count
 repair_group.action_status_counts
@@ -2088,6 +2089,7 @@ repair_group.pending_action_count
 repair_group.skippable_action_count
 repair_group.already_satisfied_action_count
 repair_group.pending_required_extra_arguments
+repair_group.pending_action_options
 ```
 
 `group_name` is currently `query_repair_review`. `issue_index` points back into
@@ -2102,13 +2104,23 @@ action's `arguments` or fill its `arguments_template`, add every
 `required_extra_arguments` value such as `rationale`, replace fields named in
 `placeholder_fields` / `reviewed_value_fields`, and review `condition` before
 calling the named tool.
+`choice_mode` is usually `review_all_applicable`; `choose_one` means the pending
+actions are alternatives. For example, `missing_storage_access` lets the agent
+either record a reviewed new storage access or stage a link to an existing
+reviewed storage access. In choose-one groups, do not treat
+`pending_required_extra_arguments` as one call's required fields; use
+`pending_action_options[]` or the selected action's own
+`required_extra_arguments`.
 Use `pending_action_count` and `skippable_action_count` for first-pass routing:
 an action with `action_status="already_satisfied"` and
 `skip_when_already_satisfied=true` is counted as skippable, while pending
 actions contribute their unique `required_extra_arguments` values to
-`pending_required_extra_arguments`. These summaries save scripts from walking
-every nested action just to decide whether the repair group still needs work;
-they do not remove the review requirement.
+`pending_required_extra_arguments`. `pending_action_options[]` repeats the
+pending non-skippable actions' index, type, tool, label, required extra
+arguments, placeholder fields, and reviewed value fields so scripts can choose a
+branch without parsing every full action template. Actions marked
+`action_status="already_pending"` with `skip_when_already_pending=true` are
+skippable too. These summaries do not remove the review requirement.
 
 Read `query.query_target_decision` before choosing from
 `query_target_candidates`. It is a derived handoff hint, not a new graph fact.
@@ -2337,10 +2349,13 @@ access. The nested repair-hint shape is:
 
 ```python
 repair_hint.action_type
+repair_hint.choice_mode
 repair_hint.candidate_existing_storage_accesses
 repair_hint.candidate_existing_storage_access_count
 repair_hint.candidate_existing_storage_access_total_count
 repair_hint.candidate_existing_storage_accesses_truncated
+repair_hint.candidate_existing_storage_accesses[].candidate_status
+repair_hint.candidate_existing_storage_accesses[].pending_staged_repair_iris
 repair_hint.source
 repair_hint.target
 repair_hint.candidate_relation_identifier

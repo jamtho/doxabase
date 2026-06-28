@@ -12300,6 +12300,7 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert missing_storage.details["repair_hint"]["action_type"] == (
         "record_or_link_storage_access"
     )
+    assert missing_storage.details["repair_hint"]["choice_mode"] == "choose_one"
     assert missing_storage.details["repair_hint"][
         "candidate_existing_storage_accesses"
     ] == []
@@ -12360,9 +12361,11 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert repair_group.issue_resource is not None
     assert repair_group.issue_resource.iri == dataset
     assert repair_group.repair_action_type == "record_or_link_storage_access"
+    assert repair_group.choice_mode == "choose_one"
     assert repair_group.repair_hint_path == (
         f"issues[{repair_group.issue_index}].details.repair_hint"
     )
+    assert repair_group.repair_context["choice_mode"] == "choose_one"
     assert repair_group.repair_context[
         "candidate_existing_storage_accesses"
     ] == []
@@ -12377,6 +12380,34 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "storage_root",
         "object",
         "rationale",
+    ]
+    assert repair_group.pending_action_options == [
+        {
+            "action_index": 0,
+            "action_type": "record_reviewed_storage_access",
+            "tool_name": "record_map_storage_access",
+            "mcp_tool_name": "doxabase.record_map_storage_access",
+            "action_label": "Record storage access and link dataset",
+            "action_status": "pending_review",
+            "required_extra_arguments": [
+                "iri",
+                "storage_protocol",
+                "storage_root",
+            ],
+            "placeholder_fields": ["path_templates"],
+            "reviewed_value_fields": ["path_templates"],
+        },
+        {
+            "action_index": 1,
+            "action_type": "stage_existing_storage_access_link",
+            "tool_name": "stage_map_assertion_change",
+            "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "action_label": "Stage link to an existing storage access",
+            "action_status": "pending_review",
+            "required_extra_arguments": ["object", "rationale"],
+            "placeholder_fields": ["object"],
+            "reviewed_value_fields": ["object"],
+        },
     ]
     assert [action["action_type"] for action in repair_group.actions] == [
         "record_reviewed_storage_access",
@@ -12525,6 +12556,58 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         staged_payload,
         sort_keys=True,
     )
+
+    pending_context = db.describe_query_context(dataset)
+    pending_missing_storage = next(
+        issue
+        for issue in pending_context.issues
+        if issue.code == "missing_storage_access"
+    )
+    assert pending_missing_storage.details is not None
+    pending_repair_hint = pending_missing_storage.details["repair_hint"]
+    pending_candidate = pending_repair_hint["candidate_existing_storage_accesses"][0]
+    assert pending_candidate["storage_access_iri"] == storage.iri
+    assert pending_candidate["candidate_status"] == "already_pending"
+    assert pending_candidate["pending_staged_repair_iris"] == [staged.revision_iri]
+    pending_repair_group = pending_context.suggested_repair_action_groups[0]
+    assert pending_repair_group.choice_mode == "choose_one"
+    assert pending_repair_group.action_status_counts == {
+        "pending_review": 1,
+        "already_pending": 1,
+    }
+    assert pending_repair_group.pending_action_count == 1
+    assert pending_repair_group.skippable_action_count == 1
+    assert pending_repair_group.pending_required_extra_arguments == [
+        "iri",
+        "storage_protocol",
+        "storage_root",
+    ]
+    pending_action_by_type = {
+        action["action_type"]: action for action in pending_repair_group.actions
+    }
+    pending_link_action = pending_action_by_type["stage_existing_storage_access_link"]
+    assert pending_link_action["action_status"] == "already_pending"
+    assert pending_link_action["skip_when_already_pending"] is True
+    assert pending_link_action["pending_staged_repair_iris"] == [
+        staged.revision_iri
+    ]
+    assert pending_repair_group.pending_action_options == [
+        {
+            "action_index": 0,
+            "action_type": "record_reviewed_storage_access",
+            "tool_name": "record_map_storage_access",
+            "mcp_tool_name": "doxabase.record_map_storage_access",
+            "action_label": "Record storage access and link dataset",
+            "action_status": "pending_review",
+            "required_extra_arguments": [
+                "iri",
+                "storage_protocol",
+                "storage_root",
+            ],
+            "placeholder_fields": ["path_templates"],
+            "reviewed_value_fields": ["path_templates"],
+        }
+    ]
 
 
 def test_missing_storage_access_ranks_dataset_specific_candidates_first(
@@ -12955,8 +13038,22 @@ def test_query_context_suggests_stale_partition_link_repair(
     assert repair_group.issue_resource is not None
     assert repair_group.issue_resource.iri == stale_partition.iri
     assert repair_group.repair_action_type == "remove_stale_partition_scheme_link"
+    assert repair_group.choice_mode == "review_all_applicable"
     assert repair_group.action_status_counts == {"pending_review": 1}
     assert repair_group.pending_required_extra_arguments == ["rationale"]
+    assert repair_group.pending_action_options == [
+        {
+            "action_index": 0,
+            "action_type": "remove_stale_partition_scheme_link",
+            "tool_name": "stage_map_assertion_change",
+            "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "action_label": "Stage stale partition-scheme removal",
+            "action_status": "pending_review",
+            "required_extra_arguments": ["rationale"],
+            "placeholder_fields": [],
+            "reviewed_value_fields": [],
+        }
+    ]
     action = repair_group.actions[0]
     assert action["tool_name"] == "stage_map_assertion_change"
     assert action["arguments"] == {

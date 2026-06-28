@@ -138,7 +138,9 @@ Start with `describe_query_context(dataset_iri)`:
    and link it to the dataset, or stage a reviewed `rc:hasStorageAccess` link to
    an existing access resource. The repair hint includes
    `candidate_existing_storage_accesses` when current map storage accesses exist;
-   use those ranked candidates for review only. Candidate ranking now includes
+   use those ranked candidates for review only. A candidate can carry
+   `pending_staged_repair_iris` and `candidate_status="already_pending"` when
+   the exact dataset/storage link is already staged. Candidate ranking now includes
    exact path-template matches, dataset-token overlap with labels/IRIs/locations,
    and a demotion when an otherwise generic access is already linked to another
    dataset. Do not auto-link the first candidate just because it is listed; fill
@@ -164,14 +166,17 @@ Start with `describe_query_context(dataset_iri)`:
    `issues[].details.repair_hint.actions[]`, preserving issue index/code/resource
    and ordered repair templates. Read `pending_action_count`,
    `skippable_action_count`, `action_status_counts`, and
-   `pending_required_extra_arguments` before routing a group; mixed database
-   relation repairs can include an already-satisfied action that should be
-   skipped after the pending cleanup is reviewed. Context-blocked direct-clean
-   routes can also expose a `remove_stale_partition_scheme_link` template for a
-   stale `rc:partitionedBy` assertion. These are reviewed templates, not
-   call-ready `suggested_next_actions`: fill placeholders, add required fields
-   such as `rationale`, and check each `condition` before calling the named
-   tool.
+   `pending_action_options` before routing a group. `choice_mode="choose_one"`
+   means the actions are alternatives; use the selected action's own
+   `required_extra_arguments` rather than the group-level union in
+   `pending_required_extra_arguments`. Mixed database relation repairs can
+   include an already-satisfied action that should be skipped after the pending
+   cleanup is reviewed. Context-blocked direct-clean routes can also expose a
+   `remove_stale_partition_scheme_link` template for a stale
+   `rc:partitionedBy` assertion. These are reviewed templates, not call-ready
+   `suggested_next_actions`: fill placeholders, add required fields such as
+   `rationale`, skip actions marked `already_satisfied` or `already_pending`,
+   and check each `condition` before calling the named tool.
    If `project_brief.recommended_next_tasks[]` reports
    `pending_staged_repair_iris` for a query repair task, review the corresponding
    `staged_frontier_review` / `staged_review` item before staging another

@@ -1699,6 +1699,7 @@ class QueryRepairActionGroup:
     repair_action_type: str | None
     requires_review: bool
     repair_context: dict[str, Any]
+    choice_mode: str
     actions: list[dict[str, Any]]
     action_count: int
     action_status_counts: dict[str, int]
@@ -1706,6 +1707,7 @@ class QueryRepairActionGroup:
     skippable_action_count: int
     already_satisfied_action_count: int
     pending_required_extra_arguments: list[str]
+    pending_action_options: list[dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -12565,7 +12567,9 @@ class DoxaBase:
                 skippable_action_count,
                 already_satisfied_action_count,
                 pending_required_extra_arguments,
+                pending_action_options,
             ) = self._query_repair_action_group_summary(actions)
+            choice_mode = repair_hint.get("choice_mode")
             groups.append(
                 QueryRepairActionGroup(
                     group_name="query_repair_review",
@@ -12580,6 +12584,11 @@ class DoxaBase:
                     ),
                     requires_review=repair_hint.get("requires_review") is not False,
                     repair_context=repair_context,
+                    choice_mode=(
+                        str(choice_mode)
+                        if choice_mode is not None
+                        else "review_all_applicable"
+                    ),
                     actions=copy.deepcopy(actions),
                     action_count=len(actions),
                     action_status_counts=action_status_counts,
@@ -12591,6 +12600,7 @@ class DoxaBase:
                     pending_required_extra_arguments=(
                         pending_required_extra_arguments
                     ),
+                    pending_action_options=pending_action_options,
                 )
             )
         return groups
@@ -12743,28 +12753,82 @@ class DoxaBase:
     @staticmethod
     def _query_repair_action_group_summary(
         actions: list[Any],
-    ) -> tuple[dict[str, int], int, int, int, list[str]]:
+    ) -> tuple[dict[str, int], int, int, int, list[str], list[dict[str, Any]]]:
         action_status_counts: dict[str, int] = {}
         pending_action_count = 0
         skippable_action_count = 0
         already_satisfied_action_count = 0
         pending_required_extra_arguments: list[str] = []
+        pending_action_options: list[dict[str, Any]] = []
 
-        for action in actions:
+        for action_index, action in enumerate(actions):
             if not isinstance(action, MappingABC):
                 status = "pending_review"
                 skippable = False
                 required_extra_arguments: list[Any] = []
+                action_option = {
+                    "action_index": action_index,
+                    "action_type": None,
+                    "tool_name": None,
+                    "mcp_tool_name": None,
+                    "action_label": None,
+                    "action_status": status,
+                    "required_extra_arguments": [],
+                    "placeholder_fields": [],
+                    "reviewed_value_fields": [],
+                }
             else:
                 raw_status = action.get("action_status")
                 status = str(raw_status) if raw_status else "pending_review"
                 skippable = (
                     status == "already_satisfied"
                     and action.get("skip_when_already_satisfied") is True
+                ) or (
+                    status == "already_pending"
+                    and action.get("skip_when_already_pending") is True
                 )
                 required_extra_arguments = action.get("required_extra_arguments")
                 if not isinstance(required_extra_arguments, list):
                     required_extra_arguments = []
+                placeholder_fields = action.get("placeholder_fields")
+                if not isinstance(placeholder_fields, list):
+                    placeholder_fields = []
+                reviewed_value_fields = action.get("reviewed_value_fields")
+                if not isinstance(reviewed_value_fields, list):
+                    reviewed_value_fields = []
+                action_option = {
+                    "action_index": action_index,
+                    "action_type": (
+                        str(action["action_type"])
+                        if action.get("action_type") is not None
+                        else None
+                    ),
+                    "tool_name": (
+                        str(action["tool_name"])
+                        if action.get("tool_name") is not None
+                        else None
+                    ),
+                    "mcp_tool_name": (
+                        str(action["mcp_tool_name"])
+                        if action.get("mcp_tool_name") is not None
+                        else None
+                    ),
+                    "action_label": (
+                        str(action["action_label"])
+                        if action.get("action_label") is not None
+                        else None
+                    ),
+                    "action_status": status,
+                    "required_extra_arguments": [
+                        str(argument) for argument in required_extra_arguments
+                    ],
+                    "placeholder_fields": [
+                        str(field) for field in placeholder_fields
+                    ],
+                    "reviewed_value_fields": [
+                        str(field) for field in reviewed_value_fields
+                    ],
+                }
 
             action_status_counts[status] = action_status_counts.get(status, 0) + 1
             if status == "already_satisfied":
@@ -12774,6 +12838,7 @@ class DoxaBase:
                 continue
 
             pending_action_count += 1
+            pending_action_options.append(action_option)
             for argument in required_extra_arguments:
                 argument_name = str(argument)
                 if argument_name not in pending_required_extra_arguments:
@@ -12785,6 +12850,7 @@ class DoxaBase:
             skippable_action_count,
             already_satisfied_action_count,
             pending_required_extra_arguments,
+            pending_action_options,
         )
 
     def _query_context_next_actions(
@@ -16508,11 +16574,142 @@ class DoxaBase:
             dataset,
             limit=8,
         )
+        actions: list[dict[str, Any]] = [
+            {
+                "action_type": "record_reviewed_storage_access",
+                "tool_name": "record_map_storage_access",
+                "mcp_tool_name": "doxabase.record_map_storage_access",
+                "action_label": "Record storage access and link dataset",
+                "reason": (
+                    "Use when review has identified the non-secret "
+                    "storage protocol and location for this dataset."
+                ),
+                "required_extra_arguments": [
+                    "iri",
+                    "storage_protocol",
+                    "storage_root",
+                ],
+                "arguments_template": {
+                    "iri": "<reviewed storage access IRI>",
+                    "datasets": [dataset.iri],
+                    "storage_protocol": "<reviewed rc:StorageProtocol IRI>",
+                    "storage_root": (
+                        "<reviewed root, URL, bucket URI, or connection>"
+                    ),
+                    "path_templates": [
+                        "<optional storage-owned path or relation template>"
+                    ],
+                },
+                "placeholder_fields": ["path_templates"],
+                "reviewed_value_fields": ["path_templates"],
+                "condition": (
+                    "Include path_templates only when the storage access "
+                    "itself owns the path or database relation template. "
+                    "Omit this optional field when the dataset or "
+                    "partition already carries the reviewed path "
+                    "template; duplicating it can create equivalent "
+                    "query target candidates. Database relation "
+                    "identifiers are the important exception and should "
+                    "be storage-access-owned. For database storage, "
+                    "rerun describe_query_context after recording the "
+                    "relation; if the same relation-like value remains "
+                    "on the dataset or partition, follow the "
+                    "database_relation_template_source_mismatch repair "
+                    "group to remove or move the misplaced template."
+                ),
+                "protocol_guidance": {
+                    "file_or_object_storage": (
+                        "Omit storage-owned path_templates when the "
+                        "dataset or partition already owns the reviewed "
+                        "file/object template."
+                    ),
+                    "rc:DatabaseStorage": (
+                        "Use storage-owned path_templates for reviewed "
+                        "database relation identifiers. Then rerun "
+                        "describe_query_context and follow "
+                        "database_relation_template_source_mismatch if "
+                        "a dataset or partition still carries the same "
+                        "relation-like template."
+                    ),
+                },
+                "review_rationale_guidance": (
+                    "record_map_storage_access writes current-best map "
+                    "facts directly and does not record graph-revision "
+                    "rationale. Preserve the reviewed rationale in the "
+                    "calling workflow, or use a staged assertion helper "
+                    "when durable review history is needed."
+                ),
+            },
+            {
+                "action_type": "stage_existing_storage_access_link",
+                "tool_name": "stage_map_assertion_change",
+                "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                "action_label": (
+                    "Stage link to an existing storage access"
+                ),
+                "reason": (
+                    "Use when a suitable storage access resource already "
+                    "exists and the dataset should link to it after "
+                    "review."
+                ),
+                "required_extra_arguments": [
+                    "object",
+                    "rationale",
+                ],
+                "arguments_template": {
+                    "subject": dataset.iri,
+                    "predicate": "rc:hasStorageAccess",
+                    "object": "<reviewed existing storage access IRI>",
+                    "object_kind": "iri",
+                    "change_kind": "add",
+                    "rationale": "<reviewed rationale>",
+                    "review_note": (
+                        "Generated from missing_storage_access query "
+                        "planning guidance; apply only after confirming "
+                        "the storage access is the intended non-secret "
+                        "route for this dataset."
+                    ),
+                    "validation_scope": "all",
+                },
+                "placeholder_fields": ["object"],
+                "reviewed_value_fields": ["object"],
+            },
+        ]
+        pending_candidate_repair_iris = list(
+            dict.fromkeys(
+                staged_iri
+                for candidate in candidate_existing_storage_accesses
+                for staged_iri in candidate.get("pending_staged_repair_iris", [])
+            )
+        )
+        if (
+            candidate_existing_storage_accesses
+            and candidate_existing_storage_access_total
+            == len(candidate_existing_storage_accesses)
+            and all(
+                candidate.get("pending_staged_repair_iris")
+                for candidate in candidate_existing_storage_accesses
+            )
+        ):
+            link_action = actions[1]
+            link_action["action_status"] = "already_pending"
+            link_action["skip_when_already_pending"] = True
+            link_action["pending_staged_repair_iris"] = pending_candidate_repair_iris
+            link_action["reason"] = (
+                "Skip while current staged work already proposes linking this "
+                "dataset to each visible reviewed existing storage access."
+            )
+            link_action["condition"] = (
+                "Review the pending staged repair before staging another "
+                "rc:hasStorageAccess link for the same dataset and storage "
+                "access."
+            )
         details: dict[str, Any] = {
             "dataset_iri": dataset.iri,
             "global_storage_access_count": storage_access_count,
             "repair_hint": {
                 "action_type": "record_or_link_storage_access",
+                "choice_mode": "choose_one",
                 "target_dataset_iri": dataset.iri,
                 "candidate_existing_storage_accesses": (
                     candidate_existing_storage_accesses
@@ -16527,107 +16724,7 @@ class DoxaBase:
                     candidate_existing_storage_access_total
                     > len(candidate_existing_storage_accesses)
                 ),
-                "actions": [
-                    {
-                        "action_type": "record_reviewed_storage_access",
-                        "tool_name": "record_map_storage_access",
-                        "mcp_tool_name": "doxabase.record_map_storage_access",
-                        "action_label": "Record storage access and link dataset",
-                        "reason": (
-                            "Use when review has identified the non-secret "
-                            "storage protocol and location for this dataset."
-                        ),
-                        "required_extra_arguments": [
-                            "iri",
-                            "storage_protocol",
-                            "storage_root",
-                        ],
-                        "arguments_template": {
-                            "iri": "<reviewed storage access IRI>",
-                            "datasets": [dataset.iri],
-                            "storage_protocol": "<reviewed rc:StorageProtocol IRI>",
-                            "storage_root": (
-                                "<reviewed root, URL, bucket URI, or connection>"
-                            ),
-                            "path_templates": [
-                                "<optional storage-owned path or relation template>"
-                            ],
-                        },
-                        "placeholder_fields": ["path_templates"],
-                        "reviewed_value_fields": ["path_templates"],
-                        "condition": (
-                            "Include path_templates only when the storage access "
-                            "itself owns the path or database relation template. "
-                            "Omit this optional field when the dataset or "
-                            "partition already carries the reviewed path "
-                            "template; duplicating it can create equivalent "
-                            "query target candidates. Database relation "
-                            "identifiers are the important exception and should "
-                            "be storage-access-owned. For database storage, "
-                            "rerun describe_query_context after recording the "
-                            "relation; if the same relation-like value remains "
-                            "on the dataset or partition, follow the "
-                            "database_relation_template_source_mismatch repair "
-                            "group to remove or move the misplaced template."
-                        ),
-                        "protocol_guidance": {
-                            "file_or_object_storage": (
-                                "Omit storage-owned path_templates when the "
-                                "dataset or partition already owns the reviewed "
-                                "file/object template."
-                            ),
-                            "rc:DatabaseStorage": (
-                                "Use storage-owned path_templates for reviewed "
-                                "database relation identifiers. Then rerun "
-                                "describe_query_context and follow "
-                                "database_relation_template_source_mismatch if "
-                                "a dataset or partition still carries the same "
-                                "relation-like template."
-                            ),
-                        },
-                        "review_rationale_guidance": (
-                            "record_map_storage_access writes current-best map "
-                            "facts directly and does not record graph-revision "
-                            "rationale. Preserve the reviewed rationale in the "
-                            "calling workflow, or use a staged assertion helper "
-                            "when durable review history is needed."
-                        ),
-                    },
-                    {
-                        "action_type": "stage_existing_storage_access_link",
-                        "tool_name": "stage_map_assertion_change",
-                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                        "action_label": (
-                            "Stage link to an existing storage access"
-                        ),
-                        "reason": (
-                            "Use when a suitable storage access resource already "
-                            "exists and the dataset should link to it after "
-                            "review."
-                        ),
-                        "required_extra_arguments": [
-                            "object",
-                            "rationale",
-                        ],
-                        "arguments_template": {
-                            "subject": dataset.iri,
-                            "predicate": "rc:hasStorageAccess",
-                            "object": "<reviewed existing storage access IRI>",
-                            "object_kind": "iri",
-                            "change_kind": "add",
-                            "rationale": "<reviewed rationale>",
-                            "review_note": (
-                                "Generated from missing_storage_access query "
-                                "planning guidance; apply only after confirming "
-                                "the storage access is the intended non-secret "
-                                "route for this dataset."
-                            ),
-                            "validation_scope": "all",
-                        },
-                        "placeholder_fields": ["object"],
-                        "reviewed_value_fields": ["object"],
-                    },
-                ],
+                "actions": actions,
             },
         }
         fixture_hint = self._known_fixture_missing_storage_access_hint(
@@ -16653,6 +16750,9 @@ class DoxaBase:
                 self._local_name(dataset.iri),
                 *dataset.path_templates,
             ]
+        )
+        pending_staged_links = self._pending_staged_storage_access_links(
+            dataset.iri,
         )
         candidates: list[tuple[int, str, str, dict[str, Any]]] = []
         for access_iri in self._subjects(
@@ -16746,6 +16846,15 @@ class DoxaBase:
                     "path/relation templates, and access mode fit this dataset."
                 ),
             }
+            pending_staged_repair_iris = pending_staged_links.get(access.iri, [])
+            if pending_staged_repair_iris:
+                candidate["candidate_status"] = "already_pending"
+                candidate["pending_staged_repair_iris"] = pending_staged_repair_iris
+                candidate["review_note"] = (
+                    "A current staged repair already proposes linking this "
+                    "storage access to the dataset. Review that staged work "
+                    "before staging a duplicate rc:hasStorageAccess link."
+                )
             candidates.append((-score, label, access.iri, candidate))
 
         sorted_candidates = sorted(candidates)
@@ -16758,6 +16867,86 @@ class DoxaBase:
             ranked_candidate["candidate_rank"] = rank
             selected_candidates.append(ranked_candidate)
         return selected_candidates, len(sorted_candidates)
+
+    def _pending_staged_storage_access_links(
+        self,
+        dataset_iri: str,
+    ) -> dict[str, list[str]]:
+        history_graphs = self._expand_graphs(["history"])
+        dataset_ref = URIRef(self.expand_iri(dataset_iri))
+        predicate_ref = URIRef(self.expand_iri("rc:hasStorageAccess"))
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        pending_by_storage: dict[str, list[str]] = {}
+        for revision_iri in self._subjects(
+            history_graphs,
+            str(RDF.type),
+            self.expand_iri("rc:GraphRevision"),
+        ):
+            patch_iris = self._objects(
+                history_graphs,
+                revision_iri,
+                "rc:hasGraphPatch",
+            )
+            if not patch_iris:
+                continue
+            item_revision_type = self._first_object(
+                history_graphs,
+                revision_iri,
+                "rc:revisionType",
+            )
+            applies_staged_revision = self._first_object(
+                history_graphs,
+                revision_iri,
+                "rc:appliesStagedRevision",
+            )
+            if (
+                self._graph_revision_record_kind(
+                    item_revision_type,
+                    has_patch_payload=True,
+                    applies_staged_revision=applies_staged_revision,
+                )
+                != "staged_patch"
+            ):
+                continue
+            if self._first_subject(
+                history_graphs,
+                "rc:appliesStagedRevision",
+                revision_iri,
+            ) is not None:
+                continue
+            if (
+                self._current_restage_successor_iri(
+                    revision_iri,
+                    graphs=history_graphs,
+                )
+                is not None
+            ):
+                continue
+            try:
+                staged = self.describe_staged_revision(revision_iri)
+            except DoxaBaseError:
+                continue
+            for patch in staged.patches:
+                if patch.operation != addition_operation:
+                    continue
+                if patch.target_graph != "map":
+                    continue
+                try:
+                    patch_graph = self._parse_staged_patch_description(patch)
+                except DoxaBaseError:
+                    continue
+                for subject, predicate, object_node in patch_graph:
+                    if subject != dataset_ref or predicate != predicate_ref:
+                        continue
+                    if not isinstance(object_node, URIRef):
+                        continue
+                    pending_by_storage.setdefault(str(object_node), []).append(
+                        revision_iri
+                    )
+        return {
+            storage_iri: list(dict.fromkeys(revision_iris))
+            for storage_iri, revision_iris in pending_by_storage.items()
+        }
 
     @staticmethod
     def _missing_storage_candidate_tokens(

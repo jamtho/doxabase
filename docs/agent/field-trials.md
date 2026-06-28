@@ -2166,6 +2166,28 @@ few useful gaps:
   applied event includes that event and its direct staged source, which is enough
   for exact applied diff reconstruction; use a full snapshot export or explicit
   older restage-chain ancestor IRIs when exact full-chain recovery matters.
+- A query-repair direct-storage trial confirmed `record_map_storage_access`
+  clears `missing_storage_access` and produces a review-gated plan when storage
+  is still only candidate-verified. It also showed that group-level
+  `pending_required_extra_arguments` was too ambiguous for choose-one repair
+  groups, so query repair groups now expose `choice_mode` and
+  `pending_action_options` for per-action routing while preserving the legacy
+  union field.
+- A staged storage-link trial showed `project_brief` correctly routes pending
+  query repairs behind staged frontier review, but raw `describe_query_context`
+  could still hand out a duplicate staged-link template for the same
+  dataset/storage pair. Missing-storage candidates now expose
+  `pending_staged_repair_iris`, and the staged existing-link action is marked
+  `already_pending` when every visible reviewed candidate already has a current
+  staged link.
+- A profile/query-blocker handoff trial confirmed the intended route:
+  `missing_storage_access` keeps DailyIndex profile review on query-context
+  repair first; after storage repair, profile tasks point to
+  `draft_profile_map_updates`; after staging profile work, `project_brief`
+  points first to staged frontier recovery and avoids duplicate same
+  dataset/evidence staging. The same scratch run showed copied capsules with
+  stale seed ontology can fail staging with a low-level `GraphPatchRole` error;
+  a clearer seed-compatibility preflight remains a future hardening task.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

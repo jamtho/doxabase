@@ -636,12 +636,15 @@ in.
 `suggested_repair_action_groups` lifts those existing nested repair hints into a
 top-level `query_repair_review` lane with the source issue index/code/resource,
 repair hint type, copied context, ordered action templates, action count,
-status counts, pending/skippable counts, and pending required extra arguments.
-Use it for repair discovery and scripting, but keep the review gate: these rows
-are templates, not flat call-ready `suggested_next_actions`. Fill placeholders,
-add required extra arguments such as `rationale`, skip actions explicitly marked
-already satisfied, and review each action's condition before calling the named
-tool.
+status counts, pending/skippable counts, per-action pending options, and the
+legacy union of pending required extra arguments. Use it for repair discovery
+and scripting, but keep the review gate: these rows are templates, not flat
+call-ready `suggested_next_actions`. If `choice_mode="choose_one"`, select one
+action and follow that action's own `required_extra_arguments`; do not treat the
+group-level `pending_required_extra_arguments` union as one call signature. Fill
+placeholders, add required extra arguments such as `rationale`, skip actions
+explicitly marked already satisfied or already pending, and review each action's
+condition before calling the named tool.
 Context-blocked direct-clean routes can expose
 `repair_action_type="remove_stale_partition_scheme_link"` to stage reviewed
 removal of a stale `rc:partitionedBy` link that is blocking an otherwise clean
@@ -655,8 +658,13 @@ read `dataset_token_matches`, `dataset_partial_token_matches`, and
 `match_reasons` before choosing a reviewed target. Missing-storage repair actions
 have stable `action_type` values
 (`record_reviewed_storage_access` and `stage_existing_storage_access_link`), and
-the repair hint carries `candidate_existing_storage_accesses` when current map
-storage accesses are available for review. For the record-new-storage action,
+the repair hint carries `choice_mode="choose_one"` plus
+`candidate_existing_storage_accesses` when current map storage accesses are
+available for review. A candidate can carry
+`pending_staged_repair_iris` and `candidate_status="already_pending"` when a
+current staged `rc:hasStorageAccess` add already proposes that exact
+dataset/storage link; review the staged row before staging a duplicate. For the
+record-new-storage action,
 include the optional `path_templates` field only when the storage access itself
 owns the path or database relation template. Omit it when a dataset or partition
 already carries the reviewed file/object path template, or you can create

@@ -292,12 +292,16 @@ for drafting the selected route. `suggested_repair_action_groups` lifts existing
 lane with the issue index/code/resource, repair hint type, copied context, and
 ordered action templates. Each group also reports `action_status_counts`,
 `pending_action_count`, `skippable_action_count`, and
-`pending_required_extra_arguments` so scripts can triage mixed pending and
-already-satisfied repair groups before reviewing the templates. These repair
-rows are reviewed templates rather than call-ready next actions: fill
-placeholders, add required extra arguments such as `rationale`, and check
-conditions before calling the named tool. Context-blocked direct-clean routes
-can expose `remove_stale_partition_scheme_link` for reviewed removal of a stale
+`pending_action_options` so scripts can triage mixed pending and
+already-satisfied repair groups before reviewing the templates. If
+`choice_mode="choose_one"`, select one action and follow that action's own
+`required_extra_arguments`; the legacy `pending_required_extra_arguments` field
+is the group-level union, not one call signature. These repair rows are reviewed
+templates rather than call-ready next actions: fill placeholders, add required
+extra arguments such as `rationale`, skip actions marked `already_satisfied` or
+`already_pending`, and check conditions before calling the named tool.
+Context-blocked direct-clean routes can expose
+`remove_stale_partition_scheme_link` for reviewed removal of a stale
 `rc:partitionedBy` assertion. For database
 template-source mismatches and
 storage protocol/location mismatches, `issues[].details.repair_hint` gives
@@ -318,7 +322,9 @@ For `missing_storage_access`, the record-new-storage template's optional
 `path_templates` field should be omitted when the dataset or partition already
 owns the reviewed file/object path template; duplicating it can produce
 equivalent ready query candidates. Use storage-access-owned templates for
-database relation identifiers.
+database relation identifiers. Existing storage candidates can carry
+`pending_staged_repair_iris` and `candidate_status="already_pending"` when that
+exact dataset/storage link is already staged.
 Follow each repair action's `required_extra_arguments`, `placeholder_fields`,
 and `reviewed_value_fields` before calling `stage_map_assertion_change`; do not
 run `arguments_template` unchanged. It does not generate SQL

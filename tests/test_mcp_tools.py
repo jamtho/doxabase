@@ -3988,6 +3988,7 @@ def test_describe_query_context_tool_suggests_stale_partition_link_repair(
     assert repair_group["repair_action_type"] == (
         "remove_stale_partition_scheme_link"
     )
+    assert repair_group["choice_mode"] == "review_all_applicable"
     assert repair_group["action_status_counts"] == {"pending_review": 1}
     assert repair_group["pending_required_extra_arguments"] == ["rationale"]
     action = repair_group["actions"][0]
@@ -4592,6 +4593,7 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
     repair_group = result["suggested_repair_action_groups"][0]
     assert repair_group["issue_code"] == "missing_storage_access"
     assert repair_group["repair_action_type"] == "record_or_link_storage_access"
+    assert repair_group["choice_mode"] == "choose_one"
     assert repair_group["action_status_counts"] == {"pending_review": 2}
     assert repair_group["pending_action_count"] == 2
     assert repair_group["skippable_action_count"] == 0
@@ -4602,6 +4604,34 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         "storage_root",
         "object",
         "rationale",
+    ]
+    assert repair_group["pending_action_options"] == [
+        {
+            "action_index": 0,
+            "action_type": "record_reviewed_storage_access",
+            "tool_name": "record_map_storage_access",
+            "mcp_tool_name": "doxabase.record_map_storage_access",
+            "action_label": "Record storage access and link dataset",
+            "action_status": "pending_review",
+            "required_extra_arguments": [
+                "iri",
+                "storage_protocol",
+                "storage_root",
+            ],
+            "placeholder_fields": ["path_templates"],
+            "reviewed_value_fields": ["path_templates"],
+        },
+        {
+            "action_index": 1,
+            "action_type": "stage_existing_storage_access_link",
+            "tool_name": "stage_map_assertion_change",
+            "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "action_label": "Stage link to an existing storage access",
+            "action_status": "pending_review",
+            "required_extra_arguments": ["object", "rationale"],
+            "placeholder_fields": ["object"],
+            "reviewed_value_fields": ["object"],
+        },
     ]
     action_by_type = {
         action["action_type"]: action for action in repair_group["actions"]
