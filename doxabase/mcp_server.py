@@ -56,6 +56,7 @@ from doxabase.mcp_tools import (
     record_graph_revision_tool,
     record_observation_tool,
     record_pattern_tool,
+    record_query_result_tool,
     record_profile_bundle_tool,
     replace_graph_triples_tool,
     restage_staged_revision_tool,
@@ -72,7 +73,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -552,6 +553,59 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             profile_metrics=profile_metrics,
             observed_physical_type=observed_physical_type,
             observed_value_type=observed_value_type,
+        )
+
+    @server.tool(name="doxabase.record_query_result")
+    def record_query_result(
+        summary: str,
+        observed_asset: str | None = None,
+        observed_at: str | None = None,
+        observed_by: str | None = None,
+        execution_status: str = "succeeded",
+        engine: str | None = None,
+        query_source_path: str | None = None,
+        query_source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        query_hash: str | None = None,
+        result_sources: list[str] | None = None,
+        evidence_summary: str | None = None,
+        failure_summary: str | None = None,
+        sample_size: int | None = None,
+        sample_scope: str | None = None,
+        sample_method: str | None = None,
+        row_count: int | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+        value_frequencies: list[dict[str, Any]] | None = None,
+        profile_metrics: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Record an externally executed query result or failure as evidence."""
+
+        return record_query_result_tool(
+            db,
+            summary=summary,
+            observed_asset=observed_asset,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            execution_status=execution_status,
+            engine=engine,
+            query_source_path=query_source_path,
+            query_source_section=query_source_section,
+            start_line=start_line,
+            end_line=end_line,
+            query_hash=query_hash,
+            result_sources=result_sources,
+            evidence_summary=evidence_summary,
+            failure_summary=failure_summary,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
         )
 
     @server.tool(name="doxabase.record_claim_observation")

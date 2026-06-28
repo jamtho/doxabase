@@ -36,12 +36,14 @@ compaction, read `start_here` first.
 10. Use `doxabase.list_entities` with `type="rc:Pattern"` followed by `doxabase.describe_pattern` when you need the full handoff behind a linked pattern.
 11. Use `doxabase.list_entities` with types such as `rc:Claim`, `rc:Evidence`, or `rc:SourceSpan`, then `doxabase.describe_resource`, when you need generic type-aware retrieval instead of lexical search.
 12. Use `doxabase.record_observation` when you discover a simple point-in-time finding that should remain available to later agents.
-13. Use `doxabase.record_dataset_profile` when a profiling result should write
+13. Use `doxabase.record_query_result` after an external query attempt produces
+    a result or failure worth preserving as evidence.
+14. Use `doxabase.record_dataset_profile` when a profiling result should write
     a profile observation and optionally update map/pattern context together.
-14. Use `doxabase.record_column_profile` when a column profiling result should
+15. Use `doxabase.record_column_profile` when a column profiling result should
     write a profile observation and optionally update map/pattern context
     together.
-15. Use `doxabase.record_profile_bundle` when one profiling pass produced a
+16. Use `doxabase.record_profile_bundle` when one profiling pass produced a
     dataset-level profile and several related column profiles that should share
     run metadata, evidence fields, or sample context. Pass
     `shared_evidence_iri` when they should all point at one shared evidence

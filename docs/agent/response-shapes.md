@@ -758,6 +758,28 @@ observation.observation_triples
 observation.evidence_triples
 ```
 
+`db.record_query_result(...)` returns a `QueryResultRecord`:
+
+```python
+result.observation_iri
+result.observation_type
+result.evidence_iri
+result.source_span_iri
+result.execution_status
+result.engine
+result.query_source_path
+result.query_hash
+result.result_sources
+result.observation_triples
+result.evidence_triples
+result.source_span_triples
+```
+
+The helper does not run queries. It records an externally executed result or
+failure as an observation with evidence. Successful calls with profile/result
+counts become `observation_type="profile"`; failed, blocked, partial, or
+cancelled attempts stay ordinary observations and reject profile count fields.
+
 For direct profile type findings, call it with `observation_type="profile"`,
 `observed_column`, and `observed_physical_type` / `observed_value_type`. These
 persist observed type evidence without asserting current map facts.

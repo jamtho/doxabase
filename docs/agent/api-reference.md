@@ -639,13 +639,23 @@ selected slice. Use `candidate_triple_count`, `returned_triple_count`, and
 `record_observation()` writes a structured `rc:Observation` or
 `rc:ProfileObservation` to the `observations` graph. When evidence fields are
 supplied, it also writes a linked `rc:Evidence` resource to the `evidence`
-graph. Include `evidence_sources` or a source span when you need validation-clean
-evidence; `evidence_summary` alone is descriptive prose. When
-`observed_column` names a column that is not yet in the map,
+graph. Include `evidence_sources` when you need validation-clean evidence;
+`evidence_summary` alone is descriptive prose. When `observed_column` names a
+column that is not yet in the map,
 `observed_column_name` can preserve the source-level column name without
 promoting the column into current map state. For `observation_type="profile"`,
 `observed_physical_type` and `observed_value_type` preserve type findings as
 evidence without asserting them as current map facts.
+
+`record_query_result()` records an externally executed query result or failure
+using the same observation/evidence model. It does not execute the query. When
+successful profile-like fields such as `row_count`, `sample_size`,
+`value_frequencies`, or `profile_metrics` are supplied, it writes a
+`rc:ProfileObservation`; failed, blocked, cancelled, or partial attempts write
+ordinary observations and reject profile count fields. Use `query_source_path`
+for a non-secret query file or query artifact, which is stored as an
+`rc:SourceSpan` with `rc:QuerySource`, and `result_sources` for result files,
+logs, or output artifacts.
 
 `record_dataset_profile()` records a profile observation for one dataset and can
 also update the map row-count snapshot and write an agent-authored profile

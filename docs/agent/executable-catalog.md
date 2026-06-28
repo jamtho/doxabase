@@ -289,3 +289,27 @@ queries.
 For now, the value is handoff and planning: the next agent can see where the data
 is, how it is physically shaped, what local profile to use, which layout claims
 need verification, and which caveats should travel with generated work.
+
+When an external runtime does execute a reviewed plan, preserve the result or
+failure with `record_query_result()` rather than stuffing all context into a
+generic note. For a local CSV smoke test, a typical shape is:
+
+```python
+result = db.record_query_result(
+    summary="Orders CSV paid-count query returned two rows.",
+    observed_asset="https://example.test/project#Orders",
+    execution_status="succeeded",
+    engine="python-csv",
+    query_source_path="queries/orders_paid_count.sql",
+    query_hash="sha256:...",
+    result_sources=["/tmp/orders-paid-count.json"],
+    sample_size=3,
+    sample_scope="All rows in the reviewed local Orders CSV.",
+    sample_method="External read-only aggregate after draft_query_plan.",
+    row_count=2,
+)
+```
+
+For failed attempts, set `execution_status="failed"` and include
+`failure_summary` plus a query source or result/log source; do not pass row,
+null, distinct, value-frequency, or metric fields.

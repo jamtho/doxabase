@@ -114,6 +114,7 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 ## Choosing The Right Move
 
 - Simple evidence-backed noticing: use `record_observation`.
+- Externally executed query result or failure: use `record_query_result`.
 - Common observation plus claim, evidence, and source span: use
   `record_claim_observation`.
 - Nuanced claim that the helper cannot express cleanly: write agent-authored

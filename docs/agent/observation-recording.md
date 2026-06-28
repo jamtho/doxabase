@@ -23,7 +23,8 @@ Use `observation_type="observation"` for general findings:
 - a caveat noticed during exploration
 - a failed assumption
 - a useful note from inspecting a dataset
-- a query result that is not just a profile count
+- a query result that is not just a profile count, when the more specific
+  `record_query_result` helper does not fit
 
 Use `observation_type="profile"` for profiling-style findings:
 
@@ -441,6 +442,14 @@ The base observation SHACL expects observations to link to evidence. The helper
 can still create a bare observation when a caller omits evidence fields, but that
 is mainly for scratch notes; prefer evidence-backed observations when you expect
 the capsule to validate cleanly.
+
+For externally executed queries, prefer `record_query_result`. It records the
+result or failure as observation/evidence, links `query_source_path` as an
+`rc:SourceSpan` with `rc:QuerySource`, and keeps result artifacts in
+`result_sources`. It does not execute queries. Successful calls with
+profile-like result fields become profile observations; failed, blocked,
+cancelled, or partial attempts stay ordinary observations and should not carry
+profile counts.
 
 ## Identifiers
 

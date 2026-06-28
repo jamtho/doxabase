@@ -54,6 +54,7 @@ from doxabase.mcp_tools import (
     record_graph_revision_tool,
     record_observation_tool,
     record_pattern_tool,
+    record_query_result_tool,
     record_profile_bundle_tool,
     replace_graph_triples_tool,
     restage_staged_revision_tool,
@@ -101,6 +102,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.draft_staged_revision_rebase" in tool_names
     assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
+    assert "doxabase.record_query_result" in tool_names
     assert "doxabase.record_claim_observation" in tool_names
     assert "doxabase.record_claim_reconsideration" in tool_names
     assert "doxabase.record_column_profile" in tool_names
@@ -298,6 +300,35 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert "returned_queue_counts" in result
     assert "omitted_queue_counts" in result
     assert isinstance(result["recommended_next_tasks"], list)
+
+
+def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    result = record_query_result_tool(
+        db,
+        summary="Scratch query result returned three rows.",
+        observed_asset="https://example.test/project#Orders",
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path="queries/orders.sql",
+        result_sources=["/tmp/orders-result.json"],
+        sample_size=3,
+        sample_scope="All rows in the scratch Orders CSV.",
+        sample_method="External read-only query.",
+        row_count=3,
+    )
+
+    assert result["observation_type"] == "profile"
+    assert result["execution_status"] == "succeeded"
+    assert result["engine"] == "python-csv"
+    assert result["evidence_iri"].startswith(
+        "https://richcanopy.org/doxabase/generated/evidence/"
+    )
+    assert result["source_span_iri"].startswith(
+        "https://richcanopy.org/doxabase/generated/source-span/"
+    )
+    assert result["source_span_triples"] > 0
 
 
 def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:

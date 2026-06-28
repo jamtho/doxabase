@@ -748,14 +748,26 @@ map implications.
 
 Records a structured observation in the `observations` graph. Optional evidence
 fields create a linked `rc:Evidence` resource in the `evidence` graph. Use this
-for point-in-time findings, profile counts, query outputs, and workflow notes
-that should remain available to later agents. For validation-clean evidence,
-include `evidence_sources`; `evidence_summary` alone is descriptive prose, not a
-source identity. When `observed_column` names a column that is not yet in the
-map, `observed_column_name` can preserve the source-level column name without
+for point-in-time findings, profile counts, and workflow notes that should
+remain available to later agents. For validation-clean evidence, include
+`evidence_sources`; `evidence_summary` alone is descriptive prose, not a source
+identity. When `observed_column` names a column that is not yet in the map,
+`observed_column_name` can preserve the source-level column name without
 promoting the column into current map state. For `observation_type="profile"`,
 `observed_physical_type` and `observed_value_type` preserve type findings as
 evidence without asserting them as current map facts.
+
+`doxabase.record_query_result`
+
+Records an externally executed query result or failure without executing the
+query. It writes an `rc:Observation` or, when successful profile/result counts
+are supplied, an `rc:ProfileObservation`, linked evidence, and an optional
+`rc:SourceSpan` with `rc:QuerySource` for the query text or query artifact.
+Use it after `draft_query_plan` and an external runtime attempt. Supply
+`result_sources` for result files, logs, or output artifacts, and
+`query_source_path` when the query text has a durable non-secret location.
+Failed, blocked, cancelled, or partial attempts are ordinary observations; do
+not pass profile count fields unless `execution_status="succeeded"`.
 
 `doxabase.record_dataset_profile`
 

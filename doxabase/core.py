@@ -2145,6 +2145,22 @@ class ObservationRecord:
 
 
 @dataclass(frozen=True)
+class QueryResultRecord:
+    observation_iri: str
+    observation_type: str
+    evidence_iri: str
+    source_span_iri: str | None
+    execution_status: str
+    engine: str | None
+    query_source_path: str | None
+    query_hash: str | None
+    result_sources: list[str]
+    observation_triples: int
+    evidence_triples: int
+    source_span_triples: int
+
+
+@dataclass(frozen=True)
 class ClaimObservationRecord:
     observation_iri: str
     claim_iri: str
@@ -17481,6 +17497,241 @@ class DoxaBase:
             observation_triples=observation_triples,
             evidence_triples=evidence_triples,
         )
+
+    def record_query_result(
+        self,
+        summary: str,
+        *,
+        observed_asset: str | None = None,
+        observed_at: datetime | str | None = None,
+        observed_by: str | None = None,
+        execution_status: str = "succeeded",
+        engine: str | None = None,
+        query_source_path: str | None = None,
+        query_source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        query_hash: str | None = None,
+        result_sources: Iterable[str] | str | None = None,
+        evidence_summary: str | None = None,
+        failure_summary: str | None = None,
+        sample_size: int | None = None,
+        sample_scope: str | None = None,
+        sample_method: str | None = None,
+        row_count: int | None = None,
+        null_count: int | None = None,
+        distinct_count: int | None = None,
+        value_frequencies: Iterable[Mapping[str, Any]] | None = None,
+        profile_metrics: Iterable[Mapping[str, Any]] | None = None,
+        observation_iri: str | None = None,
+        evidence_iri: str | None = None,
+        source_span_iri: str | None = None,
+    ) -> QueryResultRecord:
+        """Record an externally executed query result or failure as evidence."""
+        status_value = self._query_execution_status(execution_status)
+        engine_value = engine.strip() if engine and engine.strip() else None
+        query_source_path_value = (
+            query_source_path.strip()
+            if query_source_path and query_source_path.strip()
+            else None
+        )
+        query_source_section_value = (
+            query_source_section.strip()
+            if query_source_section and query_source_section.strip()
+            else None
+        )
+        query_hash_value = (
+            query_hash.strip() if query_hash and query_hash.strip() else None
+        )
+        failure_summary_value = (
+            failure_summary.strip()
+            if failure_summary and failure_summary.strip()
+            else None
+        )
+        result_source_values = self._string_values("result_sources", result_sources)
+        if not result_source_values and query_source_path_value is None:
+            raise DoxaBaseError(
+                "record_query_result requires result_sources or query_source_path"
+            )
+        for name, value in {"start_line": start_line, "end_line": end_line}.items():
+            if value is not None and value < 1:
+                raise DoxaBaseError(f"{name} must be a positive one-based line number")
+        profile_payload_present = any(
+            value is not None
+            for value in (
+                sample_size,
+                row_count,
+                null_count,
+                distinct_count,
+                value_frequencies,
+                profile_metrics,
+            )
+        )
+        if status_value != "succeeded" and profile_payload_present:
+            raise DoxaBaseError(
+                "profile result fields require execution_status='succeeded'"
+            )
+        observation_type: TypingLiteral["observation", "profile"] = (
+            "profile" if profile_payload_present else "observation"
+        )
+        evidence_summary_value = evidence_summary
+        if evidence_summary_value is None:
+            evidence_summary_value = self._query_result_evidence_summary(
+                status=status_value,
+                engine=engine_value,
+                query_hash=query_hash_value,
+                failure_summary=failure_summary_value,
+            )
+
+        observation = self.record_observation(
+            summary=summary,
+            observation_type=observation_type,
+            observed_asset=observed_asset,
+            observed_at=observed_at,
+            observed_by=observed_by,
+            evidence_summary=evidence_summary_value,
+            evidence_sources=result_source_values,
+            sample_size=sample_size,
+            sample_scope=sample_scope,
+            sample_method=sample_method,
+            row_count=row_count,
+            null_count=null_count,
+            distinct_count=distinct_count,
+            value_frequencies=value_frequencies,
+            profile_metrics=profile_metrics,
+            observation_iri=observation_iri,
+            evidence_iri=evidence_iri,
+        )
+        assert observation.evidence_iri is not None
+        source_span_triples = 0
+        source_span_value: str | None = None
+        if query_source_path_value is not None:
+            source_span_value, source_span_triples = (
+                self._insert_evidence_source_span(
+                    evidence_iri=observation.evidence_iri,
+                    source_path=query_source_path_value,
+                    source_section=query_source_section_value,
+                    start_line=start_line,
+                    end_line=end_line,
+                    source_kind="rc:QuerySource",
+                    source_span_iri=source_span_iri,
+                )
+            )
+
+        return QueryResultRecord(
+            observation_iri=observation.observation_iri,
+            observation_type=observation.observation_type,
+            evidence_iri=observation.evidence_iri,
+            source_span_iri=source_span_value,
+            execution_status=status_value,
+            engine=engine_value,
+            query_source_path=query_source_path_value,
+            query_hash=query_hash_value,
+            result_sources=result_source_values,
+            observation_triples=observation.observation_triples,
+            evidence_triples=observation.evidence_triples + source_span_triples,
+            source_span_triples=source_span_triples,
+        )
+
+    @staticmethod
+    def _query_execution_status(status: str) -> str:
+        status_value = status.strip().lower()
+        allowed = {"succeeded", "failed", "partial", "cancelled", "blocked"}
+        if status_value not in allowed:
+            allowed_display = ", ".join(sorted(allowed))
+            raise DoxaBaseError(
+                f"execution_status must be one of: {allowed_display}"
+            )
+        return status_value
+
+    @staticmethod
+    def _query_result_evidence_summary(
+        *,
+        status: str,
+        engine: str | None,
+        query_hash: str | None,
+        failure_summary: str | None,
+    ) -> str:
+        parts = [f"External query execution {status}."]
+        if engine is not None:
+            parts.append(f"Engine: {engine}.")
+        if query_hash is not None:
+            parts.append(f"Query hash: {query_hash}.")
+        if failure_summary is not None:
+            parts.append(f"Failure summary: {failure_summary}")
+        return " ".join(parts)
+
+    def _insert_evidence_source_span(
+        self,
+        *,
+        evidence_iri: str,
+        source_path: str,
+        source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        source_kind: str | None = None,
+        source_span_iri: str | None = None,
+    ) -> tuple[str, int]:
+        source_span_subject = URIRef(
+            source_span_iri or self._mint_iri("source-span")
+        )
+        evidence_subject = URIRef(evidence_iri)
+        evidence_graph = Graph()
+        self._bind_prefixes(evidence_graph)
+        evidence_graph.add(
+            (
+                evidence_subject,
+                URIRef(self.expand_iri("rc:sourceSpan")),
+                source_span_subject,
+            )
+        )
+        evidence_graph.add(
+            (
+                source_span_subject,
+                RDF.type,
+                URIRef(self.expand_iri("rc:SourceSpan")),
+            )
+        )
+        evidence_graph.add(
+            (
+                source_span_subject,
+                URIRef(self.expand_iri("rc:sourcePath")),
+                Literal(source_path),
+            )
+        )
+        if source_section:
+            evidence_graph.add(
+                (
+                    source_span_subject,
+                    URIRef(self.expand_iri("rc:sourceSection")),
+                    Literal(source_section),
+                )
+            )
+        if start_line is not None:
+            evidence_graph.add(
+                (
+                    source_span_subject,
+                    URIRef(self.expand_iri("rc:startLine")),
+                    Literal(start_line, datatype=XSD.integer),
+                )
+            )
+        if end_line is not None:
+            evidence_graph.add(
+                (
+                    source_span_subject,
+                    URIRef(self.expand_iri("rc:endLine")),
+                    Literal(end_line, datatype=XSD.integer),
+                )
+            )
+        if source_kind is not None:
+            evidence_graph.add(
+                (
+                    source_span_subject,
+                    URIRef(self.expand_iri("rc:sourceKind")),
+                    URIRef(self.expand_iri(source_kind)),
+                )
+            )
+        return str(source_span_subject), self._insert_graph("evidence", evidence_graph)
 
     def record_claim_observation(
         self,

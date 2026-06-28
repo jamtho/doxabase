@@ -485,6 +485,58 @@ def record_observation_tool(
     return to_dict(result)
 
 
+def record_query_result_tool(
+    db: DoxaBase,
+    summary: str,
+    observed_asset: str | None = None,
+    observed_at: str | None = None,
+    observed_by: str | None = None,
+    execution_status: str = "succeeded",
+    engine: str | None = None,
+    query_source_path: str | None = None,
+    query_source_section: str | None = None,
+    start_line: int | None = None,
+    end_line: int | None = None,
+    query_hash: str | None = None,
+    result_sources: list[str] | None = None,
+    evidence_summary: str | None = None,
+    failure_summary: str | None = None,
+    sample_size: int | None = None,
+    sample_scope: str | None = None,
+    sample_method: str | None = None,
+    row_count: int | None = None,
+    null_count: int | None = None,
+    distinct_count: int | None = None,
+    value_frequencies: list[dict[str, Any]] | None = None,
+    profile_metrics: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    result = db.record_query_result(
+        summary=summary,
+        observed_asset=observed_asset,
+        observed_at=observed_at,
+        observed_by=observed_by,
+        execution_status=execution_status,
+        engine=engine,
+        query_source_path=query_source_path,
+        query_source_section=query_source_section,
+        start_line=start_line,
+        end_line=end_line,
+        query_hash=query_hash,
+        result_sources=result_sources,
+        evidence_summary=evidence_summary,
+        failure_summary=failure_summary,
+        sample_size=sample_size,
+        sample_scope=sample_scope,
+        sample_method=sample_method,
+        row_count=row_count,
+        null_count=null_count,
+        distinct_count=distinct_count,
+        value_frequencies=value_frequencies,
+        profile_metrics=profile_metrics,
+    )
+    return to_dict(result)
+
+
 def record_claim_observation_tool(
     db: DoxaBase,
     summary: str,

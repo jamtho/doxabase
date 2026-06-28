@@ -238,38 +238,40 @@ Useful first tool calls for an agent:
 15. `doxabase.list_graph_revisions` when you need to find staged, applied, or
     historical revision records before inspecting a specific one
 16. `doxabase.record_observation` for useful point-in-time findings
-17. `doxabase.record_claim_observation` for structured claim observations
-18. `doxabase.record_dataset_profile` for profile outputs that should write an
+17. `doxabase.record_query_result` after an external query attempt produces a
+    result or failure worth preserving
+18. `doxabase.record_claim_observation` for structured claim observations
+19. `doxabase.record_dataset_profile` for profile outputs that should write an
     observation and optionally update map/pattern context together
-19. `doxabase.record_column_profile` for column profile outputs that should
+20. `doxabase.record_column_profile` for column profile outputs that should
     write an observation and optionally update map/pattern context together
-20. `doxabase.record_profile_bundle` for a dataset profile plus related column
+21. `doxabase.record_profile_bundle` for a dataset profile plus related column
     profiles from one profiling pass
-21. `doxabase.record_pattern` for syntheses over related findings
-22. `doxabase.stage_graph_revision` for reviewable additions/removals that
+22. `doxabase.record_pattern` for syntheses over related findings
+23. `doxabase.stage_graph_revision` for reviewable additions/removals that
     should not be applied yet, including validation diagnostics for failed
     previews
-23. `doxabase.stage_systematisation` for alternative RDF framings of one
+24. `doxabase.stage_systematisation` for alternative RDF framings of one
     modelling hunch, optionally with shared proposed context
-24. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
+25. `doxabase.stage_pattern_promotion` for pattern-supported graph changes that
     should remain reviewable before becoming durable structure
-25. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
-26. `doxabase.check_staged_revision_apply` before turning a staged proposal
+26. `doxabase.describe_staged_revision` when reviewing a staged patch proposal
+27. `doxabase.check_staged_revision_apply` before turning a staged proposal
     into durable graph state
-27. `doxabase.draft_staged_revision_rebase` when a staged proposal routes to
+28. `doxabase.draft_staged_revision_rebase` when a staged proposal routes to
     repair or replacement before a successor should be authored
-28. `doxabase.restage_staged_revision` when count or digest drift made a
+29. `doxabase.restage_staged_revision` when count or digest drift made a
     still-useful staged proposal stale
-29. `doxabase.describe_applied_revision_diff` when an applied staged revision
+30. `doxabase.describe_applied_revision_diff` when an applied staged revision
     needs stored before/after snapshot diff counts or opt-in exact triples
-30. `doxabase.apply_staged_revision` when a staged proposal should become
+31. `doxabase.apply_staged_revision` when a staged proposal should become
     durable graph state after conflict and validation checks
-31. `doxabase.record_map_dataset` and related map helpers for current-best facts
-32. `doxabase.validate_graph` with `scope="all"`
-33. `doxabase.export_trig` when you need a named-graph project review bundle
-34. `doxabase.record_graph_revision` when the bundle/change rationale should be
+32. `doxabase.record_map_dataset` and related map helpers for current-best facts
+33. `doxabase.validate_graph` with `scope="all"`
+34. `doxabase.export_trig` when you need a named-graph project review bundle
+35. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-35. `doxabase.describe_graph_revision` when reviewing a history record
+36. `doxabase.describe_graph_revision` when reviewing a history record
 
 Current MCP tools:
 
@@ -289,6 +291,7 @@ Current MCP tools:
 - `doxabase.describe_query_context`
 - `doxabase.describe_context_slice`
 - `doxabase.record_observation`
+- `doxabase.record_query_result`
 - `doxabase.record_claim_observation`
 - `doxabase.record_claim_reconsideration`
 - `doxabase.record_pattern`

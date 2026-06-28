@@ -16836,6 +16836,100 @@ def test_record_claim_observation_writes_common_rdf_pattern(tmp_path: Path) -> N
     )
 
 
+def test_record_query_result_writes_query_source_evidence(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+
+    result = db.record_query_result(
+        summary="Orders paid-count query returned two rows.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path="queries/orders_paid_count.sql",
+        query_source_section="paid-count aggregate",
+        start_line=3,
+        end_line=5,
+        query_hash="sha256:abc123",
+        result_sources=["/tmp/orders-paid-count.json"],
+        sample_size=3,
+        sample_scope="All rows in the scratch Orders CSV.",
+        sample_method="External read-only aggregate query.",
+        row_count=2,
+        profile_metrics=[
+            {
+                "metric": "rc:MaximumValue",
+                "value": "31.75",
+                "datatype": "xsd:decimal",
+            }
+        ],
+    )
+
+    assert result.observation_type == "profile"
+    assert result.execution_status == "succeeded"
+    assert result.engine == "python-csv"
+    assert result.query_hash == "sha256:abc123"
+    assert result.source_span_iri is not None
+    assert result.evidence_triples > result.source_span_triples > 0
+    assert db.validate_graph(scope="all").conforms
+
+    evidence = db.describe_resource(result.evidence_iri, graph="evidence")
+    assert any(
+        triple.predicate == RC + "sourceSpan"
+        and triple.object == result.source_span_iri
+        for triple in evidence.outgoing
+    )
+    source_span = db.describe_resource(result.source_span_iri, graph="evidence")
+    outgoing = {(triple.predicate, triple.object) for triple in source_span.outgoing}
+    assert (RC + "sourcePath", "queries/orders_paid_count.sql") in outgoing
+    assert (RC + "sourceKind", RC + "QuerySource") in outgoing
+
+    matches = db.search("paid-count", graph="observations")
+    assert result.observation_iri in {match.iri for match in matches.matches}
+
+
+def test_record_query_result_records_failures_as_observations(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    result = db.record_query_result(
+        summary="Orders CSV query failed because DuckDB was unavailable.",
+        execution_status="failed",
+        engine="duckdb",
+        query_source_path="queries/orders.sql",
+        result_sources=["stderr://duckdb-not-installed"],
+        failure_summary="ModuleNotFoundError: duckdb",
+    )
+
+    assert result.observation_type == "observation"
+    assert result.execution_status == "failed"
+    assert result.source_span_iri is not None
+    assert db.validate_graph(scope="all").conforms
+
+
+def test_record_query_result_rejects_unsourced_or_fake_failure_counts(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="result_sources or query_source_path"):
+        db.record_query_result(
+            summary="Unsourced query result should not be recorded.",
+        )
+    with pytest.raises(DoxaBaseError, match="profile result fields"):
+        db.record_query_result(
+            summary="Failed query should not create profile counts.",
+            execution_status="failed",
+            query_source_path="queries/orders.sql",
+            row_count=10,
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+
+
 def test_record_claim_reconsideration_links_claim_lifecycle(
     tmp_path: Path,
 ) -> None:
