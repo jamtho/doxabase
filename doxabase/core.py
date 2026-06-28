@@ -11078,6 +11078,7 @@ class DoxaBase:
             self._profile_query_context_review_actions(
                 dataset_description,
                 graph=graph,
+                evidence_iri=evidence_value,
             )
             if dataset_description is not None
             else []
@@ -11191,6 +11192,7 @@ class DoxaBase:
         dataset: DatasetDescription,
         *,
         graph: str | None,
+        evidence_iri: str,
     ) -> list[SuggestedNextAction]:
         if not self._profile_query_context_has_physical_intent(dataset):
             return []
@@ -11222,6 +11224,7 @@ class DoxaBase:
             "query_context_review",
             {
                 "dataset_iri": dataset.iri,
+                "evidence_iri": evidence_iri,
                 "readiness": context.readiness,
                 "blocking_issue_codes": issue_codes,
             },
@@ -11249,6 +11252,8 @@ class DoxaBase:
                     {
                         "review_lane": "query_context_review",
                         "route_group_key": route_group_key,
+                        "evidence_iri": evidence_iri,
+                        "profile_evidence_iri": evidence_iri,
                         "route_anchor_iris": [dataset.iri],
                         "readiness": context.readiness,
                         "readiness_note": context.readiness_note,

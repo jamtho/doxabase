@@ -288,6 +288,18 @@ def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
         and task.suggested_next_action.tool_name == "describe_query_context"
         for task in profile_tasks
     )
+    query_context_route_keys = []
+    for evidence_iri in evidence_iris:
+        draft = db.draft_profile_map_updates(dataset, evidence_iri)
+        query_action = draft.suggested_next_action_groups[
+            "query_context_review"
+        ][0]
+        source = query_action.source_query_context
+        assert source["evidence_iri"] == evidence_iri
+        assert source["profile_evidence_iri"] == evidence_iri
+        assert source["route_anchor_iris"] == [dataset]
+        query_context_route_keys.append(source["route_group_key"])
+    assert len(set(query_context_route_keys)) == len(evidence_iris)
     query_tasks = [
         task
         for task in brief.recommended_next_tasks
@@ -5530,6 +5542,25 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         revision_anchors=[orders],
     )
     db.record_map_dataset(orders, row_semantics="rc:EventRow")
+    informational_source = db.stage_graph_revision(
+        summary="Stage already-effective table",
+        rationale="This staged source will already be current map state.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:AlreadyEffective a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    db.record_map_dataset(
+        "https://example.test/project#AlreadyEffective",
+        label="Already effective",
+    )
     stale = db.stage_graph_revision(
         summary="Stage stale messages table",
         rationale="This proposal will need mechanical restage after map drift.",
@@ -5601,6 +5632,7 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
             handled_source.revision_iri,
             repair_source.revision_iri,
             applied_source.revision_iri,
+            informational_source.revision_iri,
         ]
     )
 
@@ -5608,7 +5640,7 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert plan.result_kind == "staged_revision_recovery_plan"
     assert plan.mode == "read_only_plan"
     assert plan.selection_mode == "explicit_revision_iris"
-    assert plan.returned_count == 5
+    assert plan.returned_count == 6
     assert plan.current_revision_by_source[handled_source.revision_iri] == (
         handled_successor.revision_iri
     )
@@ -5647,11 +5679,16 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert applied_lane.resolved_target_iri == applied_event.applied_revision_iri
     assert applied_lane.resolved_target_record_kind == "applied_event"
     assert applied_lane.row_is_target is False
+    informational_lane = lanes_by_source[informational_source.revision_iri]
+    assert informational_lane.lane == "informational"
+    assert informational_lane.not_restageable_reason == "already_effective"
+    assert informational_lane.resolved_target_iri == informational_source.revision_iri
     assert plan.next_action_queue_item_counts == {
         "apply_after_review": 2,
         "restage_after_review": 1,
         "repair_or_replace": 1,
         "inspect_already_applied": 1,
+        "informational": 1,
     }
     assert plan.mutation_frontier_iris == [
         ready.revision_iri,
@@ -5665,6 +5702,48 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     }
     assert any(
         "apply at most one ready row" in warning for warning in plan.warnings
+    )
+
+    dry_run = db.restage_staged_revisions(
+        plan.would_restage_revision_iris,
+        dry_run=True,
+    )
+
+    assert dry_run.would_restage_revision_iris == [stale.revision_iri]
+
+    batch = db.restage_staged_revisions(dry_run.would_restage_revision_iris)
+    restaged_stale_iri = batch.restaged_revision_iris[0]
+    applied_ready = db.apply_staged_revision(ready.revision_iri)
+
+    assert set(applied_ready.post_apply_recheck_revision_iris) == {
+        restaged_stale_iri,
+        handled_successor.revision_iri,
+        informational_source.revision_iri,
+        repair_source.revision_iri,
+    }
+
+    followup_plan = db.plan_staged_revision_recovery(
+        current_staged_work_only=True
+    )
+
+    assert followup_plan.next_action_queue_item_counts == {
+        "restage_after_review": 2,
+        "repair_or_replace": 1,
+        "informational": 1,
+    }
+    assert set(followup_plan.would_restage_revision_iris) == {
+        restaged_stale_iri,
+        handled_successor.revision_iri,
+    }
+    assert set(followup_plan.mutation_frontier_iris) == {
+        restaged_stale_iri,
+        handled_successor.revision_iri,
+    }
+    assert followup_plan.repair_or_replace_source_revision_iris == [
+        repair_source.revision_iri
+    ]
+    assert informational_source.revision_iri not in (
+        followup_plan.mutation_frontier_iris
     )
 
 
@@ -23929,6 +24008,8 @@ def test_profile_map_update_query_blocker_routes_before_default_stage_action(
     assert query_action.source_query_context["blocking_issue_codes"] == [
         "missing_storage_access"
     ]
+    assert query_action.source_query_context["evidence_iri"] == evidence
+    assert query_action.source_query_context["profile_evidence_iri"] == evidence
     assert query_action.source_query_context["route_anchor_iris"] == [dataset]
     assert query_action.source_query_context["route_group_key"].startswith(
         "query_context_review:"

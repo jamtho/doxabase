@@ -6123,6 +6123,12 @@ def test_draft_profile_map_updates_tool_routes_query_blockers_first(
     assert query_action["source_query_context"]["blocking_issue_codes"] == [
         "missing_storage_access"
     ]
+    assert query_action["source_query_context"]["evidence_iri"] == (
+        shared_evidence
+    )
+    assert query_action["source_query_context"]["profile_evidence_iri"] == (
+        shared_evidence
+    )
     assert query_action["source_query_context"]["route_anchor_iris"] == [table]
     assert query_action["source_query_context"]["route_group_key"].startswith(
         "query_context_review:"

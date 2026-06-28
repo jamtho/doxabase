@@ -94,6 +94,10 @@ rejection of the profile evidence.
 `source_query_context.route_anchor_iris` names the dataset, so a staged
 dataset-anchored query repair can still bridge back to the query-context route
 inside a later profile insight review bundle.
+`source_query_context.evidence_iri` and `profile_evidence_iri` name the profile
+run that produced the blocker action; keep one of those fields with copied
+first-hop `describe_query_context` actions when several profile runs on the
+same dataset route to the same physical blocker.
 
 ## Stage Accepted Facts
 

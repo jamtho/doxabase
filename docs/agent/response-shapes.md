@@ -1551,6 +1551,8 @@ review actions carry `source_query_context`:
 action.source_query_context["review_lane"]
 action.source_query_context["route_group_key"]
 action.source_query_context["route_step_key"]
+action.source_query_context["evidence_iri"]
+action.source_query_context["profile_evidence_iri"]
 action.source_query_context["route_anchor_iris"]
 action.source_query_context["readiness"]
 action.source_query_context["readiness_note"]
@@ -1558,6 +1560,11 @@ action.source_query_context["blocking_issue_codes"]
 action.source_query_context["issue_codes"]
 action.source_query_context["suggested_repair_action_group_count"]
 ```
+
+`evidence_iri` and `profile_evidence_iri` both identify the profile run that
+caused the query-context lane to appear. They keep first-hop
+`describe_query_context` actions distinguishable when multiple profile runs on
+one dataset share the same blocker.
 
 Grouped profile map-update actions are `ProfileMapUpdateSuggestedNextAction`
 rows and carry `source_profile_map_update`:
