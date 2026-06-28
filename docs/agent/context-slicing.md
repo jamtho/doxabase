@@ -67,6 +67,10 @@ not recover omitted `resource_brief` route resources. Use the
 `describe_resource`, blank-node reference caps inspect
 `include_blank_node_closure`, and predicate-usage caps currently require
 exporting/narrowing because there is no paged predicate-usage browser yet.
+Incoming reference caps are usefulness-ranked before selection: resources with
+direct claims, caveats, patterns, profile observations, staged revisions, or
+dataset/column roles are preferred over plain generic references. Paging is
+still the route for exhaustive inbound review.
 This applies to durable graph content. Proposed ontology or SHACL resources
 inside staged patch Turtle are not materialized as ordinary graph resources
 until the staged revision is applied, so `resource_brief` and

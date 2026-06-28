@@ -9655,19 +9655,62 @@ class DoxaBase:
         limit: int,
     ) -> tuple[list[str], int]:
         graph_filter, graph_params = self._graph_filter(graphs, alias="q")
-        where = """
-            q.object = ?
-            AND q.object_kind = 'uri'
-            AND q.subject_kind = 'uri'
-        """
-        params: list[Any] = [object_iri, *graph_params]
-        return self._resource_brief_distinct_iris(
-            where,
-            params,
-            graph_filter=graph_filter,
-            select_column="q.subject",
-            limit=limit,
+        rows = self._conn.execute(
+            f"""
+            SELECT DISTINCT q.subject AS iri
+            FROM quads q
+            WHERE q.object = ?
+              AND q.object_kind = 'uri'
+              AND q.subject_kind = 'uri'
+              {graph_filter}
+            """,
+            [object_iri, *graph_params],
+        ).fetchall()
+        iris = [str(row["iri"]) for row in rows]
+        lookup_graphs = self._lookup_graphs(graphs)
+        ordered = sorted(
+            iris,
+            key=lambda iri: (
+                -self._resource_brief_incoming_usefulness_score(graphs, iri),
+                self._display_label_from_graphs(lookup_graphs, iri) or "",
+                iri,
+            ),
         )
+        return ordered[:limit], len(ordered)
+
+    def _resource_brief_incoming_usefulness_score(
+        self,
+        graphs: list[str],
+        iri: str,
+    ) -> int:
+        score = 0
+        types = set(self._types_from_graphs(graphs, iri))
+        if self.expand_iri("rc:Column") in types:
+            score += 12
+        if (
+            self.expand_iri("rc:Dataset") in types
+            or self.expand_iri("rc:Table") in types
+        ):
+            score += 8
+        if self._subjects(graphs, "rc:revisionAnchor", iri):
+            score += 70
+        if self._subjects(graphs, "rc:claimTarget", iri):
+            score += 60
+        if self._subjects(graphs, "rc:patternTarget", iri):
+            score += 50
+        if self._subjects(graphs, "rc:mapImplication", iri):
+            score += 45
+        if self._subjects(graphs, "rc:observedColumn", iri):
+            score += 40
+        if self._subjects(graphs, "rc:observedAsset", iri):
+            score += 30
+        if self._objects(graphs, iri, "rc:hasKnownCaveat"):
+            score += 35
+        if self._objects(graphs, iri, "rc:caveatDescription"):
+            score += 20
+        if self._subjects(graphs, "rc:hasColumn", iri):
+            score += 10
+        return score
 
     def _resource_brief_predicate_usage_subjects(
         self,

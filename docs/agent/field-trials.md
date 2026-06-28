@@ -2229,6 +2229,12 @@ few useful gaps:
   candidate summary. When pending query repairs matter, include
   `describe_query_context` output or default project TriG plus revision snapshot
   JSON with the Markdown bundle.
+- A context-slice frontier trial showed `resource_brief` high-degree incoming
+  references can hide business-critical columns behind generic references when
+  capped. Incoming-reference caps now rank resources with direct claims,
+  caveats, patterns, profile observations, staged revisions, or dataset/column
+  roles ahead of plain generic references, while still pointing exhaustive
+  review to paged `describe_resource`.
 - A profile/query-blocker handoff trial confirmed the intended route:
   `missing_storage_access` keeps DailyIndex profile review on query-context
   repair first; after storage repair, profile tasks point to

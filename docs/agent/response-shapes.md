@@ -807,6 +807,10 @@ caps point to paged `describe_resource` calls, blank-node reference caps point t
 caps point to graph export/narrowing because there is no paged predicate-usage
 browser yet. Raising `max_triples` does not recover route-capped resources; it
 only returns more raw triples for resources already selected.
+Incoming reference caps are usefulness-ranked before selection, so resources
+with direct claims, caveats, patterns, profile observations, staged revisions,
+or dataset/column roles are preferred over plain generic references. Use the
+paged `describe_resource` action when you need the exhaustive inbound list.
 `suggested_next_actions` can include `describe_query_context` for seed tables
 whose nested `dataset_contexts[].operational_warnings` contain query-planning
 errors or warnings. Non-table dataset seeds stay on context-slice/resource

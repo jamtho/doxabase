@@ -18317,6 +18317,65 @@ def test_resource_brief_context_slice_suggests_route_cap_recovery(
     assert "predicate-usage" in predicate_action.arguments["path"]
 
 
+def test_resource_brief_incoming_cap_prioritizes_lore_rich_references(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    value_type = "https://example.test/project#ConfidenceBand"
+    useful_column = "https://example.test/project#zz_confidence_code"
+    auxiliary_columns = "\n".join(
+        (
+            f"ex:aux_confidence_{index:02d} a rc:Column ; "
+            f'rdfs:label "Aux confidence {index:02d}" ; '
+            "rc:valueType ex:ConfidenceBand ."
+        )
+        for index in range(30)
+    )
+    db.import_turtle(
+        f"""
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:ConfidenceBand a rdfs:Class ;
+            rdfs:label "Confidence band" .
+
+        {auxiliary_columns}
+
+        ex:zz_confidence_code a rc:Column ;
+            rdfs:label "ZZ confidence code" ;
+            rc:valueType ex:ConfidenceBand .
+        """,
+        graph="map",
+    )
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:confidence_code_claim a rc:InterpretationClaim ;
+            rc:claimText "Confidence code controls calibration decisions." ;
+            rc:claimTarget ex:zz_confidence_code .
+        """,
+        graph="observations",
+    )
+
+    context_slice = db.describe_context_slice(
+        value_type,
+        profile="resource_brief",
+        max_triples=1000,
+    )
+
+    resource_iris = {resource.iri for resource in context_slice.resources}
+    assert useful_column in resource_iris
+    assert "https://example.test/project#aux_confidence_29" not in resource_iris
+    assert context_slice.route_counts["incoming_reference"] == 25
+    assert any(
+        "omitted 6 incoming reference(s)" in warning
+        for warning in context_slice.warnings
+    )
+
+
 def test_resource_brief_context_slice_suggests_blank_node_closure_on_route_cap(
     tmp_path: Path,
 ) -> None:
