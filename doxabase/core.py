@@ -1830,6 +1830,30 @@ class ProfileMapUpdateRecommendation:
 
 
 @dataclass(frozen=True)
+class ProfileScalarConflictOption:
+    observed_value: Any
+    representative_recommendation_index: int
+    recommendation_indexes: list[int]
+    duplicate_recommendation_indexes: list[int]
+    duplicate_profile_observation_iris: list[str]
+    suggested_next_action: SuggestedNextAction
+    suggested_next_call: str
+
+
+@dataclass(frozen=True)
+class ProfileScalarConflictGroup:
+    conflict_group_index: int
+    evidence_iri: str
+    resource: ResourceSummary
+    predicate: str
+    kind: str
+    current_value: Any
+    option_count: int
+    options: list[ProfileScalarConflictOption]
+    review_note: str
+
+
+@dataclass(frozen=True)
 class ProfileMetricVocabularyAdvisory:
     profile_observation_iri: str
     metric_advisory_index: int
@@ -1900,6 +1924,8 @@ class ProfileMapUpdateDraft:
     recommendations: list[ProfileMapUpdateRecommendation]
     recommendation_count: int
     representative_recommendation_indexes: list[int]
+    scalar_conflict_groups: list[ProfileScalarConflictGroup]
+    scalar_conflict_group_count: int
     metric_advisories: list[ProfileMetricVocabularyAdvisory]
     metric_advisory_count: int
     representative_metric_advisory_indexes: list[int]
@@ -8762,6 +8788,11 @@ class DoxaBase:
         type_advisory_status_counts = self._profile_type_advisory_status_counts(
             type_advisories
         )
+        scalar_conflict_groups = self._profile_update_scalar_conflict_groups(
+            recommendations,
+            dataset_iri=dataset_value,
+            evidence_iri=evidence_value,
+        )
         profile_supporting_pattern_iris = (
             self._profile_map_update_supporting_pattern_iris(
                 profile_run,
@@ -8799,6 +8830,8 @@ class DoxaBase:
             recommendations=recommendations,
             recommendation_count=len(recommendations),
             representative_recommendation_indexes=representative_recommendation_indexes,
+            scalar_conflict_groups=scalar_conflict_groups,
+            scalar_conflict_group_count=len(scalar_conflict_groups),
             metric_advisories=metric_advisories,
             metric_advisory_count=len(metric_advisories),
             representative_metric_advisory_indexes=(
@@ -9329,6 +9362,135 @@ class DoxaBase:
                 for recommendation in group:
                     skip_reasons[recommendation.recommendation_index] = reason
         return skip_reasons
+
+    def _profile_update_scalar_conflict_groups(
+        self,
+        recommendations: list[ProfileMapUpdateRecommendation],
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+    ) -> list[ProfileScalarConflictGroup]:
+        groups: dict[
+            tuple[str, str, str, str],
+            dict[str, list[ProfileMapUpdateRecommendation]],
+        ] = {}
+        for recommendation in recommendations:
+            if recommendation.kind not in PROFILE_SCALAR_MAP_UPDATE_KINDS:
+                continue
+            group_key = (
+                recommendation.evidence_iri,
+                recommendation.resource.iri,
+                recommendation.predicate,
+                recommendation.kind,
+            )
+            value_key = self._profile_update_scalar_value_key(
+                recommendation.observed_value
+            )
+            groups.setdefault(group_key, {}).setdefault(value_key, []).append(
+                recommendation
+            )
+
+        conflict_groups: list[ProfileScalarConflictGroup] = []
+        for (_group_evidence_iri, _resource_iri, predicate, kind), value_groups in (
+            groups.items()
+        ):
+            if len(value_groups) <= 1:
+                continue
+            first_recommendation = next(iter(value_groups.values()))[0]
+            options: list[ProfileScalarConflictOption] = []
+            for value_group in sorted(
+                value_groups.values(),
+                key=lambda group: min(
+                    recommendation.recommendation_index
+                    for recommendation in group
+                ),
+            ):
+                representative = value_group[0]
+                recommendation_indexes = [
+                    recommendation.recommendation_index
+                    for recommendation in value_group
+                ]
+                duplicate_recommendation_indexes = list(
+                    dict.fromkeys(
+                        index
+                        for recommendation in value_group
+                        for index in (
+                            recommendation.duplicate_recommendation_indexes
+                            or [recommendation.recommendation_index]
+                        )
+                    )
+                )
+                duplicate_profile_observation_iris = list(
+                    dict.fromkeys(
+                        observation_iri
+                        for recommendation in value_group
+                        for observation_iri in (
+                            recommendation.duplicate_profile_observation_iris
+                            or [recommendation.profile_observation_iri]
+                        )
+                    )
+                )
+                arguments = {
+                    "dataset_iri": dataset_iri,
+                    "evidence_iri": evidence_iri,
+                    "accepted_recommendation_indexes": [
+                        representative.recommendation_index
+                    ],
+                }
+                action = SuggestedNextAction(
+                    action_label="Review and stage chosen profile scalar value",
+                    tool_name="stage_profile_map_updates",
+                    mcp_tool_name="doxabase.stage_profile_map_updates",
+                    arguments=arguments,
+                    reason=(
+                        "This same-evidence scalar conflict is not "
+                        "default-stageable. Use this action only after "
+                        "reviewing the conflicting profile observations and "
+                        "choosing this observed value for the current map "
+                        "assertion."
+                    ),
+                    call=self._suggested_call_string(
+                        "stage_profile_map_updates",
+                        arguments,
+                    ),
+                )
+                options.append(
+                    ProfileScalarConflictOption(
+                        observed_value=representative.observed_value,
+                        representative_recommendation_index=(
+                            representative.recommendation_index
+                        ),
+                        recommendation_indexes=recommendation_indexes,
+                        duplicate_recommendation_indexes=(
+                            duplicate_recommendation_indexes
+                        ),
+                        duplicate_profile_observation_iris=(
+                            duplicate_profile_observation_iris
+                        ),
+                        suggested_next_action=action,
+                        suggested_next_call=action.call,
+                    )
+                )
+            conflict_groups.append(
+                ProfileScalarConflictGroup(
+                    conflict_group_index=len(conflict_groups),
+                    evidence_iri=evidence_iri,
+                    resource=first_recommendation.resource,
+                    predicate=predicate,
+                    kind=kind,
+                    current_value=first_recommendation.current_value,
+                    option_count=len(options),
+                    options=options,
+                    review_note=(
+                        "Same-evidence profile recommendations propose "
+                        "multiple values for this scalar map assertion. These "
+                        "options stay out of default profile_map_updates; "
+                        "choose at most one option after reviewing the "
+                        "supporting profile observations."
+                    ),
+                )
+            )
+        return conflict_groups
 
     def _with_profile_update_default_staging_metadata(
         self,

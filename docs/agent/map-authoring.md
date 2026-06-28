@@ -94,7 +94,8 @@ indexes whose rows are `default_stageable`, while `metric_vocabulary_review` and
 row-count representatives stay visible for review but require an explicit
 override call. Same-evidence scalar conflicts stay visible too, but the default
 map-staging action omits them; choose at most one observed row-count or nullable
-value explicitly after reading the supporting profile observations.
+value explicitly from `scalar_conflict_groups[].options[]` after reading the
+supporting profile observations.
 Profile type findings are not accepted `stage_profile_map_updates`
 recommendation indexes. `physical_type` and `value_type` are still persisted on
 profile observations when `update_map_column=False`; `draft_profile_map_updates`

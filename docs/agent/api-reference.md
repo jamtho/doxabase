@@ -471,8 +471,9 @@ project-specific metric kinds that need vocabulary review. It returns
 updates, `metric_advisories` for project-specific profile metrics,
 `type_advisories` for observed profile type findings, and a `review_note`. It
 also includes `recommendation_count`, `representative_recommendation_indexes`,
-metric advisory counts plus `representative_metric_advisory_indexes`, type
-advisory counts plus `representative_type_advisory_indexes`, grouped
+`scalar_conflict_groups`, `scalar_conflict_group_count`, metric advisory counts
+plus `representative_metric_advisory_indexes`, type advisory counts plus
+`representative_type_advisory_indexes`, grouped
 `suggested_next_action_groups` / `suggested_next_call_groups`, and flat
 top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
 Each metric/type advisory row also carries its row-local
@@ -497,8 +498,11 @@ without losing sibling support. `default_stageable=False` previews guardrails
 such as sampled row-count recommendations that default staging will skip unless
 the caller opts in, and same-evidence scalar conflicts where profile
 observations propose multiple values for one row-count or nullable assertion.
-It does not mutate or stage graph changes, and it skips sampled zero-null
-promotions. Metric advisories
+Those conflicts are also summarized in `scalar_conflict_groups[]`, where each
+option carries one explicit `stage_profile_map_updates` action for a chosen
+observed value. Option actions are not copied into the default flat
+`suggested_next_actions`. It does not mutate or stage graph changes, and it
+skips sampled zero-null promotions. Metric advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
 `promotion_patterns`, `context_patterns`, duplicate-group metadata, and
 structured `suggested_next_actions` for ontology/context review. Undefined or
@@ -529,7 +533,8 @@ so agents do not have to stage duplicate siblings just to preserve observation
 support or accidentally stage sampled row-count or conflicting scalar rows.
 Sampled row-count and same-evidence scalar-conflict representatives remain in
 `representative_recommendation_indexes` for explicit review/override; for a
-conflict, choose at most one observed value. If
+conflict, use `scalar_conflict_groups[].options[]` to choose at most one
+observed value. If
 `recommendation_count == 0` and either metric or type advisories are present,
 treat the draft as advisory-only: follow metric/type review lanes and do not
 call `stage_profile_map_updates`, because advisory rows are not accepted

@@ -1023,6 +1023,8 @@ draft.profile_observation_iris
 draft.recommendations
 draft.recommendation_count
 draft.representative_recommendation_indexes
+draft.scalar_conflict_groups
+draft.scalar_conflict_group_count
 draft.metric_advisories
 draft.metric_advisory_count
 draft.representative_metric_advisory_indexes
@@ -1080,10 +1082,39 @@ recommendations remain review candidates but are skipped by default unless
 `allow_sampled_row_count_updates=True`. Same-evidence scalar conflicts, such as
 multiple full-scan row counts for one dataset or multiple nullable values for
 one column, are also non-default-stageable until one value is chosen explicitly.
-`metric_advisories[]` rows name
-project-specific profile metric IRIs observed in the run and recommend
-vocabulary review before reusable comparison or map policy. Each advisory
-includes:
+
+`scalar_conflict_groups[]` gives a structured choose-one route for those
+non-default-stageable scalar conflicts:
+
+```python
+group.conflict_group_index
+group.evidence_iri
+group.resource
+group.predicate
+group.kind
+group.current_value
+group.option_count
+group.options
+group.review_note
+
+option.observed_value
+option.representative_recommendation_index
+option.recommendation_indexes
+option.duplicate_recommendation_indexes
+option.duplicate_profile_observation_iris
+option.suggested_next_action
+option.suggested_next_call
+```
+
+Each option's suggested action is a `stage_profile_map_updates` call for one
+representative recommendation index for that observed value. These option
+actions are intentionally not copied into the draft's flat
+`suggested_next_actions`; review the group and choose at most one option before
+calling one explicitly.
+
+`metric_advisories[]` rows name project-specific profile metric IRIs observed
+in the run and recommend vocabulary review before reusable comparison or map
+policy. Each advisory includes:
 
 ```python
 advisory.profile_observation_iri
@@ -1252,7 +1283,8 @@ row-count recommendations can still appear in
 `representative_recommendation_indexes` for review, but the default staging
 action omits them unless the caller explicitly opts in. Same-evidence scalar
 conflicts also stay visible for review but are omitted from the default staging
-action; pass at most one chosen value for each row-count or nullable assertion.
+action; use `scalar_conflict_groups[].options[]` to pick at most one chosen
+value for each row-count or nullable assertion.
 When same-evidence
 profile patterns target or imply the dataset or recommendation resources, the
 suggested staging arguments also include `supporting_patterns` so the staged map

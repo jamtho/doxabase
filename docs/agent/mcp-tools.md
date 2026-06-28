@@ -370,6 +370,7 @@ both lanes generate staged drafts, review or export those drafts together before
 applying either lane on its own.
 The draft
 also includes `recommendation_count`, `representative_recommendation_indexes`,
+`scalar_conflict_groups`, `scalar_conflict_group_count`,
 `metric_advisory_count`, `representative_metric_advisory_indexes`,
 `metric_advisory_status_counts`, `type_advisory_count`,
 `representative_type_advisory_indexes`, `type_advisory_status_counts`, and
@@ -399,7 +400,10 @@ staging action unless the caller explicitly opts in with
 `allow_sampled_row_count_updates=true`. Same-evidence scalar conflicts, such as
 two full-scan row counts for the same dataset or two nullable values for the
 same column, also get `default_stageable=False`; review the observations and
-choose at most one value explicitly. If
+choose at most one value explicitly. Use `scalar_conflict_groups[]` for the
+structured choose-one options; each option carries a
+`stage_profile_map_updates` action for one representative observed value, but
+those option actions are not part of the default `profile_map_updates` lane. If
 `recommendation_count == 0` and either metric or type advisories are present,
 handle the result as advisory-only: follow advisory grouped suggested actions and
 do not call `doxabase.stage_profile_map_updates`. When recommendations and

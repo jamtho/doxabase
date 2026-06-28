@@ -19847,6 +19847,35 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
         )
     assert len(unmapped_recommendations) == 1
     assert unmapped_recommendations[0].default_stageable is True
+    assert draft.scalar_conflict_group_count == 2
+    assert [group.kind for group in draft.scalar_conflict_groups] == [
+        "dataset_row_count_snapshot",
+        "column_nullable",
+    ]
+    row_count_group = draft.scalar_conflict_groups[0]
+    assert row_count_group.resource.iri == dataset
+    assert row_count_group.predicate == "rc:rowCountSnapshot"
+    assert row_count_group.current_value == 1000
+    assert {option.observed_value for option in row_count_group.options} == {
+        1200,
+        1210,
+    }
+    for option in row_count_group.options:
+        assert option.suggested_next_action.tool_name == "stage_profile_map_updates"
+        assert option.suggested_next_action.arguments == {
+            "dataset_iri": dataset,
+            "evidence_iri": evidence,
+            "accepted_recommendation_indexes": [
+                option.representative_recommendation_index
+            ],
+        }
+    nullable_group = draft.scalar_conflict_groups[1]
+    assert nullable_group.resource.iri == status_column
+    assert nullable_group.predicate == "rc:nullable"
+    assert {option.observed_value for option in nullable_group.options} == {
+        False,
+        True,
+    }
 
     default_action = draft.suggested_next_action_groups["profile_map_updates"][0]
     assert default_action.arguments == {
@@ -19912,6 +19941,87 @@ def test_profile_map_update_scalar_conflicts_are_not_default_stageable(
     assert chosen_stage.staged_revision is not None
     assert db.check_staged_revision_apply(
         chosen_stage.staged_revision.revision_iri
+    ).status == "ready"
+
+
+def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-conflict#"
+    dataset = f"{base}Invoices"
+    evidence = f"{base}InvoicesProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Invoices",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    for index, row_count in enumerate((120, 120, 121)):
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary=f"Invoices full profile pass {index}.",
+            evidence_summary="Invoices full profile evidence.",
+            evidence_sources=[f"test://invoices/full/{index}"],
+            shared_evidence_iri=evidence,
+            sample_size=row_count,
+            sample_scope="All rows in the local Invoices table.",
+            sample_method="DuckDB full-table profile.",
+            row_count=row_count,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+        )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.recommendation_count == 3
+    assert all(
+        recommendation.default_stageable is False
+        for recommendation in draft.recommendations
+    )
+    assert draft.suggested_next_action_groups == {}
+    assert draft.suggested_next_actions == []
+    assert draft.scalar_conflict_group_count == 1
+    conflict_group = draft.scalar_conflict_groups[0]
+    assert conflict_group.kind == "dataset_row_count_snapshot"
+    assert conflict_group.resource.iri == dataset
+    assert conflict_group.current_value == 100
+    assert conflict_group.option_count == 2
+    options_by_value = {
+        option.observed_value: option for option in conflict_group.options
+    }
+    assert set(options_by_value) == {120, 121}
+    duplicate_option = options_by_value[120]
+    assert len(duplicate_option.duplicate_recommendation_indexes) == 2
+    assert len(duplicate_option.duplicate_profile_observation_iris) == 2
+    assert duplicate_option.suggested_next_action.arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+        "accepted_recommendation_indexes": [
+            duplicate_option.representative_recommendation_index
+        ],
+    }
+
+    staged = db.stage_profile_map_updates(
+        **duplicate_option.suggested_next_action.arguments
+    )
+
+    assert staged.staged_recommendation_indexes == [
+        duplicate_option.representative_recommendation_index
+    ]
+    assert staged.status_counts == {
+        "staged": 1,
+        "skipped": 0,
+        "not_selected": 2,
+    }
+    assert staged.staged_revision is not None
+    described = db.describe_staged_revision(staged.staged_revision.revision_iri)
+    assert {
+        item.iri for item in described.supporting_observations
+    } == set(duplicate_option.duplicate_profile_observation_iris)
+    assert db.check_staged_revision_apply(
+        staged.staged_revision.revision_iri
     ).status == "ready"
 
 
