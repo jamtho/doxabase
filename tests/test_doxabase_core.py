@@ -13675,6 +13675,16 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert peer_action_plan.review_gate.blocking_reason_codes == []
     assert peer_action_plan.handoff_kind == "binding_values_required"
 
+    automatic_plan = db.draft_query_plan(dataset)
+
+    assert automatic_plan.handoff_kind == "context_review_required"
+    assert automatic_plan.source_context.selection_mode == "automatic"
+    assert automatic_plan.source_context.allow_context_blocked_candidate is False
+    assert automatic_plan.review_gate.context_blocked_candidate_used is False
+    assert automatic_plan.review_gate.blocking_reason_codes == [
+        "query_context_has_other_blockers"
+    ]
+
     automatic_allowed_plan = db.draft_query_plan(
         dataset,
         allow_context_blocked_candidate=True,
@@ -19400,6 +19410,112 @@ def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(
         "pattern_count": 1,
         "other_review_lanes": ["metric_vocabulary_review"],
         "note": type_advisory.mixed_support_note,
+    }
+
+
+def test_stage_profile_map_updates_keeps_mixed_advisory_vocabulary_out_of_map_patch(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#StatusCodeValue"
+    project_metric = "https://example.test/project#StatusCompletenessScore"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with shared metric and value-type evidence.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the Orders table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=12,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.91",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status used varchar storage and a project value type.",
+                "physical_type": "rc:Varchar",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+    pattern = db.record_pattern(
+        summary="Status profile needs metric and value type vocabulary.",
+        pattern_text=(
+            "StatusCompletenessScore measures populated status values, while "
+            "StatusCodeValue names the reviewed status domain."
+        ),
+        rationale="The same profile evidence supports both review lanes.",
+        pattern_targets=[project_metric, status_value_type],
+        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
+        evidence_iri=evidence,
+        map_implications=[project_metric, status_value_type],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+
+    assert draft.metric_advisories[0].mixed_support_patterns[0].iri == (
+        pattern.pattern_iri
+    )
+    assert draft.type_advisories[0].mixed_support_patterns[0].iri == (
+        pattern.pattern_iri
+    )
+    row_count_recommendation = next(
+        recommendation
+        for recommendation in draft.recommendations
+        if recommendation.kind == "dataset_row_count_snapshot"
+    )
+
+    staged = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[
+            row_count_recommendation.recommendation_index
+        ],
+    )
+
+    assert staged.staged_recommendation_indexes == [
+        row_count_recommendation.recommendation_index
+    ]
+    assert staged.not_selected_recommendation_indexes == []
+    assert staged.metric_advisory_count == 1
+    assert staged.type_advisory_count == 1
+    assert staged.staged_revision is not None
+    description = db.describe_staged_revision(staged.staged_revision.revision_iri)
+    patch_content = "\n".join(
+        patch.content or "" for patch in description.patches
+    )
+    assert "rc:rowCountSnapshot 12" in patch_content
+    assert project_metric not in patch_content
+    assert status_value_type not in patch_content
+    assert project_metric not in {anchor.iri for anchor in description.revision_anchors}
+    assert status_value_type not in {
+        anchor.iri for anchor in description.revision_anchors
     }
 
 

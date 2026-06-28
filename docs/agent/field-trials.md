@@ -1759,7 +1759,9 @@ few useful gaps:
   `repair_first_revision_iris`. Treat that warning/lane as stronger than
   `would_restage`: inspect validation diagnostics or call
   `draft_staged_revision_rebase()` before creating another same-payload
-  successor.
+  successor. A later rebase probe confirmed real batch restage still operates
+  on the caller's supplied IRIs, so run dry-run first and pass only
+  `would_restage_revision_iris` when you want a purely mechanical batch.
 - A profile/query integration trial showed a draft with scalar conflicts and a
   default-stageable unmapped column could still put the profile map-update
   action first while query context had a hard `missing_storage_access` blocker.

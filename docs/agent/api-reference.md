@@ -1303,6 +1303,10 @@ candidates. Stale sources whose staged-time validation failed and whose
 post-batch route is repair-first are withheld from that bulk list and returned
 in `repair_first_revision_iris`; inspect their validation diagnostics or call
 `draft_staged_revision_rebase` before creating another same-payload successor.
+The withholding happens in the dry-run worklist. A real batch call still
+restages the source IRIs supplied by the caller, including repair-first rows,
+and then routes any created successor through repair/replacement review instead
+of applying it.
 In dry-run rows that would be restaged,
 `current_revision_by_source` still points to the stale source because no
 successor exists yet. `skipped_not_restageable` rows may be ready,

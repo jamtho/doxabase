@@ -212,6 +212,12 @@ stays mechanical-restage-safe. Treat the warning as stronger than
 `action="would_restage"`: inspect `validation_results` or call
 `draft_staged_revision_rebase()` before creating another same-payload
 mechanical successor.
+This filtering is a dry-run worklist contract. A real
+`restage_staged_revisions(..., dry_run=False)` call still restages the source
+IRIs it is given, including repair-first validation-failed rows; those
+successors should route to repair/replacement review rather than apply. Use a
+dry run first and pass only `would_restage_revision_iris` when you want a purely
+mechanical batch.
 It also carries `source_snapshot_evidence` /
 `source_snapshot_evidence_completeness` and `current_snapshot_evidence` /
 `current_snapshot_evidence_completeness`; read those before trusting exact
