@@ -4033,7 +4033,7 @@ Each `batch.items` row reports `source_revision_iri`, `summary`,
 `not_restageable_reason`, `restaged_revision_iri`,
 `restaged_from`, `current_restaged_by`, `current_revision_iri`,
 `next_action_after`, `next_action_queue_item_after`,
-`suggested_next_actions_after`, and `note`.
+`suggested_next_actions_after`, `repair_first_warning`, and `note`.
 The snapshot evidence fields use the same status object as revision list rows,
 and the completeness labels match grouped Markdown (`complete`, `partial`,
 `partial-extra-rows`, `history-only`, `snapshot-only`, or `missing`). Read them
@@ -4087,7 +4087,11 @@ the source-failure warning remains visible but the ready row can route to
 `apply_after_review`.
 Rows with failed staged-time validation keep a `repair_or_replace` compact route
 when no successor exists, even when later drift makes `status_after` a live
-conflict.
+conflict. In that case, or when a same-payload real restage still routes to
+repair, `repair_first_warning` names the hazard directly. Treat a non-empty
+warning as stronger than `action="would_restage"`: inspect validation results or
+call `draft_staged_revision_rebase()` before creating another mechanical
+successor.
 `stale_resolution_state_after == "restaged_successor_stale_unresolved"` means a
 skipped already-handled source points to a current successor that is itself
 stale; inspect or restage `current_revision_iri` before applying anything.

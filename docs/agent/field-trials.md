@@ -1747,6 +1747,15 @@ few useful gaps:
   `structured_warnings`, with suggested rerun arguments naming the shared graph
   roles to move into per-framing patches when fallback framings should avoid
   that context.
+- A staged rebase/versioning trial showed batch dry-runs can still classify a
+  validation-failed stale source as `would_restage` even when the effective
+  next route is repair-first. This remains intentionally permissive because
+  later graph state can sometimes fill a source validation gap, but batch items
+  now expose `repair_first_warning` when the source failed staged-time
+  validation and `routing_decision_after="repair_or_replace"`. Treat that
+  warning as stronger than `would_restage`: inspect validation diagnostics or
+  call `draft_staged_revision_rebase()` before creating another same-payload
+  successor.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

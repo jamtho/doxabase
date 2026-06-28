@@ -1008,6 +1008,82 @@ def test_restage_staged_revisions_tool_can_dry_run(
     )["count"] == staged_count_before
 
 
+def test_restage_staged_revisions_tool_serializes_repair_first_warning(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    scope = "https://example.test/project#DispatchTemporalScope"
+    clock = "https://example.test/project#dispatch_events__event_local_time"
+    timezone = "https://example.test/project#dispatch_events__timezone_hint"
+    db.import_turtle(
+        """
+        @prefix ft: <https://example.test/project/systematisation#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ft:TemporalInterpretationScope a rdfs:Class .
+
+        ft:clockColumn a rdf:Property .
+
+        ft:timezoneEvidenceColumn a rdf:Property .
+        """,
+        graph="ontology",
+    )
+    db.import_turtle(
+        """
+        @prefix ft: <https://example.test/project/systematisation#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+        ft:TemporalInterpretationScopeShape a sh:NodeShape ;
+            sh:targetClass ft:TemporalInterpretationScope ;
+            sh:property [
+                sh:path ft:timezoneEvidenceColumn ;
+                sh:minCount 1 ;
+                sh:nodeKind sh:IRI
+            ] .
+        """,
+        graph="shapes",
+    )
+    source = db.stage_graph_revision(
+        summary="Stage incomplete temporal scope",
+        rationale="The source intentionally fails staged validation.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ft: <https://example.test/project/systematisation#> .
+
+                    <{scope}> a ft:TemporalInterpretationScope ;
+                        ft:clockColumn <{clock}> .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    db.import_turtle(
+        f"""
+        @prefix ft: <https://example.test/project/systematisation#> .
+
+        <{scope}> ft:timezoneEvidenceColumn <{timezone}> .
+        """,
+        graph="map",
+    )
+
+    result = restage_staged_revisions_tool(
+        db,
+        revision_iris=[source.revision_iri],
+        dry_run=True,
+    )
+
+    item = result["items"][0]
+    assert item["action"] == "would_restage"
+    assert item["source_staged_validation_status"] == "failed"
+    assert item["routing_decision_after"] == "repair_or_replace"
+    assert item["repair_first_warning"] is not None
+    assert "Repair-first warning" in item["repair_first_warning"]
+    assert item["repair_first_warning"] in item["note"]
+
+
 def test_export_staged_revisions_tool_resolves_relative_paths(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

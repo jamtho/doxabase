@@ -751,6 +751,7 @@ class StagedGraphRevisionBatchRestageItem:
     next_action_after: RevisionNextAction | None
     next_action_queue_item_after: RevisionNextActionQueueItem | None
     suggested_next_actions_after: list[SuggestedNextAction]
+    repair_first_warning: str | None
     note: str
 
 
@@ -20824,6 +20825,31 @@ class DoxaBase:
             normalized = normalized[len(restage_prefix) :].strip()
         return normalized or summary.strip()
 
+    @staticmethod
+    def _batch_restage_repair_first_warning(
+        *,
+        source_staged_validation_status: str,
+        routing_decision_after: str,
+        source_revision_iri: str,
+        current_revision_iri: str,
+    ) -> str | None:
+        if (
+            source_staged_validation_status != "failed"
+            or routing_decision_after != "repair_or_replace"
+        ):
+            return None
+        if current_revision_iri == source_revision_iri:
+            current_note = "the selected source revision"
+        else:
+            current_note = f"current revision {current_revision_iri}"
+        return (
+            "Repair-first warning: the source failed staged-time validation "
+            f"and {current_note} routes to repair_or_replace. Inspect "
+            "validation_results or call draft_staged_revision_rebase before "
+            "restaging or applying; a same-payload mechanical restage may only "
+            "produce another repair candidate."
+        )
+
     def restage_staged_revisions(
         self,
         revision_iris: Iterable[str] | str,
@@ -21059,6 +21085,16 @@ class DoxaBase:
                 current_check.decision,
                 next_action_after,
             )
+            repair_first_warning = (
+                self._batch_restage_repair_first_warning(
+                    source_staged_validation_status=(
+                        source_staged_validation_status
+                    ),
+                    routing_decision_after=routing_decision_after,
+                    source_revision_iri=source.iri,
+                    current_revision_iri=current_revision_iri,
+                )
+            )
             next_action_queue_item_after = self._revision_next_action_queue_item(
                 row_iri=current_revision_iri,
                 next_action=next_action_after,
@@ -21101,6 +21137,8 @@ class DoxaBase:
                     "validation diagnostics and repair or replace the framing "
                     "before applying."
                 )
+            if repair_first_warning is not None:
+                note = f"{note} {repair_first_warning}"
             items.append(
                 StagedGraphRevisionBatchRestageItem(
                     source_revision_iri=source.iri,
@@ -21148,6 +21186,7 @@ class DoxaBase:
                     next_action_after=next_action_after,
                     next_action_queue_item_after=next_action_queue_item_after,
                     suggested_next_actions_after=suggested_next_actions_after,
+                    repair_first_warning=repair_first_warning,
                     note=note,
                 )
             )

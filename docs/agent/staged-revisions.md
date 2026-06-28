@@ -204,6 +204,11 @@ Each item also carries `source_staged_validation_status` /
 `source_validation_result_count` and `current_staged_validation_status` /
 `current_validation_result_count`, so a dry-run consumer can see stored
 staged-time validation failures without joining against the grouped summaries.
+When the source failed staged-time validation and the item route after the
+batch decision is `repair_or_replace`, `repair_first_warning` is populated.
+Treat that warning as stronger than `action="would_restage"`: inspect
+`validation_results` or call `draft_staged_revision_rebase()` before creating
+another same-payload mechanical successor.
 It also carries `source_snapshot_evidence` /
 `source_snapshot_evidence_completeness` and `current_snapshot_evidence` /
 `current_snapshot_evidence_completeness`; read those before trusting exact

@@ -6410,6 +6410,10 @@ def test_batch_restage_items_report_validation_failed_successor_status(
     assert "current revision fails validation" in item.note
     assert "stage a repaired or alternative candidate" in item.note
     assert "stage_map_assertion_change replacement" in item.note
+    assert item.repair_first_warning is not None
+    assert "Repair-first warning" in item.repair_first_warning
+    assert "same-payload mechanical restage" in item.repair_first_warning
+    assert item.repair_first_warning in item.note
     assert item.next_action_after is not None
     assert item.next_action_after.action_type == "repair_or_replace"
     assert item.next_action_after.queue == "repair_or_replace"
@@ -6511,6 +6515,19 @@ def test_restage_from_staged_validation_failure_routes_to_repair_when_current_st
     assert stale_check.status == "conflict"
     assert stale_check.blocking_reasons == ["target_count_drift"]
 
+    dry_run = db.restage_staged_revisions([source.revision_iri], dry_run=True)
+    dry_item = dry_run.items[0]
+    assert dry_item.action == "would_restage"
+    assert dry_run.would_restage_revision_iris == [source.revision_iri]
+    assert dry_item.source_staged_validation_status == "failed"
+    assert dry_item.routing_decision_after == "repair_or_replace"
+    assert dry_item.next_action_after is not None
+    assert dry_item.next_action_after.queue == "repair_or_replace"
+    assert dry_item.repair_first_warning is not None
+    assert "Repair-first warning" in dry_item.repair_first_warning
+    assert "same-payload mechanical restage" in dry_item.repair_first_warning
+    assert dry_item.repair_first_warning in dry_item.note
+
     restaged = db.restage_staged_revision(source.revision_iri)
     check = db.check_staged_revision_apply(restaged.revision_iri)
 
@@ -6542,6 +6559,7 @@ def test_restage_from_staged_validation_failure_routes_to_repair_when_current_st
     assert batch.items[0].next_action_after is not None
     assert batch.items[0].next_action_after.queue == "repair_or_replace"
     assert "source failed staged-time validation" in batch.items[0].note
+    assert batch.items[0].repair_first_warning is None
 
     export = db.export_staged_revisions(
         [source.revision_iri, restaged.revision_iri],
