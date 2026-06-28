@@ -48,6 +48,9 @@ profile or query repair work.
 Tasks labelled `query_repair_review` point back to `describe_query_context`,
 not directly to `draft_query_plan`, so agents can inspect reviewed repair
 templates before drafting or executing any route.
+Tasks labelled `profile_review` are scoped by `profile_evidence_iri`; keep that
+evidence IRI with the work item even when the first suggested action is a shared
+dataset-level blocker review such as `describe_query_context`.
 
 `doxabase.list_entities`
 

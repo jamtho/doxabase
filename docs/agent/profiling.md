@@ -134,6 +134,9 @@ review the staged profile-map update before calling `stage_profile_map_updates`
 again for the same dataset/evidence. Other staged revisions that merely share
 the same profile evidence remain staged-frontier work, but they should not be
 treated as duplicate profile-map-update staging.
+For any `profile_review` task, keep `profile_evidence_iri` with the work item.
+It distinguishes multiple profile drafts on the same dataset even when their
+first suggested action is the same dataset-level `describe_query_context` call.
 The returned candidates and Markdown `Profile Route Bridge` table preserve
 matched profile route keys, so reviewers can see which draft duplicate/advisory
 group led to each staged row without reverse-joining action indexes by hand.

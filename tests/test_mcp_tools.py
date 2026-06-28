@@ -524,6 +524,7 @@ def test_project_brief_tool_gates_duplicate_profile_staging(
     assert profile_task["pending_staged_profile_update_iris"] == [
         staged["staged_revision"]["revision_iri"]
     ]
+    assert profile_task["profile_evidence_iri"] == evidence
     assert "Pending staged profile update(s)" in profile_task["reason"]
     assert profile_task["suggested_next_action"]["tool_name"] == (
         "draft_profile_map_updates"
@@ -597,6 +598,7 @@ def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
         task["task_type"] for task in result["recommended_next_tasks"]
     ] == ["staged_frontier_review", "profile_review", "staged_review"]
     profile_task = result["recommended_next_tasks"][1]
+    assert profile_task["profile_evidence_iri"] == evidence
     assert profile_task["pending_staged_profile_update_iris"] == []
     assert "Pending staged profile update(s)" not in profile_task["reason"]
     assert profile_task["suggested_next_action"]["tool_name"] == (

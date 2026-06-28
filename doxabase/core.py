@@ -318,6 +318,7 @@ class ProjectBriefRecommendedTask:
     reason: str
     suggested_next_action: SuggestedNextAction | None
     suggested_next_call: str | None
+    profile_evidence_iri: str | None = None
     pending_staged_repair_iris: list[str] = field(default_factory=list)
     pending_staged_profile_update_iris: list[str] = field(default_factory=list)
 
@@ -3521,6 +3522,7 @@ class DoxaBase:
                         ),
                         suggested_next_action=action,
                         suggested_next_call=action.call,
+                        profile_evidence_iri=draft.evidence_iri,
                         pending_staged_profile_update_iris=(
                             pending_staged_profile_update_iris
                         ),

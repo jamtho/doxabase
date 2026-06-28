@@ -231,6 +231,71 @@ def test_project_brief_surfaces_singleton_profile_draft(
     )
 
 
+def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-query#"
+    dataset = f"{base}Tickets"
+    evidence_iris = [
+        f"{base}TicketsProfileEvidenceA",
+        f"{base}TicketsProfileEvidenceB",
+    ]
+
+    db.record_map_dataset(
+        dataset,
+        label="Tickets",
+        is_table=True,
+        row_count_snapshot=1000,
+        path_templates=["tickets/date={date}/*.parquet"],
+    )
+    db.record_map_physical_layout(
+        f"{base}TicketsParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+    for index, evidence_iri in enumerate(evidence_iris):
+        db.record_dataset_profile(
+            dataset,
+            summary=f"Tickets physical profile pass {index}.",
+            evidence_summary="Tickets full-profile evidence.",
+            evidence_sources=[f"test://tickets/full/{index}"],
+            evidence_iri=evidence_iri,
+            sample_size=1200 + index,
+            sample_scope="All rows in the local Tickets table.",
+            sample_method="DuckDB full-table profile.",
+            row_count=1200 + index,
+            update_map_snapshot=False,
+        )
+
+    brief = db.project_brief(limit=5, profile_candidate_limit=2)
+
+    profile_tasks = [
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "profile_review"
+    ]
+    assert len(profile_tasks) == 2
+    assert {task.profile_evidence_iri for task in profile_tasks} == set(
+        evidence_iris
+    )
+    assert {
+        task.suggested_next_call for task in profile_tasks
+    } == {f"describe_query_context(iri='{dataset}')"}
+    assert all(
+        task.suggested_next_action is not None
+        and task.suggested_next_action.tool_name == "describe_query_context"
+        for task in profile_tasks
+    )
+    query_tasks = [
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "query_repair_review"
+    ]
+    assert query_tasks[0].profile_evidence_iri is None
+
+
 def test_project_brief_reserves_recommendation_slots_by_queue(
     tmp_path: Path,
 ) -> None:

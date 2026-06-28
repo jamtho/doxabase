@@ -202,6 +202,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "reason": "...",
             "suggested_next_action": {...},
             "suggested_next_call": "describe_query_context(...)",
+            "profile_evidence_iri": null,
             "pending_staged_repair_iris": [],
             "pending_staged_profile_update_iris": [],
         },
@@ -235,6 +236,10 @@ task's suggested action is read-only `draft_profile_map_updates` instead of
 another `stage_profile_map_updates` call. Generic same-evidence staged work
 remains visible through `staged_frontier_review` / `staged_review` but does not
 populate `pending_staged_profile_update_iris`.
+For `profile_review` tasks, `profile_evidence_iri` names the profile evidence
+that scoped the task. Use it even when `suggested_next_action` is a shared
+blocker action such as `describe_query_context`, because multiple profile
+drafts for the same dataset can point at the same blocker first.
 `datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue

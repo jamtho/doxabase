@@ -36,6 +36,9 @@ When arriving cold, use this route before reading every reference doc.
 4. If `project_brief.recommended_next_tasks[]` includes
    `staged_frontier_review`, call `doxabase.plan_staged_revision_recovery`
    before staging more profile or query repair work.
+   If it includes `profile_review`, keep the task's `profile_evidence_iri`
+   with your notes; multiple profile drafts on one dataset may first route to
+   the same dataset-level blocker action.
 5. Call `doxabase.graph_overview` to see graph roles, counts, classes, and
    predicates.
 6. Call `doxabase.search` for remembered terms, dataset names, caveats, source
