@@ -18,6 +18,13 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
   claims, or observations. It can also start from an `rc:GraphRevision` seed
   when the revision itself is the handoff entry point.
 
+When lexical search finds a likely pattern, seed that pattern directly with
+`profile="pattern_brief"` before trying a broad dataset slice. Pattern seeds
+usually give a smaller, clearer handoff for the synthesized lore, support, and
+evidence that search found. Use `describe_resource()` for a quick resource card,
+but do not treat it as high-degree lore recovery; it does not carry slice route
+counts, omitted counts, or offset-style browsing.
+
 Dataset and deep-lore slices also understand profile seeds. A seed
 `rc:ProfileObservation` expands to its observed asset/column, evidence, value
 frequencies, profile metric nodes, and the observed dataset when available. A
@@ -127,7 +134,9 @@ small. Raw RDF is capped by `max_triples`, but structured contexts still return
 their full selected summaries; wide datasets or very broad seed sets emit a
 warning and should usually be narrowed to a column, profile, metric, or pattern
 seed for a smaller handoff. Follow `suggested_next_actions` to narrow to linked
-patterns first; raise `max_triples` only when exact raw RDF triples are needed.
+patterns first; those pattern suggestions prefer route-relevant linked patterns
+over broad filler when the structured dataset context exposes that distinction.
+Raise `max_triples` only when exact raw RDF triples are needed.
 Mapped column seeds narrow the route explanation and raw RDF neighborhood, but
 `dataset_contexts` still includes the owning dataset's full selected column
 inventory; use a profile, metric, or pattern seed when the full table inventory

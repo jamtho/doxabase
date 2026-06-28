@@ -64,6 +64,16 @@ is also a resource-valued field, usually the partition column IRI or CURIE. Do
 not pass the literal template placeholder such as `"event_date"` or `"date"`;
 keep that token in `path_template`.
 
+Map helpers are not only for tables. For an API endpoint, document collection,
+message stream, model artifact, or other non-tabular asset, call
+`record_map_dataset(..., is_table=False, extra_types=[...])` with project
+types when useful, then attach caveats, storage or access metadata, evidence,
+claims, observations, and patterns as usual. Use `record_map_column` only for
+real table-like fields. For non-tabular handoffs, prefer
+`describe_resource()` or `describe_context_slice()` unless you are intentionally
+testing executable physical query planning; query-planning helpers are still
+table/storage oriented.
+
 ## When To Use Map Helpers
 
 Use map helpers when you are comfortable saying:

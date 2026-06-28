@@ -8052,6 +8052,8 @@ class DoxaBase:
             truncated=truncated,
             dataset_contexts=dataset_contexts.values(),
             pattern_contexts=pattern_contexts.values(),
+            resources=resources,
+            lookup_graphs=all_lookup_graphs,
         )
 
         return ContextSlice(
@@ -8102,8 +8104,11 @@ class DoxaBase:
         truncated: bool,
         dataset_contexts: Iterable[DatasetDescription],
         pattern_contexts: Iterable[PatternDescription],
+        resources: Mapping[str, list[ContextSliceRoute]],
+        lookup_graphs: list[str],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
+        dataset_context_list = list(dataset_contexts)
 
         def add_slice_action(
             arguments: dict[str, Any],
@@ -8127,7 +8132,7 @@ class DoxaBase:
 
         seed_iris_set = set(seed_iris)
         seen_dataset_iris: set[str] = set()
-        for dataset in dataset_contexts:
+        for dataset in dataset_context_list:
             if dataset.iri not in seed_iris_set or dataset.iri in seen_dataset_iris:
                 continue
             issue_codes = sorted(
@@ -8166,7 +8171,19 @@ class DoxaBase:
 
         seen_pattern_iris: set[str] = set()
         pattern_action_count = 0
-        for pattern_context in pattern_contexts:
+        linked_pattern_relevance_ranks = (
+            self._context_slice_linked_pattern_relevance_ranks(dataset_context_list)
+        )
+        sorted_pattern_contexts = sorted(
+            pattern_contexts,
+            key=lambda pattern_context: self._context_slice_pattern_action_key(
+                pattern_context,
+                resources=resources,
+                lookup_graphs=lookup_graphs,
+                linked_pattern_relevance_ranks=linked_pattern_relevance_ranks,
+            ),
+        )
+        for pattern_context in sorted_pattern_contexts:
             if pattern_context.iri in seen_pattern_iris:
                 continue
             seen_pattern_iris.add(pattern_context.iri)
@@ -8210,6 +8227,82 @@ class DoxaBase:
             action_label="Return full raw RDF for slice",
         )
         return actions
+
+    def _context_slice_pattern_action_key(
+        self,
+        pattern_context: PatternDescription,
+        *,
+        resources: Mapping[str, list[ContextSliceRoute]],
+        lookup_graphs: list[str],
+        linked_pattern_relevance_ranks: Mapping[str, int],
+    ) -> tuple[int, int, int, str, str]:
+        routes = resources.get(pattern_context.iri, [])
+        if not routes:
+            return (
+                999,
+                999,
+                999,
+                pattern_context.summary or pattern_context.iri,
+                pattern_context.iri,
+            )
+        best_route_key = min(
+            self._context_slice_pattern_action_route_key(route) for route in routes
+        )
+        if pattern_context.iri in linked_pattern_relevance_ranks:
+            best_route_key = min(
+                best_route_key,
+                (
+                    linked_pattern_relevance_ranks[pattern_context.iri],
+                    best_route_key[1],
+                    best_route_key[2],
+                ),
+            )
+        return (
+            *best_route_key,
+            self._display_label_from_graphs(lookup_graphs, pattern_context.iri)
+            or pattern_context.summary
+            or "",
+            pattern_context.iri,
+        )
+
+    def _context_slice_pattern_action_route_key(
+        self,
+        route: ContextSliceRoute,
+    ) -> tuple[int, int, int]:
+        if route.route == "seed":
+            return (-1, route.depth, self._context_slice_route_priority(route.route))
+        if route.route.startswith("linked_pattern_"):
+            relevance_tier = route.route.removeprefix("linked_pattern_")
+            return (
+                self._linked_pattern_relevance_rank(relevance_tier),
+                route.depth,
+                self._context_slice_route_priority(route.route),
+            )
+        if route.route == "linked_pattern":
+            return (50, route.depth, self._context_slice_route_priority(route.route))
+        return (
+            100 + self._context_slice_route_priority(route.route),
+            route.depth,
+            self._context_slice_route_priority(route.route),
+        )
+
+    def _context_slice_linked_pattern_relevance_ranks(
+        self,
+        dataset_contexts: Iterable[DatasetDescription],
+    ) -> dict[str, int]:
+        ranks: dict[str, int] = {}
+        for dataset in dataset_contexts:
+            for reason in dataset.linked_pattern_reasons:
+                if not reason.match_groups:
+                    continue
+                rank = min(
+                    self._linked_pattern_relevance_rank(group.relevance_tier)
+                    for group in reason.match_groups
+                )
+                current_rank = ranks.get(reason.pattern_iri)
+                if current_rank is None or rank < current_rank:
+                    ranks[reason.pattern_iri] = rank
+        return ranks
 
     @staticmethod
     def _context_slice_structured_context_warnings(

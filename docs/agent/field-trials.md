@@ -1909,6 +1909,24 @@ few useful gaps:
   evolution outside profile metrics, generic RDF slicing, non-tabular assets,
   and large-slice pressure as areas that should be deliberately trialed rather
   than expected to emerge from staged-revision polish.
+- A seeded ontology/SHACL trial confirmed that systematisation helpers can
+  carry project ontology and shape patches, including an intentionally invalid
+  diagnostic framing, but agents need the shared-context warning in hand before
+  drafting. Put provisional ontology and shape patches in per-framing additions
+  when a fallback should remain pattern-first or map-only, and use
+  `link_alternatives=False` when the first framing is diagnostic rather than
+  the preferred comparison anchor.
+- A non-tabular asset trial showed that `record_map_dataset(is_table=False)`
+  plus project `extra_types`, caveats, evidence, observations, and patterns is
+  enough to model API or document-like assets without table columns. Start
+  retrieval from `describe_resource()` or `describe_context_slice()` unless the
+  trial is explicitly about table/storage query execution.
+- A bounded-retrieval trial showed that broad deep-lore slices can still find
+  the right lore while suggesting unhelpful broad filler patterns first.
+  Truncated pattern-narrowing suggestions now rank linked patterns by structured
+  relevance tiers from dataset context. Agents should still seed a search-found
+  pattern directly with `profile="pattern_brief"` when lexical search has
+  already identified the synthesis they need.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

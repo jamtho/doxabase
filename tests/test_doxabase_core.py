@@ -17240,6 +17240,69 @@ def test_context_slice_truncation_suggests_pattern_narrowing(
     ]
 
 
+def test_context_slice_truncation_ranks_linked_patterns_before_filler(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/bounded#Events"
+    column = "https://example.test/bounded#EventsStatus"
+    db.record_map_dataset(
+        dataset,
+        label="Bounded events",
+        is_table=True,
+        columns=[column],
+    )
+    db.record_map_column(
+        column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    for index in range(4):
+        db.record_pattern(
+            summary=f"AAA filler pattern {index}",
+            pattern_text="Filler lore should not outrank directly linked lore.",
+            rationale="This is broad support noise for truncation ordering.",
+            pattern_targets=[f"https://example.test/bounded#Filler{index}"],
+            map_implications=[dataset],
+            evidence_sources=[f"test://filler-{index}"],
+        )
+    key_claim = db.record_claim_observation(
+        summary="Rare status failure claim.",
+        claim_text="LORE-ANCHOR rare_delta_failure means status replay.",
+        claim_kind="rc:CaveatClaim",
+        claim_targets=[column],
+        evidence_sources=["test://rare-delta-failure"],
+    )
+    key_pattern = db.record_pattern(
+        summary="ZZZ key rare-delta pattern",
+        pattern_text="LORE-ANCHOR rare_delta_failure requires status replay checks.",
+        rationale="This pattern directly targets the seed dataset column.",
+        pattern_targets=[column],
+        supporting_claims=[key_claim.claim_iri],
+        evidence_sources=["test://rare-delta-failure-pattern"],
+    )
+
+    context_slice = db.describe_context_slice(
+        dataset,
+        profile="deep_lore",
+        max_triples=8,
+    )
+
+    assert context_slice.truncated is True
+    narrow_actions = [
+        action
+        for action in context_slice.suggested_next_actions
+        if action.action_label == "Narrow to pattern context"
+    ]
+    assert narrow_actions
+    assert narrow_actions[0].arguments == {
+        "seed_iris": [key_pattern.pattern_iri],
+        "profile": "pattern_brief",
+        "max_triples": 8,
+    }
+
+
 def test_truncated_pattern_context_slice_does_not_suggest_self_narrowing(
     tmp_path: Path,
 ) -> None:

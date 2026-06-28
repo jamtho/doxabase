@@ -42,6 +42,25 @@ For multi-framing drafts, read `structured_warnings`. The warning code
 `suggested_rerun_arguments` names the graph roles to move into per-framing
 patches when a fallback should avoid that semantic context.
 
+## Project Ontology And Shapes
+
+When an awkward hunch needs a project vocabulary term, shape, or constraint,
+stage it with the candidate graph move instead of mutating `ontology` or
+`shapes` directly. Put project vocabulary in `ontology`, project validation
+rules in `shapes`, and the current-best operational facts in `map`.
+
+If one framing is "ontology or shape first" and another is a pattern-only or
+map-only fallback, keep the ontology and shape patches in that framing's own
+additions rather than `shared_additions`. Shared ontology or shape context is
+included in every staged preview, so it can accidentally make a fallback depend
+on provisional vocabulary it was meant to avoid.
+
+It is often useful to stage one complete shape-backed framing beside an
+intentionally incomplete or diagnostic sibling. Keep the diagnostic sibling
+reviewable, set `link_alternatives=False` when the first framing is not the
+preferred comparison anchor, and use stored validation results to explain what
+the shape would require before choosing the durable model.
+
 ## Route The Draft
 
 Use `next_action_queue` to separate ready framings from validation failures,
