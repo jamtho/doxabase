@@ -1740,8 +1740,10 @@ inventory and carry `database_relation_template_source_mismatch` instead of a
 source template, storage-access target, candidate relation value for review,
 and ordered `stage_map_assertion_change` templates for adding the reviewed
 relation identifier and optionally removing the misplaced source template. Each
-repair action declares `required_extra_arguments=["rationale"]`; add a reviewed
-rationale to the copied arguments before calling `stage_map_assertion_change`.
+add-template action declares `required_extra_arguments=["object", "rationale"]`
+and `placeholder_fields=["object"]`; replace `object` with the reviewed
+relation identifier and add a reviewed rationale before calling
+`stage_map_assertion_change`.
 These cards do not resolve credentials, endpoint profiles, or executable SQL.
 `review_reasons` may include
 info-only notes; use `review_required` to tell whether any warning or error
@@ -1878,8 +1880,9 @@ repair_hint.actions[].condition
 Add actions use `arguments_template` with placeholders for reviewed values and
 caller rationale; remove actions may use ready `arguments` plus the same
 required `rationale` field. Storage protocol/location repair templates also
-name `placeholder_fields` and `reviewed_value_fields` so generic repair scripts
-can replace reviewed values without issue-specific field guessing.
+name `placeholder_fields` and `reviewed_value_fields`; database relation
+add-template repairs do the same for `object` so generic repair scripts can
+replace reviewed values without issue-specific field guessing.
 `ambiguous_physical_layout` includes
 the distinct file-format/compression signatures and linked layout IRIs; when it
 is present, `draft_query_plan` leaves `scan.function` unset instead of guessing

@@ -11356,6 +11356,9 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert repair_actions[1]["arguments_template"]["predicate"] == (
         "rc:hasStorageAccess"
     )
+    assert repair_actions[1]["placeholder_fields"] == ["object"]
+    assert repair_actions[1]["reviewed_value_fields"] == ["object"]
+    assert "revision_anchors" not in repair_actions[1]["arguments_template"]
     assert context.suggested_repair_action_group_count == 1
     repair_group = context.suggested_repair_action_groups[0]
     assert repair_group.group_name == "query_repair_review"
@@ -11375,6 +11378,9 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert repair_group.actions[1]["arguments_template"]["predicate"] == (
         "rc:hasStorageAccess"
     )
+    assert repair_group.actions[1]["placeholder_fields"] == ["object"]
+    assert repair_group.actions[1]["reviewed_value_fields"] == ["object"]
+    assert "revision_anchors" not in repair_group.actions[1]["arguments_template"]
     assert [issue.severity for issue in context.issues[:2]] == ["error", "error"]
     assert {issue.domain for issue in context.issues} == {"query_planning"}
     assert context.query_target_decision.status == "no_candidate"
@@ -11384,6 +11390,46 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert context.query_target_decision.direct_review_required is None
     assert context.query_target_decision.selected_candidate_direct_clean is None
     assert context.query_target_decision.reason_codes == []
+
+
+def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#messages_storage",
+        label="Messages storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_map_dataset(dataset, label="Messages", is_table=True)
+
+    context = db.describe_query_context(dataset)
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+    assert missing_storage.details is not None
+    link_action = missing_storage.details["repair_hint"]["actions"][1]
+
+    assert link_action["required_extra_arguments"] == ["object", "rationale"]
+    assert link_action["placeholder_fields"] == ["object"]
+    assert link_action["reviewed_value_fields"] == ["object"]
+    assert "revision_anchors" not in link_action["arguments_template"]
+
+    arguments = dict(link_action["arguments_template"])
+    arguments["object"] = storage.iri
+    arguments["rationale"] = "Reviewed the existing storage access for Messages."
+
+    staged = db.stage_map_assertion_change(**arguments)
+
+    assert db.check_staged_revision_apply(staged.revision_iri).status == "ready"
+    staged_payload = to_jsonable(staged)
+    assert "<reviewed existing storage access IRI>" not in json.dumps(
+        staged_payload,
+        sort_keys=True,
+    )
 
 
 def test_missing_storage_access_repair_omits_duplicate_path_template(
@@ -13210,7 +13256,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                     "action_type": "add_reviewed_relation_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "required_extra_arguments": ["rationale"],
+                    "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed database relation identifier for "
                         f"{storage.iri}."
@@ -13223,6 +13269,8 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                         "change_kind": "add",
                         "graph": "map",
                     },
+                    "placeholder_fields": ["object"],
+                    "reviewed_value_fields": ["object"],
                     "condition": (
                         "Replace the placeholder object with the reviewed "
                         "database relation identifier before staging."
@@ -13269,7 +13317,12 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
         "add_reviewed_relation_template",
         "remove_misplaced_source_template",
     ]
-    assert repair_group.actions[0]["required_extra_arguments"] == ["rationale"]
+    assert repair_group.actions[0]["required_extra_arguments"] == [
+        "object",
+        "rationale",
+    ]
+    assert repair_group.actions[0]["placeholder_fields"] == ["object"]
+    assert repair_group.actions[0]["reviewed_value_fields"] == ["object"]
     assert repair_group.actions[1]["required_extra_arguments"] == ["rationale"]
     partition_target_index, partition_target = next(
         (index, target)
@@ -13627,7 +13680,12 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         "change_kind": "add",
         "graph": "map",
     }
-    assert repair_hint["actions"][0]["required_extra_arguments"] == ["rationale"]
+    assert repair_hint["actions"][0]["required_extra_arguments"] == [
+        "object",
+        "rationale",
+    ]
+    assert repair_hint["actions"][0]["placeholder_fields"] == ["object"]
+    assert repair_hint["actions"][0]["reviewed_value_fields"] == ["object"]
     assert repair_hint["actions"][0]["rationale_template"] == (
         f"Reviewed database relation identifier for {storage.iri}."
     )
@@ -13733,7 +13791,9 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
     assert issue.details is not None
     add_action, _ = issue.details["repair_hint"]["actions"]
 
-    assert add_action["required_extra_arguments"] == ["rationale"]
+    assert add_action["required_extra_arguments"] == ["object", "rationale"]
+    assert add_action["placeholder_fields"] == ["object"]
+    assert add_action["reviewed_value_fields"] == ["object"]
     add_arguments = dict(add_action["arguments_template"])
     add_arguments["object"] = "mart.events"
     add_arguments["rationale"] = "Reviewed mart.events as the database relation."
@@ -13870,7 +13930,9 @@ def test_database_root_only_storage_requires_relation_template(
     add_action = repair_hint["actions"][0]
     assert add_action["tool_name"] == "stage_map_assertion_change"
     assert add_action["mcp_tool_name"] == "doxabase.stage_map_assertion_change"
-    assert add_action["required_extra_arguments"] == ["rationale"]
+    assert add_action["required_extra_arguments"] == ["object", "rationale"]
+    assert add_action["placeholder_fields"] == ["object"]
+    assert add_action["reviewed_value_fields"] == ["object"]
     assert add_action["arguments_template"] == {
         "subject": storage.iri,
         "predicate": "rc:pathTemplate",

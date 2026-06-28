@@ -3326,7 +3326,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
                     "action_type": "add_reviewed_relation_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "required_extra_arguments": ["rationale"],
+                    "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed database relation identifier for "
                         f"{storage.iri}."
@@ -3339,6 +3339,8 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
                         "change_kind": "add",
                         "graph": "map",
                     },
+                    "placeholder_fields": ["object"],
+                    "reviewed_value_fields": ["object"],
                     "condition": (
                         "Replace the placeholder object with the reviewed "
                         "database relation identifier before staging."
@@ -3688,7 +3690,12 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
         "change_kind": "add",
         "graph": "map",
     }
-    assert repair_hint["actions"][0]["required_extra_arguments"] == ["rationale"]
+    assert repair_hint["actions"][0]["required_extra_arguments"] == [
+        "object",
+        "rationale",
+    ]
+    assert repair_hint["actions"][0]["placeholder_fields"] == ["object"]
+    assert repair_hint["actions"][0]["reviewed_value_fields"] == ["object"]
     target = context["query_target_candidates"][0]
     assert target["template_source"] == "storage_access_location"
     assert target["composition"] == "database_connection_as_candidate"

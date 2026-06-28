@@ -289,15 +289,16 @@ source template only if it was relation metadata rather than a real file/object
 path. Protocol/location hints offer reviewed protocol/root/bucket/prefix edits
 and exact path-template add/remove repairs when a template caused the mismatch.
 Their templated actions name `placeholder_fields` and `reviewed_value_fields`
-for the reviewed value to fill in.
+for the reviewed value to fill in; database relation add-template actions mark
+`object` as the reviewed placeholder and require both `object` and `rationale`.
 For `missing_storage_access`, the record-new-storage template's optional
 `path_templates` field should be omitted when the dataset or partition already
 owns the reviewed file/object path template; duplicating it can produce
 equivalent ready query candidates. Use storage-access-owned templates for
 database relation identifiers.
-Each repair action declares
-`required_extra_arguments=["rationale"]`; add a reviewed rationale to the copied
-arguments before calling `stage_map_assertion_change`. It does not generate SQL
+Follow each repair action's `required_extra_arguments`, `placeholder_fields`,
+and `reviewed_value_fields` before calling `stage_map_assertion_change`; do not
+run `arguments_template` unchanged. It does not generate SQL
 or resolve credentials; use it to decide whether the graph has enough
 non-secret physical context for a query attempt, then review caveats before
 trusting aggregations or

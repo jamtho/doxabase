@@ -258,11 +258,13 @@ on the storage access before using a database handoff. The issue carries
 `stage_map_assertion_change` templates: add the reviewed relation identifier to
 the storage access, then remove the misplaced source template only if review
 confirms it was relation metadata rather than a real file/object path. Each
-repair action declares `required_extra_arguments=["rationale"]`; add a reviewed
-rationale to the copied arguments before calling `stage_map_assertion_change`.
-The stale dataset or partition path is context for review, not the relation
-identifier. Root-only database storage without such a template carries
-`database_relation_template_missing` even when `location_kind == "object"`;
+add-template repair declares `required_extra_arguments=["object", "rationale"]`
+and `placeholder_fields=["object"]`; replace `object` with the reviewed
+relation identifier and add a reviewed rationale before calling
+`stage_map_assertion_change`. The stale dataset or partition path is context for
+review, not the relation identifier. Root-only database storage without such a
+template carries `database_relation_template_missing` even when
+`location_kind == "object"`;
 its `details.repair_hint` gives the reviewed add-template action for the
 storage access.
 

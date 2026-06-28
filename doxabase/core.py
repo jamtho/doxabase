@@ -12244,7 +12244,7 @@ class DoxaBase:
                     "action_type": "add_reviewed_relation_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "required_extra_arguments": ["rationale"],
+                    "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed database relation identifier for "
                         f"{storage_access.iri}."
@@ -12257,6 +12257,8 @@ class DoxaBase:
                         "change_kind": "add",
                         "graph": "map",
                     },
+                    "placeholder_fields": ["object"],
+                    "reviewed_value_fields": ["object"],
                     "condition": (
                         "Replace the placeholder object with the reviewed "
                         "database relation identifier before staging."
@@ -12319,7 +12321,7 @@ class DoxaBase:
                     "action_type": "add_reviewed_relation_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "required_extra_arguments": ["rationale"],
+                    "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed database relation identifier for "
                         f"{storage_access.iri}."
@@ -12332,6 +12334,8 @@ class DoxaBase:
                         "change_kind": "add",
                         "graph": "map",
                     },
+                    "placeholder_fields": ["object"],
+                    "reviewed_value_fields": ["object"],
                     "condition": (
                         "Replace the placeholder object with the reviewed "
                         "schema, table, or relation identifier before staging."
@@ -13308,10 +13312,6 @@ class DoxaBase:
                             "object_kind": "iri",
                             "change_kind": "add",
                             "rationale": "<reviewed rationale>",
-                            "revision_anchors": [
-                                dataset.iri,
-                                "<reviewed existing storage access IRI>",
-                            ],
                             "review_note": (
                                 "Generated from missing_storage_access query "
                                 "planning guidance; apply only after confirming "
@@ -13320,6 +13320,8 @@ class DoxaBase:
                             ),
                             "validation_scope": "all",
                         },
+                        "placeholder_fields": ["object"],
+                        "reviewed_value_fields": ["object"],
                     },
                 ],
             },

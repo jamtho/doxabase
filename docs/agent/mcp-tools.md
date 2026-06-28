@@ -503,9 +503,11 @@ a database handoff. Read `issues[].details.repair_hint` for the ordered repair:
 stage an add of the reviewed relation identifier onto the storage access, then
 stage removal of the misplaced source template only if review confirms it was
 relation metadata rather than a real file/object path. Repair actions declare
-`required_extra_arguments=["rationale"]`; add a reviewed rationale to the copied
-arguments before calling `stage_map_assertion_change`. The stale dataset or
-partition path is review context, not the relation identifier. Root-only
+`required_extra_arguments=["object", "rationale"]` and
+`placeholder_fields=["object"]` for the add-template step; replace `object` with
+the reviewed relation identifier and add a reviewed rationale before calling
+`stage_map_assertion_change`. The stale dataset or partition path is review
+context, not the relation identifier. Root-only
 database storage without a storage-access relation template is also review-only
 with `database_relation_template_missing`, even when `location_kind="object"`;
 read `issues[].details.repair_hint` for the reviewed add-template action on the
