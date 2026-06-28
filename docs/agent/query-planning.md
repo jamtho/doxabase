@@ -138,9 +138,12 @@ Start with `describe_query_context(dataset_iri)`:
    and link it to the dataset, or stage a reviewed `rc:hasStorageAccess` link to
    an existing access resource. The repair hint includes
    `candidate_existing_storage_accesses` when current map storage accesses exist;
-   use those ranked candidates for review only. Do not auto-link the first
-   candidate just because it is listed; fill the staged link's `object` with
-   the chosen reviewed access IRI. When recording a new storage access, omit the
+   use those ranked candidates for review only. Candidate ranking now includes
+   exact path-template matches, dataset-token overlap with labels/IRIs/locations,
+   and a demotion when an otherwise generic access is already linked to another
+   dataset. Do not auto-link the first candidate just because it is listed; fill
+   the staged link's `object` with the chosen reviewed access IRI. When recording
+   a new storage access, omit the
    optional storage-owned `path_templates` field if the dataset
    or partition already carries the reviewed path template; duplicating it can
    create equivalent ready candidates. Database relation identifiers are the

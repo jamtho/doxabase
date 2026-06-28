@@ -16641,6 +16641,13 @@ class DoxaBase:
         data_graphs = self._expand_graphs(["map"])
         lookup_graphs = self._lookup_graphs(data_graphs)
         dataset_templates = set(dataset.path_templates)
+        dataset_tokens = self._missing_storage_candidate_tokens(
+            [
+                dataset.label,
+                self._local_name(dataset.iri),
+                *dataset.path_templates,
+            ]
+        )
         candidates: list[tuple[int, str, str, dict[str, Any]]] = []
         for access_iri in self._subjects(
             data_graphs,
@@ -16674,6 +16681,44 @@ class DoxaBase:
                 match_reasons.append("has_layout_verification_status")
                 score += 10
             label = access.label or self._local_name(access.iri)
+            access_tokens = self._missing_storage_candidate_tokens(
+                [
+                    label,
+                    self._local_name(access.iri),
+                    access.storage_root,
+                    access.bucket_name,
+                    access.key_prefix,
+                    *access.path_templates,
+                ]
+            )
+            exact_token_matches = sorted(dataset_tokens & access_tokens)
+            partial_token_matches = self._missing_storage_partial_token_matches(
+                dataset_tokens,
+                access_tokens,
+            )
+            if exact_token_matches:
+                match_reasons.append("dataset_token_overlap")
+                score += 12 * len(exact_token_matches)
+            if partial_token_matches:
+                match_reasons.append("dataset_token_partial_overlap")
+                score += 6 * len(partial_token_matches)
+            linked_dataset_iris = [
+                iri
+                for iri in self._subjects(
+                    data_graphs,
+                    "rc:hasStorageAccess",
+                    access.iri,
+                )
+                if iri != dataset.iri
+            ]
+            if (
+                linked_dataset_iris
+                and "shares_dataset_path_template" not in match_reasons
+                and not exact_token_matches
+                and not partial_token_matches
+            ):
+                match_reasons.append("linked_to_other_dataset")
+                score -= 15
             candidate = {
                 "storage_access": to_jsonable(self._summary_from_description(access)),
                 "storage_access_iri": access.iri,
@@ -16687,6 +16732,8 @@ class DoxaBase:
                     access.layout_verification_status
                 ),
                 "match_reasons": match_reasons,
+                "dataset_token_matches": exact_token_matches,
+                "dataset_partial_token_matches": partial_token_matches,
                 "review_note": (
                     "Candidate existing storage access found in the current map. "
                     "Link it only after reviewing that its protocol, location, "
@@ -16705,6 +16752,57 @@ class DoxaBase:
             ranked_candidate["candidate_rank"] = rank
             selected_candidates.append(ranked_candidate)
         return selected_candidates, len(sorted_candidates)
+
+    @staticmethod
+    def _missing_storage_candidate_tokens(
+        values: Iterable[str | None],
+    ) -> set[str]:
+        stopwords = {
+            "a",
+            "an",
+            "and",
+            "by",
+            "connection",
+            "directory",
+            "for",
+            "has",
+            "is",
+            "local",
+            "of",
+            "remote",
+            "storage",
+            "the",
+        }
+        tokens: set[str] = set()
+        for value in values:
+            if not value:
+                continue
+            spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", str(value))
+            for token in re.findall(r"[A-Za-z0-9]+", spaced):
+                lowered = token.lower()
+                if lowered not in stopwords:
+                    tokens.add(lowered)
+        return tokens
+
+    @staticmethod
+    def _missing_storage_partial_token_matches(
+        dataset_tokens: set[str],
+        access_tokens: set[str],
+    ) -> list[str]:
+        matches: set[str] = set()
+        for dataset_token in dataset_tokens:
+            for access_token in access_tokens:
+                if dataset_token == access_token:
+                    continue
+                if (
+                    len(dataset_token) >= 5
+                    and dataset_token in access_token
+                ) or (
+                    len(access_token) >= 5
+                    and access_token in dataset_token
+                ):
+                    matches.add(f"{dataset_token}:{access_token}")
+        return sorted(matches)
 
     def _known_fixture_missing_storage_access_hint(
         self,

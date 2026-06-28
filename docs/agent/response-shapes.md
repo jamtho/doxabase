@@ -2366,8 +2366,11 @@ repair_hint.actions[].condition
 
 Each missing-storage candidate includes a `storage_access` summary,
 `storage_access_iri`, protocol/location fields, storage-owned path templates,
-layout verification status, `match_reasons`, `candidate_rank`, and a
-review-first note. Candidate rows are context, not permission to auto-link.
+layout verification status, `match_reasons`, `dataset_token_matches`,
+`dataset_partial_token_matches`, `candidate_rank`, and a review-first note.
+`match_reasons` can include `dataset_token_overlap`,
+`dataset_token_partial_overlap`, or `linked_to_other_dataset`; these affect
+ranking but remain review context, not permission to auto-link.
 
 Add actions use `arguments_template` with placeholders for reviewed values and
 caller rationale; remove actions may use ready `arguments` plus the same

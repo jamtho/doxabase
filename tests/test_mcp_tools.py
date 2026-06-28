@@ -4624,7 +4624,10 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         "declares_storage_protocol",
         "has_location_metadata",
         "has_layout_verification_status",
+        "dataset_token_overlap",
     ]
+    assert candidate["dataset_token_matches"] == ["messages"]
+    assert candidate["dataset_partial_token_matches"] == []
     assert repair_group["repair_context"][
         "candidate_existing_storage_access_count"
     ] == 1

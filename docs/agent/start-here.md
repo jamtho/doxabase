@@ -65,7 +65,7 @@ When arriving cold, use this route before reading every reference doc.
    non-dataset map resources.
 11. Call `doxabase.list_entities(type="rc:Pattern", graph="patterns")` and
    `doxabase.describe_pattern` when the map points to synthesized lore.
-11. Use the smallest write helper that fits the work, then validate before
+12. Use the smallest write helper that fits the work, then validate before
    finishing.
 
 If the MCP docs tools are not exposed in the current session, follow the same

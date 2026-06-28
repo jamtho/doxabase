@@ -12497,7 +12497,10 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         "declares_storage_protocol",
         "has_location_metadata",
         "has_layout_verification_status",
+        "dataset_token_overlap",
     ]
+    assert candidate["dataset_token_matches"] == ["messages"]
+    assert candidate["dataset_partial_token_matches"] == []
     repair_group = context.suggested_repair_action_groups[0]
     assert repair_group.repair_context[
         "candidate_existing_storage_accesses"
@@ -12522,6 +12525,65 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         staged_payload,
         sort_keys=True,
     )
+
+
+def test_missing_storage_access_ranks_dataset_specific_candidates_first(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    events_storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local directory",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        path_templates=["events/current/*.parquet"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#Events",
+        label="Events",
+        is_table=True,
+        storage_accesses=[events_storage.iri],
+    )
+    generic_storage = db.record_map_storage_access(
+        "https://example.test/project#generic_archive_storage",
+        label="Generic archive directory",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "archive"),
+        layout_verification_status="rc:CandidateLayout",
+    )
+    orphan_storage = db.record_map_storage_access(
+        "https://example.test/project#orphan_nearby_storage",
+        label="Nearby orphan facts directory",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse" / "orphan-facts"),
+        path_templates=["facts/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    orphan = "https://example.test/project#OrphanFacts"
+    db.record_map_dataset(orphan, label="Orphan facts", is_table=True)
+
+    context = db.describe_query_context(orphan)
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+    assert missing_storage.details is not None
+    candidates = missing_storage.details["repair_hint"][
+        "candidate_existing_storage_accesses"
+    ]
+
+    assert [candidate["storage_access_iri"] for candidate in candidates[:3]] == [
+        orphan_storage.iri,
+        generic_storage.iri,
+        events_storage.iri,
+    ]
+    assert candidates[0]["candidate_rank"] == 1
+    assert candidates[0]["dataset_token_matches"] == ["facts", "orphan"]
+    assert "dataset_token_overlap" in candidates[0]["match_reasons"]
+    assert "linked_to_other_dataset" in candidates[2]["match_reasons"]
+    assert context.suggested_repair_action_groups[0].repair_context[
+        "candidate_existing_storage_accesses"
+    ][0]["storage_access_iri"] == orphan_storage.iri
 
 
 def test_missing_storage_access_repair_omits_duplicate_path_template(

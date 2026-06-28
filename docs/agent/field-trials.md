@@ -2150,6 +2150,10 @@ few useful gaps:
   remain separate from profile map patches. For complementary caveat plus
   vocabulary framings, set `link_alternatives=False` instead of accepting the
   default alternative-linking behavior.
+- A query/storage ranking follow-up found complete-but-unrelated storage access
+  candidates could outrank a nearby dataset-specific access. Missing-storage
+  candidate ranking now uses dataset-token overlap and demotes generic accesses
+  already linked to another dataset, while still requiring reviewed selection.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
