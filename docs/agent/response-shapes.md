@@ -228,11 +228,13 @@ the returned staged row, and `evidence_iris` lists its direct revision evidence.
 When a query repair task already has staged work anchored to the same dataset,
 `pending_staged_repair_iris` names those staged revision IRIs and the task is
 lowered behind `staged_review` so unattended agents review/apply the pending
-repair before staging another one. When a profile task already has staged work
-anchored to the same dataset and evidence,
+repair before staging another one. When a profile task already has a staged
+profile-map-update revision anchored to the same dataset and evidence,
 `pending_staged_profile_update_iris` names those staged revision IRIs and the
 task's suggested action is read-only `draft_profile_map_updates` instead of
-another `stage_profile_map_updates` call.
+another `stage_profile_map_updates` call. Generic same-evidence staged work
+remains visible through `staged_frontier_review` / `staged_review` but does not
+populate `pending_staged_profile_update_iris`.
 `datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue

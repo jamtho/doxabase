@@ -534,6 +534,82 @@ def test_project_brief_tool_gates_duplicate_profile_staging(
     }
 
 
+def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileEvidence"
+    metric = "https://example.test/project#OrdersQualityMetric"
+    db.record_map_dataset(dataset, label="Orders", is_table=True, row_count_snapshot=10)
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=dataset,
+        dataset_summary="Orders were profiled with a full scan.",
+        evidence_summary="Orders full-profile evidence.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=10,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=10,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": metric,
+                "target": dataset,
+                "value": "1",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage auxiliary Orders caveat",
+        rationale=(
+            "This revision shares the profile evidence but is not a "
+            "profile-map-update revision."
+        ),
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:OrdersAuxCaveat a rc:KnownCaveat ;
+                    rdfs:label "Orders auxiliary caveat" ;
+                    rc:caveatDescription "Auxiliary staged work." .
+
+                ex:Orders rc:hasKnownCaveat ex:OrdersAuxCaveat .
+                """,
+            }
+        ],
+        revision_anchors=[dataset],
+        evidence=[evidence],
+    )
+
+    result = project_brief_tool(db, limit=3, profile_candidate_limit=1)
+
+    assert [
+        task["task_type"] for task in result["recommended_next_tasks"]
+    ] == ["staged_frontier_review", "profile_review", "staged_review"]
+    profile_task = result["recommended_next_tasks"][1]
+    assert profile_task["pending_staged_profile_update_iris"] == []
+    assert "Pending staged profile update(s)" not in profile_task["reason"]
+    assert profile_task["suggested_next_action"]["tool_name"] == (
+        "describe_context_slice"
+    )
+    assert profile_task["suggested_next_action"]["source_profile_advisory"][
+        "review_lane"
+    ] == "metric_vocabulary_review"
+    assert staged["revision_iri"] in {
+        item["revision_iri"] for item in result["staged_review"]["items"]
+    }
+
+
 def test_query_storage_frontier_tool_route_regression(
     tmp_path: Path,
 ) -> None:

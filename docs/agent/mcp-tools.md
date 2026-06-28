@@ -1095,6 +1095,10 @@ results. The returned staged revision record includes the `summary`,
 scratch logs do not need an immediate describe call for the proposal headline.
 `revision_anchors` can name graph resources the staged proposal is about without
 treating them as evidence or support.
+Use `evidence` only for actual evidence/source resources already recorded in
+the capsule; use `revision_anchors` for affected map, ontology, shape, or
+workflow resources. Passing ordinary map resources as evidence should fail
+validation rather than silently invent support.
 Use `restages_revision` when the new payload is a caller-authored repaired or
 rebased successor for a stale staged revision. The tool records
 `rc:restagesRevision` / `restaged_from` while keeping the provided additions and
@@ -1637,8 +1641,11 @@ are `workflow` / `review_bundle` for `map`, `observations`, `patterns`, and
 `evidence`, plus `all_with_seeds` when you explicitly need immutable seed graphs
 included too. Workflow/review-bundle exports do not include `history`, so use
 the default project export or an explicit history-bearing bundle for
-revision-lineage handoffs. All-with-seeds bundles may require special import
-handling because normal capsules protect `base_ontology` and `base_shapes`.
+revision-lineage handoffs. The default project export is faithful history,
+not a shareable no-history view: staged patch payloads in `history` are exported
+unchanged when selected, with privacy warnings rather than redaction.
+All-with-seeds bundles may require special import handling because normal
+capsules protect `base_ontology` and `base_shapes`.
 `sensitive_literal_count` and `privacy_warnings` apply to the selected export
 graphs; workflow exports include evidence, so source paths and evidence source
 strings can trigger privacy warnings.

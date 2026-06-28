@@ -213,6 +213,11 @@ row, then rerun the planner.
 `project_brief` surfaces this route as `staged_frontier_review` whenever current
 staged work exists; follow it before adding new profile-map or query-repair
 staged revisions for the same frontier.
+For mixed unattended recovery loops, use this sequence: plan current staged
+recovery, dry-run batch restage when the plan points at stale mechanical rows,
+restage only `would_restage_revision_iris`, apply at most one ready row, then
+rerun the planner before the next mutation. Keep `repair_or_replace` and
+informational rows out of bulk apply/restage lanes.
 Use `repair_or_replace_source_revision_iris` as the broad top-level repair
 worklist. It includes every lane currently routing to `repair_or_replace`,
 including same-slot replacement cases that may not be listed in

@@ -130,8 +130,10 @@ profile evidence, supporting profile observations, related support patterns, or
 profile-derived anchors.
 If `project_brief` shows `staged_frontier_review` or a profile task with
 `pending_staged_profile_update_iris`, run `plan_staged_revision_recovery` or
-review the staged profile update before calling `stage_profile_map_updates`
-again for the same dataset/evidence.
+review the staged profile-map update before calling `stage_profile_map_updates`
+again for the same dataset/evidence. Other staged revisions that merely share
+the same profile evidence remain staged-frontier work, but they should not be
+treated as duplicate profile-map-update staging.
 The returned candidates and Markdown `Profile Route Bridge` table preserve
 matched profile route keys, so reviewers can see which draft duplicate/advisory
 group led to each staged row without reverse-joining action indexes by hand.
