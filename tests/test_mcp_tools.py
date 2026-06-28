@@ -5729,6 +5729,8 @@ def test_record_claim_observation_tool_and_resource_context(
     assert context["outgoing_offset"] == 0
     assert context["incoming_offset"] == 0
     assert context["blank_node_triples"] == []
+    assert context["blank_node_depth_exhausted"] is False
+    assert context["blank_node_unvisited_count"] == 0
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

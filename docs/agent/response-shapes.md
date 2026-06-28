@@ -499,6 +499,8 @@ resource.blank_node_limit
 resource.blank_node_total_count
 resource.blank_node_returned_count
 resource.blank_node_omitted_count
+resource.blank_node_depth_exhausted
+resource.blank_node_unvisited_count
 ```
 
 `outgoing[]` and `incoming[]` rows are `ResourceTriple` summaries:
@@ -527,7 +529,9 @@ the returned count is lower than the total count. Set
 `include_blank_node_closure=True` for SHACL shapes and other RDF structures
 whose important details live on blank nodes reached from direct outgoing
 triples; closure rows are returned separately in `blank_node_triples` so
-`outgoing` remains direct subject triples.
+`outgoing` remains direct subject triples. If `blank_node_depth_exhausted` is
+true, increase `blank_node_depth` before assuming the closure is complete; if
+only `blank_node_omitted_count` is non-zero, increase `blank_node_limit`.
 
 ## Staged Map Assertion Changes
 

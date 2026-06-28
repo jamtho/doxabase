@@ -17034,9 +17034,20 @@ def test_describe_resource_can_include_bounded_blank_node_closure(
     assert context.blank_node_omitted_count == (
         context.blank_node_total_count - context.blank_node_returned_count
     )
+    assert context.blank_node_depth_exhausted is False
+    assert context.blank_node_unvisited_count == 0
     blank_node_predicates = {triple.predicate for triple in context.blank_node_triples}
     assert "http://www.w3.org/ns/shacl#path" in blank_node_predicates
     assert "http://www.w3.org/ns/shacl#datatype" in blank_node_predicates
+
+    shallow_context = db.describe_resource(
+        shape,
+        graph="shapes",
+        include_blank_node_closure=True,
+        blank_node_depth=1,
+    )
+    assert shallow_context.blank_node_depth_exhausted is True
+    assert shallow_context.blank_node_unvisited_count == 1
 
     with pytest.raises(DoxaBaseError, match="blank_node_depth"):
         db.describe_resource(shape, include_blank_node_closure=True, blank_node_depth=-1)

@@ -32,7 +32,9 @@ resources, source spans, or non-dataset map resources, start with
 resources whose details sit behind blank-node objects, call
 `describe_resource(graph="shapes", include_blank_node_closure=True)` and read
 `blank_node_triples`, `blank_node_total_count`, and
-`blank_node_omitted_count`. Use `export_graph()` or `export_trig()` when
+`blank_node_omitted_count`. When `blank_node_depth_exhausted=true`, rerun with
+a larger `blank_node_depth`; when only `blank_node_omitted_count` is non-zero,
+raise `blank_node_limit`. Use `export_graph()` or `export_trig()` when
 reviewers need complete Turtle for a graph role. Current context-slice profiles
 are not a generic RDF neighborhood browser, and shape seeds may not carry
 blank-node closure through the slice.

@@ -1419,7 +1419,9 @@ context rather than a type-specific helper. For SHACL shapes or other RDF
 structures whose details sit behind blank-node objects, pass
 `include_blank_node_closure=True` with bounded `blank_node_depth` and
 `blank_node_limit`; closure triples are returned separately from direct
-outgoing triples.
+outgoing triples. `blank_node_depth_exhausted` means another blank-node hop was
+available beyond the requested depth; `blank_node_omitted_count` means the
+closure rows found within that depth exceeded `blank_node_limit`.
 
 `describe_assertion_support()` returns support context for one map assertion.
 Pass `subject`, `predicate`, optional `object`, and optional `object_kind`

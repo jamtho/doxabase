@@ -2365,6 +2365,8 @@ class ResourceContext:
     blank_node_total_count: int
     blank_node_returned_count: int
     blank_node_omitted_count: int
+    blank_node_depth_exhausted: bool
+    blank_node_unvisited_count: int
 
 
 @dataclass(frozen=True)
@@ -3488,14 +3490,19 @@ class DoxaBase:
         )
         blank_node_triples: list[ResourceTriple] = []
         blank_node_total_count = 0
+        blank_node_depth_exhausted = False
+        blank_node_unvisited_count = 0
         if include_blank_node_closure:
-            blank_node_triples, blank_node_total_count = (
-                self._resource_blank_node_closure(
-                    graphs,
-                    subject=resource_iri,
-                    max_depth=blank_node_depth,
-                    limit=blank_node_limit,
-                )
+            (
+                blank_node_triples,
+                blank_node_total_count,
+                blank_node_depth_exhausted,
+                blank_node_unvisited_count,
+            ) = self._resource_blank_node_closure(
+                graphs,
+                subject=resource_iri,
+                max_depth=blank_node_depth,
+                limit=blank_node_limit,
             )
         return ResourceContext(
             iri=resource_iri,
@@ -3531,6 +3538,8 @@ class DoxaBase:
                 blank_node_total_count - len(blank_node_triples),
                 0,
             ),
+            blank_node_depth_exhausted=blank_node_depth_exhausted,
+            blank_node_unvisited_count=blank_node_unvisited_count,
         )
 
     def describe_assertion_support(
@@ -35931,9 +35940,10 @@ class DoxaBase:
         subject: str,
         max_depth: int,
         limit: int,
-    ) -> tuple[list[ResourceTriple], int]:
+    ) -> tuple[list[ResourceTriple], int, bool, int]:
         if max_depth == 0:
-            return [], 0
+            frontier = self._resource_blank_node_objects(graphs, subject=subject)
+            return [], 0, bool(frontier), len(frontier)
         frontier = self._resource_blank_node_objects(graphs, subject=subject)
         visited: set[str] = set()
         seen_triples: set[
@@ -35975,7 +35985,8 @@ class DoxaBase:
                         next_frontier.append(triple.object)
             frontier = next_frontier
         total_count = len(closure_triples)
-        return closure_triples[:limit], total_count
+        unvisited = [blank_node for blank_node in frontier if blank_node not in visited]
+        return closure_triples[:limit], total_count, bool(unvisited), len(unvisited)
 
     def _assertion_triples(
         self,
