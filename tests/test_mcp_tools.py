@@ -2500,6 +2500,9 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert exported.startswith("# Identity ladder MCP bundle\n")
     assert "## Review Summary" in exported
     assert "Pattern-first is preferred" in exported
+    assert "## Reviewer Decision Matrix" in exported
+    assert "Rows 1 and 2 are competing alternatives" in exported
+    assert "Authored recommendation" in exported
     assert "Preferred until the map vocabulary settles." in exported
     assert "The pattern framing keeps the idea tentative." in exported
     assert "## Summary" in exported

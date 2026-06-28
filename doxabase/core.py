@@ -32026,6 +32026,14 @@ class DoxaBase:
         )
         if executive_summary_text:
             lines.extend(["## Review Summary", "", executive_summary_text, ""])
+        decision_matrix = self._staged_revisions_reviewer_decision_matrix_markdown(
+            descriptions,
+            revision_summaries,
+        )
+        if decision_matrix:
+            lines.extend(["## Reviewer Decision Matrix", ""])
+            lines.extend(decision_matrix)
+            lines.append("")
         lines.extend(
             [
                 "## Summary",
@@ -32178,6 +32186,143 @@ class DoxaBase:
                 ]
         )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revisions_reviewer_decision_matrix_markdown(
+        self,
+        descriptions: list[StagedGraphRevisionDescription],
+        summaries: list[StagedGraphRevisionExportSummary],
+    ) -> list[str]:
+        if not descriptions:
+            return []
+        lines: list[str] = []
+        alternative_groups = self._staged_revisions_alternative_row_groups(
+            summaries
+        )
+        for group in alternative_groups:
+            rows = self._staged_revisions_row_list(group)
+            lines.append(
+                f"Rows {rows} are competing alternatives. Apply at most one "
+                "before regenerating or rechecking the bundle."
+            )
+        if alternative_groups:
+            lines.append("")
+        lines.extend(
+            [
+                (
+                    "| Row | Candidate | Suggested human action | Why | "
+                    "Authored recommendation |"
+                ),
+                "|---:|---|---|---|---|",
+            ]
+        )
+        for index, (description, summary) in enumerate(
+            zip(descriptions, summaries, strict=True),
+            start=1,
+        ):
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(index),
+                        self._markdown_table_cell(
+                            description.summary or description.iri
+                        ),
+                        self._markdown_table_cell(
+                            self._staged_revisions_human_action(summary)
+                        ),
+                        self._markdown_table_cell(
+                            self._staged_revisions_human_action_reason(summary)
+                        ),
+                        self._markdown_table_cell(
+                            summary.review_recommendation or "(none)"
+                        ),
+                    ]
+                )
+                + " |"
+            )
+        return lines
+
+    @staticmethod
+    def _staged_revisions_alternative_row_groups(
+        summaries: list[StagedGraphRevisionExportSummary],
+    ) -> list[list[int]]:
+        row_by_iri = {
+            summary.revision_iri: index
+            for index, summary in enumerate(summaries, start=1)
+        }
+        grouped: list[list[int]] = []
+        seen: set[tuple[int, ...]] = set()
+        for index, summary in enumerate(summaries, start=1):
+            target = summary.current_alternative_to or summary.alternative_to
+            if target is None or target not in row_by_iri:
+                continue
+            group = tuple(sorted({index, row_by_iri[target]}))
+            if group not in seen:
+                seen.add(group)
+                grouped.append(list(group))
+        return grouped
+
+    @staticmethod
+    def _staged_revisions_row_list(rows: list[int]) -> str:
+        values = [str(row) for row in rows]
+        if len(values) <= 2:
+            return " and ".join(values)
+        return ", ".join(values[:-1]) + f", and {values[-1]}"
+
+    @staticmethod
+    def _staged_revisions_human_action(
+        summary: StagedGraphRevisionExportSummary,
+    ) -> str:
+        if summary.next_action is not None and summary.next_action.queue == (
+            "repair_or_replace"
+        ):
+            return "Repair or discard"
+        if summary.staged_validation_conforms is False:
+            return "Repair before applying"
+        if summary.apply_status == "validation_failed":
+            return "Repair before applying"
+        if summary.stale_resolution_state in {
+            "stale_unresolved",
+            "restaged_successor_stale_unresolved",
+        }:
+            return "Restage or replace"
+        if summary.apply_status == "conflict":
+            return "Restage or inspect conflict"
+        if summary.stale_resolution_state in {
+            "already_applied",
+            "restaged_successor_already_applied",
+        }:
+            return "Inspect applied event"
+        if summary.stale_resolution_state in {"noop", "restaged_successor_noop"}:
+            return "Review no-op"
+        if (
+            summary.alternative_gate.semantic_review_required
+            or summary.current_alternative_to is not None
+            or summary.alternative_to is not None
+        ):
+            return "Choose only if this alternative is preferred"
+        if summary.apply_decision == "review_then_apply":
+            return "Apply after semantic review"
+        if summary.next_action is not None:
+            return summary.next_action.action_label
+        return "Review before acting"
+
+    @staticmethod
+    def _staged_revisions_human_action_reason(
+        summary: StagedGraphRevisionExportSummary,
+    ) -> str:
+        diagnostic = summary.validation_diagnostic_headline.strip()
+        if diagnostic and diagnostic != "none":
+            return diagnostic
+        if (
+            summary.alternative_gate.semantic_review_required
+            or summary.current_alternative_to is not None
+            or summary.alternative_to is not None
+        ):
+            return summary.alternative_gate.note or "Competing alternative in this bundle."
+        if summary.apply_summary:
+            return summary.apply_summary
+        return summary.summary_recommendation
 
     def _staged_revisions_snapshot_evidence_markdown(
         self,

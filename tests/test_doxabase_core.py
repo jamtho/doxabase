@@ -10031,6 +10031,16 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert exported.startswith("# Identity ladder alternatives\n")
     assert "## Review Summary" in exported
     assert "Prefer the pattern-first framing for now" in exported
+    assert "## Reviewer Decision Matrix" in exported
+    assert (
+        "Rows 1 and 2 are competing alternatives. Apply at most one before "
+        "regenerating or rechecking the bundle."
+    ) in exported
+    assert (
+        "| Row | Candidate | Suggested human action | Why | "
+        "Authored recommendation |"
+    ) in exported
+    assert "Choose only if this alternative is preferred" in exported
     assert "## Summary" in exported
     assert "Apply status" in exported
     assert "Current validation" in exported

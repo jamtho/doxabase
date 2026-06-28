@@ -278,6 +278,11 @@ few useful gaps:
   recorded. Use `scan_sensitive_literals` and export `privacy_warnings` before
   sharing bundles; warnings are redacted audit signals, not automatic RDF
   redaction or proof that the graph is secret-free.
+- A human-review artifact trial showed grouped staged-revision Markdown was
+  mechanically complete but too technical at the top. `export_staged_revisions`
+  now opens with a `Reviewer Decision Matrix` that gives row numbers, plain
+  human actions, reasons, authored review recommendations, and a warning when
+  bundled rows are competing alternatives.
 - Claim lifecycle needed first-class support. Agents could record an initial
   hunch and a later correction, but they needed an explicit
   `record_claim_reconsideration` move to mark the earlier claim as weakened,

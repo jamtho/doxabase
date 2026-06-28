@@ -149,10 +149,15 @@ Stale original exports include a top metadata `Restaged by` line when a
 refreshed successor already exists. Use
 `doxabase.export_staged_revisions` when
 several alternatives, failed candidates, and repaired candidates should be
-reviewed together; its summary table includes the current apply status and
-decision, plus current and staged-time validation state for each staged
-revision. When the bundle contains restaged revisions, a `Restage Context`
-section appears near the top before the detailed revision bodies. When an
+reviewed together. The grouped export starts with a `Reviewer Decision Matrix`
+that gives row numbers, plain human actions, reasons, and authored review
+recommendations before the technical tables. Its summary table then includes
+the current apply status and decision, plus current and staged-time validation
+state for each staged revision. When competing alternatives are bundled
+together, the decision matrix warns reviewers to apply at most one before
+regenerating or rechecking the bundle. When the bundle contains restaged
+revisions, a `Restage Context` section appears near the top before the detailed
+revision bodies. When an
 alternative points to a stale revision whose successor is also in play, an
 `Alternative Context` section names the current successor to compare against.
 Single-revision exports include `Linked Support` when the staged revision has
