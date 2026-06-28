@@ -2037,7 +2037,11 @@ few useful gaps:
   `sample_method`, query artifact, result artifact, and failure log made the
   actual runtime clear. The main product signal was docs/onboarding, not a new
   query engine: DoxaBase plans and records; it still does not execute queries
-  itself.
+  itself. A follow-up query-result semantics trial found one recurring trap:
+  passing `row_count` for a filtered or grouped aggregate makes the result look
+  like profile evidence and can surface profile-review work. Keep arbitrary
+  aggregate counts in `result_sources` unless the value is genuinely the
+  profiled population row count.
 - An ontology/SHACL frontier trial for late-arriving snapshot corrections
   confirmed that pattern-only, map-only, and complete ontology+shape framings
   can be staged side by side, while an intentionally incomplete shape-backed

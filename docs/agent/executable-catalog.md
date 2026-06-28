@@ -312,7 +312,6 @@ result = db.record_query_result(
     sample_size=3,
     sample_scope="All rows in the reviewed local Orders CSV.",
     sample_method="External read-only aggregate after draft_query_plan.",
-    row_count=2,
 )
 ```
 
@@ -320,7 +319,9 @@ Use `result_sources` for arbitrary result-table or aggregate payloads such as
 grouped counts, sums, or JSON output. The structured `row_count`, `null_count`,
 `distinct_count`, value-frequency, and metric fields are profile-shaped
 observation fields; only fill them when their meaning is clear in `summary`,
-`sample_scope`, and `sample_method`.
+`sample_scope`, and `sample_method`. For filtered or grouped aggregate query
+results, keep counts such as "two paid rows" or grouped totals in the result
+payload unless the value is genuinely the profiled population row count.
 
 For failed attempts, set `execution_status="failed"` and include
 `failure_summary` plus a query source or result/log source; do not pass row,
