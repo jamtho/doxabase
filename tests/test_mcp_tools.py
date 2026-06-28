@@ -2118,6 +2118,19 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["next_action_queue"] == {"apply_after_review": revision_iris}
     assert result["next_action_queue_item_counts"] == {"apply_after_review": 2}
     assert result["semantic_review_required_queue_counts"] == {}
+    assert result["structured_warnings"] == [
+        {
+            "warning_code": "shared_semantic_context_applies_to_all_framings",
+            "message": result["warnings"][-1],
+            "affected_revision_iris": revision_iris,
+            "suggested_action": (
+                "rerun_with_shared_semantic_context_moved_to_framings"
+            ),
+            "suggested_rerun_arguments": {
+                "move_shared_patch_graphs_into_framing_patches": ["ontology"]
+            },
+        }
+    ]
     assert [
         item["row_iri"] for item in result["next_action_queue_items"]
     ] == revision_iris
@@ -2275,6 +2288,17 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
     )
     assert result["structured_warnings"] == [
         {
+            "warning_code": "shared_semantic_context_applies_to_all_framings",
+            "message": result["warnings"][-2],
+            "affected_revision_iris": revision_iris,
+            "suggested_action": (
+                "rerun_with_shared_semantic_context_moved_to_framings"
+            ),
+            "suggested_rerun_arguments": {
+                "move_shared_patch_graphs_into_framing_patches": ["shapes"]
+            },
+        },
+        {
             "warning_code": "first_alternative_anchor_not_ready",
             "message": result["warnings"][-1],
             "affected_revision_iris": revision_iris,
@@ -2299,7 +2323,7 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
     assert "Complementary complete thing" in exported
 
 
-def test_stage_systematisation_tool_does_not_warn_for_explicit_sibling_alternatives(
+def test_stage_systematisation_tool_suppresses_anchor_warning_for_explicit_sibling_alternatives(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
@@ -2382,7 +2406,19 @@ def test_stage_systematisation_tool_does_not_warn_for_explicit_sibling_alternati
         "repair_or_replace": [revision_iris[0]],
         "apply_after_review": [revision_iris[1], revision_iris[2]],
     }
-    assert result["structured_warnings"] == []
+    assert result["structured_warnings"] == [
+        {
+            "warning_code": "shared_semantic_context_applies_to_all_framings",
+            "message": result["warnings"][-1],
+            "affected_revision_iris": revision_iris,
+            "suggested_action": (
+                "rerun_with_shared_semantic_context_moved_to_framings"
+            ),
+            "suggested_rerun_arguments": {
+                "move_shared_patch_graphs_into_framing_patches": ["shapes"]
+            },
+        }
+    ]
     assert not any(
         "First framing 'Diagnostic incomplete thing'" in warning
         for warning in result["warnings"]

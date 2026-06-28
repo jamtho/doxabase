@@ -1028,7 +1028,11 @@ without requiring a grouped export first. If later framings actually
 default-linked to a first framing that did not route to `apply_after_review`,
 `structured_warnings` includes `first_alternative_anchor_not_ready` with
 `suggested_rerun_arguments={"link_alternatives": False}`. Per-framing
-`alternative_to` values reroute siblings without that warning.
+`alternative_to` values reroute siblings without that warning. When multiple
+framings share `ontology` or `shapes` patches, `structured_warnings` includes
+`shared_semantic_context_applies_to_all_framings`; move those patches into
+per-framing additions/removals when fallback alternatives should not carry the
+same provisional vocabulary or validation shapes.
 
 `doxabase.stage_pattern_promotion`
 

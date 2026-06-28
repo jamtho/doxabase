@@ -2357,8 +2357,13 @@ For that invalid-anchor case, `warning.warning_code` is
 `first_alternative_anchor_not_ready` and
 `warning.suggested_rerun_arguments == {"link_alternatives": False}`. The warning
 only fires when a sibling actually default-linked to the first framing; use
-per-framing `alternative_to` when ready siblings should point elsewhere. Use the
-structured fields for automation; keep `warnings` for readable handoffs.
+per-framing `alternative_to` when ready siblings should point elsewhere. A
+multi-framing draft with shared `ontology` or `shapes` patches also reports
+`shared_semantic_context_applies_to_all_framings`; its suggested rerun arguments
+name the shared graph roles that should move into per-framing patches if a
+fallback alternative should avoid the provisional vocabulary or validation
+shape. Use the structured fields for automation; keep `warnings` for readable
+handoffs.
 
 Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:
 

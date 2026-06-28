@@ -503,7 +503,11 @@ framing.
 Automation should read `structured_warnings` as well as `warnings`; the
 `first_alternative_anchor_not_ready` warning carries
 `suggested_rerun_arguments={"link_alternatives": False}` so callers do not have
-to parse prose.
+to parse prose. Multi-framing drafts with shared `ontology` or `shapes` patches
+also emit `shared_semantic_context_applies_to_all_framings`; use its suggested
+rerun arguments as a cue to move those patches into per-framing additions or
+removals when fallback alternatives should not carry the provisional vocabulary
+or validation shape.
 
 ## Pattern-Supported Promotion
 

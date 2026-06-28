@@ -21206,6 +21206,13 @@ class DoxaBase:
             "rc:SharedContextPatch",
         )
         shared_patch_count = len(shared_addition_specs) + len(shared_removal_specs)
+        shared_semantic_context_graphs = sorted(
+            {
+                str(spec["graph"])
+                for spec in [*shared_addition_specs, *shared_removal_specs]
+                if str(spec.get("graph") or "") in {"ontology", "shapes"}
+            }
+        )
         shared_context_summary_value = (
             shared_context_summary.strip()
             if shared_context_summary is not None
@@ -21347,6 +21354,34 @@ class DoxaBase:
             warnings.append(
                 "Multiple framings were staged; at least one later revision "
                 "was linked as an alternative to the first."
+            )
+        if len(staged_revisions) > 1 and shared_semantic_context_graphs:
+            shared_graph_summary = ", ".join(shared_semantic_context_graphs)
+            warning_message = (
+                "Shared ontology or shapes context patches are included in "
+                "every staged framing preview and patch bundle, including "
+                f"fallback framings. Shared graph roles: {shared_graph_summary}. "
+                "Move those patches into per-framing additions or removals "
+                "when only some alternatives should carry provisional "
+                "vocabulary or validation shapes."
+            )
+            warnings.append(warning_message)
+            structured_warnings.append(
+                SystematisationWarningRecord(
+                    warning_code="shared_semantic_context_applies_to_all_framings",
+                    message=warning_message,
+                    affected_revision_iris=[
+                        revision.revision_iri for revision in staged_revisions
+                    ],
+                    suggested_action=(
+                        "rerun_with_shared_semantic_context_moved_to_framings"
+                    ),
+                    suggested_rerun_arguments={
+                        "move_shared_patch_graphs_into_framing_patches": (
+                            shared_semantic_context_graphs
+                        )
+                    },
+                )
             )
         if (
             len(staged_revisions) > 1

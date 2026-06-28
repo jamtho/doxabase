@@ -1733,6 +1733,15 @@ few useful gaps:
   beside that optional field: omit it when the dataset or partition already owns
   the reviewed file/object path template, while still recording database
   relation identifiers as storage-access-owned templates.
+- A systematisation/pattern-promotion trial showed shared ontology and shape
+  patches are sometimes semantically too strong for fallback alternatives:
+  pattern-first fallbacks still carried provisional map vocabulary and preview
+  shapes because `shared_additions` intentionally applies to every staged
+  framing. Multi-framing drafts with shared `ontology` or `shapes` patches now
+  expose `shared_semantic_context_applies_to_all_framings` in
+  `structured_warnings`, with suggested rerun arguments naming the shared graph
+  roles to move into per-framing patches when fallback framings should avoid
+  that context.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

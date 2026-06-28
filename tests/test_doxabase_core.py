@@ -9984,8 +9984,23 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         and "link_alternatives=False" in warning
         for warning in draft.warnings
     )
-    assert len(draft.structured_warnings) == 1
-    structured_warning = draft.structured_warnings[0]
+    assert [
+        warning.warning_code for warning in draft.structured_warnings
+    ] == [
+        "shared_semantic_context_applies_to_all_framings",
+        "first_alternative_anchor_not_ready",
+    ]
+    shared_warning = draft.structured_warnings[0]
+    assert shared_warning.message in draft.warnings
+    assert shared_warning.affected_revision_iris == revision_iris
+    assert (
+        shared_warning.suggested_action
+        == "rerun_with_shared_semantic_context_moved_to_framings"
+    )
+    assert shared_warning.suggested_rerun_arguments == {
+        "move_shared_patch_graphs_into_framing_patches": ["ontology", "shapes"]
+    }
+    structured_warning = draft.structured_warnings[1]
     assert structured_warning.warning_code == "first_alternative_anchor_not_ready"
     assert structured_warning.message in draft.warnings
     assert structured_warning.affected_revision_iris == revision_iris
@@ -10173,6 +10188,21 @@ def test_stage_systematisation_shared_context_validates_each_framing(
 
     assert len(draft.staged_revisions) == 2
     assert "Shared proposed context patches" in draft.warnings[0]
+    assert [
+        warning.warning_code for warning in draft.structured_warnings
+    ] == ["shared_semantic_context_applies_to_all_framings"]
+    shared_warning = draft.structured_warnings[0]
+    assert shared_warning.message in draft.warnings
+    assert shared_warning.affected_revision_iris == [
+        revision.revision_iri for revision in draft.staged_revisions
+    ]
+    assert (
+        shared_warning.suggested_action
+        == "rerun_with_shared_semantic_context_moved_to_framings"
+    )
+    assert shared_warning.suggested_rerun_arguments == {
+        "move_shared_patch_graphs_into_framing_patches": ["ontology"]
+    }
     assert db.triple_count("ontology") == before_ontology_count
     assert db.triple_count("map") == before_map_count
     assert db.triple_count("patterns") == before_patterns_count

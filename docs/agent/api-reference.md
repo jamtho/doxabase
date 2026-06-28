@@ -898,7 +898,11 @@ When later framings actually default-linked to a first framing that did not
 route to `apply_after_review`, `structured_warnings` includes
 `warning_code="first_alternative_anchor_not_ready"` and
 `suggested_rerun_arguments={"link_alternatives": False}`. Per-framing
-`alternative_to` values reroute siblings without that warning.
+`alternative_to` values reroute siblings without that warning. When multiple
+framings share `ontology` or `shapes` patches, `structured_warnings` includes
+`warning_code="shared_semantic_context_applies_to_all_framings"` and suggested
+rerun arguments naming the shared graph roles to move into per-framing patches
+if fallback alternatives should avoid that provisional semantic context.
 
 `stage_pattern_promotion()` stages one or more caller-authored RDF framings
 supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;
