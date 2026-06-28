@@ -22541,7 +22541,7 @@ def test_profile_map_update_duplicate_groups_preserve_representative_support(
         nullable=False,
     )
 
-    def record_repeated_profile() -> None:
+    def record_repeated_profile(settlement_sample_scope: str) -> None:
         db.record_profile_bundle(
             dataset,
             dataset_summary="Payments were profiled with a full-table scan.",
@@ -22572,12 +22572,13 @@ def test_profile_map_update_duplicate_groups_preserve_representative_support(
                     "column_iri": settlement_column,
                     "column_name": "settlement_method",
                     "summary": "Settlement method was observed but is unmapped.",
+                    "sample_scope": settlement_sample_scope,
                 },
             ],
         )
 
-    record_repeated_profile()
-    record_repeated_profile()
+    record_repeated_profile("All rows in the test Payments table.")
+    record_repeated_profile("Repeated pass over the same Payments population.")
 
     draft = db.draft_profile_map_updates(dataset, evidence)
 
@@ -22599,6 +22600,15 @@ def test_profile_map_update_duplicate_groups_preserve_representative_support(
         "dataset_row_count_snapshot",
         "column_nullable",
         "unmapped_profiled_column",
+    }
+    unmapped_group = [
+        group
+        for group in recommendation_groups.values()
+        if group[0].kind == "unmapped_profiled_column"
+    ][0]
+    assert {item.sample_scope for item in unmapped_group} == {
+        "All rows in the test Payments table.",
+        "Repeated pass over the same Payments population.",
     }
     for group_key, group in recommendation_groups.items():
         indexes = [recommendation.recommendation_index for recommendation in group]

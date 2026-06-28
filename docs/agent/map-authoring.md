@@ -97,7 +97,10 @@ map. The draft rows carry sample scope, confidence, helper arguments,
 can decide which recommendations to accept.
 Duplicate groups are explicit: when repeated profile observations produce the
 same review row, accept one representative index unless the siblings need
-different modelling judgement. Prefer the draft's
+different modelling judgement. For `unmapped_profiled_column` shell rows, the
+duplicate group is keyed to the helper mutation rather than profile-specific
+sample or null details, so one representative stages one map shell with all
+supporting profile observations. Prefer the draft's
 `suggested_next_action_groups`: `profile_map_updates` starts from representative
 indexes whose rows are `default_stageable`, `profile_scalar_conflict_review`
 surfaces mutually exclusive choose-one scalar options, and

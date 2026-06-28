@@ -2107,6 +2107,11 @@ few useful gaps:
   `revision_anchor_iris`; query repair tasks with matching pending staged work
   include `pending_staged_repair_iris` and are sorted behind `staged_review` so
   agents review the pending mutation before staging a duplicate repair.
+- A profile frontier trial found repeated profile observations could produce two
+  default-stageable `unmapped_profiled_column` shell rows for the same helper
+  mutation when sample/null details differed. Profile map-update duplicate keys
+  now group unmapped shells by their helper mutation, while preserving all
+  supporting profile observations on the accepted representative.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

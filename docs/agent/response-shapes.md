@@ -1312,6 +1312,9 @@ recommendations remain review candidates but are skipped by default unless
 `allow_sampled_row_count_updates=True`. Same-evidence scalar conflicts, such as
 multiple full-scan row counts for one dataset or multiple nullable values for
 one column, are also non-default-stageable until one value is chosen explicitly.
+`unmapped_profiled_column` duplicate groups are keyed by the helper mutation,
+not profile-specific sample details, so one accepted representative can stage the
+column shell while preserving all supporting profile observations.
 
 `scalar_conflict_groups[]` gives a structured choose-one route for those
 non-default-stageable scalar conflicts:

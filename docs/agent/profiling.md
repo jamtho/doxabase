@@ -104,7 +104,10 @@ shells, so applying one accepted profile batch does not immediately drift
 against sibling staged revisions.
 
 Accept one representative from duplicate groups unless sibling rows need
-different modelling judgement. For scalar conflicts, choose at most one option
+different modelling judgement. Repeated `unmapped_profiled_column` shell rows are
+grouped by the helper mutation, so profile-specific sample or null details do not
+make agents stage the same shell twice; the accepted representative still carries
+all supporting profile observations. For scalar conflicts, choose at most one option
 from `profile_scalar_conflict_review` or from
 `scalar_conflict_groups[].options[]`; those options intentionally stay out of
 flat `suggested_next_actions`.

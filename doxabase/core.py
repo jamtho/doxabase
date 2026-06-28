@@ -11879,24 +11879,34 @@ class DoxaBase:
     def _profile_update_duplicate_group_key(
         recommendation: ProfileMapUpdateRecommendation,
     ) -> str:
-        payload = {
-            "kind": recommendation.kind,
-            "action": recommendation.action,
-            "resource_iri": recommendation.resource.iri,
-            "predicate": recommendation.predicate,
-            "current_value": recommendation.current_value,
-            "observed_value": recommendation.observed_value,
-            "observed_count": recommendation.observed_count,
-            "sample_size": recommendation.sample_size,
-            "sample_scope": recommendation.sample_scope,
-            "sample_method": recommendation.sample_method,
-            "profile_row_count": recommendation.profile_row_count,
-            "evidence_iri": recommendation.evidence_iri,
-            "basis": recommendation.basis,
-            "confidence": recommendation.confidence,
-            "helper_name": recommendation.helper_name,
-            "helper_arguments": recommendation.helper_arguments,
-        }
+        if recommendation.kind == "unmapped_profiled_column":
+            payload = {
+                "kind": recommendation.kind,
+                "action": recommendation.action,
+                "resource_iri": recommendation.resource.iri,
+                "predicate": recommendation.predicate,
+                "helper_name": recommendation.helper_name,
+                "helper_arguments": recommendation.helper_arguments,
+            }
+        else:
+            payload = {
+                "kind": recommendation.kind,
+                "action": recommendation.action,
+                "resource_iri": recommendation.resource.iri,
+                "predicate": recommendation.predicate,
+                "current_value": recommendation.current_value,
+                "observed_value": recommendation.observed_value,
+                "observed_count": recommendation.observed_count,
+                "sample_size": recommendation.sample_size,
+                "sample_scope": recommendation.sample_scope,
+                "sample_method": recommendation.sample_method,
+                "profile_row_count": recommendation.profile_row_count,
+                "evidence_iri": recommendation.evidence_iri,
+                "basis": recommendation.basis,
+                "confidence": recommendation.confidence,
+                "helper_name": recommendation.helper_name,
+                "helper_arguments": recommendation.helper_arguments,
+            }
         digest = hashlib.sha256(
             json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
         ).hexdigest()[:12]
