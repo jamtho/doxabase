@@ -483,7 +483,22 @@ resource.types
 resource.claim
 resource.outgoing
 resource.incoming
+resource.blank_node_triples
 resource.limit
+resource.outgoing_offset
+resource.incoming_offset
+resource.outgoing_total_count
+resource.outgoing_returned_count
+resource.outgoing_omitted_count
+resource.incoming_total_count
+resource.incoming_returned_count
+resource.incoming_omitted_count
+resource.include_blank_node_closure
+resource.blank_node_depth
+resource.blank_node_limit
+resource.blank_node_total_count
+resource.blank_node_returned_count
+resource.blank_node_omitted_count
 ```
 
 `outgoing[]` and `incoming[]` rows are `ResourceTriple` summaries:
@@ -507,6 +522,12 @@ triple.object_lang
 Use this helper when a specific resource needs a local RDF neighborhood rather
 than a route-explained context slice. The `claim` field is populated for claim
 resources and has the normal claim-description shape.
+Use `outgoing_offset` and `incoming_offset` to page high-degree resources when
+the returned count is lower than the total count. Set
+`include_blank_node_closure=True` for SHACL shapes and other RDF structures
+whose important details live on blank nodes reached from direct outgoing
+triples; closure rows are returned separately in `blank_node_triples` so
+`outgoing` remains direct subject triples.
 
 ## Staged Map Assertion Changes
 

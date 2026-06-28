@@ -1947,6 +1947,13 @@ few useful gaps:
   should not steer those assets into query repair: non-table datasets now carry
   `is_table=false`, `not_applicable_non_tabular_asset` query readiness, and a
   `non_tabular_asset_review` task pointing at a context-slice handoff.
+- Two generic-RDF API-shape probes found that a full route-explained generic
+  slice helper is still the likely long-term answer, but the immediate
+  high-value fix was smaller: `describe_resource` now reports outgoing and
+  incoming total/returned/omitted counts with offsets, and can optionally return
+  bounded blank-node closure triples for SHACL/property-shape handoffs. Use that
+  local card before reaching for graph export; keep the future generic slice for
+  durable multi-resource handoffs that need routes and cross-graph context.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

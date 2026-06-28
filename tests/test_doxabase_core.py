@@ -16923,6 +16923,127 @@ def test_record_claim_observation_writes_common_rdf_pattern(tmp_path: Path) -> N
     )
 
 
+def test_describe_resource_reports_counts_and_offsets(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    hub = "https://example.test/project#Hub"
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:Hub a rc:Dataset ;
+            rdfs:label "Hub" ;
+            ex:link ex:Item00, ex:Item01, ex:Item02, ex:Item03, ex:Item04,
+                ex:Item05, ex:Item06, ex:Item07, ex:Item08, ex:Item09 .
+
+        ex:Item00 ex:pointsTo ex:Hub .
+        ex:Item01 ex:pointsTo ex:Hub .
+        ex:Item02 ex:pointsTo ex:Hub .
+        ex:Item03 ex:pointsTo ex:Hub .
+        ex:Item04 ex:pointsTo ex:Hub .
+        ex:Item05 ex:pointsTo ex:Hub .
+        ex:Item06 ex:pointsTo ex:Hub .
+        ex:Item07 ex:pointsTo ex:Hub .
+        ex:Item08 ex:pointsTo ex:Hub .
+        ex:Item09 ex:pointsTo ex:Hub .
+        """,
+        graph="map",
+    )
+
+    context = db.describe_resource(
+        hub,
+        graph="map",
+        limit=3,
+        outgoing_offset=2,
+        incoming_offset=4,
+    )
+
+    assert context.outgoing_total_count == 12
+    assert context.outgoing_returned_count == 3
+    assert context.outgoing_omitted_count == 7
+    assert context.outgoing_offset == 2
+    assert len(context.outgoing) == 3
+    assert context.incoming_total_count == 10
+    assert context.incoming_returned_count == 3
+    assert context.incoming_omitted_count == 3
+    assert context.incoming_offset == 4
+    assert len(context.incoming) == 3
+
+    with pytest.raises(DoxaBaseError, match="outgoing_offset"):
+        db.describe_resource(hub, outgoing_offset=-1)
+    with pytest.raises(DoxaBaseError, match="incoming_offset"):
+        db.describe_resource(hub, incoming_offset=-1)
+
+
+def test_describe_resource_can_include_bounded_blank_node_closure(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shape = "https://example.test/project#SignalShape"
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:SignalShape a sh:NodeShape ;
+            rdfs:label "Signal shape" ;
+            sh:targetClass ex:Signal ;
+            sh:property [
+                sh:path ex:score ;
+                sh:datatype xsd:decimal ;
+                sh:message "Score is decimal." ;
+                sh:qualifiedValueShape [
+                    sh:path ex:source ;
+                    sh:datatype xsd:string
+                ]
+            ] ;
+            sh:property [
+                sh:path ex:status ;
+                sh:datatype xsd:string ;
+                sh:message "Status is text."
+            ] .
+        """,
+        graph="shapes",
+    )
+
+    default_context = db.describe_resource(shape, graph="shapes")
+    assert default_context.include_blank_node_closure is False
+    assert default_context.blank_node_triples == []
+    assert any(
+        triple.predicate == "http://www.w3.org/ns/shacl#property"
+        and triple.object_kind == "bnode"
+        for triple in default_context.outgoing
+    )
+
+    context = db.describe_resource(
+        shape,
+        graph="shapes",
+        include_blank_node_closure=True,
+        blank_node_depth=2,
+        blank_node_limit=4,
+    )
+
+    assert context.include_blank_node_closure is True
+    assert context.blank_node_depth == 2
+    assert context.blank_node_limit == 4
+    assert context.blank_node_returned_count == 4
+    assert context.blank_node_total_count > context.blank_node_returned_count
+    assert context.blank_node_omitted_count == (
+        context.blank_node_total_count - context.blank_node_returned_count
+    )
+    blank_node_predicates = {triple.predicate for triple in context.blank_node_triples}
+    assert "http://www.w3.org/ns/shacl#path" in blank_node_predicates
+    assert "http://www.w3.org/ns/shacl#datatype" in blank_node_predicates
+
+    with pytest.raises(DoxaBaseError, match="blank_node_depth"):
+        db.describe_resource(shape, include_blank_node_closure=True, blank_node_depth=-1)
+    with pytest.raises(DoxaBaseError, match="blank_node_limit"):
+        db.describe_resource(shape, include_blank_node_closure=True, blank_node_limit=0)
+
+
 def test_record_query_result_writes_query_source_evidence(
     tmp_path: Path,
 ) -> None:

@@ -40,9 +40,12 @@ URI-valued facts attached to each resource, not only labels.
 
 `doxabase.describe_resource`
 
-Returns outgoing and incoming triples for one resource, with available labels
-and RDF types. Use it after `list_entities` when lexical search found a resource
-but you need its structured claim/evidence/source-span context.
+Returns outgoing and incoming triples for one resource, with available labels,
+RDF types, per-direction total/returned/omitted counts, offsets, and optional
+bounded blank-node closure. Use it after `list_entities` when lexical search
+found a resource but you need its structured claim/evidence/source-span context.
+For SHACL shapes, pass `include_blank_node_closure=true` and read
+`blank_node_triples` separately from direct `outgoing` triples.
 
 `doxabase.describe_assertion_support`
 

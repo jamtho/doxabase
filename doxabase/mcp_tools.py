@@ -81,12 +81,22 @@ def describe_resource_tool(
     graph: str | None = None,
     include_incoming: bool = True,
     limit: int = 100,
+    outgoing_offset: int = 0,
+    incoming_offset: int = 0,
+    include_blank_node_closure: bool = False,
+    blank_node_depth: int = 2,
+    blank_node_limit: int = 100,
 ) -> dict[str, Any]:
     result = db.describe_resource(
         iri=iri,
         graph=graph,
         include_incoming=include_incoming,
         limit=limit,
+        outgoing_offset=outgoing_offset,
+        incoming_offset=incoming_offset,
+        include_blank_node_closure=include_blank_node_closure,
+        blank_node_depth=blank_node_depth,
+        blank_node_limit=blank_node_limit,
     )
     return to_dict(result)
 

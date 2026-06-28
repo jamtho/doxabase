@@ -28,11 +28,14 @@ counts, omitted counts, or offset-style browsing.
 For arbitrary project RDF, such as ontology terms, SHACL shapes, evidence
 resources, source spans, or non-dataset map resources, start with
 `list_entities()` or `search()`, then inspect specific IRIs with
-`describe_resource(include_incoming=True)`. Use `export_graph()` or
-`export_trig()` when reviewers need complete Turtle for a graph role or when
-SHACL blank-node property shapes matter. Current context-slice profiles are not
-a generic RDF neighborhood browser, and shape seeds may not carry blank-node
-closure through the slice.
+`describe_resource(include_incoming=True)`. For SHACL node shapes or other
+resources whose details sit behind blank-node objects, call
+`describe_resource(graph="shapes", include_blank_node_closure=True)` and read
+`blank_node_triples`, `blank_node_total_count`, and
+`blank_node_omitted_count`. Use `export_graph()` or `export_trig()` when
+reviewers need complete Turtle for a graph role. Current context-slice profiles
+are not a generic RDF neighborhood browser, and shape seeds may not carry
+blank-node closure through the slice.
 
 Dataset and deep-lore slices also understand profile seeds. A seed
 `rc:ProfileObservation` expands to its observed asset/column, evidence, value

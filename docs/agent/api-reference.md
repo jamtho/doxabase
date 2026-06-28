@@ -1411,10 +1411,15 @@ post-apply queue and how to route it.
 rationale, targets, supporting observations and claims, evidence/source spans,
 and map implications.
 
-`describe_resource()` returns outgoing and incoming triples for one resource.
-Use it after `list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence")`,
+`describe_resource()` returns outgoing and incoming triples for one resource,
+with per-direction total, returned, omitted, and offset fields. Use it after
+`list_entities(type="rc:Claim")`, `list_entities(type="rc:Evidence")`,
 or `list_entities(type="rc:SourceSpan")` when you need generic structured
-context rather than a type-specific helper.
+context rather than a type-specific helper. For SHACL shapes or other RDF
+structures whose details sit behind blank-node objects, pass
+`include_blank_node_closure=True` with bounded `blank_node_depth` and
+`blank_node_limit`; closure triples are returned separately from direct
+outgoing triples.
 
 `describe_assertion_support()` returns support context for one map assertion.
 Pass `subject`, `predicate`, optional `object`, and optional `object_kind`

@@ -5724,6 +5724,11 @@ def test_record_claim_observation_tool_and_resource_context(
         triple["predicate"] == "https://richcanopy.org/ns/rc#claimKind"
         for triple in context["outgoing"]
     )
+    assert context["outgoing_total_count"] >= context["outgoing_returned_count"]
+    assert context["incoming_total_count"] >= context["incoming_returned_count"]
+    assert context["outgoing_offset"] == 0
+    assert context["incoming_offset"] == 0
+    assert context["blank_node_triples"] == []
     assert validate_graph_tool(db, scope="all")["conforms"] is True
 
 

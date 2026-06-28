@@ -2349,7 +2349,22 @@ class ResourceContext:
     claim: ClaimDescription | None
     outgoing: list[ResourceTriple]
     incoming: list[ResourceTriple]
+    blank_node_triples: list[ResourceTriple]
     limit: int
+    outgoing_offset: int
+    incoming_offset: int
+    outgoing_total_count: int
+    outgoing_returned_count: int
+    outgoing_omitted_count: int
+    incoming_total_count: int
+    incoming_returned_count: int
+    incoming_omitted_count: int
+    include_blank_node_closure: bool
+    blank_node_depth: int
+    blank_node_limit: int
+    blank_node_total_count: int
+    blank_node_returned_count: int
+    blank_node_omitted_count: int
 
 
 @dataclass(frozen=True)
@@ -3416,9 +3431,22 @@ class DoxaBase:
         graph: str | None = None,
         include_incoming: bool = True,
         limit: int = 100,
+        outgoing_offset: int = 0,
+        incoming_offset: int = 0,
+        include_blank_node_closure: bool = False,
+        blank_node_depth: int = 2,
+        blank_node_limit: int = 100,
     ) -> ResourceContext:
         if limit < 1:
             raise DoxaBaseError("Resource context limit must be at least 1")
+        if outgoing_offset < 0:
+            raise DoxaBaseError("outgoing_offset must be non-negative")
+        if incoming_offset < 0:
+            raise DoxaBaseError("incoming_offset must be non-negative")
+        if blank_node_depth < 0:
+            raise DoxaBaseError("blank_node_depth must be non-negative")
+        if blank_node_limit < 1:
+            raise DoxaBaseError("blank_node_limit must be at least 1")
         resource_iri = self.expand_iri(iri)
         graphs = self._expand_graphs([graph] if graph else None)
         lookup_graphs = self._lookup_graphs(graphs)
@@ -3428,6 +3456,47 @@ class DoxaBase:
             if self.expand_iri("rc:Claim") in types
             else None
         )
+        outgoing_total_count = self._resource_triple_count(
+            graphs,
+            subject=resource_iri,
+        )
+        incoming_total_count = (
+            self._resource_triple_count(
+                graphs,
+                object_value=resource_iri,
+                object_kind="uri",
+            )
+            if include_incoming
+            else 0
+        )
+        outgoing = self._resource_triples(
+            graphs,
+            subject=resource_iri,
+            limit=limit,
+            offset=outgoing_offset,
+        )
+        incoming = (
+            self._resource_triples(
+                graphs,
+                object_value=resource_iri,
+                object_kind="uri",
+                limit=limit,
+                offset=incoming_offset,
+            )
+            if include_incoming
+            else []
+        )
+        blank_node_triples: list[ResourceTriple] = []
+        blank_node_total_count = 0
+        if include_blank_node_closure:
+            blank_node_triples, blank_node_total_count = (
+                self._resource_blank_node_closure(
+                    graphs,
+                    subject=resource_iri,
+                    max_depth=blank_node_depth,
+                    limit=blank_node_limit,
+                )
+            )
         return ResourceContext(
             iri=resource_iri,
             graph=graph,
@@ -3435,22 +3504,33 @@ class DoxaBase:
             description=self._description_from_graphs(lookup_graphs, resource_iri),
             types=types,
             claim=claim,
-            outgoing=self._resource_triples(
-                graphs,
-                subject=resource_iri,
-                limit=limit,
-            ),
-            incoming=(
-                self._resource_triples(
-                    graphs,
-                    object_value=resource_iri,
-                    object_kind="uri",
-                    limit=limit,
-                )
-                if include_incoming
-                else []
-            ),
+            outgoing=outgoing,
+            incoming=incoming,
+            blank_node_triples=blank_node_triples,
             limit=limit,
+            outgoing_offset=outgoing_offset,
+            incoming_offset=incoming_offset,
+            outgoing_total_count=outgoing_total_count,
+            outgoing_returned_count=len(outgoing),
+            outgoing_omitted_count=max(
+                outgoing_total_count - outgoing_offset - len(outgoing),
+                0,
+            ),
+            incoming_total_count=incoming_total_count,
+            incoming_returned_count=len(incoming),
+            incoming_omitted_count=max(
+                incoming_total_count - incoming_offset - len(incoming),
+                0,
+            ),
+            include_blank_node_closure=include_blank_node_closure,
+            blank_node_depth=blank_node_depth,
+            blank_node_limit=blank_node_limit,
+            blank_node_total_count=blank_node_total_count,
+            blank_node_returned_count=len(blank_node_triples),
+            blank_node_omitted_count=max(
+                blank_node_total_count - len(blank_node_triples),
+                0,
+            ),
         )
 
     def describe_assertion_support(
@@ -35746,7 +35826,8 @@ class DoxaBase:
         subject: str | None = None,
         object_value: str | None = None,
         object_kind: str | None = None,
-        limit: int = 100,
+        limit: int | None = 100,
+        offset: int = 0,
     ) -> list[ResourceTriple]:
         graph_filter, graph_params = self._graph_filter(graphs, alias="q")
         filters: list[str] = []
@@ -35763,6 +35844,11 @@ class DoxaBase:
         if not filters:
             raise DoxaBaseError("Resource triple lookup requires subject or object")
         where = " AND ".join(filters)
+        limit_clause = ""
+        limit_params: list[Any] = []
+        if limit is not None:
+            limit_clause = "LIMIT ? OFFSET ?"
+            limit_params.extend([limit, offset])
         rows = self._conn.execute(
             f"""
             SELECT
@@ -35778,11 +35864,118 @@ class DoxaBase:
             WHERE {where}
               {graph_filter}
             ORDER BY q.graph, q.subject, q.predicate, q.object
-            LIMIT ?
+            {limit_clause}
             """,
-            [*params, *graph_params, limit],
+            [*params, *graph_params, *limit_params],
         ).fetchall()
         return [self._resource_triple_from_row(row) for row in rows]
+
+    def _resource_triple_count(
+        self,
+        graphs: list[str],
+        *,
+        subject: str | None = None,
+        object_value: str | None = None,
+        object_kind: str | None = None,
+    ) -> int:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        filters: list[str] = []
+        params: list[Any] = []
+        if subject is not None:
+            filters.append("q.subject = ?")
+            params.append(subject)
+        if object_value is not None:
+            filters.append("q.object = ?")
+            params.append(object_value)
+        if object_kind is not None:
+            filters.append("q.object_kind = ?")
+            params.append(object_kind)
+        if not filters:
+            raise DoxaBaseError("Resource triple count requires subject or object")
+        where = " AND ".join(filters)
+        row = self._conn.execute(
+            f"""
+            SELECT COUNT(*) AS count
+            FROM quads q
+            WHERE {where}
+              {graph_filter}
+            """,
+            [*params, *graph_params],
+        ).fetchone()
+        return int(row["count"])
+
+    def _resource_blank_node_objects(
+        self,
+        graphs: list[str],
+        *,
+        subject: str,
+    ) -> list[str]:
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
+        rows = self._conn.execute(
+            f"""
+            SELECT DISTINCT q.object
+            FROM quads q
+            WHERE q.subject = ?
+              AND q.object_kind = 'bnode'
+              {graph_filter}
+            ORDER BY q.object
+            """,
+            [subject, *graph_params],
+        ).fetchall()
+        return [row["object"] for row in rows]
+
+    def _resource_blank_node_closure(
+        self,
+        graphs: list[str],
+        *,
+        subject: str,
+        max_depth: int,
+        limit: int,
+    ) -> tuple[list[ResourceTriple], int]:
+        if max_depth == 0:
+            return [], 0
+        frontier = self._resource_blank_node_objects(graphs, subject=subject)
+        visited: set[str] = set()
+        seen_triples: set[
+            tuple[str, str, str, str, str, str | None, str | None]
+        ] = set()
+        closure_triples: list[ResourceTriple] = []
+        for _depth in range(max_depth):
+            if not frontier:
+                break
+            next_frontier: list[str] = []
+            for blank_node in frontier:
+                if blank_node in visited:
+                    continue
+                visited.add(blank_node)
+                triples = self._resource_triples(
+                    graphs,
+                    subject=blank_node,
+                    limit=None,
+                )
+                for triple in triples:
+                    triple_key = (
+                        triple.graph,
+                        triple.subject,
+                        triple.predicate,
+                        triple.object,
+                        triple.object_kind,
+                        triple.object_datatype,
+                        triple.object_lang,
+                    )
+                    if triple_key in seen_triples:
+                        continue
+                    seen_triples.add(triple_key)
+                    closure_triples.append(triple)
+                    if (
+                        triple.object_kind == "bnode"
+                        and triple.object not in visited
+                        and triple.object not in next_frontier
+                    ):
+                        next_frontier.append(triple.object)
+            frontier = next_frontier
+        total_count = len(closure_triples)
+        return closure_triples[:limit], total_count
 
     def _assertion_triples(
         self,
