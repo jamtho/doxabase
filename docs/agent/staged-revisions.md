@@ -183,8 +183,22 @@ A stale export should be read like this:
 - **Restage stale source:** restage_staged_revision(...)
 ```
 
-For larger stale sets, use `doxabase.restage_staged_revisions(...)` instead of
-looping manually. It restages conflicted rows that do not already have a
+For larger stale sets or mixed queues, start with
+`doxabase.plan_staged_revision_recovery(...)`. It is a read-only planner: it
+does not stage, restage, apply, export, or write files. It discovers current
+staged work by default, or accepts explicit `revision_iris`, then uses dry-run
+batch classification and optional rebase drafts to return one lane per source
+revision. Read `lanes[].lane`, `current_revision_iri`, `next_action`, and
+`next_action_queue_item.resolved_target_iri` before mutating. Queue values are
+row IRIs, while resolved targets may point at refreshed successors or applied
+events. Treat `would_restage_revision_iris` as the post-review mechanical
+restage list, and treat `repair_first_revision_iris` / `repair_or_replace`
+lanes as repair or replacement work before any same-payload restage. If
+`sequential_apply_recheck_candidate_iris` is non-empty, apply at most one ready
+row, then rerun the planner.
+
+Use `doxabase.restage_staged_revisions(...)` when you are ready for the lower
+level batch operation. It restages conflicted rows that do not already have a
 successor, skips already-handled or non-conflicted rows, preserves caller order,
 returns source-to-current mappings, and can write the grouped review bundle when
 you pass `path`. Use `dry_run=true` first when you want the same per-source

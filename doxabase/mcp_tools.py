@@ -318,6 +318,29 @@ def draft_staged_revision_rebase_tool(
     )
 
 
+def plan_staged_revision_recovery_tool(
+    db: DoxaBase,
+    revision_iris: list[str] | None = None,
+    current_staged_work_only: bool = True,
+    include_drafts: bool = True,
+    validation_scope: str | None = None,
+    drift_detail: str = "summary",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    return to_dict(
+        db.plan_staged_revision_recovery(
+            revision_iris=revision_iris,
+            current_staged_work_only=current_staged_work_only,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,  # type: ignore[arg-type]
+            drift_detail=drift_detail,  # type: ignore[arg-type]
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+
 def describe_pattern_tool(
     db: DoxaBase,
     iri: str,

@@ -82,6 +82,16 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
     )
     assert "non_executed_review_draft" in str(rebase_mcp_doc["content"])
 
+    recovery_mcp_doc = get_agent_doc(
+        "mcp_tools",
+        section="doxabase.plan_staged_revision_recovery",
+        max_chars=2_000,
+    )
+    assert recovery_mcp_doc["selected_section"]["heading"] == (
+        "doxabase.plan_staged_revision_recovery"
+    )
+    assert "read-only recovery routes" in str(recovery_mcp_doc["content"])
+
     profile_run_mcp_doc = get_agent_doc(
         "mcp_tools",
         section="doxabase.describe_profile_run",
@@ -111,6 +121,16 @@ def test_high_value_sections_are_addressable_for_cold_start() -> None:
         "Staged Revision Rebase Draft"
     )
     assert "draft.repair_candidates" in str(rebase_response_doc["content"])
+
+    recovery_response_doc = get_agent_doc(
+        "response_shapes",
+        section="Staged Revision Recovery Plan",
+        max_chars=4_000,
+    )
+    assert recovery_response_doc["selected_section"]["heading"] == (
+        "Staged Revision Recovery Plan"
+    )
+    assert "plan.lanes" in str(recovery_response_doc["content"])
 
     profile_run_response_doc = get_agent_doc(
         "response_shapes",

@@ -41,6 +41,7 @@ from doxabase.mcp_tools import (
     list_graph_revisions_tool,
     list_resource_revisions_tool,
     load_example_fixtures_tool,
+    plan_staged_revision_recovery_tool,
     project_brief_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
@@ -73,7 +74,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -507,6 +508,29 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             db,
             iri=iri,
             validation_scope=validation_scope,
+        )
+
+    @server.tool(name="doxabase.plan_staged_revision_recovery")
+    def plan_staged_revision_recovery(
+        revision_iris: list[str] | None = None,
+        current_staged_work_only: bool = True,
+        include_drafts: bool = True,
+        validation_scope: str | None = None,
+        drift_detail: str = "summary",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Plan read-only recovery routes for staged revision queues."""
+
+        return plan_staged_revision_recovery_tool(
+            db,
+            revision_iris=revision_iris,
+            current_staged_work_only=current_staged_work_only,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,
+            drift_detail=drift_detail,
+            limit=limit,
+            offset=offset,
         )
 
     @server.tool(name="doxabase.describe_pattern")

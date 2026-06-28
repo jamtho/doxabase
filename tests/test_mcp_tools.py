@@ -39,6 +39,7 @@ from doxabase.mcp_tools import (
     list_graph_revisions_tool,
     list_resource_revisions_tool,
     load_example_fixtures_tool,
+    plan_staged_revision_recovery_tool,
     project_brief_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
@@ -100,6 +101,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_staged_revision" in tool_names
     assert "doxabase.check_staged_revision_apply" in tool_names
     assert "doxabase.draft_staged_revision_rebase" in tool_names
+    assert "doxabase.plan_staged_revision_recovery" in tool_names
     assert "doxabase.describe_pattern" in tool_names
     assert "doxabase.record_observation" in tool_names
     assert "doxabase.record_query_result" in tool_names
@@ -594,6 +596,52 @@ def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
         RC + "SnapshotRow"
     )
     assert result["next_action"]["source"] == "draft_staged_revision_rebase"
+
+
+def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    result = plan_staged_revision_recovery_tool(db)
+
+    assert result["result_kind"] == "staged_revision_recovery_plan"
+    assert result["helper"] == "plan_staged_revision_recovery"
+    assert result["mode"] == "read_only_plan"
+    assert result["selection_mode"] == "current_staged_work"
+    assert result["processed_revision_iris"] == [staged["revision_iri"]]
+    assert result["lane_counts"] == {"apply_after_review": 1}
+    assert result["next_action_queue_item_counts"] == {
+        "apply_after_review": 1
+    }
+    lane = result["lanes"][0]
+    assert lane["source_revision_iri"] == staged["revision_iri"]
+    assert lane["row_iri"] == staged["revision_iri"]
+    assert lane["lane"] == "apply_after_review"
+    assert lane["next_action"]["tool_name"] == "apply_staged_revision"
+    assert lane["next_action_queue_item"]["resolved_target_iri"] == (
+        staged["revision_iri"]
+    )
+    assert result["bundle_summary"]["next_action_queue"] == {
+        "apply_after_review": [staged["revision_iri"]]
+    }
+    assert result["note"].startswith("Read-only staged revision recovery plan")
 
 
 def test_restage_staged_revision_tool_returns_json_like_payload(

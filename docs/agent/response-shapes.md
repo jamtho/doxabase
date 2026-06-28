@@ -3966,6 +3966,133 @@ label says `Apply only after semantic review` in that case. Conflict review
 actions include `include_current_apply_check=True` so the next inspection reloads
 the current blocked status.
 
+### Staged Revision Recovery Plan
+
+`db.plan_staged_revision_recovery(...)` returns a
+`StagedRevisionRecoveryPlan`:
+
+```python
+plan.result_kind
+plan.helper
+plan.mode
+plan.selection_mode
+plan.requested_revision_iris
+plan.processed_revision_iris
+plan.current_staged_work_only
+plan.include_drafts
+plan.validation_scope
+plan.drift_detail
+plan.limit
+plan.offset
+plan.count
+plan.returned_count
+plan.total_count
+plan.lanes
+plan.lane_counts
+plan.next_action_queue
+plan.next_action_queue_items
+plan.next_action_queue_item_counts
+plan.semantic_review_required_queue_counts
+plan.would_restage_revision_iris
+plan.repair_first_revision_iris
+plan.not_restageable_revision_iris_by_reason
+plan.current_revision_by_source
+plan.review_revision_iris
+plan.recommended_review_iris
+plan.recommended_mutation_review_iris
+plan.recommended_apply_or_restage_review_iris
+plan.recommended_repair_review_iris
+plan.recommended_applied_inspection_iris
+plan.sequential_apply_recheck_candidate_iris
+plan.revision_summaries
+plan.bundle_summary
+plan.suggested_next_actions
+plan.suggested_next_calls
+plan.warnings
+plan.note
+```
+
+`mode` is `read_only_plan`: the helper does not stage, restage, apply, export,
+or write files. With no explicit `revision_iris`, `selection_mode` is
+`current_staged_work` by default and the helper plans over the bounded current
+staged queue. With explicit `revision_iris`, it preserves first-seen order after
+`limit` and `offset`.
+
+Each `plan.lanes[]` row is a `StagedRevisionRecoveryLane`:
+
+```python
+lane.row_iri
+lane.source_revision_iri
+lane.current_revision_iri
+lane.resolved_target_iri
+lane.resolved_target_record_kind
+lane.row_is_target
+lane.lane
+lane.action_type
+lane.action_label
+lane.batch_action
+lane.not_restageable_reason
+lane.summary
+lane.changed_graphs
+lane.status_before
+lane.decision_before
+lane.routing_decision_before
+lane.stale_resolution_state_before
+lane.blocking_reasons_before
+lane.status_after
+lane.decision_after
+lane.routing_decision_after
+lane.stale_resolution_state_after
+lane.blocking_reasons_after
+lane.source_staged_validation_status
+lane.source_validation_result_count
+lane.current_staged_validation_status
+lane.current_validation_result_count
+lane.source_snapshot_evidence
+lane.source_snapshot_evidence_completeness
+lane.current_snapshot_evidence
+lane.current_snapshot_evidence_completeness
+lane.triples_to_add_after
+lane.triples_to_remove_after
+lane.restaged_from
+lane.restaged_revision_iri
+lane.current_restaged_by
+lane.alternative_gate
+lane.next_action
+lane.next_action_queue_item
+lane.repair_draft
+lane.repair_draft_error
+lane.suggested_next_actions
+lane.suggested_next_calls
+lane.batch_item
+lane.note
+```
+
+`lane.lane` is the effective queue, usually `apply_after_review`,
+`restage_after_review`, `repair_or_replace`, `inspect_already_applied`, or
+`informational`. `batch_action` comes from the dry-run batch classifier, for
+example `would_restage`, `skipped_already_handled`, or
+`skipped_not_restageable`. A dry-run `would_restage` lane has no successor yet:
+`current_revision_iri` is still the stale source. A handled stale lane can have
+`current_revision_iri` and `row_iri` set to a refreshed successor. An
+already-applied source can have `resolved_target_iri` set to the applied event
+and `row_is_target=False`.
+
+Use `next_action_queue_item.resolved_target_iri` or
+`next_action.arguments["iri"]` for the concrete target when present. Raw
+`next_action_queue` values are row IRIs and are intentionally not always the
+same as the mutation or inspection target. Repair lanes may include
+`repair_draft`; when the suggested repair creates a new successor,
+`resolved_target_iri` can be `None`, so drive the reviewed repair from
+`repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
+
+`would_restage_revision_iris` is a mechanical restage worklist after review, not
+an apply queue. `repair_first_revision_iris` marks stale sources whose staged
+validation history means a repair draft or manual replacement should come before
+another same-payload restage. If
+`sequential_apply_recheck_candidate_iris` is non-empty, apply at most one ready
+row, then rerun `plan_staged_revision_recovery()` before the next mutation.
+
 ### Staged Revision Rebase Draft
 
 `db.draft_staged_revision_rebase(revision_iri)` returns a

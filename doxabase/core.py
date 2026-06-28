@@ -876,6 +876,97 @@ class StagedGraphRevisionBatchRestageRecord:
 
 
 @dataclass(frozen=True)
+class StagedRevisionRecoveryLane:
+    row_iri: str
+    source_revision_iri: str
+    current_revision_iri: str
+    resolved_target_iri: str | None
+    resolved_target_record_kind: str | None
+    row_is_target: bool
+    lane: str
+    action_type: str | None
+    action_label: str | None
+    batch_action: str
+    not_restageable_reason: str | None
+    summary: str | None
+    changed_graphs: list[str]
+    status_before: str
+    decision_before: str
+    routing_decision_before: str
+    stale_resolution_state_before: str | None
+    blocking_reasons_before: list[str]
+    status_after: str
+    decision_after: str
+    routing_decision_after: str
+    stale_resolution_state_after: str | None
+    blocking_reasons_after: list[str]
+    source_staged_validation_status: str
+    source_validation_result_count: int | None
+    current_staged_validation_status: str
+    current_validation_result_count: int | None
+    source_snapshot_evidence: RevisionSnapshotEvidenceStatus
+    source_snapshot_evidence_completeness: str
+    current_snapshot_evidence: RevisionSnapshotEvidenceStatus
+    current_snapshot_evidence_completeness: str
+    triples_to_add_after: int
+    triples_to_remove_after: int
+    restaged_from: str | None
+    restaged_revision_iri: str | None
+    current_restaged_by: str | None
+    alternative_gate: StagedRevisionAlternativeGate | None
+    next_action: RevisionNextAction | None
+    next_action_queue_item: RevisionNextActionQueueItem | None
+    repair_draft: StagedRevisionRebaseDraft | None
+    repair_draft_error: str | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    batch_item: StagedGraphRevisionBatchRestageItem
+    note: str
+
+
+@dataclass(frozen=True)
+class StagedRevisionRecoveryPlan:
+    result_kind: str
+    helper: str
+    mode: str
+    selection_mode: str
+    requested_revision_iris: list[str] | None
+    processed_revision_iris: list[str]
+    current_staged_work_only: bool
+    include_drafts: bool
+    validation_scope: str | None
+    drift_detail: str
+    limit: int
+    offset: int
+    count: int
+    returned_count: int
+    total_count: int
+    lanes: list[StagedRevisionRecoveryLane]
+    lane_counts: dict[str, int]
+    next_action_queue: dict[str, list[str]]
+    next_action_queue_items: list[RevisionNextActionQueueItem]
+    next_action_queue_item_counts: dict[str, int]
+    semantic_review_required_queue_counts: dict[str, int]
+    would_restage_revision_iris: list[str]
+    repair_first_revision_iris: list[str]
+    not_restageable_revision_iris_by_reason: dict[str, list[str]]
+    current_revision_by_source: dict[str, str]
+    review_revision_iris: list[str]
+    recommended_review_iris: list[str]
+    recommended_mutation_review_iris: list[str]
+    recommended_apply_or_restage_review_iris: list[str]
+    recommended_repair_review_iris: list[str]
+    recommended_applied_inspection_iris: list[str]
+    sequential_apply_recheck_candidate_iris: list[str]
+    revision_summaries: list[StagedGraphRevisionExportSummary]
+    bundle_summary: StagedGraphRevisionBundleSummary | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    warnings: list[str]
+    note: str
+
+
+@dataclass(frozen=True)
 class _StagedRevisionApplicationPreview:
     staged: StagedGraphRevisionDescription
     check: StagedRevisionApplyCheck
@@ -23560,6 +23651,412 @@ class DoxaBase:
             revision_summaries=revision_summaries,
             bundle_summary=bundle_summary,
             export_record=export_record,
+        )
+
+    def plan_staged_revision_recovery(
+        self,
+        revision_iris: Iterable[str] | str | None = None,
+        *,
+        current_staged_work_only: bool = True,
+        include_drafts: bool = True,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None = None,
+        drift_detail: TypingLiteral["summary", "exact"] = "summary",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> StagedRevisionRecoveryPlan:
+        if drift_detail not in {"summary", "exact"}:
+            raise DoxaBaseError("drift_detail must be 'summary' or 'exact'")
+        selection_mode: str
+        requested_revision_iris: list[str] | None
+        total_count: int
+        selected_revision_iris: list[str]
+        if revision_iris is None:
+            selection_mode = (
+                "current_staged_work"
+                if current_staged_work_only
+                else "listed_staged_revisions"
+            )
+            requested_revision_iris = None
+            listing = self.list_graph_revisions(
+                revision_type="rc:StagedRevision",
+                include_apply_checks=True,
+                drift_detail=drift_detail,
+                current_staged_work_only=current_staged_work_only,
+                limit=limit,
+                offset=offset,
+            )
+            selected_revision_iris = [item.iri for item in listing.revisions]
+            total_count = listing.total_count
+        else:
+            selection_mode = "explicit_revision_iris"
+            self._ensure_non_negative("limit", limit)
+            self._ensure_non_negative("offset", offset)
+            requested_revision_iris = list(
+                dict.fromkeys(
+                    self._string_values(
+                        "revision_iris",
+                        revision_iris,
+                        required=True,
+                    )
+                )
+            )
+            total_count = len(requested_revision_iris)
+            selected_revision_iris = requested_revision_iris[offset : offset + limit]
+
+        if not selected_revision_iris:
+            return self._empty_staged_revision_recovery_plan(
+                selection_mode=selection_mode,
+                requested_revision_iris=requested_revision_iris,
+                current_staged_work_only=current_staged_work_only,
+                include_drafts=include_drafts,
+                validation_scope=validation_scope,
+                drift_detail=drift_detail,
+                limit=limit,
+                offset=offset,
+                total_count=total_count,
+            )
+
+        batch = self.restage_staged_revisions(
+            selected_revision_iris,
+            dry_run=True,
+            validation_scope=validation_scope,
+        )
+        summary_by_iri = {
+            summary.revision_iri: summary for summary in batch.revision_summaries
+        }
+        warnings = list(batch.bundle_summary.warnings)
+        lanes: list[StagedRevisionRecoveryLane] = []
+        for item in batch.items:
+            lane, warning = self._staged_recovery_lane_from_batch_item(
+                item,
+                summary_by_iri=summary_by_iri,
+                include_drafts=include_drafts,
+                validation_scope=validation_scope,
+            )
+            lanes.append(lane)
+            if warning is not None:
+                warnings.append(warning)
+
+        if batch.bundle_summary.sequential_apply_recheck_candidate_iris:
+            warnings.append(
+                "Plan includes staged revisions that share changed graphs; "
+                "apply at most one ready row, then rerun "
+                "plan_staged_revision_recovery before taking the next mutation."
+            )
+        lane_counts = self._staged_recovery_lane_counts(lanes)
+        queue_items = [
+            lane.next_action_queue_item
+            for lane in lanes
+            if lane.next_action_queue_item is not None
+        ]
+        suggested_next_actions = self._staged_recovery_suggested_next_actions(lanes)
+        return StagedRevisionRecoveryPlan(
+            result_kind="staged_revision_recovery_plan",
+            helper="plan_staged_revision_recovery",
+            mode="read_only_plan",
+            selection_mode=selection_mode,
+            requested_revision_iris=requested_revision_iris,
+            processed_revision_iris=batch.processed_revision_iris,
+            current_staged_work_only=current_staged_work_only,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,
+            drift_detail=drift_detail,
+            limit=limit,
+            offset=offset,
+            count=total_count,
+            returned_count=len(batch.processed_revision_iris),
+            total_count=total_count,
+            lanes=lanes,
+            lane_counts=lane_counts,
+            next_action_queue=self._revision_next_action_queue(
+                (lane.row_iri, lane.next_action) for lane in lanes
+            ),
+            next_action_queue_items=queue_items,
+            next_action_queue_item_counts=(
+                self._revision_next_action_queue_item_counts(queue_items)
+            ),
+            semantic_review_required_queue_counts=(
+                self._semantic_review_required_queue_counts(queue_items)
+            ),
+            would_restage_revision_iris=batch.would_restage_revision_iris,
+            repair_first_revision_iris=batch.repair_first_revision_iris,
+            not_restageable_revision_iris_by_reason=(
+                batch.not_restageable_revision_iris_by_reason
+            ),
+            current_revision_by_source=batch.current_revision_by_source,
+            review_revision_iris=batch.review_revision_iris,
+            recommended_review_iris=batch.bundle_summary.recommended_review_iris,
+            recommended_mutation_review_iris=(
+                batch.bundle_summary.recommended_mutation_review_iris
+            ),
+            recommended_apply_or_restage_review_iris=(
+                batch.bundle_summary.recommended_apply_or_restage_review_iris
+            ),
+            recommended_repair_review_iris=(
+                batch.bundle_summary.recommended_repair_review_iris
+            ),
+            recommended_applied_inspection_iris=(
+                batch.bundle_summary.recommended_applied_inspection_iris
+            ),
+            sequential_apply_recheck_candidate_iris=(
+                batch.bundle_summary.sequential_apply_recheck_candidate_iris
+            ),
+            revision_summaries=batch.revision_summaries,
+            bundle_summary=batch.bundle_summary,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions if action.call
+            ],
+            warnings=list(dict.fromkeys(warnings)),
+            note=(
+                "Read-only staged revision recovery plan. It did not stage, "
+                "restage, apply, export, or otherwise mutate graph state."
+            ),
+        )
+
+    def _empty_staged_revision_recovery_plan(
+        self,
+        *,
+        selection_mode: str,
+        requested_revision_iris: list[str] | None,
+        current_staged_work_only: bool,
+        include_drafts: bool,
+        validation_scope: str | None,
+        drift_detail: str,
+        limit: int,
+        offset: int,
+        total_count: int,
+    ) -> StagedRevisionRecoveryPlan:
+        return StagedRevisionRecoveryPlan(
+            result_kind="staged_revision_recovery_plan",
+            helper="plan_staged_revision_recovery",
+            mode="read_only_plan",
+            selection_mode=selection_mode,
+            requested_revision_iris=requested_revision_iris,
+            processed_revision_iris=[],
+            current_staged_work_only=current_staged_work_only,
+            include_drafts=include_drafts,
+            validation_scope=validation_scope,
+            drift_detail=drift_detail,
+            limit=limit,
+            offset=offset,
+            count=total_count,
+            returned_count=0,
+            total_count=total_count,
+            lanes=[],
+            lane_counts={},
+            next_action_queue={},
+            next_action_queue_items=[],
+            next_action_queue_item_counts={},
+            semantic_review_required_queue_counts={},
+            would_restage_revision_iris=[],
+            repair_first_revision_iris=[],
+            not_restageable_revision_iris_by_reason={},
+            current_revision_by_source={},
+            review_revision_iris=[],
+            recommended_review_iris=[],
+            recommended_mutation_review_iris=[],
+            recommended_apply_or_restage_review_iris=[],
+            recommended_repair_review_iris=[],
+            recommended_applied_inspection_iris=[],
+            sequential_apply_recheck_candidate_iris=[],
+            revision_summaries=[],
+            bundle_summary=None,
+            suggested_next_actions=[],
+            suggested_next_calls=[],
+            warnings=[],
+            note=(
+                "No staged revisions matched the recovery-plan selection. "
+                "No graph state was changed."
+            ),
+        )
+
+    def _staged_recovery_lane_from_batch_item(
+        self,
+        item: StagedGraphRevisionBatchRestageItem,
+        *,
+        summary_by_iri: dict[str, StagedGraphRevisionExportSummary],
+        include_drafts: bool,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ]
+        | None,
+    ) -> tuple[StagedRevisionRecoveryLane, str | None]:
+        queue_item = item.next_action_queue_item_after
+        next_action = item.next_action_after
+        lane = (
+            queue_item.queue
+            if queue_item is not None
+            else next_action.queue
+            if next_action is not None
+            else "informational"
+        )
+        row_iri = (
+            queue_item.row_iri
+            if queue_item is not None
+            else item.current_revision_iri
+        )
+        current_summary = summary_by_iri.get(item.current_revision_iri)
+        changed_graphs = (
+            current_summary.changed_graphs
+            if current_summary is not None
+            else []
+        )
+        repair_draft: StagedRevisionRebaseDraft | None = None
+        repair_draft_error: str | None = None
+        warning: str | None = None
+        if include_drafts and self._staged_recovery_should_draft_repair(
+            item,
+            lane=lane,
+        ):
+            try:
+                repair_draft = self.draft_staged_revision_rebase(
+                    item.current_revision_iri,
+                    validation_scope=validation_scope,
+                )
+            except DoxaBaseError as exc:
+                repair_draft_error = str(exc)
+                warning = (
+                    "Could not draft staged revision repair for "
+                    f"'{item.current_revision_iri}': {exc}"
+                )
+        return (
+            StagedRevisionRecoveryLane(
+                row_iri=row_iri,
+                source_revision_iri=item.source_revision_iri,
+                current_revision_iri=item.current_revision_iri,
+                resolved_target_iri=(
+                    queue_item.resolved_target_iri
+                    if queue_item is not None
+                    else None
+                ),
+                resolved_target_record_kind=(
+                    queue_item.resolved_target_record_kind
+                    if queue_item is not None
+                    else None
+                ),
+                row_is_target=(
+                    queue_item.row_is_target if queue_item is not None else True
+                ),
+                lane=lane,
+                action_type=next_action.action_type if next_action is not None else None,
+                action_label=next_action.action_label if next_action is not None else None,
+                batch_action=item.action,
+                not_restageable_reason=item.not_restageable_reason,
+                summary=item.summary,
+                changed_graphs=changed_graphs,
+                status_before=item.status_before,
+                decision_before=item.decision_before,
+                routing_decision_before=item.routing_decision_before,
+                stale_resolution_state_before=item.stale_resolution_state_before,
+                blocking_reasons_before=item.blocking_reasons_before,
+                status_after=item.status_after,
+                decision_after=item.decision_after,
+                routing_decision_after=item.routing_decision_after,
+                stale_resolution_state_after=item.stale_resolution_state_after,
+                blocking_reasons_after=item.blocking_reasons_after,
+                source_staged_validation_status=(
+                    item.source_staged_validation_status
+                ),
+                source_validation_result_count=item.source_validation_result_count,
+                current_staged_validation_status=(
+                    item.current_staged_validation_status
+                ),
+                current_validation_result_count=item.current_validation_result_count,
+                source_snapshot_evidence=item.source_snapshot_evidence,
+                source_snapshot_evidence_completeness=(
+                    item.source_snapshot_evidence_completeness
+                ),
+                current_snapshot_evidence=item.current_snapshot_evidence,
+                current_snapshot_evidence_completeness=(
+                    item.current_snapshot_evidence_completeness
+                ),
+                triples_to_add_after=item.triples_to_add_after,
+                triples_to_remove_after=item.triples_to_remove_after,
+                restaged_from=item.restaged_from,
+                restaged_revision_iri=item.restaged_revision_iri,
+                current_restaged_by=item.current_restaged_by,
+                alternative_gate=(
+                    current_summary.alternative_gate
+                    if current_summary is not None
+                    else None
+                ),
+                next_action=next_action,
+                next_action_queue_item=queue_item,
+                repair_draft=repair_draft,
+                repair_draft_error=repair_draft_error,
+                suggested_next_actions=item.suggested_next_actions_after,
+                suggested_next_calls=[
+                    action.call
+                    for action in item.suggested_next_actions_after
+                    if action.call
+                ],
+                batch_item=item,
+                note=item.note,
+            ),
+            warning,
+        )
+
+    @staticmethod
+    def _staged_recovery_should_draft_repair(
+        item: StagedGraphRevisionBatchRestageItem,
+        *,
+        lane: str,
+    ) -> bool:
+        return (
+            lane == "repair_or_replace"
+            or item.routing_decision_after == "stage_same_slot_replacement"
+            or item.not_restageable_reason
+            in {
+                "same_slot_replacement",
+                "validation_failed",
+                "patch_conflict",
+                "inspect_restaged_source_validation_failure",
+            }
+        )
+
+    @staticmethod
+    def _staged_recovery_lane_counts(
+        lanes: Iterable[StagedRevisionRecoveryLane],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for lane in lanes:
+            counts[lane.lane] = counts.get(lane.lane, 0) + 1
+        return counts
+
+    def _staged_recovery_suggested_next_actions(
+        self,
+        lanes: Iterable[StagedRevisionRecoveryLane],
+    ) -> list[SuggestedNextAction]:
+        review_first_actions: list[SuggestedNextAction] = []
+        mutation_actions: list[SuggestedNextAction] = []
+        for lane in lanes:
+            for action in lane.suggested_next_actions:
+                if action.tool_name in {
+                    "describe_staged_revision",
+                    "export_staged_revision",
+                    "export_staged_revisions",
+                    "describe_revision_lineage",
+                    "describe_graph_revision",
+                    "describe_applied_revision_diff",
+                    "draft_staged_revision_rebase",
+                }:
+                    review_first_actions.append(action)
+                else:
+                    mutation_actions.append(action)
+        return self._dedupe_suggested_next_actions(
+            [*review_first_actions, *mutation_actions]
         )
 
     def _batch_restage_not_restageable_reason(

@@ -1270,6 +1270,37 @@ When no safe repair is drafted, the helper filters inherited
 `suggested_next_actions`; follow the remaining inspect/export/manual-repair
 route instead of calling the same helper in a loop.
 
+### doxabase.plan_staged_revision_recovery
+
+Plans read-only recovery routes for a staged revision queue. It does not stage,
+restage, apply, export, or write files. Use it as the first call when several
+staged rows may be ready, stale, already handled by restage, already applied, or
+repair-first. With no `revision_iris`, it discovers current staged work through
+`list_graph_revisions(include_apply_checks=True, current_staged_work_only=True)`.
+With explicit `revision_iris`, it preserves caller order after pagination.
+
+The helper wraps `restage_staged_revisions(..., dry_run=True, path=None)` for
+classification, grouped queue summaries, old-to-current mappings, and
+sequential-apply warnings. When `include_drafts=True`, repair lanes may include
+a read-only `repair_draft` from `draft_staged_revision_rebase`; failed draft
+attempts are reported as lane errors and warnings while the dry-run route still
+returns.
+
+Read `lanes[]` first. Each lane names the `source_revision_iri`,
+`current_revision_iri`, `lane`, `batch_action`, status/decision before and
+after classification, staged-validation status, snapshot-evidence completeness,
+`next_action`, and `next_action_queue_item`. Queue values are row IRIs, not
+always action targets. Use `next_action_queue_item.resolved_target_iri` and
+`next_action.arguments["iri"]` when present; handled stale rows can route to a
+refreshed successor or applied event, while repair actions can create a new
+successor and therefore have no existing resolved target.
+
+`would_restage_revision_iris` is the post-review mechanical-restage list, not an
+apply queue. `repair_first_revision_iris` and lanes with
+`lane="repair_or_replace"` should be inspected or drafted before any restage.
+If `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one
+ready row, then rerun this helper before taking the next mutation.
+
 `doxabase.describe_applied_revision_diff`
 
 Returns stored before/after snapshot diffs for an applied staged revision. Pass

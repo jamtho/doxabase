@@ -4826,6 +4826,151 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert repair_check.status == "ready"
 
 
+def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    repair_source = db.stage_graph_revision(
+        summary="Model Orders as snapshot rows",
+        rationale="Original row-grain proposal before an intervening map edit.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics rc:SnapshotRow .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    db.record_map_dataset(orders, row_semantics="rc:EventRow")
+    stale = db.stage_graph_revision(
+        summary="Stage stale messages table",
+        rationale="This proposal will need mechanical restage after map drift.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    handled_source = db.stage_graph_revision(
+        summary="Stage handled table",
+        rationale="This stale source will already have a refreshed successor.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Handled a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    applied_source = db.stage_graph_revision(
+        summary="Stage applied table",
+        rationale="This staged source will already be durable.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Applied a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    applied_event = db.apply_staged_revision(applied_source.revision_iri)
+    handled_successor = db.restage_staged_revision(handled_source.revision_iri)
+    ready = db.stage_graph_revision(
+        summary="Stage ready table",
+        rationale="This proposal is staged against current map state.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Ready a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    counts_before = _mutable_graph_counts(db)
+
+    plan = db.plan_staged_revision_recovery(
+        [
+            ready.revision_iri,
+            stale.revision_iri,
+            handled_source.revision_iri,
+            repair_source.revision_iri,
+            applied_source.revision_iri,
+        ]
+    )
+
+    assert _mutable_graph_counts(db) == counts_before
+    assert plan.result_kind == "staged_revision_recovery_plan"
+    assert plan.mode == "read_only_plan"
+    assert plan.selection_mode == "explicit_revision_iris"
+    assert plan.returned_count == 5
+    assert plan.current_revision_by_source[handled_source.revision_iri] == (
+        handled_successor.revision_iri
+    )
+    assert plan.would_restage_revision_iris == [stale.revision_iri]
+    lanes_by_source = {lane.source_revision_iri: lane for lane in plan.lanes}
+    assert lanes_by_source[ready.revision_iri].lane == "apply_after_review"
+    assert lanes_by_source[ready.revision_iri].status_after == "ready"
+    assert lanes_by_source[stale.revision_iri].lane == "restage_after_review"
+    assert lanes_by_source[stale.revision_iri].batch_action == "would_restage"
+    handled_lane = lanes_by_source[handled_source.revision_iri]
+    assert handled_lane.current_revision_iri == handled_successor.revision_iri
+    assert handled_lane.row_iri == handled_successor.revision_iri
+    assert handled_lane.lane == "apply_after_review"
+    assert handled_lane.batch_action == "skipped_already_handled"
+    repair_lane = lanes_by_source[repair_source.revision_iri]
+    assert repair_lane.lane == "repair_or_replace"
+    assert repair_lane.not_restageable_reason == "same_slot_replacement"
+    assert repair_lane.repair_draft is not None
+    assert repair_lane.repair_draft.draft_kind == "same_slot_replacement"
+    assert repair_lane.repair_draft.preferred_action is not None
+    assert repair_lane.repair_draft.preferred_action.arguments["restages_revision"] == (
+        repair_source.revision_iri
+    )
+    applied_lane = lanes_by_source[applied_source.revision_iri]
+    assert applied_lane.lane == "inspect_already_applied"
+    assert applied_lane.resolved_target_iri == applied_event.applied_revision_iri
+    assert applied_lane.resolved_target_record_kind == "applied_event"
+    assert applied_lane.row_is_target is False
+    assert plan.next_action_queue_item_counts == {
+        "apply_after_review": 2,
+        "restage_after_review": 1,
+        "repair_or_replace": 1,
+        "inspect_already_applied": 1,
+    }
+    assert set(plan.sequential_apply_recheck_candidate_iris) == {
+        ready.revision_iri,
+        handled_successor.revision_iri,
+    }
+    assert any(
+        "apply at most one ready row" in warning for warning in plan.warnings
+    )
+
+
 def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
     tmp_path: Path,
 ) -> None:
