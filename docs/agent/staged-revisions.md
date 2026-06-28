@@ -139,7 +139,8 @@ digest drift, validation-skipped reason, and suggested next calls in the review
 artifact itself. If the generated Markdown contains credential-like or
 secret-looking staged patch literals, the export record returns
 `sensitive_literal_count` and `privacy_warnings`, and the artifact starts with a
-`Privacy Warning`; patch content is preserved and not redacted. For simple
+`Privacy Warning`; warning line examples refer to the final written Markdown
+artifact. Patch content is preserved and not redacted. For simple
 single-assertion `map` changes that still replay
 cleanly, the export may include a `Semantic Review Warning` before the apply
 check, and also includes a `Judgement Panel` section so human and agent

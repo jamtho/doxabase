@@ -28450,7 +28450,10 @@ class DoxaBase:
             apply_check_error=apply_check_error,
         )
         sensitive_literal_count, privacy_warnings = (
-            self._markdown_export_privacy_warnings(data)
+            self._markdown_export_privacy_warnings(
+                data,
+                final_privacy_warning_line_numbers=True,
+            )
         )
         data = self._markdown_with_privacy_warning(data, privacy_warnings)
         bytes_written = self._write_export(path, data, overwrite=overwrite)
@@ -28936,7 +28939,10 @@ class DoxaBase:
             executive_summary=executive_summary,
         )
         sensitive_literal_count, privacy_warnings = (
-            self._markdown_export_privacy_warnings(data)
+            self._markdown_export_privacy_warnings(
+                data,
+                final_privacy_warning_line_numbers=True,
+            )
         )
         data = self._markdown_with_privacy_warning(data, privacy_warnings)
         bytes_written = self._write_export(path, data, overwrite=overwrite)
@@ -34574,17 +34580,33 @@ class DoxaBase:
         data: str,
         *,
         limit: int = 5,
+        final_privacy_warning_line_numbers: bool = False,
     ) -> tuple[int, list[str]]:
         match_count = 0
         omitted_match_count = 0
         examples: list[str] = []
-        for line_number, line in enumerate(data.splitlines(), start=1):
+        lines = data.splitlines()
+        insertion_after_line = (
+            2
+            if final_privacy_warning_line_numbers
+            and len(lines) >= 2
+            and lines[0].startswith("# ")
+            and lines[1] == ""
+            else 0
+        )
+        inserted_line_count = 4 if final_privacy_warning_line_numbers else 0
+        for line_number, line in enumerate(lines, start=1):
             match_kind, redacted_snippet = self._sensitive_literal_match(line)
             if match_kind is None or redacted_snippet is None:
                 continue
             match_count += 1
             if len(examples) < limit:
-                examples.append(f"line {line_number} {redacted_snippet}")
+                final_line_number = (
+                    line_number + inserted_line_count
+                    if line_number > insertion_after_line
+                    else line_number
+                )
+                examples.append(f"line {final_line_number} {redacted_snippet}")
             else:
                 omitted_match_count += 1
         if match_count == 0:

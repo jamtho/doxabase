@@ -75,6 +75,13 @@ from doxabase.mcp_tools import (
 RC = "https://richcanopy.org/ns/rc#"
 
 
+def _line_number_containing(text: str, needle: str) -> int:
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if needle in line:
+            return line_number
+    raise AssertionError(f"Expected text to contain {needle!r}")
+
+
 @pytest.mark.anyio
 async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     server = build_server(tmp_path / "mcp.sqlite")
@@ -726,8 +733,16 @@ def test_staged_markdown_export_tools_return_privacy_warnings(
     assert grouped["privacy_warnings"]
     assert fake_secret not in " ".join(single["privacy_warnings"])
     assert fake_secret not in " ".join(grouped["privacy_warnings"])
-    assert "## Privacy Warning" in Path(single["path"]).read_text(encoding="utf-8")
-    assert "## Privacy Warning" in Path(grouped["path"]).read_text(encoding="utf-8")
+    single_text = Path(single["path"]).read_text(encoding="utf-8")
+    grouped_text = Path(grouped["path"]).read_text(encoding="utf-8")
+    assert "## Privacy Warning" in single_text
+    assert "## Privacy Warning" in grouped_text
+    assert f"line {_line_number_containing(single_text, secret_text)} " in " ".join(
+        single["privacy_warnings"]
+    )
+    assert f"line {_line_number_containing(grouped_text, secret_text)} " in " ".join(
+        grouped["privacy_warnings"]
+    )
 
 
 def test_draft_staged_revision_rebase_tool_returns_json_like_payload(

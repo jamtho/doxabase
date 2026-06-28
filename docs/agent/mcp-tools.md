@@ -1511,6 +1511,8 @@ top metadata `Restage headline` before the apply check; stale original exports
 include a top `Restaged by` line when a refreshed successor already exists.
 Exports include a `Linked Support` section when supporting observations, claims,
 patterns, or evidence are recorded on the staged revision.
+When a Markdown privacy warning reports line examples, those line numbers refer
+to the final written artifact, after the warning block has been inserted.
 Suggested export actions use revision-derived `/tmp` filenames with a short hash
 to reduce collisions across concurrent runs; callers may override the path. This
 is for human/agent review.

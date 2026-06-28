@@ -2077,6 +2077,11 @@ few useful gaps:
   `plan_staged_revision_recovery()` now also returns
   `repair_or_replace_source_revision_iris` as the broad source-row worklist for
   repair/replacement lanes.
+- A privacy/export trial confirmed staged Markdown and profile insight exports
+  detect sensitive-looking patch literals and keep warning text redacted, but
+  warning examples used pre-insertion line numbers. Markdown privacy warning
+  examples now report final artifact line numbers, after the inserted warning
+  block, so reviewers can jump directly to the preserved patch literal.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

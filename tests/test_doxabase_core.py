@@ -34,6 +34,13 @@ def _mutable_graph_counts(db: DoxaBase) -> dict[str, int]:
     return {graph: db.triple_count(graph) for graph in MUTABLE_GRAPHS}
 
 
+def _line_number_containing(text: str, needle: str) -> int:
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if needle in line:
+            return line_number
+    raise AssertionError(f"Expected text to contain {needle!r}")
+
+
 def _corrupt_staged_patch_target_graph(
     db: DoxaBase,
     patch_iri: str,
@@ -1053,6 +1060,10 @@ def test_staged_markdown_exports_warn_about_sensitive_patch_literals(
     assert single_text.index("## Privacy Warning") < single_text.index(
         "## Current Apply Check"
     )
+    single_secret_line = _line_number_containing(single_text, secret_text)
+    assert f"line {single_secret_line} " in " ".join(
+        single_export.privacy_warnings
+    )
     single_warning_prefix = single_text.split("## Current Apply Check", 1)[0]
     assert fake_secret not in single_warning_prefix
 
@@ -1070,6 +1081,10 @@ def test_staged_markdown_exports_warn_about_sensitive_patch_literals(
     assert "## Privacy Warning" in grouped_text
     assert grouped_text.index("## Privacy Warning") < grouped_text.index(
         "## Reviewer Decision Matrix"
+    )
+    grouped_secret_line = _line_number_containing(grouped_text, secret_text)
+    assert f"line {grouped_secret_line} " in " ".join(
+        grouped_export.privacy_warnings
     )
     grouped_warning_prefix = grouped_text.split(
         "## Reviewer Decision Matrix",
@@ -21174,6 +21189,8 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert profile_map_route_key in exported
     assert metric_route_key in exported
     assert query_route_key in exported
+    secret_line = _line_number_containing(exported, secret_text)
+    assert f"line {secret_line} " in " ".join(result.export.privacy_warnings)
     assert "Workflow flip denominator caveat" in exported
     assert secret_text in exported
     assert "WorkflowFlipRate" in exported

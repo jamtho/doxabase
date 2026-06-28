@@ -4405,7 +4405,8 @@ Stale original exports include a top metadata `Restaged by` line when a
 refreshed successor already exists.
 If the generated staged Markdown contains credential-like or secret-looking
 patch literals, the export inserts a top `Privacy Warning` section and returns
-redacted warning fields. The staged patch content itself is preserved and is not
+redacted warning fields. Warning line examples refer to the final written
+Markdown artifact. The staged patch content itself is preserved and is not
 redacted.
 In grouped exports, `Staged validation` is the staged description's original
 preview result, while `Current validation` is derived from the live apply check
