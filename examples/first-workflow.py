@@ -57,6 +57,18 @@ def main() -> None:
     print(f"Column count: {len(description.columns)}")
     print(f"Caveat count: {len(description.caveats)}")
     print(f"Query readiness: {query_context.readiness}")
+    decision = query_context.query_target_decision
+    print(
+        "Query decision: "
+        f"{decision.status}"
+        f" candidate={decision.candidate_index}"
+        f" path_status={decision.candidate_path_status}"
+    )
+    if decision.candidate_path:
+        print(f"Query candidate path: {decision.candidate_path}")
+    if query_context.suggested_next_actions:
+        action = query_context.suggested_next_actions[0]
+        print(f"Next action: {action.call or action.tool_name}")
     if query_context.issues:
         print("Query issues:")
         for issue in query_context.issues[:3]:
@@ -68,6 +80,11 @@ def main() -> None:
             )
             if fixture_hint is not None:
                 print(f"  fixture hint: {fixture_hint['hint_type']}")
+        if "dailyindex" in table.iri.lower():
+            print(
+                "  see docs/agent/query-planning.md#"
+                "ais-dailyindex-question-to-handoff-gap"
+            )
     else:
         print("Query issues: none")
     print()

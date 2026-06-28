@@ -42,6 +42,11 @@ def test_first_workflow_example_runs() -> None:
     assert "Loaded fixture triples:" in output
     assert "Key counts:" in output
     assert "Tables:" in output
+    assert "Query decision:" in output
+    assert "Next action: draft_query_plan(" in output
+    assert "docs/agent/query-planning.md#ais-dailyindex-question-to-handoff-gap" in (
+        output
+    )
     assert "Search matches:" in output
     assert "Recorded observation:" in output
     assert "Validation conforms: True" in output
