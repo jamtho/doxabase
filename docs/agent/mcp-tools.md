@@ -343,6 +343,11 @@ The first metric context action seeds `describe_context_slice` with
 `observed_metric_iri` so the initial handoff stays on the profiled dataset; use
 nearby metric-vocabulary actions when you intentionally want broader same-metric
 usage.
+When a metric reruns as `project_metric_defined` after a promotion, do not
+stage duplicate vocabulary; use the observed-metric context action for the
+dataset handoff and `describe_context_slice(..., profile="deep_lore")` from the
+metric, promotion pattern, or revision when you need to rediscover the
+supporting promotion trail.
 That skeleton seeds its `rdfs:comment` from metric-specific supporting pattern
 text, rationale, or summary when available; otherwise it uses a generic
 review-first comment. It is still a draft vocabulary definition; sharpen units,
@@ -404,7 +409,7 @@ actions, such as one `describe_pattern` call supporting several metric
 advisories; grouped metric/type actions carry `source_profile_advisory` with
 the source advisory kind, index field, represented advisory indexes, duplicate
 group keys, duplicate advisory indexes, duplicate profile-observation IRIs, and
-optional `mixed_support`.
+optional metric-only `observed_metric_iris` plus optional `mixed_support`.
 Use that source block for direct lane routing, or use each advisory row's own
 `suggested_next_actions` for per-metric or per-column follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
@@ -537,11 +542,15 @@ identifier; record the schema/table/relation on the storage access before using
 that route as a database handoff. If the storage access already has the same
 relation-like template, the repair action list puts
 `remove_misplaced_source_template` first and marks the add action
-`already_satisfied` so automation can skip the duplicate add.
-Read `issues[].details.repair_hint` for the ordered repair:
-stage an add of the reviewed relation identifier onto the storage access, then
-stage removal of the misplaced source template only if review confirms it was
-relation metadata rather than a real file/object path. Repair actions declare
+`already_satisfied` with `skip_when_already_satisfied=true` so automation can
+skip the duplicate add.
+Read `issues[].details.repair_hint.actions` and follow the returned order. In
+the common move case, stage an add of the reviewed relation identifier onto the
+storage access, then stage removal of the misplaced source template only if
+review confirms it was relation metadata rather than a real file/object path.
+When `candidate_relation_identifier.already_on_storage_access` is true, the
+storage access already has that relation-like value; skip the already-satisfied
+add action and review the ordered remove action instead. Repair actions declare
 `required_extra_arguments=["object", "rationale"]` and
 `placeholder_fields=["object"]` for the add-template step; replace `object` with
 the reviewed relation identifier and add a reviewed rationale before calling
@@ -1223,6 +1232,10 @@ when present, so semantic alternative gates survive the repair. When the
 selected row already has `restaged_by`, `current_restaged_by`, or `applied_by`,
 the draft is a redirect and the compact action points at the current successor
 or applied event instead of creating a parallel repair.
+When no safe repair is drafted, the helper filters inherited
+`draft_staged_revision_rebase` actions from `next_action` and
+`suggested_next_actions`; follow the remaining inspect/export/manual-repair
+route instead of calling the same helper in a loop.
 
 `doxabase.describe_applied_revision_diff`
 

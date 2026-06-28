@@ -14109,6 +14109,7 @@ def test_database_relation_repair_hint_prioritizes_remove_when_relation_exists(
         "graph": "map",
     }
     assert repair_hint["actions"][1]["action_status"] == "already_satisfied"
+    assert repair_hint["actions"][1]["skip_when_already_satisfied"] is True
     assert "remove_misplaced_source_template" in repair_hint["actions"][1][
         "condition"
     ]

@@ -108,6 +108,11 @@ recommendation indexes. Metric advisories may suggest `stage_pattern_promotion`
 for vocabulary or pattern-supported modelling. Type advisories may suggest
 context slices, `record_pattern`, related column shells, or focused
 `stage_map_assertion_change` calls.
+After a metric promotion applies, a rerun should report
+`project_metric_defined` and stop suggesting another promotion skeleton. Use the
+observed-metric context action for the local dataset handoff, and use a
+`deep_lore` context slice from the metric, promotion pattern, or revision when
+you need to rediscover why the ontology term exists.
 
 After applying unmapped column shells, rerun `draft_profile_map_updates` for the
 same dataset and evidence. Newly map-present columns can expose ordinary

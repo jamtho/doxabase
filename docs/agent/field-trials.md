@@ -1845,6 +1845,19 @@ few useful gaps:
   template. Same-slot rebase drafts also filter out inherited
   `draft_staged_revision_rebase` suggestions when a concrete repair action is
   already available.
+- A later retest wave found the product behavior held up in direct trials: the
+  observed-metric handoff stays dataset-local while the broad metric-kind slice
+  still finds same-metric peers, direct database-relation repair reaches
+  `ready_for_query_planning` after the ordered removal, and applied metric
+  promotions rerun as `project_metric_defined` without duplicate vocabulary
+  suggestions. The remaining hazard was documentation and automation clarity,
+  not graph behavior. Agent docs now name grouped
+  `source_profile_advisory.observed_metric_iris`, spell out the
+  already-on-storage repair exception, and point successful metric-promotion
+  follow-up at `deep_lore` when agents need to rediscover the support trail.
+  The already-satisfied relation-template add action also carries
+  `skip_when_already_satisfied=true` for scripts that should follow the ordered
+  remove action without parsing prose.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

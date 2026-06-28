@@ -277,12 +277,18 @@ storage are review-only inventory cards with
 `database_relation_template_source_mismatch`; record the schema/table/relation
 on the storage access before using a database handoff. The issue carries
 `details.repair_hint` with ordered, review-gated
-`stage_map_assertion_change` templates: add the reviewed relation identifier to
-the storage access, then remove the misplaced source template only if review
-confirms it was relation metadata rather than a real file/object path. Each
-add-template repair declares `required_extra_arguments=["object", "rationale"]`
-and `placeholder_fields=["object"]`; replace `object` with the reviewed
-relation identifier and add a reviewed rationale before calling
+`stage_map_assertion_change` templates; follow `repair_hint.actions` order. In
+the common move case, add the reviewed relation identifier to the storage
+access, then remove the misplaced source template only if review confirms it was
+relation metadata rather than a real file/object path. If
+`candidate_relation_identifier.already_on_storage_access` is true, the storage
+access already has the same relation-like value; the remove action is first and
+the add action is marked `action_status="already_satisfied"` with
+`skip_when_already_satisfied=true`, so automation should skip that duplicate
+add. Each add-template repair declares
+`required_extra_arguments=["object", "rationale"]` and
+`placeholder_fields=["object"]`; replace `object` with the reviewed relation
+identifier and add a reviewed rationale before calling
 `stage_map_assertion_change`. The stale dataset or partition path is context for
 review, not the relation identifier. Root-only database storage without such a
 template carries `database_relation_template_missing` even when

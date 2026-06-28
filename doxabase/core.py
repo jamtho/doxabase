@@ -12765,11 +12765,12 @@ class DoxaBase:
             add_action = {
                 **add_action,
                 "action_status": "already_satisfied",
+                "skip_when_already_satisfied": True,
                 "condition": (
                     "The storage access already carries this relation-like "
                     "template. Review the remaining misplaced source template "
-                    "and usually run remove_misplaced_source_template instead "
-                    "of adding a duplicate relation template."
+                    "and run remove_misplaced_source_template instead of "
+                    "adding a duplicate relation template."
                 ),
             }
         actions = (

@@ -1177,6 +1177,10 @@ ambiguous metric also has a same-evidence
 pattern that names the metric as a target or map implication, the advisory
 includes `promotion_patterns` and adds `describe_pattern` plus a reviewable
 `stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
+When a rerun reports `project_metric_defined`, do not stage duplicate
+vocabulary; use the observed-metric context action for the dataset handoff and a
+`deep_lore` slice from the metric, promotion pattern, or revision when you need
+the promotion support trail.
 The skeleton seeds its `rdfs:comment` from matched pattern text, rationale, or
 summary only when that text mentions the metric IRI, local name, or normalized
 local-name phrase. Otherwise it uses a generic review-first comment. Treat it as
@@ -1305,11 +1309,13 @@ action.source_profile_advisory["advisory_indexes"]
 action.source_profile_advisory["duplicate_group_keys"]
 action.source_profile_advisory["duplicate_advisory_indexes"]
 action.source_profile_advisory["duplicate_profile_observation_iris"]
+action.source_profile_advisory["observed_metric_iris"]
 action.source_profile_advisory["mixed_support"]
 ```
 
 Use `source_profile_advisory` when routing directly from grouped lanes. Scripts
-should inspect optional `mixed_support` before applying grouped promotion or
+should inspect optional metric-only `observed_metric_iris` before choosing a
+context seed, and optional `mixed_support` before applying grouped promotion or
 assertion actions; it names shared promotion pattern IRIs, the other review
 lane, and the review note. When both lanes generate staged promotion/assertion
 drafts from the same pattern, review or export those drafts together before
@@ -1979,7 +1985,8 @@ relation placeholder, and ordered action templates; callers still supply a
 the same relation-like template, `candidate_relation_identifier` includes
 `already_on_storage_access=True`, the remove action is ordered first, and the
 add action is marked `action_status="already_satisfied"` so agents do not stage
-a duplicate relation template.
+a duplicate relation template. Automation can also read
+`skip_when_already_satisfied=True` on that add action.
 `database_relation_template_missing` includes the affected storage access IRI,
 storage protocol IRI, storage root, location kind, allowed relation-template
 sources, and a `repair_hint` with a reviewed add-template action on the storage
@@ -1994,8 +2001,13 @@ repair_hint.candidate_existing_storage_accesses_truncated
 repair_hint.source
 repair_hint.target
 repair_hint.candidate_relation_identifier
+repair_hint.candidate_relation_identifier.value
+repair_hint.candidate_relation_identifier.requires_review
+repair_hint.candidate_relation_identifier.already_on_storage_access
+repair_hint.candidate_relation_identifier.review_note
 repair_hint.actions[].action_type
 repair_hint.actions[].action_status
+repair_hint.actions[].skip_when_already_satisfied
 repair_hint.actions[].tool_name
 repair_hint.actions[].mcp_tool_name
 repair_hint.actions[].action_label

@@ -285,10 +285,15 @@ call-ready next actions: fill placeholders, add required extra arguments such as
 `rationale`, and check conditions before calling the named tool. For database
 template-source mismatches and
 storage protocol/location mismatches, `issues[].details.repair_hint` gives
-ordered, review-gated repair templates. Database template-source hints add the
-reviewed relation identifier to the storage access, then remove the misplaced
-source template only if it was relation metadata rather than a real file/object
-path. Protocol/location hints offer reviewed protocol/root/bucket/prefix edits
+ordered, review-gated repair templates; follow `repair_hint.actions` order.
+In the common database template-source move, add the reviewed relation
+identifier to the storage access, then remove the misplaced source template
+only if it was relation metadata rather than a real file/object path. If
+`candidate_relation_identifier.already_on_storage_access` is true, the storage
+access already has the same relation-like value; the remove action is first,
+and the add action is marked `action_status="already_satisfied"` with
+`skip_when_already_satisfied=true`. Protocol/location hints offer reviewed
+protocol/root/bucket/prefix edits
 and exact path-template add/remove repairs when a template caused the mismatch.
 Their templated actions name `placeholder_fields` and `reviewed_value_fields`
 for the reviewed value to fill in; database relation add-template actions mark
@@ -497,8 +502,9 @@ conflict lane is present when same-evidence scalar recommendations require a
 choose-one decision. Grouped metric/type actions carry
 `source_profile_advisory` with the source advisory kind, index field,
 represented advisory indexes, duplicate group keys, duplicate advisory indexes,
-and duplicate profile-observation IRIs, so scripts can route directly from the
-grouped lane without rejoining every action to the advisory rows first. If
+duplicate profile-observation IRIs, and optional metric-only
+`observed_metric_iris`, so scripts can route directly from the grouped lane
+without rejoining every action to the advisory rows first. If
 `source_profile_advisory.mixed_support` is present on promotion or assertion
 actions in both metric and type lanes, review or export those generated drafts
 together before applying either lane independently.
@@ -1245,6 +1251,9 @@ exactly one different IRI value, it drafts
 `stage_map_assertion_change(change_kind="replace", restages_revision=...)`
 arguments without staging them. If the source already has a successor or applied
 event, the draft is a redirect instead of a parallel repair.
+When no safe repair is drafted, inherited `draft_staged_revision_rebase` actions
+are filtered from `next_action` and `suggested_next_actions`; follow the
+remaining inspect/export/manual-repair route instead of looping the same helper.
 The first slice is deliberately narrow: `rc:rowSemantics`, `rc:physicalType`,
 and `rc:schemaStability` repair drafts require IRI objects; `rc:nullable` repair
 drafts allow typed `xsd:boolean` literals; blank-node objects, free-text
