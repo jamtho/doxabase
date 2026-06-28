@@ -51,11 +51,14 @@ Start with `describe_query_context(dataset_iri)`:
    When `missing_storage_access` appears, read its `details.repair_hint` before
    guessing at a path: either record reviewed non-secret storage access metadata
    and link it to the dataset, or stage a reviewed `rc:hasStorageAccess` link to
-   an existing access resource. When recording a new storage access, omit the
-   optional storage-owned `path_templates` field if the dataset or partition
-   already carries the reviewed path template; duplicating it can create
-   equivalent ready candidates. Database relation identifiers are the important
-   exception and should be recorded as storage-access-owned templates.
+   an existing access resource. The repair hint includes
+   `candidate_existing_storage_accesses` when current map storage accesses exist;
+   use those ranked candidates for review, but still fill the staged link's
+   `object` with the chosen reviewed access IRI. When recording a new storage
+   access, omit the optional storage-owned `path_templates` field if the dataset
+   or partition already carries the reviewed path template; duplicating it can
+   create equivalent ready candidates. Database relation identifiers are the
+   important exception and should be recorded as storage-access-owned templates.
 6. Use `suggested_repair_action_groups` when scripting metadata repairs. It is a
    top-level `query_repair_review` lane over existing
    `issues[].details.repair_hint.actions[]`, preserving issue index/code/resource

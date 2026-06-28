@@ -1890,7 +1890,12 @@ includes `dataset_iri`,
 `global_storage_access_count`, a `repair_hint`, and sometimes
 `fixture_staleness_hint`. The repair hint offers reviewed action templates for
 `record_map_storage_access(..., datasets=[...])` or a staged
-`rc:hasStorageAccess` assertion to an existing access resource. In the
+`rc:hasStorageAccess` assertion to an existing access resource.
+Missing-storage repair actions have stable `action_type` values:
+`record_reviewed_storage_access` and `stage_existing_storage_access_link`.
+When existing map storage accesses are present, the repair hint also carries
+bounded `candidate_existing_storage_accesses` so agents can review likely link
+targets before filling the staged assertion's `object`. In the
 record-new-storage template, omit optional storage-owned `path_templates` when
 the dataset or partition already carries the reviewed file/object path template;
 duplicating it can create equivalent ready query candidates. Database relation
@@ -1911,9 +1916,14 @@ access. The nested repair-hint shape is:
 
 ```python
 repair_hint.action_type
+repair_hint.candidate_existing_storage_accesses
+repair_hint.candidate_existing_storage_access_count
+repair_hint.candidate_existing_storage_access_total_count
+repair_hint.candidate_existing_storage_accesses_truncated
 repair_hint.source
 repair_hint.target
 repair_hint.candidate_relation_identifier
+repair_hint.actions[].action_type
 repair_hint.actions[].tool_name
 repair_hint.actions[].mcp_tool_name
 repair_hint.actions[].action_label
@@ -1926,6 +1936,11 @@ repair_hint.actions[].arguments_template
 repair_hint.actions[].arguments
 repair_hint.actions[].condition
 ```
+
+Each missing-storage candidate includes a `storage_access` summary,
+`storage_access_iri`, protocol/location fields, storage-owned path templates,
+layout verification status, `match_reasons`, `candidate_rank`, and a
+review-first note. Candidate rows are context, not permission to auto-link.
 
 Add actions use `arguments_template` with placeholders for reviewed values and
 caller rationale; remove actions may use ready `arguments` plus the same

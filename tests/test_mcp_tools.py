@@ -3568,6 +3568,70 @@ def test_describe_query_context_tool_lifts_repair_action_groups(
     ] == "public"
 
 
+def test_describe_query_context_tool_lists_missing_storage_candidates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Messages"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#messages_storage",
+        label="Messages storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Messages",
+        is_table=True,
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    repair_group = result["suggested_repair_action_groups"][0]
+    assert repair_group["issue_code"] == "missing_storage_access"
+    assert repair_group["repair_action_type"] == "record_or_link_storage_access"
+    action_by_type = {
+        action["action_type"]: action for action in repair_group["actions"]
+    }
+    assert set(action_by_type) == {
+        "record_reviewed_storage_access",
+        "stage_existing_storage_access_link",
+    }
+    candidates = repair_group["repair_context"][
+        "candidate_existing_storage_accesses"
+    ]
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate["candidate_rank"] == 1
+    assert candidate["storage_access_iri"] == storage["iri"]
+    assert candidate["storage_access"]["iri"] == storage["iri"]
+    assert candidate["storage_protocol"]["iri"] == RC + "LocalFilesystemStorage"
+    assert candidate["storage_root"] == str(tmp_path / "warehouse")
+    assert candidate["match_reasons"] == [
+        "declares_storage_protocol",
+        "has_location_metadata",
+        "has_layout_verification_status",
+    ]
+    assert repair_group["repair_context"][
+        "candidate_existing_storage_access_count"
+    ] == 1
+    assert repair_group["repair_context"][
+        "candidate_existing_storage_access_total_count"
+    ] == 1
+    assert repair_group["repair_context"][
+        "candidate_existing_storage_accesses_truncated"
+    ] is False
+    link_action = action_by_type["stage_existing_storage_access_link"]
+    assert link_action["placeholder_fields"] == ["object"]
+    assert link_action["reviewed_value_fields"] == ["object"]
+    assert link_action["arguments_template"]["object"] == (
+        "<reviewed existing storage access IRI>"
+    )
+
+
 def test_describe_query_context_tool_surfaces_root_only_targets(
     tmp_path: Path,
 ) -> None:

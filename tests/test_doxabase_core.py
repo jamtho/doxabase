@@ -11376,7 +11376,23 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert missing_storage.details["repair_hint"]["action_type"] == (
         "record_or_link_storage_access"
     )
+    assert missing_storage.details["repair_hint"][
+        "candidate_existing_storage_accesses"
+    ] == []
+    assert missing_storage.details["repair_hint"][
+        "candidate_existing_storage_access_count"
+    ] == 0
+    assert missing_storage.details["repair_hint"][
+        "candidate_existing_storage_access_total_count"
+    ] == 0
+    assert missing_storage.details["repair_hint"][
+        "candidate_existing_storage_accesses_truncated"
+    ] is False
     repair_actions = missing_storage.details["repair_hint"]["actions"]
+    assert [action["action_type"] for action in repair_actions] == [
+        "record_reviewed_storage_access",
+        "stage_existing_storage_access_link",
+    ]
     assert [action["tool_name"] for action in repair_actions] == [
         "record_map_storage_access",
         "stage_map_assertion_change",
@@ -11411,7 +11427,14 @@ def test_describe_query_context_reports_missing_planning_metadata(
     assert repair_group.repair_hint_path == (
         f"issues[{repair_group.issue_index}].details.repair_hint"
     )
+    assert repair_group.repair_context[
+        "candidate_existing_storage_accesses"
+    ] == []
     assert repair_group.action_count == 2
+    assert [action["action_type"] for action in repair_group.actions] == [
+        "record_reviewed_storage_access",
+        "stage_existing_storage_access_link",
+    ]
     assert [action["tool_name"] for action in repair_group.actions] == [
         "record_map_storage_access",
         "stage_map_assertion_change",
@@ -11453,8 +11476,32 @@ def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
         issue for issue in context.issues if issue.code == "missing_storage_access"
     )
     assert missing_storage.details is not None
-    link_action = missing_storage.details["repair_hint"]["actions"][1]
+    repair_hint = missing_storage.details["repair_hint"]
+    assert repair_hint["candidate_existing_storage_access_count"] == 1
+    assert repair_hint["candidate_existing_storage_access_total_count"] == 1
+    assert repair_hint["candidate_existing_storage_accesses_truncated"] is False
+    candidate = repair_hint["candidate_existing_storage_accesses"][0]
+    assert candidate["candidate_rank"] == 1
+    assert candidate["storage_access_iri"] == storage.iri
+    assert candidate["storage_access"]["iri"] == storage.iri
+    assert candidate["storage_protocol"]["iri"] == RC + "LocalFilesystemStorage"
+    assert candidate["storage_root"] == str(tmp_path / "warehouse")
+    assert candidate["path_templates"] == []
+    assert candidate["layout_verification_status"]["iri"] == (
+        RC + "VerifiedByListingLayout"
+    )
+    assert candidate["match_reasons"] == [
+        "declares_storage_protocol",
+        "has_location_metadata",
+        "has_layout_verification_status",
+    ]
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.repair_context[
+        "candidate_existing_storage_accesses"
+    ][0]["storage_access_iri"] == storage.iri
+    link_action = repair_hint["actions"][1]
 
+    assert link_action["action_type"] == "stage_existing_storage_access_link"
     assert link_action["required_extra_arguments"] == ["object", "rationale"]
     assert link_action["placeholder_fields"] == ["object"]
     assert link_action["reviewed_value_fields"] == ["object"]

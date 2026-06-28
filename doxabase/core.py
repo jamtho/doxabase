@@ -13502,14 +13502,35 @@ class DoxaBase:
         dataset_resource: ResourceSummary,
     ) -> dict[str, Any]:
         storage_access_count = self._count_type("rc:StorageAccess")
+        (
+            candidate_existing_storage_accesses,
+            candidate_existing_storage_access_total,
+        ) = self._missing_storage_existing_access_candidates(
+            dataset,
+            limit=8,
+        )
         details: dict[str, Any] = {
             "dataset_iri": dataset.iri,
             "global_storage_access_count": storage_access_count,
             "repair_hint": {
                 "action_type": "record_or_link_storage_access",
                 "target_dataset_iri": dataset.iri,
+                "candidate_existing_storage_accesses": (
+                    candidate_existing_storage_accesses
+                ),
+                "candidate_existing_storage_access_count": len(
+                    candidate_existing_storage_accesses
+                ),
+                "candidate_existing_storage_access_total_count": (
+                    candidate_existing_storage_access_total
+                ),
+                "candidate_existing_storage_accesses_truncated": (
+                    candidate_existing_storage_access_total
+                    > len(candidate_existing_storage_accesses)
+                ),
                 "actions": [
                     {
+                        "action_type": "record_reviewed_storage_access",
                         "tool_name": "record_map_storage_access",
                         "mcp_tool_name": "doxabase.record_map_storage_access",
                         "action_label": "Record storage access and link dataset",
@@ -13547,6 +13568,7 @@ class DoxaBase:
                         ),
                     },
                     {
+                        "action_type": "stage_existing_storage_access_link",
                         "tool_name": "stage_map_assertion_change",
                         "mcp_tool_name": "doxabase.stage_map_assertion_change",
                         "action_label": (
@@ -13589,6 +13611,80 @@ class DoxaBase:
         if fixture_hint is not None:
             details["fixture_staleness_hint"] = fixture_hint
         return details
+
+    def _missing_storage_existing_access_candidates(
+        self,
+        dataset: DatasetDescription,
+        *,
+        limit: int,
+    ) -> tuple[list[dict[str, Any]], int]:
+        data_graphs = self._expand_graphs(["map"])
+        lookup_graphs = self._lookup_graphs(data_graphs)
+        dataset_templates = set(dataset.path_templates)
+        candidates: list[tuple[int, str, str, dict[str, Any]]] = []
+        for access_iri in self._subjects(
+            data_graphs,
+            "rdf:type",
+            self.expand_iri("rc:StorageAccess"),
+        ):
+            access = self._describe_storage_access(
+                access_iri,
+                data_graphs,
+                lookup_graphs,
+            )
+            match_reasons: list[str] = []
+            score = 0
+            if dataset_templates and dataset_templates & set(access.path_templates):
+                match_reasons.append("shares_dataset_path_template")
+                score += 100
+            if access.storage_protocol is not None:
+                match_reasons.append("declares_storage_protocol")
+                score += 20
+            if any(
+                [
+                    access.storage_root,
+                    access.bucket_name,
+                    access.key_prefix,
+                    access.path_templates,
+                ]
+            ):
+                match_reasons.append("has_location_metadata")
+                score += 20
+            if access.layout_verification_status is not None:
+                match_reasons.append("has_layout_verification_status")
+                score += 10
+            label = access.label or self._local_name(access.iri)
+            candidate = {
+                "storage_access": to_jsonable(self._summary_from_description(access)),
+                "storage_access_iri": access.iri,
+                "storage_protocol": to_jsonable(access.storage_protocol),
+                "location_kind": access.location_kind,
+                "storage_root": access.storage_root,
+                "bucket_name": access.bucket_name,
+                "key_prefix": access.key_prefix,
+                "path_templates": access.path_templates,
+                "layout_verification_status": to_jsonable(
+                    access.layout_verification_status
+                ),
+                "match_reasons": match_reasons,
+                "review_note": (
+                    "Candidate existing storage access found in the current map. "
+                    "Link it only after reviewing that its protocol, location, "
+                    "path/relation templates, and access mode fit this dataset."
+                ),
+            }
+            candidates.append((-score, label, access.iri, candidate))
+
+        sorted_candidates = sorted(candidates)
+        selected_candidates: list[dict[str, Any]] = []
+        for rank, (_score, _label, _iri, candidate) in enumerate(
+            sorted_candidates[:limit],
+            start=1,
+        ):
+            ranked_candidate = dict(candidate)
+            ranked_candidate["candidate_rank"] = rank
+            selected_candidates.append(ranked_candidate)
+        return selected_candidates, len(sorted_candidates)
 
     def _known_fixture_missing_storage_access_hint(
         self,
