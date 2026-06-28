@@ -742,6 +742,35 @@ def test_sensitive_literal_scan_and_export_warnings(tmp_path: Path) -> None:
     assert private_key_body not in " ".join(export.privacy_warnings)
     assert fake_secret in export_path.read_text(encoding="utf-8")
 
+    blocked_path = tmp_path / "blocked-map.ttl"
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.export_graph(blocked_path, graphs="map", fail_on_sensitive=True)
+    blocked_message = str(excinfo.value)
+    assert "fail_on_sensitive=True" in blocked_message
+    assert fake_secret not in blocked_message
+    assert private_key_body not in blocked_message
+    assert not blocked_path.exists()
+
+    existing_path = tmp_path / "existing-map.ttl"
+    existing_path.write_text("keep me\n", encoding="utf-8")
+    with pytest.raises(DoxaBaseError):
+        db.export_graph(
+            existing_path,
+            graphs="map",
+            overwrite=True,
+            fail_on_sensitive=True,
+        )
+    assert existing_path.read_text(encoding="utf-8") == "keep me\n"
+
+    blocked_trig_path = tmp_path / "blocked-project.trig"
+    with pytest.raises(DoxaBaseError):
+        db.export_trig(
+            blocked_trig_path,
+            graphs="project",
+            fail_on_sensitive=True,
+        )
+    assert not blocked_trig_path.exists()
+
 
 def test_replace_graph_triples_can_create_same_count_digest_drift(
     tmp_path: Path,

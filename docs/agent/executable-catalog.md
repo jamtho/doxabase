@@ -74,7 +74,9 @@ roles you intend to export. `export_graph` and `export_trig` also return
 `sensitive_literal_count` and `privacy_warnings` when their selected graphs
 contain suspicious credential-like values. Treat those warnings as a
 stop-and-review signal: exports remain faithful RDF and are not redacted
-automatically.
+automatically. For unattended or shareable exports, pass
+`fail_on_sensitive=true` so DoxaBase raises before writing when the selected
+graph roles contain potential sensitive literals.
 
 ## How Agents Should Use It
 

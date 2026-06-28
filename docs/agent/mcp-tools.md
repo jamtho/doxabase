@@ -1629,7 +1629,8 @@ Exports one or more graph roles as one flattened RDF graph file. The default is
 the `map` graph in Turtle. Use it for quick single-graph review artifacts. The
 result includes per-graph triple counts plus privacy warning counts from
 `scan_sensitive_literals`. Warnings do not block export and the written RDF is
-not redacted.
+not redacted. Pass `fail_on_sensitive=true` when the export should raise before
+creating or overwriting an artifact if the selected graph roles scan dirty.
 
 `doxabase.replace_graph_triples`
 
@@ -1663,7 +1664,10 @@ All-with-seeds bundles may require special import handling because normal
 capsules protect `base_ontology` and `base_shapes`.
 `sensitive_literal_count` and `privacy_warnings` apply to the selected export
 graphs; workflow exports include evidence, so source paths and evidence source
-strings can trigger privacy warnings.
+strings can trigger privacy warnings. Pass `fail_on_sensitive=true` for
+unattended or shareable exports; the tool scans first and raises before
+creating or overwriting the artifact when potential sensitive literals are
+found.
 If a copied or older capsule fails staging because immutable `base_ontology`
 is missing current staging vocabulary, `seed_base_graphs()` will not refresh a
 non-empty seed graph. Export the mutable project graphs with the default project

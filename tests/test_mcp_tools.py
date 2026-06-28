@@ -896,6 +896,41 @@ def test_scan_sensitive_literals_tool_returns_redacted_payload(tmp_path: Path) -
     assert all("redacted_snippet" in match for match in result["matches"])
 
 
+def test_export_tools_can_block_sensitive_literals_before_writing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_MCP"
+    record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/orders",
+    )
+
+    graph_path = tmp_path / "blocked.ttl"
+    with pytest.raises(DoxaBaseError) as excinfo:
+        export_graph_tool(
+            db,
+            path=str(graph_path),
+            graphs=["map"],
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(excinfo.value)
+    assert fake_secret not in str(excinfo.value)
+    assert not graph_path.exists()
+
+    trig_path = tmp_path / "blocked.trig"
+    with pytest.raises(DoxaBaseError):
+        export_trig_tool(
+            db,
+            path=str(trig_path),
+            graphs=["map"],
+            fail_on_sensitive=True,
+        )
+    assert not trig_path.exists()
+
+
 def test_replace_graph_triples_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_turtle(

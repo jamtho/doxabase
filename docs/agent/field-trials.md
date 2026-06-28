@@ -277,7 +277,9 @@ few useful gaps:
   caller-authored literals travel through search, retrieval, and exports once
   recorded. Use `scan_sensitive_literals` and export `privacy_warnings` before
   sharing bundles; warnings are redacted audit signals, not automatic RDF
-  redaction or proof that the graph is secret-free.
+  redaction or proof that the graph is secret-free. For unattended or shareable
+  RDF exports, use `fail_on_sensitive=True` to block before creating or
+  overwriting an artifact when selected graph roles scan dirty.
 - A human-review artifact trial showed grouped staged-revision Markdown was
   mechanically complete but too technical at the top. `export_staged_revisions`
   now opens with a `Reviewer Decision Matrix` that gives row numbers, plain

@@ -1255,6 +1255,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         graphs: list[str] | None = None,
         format: str = "turtle",
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> dict[str, Any]:
         """Export one or more graph roles as a flattened RDF graph file."""
 
@@ -1264,6 +1265,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             graphs=graphs,
             format=format,
             overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
         )
 
     @server.tool(name="doxabase.replace_graph_triples")
@@ -1292,6 +1294,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         path: str,
         graphs: list[str] | None = None,
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> dict[str, Any]:
         """Export graph roles as a named-graph TriG bundle."""
 
@@ -1300,6 +1303,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             path=path,
             graphs=graphs,
             overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
         )
 
     @server.tool(name="doxabase.export_revision_snapshots")

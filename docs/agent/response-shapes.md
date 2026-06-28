@@ -3655,8 +3655,10 @@ export.privacy_warnings
 
 `sensitive_literal_count` and `privacy_warnings` come from a conservative
 credential-like literal scan over the selected export graph roles. They warn
-before sharing; they do not redact or block the exported RDF. Call
-`scan_sensitive_literals(graphs=...)` for redacted match rows.
+before sharing; they do not redact the exported RDF. Pass
+`fail_on_sensitive=True` to block before creating or overwriting an RDF export
+when the selected graph roles scan dirty. Call `scan_sensitive_literals(graphs=...)`
+for redacted match rows.
 
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
 returns `RevisionSnapshotBundleExportRecord`:

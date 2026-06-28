@@ -1191,6 +1191,7 @@ def export_graph_tool(
     graphs: list[str] | None = None,
     format: str = "turtle",
     overwrite: bool = False,
+    fail_on_sensitive: bool = False,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
     result = db.export_graph(
@@ -1198,6 +1199,7 @@ def export_graph_tool(
         graphs=graphs if graphs is not None else ["map"],
         format=format,
         overwrite=overwrite,
+        fail_on_sensitive=fail_on_sensitive,
     )
     return to_dict(result)
 
@@ -1227,12 +1229,14 @@ def export_trig_tool(
     path: str,
     graphs: list[str] | None = None,
     overwrite: bool = False,
+    fail_on_sensitive: bool = False,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
     result = db.export_trig(
         resolved_path,
         graphs=graphs,
         overwrite=overwrite,
+        fail_on_sensitive=fail_on_sensitive,
     )
     return to_dict(result)
 

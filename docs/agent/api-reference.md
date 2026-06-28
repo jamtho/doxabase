@@ -62,6 +62,7 @@ using normal revision helpers.
 db.export_graph("/tmp/map.ttl", graphs="map")
 db.export_trig("/tmp/project-review-bundle.trig")
 db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
+db.export_trig("/tmp/shareable-project.trig", fail_on_sensitive=True)
 db.scan_sensitive_literals(graphs=["map", "evidence"])
 db.export_revision_snapshots("/tmp/revision-snapshots.json")
 ```
@@ -70,7 +71,10 @@ db.export_revision_snapshots("/tmp/revision-snapshots.json")
 `scan_sensitive_literals()` returns redacted credential-like literal matches for
 selected graph roles. `export_graph()` and `export_trig()` include
 `sensitive_literal_count` and `privacy_warnings`; exports are not redacted
-automatically.
+automatically. For unattended or shareable exports, pass
+`fail_on_sensitive=True` to scan selected graph roles first and raise before
+creating or overwriting the artifact when potential sensitive literals are
+found.
 
 `export_trig()` writes a named-graph bundle with graph role IRIs so another
 DoxaBase capsule can import it again. The default exports mutable project

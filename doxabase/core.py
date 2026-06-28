@@ -35125,14 +35125,20 @@ class DoxaBase:
         graphs: Iterable[str] | str | None = "map",
         format: str = "turtle",
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> GraphExportRecord:
         graph_names = self._graph_names_for_export(graphs)
-        rdf_graph = self._to_graph_roles(graph_names)
-        data = rdf_graph.serialize(format=format)
-        bytes_written = self._write_export(path, data, overwrite=overwrite)
         sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
             graph_names
         )
+        self._raise_if_sensitive_export_blocked(
+            fail_on_sensitive=fail_on_sensitive,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
+        )
+        rdf_graph = self._to_graph_roles(graph_names)
+        data = rdf_graph.serialize(format=format)
+        bytes_written = self._write_export(path, data, overwrite=overwrite)
         return GraphExportRecord(
             path=str(path),
             format=format,
@@ -35151,14 +35157,20 @@ class DoxaBase:
         graphs: Iterable[str] | str | None = None,
         overwrite: bool = False,
         graph_iri_prefix: str = RCG_PREFIX,
+        fail_on_sensitive: bool = False,
     ) -> GraphExportRecord:
         graph_names = self._graph_names_for_export(graphs, default_preset="project")
-        dataset = self.to_dataset(graph_names, graph_iri_prefix=graph_iri_prefix)
-        data = dataset.serialize(format="trig")
-        bytes_written = self._write_export(path, data, overwrite=overwrite)
         sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
             graph_names
         )
+        self._raise_if_sensitive_export_blocked(
+            fail_on_sensitive=fail_on_sensitive,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
+        )
+        dataset = self.to_dataset(graph_names, graph_iri_prefix=graph_iri_prefix)
+        data = dataset.serialize(format="trig")
+        bytes_written = self._write_export(path, data, overwrite=overwrite)
         return GraphExportRecord(
             path=str(path),
             format="trig",
@@ -35337,6 +35349,24 @@ class DoxaBase:
         if scan.omitted_match_count:
             warning += f" ({scan.omitted_match_count} additional match(es) omitted.)"
         return scan.match_count, [warning]
+
+    @staticmethod
+    def _raise_if_sensitive_export_blocked(
+        *,
+        fail_on_sensitive: bool,
+        sensitive_literal_count: int,
+        privacy_warnings: list[str],
+    ) -> None:
+        if not fail_on_sensitive or sensitive_literal_count == 0:
+            return
+        warning_text = " ".join(privacy_warnings) if privacy_warnings else (
+            "Potential sensitive literals detected."
+        )
+        raise DoxaBaseError(
+            "Export blocked because fail_on_sensitive=True and the selected "
+            f"graph roles contain {sensitive_literal_count} potential sensitive "
+            f"literal match(es). {warning_text}"
+        )
 
     def _markdown_export_privacy_warnings(
         self,
