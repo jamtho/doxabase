@@ -664,7 +664,7 @@ def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
         task["task_type"] for task in result["recommended_next_tasks"]
     ] == [
         "staged_frontier_review",
-        "query_context_review",
+        "query_repair_review",
         "profile_review",
         "staged_review",
     ]
@@ -4170,6 +4170,73 @@ def test_describe_query_context_tool_suggests_stale_partition_link_repair(
         "graph": "map",
         "validation_scope": "all",
     }
+
+
+def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#warehouse_orders_storage",
+        label="Warehouse orders database",
+        storage_protocol="rc:DatabaseStorage",
+        storage_root="warehouse-prod",
+        path_templates=["public.orders"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    repair_group = next(
+        group
+        for group in result["suggested_repair_action_groups"]
+        if group["issue_code"] == "missing_physical_layout"
+    )
+    assert repair_group["repair_action_type"] == "record_physical_layout"
+    assert repair_group["repair_context"]["database_storage_present"] is True
+    assert repair_group["repair_context"]["storage_protocol_iris"] == [
+        RC + "DatabaseStorage"
+    ]
+    assert "rc:PostgreSQLTable" in repair_group["repair_context"][
+        "file_format_guidance"
+    ]["rc:DatabaseStorage"]
+    assert repair_group["pending_action_options"] == [
+        {
+            "action_index": 0,
+            "action_type": "record_reviewed_physical_layout",
+            "tool_name": "record_map_physical_layout",
+            "mcp_tool_name": "doxabase.record_map_physical_layout",
+            "action_label": "Record physical layout and link dataset",
+            "action_status": "pending_review",
+            "required_extra_arguments": ["iri", "file_format"],
+            "placeholder_fields": [
+                "file_format",
+                "layout_verification_status",
+                "layout_verification_note",
+            ],
+            "reviewed_value_fields": [
+                "file_format",
+                "layout_verification_status",
+                "layout_verification_note",
+            ],
+        }
+    ]
+    action = repair_group["actions"][0]
+    assert action["tool_name"] == "record_map_physical_layout"
+    assert action["arguments_template"]["datasets"] == [dataset]
+    assert action["arguments_template"]["file_format"] == (
+        "<reviewed rc:FileFormat IRI>"
+    )
 
 
 def test_draft_query_plan_tool_accepts_explicit_physical_layout_selection(

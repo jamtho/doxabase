@@ -2272,6 +2272,11 @@ few useful gaps:
   affordances available on RDF exports. Snapshot JSON exports now report
   `sensitive_literal_count` and redacted `privacy_warnings`, and
   `fail_on_sensitive=True` blocks before creating or overwriting the artifact.
+- A query/storage frontier trial found database-backed routes could have storage
+  and relation metadata modeled correctly but no structured repair lane for
+  `missing_physical_layout`. Once storage is linked, that issue now exposes a
+  reviewed `record_map_physical_layout` repair group with database table-layout
+  guidance such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

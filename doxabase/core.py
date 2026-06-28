@@ -17092,6 +17092,11 @@ class DoxaBase:
                 "warning",
                 "No physical layout resource is linked to the dataset.",
                 dataset_resource,
+                (
+                    self._missing_physical_layout_details(dataset)
+                    if dataset.storage_accesses
+                    else None
+                ),
             )
         ambiguous_layout_issue = self._ambiguous_physical_layout_issue(
             dataset.physical_layouts,
@@ -17135,6 +17140,94 @@ class DoxaBase:
             )
 
         return self._sort_query_planning_issues(issues)
+
+    def _missing_physical_layout_details(
+        self,
+        dataset: DatasetDescription,
+    ) -> dict[str, Any]:
+        storage_protocol_iris = list(
+            dict.fromkeys(
+                access.storage_protocol.iri
+                for access in dataset.storage_accesses
+                if access.storage_protocol is not None
+            )
+        )
+        database_storage_present = any(
+            self._is_database_storage(access.storage_protocol)
+            for access in dataset.storage_accesses
+        )
+        return {
+            "dataset_iri": dataset.iri,
+            "storage_protocol_iris": storage_protocol_iris,
+            "database_storage_present": database_storage_present,
+            "repair_hint": {
+                "action_type": "record_physical_layout",
+                "choice_mode": "review_all_applicable",
+                "requires_review": True,
+                "target_dataset_iri": dataset.iri,
+                "storage_protocol_iris": storage_protocol_iris,
+                "database_storage_present": database_storage_present,
+                "file_format_guidance": {
+                    "file_or_object_storage": (
+                        "Use a reviewed rc:FileFormat such as rc:Parquet, "
+                        "rc:CSV, or rc:JSONLines that matches the selected "
+                        "file/object route."
+                    ),
+                    "rc:DatabaseStorage": (
+                        "Use a database table layout such as rc:PostgreSQLTable, "
+                        "rc:SQLiteTable, or rc:MySQLTable when the selected "
+                        "route is a database relation handoff."
+                    ),
+                },
+                "actions": [
+                    {
+                        "action_type": "record_reviewed_physical_layout",
+                        "tool_name": "record_map_physical_layout",
+                        "mcp_tool_name": "doxabase.record_map_physical_layout",
+                        "action_label": "Record physical layout and link dataset",
+                        "reason": (
+                            "Use when review has identified the dataset's file "
+                            "format or database table layout."
+                        ),
+                        "required_extra_arguments": ["iri", "file_format"],
+                        "arguments_template": {
+                            "iri": "<reviewed physical layout IRI>",
+                            "datasets": [dataset.iri],
+                            "file_format": "<reviewed rc:FileFormat IRI>",
+                            "layout_verification_status": (
+                                "<reviewed rc:LayoutVerificationStatus IRI>"
+                            ),
+                            "layout_verification_note": (
+                                "<reviewed physical layout evidence note>"
+                            ),
+                        },
+                        "placeholder_fields": [
+                            "file_format",
+                            "layout_verification_status",
+                            "layout_verification_note",
+                        ],
+                        "reviewed_value_fields": [
+                            "file_format",
+                            "layout_verification_status",
+                            "layout_verification_note",
+                        ],
+                        "condition": (
+                            "Replace placeholders with reviewed values before "
+                            "recording. For database storage, prefer "
+                            "rc:PostgreSQLTable, rc:SQLiteTable, or rc:MySQLTable "
+                            "when that matches the relation engine."
+                        ),
+                        "review_rationale_guidance": (
+                            "record_map_physical_layout writes current-best map "
+                            "facts directly and does not record graph-revision "
+                            "rationale. Preserve the reviewed rationale in the "
+                            "calling workflow, or use a staged assertion helper "
+                            "when durable review history is needed."
+                        ),
+                    }
+                ],
+            },
+        }
 
     def _missing_storage_access_details(
         self,

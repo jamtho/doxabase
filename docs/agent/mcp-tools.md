@@ -669,6 +669,14 @@ Context-blocked direct-clean routes can expose
 `repair_action_type="remove_stale_partition_scheme_link"` to stage reviewed
 removal of a stale `rc:partitionedBy` link that is blocking an otherwise clean
 query target.
+When storage is already linked but no physical layout is present,
+`missing_physical_layout` exposes
+`repair_action_type="record_physical_layout"` with a reviewed
+`record_map_physical_layout` template. Use `repair_context.storage_protocol_iris`,
+`repair_context.database_storage_present`, and `file_format_guidance` to choose
+the reviewed `file_format`; database relation handoffs should use table-layout
+formats such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable` when
+those match the engine.
 When `missing_storage_access` appears, read `issues[].details.repair_hint` for
 reviewed repair templates: record a non-secret storage access and link it to the
 dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing

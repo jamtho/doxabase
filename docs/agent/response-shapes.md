@@ -2185,6 +2185,13 @@ pending, `repair_context.already_pending_candidate_count`,
 `repair_context.pending_staged_repair_iris` summarize them. The compact
 `stage_existing_storage_access_link` pending option repeats those fields when it
 remains pending because other candidate choices are still available.
+When `missing_physical_layout` appears after storage is linked, its repair group
+has `repair_action_type="record_physical_layout"` and a reviewed
+`record_map_physical_layout` template. Its `repair_context.storage_protocol_iris`,
+`repair_context.database_storage_present`, and `repair_context.file_format_guidance`
+help pick a reviewed `file_format`; for database storage, use table-layout
+formats such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable` when
+the selected route is a database relation handoff.
 
 Read `query.query_target_decision` before choosing from
 `query_target_candidates`. It is a derived handoff hint, not a new graph fact.
@@ -2467,6 +2474,8 @@ required `rationale` field. Storage protocol/location repair templates also
 name `placeholder_fields` and `reviewed_value_fields`; database relation
 add-template repairs do the same for `object` so generic repair scripts can
 replace reviewed values without issue-specific field guessing.
+Missing physical layout repair templates use the same fields for `file_format`,
+`layout_verification_status`, and `layout_verification_note`.
 `ambiguous_physical_layout` includes
 the distinct file-format/compression signatures and linked layout IRIs; when it
 is present, `draft_query_plan` leaves `scan.function` unset instead of guessing

@@ -13130,6 +13130,101 @@ def test_describe_query_context_marks_non_tabular_asset_not_applicable(
     assert plan.issues[0].code == "non_tabular_asset_query_not_applicable"
 
 
+def test_describe_query_context_suggests_missing_physical_layout_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#warehouse_orders_storage",
+        label="Warehouse orders database",
+        storage_protocol="rc:DatabaseStorage",
+        storage_root="warehouse-prod",
+        path_templates=["public.orders"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    missing_layout = next(
+        issue for issue in context.issues if issue.code == "missing_physical_layout"
+    )
+    assert missing_layout.details is not None
+    assert missing_layout.details["dataset_iri"] == dataset
+    assert missing_layout.details["storage_protocol_iris"] == [RC + "DatabaseStorage"]
+    assert missing_layout.details["database_storage_present"] is True
+    repair_hint = missing_layout.details["repair_hint"]
+    assert repair_hint["action_type"] == "record_physical_layout"
+    assert repair_hint["choice_mode"] == "review_all_applicable"
+    assert "rc:PostgreSQLTable" in repair_hint["file_format_guidance"][
+        "rc:DatabaseStorage"
+    ]
+    repair_group = next(
+        group
+        for group in context.suggested_repair_action_groups
+        if group.issue_code == "missing_physical_layout"
+    )
+    assert repair_group.repair_action_type == "record_physical_layout"
+    assert repair_group.issue_resource is not None
+    assert repair_group.issue_resource.iri == dataset
+    assert repair_group.repair_context["database_storage_present"] is True
+    assert repair_group.repair_context["storage_protocol_iris"] == [
+        RC + "DatabaseStorage"
+    ]
+    assert repair_group.pending_required_extra_arguments == ["iri", "file_format"]
+    assert repair_group.pending_action_options == [
+        {
+            "action_index": 0,
+            "action_type": "record_reviewed_physical_layout",
+            "tool_name": "record_map_physical_layout",
+            "mcp_tool_name": "doxabase.record_map_physical_layout",
+            "action_label": "Record physical layout and link dataset",
+            "action_status": "pending_review",
+            "required_extra_arguments": ["iri", "file_format"],
+            "placeholder_fields": [
+                "file_format",
+                "layout_verification_status",
+                "layout_verification_note",
+            ],
+            "reviewed_value_fields": [
+                "file_format",
+                "layout_verification_status",
+                "layout_verification_note",
+            ],
+        }
+    ]
+    action = repair_group.actions[0]
+    assert action["tool_name"] == "record_map_physical_layout"
+    assert action["arguments_template"]["datasets"] == [dataset]
+    assert action["arguments_template"]["file_format"] == (
+        "<reviewed rc:FileFormat IRI>"
+    )
+    assert "rc:PostgreSQLTable" in action["condition"]
+
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#warehouse_orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
+
+    repaired_context = db.describe_query_context(dataset)
+    assert "missing_physical_layout" not in {
+        issue.code for issue in repaired_context.issues
+    }
+    plan = db.draft_query_plan(dataset)
+    assert plan.handoff_kind == "database_relation_handoff"
+    assert plan.scan.physical_layout is not None
+    assert plan.scan.physical_layout.iri == layout.iri
+
+
 def test_missing_storage_access_link_template_has_no_hidden_anchor_placeholder(
     tmp_path: Path,
 ) -> None:

@@ -181,7 +181,11 @@ Start with `describe_query_context(dataset_iri)`:
    include an already-satisfied action that should be skipped after the pending
    cleanup is reviewed. Context-blocked direct-clean routes can also expose a
    `remove_stale_partition_scheme_link` template for a stale
-   `rc:partitionedBy` assertion. These are reviewed templates, not call-ready
+   `rc:partitionedBy` assertion. When storage is already linked but no physical
+   layout is present, `missing_physical_layout` exposes a reviewed
+   `record_map_physical_layout` template; for database storage, choose a
+   database table layout such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or
+   `rc:MySQLTable` after review. These are reviewed templates, not call-ready
    `suggested_next_actions`: fill placeholders, add required fields such as
    `rationale`, skip actions marked `already_satisfied` or `already_pending`,
    and check each `condition` before calling the named tool.
