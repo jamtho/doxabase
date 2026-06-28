@@ -16171,6 +16171,10 @@ class DoxaBase:
                 "Polymarket",
                 "https://richcanopy.org/example/manifest/polymarket#",
                 [
+                    "MarketSnapshots",
+                    "OrderbookSnapshots",
+                    "Trades",
+                    "HolderSnapshots",
                     "Markets",
                     "PriceSnapshots",
                     "TradeEvents",

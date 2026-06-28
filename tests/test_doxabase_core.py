@@ -12501,6 +12501,40 @@ def test_describe_query_context_flags_known_fixture_without_storage_access(
     assert "stale or intentionally reduced" in fixture_hint["message"]
 
 
+def test_describe_query_context_matches_current_polymarket_fixture_names(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    namespace = "https://richcanopy.org/example/manifest/polymarket#"
+    table_names = [
+        "MarketSnapshots",
+        "PriceSnapshots",
+        "OrderbookSnapshots",
+        "Trades",
+        "HolderSnapshots",
+    ]
+    for table_name in table_names:
+        db.record_map_dataset(
+            f"{namespace}{table_name}",
+            label=table_name,
+            is_table=True,
+        )
+
+    for table_name in table_names:
+        dataset = f"{namespace}{table_name}"
+        context = db.describe_query_context(dataset)
+        missing_storage = next(
+            issue for issue in context.issues if issue.code == "missing_storage_access"
+        )
+
+        assert missing_storage.details is not None
+        fixture_hint = missing_storage.details["fixture_staleness_hint"]
+        assert fixture_hint["fixture_names"] == ["Polymarket"]
+        assert fixture_hint["global_storage_access_count"] == 0
+        assert fixture_hint["dataset_matches_known_fixture"] is True
+        assert dataset in fixture_hint["known_fixture_table_iris"]
+
+
 def test_describe_query_context_summarizes_fixture_target_candidates(
     tmp_path: Path,
 ) -> None:
