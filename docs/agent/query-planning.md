@@ -12,6 +12,64 @@ conclusions about query-target behavior. `describe_query_context` now carries
 the same warning in `missing_storage_access.details.fixture_staleness_hint` when
 known fixture tables are present with no storage access resources.
 
+## AIS DailyIndex Question-To-Handoff Gap
+
+The bundled AIS fixture is a representative reduced pressure test, not a full
+executable AIS catalog. Do not silently "fix" its reduced shape unless the
+fixture's purpose changes. For the current question-to-DuckDB-handoff gap, the
+sensible smallest move is a walkthrough or example that overlays reviewed
+metadata in a scratch capsule. The next larger product move is a separate full
+executable AIS fixture/example.
+
+Known exact gap:
+
+- `ais:DailyIndex` currently inherits `ais:daily_date_partition`, whose
+  `rc:pathTemplate` is `broadcasts/{year}/ais-{date}.parquet`. That is the
+  broadcast route. The observed daily-index route used by DuckDB was
+  `s3://ais-noaa/index/*/*.parquet`; the partition-shaped template is
+  `index/{year}/ais-{date}.parquet`.
+- The fixture's daily-index schema is reduced to `mmsi`, `date`,
+  `message_count`, `first_timestamp`, `last_timestamp`, and `distance_m`.
+  The observed index has `vessel_names` plus other list and statistic columns
+  such as `imos`, `call_signs`, `vessel_types`, `cargos`, `lengths`, `widths`,
+  `drafts`, `transceiver_classes`, `status_codes`, `duration_s`,
+  `centroid_lat`, `centroid_lon`, `min_lat`, `max_lat`, `min_lon`, `max_lon`,
+  `h3_cell_count`, `sog_min`, `sog_max`, `sog_mean`, and
+  `max_inter_msg_speed_ms`. The observed broadcast files also include
+  `vessel_name`, `imo`, `call_sign`, `vessel_type`, `status`, `length`,
+  `width`, `draft`, `cargo`, `transceiver`, `cog`, and `heading`.
+- Importing the AIS session-observation bundles makes this lore rediscoverable
+  through `describe_context_slice(profile="dataset_brief")`, but it does not
+  turn observation/evidence facts into current map facts. `describe_query_context`
+  will still plan from the stale inherited broadcast partition until reviewed
+  map metadata is added.
+
+A scratch overlay that reaches a credible non-executed DuckDB handoff needs all
+of these reviewed map moves:
+
+1. Add `ais:ix_vessel_names` as a `rc:Column` on `ais:DailyIndex` with
+   `rc:columnName "vessel_names"` and physical type `rc:VarcharList`.
+2. Add a daily-index storage access linked to `ais:DailyIndex` with the existing
+   non-secret S3-compatible facts and `rc:pathTemplate "index/*/*.parquet"`.
+   Mark the route `rc:VerifiedByQueryLayout` only when the DuckDB/listing
+   evidence is in scope.
+3. Add a separate `ais:daily_index_date_partition` with
+   `rc:pathTemplate "index/{year}/ais-{date}.parquet"` and
+   `rc:partitionColumn ais:ix_date`.
+4. Update `ais:DailyIndex` itself to `rc:VerifiedByQueryLayout` with a note that
+   DuckDB verified the schema and `s3://ais-noaa/index/*/*.parquet` route.
+5. Stage and apply removal of the inherited
+   `ais:DailyIndex rc:partitionedBy ais:daily_date_partition` assertion. If
+   that old link remains, the corrected index candidates stay context-blocked
+   by the stale broadcast partition even when selected explicitly.
+
+After those moves, the wildcard index candidate should draft as
+`handoff_kind="runtime_resolution_required"` with
+`scan.uri_template="s3://ais-noaa/index/*/*.parquet"`, no required bindings, and
+`review_gate.executable_without_review=True`. It should still have
+`ready_for_execution_attempt=False` until endpoint profile and credentials are
+resolved outside DoxaBase.
+
 ## Field Precedence
 
 Start with `describe_query_context(dataset_iri)`:
