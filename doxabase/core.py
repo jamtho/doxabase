@@ -153,6 +153,31 @@ PROFILE_SCALAR_MAP_UPDATE_KINDS = frozenset(
 PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER = (
     "metric-vocabulary promotion skeleton from draft_profile_map_updates"
 )
+QUERY_REPAIR_PREDICATE_CURIES = frozenset(
+    {
+        "rc:hasStorageAccess",
+        "rc:storageProtocol",
+        "rc:accessMode",
+        "rc:locationKind",
+        "rc:storageRoot",
+        "rc:endpointProfile",
+        "rc:bucketName",
+        "rc:keyPrefix",
+        "rc:region",
+        "rc:credentialReference",
+        "rc:pathStyleAccess",
+        "rc:pathTemplate",
+        "rc:layoutVerificationStatus",
+        "rc:layoutVerificationNote",
+        "rc:hasPhysicalLayout",
+        "rc:partitionedBy",
+        "rc:partitionColumn",
+        "rc:partitionGranularity",
+        "rc:redundantPartitionKey",
+        "rc:fileFormat",
+        "rc:compressionCodec",
+    }
+)
 
 
 def to_jsonable(value: Any) -> Any:
@@ -3913,7 +3938,42 @@ class DoxaBase:
             if item.suggested_next_action is not None
             and item.queue not in ignored_queues
             and dataset_value in item.revision_anchor_iris
+            and self._project_brief_staged_item_is_query_repair(item)
         ]
+
+    def _project_brief_staged_item_is_query_repair(
+        self,
+        item: ProjectBriefStagedReviewItem,
+    ) -> bool:
+        history_graphs = self._expand_graphs(["history"])
+        review_note = self._first_object(
+            history_graphs,
+            item.revision_iri,
+            "rc:reviewNote",
+        )
+        if review_note and "query planning guidance" in review_note:
+            return True
+
+        query_repair_predicates = {
+            self.expand_iri(predicate) for predicate in QUERY_REPAIR_PREDICATE_CURIES
+        }
+        try:
+            staged = self.describe_staged_revision(item.revision_iri)
+        except DoxaBaseError:
+            return False
+        for patch in staged.patches:
+            if patch.target_graph != "map":
+                continue
+            try:
+                patch_graph = self._parse_staged_patch_description(patch)
+            except DoxaBaseError:
+                continue
+            if any(
+                str(predicate) in query_repair_predicates
+                for _, predicate, _ in patch_graph
+            ):
+                return True
+        return False
 
     def _project_brief_pending_staged_profile_update_iris(
         self,

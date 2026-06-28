@@ -244,8 +244,13 @@ the returned staged row, and `evidence_iris` lists its direct revision evidence.
 When a query repair task already has staged work anchored to the same dataset,
 `pending_staged_repair_iris` names those staged revision IRIs and the task is
 lowered behind `staged_review` so unattended agents review/apply the pending
-repair before staging another one. When a profile task already has a staged
-profile-map-update revision anchored to the same dataset and evidence,
+repair before staging another one. This pending-repair field is query-specific:
+the staged row must change query-planning metadata such as storage links, path
+templates, storage fields, physical-layout fields, or partition metadata.
+Unrelated same-dataset caveats or profile-map updates remain visible through
+staged-review queues without marking the query repair pending. When a profile
+task already has a staged profile-map-update revision anchored to the same
+dataset and evidence,
 `pending_staged_profile_update_iris` names those staged revision IRIs and the
 task's suggested action is read-only `draft_profile_map_updates` instead of
 another `stage_profile_map_updates` call. Generic same-evidence staged work

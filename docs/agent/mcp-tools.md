@@ -690,7 +690,10 @@ some visible candidates are already pending, the repair context and compact
 stage-existing-link option expose `already_pending_candidate_count`,
 `already_pending_storage_access_iris`, and `pending_staged_repair_iris`; the
 link action can still be pending if other non-pending candidates remain
-available for review. For the record-new-storage action,
+available for review. In `project_brief`, top-level
+`pending_staged_repair_iris` is limited to current staged rows that change
+query-planning metadata, not arbitrary same-dataset staged caveats or profile
+work. For the record-new-storage action,
 include the optional `path_templates` field only when the storage access itself
 owns the path or database relation template. Omit it when a dataset or partition
 already carries the reviewed file/object path template, or you can create

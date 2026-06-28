@@ -458,6 +458,52 @@ def test_project_brief_tool_marks_pending_staged_query_repairs(
     assert "Pending staged repair(s)" in repair_task["reason"]
 
 
+def test_project_brief_tool_does_not_gate_query_repair_on_unrelated_staged_work(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Tickets"
+    db.record_map_dataset(dataset, label="Tickets", is_table=True)
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage Tickets caveat wording",
+        rationale="Unrelated caveat wording should not count as a query repair.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:TicketsFreshnessCaveat a rc:KnownCaveat ;
+                    rdfs:label "Tickets freshness caveat" ;
+                    rc:caveatDescription "Tickets freshness needs review." .
+
+                ex:Tickets rc:hasKnownCaveat ex:TicketsFreshnessCaveat .
+                """,
+            }
+        ],
+        revision_anchors=[dataset],
+    )
+
+    result = project_brief_tool(db, limit=3)
+
+    assert [
+        task["task_type"] for task in result["recommended_next_tasks"]
+    ] == ["staged_frontier_review", "query_repair_review", "staged_review"]
+    repair_task = result["recommended_next_tasks"][1]
+    assert repair_task["priority"] == 10
+    assert repair_task["pending_staged_repair_iris"] == []
+    assert "Pending staged repair(s)" not in repair_task["reason"]
+    assert repair_task["suggested_next_action"]["tool_name"] == (
+        "describe_query_context"
+    )
+    assert staged["revision_iri"] in {
+        item["revision_iri"] for item in result["staged_review"]["items"]
+    }
+
+
 def test_project_brief_tool_gates_duplicate_profile_staging(
     tmp_path: Path,
 ) -> None:
@@ -544,7 +590,25 @@ def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
     dataset = "https://example.test/project#Orders"
     evidence = "https://example.test/project#OrdersProfileEvidence"
     metric = "https://example.test/project#OrdersQualityMetric"
-    db.record_map_dataset(dataset, label="Orders", is_table=True, row_count_snapshot=10)
+    storage = record_map_storage_access_tool(
+        db,
+        "https://example.test/project#OrdersStorage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root="/tmp/orders.csv",
+        path_templates=["orders.csv"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+        path_templates=["orders.csv"],
+        storage_accesses=[storage["iri"]],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
     record_profile_bundle_tool(
         db,
         dataset_iri=dataset,
@@ -594,12 +658,17 @@ def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
         evidence=[evidence],
     )
 
-    result = project_brief_tool(db, limit=3, profile_candidate_limit=1)
+    result = project_brief_tool(db, limit=4, profile_candidate_limit=1)
 
     assert [
         task["task_type"] for task in result["recommended_next_tasks"]
-    ] == ["staged_frontier_review", "profile_review", "staged_review"]
-    profile_task = result["recommended_next_tasks"][1]
+    ] == [
+        "staged_frontier_review",
+        "query_context_review",
+        "profile_review",
+        "staged_review",
+    ]
+    profile_task = result["recommended_next_tasks"][2]
     assert profile_task["profile_evidence_iri"] == evidence
     assert profile_task["pending_staged_profile_update_iris"] == []
     assert "Pending staged profile update(s)" not in profile_task["reason"]

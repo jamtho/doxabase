@@ -2259,6 +2259,14 @@ few useful gaps:
   structured route was informational `inspect_no_effective_change`. Grouped
   exports now use the compact next-action label "Inspect already-effective stale
   source" for those rows.
+- A project-brief frontier trial found
+  `_project_brief_pending_staged_repair_iris()` treated any non-informational
+  staged row anchored to a dataset as a pending query repair. Unrelated staged
+  caveats and staged profile updates could therefore lower reachable
+  `missing_storage_access` repair tasks behind staged review. Pending query
+  repairs are now filtered to staged rows that change query-planning metadata
+  such as storage links, path templates, storage fields, layout fields, or
+  partition metadata.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
