@@ -324,6 +324,21 @@ class ProjectBriefRecommendedTask:
 
 
 @dataclass(frozen=True)
+class ProjectBriefHealthTask:
+    priority: int
+    task_type: str
+    source: str
+    reason: str
+    suggested_next_action: SuggestedNextAction | None
+    suggested_next_call: str | None
+    queue_types: list[str] = field(default_factory=list)
+    omitted_queue_counts: dict[str, int] = field(default_factory=dict)
+    suggested_limit: int | None = None
+    sensitive_literal_count: int | None = None
+    missing_seed_terms: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class ProjectBrief:
     key_counts: dict[str, int]
     dataset_count: int
@@ -337,6 +352,7 @@ class ProjectBrief:
     active_queue_type_count: int
     returned_queue_type_count: int
     limit_crowded_queue_types: list[str]
+    health_tasks: list[ProjectBriefHealthTask]
     datasets: list[ProjectBriefDatasetSummary]
     staged_review: ProjectBriefStagedReviewSummary
     recommended_next_tasks: list[ProjectBriefRecommendedTask]
@@ -3142,6 +3158,20 @@ class DoxaBase:
             for task_type, count in queue_counts.items()
             if count > returned_queue_counts.get(task_type, 0)
         }
+        limit_crowded_queue_types = (
+            self._project_brief_limit_crowded_queue_types(
+                queue_counts,
+                returned_queue_counts,
+                limit=limit,
+            )
+        )
+        health_tasks = self._project_brief_health_tasks(
+            limit=limit,
+            profile_candidate_limit=profile_candidate_limit,
+            active_queue_type_count=len(queue_counts),
+            omitted_queue_counts=omitted_queue_counts,
+            limit_crowded_queue_types=limit_crowded_queue_types,
+        )
 
         return ProjectBrief(
             key_counts=overview.key_counts,
@@ -3161,13 +3191,8 @@ class DoxaBase:
             omitted_queue_counts=omitted_queue_counts,
             active_queue_type_count=len(queue_counts),
             returned_queue_type_count=len(returned_queue_counts),
-            limit_crowded_queue_types=(
-                self._project_brief_limit_crowded_queue_types(
-                    queue_counts,
-                    returned_queue_counts,
-                    limit=limit,
-                )
-            ),
+            limit_crowded_queue_types=limit_crowded_queue_types,
+            health_tasks=health_tasks,
             datasets=datasets,
             staged_review=staged_review,
             recommended_next_tasks=selected_tasks,
@@ -3330,6 +3355,159 @@ class DoxaBase:
                 "plan_staged_revision_recovery",
                 arguments,
             ),
+        )
+
+    def _project_brief_health_tasks(
+        self,
+        *,
+        limit: int,
+        profile_candidate_limit: int,
+        active_queue_type_count: int,
+        omitted_queue_counts: dict[str, int],
+        limit_crowded_queue_types: list[str],
+    ) -> list[ProjectBriefHealthTask]:
+        tasks: list[ProjectBriefHealthTask] = []
+        expand_task = self._project_brief_expand_health_task(
+            limit=limit,
+            profile_candidate_limit=profile_candidate_limit,
+            active_queue_type_count=active_queue_type_count,
+            omitted_queue_counts=omitted_queue_counts,
+            limit_crowded_queue_types=limit_crowded_queue_types,
+        )
+        if expand_task is not None:
+            tasks.append(expand_task)
+
+        privacy_task = self._project_brief_privacy_health_task()
+        if privacy_task is not None:
+            tasks.append(privacy_task)
+
+        seed_task = self._project_brief_seed_recovery_health_task()
+        if seed_task is not None:
+            tasks.append(seed_task)
+
+        return sorted(tasks, key=lambda task: (task.priority, task.task_type))
+
+    def _project_brief_expand_health_task(
+        self,
+        *,
+        limit: int,
+        profile_candidate_limit: int,
+        active_queue_type_count: int,
+        omitted_queue_counts: dict[str, int],
+        limit_crowded_queue_types: list[str],
+    ) -> ProjectBriefHealthTask | None:
+        if not omitted_queue_counts and not limit_crowded_queue_types:
+            return None
+        suggested_limit = max(limit + 1, active_queue_type_count)
+        if omitted_queue_counts:
+            suggested_limit = max(
+                suggested_limit,
+                min(limit + sum(omitted_queue_counts.values()), limit * 2),
+            )
+        arguments = {
+            "limit": suggested_limit,
+            "profile_candidate_limit": profile_candidate_limit,
+        }
+        action = SuggestedNextAction(
+            action_label="Expand project brief frontier",
+            tool_name="project_brief",
+            mcp_tool_name="doxabase.project_brief",
+            arguments=arguments,
+            reason=(
+                "Some active queues were omitted from the bounded recommended "
+                "task slice; rerun project_brief with a larger limit before "
+                "repeating the same visible tasks."
+            ),
+            call=self._suggested_call_string("project_brief", arguments),
+        )
+        queue_types = list(
+            dict.fromkeys(
+                [*omitted_queue_counts.keys(), *limit_crowded_queue_types]
+            )
+        )
+        return ProjectBriefHealthTask(
+            priority=10,
+            task_type="expand_project_brief",
+            source="project_brief",
+            reason=(
+                "The current project_brief limit hides some concrete task "
+                "payloads from recommended_next_tasks."
+            ),
+            suggested_next_action=action,
+            suggested_next_call=action.call,
+            queue_types=queue_types,
+            omitted_queue_counts=dict(omitted_queue_counts),
+            suggested_limit=suggested_limit,
+        )
+
+    def _project_brief_privacy_health_task(
+        self,
+    ) -> ProjectBriefHealthTask | None:
+        scan = self.scan_sensitive_literals(graphs="project", limit=1)
+        if scan.match_count == 0:
+            return None
+        arguments = {"graphs": "project", "limit": 20}
+        action = SuggestedNextAction(
+            action_label="Review export privacy",
+            tool_name="scan_sensitive_literals",
+            mcp_tool_name="doxabase.scan_sensitive_literals",
+            arguments=arguments,
+            reason=(
+                "Run the redacted sensitive-literal scan before sharing RDF "
+                "exports; use fail_on_sensitive=True for blocking exports."
+            ),
+            call=self._suggested_call_string("scan_sensitive_literals", arguments),
+        )
+        return ProjectBriefHealthTask(
+            priority=20,
+            task_type="privacy_export_review",
+            source="scan_sensitive_literals",
+            reason=(
+                "Project graph roles contain potential sensitive literals; "
+                "project_brief reports only the count and a redacted scan route."
+            ),
+            suggested_next_action=action,
+            suggested_next_call=action.call,
+            sensitive_literal_count=scan.match_count,
+        )
+
+    def _project_brief_seed_recovery_health_task(
+        self,
+    ) -> ProjectBriefHealthTask | None:
+        required_terms = list(
+            dict.fromkeys(
+                [
+                    *REQUIRED_STAGING_ONTOLOGY_TERMS,
+                    *REQUIRED_REVISION_STANCE_ONTOLOGY_TERMS,
+                ]
+            )
+        )
+        missing_seed_terms = self._missing_base_ontology_terms(required_terms)
+        if not missing_seed_terms:
+            return None
+        arguments = {
+            "doc_id": "api_reference",
+            "section": "Create or Open a Capsule",
+        }
+        action = SuggestedNextAction(
+            action_label="Read stale seed recovery guidance",
+            tool_name="get_doc",
+            mcp_tool_name="doxabase.get_doc",
+            arguments=arguments,
+            reason=(
+                "The immutable base_ontology is missing current staging seed "
+                "terms; read the recovery guidance before staging graph changes."
+            ),
+            call=self._suggested_call_string("get_doc", arguments),
+        )
+        return ProjectBriefHealthTask(
+            priority=5,
+            task_type="seed_recovery_review",
+            source="base_ontology_seed_check",
+            reason=self._stale_seed_recovery_message(missing_seed_terms),
+            suggested_next_action=action,
+            suggested_next_call=action.call,
+            missing_seed_terms=missing_seed_terms,
         )
 
     def _project_brief_staged_review(

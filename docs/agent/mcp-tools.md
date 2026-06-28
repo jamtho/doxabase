@@ -42,6 +42,9 @@ tasks. Use it when arriving cold or when a loop may be over-polishing one
 workflow while missing another active queue. If `limit_crowded_queue_types` is
 non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
+Read `health_tasks` before repeating visible recommended tasks. It is not
+limited by `recommended_next_tasks` and can route agents to widen the brief,
+run redacted privacy/export review, or handle stale immutable seed graphs.
 When current staged work exists, a `staged_frontier_review` task points to
 `plan_staged_revision_recovery`; follow that first before staging duplicate
 profile or query repair work.

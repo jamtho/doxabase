@@ -348,6 +348,18 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     assert brief.active_queue_type_count == 3
     assert brief.returned_queue_type_count == 2
     assert brief.limit_crowded_queue_types == ["staged_review"]
+    health_task = brief.health_tasks[0]
+    assert health_task.task_type == "expand_project_brief"
+    assert health_task.queue_types == ["query_repair_review", "staged_review"]
+    assert health_task.omitted_queue_counts == brief.omitted_queue_counts
+    assert health_task.suggested_limit is not None
+    assert health_task.suggested_limit > brief.limit
+    assert health_task.suggested_next_action is not None
+    assert health_task.suggested_next_action.tool_name == "project_brief"
+    assert health_task.suggested_next_action.arguments == {
+        "limit": health_task.suggested_limit,
+        "profile_candidate_limit": brief.profile_candidate_limit,
+    }
 
 
 def test_project_brief_counts_staged_review_rows_hidden_by_limit(
@@ -455,6 +467,66 @@ def test_project_brief_reports_limit_crowded_queue_types(
         "query_repair_review",
         "non_tabular_asset_review",
     ]
+    expand_task = next(
+        task for task in brief.health_tasks if task.task_type == "expand_project_brief"
+    )
+    assert "profile_review" in expand_task.queue_types
+    assert "staged_review" in expand_task.queue_types
+
+
+def test_project_brief_surfaces_sanitized_privacy_health_task(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.record_map_dataset(
+        "https://example.test/project#CredentialNotes",
+        label="Credential notes",
+        description="Synthetic fixture FAKE_SECRET_TOKEN_PROJECT_BRIEF.",
+    )
+
+    brief = db.project_brief(limit=5)
+
+    privacy_task = next(
+        task for task in brief.health_tasks if task.task_type == "privacy_export_review"
+    )
+    assert privacy_task.sensitive_literal_count == 1
+    assert "FAKE_SECRET" not in privacy_task.reason
+    assert privacy_task.suggested_next_action is not None
+    assert privacy_task.suggested_next_action.tool_name == "scan_sensitive_literals"
+    assert privacy_task.suggested_next_action.arguments == {
+        "graphs": "project",
+        "limit": 20,
+    }
+    assert "FAKE_SECRET" not in json.dumps(to_dict(privacy_task))
+
+
+def test_project_brief_surfaces_stale_seed_health_task(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    _delete_base_ontology_seed_terms(
+        db,
+        ["rc:GraphPatchRole", "rc:CandidateRevision"],
+    )
+
+    brief = db.project_brief(limit=5)
+
+    seed_task = next(
+        task for task in brief.health_tasks if task.task_type == "seed_recovery_review"
+    )
+    assert seed_task.missing_seed_terms == [
+        "rc:GraphPatchRole",
+        "rc:CandidateRevision",
+    ]
+    assert "immutable base_ontology is missing current staging vocabulary" in (
+        seed_task.reason
+    )
+    assert seed_task.suggested_next_action is not None
+    assert seed_task.suggested_next_action.tool_name == "get_doc"
+    assert seed_task.suggested_next_action.arguments == {
+        "doc_id": "api_reference",
+        "section": "Create or Open a Capsule",
+    }
 
 
 def test_project_brief_routes_non_tabular_assets_to_context_review(

@@ -12,7 +12,10 @@ compaction, read `start_here` first.
    `staged_revisions` / `systematisation` / `revisions` for graph changes,
    `context_slicing` / `lexical_search` for retrieval, `response_shapes` before
    scripting against returned objects, and `field_trials` for sub-agent trials.
-3. Call `doxabase.project_brief` for a read-only summary of datasets, query-readiness buckets, profile draft counts, staged review queues, and recommended next tasks.
+3. Call `doxabase.project_brief` for a read-only summary of datasets,
+   query-readiness buckets, profile draft counts, staged review queues,
+   recommended next tasks, and `health_tasks` that can surface omitted queues,
+   privacy/export review, or stale seed recovery.
 4. Call `doxabase.graph_overview` to inspect named graphs, counts, common classes, and predicates.
 5. Call `doxabase.search` when you have a remembered term, caveat, column name, source note, or question-shaped keyword.
 6. Call `doxabase.list_entities` for likely entry points, usually `type="rc:Table"` or `type="rc:Dataset"` in `graph="map"`.

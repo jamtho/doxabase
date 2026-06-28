@@ -133,6 +133,21 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
     "active_queue_type_count": 4,
     "returned_queue_type_count": 4,
     "limit_crowded_queue_types": [],
+    "health_tasks": [
+        {
+            "priority": 10,
+            "task_type": "expand_project_brief",
+            "source": "project_brief",
+            "reason": "...",
+            "suggested_next_action": {...},
+            "suggested_next_call": "project_brief(...)",
+            "queue_types": ["query_repair_review"],
+            "omitted_queue_counts": {"query_repair_review": 1},
+            "suggested_limit": 21,
+            "sensitive_literal_count": null,
+            "missing_seed_terms": [],
+        },
+    ],
     "datasets": [
         {
             "dataset": {"iri": "https://...", "label": "...", "description": ...},
@@ -244,6 +259,12 @@ drafts for the same dataset can point at the same blocker first.
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue
 when the limit allows, then fills remaining slots by priority.
+`health_tasks` is outside the bounded `recommended_next_tasks` slice. It reports
+stable follow-ups such as `expand_project_brief` for omitted queues,
+`privacy_export_review` when a redacted project scan finds potential sensitive
+literals, and `seed_recovery_review` when immutable seed graphs are missing
+current staging vocabulary. Check it before repeating the same visible task
+types in an unattended loop.
 When `limit_crowded_queue_types` is non-empty, the current `limit` was too low
 to return a task from every active queue type. Rerun with a larger limit or
 inspect `queue_counts`/`omitted_queue_counts` before choosing the next loop

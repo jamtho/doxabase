@@ -380,6 +380,8 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert "active_queue_type_count" in result
     assert "returned_queue_type_count" in result
     assert "limit_crowded_queue_types" in result
+    assert "health_tasks" in result
+    assert isinstance(result["health_tasks"], list)
     assert isinstance(result["recommended_next_tasks"], list)
 
 
