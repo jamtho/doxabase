@@ -201,6 +201,11 @@ restage list, and treat `repair_first_revision_iris` / `repair_or_replace`
 lanes as repair or replacement work before any same-payload restage. If
 `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one ready
 row, then rerun the planner.
+When `include_drafts=True`, a repair lane whose embedded draft finds no safe
+automatic repair uses the draft's inspection/export route instead of asking the
+agent to call `draft_staged_revision_rebase()` again for the same row. If the
+embedded draft does provide a concrete `preferred_action`, follow that reviewed
+repair action.
 
 Use `doxabase.restage_staged_revisions(...)` when you are ready for the lower
 level batch operation. It restages conflicted rows that do not already have a

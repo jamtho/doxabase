@@ -24140,6 +24140,25 @@ class DoxaBase:
                     "Could not draft staged revision repair for "
                     f"'{item.current_revision_iri}': {exc}"
                 )
+        suggested_next_actions = item.suggested_next_actions_after
+        if self._staged_recovery_should_use_embedded_draft_route(repair_draft):
+            if repair_draft.next_action is not None:
+                next_action = repair_draft.next_action
+            if repair_draft.next_action_queue_item is not None:
+                queue_item = repair_draft.next_action_queue_item
+            suggested_next_actions = repair_draft.suggested_next_actions
+            lane = (
+                queue_item.queue
+                if queue_item is not None
+                else next_action.queue
+                if next_action is not None
+                else lane
+            )
+            row_iri = (
+                queue_item.row_iri
+                if queue_item is not None
+                else item.current_revision_iri
+            )
         return (
             StagedRevisionRecoveryLane(
                 row_iri=row_iri,
@@ -24205,10 +24224,10 @@ class DoxaBase:
                 next_action_queue_item=queue_item,
                 repair_draft=repair_draft,
                 repair_draft_error=repair_draft_error,
-                suggested_next_actions=item.suggested_next_actions_after,
+                suggested_next_actions=suggested_next_actions,
                 suggested_next_calls=[
                     action.call
-                    for action in item.suggested_next_actions_after
+                    for action in suggested_next_actions
                     if action.call
                 ],
                 batch_item=item,
@@ -24216,6 +24235,19 @@ class DoxaBase:
             ),
             warning,
         )
+
+    @staticmethod
+    def _staged_recovery_should_use_embedded_draft_route(
+        repair_draft: StagedRevisionRebaseDraft | None,
+    ) -> bool:
+        if repair_draft is None or repair_draft.preferred_action is not None:
+            return False
+        if any(
+            action.tool_name == "draft_staged_revision_rebase"
+            for action in repair_draft.suggested_next_actions
+        ):
+            return False
+        return bool(repair_draft.next_action or repair_draft.suggested_next_actions)
 
     @staticmethod
     def _staged_recovery_should_draft_repair(

@@ -733,6 +733,50 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert result["note"].startswith("Read-only staged revision recovery plan")
 
 
+def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    record_map_dataset_tool(db, iri=orders, label="Orders", is_table=True)
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Model Orders with invalid row-semantics object",
+        rationale="The invalid object should require manual repair review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Orders rc:rowSemantics "snapshot" .
+                """,
+            }
+        ],
+        revision_anchors=[orders],
+    )
+    record_map_dataset_tool(db, iri=orders, row_semantics="rc:EventRow")
+
+    result = plan_staged_revision_recovery_tool(
+        db,
+        revision_iris=[staged["revision_iri"]],
+    )
+
+    assert result["repair_first_revision_iris"] == [staged["revision_iri"]]
+    lane = result["lanes"][0]
+    assert lane["repair_draft"]["draft_kind"] == "validation_repair_needed"
+    assert lane["next_action"]["tool_name"] != "draft_staged_revision_rebase"
+    assert all(
+        action["tool_name"] != "draft_staged_revision_rebase"
+        for action in lane["suggested_next_actions"]
+    )
+    assert all(
+        action["tool_name"] != "draft_staged_revision_rebase"
+        for action in result["suggested_next_actions"]
+    )
+
+
 def test_restage_staged_revision_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:

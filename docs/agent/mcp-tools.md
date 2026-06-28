@@ -1321,6 +1321,10 @@ sequential-apply warnings. When `include_drafts=True`, repair lanes may include
 a read-only `repair_draft` from `draft_staged_revision_rebase`; failed draft
 attempts are reported as lane errors and warnings while the dry-run route still
 returns.
+If the embedded draft finds no safe automatic repair and has already filtered
+out the self-call to `draft_staged_revision_rebase`, the lane and top-level plan
+suggestions follow the draft's inspect/export route instead of recommending the
+same draft call again.
 
 Read `lanes[]` first. Each lane names the `source_revision_iri`,
 `current_revision_iri`, `lane`, `batch_action`, status/decision before and

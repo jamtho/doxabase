@@ -4172,6 +4172,10 @@ same as the mutation or inspection target. Repair lanes may include
 `repair_draft`; when the suggested repair creates a new successor,
 `resolved_target_iri` can be `None`, so drive the reviewed repair from
 `repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
+When `include_drafts=True` and a no-repair embedded draft already removed
+`draft_staged_revision_rebase` from its own suggestions, the lane and top-level
+plan suggestions use that draft's inspection/export route too. Do not call the
+draft helper again unless it still appears in `lane.suggested_next_actions`.
 
 `would_restage_revision_iris` is a mechanical restage worklist after review, not
 an apply queue. `repair_first_revision_iris` marks stale sources whose staged

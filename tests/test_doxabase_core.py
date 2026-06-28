@@ -5103,6 +5103,12 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert repair_lane.repair_draft.preferred_action.arguments["restages_revision"] == (
         repair_source.revision_iri
     )
+    assert repair_lane.next_action is not None
+    assert repair_lane.next_action.tool_name == "stage_map_assertion_change"
+    assert any(
+        action.tool_name == "stage_map_assertion_change"
+        for action in repair_lane.suggested_next_actions
+    )
     applied_lane = lanes_by_source[applied_source.revision_iri]
     assert applied_lane.lane == "inspect_already_applied"
     assert applied_lane.resolved_target_iri == applied_event.applied_revision_iri
@@ -5219,6 +5225,22 @@ def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
     assert all(
         action.tool_name != "draft_staged_revision_rebase"
         for action in draft.suggested_next_actions
+    )
+    plan = db.plan_staged_revision_recovery([source.revision_iri])
+    assert plan.repair_first_revision_iris == [source.revision_iri]
+    lane = plan.lanes[0]
+    assert lane.repair_draft is not None
+    assert lane.repair_draft.draft_kind == "validation_repair_needed"
+    assert lane.next_action is not None
+    assert lane.next_action.tool_name != "draft_staged_revision_rebase"
+    assert lane.suggested_next_actions == lane.repair_draft.suggested_next_actions
+    assert all(
+        action.tool_name != "draft_staged_revision_rebase"
+        for action in lane.suggested_next_actions
+    )
+    assert all(
+        action.tool_name != "draft_staged_revision_rebase"
+        for action in plan.suggested_next_actions
     )
 
 
