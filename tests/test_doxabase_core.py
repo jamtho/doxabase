@@ -16987,6 +16987,49 @@ def test_resource_brief_context_slice_finds_owner_for_blank_node_seed(
     assert not any("owner lookup" in warning for warning in context_slice.warnings)
 
 
+def test_resource_brief_context_slice_finds_owner_for_nested_predicate_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shape = "https://example.test/project#NestedShape"
+    inner_path = "https://example.test/project#innerPath"
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        ex:NestedShape a sh:NodeShape ;
+            rdfs:label "Nested shape" ;
+            sh:property [
+                sh:path ex:outerPath ;
+                sh:qualifiedValueShape [
+                    sh:path ex:innerPath ;
+                    sh:datatype xsd:string ;
+                    sh:message "Inner path is text."
+                ]
+            ] .
+        """,
+        graph="shapes",
+    )
+
+    context_slice = db.describe_context_slice(
+        inner_path,
+        profile="resource_brief",
+        max_triples=50,
+    )
+
+    shape_resource = next(
+        resource for resource in context_slice.resources if resource.iri == shape
+    )
+    assert any(
+        route.route == "incoming_blank_node_owner"
+        for route in shape_resource.routes
+    )
+    assert context_slice.route_counts["incoming_blank_node_owner"] == 1
+
+
 def test_resource_brief_context_slice_expands_evidence_handoff(
     tmp_path: Path,
 ) -> None:

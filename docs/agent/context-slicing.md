@@ -52,7 +52,9 @@ that blank node as the main handoff. Seed it with
 For predicate seeds, read `predicate_usage_subject` and
 `incoming_blank_node_owner` routes together: a project predicate can be defined
 in ontology, constrained in shapes, and used by map resources in the same
-slice.
+slice. `incoming_blank_node_owner` walks through nested SHACL blank-node
+fragments, so a predicate used inside `sh:qualifiedValueShape` can still route
+back to the named owner shape.
 This applies to durable graph content. Proposed ontology or SHACL resources
 inside staged patch Turtle are not materialized as ordinary graph resources
 until the staged revision is applied, so `resource_brief` and

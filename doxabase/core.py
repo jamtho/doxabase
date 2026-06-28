@@ -9076,39 +9076,25 @@ class DoxaBase:
         object_iri: str,
         limit: int,
     ) -> tuple[list[str], int]:
-        path_graph_filter, path_graph_params = self._graph_filter(graphs, alias="p")
-        owner_graph_filter, owner_graph_params = self._graph_filter(graphs, alias="o")
-        base_params: list[Any] = [
-            object_iri,
-            *path_graph_params,
-            *owner_graph_params,
-        ]
-        base_query = f"""
-            SELECT DISTINCT o.subject AS iri
-            FROM quads p
-            JOIN quads o
-              ON o.object = p.subject
-             AND o.object_kind = 'bnode'
-             AND o.subject_kind = 'uri'
-            WHERE p.object = ?
-              AND p.object_kind = 'uri'
-              AND p.subject_kind = 'bnode'
-              {path_graph_filter}
-              {owner_graph_filter}
-        """
+        graph_filter, graph_params = self._graph_filter(graphs, alias="q")
         rows = self._conn.execute(
             f"""
-            {base_query}
-            ORDER BY iri
-            LIMIT ?
+            SELECT DISTINCT q.subject AS blank_node
+            FROM quads q
+            WHERE q.object = ?
+              AND q.object_kind = 'uri'
+              AND q.subject_kind = 'bnode'
+              {graph_filter}
+            ORDER BY q.subject
             """,
-            [*base_params, limit],
+            [object_iri, *graph_params],
         ).fetchall()
-        count_row = self._conn.execute(
-            f"SELECT COUNT(*) AS count FROM ({base_query})",
-            base_params,
-        ).fetchone()
-        return [row["iri"] for row in rows], int(count_row["count"])
+        owners, _depth_exhausted = self._recursive_blank_node_uri_owners(
+            graphs,
+            blank_nodes=[row["blank_node"] for row in rows],
+        )
+        ordered_owners = sorted(owners)
+        return ordered_owners[:limit], len(ordered_owners)
 
     def _resource_brief_blank_node_seed_owners(
         self,
@@ -9118,10 +9104,24 @@ class DoxaBase:
         limit: int,
         max_depth: int = 4,
     ) -> tuple[list[str], int, bool]:
-        frontier = [blank_node]
+        owners, depth_exhausted = self._recursive_blank_node_uri_owners(
+            graphs,
+            blank_nodes=[blank_node],
+            max_depth=max_depth,
+        )
+        ordered_owners = sorted(owners)
+        return ordered_owners[:limit], len(ordered_owners), depth_exhausted
+
+    def _recursive_blank_node_uri_owners(
+        self,
+        graphs: list[str],
+        *,
+        blank_nodes: Iterable[str],
+        max_depth: int = 4,
+    ) -> tuple[set[str], bool]:
+        frontier = list(dict.fromkeys(blank_nodes))
         visited: set[str] = set()
         owners: set[str] = set()
-        depth_exhausted = False
         for _depth in range(max_depth):
             if not frontier:
                 break
@@ -9140,8 +9140,7 @@ class DoxaBase:
                         next_frontier.append(owner)
             frontier = next_frontier
         depth_exhausted = bool(frontier)
-        ordered_owners = sorted(owners)
-        return ordered_owners[:limit], len(ordered_owners), depth_exhausted
+        return owners, depth_exhausted
 
     def _blank_node_subject_owners(
         self,
