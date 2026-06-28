@@ -475,6 +475,8 @@ class RevisionSnapshotBundleExportRecord:
     snapshot_count: int
     quad_count: int
     bytes_written: int
+    sensitive_literal_count: int = 0
+    privacy_warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -35854,6 +35856,7 @@ class DoxaBase:
         revision_iris: Iterable[str] | str | None = None,
         graph_roles: Iterable[str] | str | None = None,
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> RevisionSnapshotBundleExportRecord:
         revisions = [
             self._required_iri("revision_iris", value)
@@ -35868,6 +35871,14 @@ class DoxaBase:
         revision_values = list(dict.fromkeys(entry["revision_iri"] for entry in entries))
         graph_role_values = list(dict.fromkeys(entry["graph_role"] for entry in entries))
         quad_count = sum(len(entry["quads"]) for entry in entries)
+        sensitive_literal_count, privacy_warnings = (
+            self._revision_snapshot_export_privacy_warnings(entries)
+        )
+        self._raise_if_sensitive_export_blocked(
+            fail_on_sensitive=fail_on_sensitive,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
+        )
         payload = {
             "format": "doxabase.revision_snapshot_bundle.v1",
             "created_at": _now(),
@@ -35883,7 +35894,56 @@ class DoxaBase:
             snapshot_count=len(entries),
             quad_count=quad_count,
             bytes_written=bytes_written,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
         )
+
+    def _revision_snapshot_export_privacy_warnings(
+        self,
+        entries: list[dict[str, Any]],
+        *,
+        limit: int = 5,
+    ) -> tuple[int, list[str]]:
+        examples: list[str] = []
+        omitted = 0
+        match_count = 0
+        for entry in entries:
+            graph_role = str(entry["graph_role"])
+            revision_iri = str(entry["revision_iri"])
+            for quad in entry["quads"]:
+                if quad.get("object_kind") not in {"literal", "uri"}:
+                    continue
+                object_value = quad.get("object")
+                if object_value is None:
+                    continue
+                match_kind, redacted_snippet = self._sensitive_literal_match(
+                    str(object_value)
+                )
+                if match_kind is None or redacted_snippet is None:
+                    continue
+                match_count += 1
+                if len(examples) < limit:
+                    examples.append(
+                        (
+                            f"{graph_role} {self._compact_iri(str(quad['predicate']))} "
+                            f"{redacted_snippet} in snapshot for {revision_iri}"
+                        )
+                    )
+                else:
+                    omitted += 1
+
+        if match_count == 0:
+            return 0, []
+        warning = (
+            f"Revision snapshot export includes {match_count} potential sensitive "
+            "literal match(es). Snapshot JSON faithfully preserves stored graph "
+            "content; run scan_sensitive_literals on project graph roles before "
+            "sharing. Redacted examples: "
+            + "; ".join(examples)
+        )
+        if omitted:
+            warning += f" ({omitted} additional match(es) omitted.)"
+        return match_count, [warning]
 
     def _snapshot_export_revision_iris(self, revision_iris: list[str]) -> list[str]:
         if not revision_iris:

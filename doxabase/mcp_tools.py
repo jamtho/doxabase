@@ -1164,6 +1164,7 @@ def export_revision_snapshots_tool(
     revision_iris: list[str] | None = None,
     graph_roles: list[str] | None = None,
     overwrite: bool = False,
+    fail_on_sensitive: bool = False,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
     result = db.export_revision_snapshots(
@@ -1171,6 +1172,7 @@ def export_revision_snapshots_tool(
         revision_iris=revision_iris,
         graph_roles=graph_roles,
         overwrite=overwrite,
+        fail_on_sensitive=fail_on_sensitive,
     )
     return to_dict(result)
 

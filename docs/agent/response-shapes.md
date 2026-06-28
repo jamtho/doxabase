@@ -3743,7 +3743,7 @@ signal: non-secret local paths, object-store URIs, endpoint URLs, and relative
 paths remain in faithful exports unless the caller keeps them out of the graph
 or replaces them before export.
 
-`db.export_revision_snapshots(path, revision_iris=None, graph_roles=None)`
+`db.export_revision_snapshots(path, revision_iris=None, graph_roles=None, fail_on_sensitive=False)`
 returns `RevisionSnapshotBundleExportRecord`:
 
 ```python
@@ -3754,6 +3754,8 @@ bundle.graph_roles
 bundle.snapshot_count
 bundle.quad_count
 bundle.bytes_written
+bundle.sensitive_literal_count
+bundle.privacy_warnings
 ```
 
 The JSON bundle is an opt-in companion to RDF exports. It preserves
@@ -3762,6 +3764,10 @@ inspection; it is not an RDF graph export. If `revision_iris` contains an
 applied staged-revision event, export also includes that event's staged source
 revision snapshots so applied diff reconstruction has both sides. It may
 include historical triples that are no longer present in current graph roles.
+Snapshot exports are faithful JSON, not redacted output. The warning fields come
+from a conservative scan of stored snapshot quad objects, and
+`fail_on_sensitive=True` blocks before creating or overwriting the JSON file
+when potential sensitive literals are found.
 
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:

@@ -1722,7 +1722,11 @@ needed for before/after reconstruction. That applied-event shortcut does not
 include older restage-chain ancestors, so use a full snapshot export or include
 those ancestor IRIs explicitly when the receiving agent needs exact full-chain
 lineage recovery. The bundle may include historical triples that are no longer
-current graph facts.
+current graph facts. Snapshot JSON is a faithful handoff artifact, not a
+redacted shareable view. The export result includes `sensitive_literal_count`
+and `privacy_warnings` from scanning the stored snapshot quad objects; pass
+`fail_on_sensitive=true` when unattended or shareable snapshot exports should
+raise before creating or overwriting the JSON artifact.
 
 `doxabase.load_example_fixtures`
 

@@ -1312,6 +1312,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         revision_iris: list[str] | None = None,
         graph_roles: list[str] | None = None,
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> dict[str, Any]:
         """Export stored revision snapshot rows as a JSON handoff bundle."""
 
@@ -1321,6 +1322,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             revision_iris=revision_iris,
             graph_roles=graph_roles,
             overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
         )
 
     @server.tool(name="doxabase.record_graph_revision")

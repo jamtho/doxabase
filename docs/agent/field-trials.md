@@ -2267,6 +2267,11 @@ few useful gaps:
   repairs are now filtered to staged rows that change query-planning metadata
   such as storage links, path templates, storage fields, layout fields, or
   partition metadata.
+- A privacy/export frontier trial found `export_revision_snapshots()` preserved
+  raw SQLite-side snapshot quads but did not surface the privacy warning/blocking
+  affordances available on RDF exports. Snapshot JSON exports now report
+  `sensitive_literal_count` and redacted `privacy_warnings`, and
+  `fail_on_sensitive=True` blocks before creating or overwriting the artifact.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

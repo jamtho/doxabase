@@ -93,6 +93,9 @@ after the RDF import. Keep the source capsule or explicit before/after exports
 when a downstream agent will only receive an RDF bundle. For controlled
 replacements, record the exact removed/added assertions in the rationale or
 preserve before/after exports when no snapshot bundle is available.
+Snapshot JSON is faithful and may preserve historical sensitive-looking values;
+review its `sensitive_literal_count` and `privacy_warnings`, or pass
+`fail_on_sensitive=True`, before sharing the artifact.
 Choose the export artifact by the receiving task:
 
 - `export_trig(graphs="workflow")` / `graphs="review_bundle"` is for review
@@ -498,7 +501,8 @@ For a stale-restage-apply handoff between capsules:
 3. Apply only after review with `apply_staged_revision(restaged.revision_iri)`.
 4. Export both the project/history RDF and SQLite-side snapshot rows:
    `export_trig(project_path, graphs="project")` plus
-   `export_revision_snapshots(snapshot_path, revision_iris=[applied_iri])`.
+   `export_revision_snapshots(snapshot_path, revision_iris=[applied_iri],
+   fail_on_sensitive=True)`.
    Include older stale ancestor IRIs explicitly if exact full-chain recovery
    matters beyond the direct staged source and applied event.
 5. On the receiving capsule, run `import_trig(project_path)` first. Before the

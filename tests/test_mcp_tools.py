@@ -1004,6 +1004,59 @@ def test_export_tools_can_block_sensitive_literals_before_writing(
     assert not trig_path.exists()
 
 
+def test_export_revision_snapshots_tool_reports_sensitive_literals(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_SNAPSHOT_MCP"
+    record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/orders",
+    )
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage snapshot probe",
+        rationale="Create a revision snapshot over the map graph.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrdersSnapshotProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    result = export_revision_snapshots_tool(
+        db,
+        path=str(snapshot_path),
+        revision_iris=[staged["revision_iri"]],
+    )
+
+    assert result["sensitive_literal_count"] >= 1
+    assert result["privacy_warnings"]
+    assert fake_secret not in " ".join(result["privacy_warnings"])
+    assert fake_secret in snapshot_path.read_text(encoding="utf-8")
+
+    blocked_path = tmp_path / "blocked-revision-snapshots.json"
+    with pytest.raises(DoxaBaseError) as excinfo:
+        export_revision_snapshots_tool(
+            db,
+            path=str(blocked_path),
+            revision_iris=[staged["revision_iri"]],
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(excinfo.value)
+    assert fake_secret not in str(excinfo.value)
+    assert not blocked_path.exists()
+
+
 def test_replace_graph_triples_tool_returns_json_like_payload(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_turtle(

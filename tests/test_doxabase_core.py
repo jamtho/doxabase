@@ -967,6 +967,66 @@ def test_sensitive_literal_scan_and_export_warnings(tmp_path: Path) -> None:
     assert not blocked_trig_path.exists()
 
 
+def test_export_revision_snapshots_reports_sensitive_literals(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_SNAPSHOT"
+    db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/orders",
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage snapshot probe",
+        rationale="Create a revision snapshot over the map graph.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrdersSnapshotProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    export = db.export_revision_snapshots(
+        snapshot_path,
+        revision_iris=[staged.revision_iri],
+    )
+
+    assert export.sensitive_literal_count >= 1
+    assert export.privacy_warnings
+    assert fake_secret not in " ".join(export.privacy_warnings)
+    assert fake_secret in snapshot_path.read_text(encoding="utf-8")
+
+    blocked_path = tmp_path / "blocked-revision-snapshots.json"
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.export_revision_snapshots(
+            blocked_path,
+            revision_iris=[staged.revision_iri],
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(excinfo.value)
+    assert fake_secret not in str(excinfo.value)
+    assert not blocked_path.exists()
+
+    existing_path = tmp_path / "existing-revision-snapshots.json"
+    existing_path.write_text("keep me\n", encoding="utf-8")
+    with pytest.raises(DoxaBaseError):
+        db.export_revision_snapshots(
+            existing_path,
+            revision_iris=[staged.revision_iri],
+            overwrite=True,
+            fail_on_sensitive=True,
+        )
+    assert existing_path.read_text(encoding="utf-8") == "keep me\n"
+
+
 def test_replace_graph_triples_can_create_same_count_digest_drift(
     tmp_path: Path,
 ) -> None:

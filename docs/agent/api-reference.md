@@ -64,7 +64,7 @@ db.export_trig("/tmp/project-review-bundle.trig")
 db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
 db.export_trig("/tmp/shareable-project.trig", fail_on_sensitive=True)
 db.scan_sensitive_literals(graphs=["map", "evidence"])
-db.export_revision_snapshots("/tmp/revision-snapshots.json")
+db.export_revision_snapshots("/tmp/revision-snapshots.json", fail_on_sensitive=True)
 ```
 
 `export_graph()` writes one flattened RDF graph, usually Turtle.
@@ -98,11 +98,13 @@ SQLite-side snapshot rows; pair them with `export_revision_snapshots()` when
 exact applied-diff or stale-drift
 triple reconstruction must survive import.
 
-`export_revision_snapshots()` writes a JSON handoff bundle for stored revision
-snapshot rows. Pass `revision_iris=[applied_iri]` to preserve the applied
-after-snapshot plus the staged source before-snapshot needed by one applied
-staged revision diff, or omit the filter to export all stored snapshot rows in
-the capsule.
+`export_revision_snapshots()` writes a faithful JSON handoff bundle for stored
+revision snapshot rows. Its result includes `sensitive_literal_count` and
+`privacy_warnings`; pass `fail_on_sensitive=True` to raise before creating or
+overwriting the JSON artifact when stored snapshot quads scan dirty. Pass
+`revision_iris=[applied_iri]` to preserve the applied after-snapshot plus the
+staged source before-snapshot needed by one applied staged revision diff, or omit
+the filter to export all stored snapshot rows in the capsule.
 
 ## Replace Graph Triples
 
