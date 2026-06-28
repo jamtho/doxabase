@@ -1868,6 +1868,7 @@ class ProfileScalarConflictGroup:
 @dataclass(frozen=True)
 class ProfileMetricVocabularyAdvisory:
     profile_observation_iri: str
+    observed_metric_iri: str
     metric_advisory_index: int
     evidence_iri: str
     metric: ResourceSummary
@@ -12712,6 +12713,70 @@ class DoxaBase:
         source_resource: ResourceSummary,
         storage_access: StorageAccessDescription,
     ) -> dict[str, Any]:
+        add_action = {
+            "action_type": "add_reviewed_relation_template",
+            "tool_name": "stage_map_assertion_change",
+            "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "required_extra_arguments": ["object", "rationale"],
+            "rationale_template": (
+                "Reviewed database relation identifier for "
+                f"{storage_access.iri}."
+            ),
+            "arguments_template": {
+                "subject": storage_access.iri,
+                "predicate": "rc:pathTemplate",
+                "object": "<reviewed_database_relation_identifier>",
+                "object_kind": "literal",
+                "change_kind": "add",
+                "graph": "map",
+            },
+            "placeholder_fields": ["object"],
+            "reviewed_value_fields": ["object"],
+            "condition": (
+                "Replace the placeholder object with the reviewed "
+                "database relation identifier before staging."
+            ),
+        }
+        remove_action = {
+            "action_type": "remove_misplaced_source_template",
+            "tool_name": "stage_map_assertion_change",
+            "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "required_extra_arguments": ["rationale"],
+            "rationale_template": (
+                "Reviewed source template as misplaced database "
+                "relation metadata."
+            ),
+            "arguments": {
+                "subject": source_resource.iri,
+                "predicate": "rc:pathTemplate",
+                "object": template,
+                "object_kind": "literal",
+                "change_kind": "remove",
+                "graph": "map",
+            },
+            "condition": (
+                "Only after review confirms the source template was "
+                "misplaced relation metadata rather than a real "
+                "file/object path."
+            ),
+        }
+        target_already_has_template = template in storage_access.path_templates
+        if target_already_has_template:
+            add_action = {
+                **add_action,
+                "action_status": "already_satisfied",
+                "condition": (
+                    "The storage access already carries this relation-like "
+                    "template. Review the remaining misplaced source template "
+                    "and usually run remove_misplaced_source_template instead "
+                    "of adding a duplicate relation template."
+                ),
+            }
+        actions = (
+            [remove_action, add_action]
+            if target_already_has_template
+            else [add_action, remove_action]
+        )
         return {
             "action_type": "move_database_relation_template_to_storage_access",
             "requires_review": True,
@@ -12729,61 +12794,14 @@ class DoxaBase:
             "candidate_relation_identifier": {
                 "value": template,
                 "requires_review": True,
+                "already_on_storage_access": target_already_has_template,
                 "review_note": (
                     "Dataset and partition path templates are not database "
                     "relation identifiers by default; replace this value with "
                     "the reviewed schema/table/relation before staging the add."
                 ),
             },
-            "actions": [
-                {
-                    "action_type": "add_reviewed_relation_template",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "required_extra_arguments": ["object", "rationale"],
-                    "rationale_template": (
-                        "Reviewed database relation identifier for "
-                        f"{storage_access.iri}."
-                    ),
-                    "arguments_template": {
-                        "subject": storage_access.iri,
-                        "predicate": "rc:pathTemplate",
-                        "object": "<reviewed_database_relation_identifier>",
-                        "object_kind": "literal",
-                        "change_kind": "add",
-                        "graph": "map",
-                    },
-                    "placeholder_fields": ["object"],
-                    "reviewed_value_fields": ["object"],
-                    "condition": (
-                        "Replace the placeholder object with the reviewed "
-                        "database relation identifier before staging."
-                    ),
-                },
-                {
-                    "action_type": "remove_misplaced_source_template",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "required_extra_arguments": ["rationale"],
-                    "rationale_template": (
-                        "Reviewed source template as misplaced database "
-                        "relation metadata."
-                    ),
-                    "arguments": {
-                        "subject": source_resource.iri,
-                        "predicate": "rc:pathTemplate",
-                        "object": template,
-                        "object_kind": "literal",
-                        "change_kind": "remove",
-                        "graph": "map",
-                    },
-                    "condition": (
-                        "Only after review confirms the source template was "
-                        "misplaced relation metadata rather than a real "
-                        "file/object path."
-                    ),
-                },
-            ],
+            "actions": actions,
         }
 
     def _query_database_relation_template_missing_repair_hint(
@@ -15561,6 +15579,8 @@ class DoxaBase:
                     else []
                 )
                 suggested_next_actions = self._profile_metric_advisory_actions(
+                    observed_metric_iri=metric.iri,
+                    profile_observation_iri=profile.iri,
                     metric_iri=metric_iri,
                     advisory_status=advisory_status,
                     promotion_pattern_iris=promotion_pattern_iris,
@@ -15570,6 +15590,7 @@ class DoxaBase:
                 advisories.append(
                     ProfileMetricVocabularyAdvisory(
                         profile_observation_iri=profile.iri,
+                        observed_metric_iri=metric.iri,
                         metric_advisory_index=len(advisories),
                         evidence_iri=evidence_iri,
                         metric=metric.metric,
@@ -15909,6 +15930,16 @@ class DoxaBase:
                         source["duplicate_profile_observation_iris"],
                         observation_iri,
                     )
+                observed_metric_iri = getattr(advisory, "observed_metric_iri", None)
+                if observed_metric_iri:
+                    observed_metric_iris = source.setdefault(
+                        "observed_metric_iris",
+                        [],
+                    )
+                    DoxaBase._append_unique(
+                        observed_metric_iris,
+                        observed_metric_iri,
+                    )
 
         return [
             DoxaBase._profile_advisory_suggested_action(
@@ -15942,6 +15973,8 @@ class DoxaBase:
     def _profile_metric_advisory_actions(
         self,
         *,
+        observed_metric_iri: str | None,
+        profile_observation_iri: str | None,
         metric_iri: str,
         advisory_status: str,
         promotion_pattern_iris: list[str] | None = None,
@@ -15951,6 +15984,7 @@ class DoxaBase:
         actions: list[SuggestedNextAction] = []
         promotion_pattern_values = list(promotion_pattern_iris or [])
         context_pattern_values = list(context_pattern_iris or [])
+        focused_seed_iri = observed_metric_iri or profile_observation_iri or metric_iri
 
         def add_action(
             tool_name: str,
@@ -15972,12 +16006,13 @@ class DoxaBase:
 
         add_action(
             "describe_context_slice",
-            {"seed_iris": [metric_iri], "profile": "dataset_brief"},
+            {"seed_iris": [focused_seed_iri], "profile": "dataset_brief"},
             (
-                "Load bounded lore around the observed project-specific profile "
-                "metric before reusing it in comparison, map policy, or ontology."
+                "Load bounded lore around this observed profile metric before "
+                "reusing its project-specific metric kind in comparison, map "
+                "policy, or ontology."
             ),
-            action_label="Inspect metric context",
+            action_label="Inspect observed metric context",
         )
         if advisory_status in {
             "project_metric_defined",
@@ -20453,7 +20488,10 @@ class DoxaBase:
 
         preferred_action = repair_actions[0] if repair_actions else None
         action_candidates = [*repair_actions, *check.suggested_next_actions]
-        if not repair_actions:
+        if any(
+            action.tool_name != "draft_staged_revision_rebase"
+            for action in action_candidates
+        ):
             action_candidates = [
                 action
                 for action in action_candidates

@@ -3482,6 +3482,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
             "candidate_relation_identifier": {
                 "value": dataset_template,
                 "requires_review": True,
+                "already_on_storage_access": False,
                 "review_note": (
                     "Dataset and partition path templates are not database "
                     "relation identifiers by default; replace this value with "
@@ -4884,6 +4885,9 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert metric_action_source["index_field"] == "metric_advisory_index"
     assert metric_action_source["advisory_indexes"] == [0]
     assert metric_action_source["duplicate_advisory_indexes"] == [0]
+    assert metric_action_source["observed_metric_iris"] == [
+        result["metric_advisories"][0]["observed_metric_iri"]
+    ]
     assert [
         action["tool_name"]
         for action in result["suggested_next_action_groups"]["profile_type_review"]

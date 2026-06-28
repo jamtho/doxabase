@@ -4593,6 +4593,13 @@ def test_stale_row_semantics_add_suggests_same_slot_replacement(
     assert draft.next_action is not None
     assert draft.next_action.queue == "repair_or_replace"
     assert draft.next_action.tool_name == "stage_map_assertion_change"
+    assert [
+        action.tool_name for action in draft.suggested_next_actions
+    ] == [
+        "stage_map_assertion_change",
+        "describe_staged_revision",
+        "export_staged_revision",
+    ]
     assert draft.next_action_queue_item is not None
     assert draft.next_action_queue_item.row_iri == source.revision_iri
     assert draft.next_action_queue_item.row_is_target is False
@@ -13437,6 +13444,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
             "candidate_relation_identifier": {
                 "value": partition_template,
                 "requires_review": True,
+                "already_on_storage_access": False,
                 "review_note": (
                     "Dataset and partition path templates are not database "
                     "relation identifiers by default; replace this value with "
@@ -14043,6 +14051,67 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
         and candidate.direct_review_required is False
         for candidate in repaired_context.query_target_candidates
     )
+
+
+def test_database_relation_repair_hint_prioritizes_remove_when_relation_exists(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    relation = "mart.orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_database_storage",
+        label="Orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=[relation],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=[relation],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    issue = next(
+        issue
+        for issue in db.describe_query_context(dataset).issues
+        if issue.code == "database_relation_template_source_mismatch"
+    )
+    assert issue.details is not None
+    repair_hint = issue.details["repair_hint"]
+
+    assert repair_hint["candidate_relation_identifier"][
+        "already_on_storage_access"
+    ] is True
+    assert [action["action_type"] for action in repair_hint["actions"]] == [
+        "remove_misplaced_source_template",
+        "add_reviewed_relation_template",
+    ]
+    assert repair_hint["actions"][0]["arguments"] == {
+        "subject": dataset,
+        "predicate": "rc:pathTemplate",
+        "object": relation,
+        "object_kind": "literal",
+        "change_kind": "remove",
+        "graph": "map",
+    }
+    assert repair_hint["actions"][1]["action_status"] == "already_satisfied"
+    assert "remove_misplaced_source_template" in repair_hint["actions"][1][
+        "condition"
+    ]
 
 
 @pytest.mark.parametrize("location_kind", ["object", "connection"])
@@ -18921,6 +18990,9 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert {
         source["index_field"] for source in metric_action_sources
     } == {"metric_advisory_index"}
+    assert {
+        tuple(source["observed_metric_iris"]) for source in metric_action_sources
+    } == {(draft.metric_advisories[0].observed_metric_iri,)}
     assert draft.suggested_next_call_groups["profile_map_updates"] == [
         draft.suggested_next_calls[0]
     ]
@@ -18987,6 +19059,9 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     }
     metric_advisory = draft.metric_advisories[0]
     assert metric_advisory.metric.iri == project_metric
+    assert metric_advisory.observed_metric_iri.startswith(
+        "https://richcanopy.org/doxabase/generated/observed-profile-metric/"
+    )
     assert metric_advisory.advisory_status == "project_metric_undefined"
     assert metric_advisory.definition_found is False
     assert metric_advisory.definition is None
@@ -19000,7 +19075,7 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
         metric_pattern.pattern_iri
     ]
     assert metric_advisory.suggested_next_actions[0].arguments == {
-        "seed_iris": [project_metric],
+        "seed_iris": [metric_advisory.observed_metric_iri],
         "profile": "dataset_brief",
     }
     assert metric_advisory.recommendation == (
@@ -20876,6 +20951,79 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert bundle.handoff_entrypoints.profile_observation_iris[0] in export_text
 
 
+def test_metric_advisory_context_action_stays_on_observed_metric(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    orders = "https://example.test/project#Orders"
+    shipments = "https://example.test/project#Shipments"
+    orders_evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    shipments_evidence = "https://example.test/project#ShipmentsProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    db.record_map_dataset(orders, label="Orders", is_table=True)
+    db.record_map_dataset(shipments, label="Shipments", is_table=True)
+
+    db.record_profile_bundle(
+        orders,
+        dataset_summary="Orders profile with completeness metric.",
+        evidence_summary="Orders profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=orders_evidence,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.98",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+    db.record_profile_bundle(
+        shipments,
+        dataset_summary="Shipments profile with the same metric kind.",
+        evidence_summary="Shipments profile run.",
+        evidence_sources=["test://shipments-profile"],
+        shared_evidence_iri=shipments_evidence,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.74",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+
+    draft = db.draft_profile_map_updates(orders, orders_evidence)
+    advisory = draft.metric_advisories[0]
+    context_action = advisory.suggested_next_actions[0]
+
+    assert advisory.metric.iri == project_metric
+    assert context_action.action_label == "Inspect observed metric context"
+    assert context_action.arguments == {
+        "seed_iris": [advisory.observed_metric_iri],
+        "profile": "dataset_brief",
+    }
+
+    context_slice = db.describe_context_slice(**context_action.arguments)
+    context_dataset_iris = {dataset.iri for dataset in context_slice.dataset_contexts}
+
+    assert orders in context_dataset_iris
+    assert shipments not in context_dataset_iris
+
+    broad_metric_slice = db.describe_context_slice(
+        project_metric,
+        profile="dataset_brief",
+        max_triples=200,
+    )
+    broad_dataset_iris = {
+        dataset.iri for dataset in broad_metric_slice.dataset_contexts
+    }
+    assert {orders, shipments} <= broad_dataset_iris
+
+
 def test_profile_helper_pattern_defaults_include_project_metric_implications(
     tmp_path: Path,
 ) -> None:
@@ -21484,7 +21632,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
         "list_entities",
     ]
     assert staged.metric_advisory_suggested_next_actions[0].arguments == {
-        "seed_iris": [project_metric],
+        "seed_iris": [staged.metric_advisories[0].observed_metric_iri],
         "profile": "dataset_brief",
     }
     assert staged.metric_advisory_suggested_next_calls == [

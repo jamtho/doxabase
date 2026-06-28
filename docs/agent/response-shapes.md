@@ -1138,6 +1138,7 @@ policy. Each advisory includes:
 
 ```python
 advisory.profile_observation_iri
+advisory.observed_metric_iri
 advisory.metric_advisory_index
 advisory.evidence_iri
 advisory.metric
@@ -1167,9 +1168,12 @@ advisory.duplicate_profile_observation_iris
 
 `advisory_status` is `project_metric_undefined`,
 `project_metric_defined`, or `project_metric_definition_ambiguous`.
-Undefined metrics point suggested actions at context loading and nearby ontology
-metric lookup. Ambiguous metrics add existing-definition inspection before any
-repair path. If an undefined or ambiguous metric also has a same-evidence
+Undefined metrics point suggested actions at observed-metric context loading and
+nearby ontology metric lookup. The first `describe_context_slice` action seeds
+`observed_metric_iri`, not the broad metric-kind IRI, so the handoff stays on
+the profiled dataset before reviewing wider same-metric usage. Ambiguous metrics
+add existing-definition inspection before any repair path. If an undefined or
+ambiguous metric also has a same-evidence
 pattern that names the metric as a target or map implication, the advisory
 includes `promotion_patterns` and adds `describe_pattern` plus a reviewable
 `stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
@@ -1971,7 +1975,11 @@ template, template source, source resource IRI, storage access IRI, storage
 protocol IRI, the allowed relation-template source list, and `repair_hint`.
 The repair hint names the source template, target storage access, reviewed
 relation placeholder, and ordered action templates; callers still supply a
-`rationale` for each staged add/remove.
+`rationale` for each staged add/remove. If the storage access already carries
+the same relation-like template, `candidate_relation_identifier` includes
+`already_on_storage_access=True`, the remove action is ordered first, and the
+add action is marked `action_status="already_satisfied"` so agents do not stage
+a duplicate relation template.
 `database_relation_template_missing` includes the affected storage access IRI,
 storage protocol IRI, storage root, location kind, allowed relation-template
 sources, and a `repair_hint` with a reviewed add-template action on the storage
@@ -1987,6 +1995,7 @@ repair_hint.source
 repair_hint.target
 repair_hint.candidate_relation_identifier
 repair_hint.actions[].action_type
+repair_hint.actions[].action_status
 repair_hint.actions[].tool_name
 repair_hint.actions[].mcp_tool_name
 repair_hint.actions[].action_label

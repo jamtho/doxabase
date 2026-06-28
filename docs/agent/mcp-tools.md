@@ -331,7 +331,7 @@ arguments for accepted map-helper updates, plus `metric_advisories` for
 project-specific metric kinds that should be defined before reuse. Sampled
 zero-null profiles are intentionally not promoted into non-null map
 recommendations. Metric advisory rows include `advisory_status`,
-`definition_found`, optional `definition`, `promotion_patterns`,
+`definition_found`, `observed_metric_iri`, optional `definition`, `promotion_patterns`,
 `mixed_support_patterns`, `mixed_support_note`, `context_patterns`, and
 structured `suggested_next_actions` so agents can inspect existing ontology
 definitions or nearby metric vocabulary before recording
@@ -339,6 +339,10 @@ claims/patterns/promotions. When an undefined or ambiguously typed metric has a
 same-evidence pattern naming it as a target or map implication, the advisory
 also suggests `describe_pattern` and a reviewable
 `stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
+The first metric context action seeds `describe_context_slice` with
+`observed_metric_iri` so the initial handoff stays on the profiled dataset; use
+nearby metric-vocabulary actions when you intentionally want broader same-metric
+usage.
 That skeleton seeds its `rdfs:comment` from metric-specific supporting pattern
 text, rationale, or summary when available; otherwise it uses a generic
 review-first comment. It is still a draft vocabulary definition; sharpen units,
@@ -466,8 +470,10 @@ advisories are still `type_finding_unmapped_column`, the returned and stored
 review note tells agents to apply the shell after review and rerun
 `draft_profile_map_updates` for the same dataset/evidence; the returned
 `suggested_next_actions` includes that structured rerun action after the staged
-revision apply-check action. That rerun is what turns related type advisories
-into map-present `rc:physicalType` / `rc:valueType` assertion actions.
+revision apply-check action, with
+`preconditions.staged_revision_applied` naming the staged revision that must be
+applied first. That rerun is what turns related type advisories into map-present
+`rc:physicalType` / `rc:valueType` assertion actions.
 
 ### doxabase.describe_query_context
 
@@ -528,7 +534,11 @@ storage-access-owned templates become `relation_identifier` values. Dataset or
 partition path templates paired with database storage are review-only
 `database_relation_template_source_mismatch` candidates with no relation
 identifier; record the schema/table/relation on the storage access before using
-a database handoff. Read `issues[].details.repair_hint` for the ordered repair:
+that route as a database handoff. If the storage access already has the same
+relation-like template, the repair action list puts
+`remove_misplaced_source_template` first and marks the add action
+`already_satisfied` so automation can skip the duplicate add.
+Read `issues[].details.repair_hint` for the ordered repair:
 stage an add of the reviewed relation identifier onto the storage access, then
 stage removal of the misplaced source template only if review confirms it was
 relation metadata rather than a real file/object path. Repair actions declare

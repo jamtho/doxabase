@@ -1835,6 +1835,16 @@ few useful gaps:
   the remaining inspection/export route or manual repair path, with
   `apply_check.routing_decision`, `draft_kind`, `next_action.queue`, and batch
   `repair_first_revision_iris` overriding broad restage wording.
+- A retest-heavy follow-up confirmed those fixes and found two smaller routing
+  refinements. Metric advisory context actions now seed the specific
+  `observed_metric_iri` rather than the broad project metric kind, so a
+  same-metric multi-dataset project does not pull unrelated profile runs into
+  the first handoff. Database relation mismatch repair hints now put
+  `remove_misplaced_source_template` first and mark the add action
+  `already_satisfied` when the storage access already has the reviewed relation
+  template. Same-slot rebase drafts also filter out inherited
+  `draft_staged_revision_rebase` suggestions when a concrete repair action is
+  already available.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
