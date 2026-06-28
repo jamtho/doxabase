@@ -138,6 +138,24 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.validate_graph" in tool_names
 
 
+@pytest.mark.anyio
+async def test_profile_mcp_tools_expose_sampled_snapshot_gate(
+    tmp_path: Path,
+) -> None:
+    server = build_server(tmp_path / "mcp.sqlite")
+    tools = {tool.name: tool for tool in await server.list_tools()}
+
+    for tool_name in (
+        "doxabase.record_dataset_profile",
+        "doxabase.record_profile_bundle",
+    ):
+        properties = tools[tool_name].inputSchema["properties"]
+
+        assert "allow_sampled_row_count_snapshot" in properties
+        assert properties["allow_sampled_row_count_snapshot"]["default"] is False
+        assert properties["allow_sampled_row_count_snapshot"]["type"] == "boolean"
+
+
 def test_doc_tools_return_json_like_payloads() -> None:
     result = list_docs_tool()
     doc_ids = {doc["id"] for doc in result["docs"]}

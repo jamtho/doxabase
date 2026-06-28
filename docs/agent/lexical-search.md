@@ -53,6 +53,16 @@ cover the query. The main current use is same-table column discovery, such as
 finding both `outcomes` and `clobTokenIds` when those names live on separate
 column resources owned by one dataset.
 
+When an expected piece of lore does not appear, retry before concluding it is
+absent. Use shorter phrases, exact labels or column names, distinctive stored
+words from the likely source, and graph scoping. For example, a natural query
+like "permit_number joins inspection events" may miss a recorded pattern whose
+stored wording says "inspection events" and "permit_number" in a different
+shape, while a shorter query such as "inspection events permit_number" can find
+it. If you know the resource type, pair search with `list_entities` and then
+inspect candidates through `describe_resource`, `describe_pattern`, or
+`describe_context_slice`.
+
 ## Observation And Systematisation
 
 Search is especially important for the observation/systematisation loop.

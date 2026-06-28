@@ -111,10 +111,15 @@ trials are good at improving response shapes, repair hints, and staged-review
 routing, but they can underexplore project-wide product questions. Every few
 loops, aim a wave at one or more of:
 
+- MCP transport and schema parity, especially when a Python helper gained a
+  useful argument or safety gate that may not be exposed by the decorated server
+  wrapper yet;
 - real-data pressure, such as an AIS or Polymarket question-to-handoff run;
 - cold-start/onboarding, including the first successful workflow;
 - architecture gaps that need a new primitive, such as durable graph versions
   or executable query/result capture;
+- non-tabular assets, mixed arbitrary RDF, derived/aggregate relationships,
+  privacy/export hygiene, and scale/truncation pressure;
 - human-facing workflow shape, including project briefs, recovery narratives,
   CLI affordances, and review-bundle readability.
 
@@ -264,6 +269,10 @@ that is the practical way out of a pathological state.
 The June 2026 cold-start, wrong-hunch, and AIS generalisation trials surfaced a
 few useful gaps:
 
+- MCP wrapper parity can lag Python helper behavior because most behavioral
+  tests exercise `doxabase.mcp_tools` directly. When helper arguments carry a
+  safety gate or semantic option, inspect the actual FastMCP input schema and
+  add server-boundary regression coverage, not only direct helper tests.
 - Claim lifecycle needed first-class support. Agents could record an initial
   hunch and a later correction, but they needed an explicit
   `record_claim_reconsideration` move to mark the earlier claim as weakened,
