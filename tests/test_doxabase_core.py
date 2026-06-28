@@ -94,13 +94,99 @@ def test_project_brief_summarizes_datasets_and_active_queues(tmp_path: Path) -> 
     assert brief.dataset_count >= 7
     assert brief.returned_dataset_count == 4
     assert brief.limit == 4
-    assert sum(brief.dataset_query_readiness_counts.values()) == 4
+    assert sum(brief.dataset_query_readiness_counts.values()) == brief.dataset_count
+    assert sum(brief.returned_dataset_query_readiness_counts.values()) == 4
     assert len(brief.datasets) == 4
     assert brief.datasets[0].dataset.iri.startswith("https://")
     assert brief.datasets[0].query.readiness
     assert brief.datasets[0].profile.profile_run_candidate_count >= 0
     assert brief.staged_review.returned_count == 0
     assert isinstance(to_dict(brief)["recommended_next_tasks"], list)
+
+
+def test_project_brief_surfaces_singleton_profile_draft(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    db.record_dataset_profile(
+        dataset,
+        summary="Orders were profiled with one full-table aggregate.",
+        evidence_summary="Synthetic singleton profile output.",
+        evidence_sources=["test://orders-profile"],
+        evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
+
+    brief = db.project_brief(limit=2, profile_candidate_limit=1)
+    profile = brief.datasets[0].profile
+
+    assert profile.total_profile_count == 1
+    assert profile.profile_run_candidate_count == 0
+    assert profile.profile_evidence_iris == [evidence]
+    assert profile.draft_evidence_iris == [evidence]
+    assert profile.draft_count == 1
+    assert profile.drafts[0].recommendation_count == 1
+    assert brief.profile_queue_counts["profile_observations"] == 1
+    assert brief.profile_queue_counts["profile_drafts"] == 1
+    assert brief.profile_queue_counts["profile_draft_recommendations"] == 1
+    assert "profile_review" in brief.queue_counts
+    assert any(
+        task.task_type == "profile_review"
+        for task in brief.recommended_next_tasks
+    )
+
+
+def test_project_brief_reserves_recommendation_slots_by_queue(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    for name in ("Alpha", "Beta", "Gamma"):
+        db.record_map_dataset(
+            f"https://example.test/project#{name}",
+            label=name,
+            is_table=True,
+        )
+    db.stage_graph_revision(
+        summary="Stage a delta table shell",
+        rationale="The project brief should keep staged work visible.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                @prefix ex: <https://example.test/project#> .
+                @prefix rc: <https://richcanopy.org/ns/rc#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                ex:Delta a rc:Dataset, rc:Table ;
+                    rdfs:label "Delta" .
+                """,
+            }
+        ],
+    )
+
+    brief = db.project_brief(limit=2)
+
+    assert brief.queue_counts["query_repair_review"] >= 3
+    assert brief.queue_counts["staged_review"] == 1
+    assert brief.returned_queue_counts["query_repair_review"] == 1
+    assert brief.returned_queue_counts["staged_review"] == 1
+    assert brief.omitted_queue_counts["query_repair_review"] >= 2
+    assert [
+        task.task_type for task in brief.recommended_next_tasks
+    ] == ["query_repair_review", "staged_review"]
 
 
 def test_immutable_seed_graphs_reject_normal_imports(tmp_path: Path) -> None:

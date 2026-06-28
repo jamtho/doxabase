@@ -25,11 +25,11 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 `doxabase.project_brief`
 
 Returns a read-only orientation brief over datasets and active queues. It
-combines key graph counts, dataset query-readiness summaries,
-profile-map-update draft counts for recent profile candidates, current staged
-revision review counts, and bounded recommended next tasks. Use it when
-arriving cold or when a loop may be over-polishing one workflow while missing
-another active queue.
+combines key graph counts, project-wide dataset query-readiness summaries,
+profile-map-update draft counts for recent profile evidence, current staged
+revision review counts, per-queue task counts, and bounded recommended next
+tasks. Use it when arriving cold or when a loop may be over-polishing one
+workflow while missing another active queue.
 
 `doxabase.list_entities`
 

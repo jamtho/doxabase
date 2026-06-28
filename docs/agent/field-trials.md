@@ -1893,6 +1893,22 @@ few useful gaps:
   `candidate_index` plus `allow_context_blocked_candidate=True` action when the
   exact object candidate is direct-clean but sibling template metadata keeps the
   whole context in review.
+- A broader expedition wave confirmed that autonomous loops will not reliably
+  reach every project area by time alone; they need seeded trials outside the
+  current high-friction surface. The first fix from that wave was
+  `project_brief()`, a read-only orientation helper over dataset query
+  readiness, profile draft lanes, staged review queues, and recommended next
+  tasks. A follow-up field trial found two steering hazards: singleton profile
+  evidence could draft useful map updates without appearing as a profile-run
+  candidate, and low limits could let one queue type crowd out staged or
+  profile work. `project_brief()` now drafts from singleton/shared profile
+  evidence, reports profile and task queue counts across scanned datasets,
+  keeps returned readiness counts separate from project-wide readiness counts,
+  and reserves recommended task slots by queue type when the limit allows.
+  The same expedition ranked query execution/result capture, ontology/SHACL
+  evolution outside profile metrics, generic RDF slicing, non-tabular assets,
+  and large-slice pressure as areas that should be deliberately trialed rather
+  than expected to emerge from staged-revision polish.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

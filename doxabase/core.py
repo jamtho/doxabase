@@ -216,9 +216,15 @@ class ProjectBriefProfileDraftSummary:
 
 @dataclass(frozen=True)
 class ProjectBriefDatasetProfileSummary:
+    total_profile_count: int
+    returned_profile_count: int
+    omitted_profile_count: int
+    profile_evidence_count: int
+    profile_evidence_iris: list[str]
     profile_run_candidate_count: int
     profile_run_evidence_iris: list[str]
     draft_count: int
+    draft_evidence_iris: list[str]
     drafts: list[ProjectBriefProfileDraftSummary]
 
 
@@ -266,6 +272,11 @@ class ProjectBrief:
     dataset_count: int
     returned_dataset_count: int
     dataset_query_readiness_counts: dict[str, int]
+    returned_dataset_query_readiness_counts: dict[str, int]
+    profile_queue_counts: dict[str, int]
+    queue_counts: dict[str, int]
+    returned_queue_counts: dict[str, int]
+    omitted_queue_counts: dict[str, int]
     datasets: list[ProjectBriefDatasetSummary]
     staged_review: ProjectBriefStagedReviewSummary
     recommended_next_tasks: list[ProjectBriefRecommendedTask]
@@ -2783,12 +2794,19 @@ class DoxaBase:
             raise DoxaBaseError("profile_candidate_limit must be non-negative")
 
         overview = self.graph_overview(limit=limit)
-        dataset_entities = self._project_brief_dataset_entities(limit)
+        entity_scan_limit = max(
+            limit,
+            overview.key_counts.get("datasets", 0),
+            overview.key_counts.get("tables", 0),
+        )
+        dataset_entities = self._project_brief_dataset_entities(entity_scan_limit)
         datasets: list[ProjectBriefDatasetSummary] = []
         readiness_counts: dict[str, int] = {}
+        returned_readiness_counts: dict[str, int] = {}
         recommended_tasks: list[ProjectBriefRecommendedTask] = []
+        all_dataset_summaries: list[ProjectBriefDatasetSummary] = []
 
-        for entity in dataset_entities[:limit]:
+        for entity_index, entity in enumerate(dataset_entities):
             description = self.describe_dataset(entity.iri)
             query_context = self.describe_query_context(entity.iri)
             readiness_counts[query_context.readiness] = (
@@ -2822,7 +2840,13 @@ class DoxaBase:
                 query=query_summary,
                 profile=profile_summary,
             )
-            datasets.append(dataset_summary)
+            all_dataset_summaries.append(dataset_summary)
+            if entity_index < limit:
+                datasets.append(dataset_summary)
+                returned_readiness_counts[query_context.readiness] = (
+                    returned_readiness_counts.get(query_context.readiness, 0)
+                    + 1
+                )
             recommended_tasks.extend(
                 self._project_brief_dataset_tasks(dataset_summary)
             )
@@ -2832,6 +2856,12 @@ class DoxaBase:
             self._project_brief_staged_tasks(staged_review)
         )
         recommended_tasks.sort(key=lambda task: (task.priority, task.task_type))
+        selected_tasks = self._project_brief_select_recommended_tasks(
+            recommended_tasks,
+            limit=limit,
+        )
+        queue_counts = self._project_brief_task_type_counts(recommended_tasks)
+        returned_queue_counts = self._project_brief_task_type_counts(selected_tasks)
 
         return ProjectBrief(
             key_counts=overview.key_counts,
@@ -2842,9 +2872,20 @@ class DoxaBase:
             ),
             returned_dataset_count=len(datasets),
             dataset_query_readiness_counts=readiness_counts,
+            returned_dataset_query_readiness_counts=returned_readiness_counts,
+            profile_queue_counts=self._project_brief_profile_queue_counts(
+                all_dataset_summaries
+            ),
+            queue_counts=queue_counts,
+            returned_queue_counts=returned_queue_counts,
+            omitted_queue_counts={
+                task_type: count - returned_queue_counts.get(task_type, 0)
+                for task_type, count in queue_counts.items()
+                if count > returned_queue_counts.get(task_type, 0)
+            },
             datasets=datasets,
             staged_review=staged_review,
-            recommended_next_tasks=recommended_tasks[:limit],
+            recommended_next_tasks=selected_tasks,
             limit=limit,
             profile_candidate_limit=profile_candidate_limit,
         )
@@ -2869,19 +2910,21 @@ class DoxaBase:
         *,
         profile_candidate_limit: int,
     ) -> ProjectBriefDatasetProfileSummary:
-        candidates = dataset.profile_summary.profile_run_candidates
+        profile_summary = dataset.profile_summary
+        candidates = profile_summary.profile_run_candidates
+        draft_evidence_iris = self._project_brief_profile_draft_evidence_iris(
+            profile_summary
+        )
         drafts: list[ProjectBriefProfileDraftSummary] = []
-        for candidate in candidates[:profile_candidate_limit]:
+        for evidence_iri in draft_evidence_iris[:profile_candidate_limit]:
             draft = self.draft_profile_map_updates(
                 dataset.iri,
-                candidate.evidence_iri,
+                evidence_iri,
             )
             drafts.append(
                 ProjectBriefProfileDraftSummary(
-                    evidence_iri=candidate.evidence_iri,
-                    profile_observation_count=len(
-                        candidate.profile_observation_iris
-                    ),
+                    evidence_iri=evidence_iri,
+                    profile_observation_count=len(draft.profile_observation_iris),
                     recommendation_count=draft.recommendation_count,
                     scalar_conflict_group_count=draft.scalar_conflict_group_count,
                     metric_advisory_count=draft.metric_advisory_count,
@@ -2896,13 +2939,30 @@ class DoxaBase:
                 )
             )
         return ProjectBriefDatasetProfileSummary(
+            total_profile_count=profile_summary.total_profile_count,
+            returned_profile_count=profile_summary.returned_profile_count,
+            omitted_profile_count=profile_summary.omitted_profile_count,
+            profile_evidence_count=len(profile_summary.evidence_iris),
+            profile_evidence_iris=profile_summary.evidence_iris,
             profile_run_candidate_count=len(candidates),
             profile_run_evidence_iris=[
                 candidate.evidence_iri for candidate in candidates
             ],
             draft_count=len(drafts),
+            draft_evidence_iris=[draft.evidence_iri for draft in drafts],
             drafts=drafts,
         )
+
+    def _project_brief_profile_draft_evidence_iris(
+        self,
+        profile_summary: ProfileSummary,
+    ) -> list[str]:
+        evidence_iris: list[str] = []
+        for candidate in profile_summary.profile_run_candidates:
+            evidence_iris.append(candidate.evidence_iri)
+        evidence_iris.extend(profile_summary.shared_evidence_iris)
+        evidence_iris.extend(profile_summary.evidence_iris)
+        return list(dict.fromkeys(evidence_iris))
 
     def _project_brief_staged_review(
         self,
@@ -2956,10 +3016,9 @@ class DoxaBase:
         dataset: ProjectBriefDatasetSummary,
     ) -> list[ProjectBriefRecommendedTask]:
         tasks: list[ProjectBriefRecommendedTask] = []
-        first_query_action = (
-            dataset.query.suggested_next_actions[0]
-            if dataset.query.suggested_next_actions
-            else None
+        first_query_action = self._project_brief_query_task_action(
+            dataset.dataset.iri,
+            dataset.query.suggested_next_actions,
         )
         if dataset.query.repair_action_group_count:
             tasks.append(
@@ -3033,6 +3092,105 @@ class DoxaBase:
                     )
                 )
         return tasks
+
+    def _project_brief_query_task_action(
+        self,
+        dataset_iri: str,
+        actions: list[SuggestedNextAction],
+    ) -> SuggestedNextAction:
+        for action in actions:
+            if action.tool_name == "draft_query_plan":
+                return action
+        for action in actions:
+            if action.tool_name != "describe_profile_run":
+                return action
+        return self._project_brief_describe_query_context_action(dataset_iri)
+
+    def _project_brief_describe_query_context_action(
+        self,
+        dataset_iri: str,
+    ) -> SuggestedNextAction:
+        arguments = {"iri": dataset_iri}
+        return SuggestedNextAction(
+            action_label="Review query context",
+            tool_name="describe_query_context",
+            mcp_tool_name="doxabase.describe_query_context",
+            arguments=arguments,
+            reason="Inspect the dataset query context before choosing a repair or plan.",
+            call=self._suggested_call_string(
+                "describe_query_context",
+                arguments,
+            ),
+        )
+
+    @staticmethod
+    def _project_brief_select_recommended_tasks(
+        tasks: list[ProjectBriefRecommendedTask],
+        *,
+        limit: int,
+    ) -> list[ProjectBriefRecommendedTask]:
+        selected: list[ProjectBriefRecommendedTask] = []
+        selected_indexes: set[int] = set()
+        seen_task_types: set[str] = set()
+        for index, task in enumerate(tasks):
+            if task.task_type in seen_task_types:
+                continue
+            selected.append(task)
+            selected_indexes.add(index)
+            seen_task_types.add(task.task_type)
+            if len(selected) >= limit:
+                return selected
+        for index, task in enumerate(tasks):
+            if index in selected_indexes:
+                continue
+            selected.append(task)
+            if len(selected) >= limit:
+                break
+        return selected
+
+    @staticmethod
+    def _project_brief_task_type_counts(
+        tasks: list[ProjectBriefRecommendedTask],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for task in tasks:
+            counts[task.task_type] = counts.get(task.task_type, 0) + 1
+        return counts
+
+    @staticmethod
+    def _project_brief_profile_queue_counts(
+        datasets: list[ProjectBriefDatasetSummary],
+    ) -> dict[str, int]:
+        drafts = [
+            draft
+            for dataset in datasets
+            for draft in dataset.profile.drafts
+        ]
+        return {
+            "profile_observations": sum(
+                dataset.profile.total_profile_count for dataset in datasets
+            ),
+            "profile_evidence": sum(
+                dataset.profile.profile_evidence_count for dataset in datasets
+            ),
+            "profile_run_candidates": sum(
+                dataset.profile.profile_run_candidate_count
+                for dataset in datasets
+            ),
+            "profile_drafts": len(drafts),
+            "profile_draft_recommendations": sum(
+                draft.recommendation_count for draft in drafts
+            ),
+            "profile_scalar_conflict_groups": sum(
+                draft.scalar_conflict_group_count for draft in drafts
+            ),
+            "profile_metric_advisories": sum(
+                draft.metric_advisory_count for draft in drafts
+            ),
+            "profile_type_advisories": sum(
+                draft.type_advisory_count for draft in drafts
+            ),
+        }
 
     def _project_brief_staged_tasks(
         self,

@@ -103,6 +103,31 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "ready_for_query_planning": 3,
         "needs_storage_access": 4,
     },
+    "returned_dataset_query_readiness_counts": {
+        "ready_for_query_planning": 2,
+        "needs_storage_access": 1,
+    },
+    "profile_queue_counts": {
+        "profile_observations": 4,
+        "profile_evidence": 2,
+        "profile_run_candidates": 1,
+        "profile_drafts": 2,
+        "profile_draft_recommendations": 3,
+        "profile_scalar_conflict_groups": 0,
+        "profile_metric_advisories": 1,
+        "profile_type_advisories": 0,
+    },
+    "queue_counts": {
+        "query_repair_review": 2,
+        "profile_review": 1,
+        "staged_review": 1,
+    },
+    "returned_queue_counts": {
+        "query_repair_review": 1,
+        "profile_review": 1,
+        "staged_review": 1,
+    },
+    "omitted_queue_counts": {"query_repair_review": 1},
     "datasets": [
         {
             "dataset": {"iri": "https://...", "label": "...", "description": ...},
@@ -118,12 +143,19 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
                 "suggested_next_calls": [...],
             },
             "profile": {
+                "total_profile_count": 4,
+                "returned_profile_count": 4,
+                "omitted_profile_count": 0,
+                "profile_evidence_count": 1,
+                "profile_evidence_iris": ["https://..."],
                 "profile_run_candidate_count": 1,
                 "profile_run_evidence_iris": ["https://..."],
                 "draft_count": 1,
+                "draft_evidence_iris": ["https://..."],
                 "drafts": [
                     {
                         "evidence_iri": "https://...",
+                        "profile_observation_count": 4,
                         "recommendation_count": 2,
                         "scalar_conflict_group_count": 0,
                         "metric_advisory_count": 1,
@@ -165,6 +197,11 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
 its suggested actions into `describe_query_context`,
 `draft_profile_map_updates`, `list_graph_revisions`, or the relevant focused
 inspection helper before making durable graph changes.
+`dataset_query_readiness_counts`, `profile_queue_counts`, and `queue_counts`
+are computed across scanned table/dataset entities, while `datasets` and
+`returned_dataset_query_readiness_counts` describe the bounded returned slice.
+The recommended task selector keeps at least one task from each active queue
+when the limit allows, then fills remaining slots by priority.
 
 `db.replace_graph_triples(...)` returns `GraphTripleReplacementRecord`:
 
