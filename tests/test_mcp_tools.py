@@ -4696,7 +4696,10 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         "dataset_token_overlap",
     ]
     assert candidate["dataset_token_matches"] == ["messages"]
+    assert candidate["generic_dataset_token_matches"] == []
     assert candidate["dataset_partial_token_matches"] == []
+    assert candidate["generic_dataset_partial_token_matches"] == []
+    assert candidate["linked_dataset_iris"] == []
     assert repair_group["repair_context"][
         "candidate_existing_storage_access_count"
     ] == 1

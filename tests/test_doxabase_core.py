@@ -13144,6 +13144,93 @@ def test_missing_storage_access_ranks_dataset_specific_candidates_first(
     ][0]["storage_access_iri"] == orphan_storage.iri
 
 
+def test_missing_storage_access_downweights_generic_token_candidates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    target = "https://example.test/project#AlphaTrialSnapshotData"
+    intended_storage = db.record_map_storage_access(
+        "https://example.test/project#alpha_storage",
+        label="Alpha storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "alpha"),
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    generic_storage = db.record_map_storage_access(
+        "https://example.test/project#generic_data_trial_snapshot_parquet_storage",
+        label="Generic data trial snapshot parquet storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "data-trial-snapshot-parquet"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    linked_generic_storage = db.record_map_storage_access(
+        "https://example.test/project#linked_data_trial_snapshot_parquet_storage",
+        label="Linked data trial snapshot parquet storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "linked-data-trial-snapshot-parquet"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_map_dataset(
+        "https://example.test/project#GenericTrialSnapshotArchive",
+        label="Generic trial snapshot archive",
+        is_table=True,
+        storage_accesses=[linked_generic_storage.iri],
+    )
+    database_generic_storage = db.record_map_storage_access(
+        "https://example.test/project#analytics_trial_snapshot_data_relation",
+        label="Analytics trial snapshot data relation",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-trial-snapshot",
+        path_templates=["trial_snapshot_data"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        target,
+        label="Alpha trial snapshot data",
+        is_table=True,
+        path_templates=["data/trial/snapshot/*.parquet"],
+    )
+
+    context = db.describe_query_context(target)
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+    assert missing_storage.details is not None
+    candidates = missing_storage.details["repair_hint"][
+        "candidate_existing_storage_accesses"
+    ]
+
+    assert [candidate["storage_access_iri"] for candidate in candidates[:4]] == [
+        intended_storage.iri,
+        generic_storage.iri,
+        database_generic_storage.iri,
+        linked_generic_storage.iri,
+    ]
+    intended_candidate = candidates[0]
+    assert intended_candidate["dataset_token_matches"] == ["alpha"]
+    assert intended_candidate["generic_dataset_token_matches"] == []
+    assert "dataset_token_overlap" in intended_candidate["match_reasons"]
+
+    generic_candidate = candidates[1]
+    assert generic_candidate["dataset_token_matches"] == []
+    assert generic_candidate["generic_dataset_token_matches"] == [
+        "data",
+        "parquet",
+        "snapshot",
+        "trial",
+    ]
+    assert "generic_dataset_token_overlap" in generic_candidate["match_reasons"]
+    assert "dataset_token_overlap" not in generic_candidate["match_reasons"]
+
+    linked_candidate = candidates[3]
+    assert linked_candidate["storage_access_iri"] == linked_generic_storage.iri
+    assert "linked_to_other_dataset" in linked_candidate["match_reasons"]
+    assert linked_candidate["linked_dataset_iris"] == [
+        "https://example.test/project#GenericTrialSnapshotArchive"
+    ]
+
+
 def test_missing_storage_access_repair_omits_duplicate_path_template(
     tmp_path: Path,
 ) -> None:

@@ -2180,8 +2180,10 @@ few useful gaps:
   default alternative-linking behavior.
 - A query/storage ranking follow-up found complete-but-unrelated storage access
   candidates could outrank a nearby dataset-specific access. Missing-storage
-  candidate ranking now uses dataset-token overlap and demotes generic accesses
-  already linked to another dataset, while still requiring reviewed selection.
+  candidate ranking now splits weak generic tokens such as `data`, `parquet`,
+  `snapshot`, and `trial` from project-specific token matches, and always
+  surfaces `linked_to_other_dataset` with `linked_dataset_iris`, while still
+  requiring reviewed selection.
 - An assertion-support/caveat trial confirmed that support routes correctly pull
   direct and owner-dataset caveats plus mixed supporting and contradictory lore,
   but related claims/patterns are contextual, not endorsement. Read claim text,

@@ -142,8 +142,9 @@ Start with `describe_query_context(dataset_iri)`:
    `pending_staged_repair_iris` and `candidate_status="already_pending"` when
    the exact dataset/storage link is already staged. Candidate ranking now includes
    exact path-template matches, dataset-token overlap with labels/IRIs/locations,
-   and a demotion when an otherwise generic access is already linked to another
-   dataset. Do not auto-link the first candidate just because it is listed; fill
+   weaker separately reported generic-token overlap, and a linked-dataset
+   caution when an access is already attached elsewhere. Do not auto-link the
+   first candidate just because it is listed; fill
    the staged link's `object` with the chosen reviewed access IRI. When recording
    a new storage access, omit the
    optional storage-owned `path_templates` field if the dataset

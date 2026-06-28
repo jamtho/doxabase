@@ -94,6 +94,24 @@ SENSITIVE_LITERAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
 )
 
+MISSING_STORAGE_GENERIC_TOKENS = {
+    "archive",
+    "archives",
+    "csv",
+    "data",
+    "dataset",
+    "datasets",
+    "file",
+    "files",
+    "json",
+    "parquet",
+    "snapshot",
+    "snapshots",
+    "table",
+    "tables",
+    "trial",
+}
+
 SCHEMA_STABILITY_LEVELS = (
     "rc:FixedSchema",
     "rc:InferredSchema",
@@ -17200,16 +17218,42 @@ class DoxaBase:
                 ]
             )
             exact_token_matches = sorted(dataset_tokens & access_tokens)
+            strong_exact_token_matches = [
+                token
+                for token in exact_token_matches
+                if token not in MISSING_STORAGE_GENERIC_TOKENS
+            ]
+            generic_exact_token_matches = [
+                token
+                for token in exact_token_matches
+                if token in MISSING_STORAGE_GENERIC_TOKENS
+            ]
             partial_token_matches = self._missing_storage_partial_token_matches(
                 dataset_tokens,
                 access_tokens,
             )
-            if exact_token_matches:
+            strong_partial_token_matches = [
+                match
+                for match in partial_token_matches
+                if not self._missing_storage_partial_match_is_generic(match)
+            ]
+            generic_partial_token_matches = [
+                match
+                for match in partial_token_matches
+                if self._missing_storage_partial_match_is_generic(match)
+            ]
+            if strong_exact_token_matches:
                 match_reasons.append("dataset_token_overlap")
-                score += 12 * len(exact_token_matches)
-            if partial_token_matches:
+                score += 12 * len(strong_exact_token_matches)
+            if generic_exact_token_matches:
+                match_reasons.append("generic_dataset_token_overlap")
+                score += len(generic_exact_token_matches)
+            if strong_partial_token_matches:
                 match_reasons.append("dataset_token_partial_overlap")
-                score += 6 * len(partial_token_matches)
+                score += 6 * len(strong_partial_token_matches)
+            if generic_partial_token_matches:
+                match_reasons.append("generic_dataset_token_partial_overlap")
+                score += len(generic_partial_token_matches)
             linked_dataset_iris = [
                 iri
                 for iri in self._subjects(
@@ -17219,13 +17263,12 @@ class DoxaBase:
                 )
                 if iri != dataset.iri
             ]
+            if linked_dataset_iris:
+                match_reasons.append("linked_to_other_dataset")
             if (
                 linked_dataset_iris
                 and "shares_dataset_path_template" not in match_reasons
-                and not exact_token_matches
-                and not partial_token_matches
             ):
-                match_reasons.append("linked_to_other_dataset")
                 score -= 15
             candidate = {
                 "storage_access": to_jsonable(self._summary_from_description(access)),
@@ -17240,8 +17283,13 @@ class DoxaBase:
                     access.layout_verification_status
                 ),
                 "match_reasons": match_reasons,
-                "dataset_token_matches": exact_token_matches,
-                "dataset_partial_token_matches": partial_token_matches,
+                "dataset_token_matches": strong_exact_token_matches,
+                "generic_dataset_token_matches": generic_exact_token_matches,
+                "dataset_partial_token_matches": strong_partial_token_matches,
+                "generic_dataset_partial_token_matches": (
+                    generic_partial_token_matches
+                ),
+                "linked_dataset_iris": linked_dataset_iris,
                 "review_note": (
                     "Candidate existing storage access found in the current map. "
                     "Link it only after reviewing that its protocol, location, "
@@ -17400,6 +17448,11 @@ class DoxaBase:
                 ):
                     matches.add(f"{dataset_token}:{access_token}")
         return sorted(matches)
+
+    @staticmethod
+    def _missing_storage_partial_match_is_generic(match: str) -> bool:
+        parts = match.split(":", 1)
+        return any(part in MISSING_STORAGE_GENERIC_TOKENS for part in parts)
 
     def _known_fixture_missing_storage_access_hint(
         self,

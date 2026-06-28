@@ -670,8 +670,10 @@ When `missing_storage_access` appears, read `issues[].details.repair_hint` for
 reviewed repair templates: record a non-secret storage access and link it to the
 dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing
 storage access. Candidate ranking uses exact path-template matches, dataset-token
-overlap, and a demotion for generic accesses already linked to another dataset;
-read `dataset_token_matches`, `dataset_partial_token_matches`, and
+overlap, weak generic-token overlap, and a linked-dataset caution for accesses
+already attached elsewhere; read `dataset_token_matches`,
+`generic_dataset_token_matches`, `dataset_partial_token_matches`,
+`generic_dataset_partial_token_matches`, `linked_dataset_iris`, and
 `match_reasons` before choosing a reviewed target. Missing-storage repair actions
 have stable `action_type` values
 (`record_reviewed_storage_access` and `stage_existing_storage_access_link`), and
