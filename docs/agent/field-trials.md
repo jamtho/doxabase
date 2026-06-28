@@ -1804,6 +1804,16 @@ few useful gaps:
   systematisation docs pointed at a non-addressable response-shapes section,
   and query-planning docs implied `row_count_snapshot_basis` was top-level
   instead of under `profile_summary.profile_run_candidates[]`.
+- A four-trial routing wave found two places where the right next move existed
+  but was too easy for automation to skip. Query contexts now add extra
+  `describe_profile_run` actions before drafting a plan when profile-run row
+  counts disagree, or when the snapshot-matching run is sampled, unknown, or
+  mixed basis. Systematisation drafts with an invalid first alternative anchor
+  now surface a complete `stage_systematisation(..., link_alternatives=False)`
+  rerun action before export/check actions. The same wave confirmed revision
+  count aliases and caveat severity details are clear, and added docs crib notes
+  for lineage/list/apply field names such as `applied_revision_iri`,
+  `application_decision`, and `next_action_queue_items[].resolved_target_iri`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

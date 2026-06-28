@@ -122,6 +122,14 @@ next action without reading full patches. For imported capsules, read lineage
 drift triples are present. Warnings also call out imported oddities such as
 missing applied-source links, non-staged rows inside restage chains, and
 parallel restage successors.
+First-read field names are intentionally specific: lineage exposes
+`selected_revision.iri` and `staged_revision_iri`, not a top-level
+`selected_revision_iri`; applied records use `applied_revision_iri`; revision
+list rows use `application_decision`, while direct apply checks use `decision`.
+For automation over grouped/list queues, prefer
+`next_action_queue_items[].resolved_target_iri` and row-local `next_action`
+arguments over raw `next_action_queue` values, because handled stale rows may
+route to a refreshed successor or applied event.
 
 Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
 proposal. The export includes a live `Current Apply Check` section generated at
@@ -516,8 +524,11 @@ for the run, when ready siblings should not be alternatives to the first
 framing.
 Automation should read `structured_warnings` as well as `warnings`; the
 `first_alternative_anchor_not_ready` warning carries
-`suggested_rerun_arguments={"link_alternatives": False}` so callers do not have
-to parse prose. Multi-framing drafts with shared `ontology` or `shapes` patches
+`suggested_rerun_arguments={"link_alternatives": False}` and the first
+`suggested_next_actions` entry is a complete `stage_systematisation` rerun call
+with explicit alternative routing, so callers do not have to parse prose or
+reconstruct the original framings by hand. Multi-framing drafts with shared
+`ontology` or `shapes` patches
 also emit `shared_semantic_context_applies_to_all_framings`; use its suggested
 rerun arguments as a cue to move those patches into per-framing additions or
 removals when fallback alternatives should not carry the provisional vocabulary

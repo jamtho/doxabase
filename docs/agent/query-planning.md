@@ -36,8 +36,10 @@ Start with `describe_query_context(dataset_iri)`:
    profile-derived count as fresh enough for a query handoff. Candidates are
    count-ranked; ties prefer evidence whose dataset-profile `row_count` matches
    `row_count_snapshot`, then fall back to evidence IRI order. In mixed profile
-   history, still inspect the candidate run before treating the profile-derived
-   count as current, and read
+   history, inspect all profile-run actions before treating the profile-derived
+   count as current; query context adds additional `describe_profile_run`
+   actions when candidate row counts disagree, or when the snapshot-matching
+   run is sampled, unknown, or mixed basis. Read
    `profile_summary.profile_run_candidates[].row_count_snapshot_basis` with
    each candidate's `dataset_profile_row_count_bases` to distinguish full-scan,
    sampled, and unknown-scope count support.
@@ -75,8 +77,9 @@ Start with `describe_query_context(dataset_iri)`:
    `suggested_next_actions`: fill placeholders, add required fields such as
    `rationale`, and check each `condition` before calling the named tool.
 7. Use `suggested_next_actions` when scripting the next step. If profile run
-   candidates exist, the first action inspects the profile evidence; when a
-   query target candidate is also available, the draft-query-plan action follows.
+   candidates exist, profile evidence inspection actions come before query-plan
+   drafting; when multiple candidate runs need review, several
+   `describe_profile_run` actions can appear before the first `draft_query_plan`.
    Peer ready or context-blocked direct-clean candidates are also exposed as
    explicit `draft_query_plan(candidate_index=...)` actions, so scripts should
    follow actions instead of parsing peer indexes from prose or storage-selector

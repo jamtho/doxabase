@@ -484,13 +484,13 @@ dataset/layout verification status and note, caveats, and structured
 evidence IRIs and `profile_run_candidates` without a separate
 `describe_dataset` call when row counts or metric context came from profiling.
 When profile run candidates exist, `suggested_next_actions` includes
-`describe_profile_run` first; a draft-plan action follows when a query target
-candidate is available. In mixed profile history, match the dataset-profile
-`row_count` in candidate runs to `row_count_snapshot` before relying on a
-profile-derived count. Also read `row_count_snapshot_basis` and
-`dataset_profile_row_count_bases` on
+`describe_profile_run` before query-plan drafting. Several profile-run actions
+can appear before the draft action when candidate row counts disagree, or when a
+snapshot-matching run is sampled, unknown, or mixed basis. Follow the profile
+actions before treating a profile-derived count as current. Also read
+`row_count_snapshot_basis` and `dataset_profile_row_count_bases` on
 `profile_summary.profile_run_candidates[]`; a matching row count can still come
-from sampled or unknown-scope profile evidence.
+from sampled, unknown, or mixed-basis profile evidence.
 It also returns `ready_candidate_indexes`, `unselected_ready_candidate_indexes`,
 `direct_clean_candidate_indexes`, and
 `unselected_direct_clean_candidate_indexes` so callers can see peer strict-ready
@@ -1049,9 +1049,11 @@ Markdown bundle. Queue items expose resolved targets and semantic-gate fields
 without requiring a grouped export first. If later framings actually
 default-linked to a first framing that did not route to `apply_after_review`,
 `structured_warnings` includes `first_alternative_anchor_not_ready` with
-`suggested_rerun_arguments={"link_alternatives": False}`. Per-framing
-`alternative_to` values reroute siblings without that warning. When multiple
-framings share `ontology` or `shapes` patches, `structured_warnings` includes
+`suggested_rerun_arguments={"link_alternatives": False}`; in that case
+`suggested_next_actions` starts with a complete `stage_systematisation` rerun
+action using explicit alternative routing. Per-framing `alternative_to` values
+reroute siblings without that warning. When multiple framings share `ontology`
+or `shapes` patches, `structured_warnings` includes
 `shared_semantic_context_applies_to_all_framings`; move those patches into
 per-framing additions/removals when fallback alternatives should not carry the
 same provisional vocabulary or validation shapes.

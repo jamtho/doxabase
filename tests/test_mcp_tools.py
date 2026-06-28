@@ -2409,6 +2409,27 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
             "suggested_rerun_arguments": {"link_alternatives": False},
         }
     ]
+    rerun_action = result["suggested_next_actions"][0]
+    assert rerun_action["tool_name"] == "stage_systematisation"
+    assert rerun_action["action_label"] == (
+        "Rerun with explicit alternative routing"
+    )
+    assert rerun_action["arguments"]["summary"] == "Compare thing framings"
+    assert rerun_action["arguments"]["link_alternatives"] is False
+    assert rerun_action["arguments"]["shared_additions"] == [
+        {"graph": "shapes", "content": shared_shape}
+    ]
+    assert [
+        framing["label"] for framing in rerun_action["arguments"]["framings"]
+    ] == [
+        "Diagnostic incomplete thing",
+        "Complete thing",
+        "Complementary complete thing",
+    ]
+    assert "link_alternatives=False" in rerun_action["reason"]
+    assert result["suggested_next_actions"][1]["tool_name"] == (
+        "export_staged_revisions"
+    )
     export_path = tmp_path / "invalid-first-review.md"
     export = export_staged_revisions_tool(
         db,

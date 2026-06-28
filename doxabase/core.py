@@ -10288,28 +10288,51 @@ class DoxaBase:
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         if profile_summary.profile_run_candidates:
-            candidate_run = profile_summary.profile_run_candidates[0]
-            profile_arguments = {
-                "dataset_iri": dataset_iri,
-                "evidence_iri": candidate_run.evidence_iri,
-            }
-            actions.append(
-                SuggestedNextAction(
-                    action_label="Inspect profile run evidence",
-                    tool_name="describe_profile_run",
-                    mcp_tool_name="doxabase.describe_profile_run",
-                    arguments=profile_arguments,
-                    reason=(
+            profile_candidates = profile_summary.profile_run_candidates
+            for candidate_index, candidate_run in enumerate(
+                profile_candidates
+            ):
+                if candidate_index > 0 and not (
+                    self._query_context_should_inspect_profile_candidate(
+                        profile_candidates[0],
+                        candidate_run,
+                        profile_candidates,
+                    )
+                ):
+                    continue
+                profile_arguments = {
+                    "dataset_iri": dataset_iri,
+                    "evidence_iri": candidate_run.evidence_iri,
+                }
+                if candidate_index == 0:
+                    action_label = "Inspect profile run evidence"
+                    reason = (
                         "Inspect the profile observations behind the selected "
                         "row-count/profile handoff before relying on profiler "
                         "evidence in a query plan."
-                    ),
-                    call=self._suggested_call_string(
-                        "describe_profile_run",
-                        profile_arguments,
-                    ),
+                    )
+                else:
+                    action_label = "Inspect additional profile run evidence"
+                    reason = (
+                        "Multiple profile-run candidates carry different row "
+                        "count evidence, or the selected snapshot-matching "
+                        "candidate is sampled, unknown, or mixed basis. Inspect "
+                        "this additional run before treating a profile-derived "
+                        "row count as current."
+                    )
+                actions.append(
+                    SuggestedNextAction(
+                        action_label=action_label,
+                        tool_name="describe_profile_run",
+                        mcp_tool_name="doxabase.describe_profile_run",
+                        arguments=profile_arguments,
+                        reason=reason,
+                        call=self._suggested_call_string(
+                            "describe_profile_run",
+                            profile_arguments,
+                        ),
+                    )
                 )
-            )
         if (
             decision.candidate_index is None
             or decision.candidate_index < 0
@@ -10469,6 +10492,27 @@ class DoxaBase:
                 )
             )
         return actions
+
+    @staticmethod
+    def _query_context_should_inspect_profile_candidate(
+        primary_candidate: ProfileRunCandidate,
+        candidate: ProfileRunCandidate,
+        candidates: list[ProfileRunCandidate],
+    ) -> bool:
+        if candidate.evidence_iri == primary_candidate.evidence_iri:
+            return False
+        row_count_sets = {
+            tuple(candidate_item.dataset_profile_row_counts)
+            for candidate_item in candidates
+            if candidate_item.dataset_profile_row_counts
+        }
+        if len(row_count_sets) > 1:
+            return True
+        return (
+            primary_candidate.row_count_snapshot_matches
+            and primary_candidate.row_count_snapshot_basis
+            in {"mixed", "sample", "unknown"}
+        )
 
     def _query_context_candidate_only_layout_blocked(
         self,
@@ -21715,6 +21759,7 @@ class DoxaBase:
         bundle_summary, suggested_next_actions = (
             self._systematisation_draft_routing(staged_revisions)
         )
+        warning_suggested_actions: list[SuggestedNextAction] = []
         next_action_queue = bundle_summary.next_action_queue
         if first_anchor_default_linked_revision_iris:
             warnings.append(
@@ -21793,6 +21838,51 @@ class DoxaBase:
                         suggested_rerun_arguments={"link_alternatives": False},
                     )
                 )
+                rerun_arguments = self._systematisation_rerun_arguments(
+                    summary=summary_value,
+                    intent=intent_value,
+                    framings=framing_values,
+                    anchors=anchor_values,
+                    rationale=rationale_value,
+                    shared_additions=shared_addition_specs,
+                    shared_removals=shared_removal_specs,
+                    shared_context_summary=shared_context_summary_value,
+                    default_stance=default_stance,
+                    revision_type=revision_type,
+                    included_graphs=included_graphs,
+                    created_at=created_at,
+                    created_by=created_by,
+                    supporting_observations=supporting_observations,
+                    supporting_claims=supporting_claims,
+                    supporting_patterns=supporting_patterns,
+                    evidence=evidence,
+                    alternative_to=alternative_to,
+                    validation_scope=validation_scope,
+                )
+                warning_suggested_actions.append(
+                    SuggestedNextAction(
+                        action_label="Rerun with explicit alternative routing",
+                        tool_name="stage_systematisation",
+                        mcp_tool_name="doxabase.stage_systematisation",
+                        arguments=rerun_arguments,
+                        reason=(
+                            "The first framing did not route to apply review, "
+                            "but later framings default-linked to it as "
+                            "alternatives. Rerun with link_alternatives=False "
+                            "so diagnostic and ready framings can be reviewed "
+                            "without anchoring ready siblings to a failed first "
+                            "framing."
+                        ),
+                        call=self._suggested_call_string(
+                            "stage_systematisation",
+                            rerun_arguments,
+                        ),
+                    )
+                )
+        suggested_next_actions = [
+            *warning_suggested_actions,
+            *suggested_next_actions,
+        ]
         return SystematisationDraftRecord(
             result_kind="systematisation_draft",
             summary=summary_value,
@@ -21813,6 +21903,96 @@ class DoxaBase:
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
+
+    def _systematisation_rerun_arguments(
+        self,
+        *,
+        summary: str,
+        intent: str,
+        framings: Iterable[Mapping[str, Any]],
+        anchors: list[str],
+        rationale: str | None,
+        shared_additions: Iterable[Mapping[str, str]],
+        shared_removals: Iterable[Mapping[str, str]],
+        shared_context_summary: str | None,
+        default_stance: str,
+        revision_type: str,
+        included_graphs: Iterable[str] | str | None,
+        created_at: datetime | str | None,
+        created_by: str | None,
+        supporting_observations: Iterable[str] | str | None,
+        supporting_claims: Iterable[str] | str | None,
+        supporting_patterns: Iterable[str] | str | None,
+        evidence: Iterable[str] | str | None,
+        alternative_to: str | None,
+        validation_scope: str,
+    ) -> dict[str, Any]:
+        arguments: dict[str, Any] = {
+            "summary": summary,
+            "intent": intent,
+            "framings": [copy.deepcopy(dict(framing)) for framing in framings],
+            "link_alternatives": False,
+            "validation_scope": validation_scope,
+        }
+        if anchors:
+            arguments["anchors"] = anchors
+        if rationale is not None:
+            arguments["rationale"] = rationale
+        if shared_additions:
+            arguments["shared_additions"] = [
+                self._rerun_patch_arguments(spec) for spec in shared_additions
+            ]
+        if shared_removals:
+            arguments["shared_removals"] = [
+                self._rerun_patch_arguments(spec) for spec in shared_removals
+            ]
+        if shared_context_summary is not None:
+            arguments["shared_context_summary"] = shared_context_summary
+        if default_stance != "rc:ExploratoryHunch":
+            arguments["default_stance"] = default_stance
+        if revision_type != "rc:StagedRevision":
+            arguments["revision_type"] = revision_type
+        if included_graphs is not None:
+            arguments["included_graphs"] = self._string_values(
+                "included_graphs",
+                included_graphs,
+            )
+        if created_at is not None:
+            arguments["created_at"] = (
+                created_at.isoformat()
+                if isinstance(created_at, datetime)
+                else created_at
+            )
+        if created_by is not None:
+            arguments["created_by"] = created_by
+        if supporting_observations is not None:
+            arguments["supporting_observations"] = self._string_values(
+                "supporting_observations",
+                supporting_observations
+            )
+        if supporting_claims is not None:
+            arguments["supporting_claims"] = self._string_values(
+                "supporting_claims",
+                supporting_claims,
+            )
+        if supporting_patterns is not None:
+            arguments["supporting_patterns"] = self._string_values(
+                "supporting_patterns",
+                supporting_patterns,
+            )
+        if evidence is not None:
+            arguments["evidence"] = self._string_values("evidence", evidence)
+        if alternative_to is not None:
+            arguments["alternative_to"] = alternative_to
+        return arguments
+
+    @staticmethod
+    def _rerun_patch_arguments(spec: Mapping[str, str]) -> dict[str, str]:
+        return {
+            str(key): str(value)
+            for key, value in spec.items()
+            if key != "patch_role"
+        }
 
     def _systematisation_draft_routing(
         self,

@@ -10058,12 +10058,36 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     assert structured_warning.suggested_rerun_arguments == {
         "link_alternatives": False
     }
-    assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
-    assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
-    assert draft.suggested_next_actions[0].arguments["path"].startswith(
+    rerun_action = draft.suggested_next_actions[0]
+    assert rerun_action.tool_name == "stage_systematisation"
+    assert rerun_action.action_label == (
+        "Rerun with explicit alternative routing"
+    )
+    assert rerun_action.arguments["summary"] == (
+        "Promote temporal interpretation alternatives"
+    )
+    assert rerun_action.arguments["intent"] == (
+        "Stage alternative RDF framings for temporal semantics that do not "
+        "fit a simple dataset or column map helper."
+    )
+    assert rerun_action.arguments["link_alternatives"] is False
+    assert rerun_action.arguments["shared_additions"] == [
+        {"graph": "ontology", "content": shared_ontology},
+        {"graph": "shapes", "content": shared_shape},
+    ]
+    assert [framing["label"] for framing in rerun_action.arguments["framings"]] == [
+        "Incomplete map scope without timezone evidence",
+        "Repaired map scope with timezone evidence",
+        "Pattern-first temporal lore",
+    ]
+    assert "link_alternatives=False" in rerun_action.reason
+    export_action = draft.suggested_next_actions[1]
+    assert export_action.tool_name == "export_staged_revisions"
+    assert export_action.arguments["revision_iris"] == revision_iris
+    assert export_action.arguments["path"].startswith(
         "/tmp/systematisation-review-"
     )
-    assert draft.suggested_next_actions[0].arguments["path"].endswith(".md")
+    assert export_action.arguments["path"].endswith(".md")
     assert [
         action.arguments
         for action in draft.suggested_next_actions
@@ -18183,26 +18207,39 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     dataset = "https://example.test/project#Orders"
     status_column = "https://example.test/project#OrdersStatus"
+    storage = "https://example.test/project#OrdersStorage"
+    layout = "https://example.test/project#OrdersParquetLayout"
     old_evidence = "https://example.test/project#AOldProfileEvidence"
     matching_evidence = "https://example.test/project#ZMatchingProfileEvidence"
 
+    db.record_map_storage_access(
+        storage,
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "warehouse"),
+        datasets=[dataset],
+    )
+    db.record_map_physical_layout(
+        layout,
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+        datasets=[dataset],
+    )
     db.record_map_dataset(
         dataset,
         label="Orders",
         is_table=True,
         row_count_snapshot=120,
         path_templates=["orders/dt={date}.parquet"],
+        storage_accesses=[storage],
+        physical_layouts=[layout],
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
     db.record_map_column(
         status_column,
         table_iri=dataset,
         column_name="status",
-    )
-    db.record_map_physical_layout(
-        "https://example.test/project#orders_parquet_layout",
-        file_format="rc:Parquet",
-        layout_verification_status="rc:VerifiedByQueryLayout",
     )
     db.record_profile_bundle(
         dataset,
@@ -18263,6 +18300,23 @@ def test_profile_run_candidates_prefer_row_count_snapshot_match_on_ties(
         "dataset_iri": dataset,
         "evidence_iri": matching_evidence,
     }
+    assert [
+        action.tool_name for action in context.suggested_next_actions[:3]
+    ] == [
+        "describe_profile_run",
+        "describe_profile_run",
+        "draft_query_plan",
+    ]
+    assert context.suggested_next_actions[1].action_label == (
+        "Inspect additional profile run evidence"
+    )
+    assert context.suggested_next_actions[1].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": old_evidence,
+    }
+    assert "sampled, unknown, or mixed basis" in (
+        context.suggested_next_actions[1].reason
+    )
 
 
 def test_describe_profile_run_returns_wide_shared_evidence_run(

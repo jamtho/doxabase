@@ -1665,10 +1665,14 @@ Use it with `row_count_snapshot` when query planning depends on profiler output:
 it exposes the evidence IRIs and `profile_run_candidates` behind the observed
 row-count/profile handoff without requiring a separate `describe_dataset` call.
 When candidates exist, `suggested_next_actions` includes a
-`describe_profile_run` action first; a draft-plan action follows when a query
-target candidate is available. In mixed profile history, match the
-dataset-profile `row_count` in candidate runs to `row_count_snapshot` before
-relying on a profile-derived count, and check
+`describe_profile_run` action first; when a query target candidate is available,
+the draft-plan action is included after any profile-run inspection actions.
+Additional `describe_profile_run` actions appear before the draft-plan action
+when candidate row counts disagree, or when the selected snapshot-matching run
+has `row_count_snapshot_basis` of `sample`, `unknown`, or `mixed`. In mixed
+profile history, match the dataset-profile
+`row_count` in candidate runs to `row_count_snapshot` before relying on a
+profile-derived count, and check
 `profile_summary.profile_run_candidates[].row_count_snapshot_basis` before
 treating the matching count as full-scan evidence.
 
@@ -2407,11 +2411,14 @@ mechanically ready framings land in `apply_after_review`.
 `next_action_queue_items` mirrors the grouped export queue-item shape, including
 `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
 fields, and alternative-gate fields for each staged framing. The suggested
-actions include a grouped `export_staged_revisions` call plus per-revision
-`check_staged_revision_apply` calls for fresh live routing. Suggested export
-paths include a readable revision slug and short hash to reduce collisions
-across concurrent scratch runs; callers can still pass their own run-specific
-path.
+actions normally include a grouped `export_staged_revisions` call plus
+per-revision `check_staged_revision_apply` calls for fresh live routing. When
+`first_alternative_anchor_not_ready` fires, the first suggested action is a
+complete `stage_systematisation(..., link_alternatives=False)` rerun call so
+automation can create a cleaner review bundle before exporting the anchored
+draft. Suggested export paths include a readable revision slug and short hash to
+reduce collisions across concurrent scratch runs; callers can still pass their
+own run-specific path.
 
 `draft.structured_warnings` is a machine-readable companion to selected prose
 warnings. For example, when the first framing is not routed to
@@ -2497,6 +2504,9 @@ revisions.returned_current_staged_work_application_status_counts
 revisions.returned_stale_resolution_state_counts
 revisions.returned_staged_validation_status_counts
 revisions.next_action_queue
+revisions.next_action_queue_items
+revisions.next_action_queue_item_counts
+revisions.semantic_review_required_queue_counts
 revisions.include_apply_checks
 revisions.drift_detail
 ```

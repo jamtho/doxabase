@@ -320,6 +320,9 @@ Candidate rows expose `dataset_profile_row_count_bases` and
 `row_count_snapshot_basis` under `profile_summary.profile_run_candidates[]`, so
 a count that matches the map snapshot can still be recognized as full-scan,
 sampled, or unknown-scope support.
+When candidate row counts disagree, or when the snapshot-matching run is
+sampled, unknown, or mixed basis, `suggested_next_actions` includes additional
+`describe_profile_run` actions before query-plan drafting.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
 when candidate order selected a different route than intended. These indexes
@@ -911,9 +914,11 @@ the same resolved-target and semantic-gate fields as grouped export summaries.
 When later framings actually default-linked to a first framing that did not
 route to `apply_after_review`, `structured_warnings` includes
 `warning_code="first_alternative_anchor_not_ready"` and
-`suggested_rerun_arguments={"link_alternatives": False}`. Per-framing
-`alternative_to` values reroute siblings without that warning. When multiple
-framings share `ontology` or `shapes` patches, `structured_warnings` includes
+`suggested_rerun_arguments={"link_alternatives": False}`; in that case the first
+`suggested_next_actions` entry is a complete `stage_systematisation` rerun call
+with explicit alternative routing. Per-framing `alternative_to` values reroute
+siblings without that warning. When multiple framings share `ontology` or
+`shapes` patches, `structured_warnings` includes
 `warning_code="shared_semantic_context_applies_to_all_framings"` and suggested
 rerun arguments naming the shared graph roles to move into per-framing patches
 if fallback alternatives should avoid that provisional semantic context.
