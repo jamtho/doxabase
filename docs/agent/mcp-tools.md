@@ -541,9 +541,12 @@ support/evidence/anchor fields, `profile_route_keys`,
 `profile_route_groups`, `candidate_revision_iris`, and the nested
 `export_staged_revisions` record when a bundle was written. The grouped
 Markdown review summary includes a `Profile Route Bridge` table when candidates
-match draft route groups. Same evidence alone does not make an unrelated
-pattern a related pattern; support should connect through profile observations,
-targets, map implications, or explicit `revision_iris`.
+match draft route groups. Route groups include `match_strength`: use
+`direct_action` for the lane a staged row appears to implement, and treat
+`strong_support` / `related_support` as related context rather than lane
+satisfaction. Same evidence alone does not make an unrelated pattern a related
+pattern; support should connect through profile observations, targets, map
+implications, or explicit `revision_iris`.
 
 ### doxabase.describe_query_context
 

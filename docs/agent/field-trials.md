@@ -2068,7 +2068,11 @@ few useful gaps:
   profile map-update actions expose `source_profile_map_update`; metric/type
   actions keep `source_profile_advisory` with route keys; and profile insight
   bundle candidates plus Markdown expose a `Profile Route Bridge` so reviewers
-  can see which draft route produced or motivated each staged row.
+  can see which draft route produced or motivated each staged row. A later
+  review-artifact trial showed that broad support overlaps could make related
+  lanes look implemented; profile route groups now include `match_strength`
+  (`direct_action`, `strong_support`, or `related_support`) and Markdown renders
+  the strength beside each lane.
 - A follow-up project-brief pass found a remaining bridge gap for
   `query_context_review`: the draft action had route keys, but no route anchor,
   so a staged dataset-anchored storage/query repair could enter a profile

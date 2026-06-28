@@ -6582,6 +6582,9 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert result["candidates"][0]["profile_route_groups"][0][
         "review_lane"
     ] == "profile_map_updates"
+    assert result["candidates"][0]["profile_route_groups"][0][
+        "match_strength"
+    ] == "direct_action"
     assert result["export"]["path"] == str(export_path)
     assert result["export"]["revision_iris"] == result["candidate_revision_iris"]
     assert result["candidates"][0]["relation_reasons"]
@@ -6589,6 +6592,7 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     exported = export_path.read_text(encoding="utf-8")
     assert "Profile insight review: Orders" in exported
     assert "### Profile Route Bridge" in exported
+    assert "profile_map_updates (direct_action)" in exported
     assert result["candidates"][0]["profile_route_keys"][0] in exported
 
 

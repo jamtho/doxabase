@@ -1809,8 +1809,12 @@ supporting profile observations, profile-derived targets/map implications, or
 advisory patterns from `draft_profile_map_updates`.
 `profile_route_keys` names matched draft `route_group_key` values; each
 `profile_route_groups[]` row has `route_group_key`, `review_lane`,
-`route_step_keys`, and `matched_by`. The Markdown export includes a `Profile
-Route Bridge` table in the review summary when candidates match draft routes.
+`route_step_keys`, `matched_by`, and `match_strength`. Strength values are
+`direct_action`, `strong_support`, or `related_support`: direct means the staged
+row appears to implement that draft lane, while strong/related support means it
+shares profile observations, support patterns, or anchors with the lane. The
+Markdown export includes a `Profile Route Bridge` table in the review summary
+when candidates match draft routes, and renders lane names with their strength.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:

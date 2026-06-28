@@ -137,6 +137,10 @@ treated as duplicate profile-map-update staging.
 The returned candidates and Markdown `Profile Route Bridge` table preserve
 matched profile route keys, so reviewers can see which draft duplicate/advisory
 group led to each staged row without reverse-joining action indexes by hand.
+Read each route group's `match_strength`: `direct_action` marks the lane a
+staged row appears to implement, while `strong_support` and `related_support`
+mean the row is included because it shares profile observations, support
+patterns, or anchors with that lane.
 
 When `stage_profile_map_updates` creates a staged revision, its
 `suggested_next_actions` includes an `export_profile_insight_review_bundle`

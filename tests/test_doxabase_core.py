@@ -21863,9 +21863,33 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert profile_map_route_key in candidates_by_iri[
         staged_map.staged_revision.revision_iri
     ].profile_route_keys
+    map_route_groups = {
+        group["review_lane"]: group
+        for group in candidates_by_iri[
+            staged_map.staged_revision.revision_iri
+        ].profile_route_groups
+    }
+    assert map_route_groups["profile_map_updates"]["match_strength"] == (
+        "direct_action"
+    )
+    assert map_route_groups["metric_vocabulary_review"]["match_strength"] == (
+        "strong_support"
+    )
     assert metric_route_key in candidates_by_iri[
         metric_promotion.staged_revisions[0].revision_iri
     ].profile_route_keys
+    metric_route_groups = {
+        group["review_lane"]: group
+        for group in candidates_by_iri[
+            metric_promotion.staged_revisions[0].revision_iri
+        ].profile_route_groups
+    }
+    assert metric_route_groups["metric_vocabulary_review"]["match_strength"] == (
+        "direct_action"
+    )
+    assert metric_route_groups["profile_map_updates"]["match_strength"] == (
+        "strong_support"
+    )
     assert query_route_key in candidates_by_iri[
         query_repair_draft.staged_revisions[0].revision_iri
     ].profile_route_keys
@@ -21893,6 +21917,10 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert profile_map_route_key in exported
     assert metric_route_key in exported
     assert query_route_key in exported
+    assert "profile_map_updates (direct_action)" in exported
+    assert "metric_vocabulary_review (direct_action)" in exported
+    assert "profile_map_updates (strong_support)" in exported
+    assert "metric_vocabulary_review (strong_support)" in exported
     secret_line = _line_number_containing(exported, secret_text)
     assert f"line {secret_line} " in " ".join(result.export.privacy_warnings)
     assert "Workflow flip denominator caveat" in exported
