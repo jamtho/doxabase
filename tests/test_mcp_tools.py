@@ -1395,6 +1395,52 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert result["note"].startswith("Read-only staged revision recovery plan")
 
 
+def test_plan_staged_revision_recovery_tool_suggests_batch_restage_dry_run(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage messages table",
+        rationale="Messages should become durable map context after review.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    record_map_dataset_tool(
+        db,
+        iri="https://example.test/project#Drift",
+        label="Drift",
+    )
+
+    result = plan_staged_revision_recovery_tool(
+        db,
+        revision_iris=[staged["revision_iri"]],
+    )
+
+    assert result["would_restage_revision_iris"] == [staged["revision_iri"]]
+    batch_action = result["suggested_next_actions"][0]
+    assert batch_action["tool_name"] == "restage_staged_revisions"
+    assert batch_action["mcp_tool_name"] == "doxabase.restage_staged_revisions"
+    assert batch_action["arguments"] == {
+        "revision_iris": [staged["revision_iri"]],
+        "dry_run": True,
+    }
+    assert any(
+        action["tool_name"] == "restage_staged_revision"
+        and action["arguments"] == {"iri": staged["revision_iri"]}
+        for action in result["suggested_next_actions"]
+    )
+
+
 def test_plan_staged_revision_recovery_tool_uses_embedded_no_repair_draft_route(
     tmp_path: Path,
 ) -> None:

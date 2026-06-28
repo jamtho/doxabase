@@ -212,6 +212,11 @@ mechanical restage list, and treat `repair_first_revision_iris` /
 `repair_or_replace` lanes as repair or replacement work before any same-payload
 restage. If `requires_recheck_after_each_apply` is true, apply at most one ready
 row, then rerun the planner.
+When `would_restage_revision_iris` is non-empty, top-level
+`suggested_next_actions` starts with a batch
+`restage_staged_revisions(revision_iris=[...], dry_run=true)` action over that
+worklist. Use it before creating successors; row-level `restage_staged_revision`
+actions remain available for focused single-row review.
 `project_brief` surfaces this route as `staged_frontier_review` whenever current
 staged work exists; follow it before adding new profile-map or query-repair
 staged revisions for the same frontier.

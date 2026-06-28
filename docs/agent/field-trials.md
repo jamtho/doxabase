@@ -2277,6 +2277,11 @@ few useful gaps:
   `missing_physical_layout`. Once storage is linked, that issue now exposes a
   reviewed `record_map_physical_layout` repair group with database table-layout
   guidance such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable`.
+- A staged-recovery frontier trial found `plan_staged_revision_recovery()`
+  exposed `would_restage_revision_iris` correctly but top-level suggestions still
+  nudged agents toward individual restage calls. Plans with restageable stale rows
+  now start `suggested_next_actions` with a batch
+  `restage_staged_revisions(..., dry_run=True)` action over that worklist.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

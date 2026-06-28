@@ -5763,6 +5763,17 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert any(
         "apply at most one ready row" in warning for warning in plan.warnings
     )
+    batch_dry_run_action = plan.suggested_next_actions[0]
+    assert batch_dry_run_action.tool_name == "restage_staged_revisions"
+    assert batch_dry_run_action.arguments == {
+        "revision_iris": [stale.revision_iri],
+        "dry_run": True,
+    }
+    assert any(
+        action.tool_name == "restage_staged_revision"
+        and action.arguments == {"iri": stale.revision_iri}
+        for action in plan.suggested_next_actions
+    )
 
     dry_run = db.restage_staged_revisions(
         plan.would_restage_revision_iris,
@@ -5795,6 +5806,13 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         restaged_stale_iri,
         handled_successor.revision_iri,
     }
+    followup_batch_action = followup_plan.suggested_next_actions[0]
+    assert followup_batch_action.tool_name == "restage_staged_revisions"
+    assert set(followup_batch_action.arguments["revision_iris"]) == {
+        restaged_stale_iri,
+        handled_successor.revision_iri,
+    }
+    assert followup_batch_action.arguments["dry_run"] is True
     assert set(followup_plan.mutation_frontier_iris) == {
         restaged_stale_iri,
         handled_successor.revision_iri,

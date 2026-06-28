@@ -25987,7 +25987,10 @@ class DoxaBase:
         requires_recheck_after_each_apply = bool(
             batch.bundle_summary.sequential_apply_recheck_candidate_iris
         )
-        suggested_next_actions = self._staged_recovery_suggested_next_actions(lanes)
+        suggested_next_actions = self._staged_recovery_suggested_next_actions(
+            lanes,
+            would_restage_revision_iris=batch.would_restage_revision_iris,
+        )
         return StagedRevisionRecoveryPlan(
             result_kind="staged_revision_recovery_plan",
             helper="plan_staged_revision_recovery",
@@ -26311,9 +26314,17 @@ class DoxaBase:
     def _staged_recovery_suggested_next_actions(
         self,
         lanes: Iterable[StagedRevisionRecoveryLane],
+        *,
+        would_restage_revision_iris: list[str],
     ) -> list[SuggestedNextAction]:
         review_first_actions: list[SuggestedNextAction] = []
         mutation_actions: list[SuggestedNextAction] = []
+        if would_restage_revision_iris:
+            review_first_actions.append(
+                self._staged_recovery_batch_restage_dry_run_action(
+                    would_restage_revision_iris
+                )
+            )
         for lane in lanes:
             for action in lane.suggested_next_actions:
                 if action.tool_name in {
@@ -26330,6 +26341,30 @@ class DoxaBase:
                     mutation_actions.append(action)
         return self._dedupe_suggested_next_actions(
             [*review_first_actions, *mutation_actions]
+        )
+
+    def _staged_recovery_batch_restage_dry_run_action(
+        self,
+        revision_iris: list[str],
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {
+            "revision_iris": list(revision_iris),
+            "dry_run": True,
+        }
+        return SuggestedNextAction(
+            action_label="Dry-run batch restage",
+            tool_name="restage_staged_revisions",
+            mcp_tool_name="doxabase.restage_staged_revisions",
+            arguments=arguments,
+            reason=(
+                "Planner found mechanically restageable stale revisions. Run a "
+                "batch dry-run over would_restage_revision_iris before creating "
+                "successors, then restage only the reviewed worklist."
+            ),
+            call=self._suggested_call_string(
+                "restage_staged_revisions",
+                arguments,
+            ),
         )
 
     def _batch_restage_not_restageable_reason(

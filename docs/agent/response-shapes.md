@@ -4430,6 +4430,13 @@ manual replacement should come before another same-payload restage. If
 row, then rerun `plan_staged_revision_recovery()` before the next mutation.
 `requires_recheck_after_each_apply` is the boolean form of that same sequencing
 hazard.
+When `would_restage_revision_iris` is non-empty,
+`plan.suggested_next_actions[0]` is a batch
+`restage_staged_revisions` dry-run action with
+`arguments.revision_iris == would_restage_revision_iris` and
+`arguments.dry_run == True`. Keep the row-level restage actions for focused
+single-row review, but prefer the batch dry-run before creating restage
+successors in unattended loops.
 
 ### Staged Revision Rebase Draft
 
