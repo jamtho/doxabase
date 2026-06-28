@@ -210,6 +210,9 @@ mechanical restage list, and treat `repair_first_revision_iris` /
 `repair_or_replace` lanes as repair or replacement work before any same-payload
 restage. If `requires_recheck_after_each_apply` is true, apply at most one ready
 row, then rerun the planner.
+`project_brief` surfaces this route as `staged_frontier_review` whenever current
+staged work exists; follow it before adding new profile-map or query-repair
+staged revisions for the same frontier.
 Use `repair_or_replace_source_revision_iris` as the broad top-level repair
 worklist. It includes every lane currently routing to `repair_or_replace`,
 including same-slot replacement cases that may not be listed in

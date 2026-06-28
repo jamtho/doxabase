@@ -138,9 +138,10 @@ Start with `describe_query_context(dataset_iri)`:
    and link it to the dataset, or stage a reviewed `rc:hasStorageAccess` link to
    an existing access resource. The repair hint includes
    `candidate_existing_storage_accesses` when current map storage accesses exist;
-   use those ranked candidates for review, but still fill the staged link's
-   `object` with the chosen reviewed access IRI. When recording a new storage
-   access, omit the optional storage-owned `path_templates` field if the dataset
+   use those ranked candidates for review only. Do not auto-link the first
+   candidate just because it is listed; fill the staged link's `object` with
+   the chosen reviewed access IRI. When recording a new storage access, omit the
+   optional storage-owned `path_templates` field if the dataset
    or partition already carries the reviewed path template; duplicating it can
    create equivalent ready candidates. Database relation identifiers are the
    important exception and should be recorded as storage-access-owned templates.
@@ -170,9 +171,9 @@ Start with `describe_query_context(dataset_iri)`:
    tool.
    If `project_brief.recommended_next_tasks[]` reports
    `pending_staged_repair_iris` for a query repair task, review the corresponding
-   `staged_review` item before staging another repair. The pending staged row is
-   already anchored to the same dataset and may resolve the query repair queue
-   after apply/recheck.
+   `staged_frontier_review` / `staged_review` item before staging another
+   repair. The pending staged row is already anchored to the same dataset and
+   may resolve the query repair queue after apply/recheck.
 7. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, profile evidence inspection actions come before query-plan
    drafting; when multiple candidate runs need review, several

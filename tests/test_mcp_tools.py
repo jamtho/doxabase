@@ -441,15 +441,251 @@ def test_project_brief_tool_marks_pending_staged_query_repairs(
     )
     staged = db.stage_map_assertion_change(**remove_arguments)
 
-    result = project_brief_tool(db, limit=2)
+    result = project_brief_tool(db, limit=3)
 
     assert result["staged_review"]["items"][0]["revision_anchor_iris"] == [dataset]
     assert [
         task["task_type"] for task in result["recommended_next_tasks"]
-    ] == ["staged_review", "query_repair_review"]
-    repair_task = result["recommended_next_tasks"][1]
+    ] == ["staged_frontier_review", "staged_review", "query_repair_review"]
+    frontier_task = result["recommended_next_tasks"][0]
+    assert frontier_task["suggested_next_action"]["tool_name"] == (
+        "plan_staged_revision_recovery"
+    )
+    repair_task = result["recommended_next_tasks"][2]
     assert repair_task["pending_staged_repair_iris"] == [staged.revision_iri]
     assert "Pending staged repair(s)" in repair_task["reason"]
+
+
+def test_project_brief_tool_gates_duplicate_profile_staging(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileEvidence"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_local_storage",
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "warehouse"),
+        path_templates=["orders/current.csv"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#orders_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=dataset,
+        dataset_summary="Orders were profiled with a full scan.",
+        evidence_summary="Orders full-profile evidence.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Orders table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=12,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+    )
+    draft = draft_profile_map_updates_tool(db, dataset, evidence)
+    staged = stage_profile_map_updates_tool(
+        db,
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=(
+            draft["representative_recommendation_indexes"]
+        ),
+    )
+
+    result = project_brief_tool(db, limit=3, profile_candidate_limit=1)
+
+    assert [
+        task["task_type"] for task in result["recommended_next_tasks"]
+    ] == ["staged_frontier_review", "staged_review", "profile_review"]
+    frontier_task, staged_task, profile_task = result["recommended_next_tasks"]
+    assert frontier_task["suggested_next_action"]["tool_name"] == (
+        "plan_staged_revision_recovery"
+    )
+    assert staged_task["resource"]["iri"] == staged["staged_revision"]["revision_iri"]
+    assert profile_task["pending_staged_profile_update_iris"] == [
+        staged["staged_revision"]["revision_iri"]
+    ]
+    assert "Pending staged profile update(s)" in profile_task["reason"]
+    assert profile_task["suggested_next_action"]["tool_name"] == (
+        "draft_profile_map_updates"
+    )
+    assert profile_task["suggested_next_action"]["arguments"] == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+    }
+
+
+def test_query_storage_frontier_tool_route_regression(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    non_table_asset = f"{base}DesignNotesArchive"
+    orders = f"{base}Orders"
+    orphan = f"{base}OrphanEvents"
+    relation = "mart.orders"
+    warehouse_storage = record_map_storage_access_tool(
+        db,
+        iri=f"{base}orders_database_storage",
+        label="Orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=[relation],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    archive_storage = record_map_storage_access_tool(
+        db,
+        iri=f"{base}orphan_archive_storage",
+        label="Orphan archive storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri=f"{base}orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=non_table_asset,
+        label="Design notes archive",
+        is_table=False,
+        extra_types=[f"{base}DocumentArchive"],
+    )
+    record_map_dataset_tool(
+        db,
+        iri=orders,
+        label="Orders",
+        is_table=True,
+        path_templates=[relation],
+        storage_accesses=[warehouse_storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(db, iri=orphan, label="Orphan events", is_table=True)
+
+    non_table_brief = project_brief_tool(db, limit=5)
+    non_table_task = next(
+        task
+        for task in non_table_brief["recommended_next_tasks"]
+        if task["resource"] and task["resource"]["iri"] == non_table_asset
+    )
+    assert non_table_task["task_type"] == "non_tabular_asset_review"
+    assert non_table_task["suggested_next_action"]["tool_name"] == (
+        "describe_context_slice"
+    )
+
+    orphan_context = describe_query_context_tool(db, iri=orphan)
+    missing_storage_group = next(
+        group
+        for group in orphan_context["suggested_repair_action_groups"]
+        if group["issue_code"] == "missing_storage_access"
+    )
+    assert missing_storage_group["repair_action_type"] == (
+        "record_or_link_storage_access"
+    )
+    assert missing_storage_group["action_status_counts"] == {"pending_review": 2}
+    assert {
+        action["action_type"] for action in missing_storage_group["actions"]
+    } == {
+        "record_reviewed_storage_access",
+        "stage_existing_storage_access_link",
+    }
+    candidate_storage_iris = {
+        candidate["storage_access"]["iri"]
+        for candidate in missing_storage_group["repair_context"][
+            "candidate_existing_storage_accesses"
+        ]
+    }
+    assert archive_storage["iri"] in candidate_storage_iris
+
+    context = describe_query_context_tool(db, iri=orders)
+    relation_candidate_index = next(
+        index
+        for index, candidate in enumerate(context["query_target_candidates"])
+        if candidate["relation_identifier"] == relation
+    )
+    mismatch_group = next(
+        group
+        for group in context["suggested_repair_action_groups"]
+        if group["issue_code"] == "database_relation_template_source_mismatch"
+    )
+    action_by_type = {
+        action["action_type"]: action for action in mismatch_group["actions"]
+    }
+    assert mismatch_group["action_status_counts"] == {
+        "pending_review": 1,
+        "already_satisfied": 1,
+    }
+    assert action_by_type["add_reviewed_relation_template"]["action_status"] == (
+        "already_satisfied"
+    )
+    assert action_by_type["remove_misplaced_source_template"][
+        "required_extra_arguments"
+    ] == ["rationale"]
+    remove_arguments = dict(
+        action_by_type["remove_misplaced_source_template"]["arguments"]
+    )
+    remove_arguments["rationale"] = (
+        "Reviewed dataset path template as misplaced database relation metadata."
+    )
+    staged = stage_map_assertion_change_tool(db, **remove_arguments)
+
+    brief = project_brief_tool(db, limit=5)
+    staged_task_index = next(
+        index
+        for index, task in enumerate(brief["recommended_next_tasks"])
+        if task["task_type"] == "staged_review"
+        and task["resource"]
+        and task["resource"]["iri"] == staged["revision_iri"]
+    )
+    query_task_index, query_task = next(
+        (index, task)
+        for index, task in enumerate(brief["recommended_next_tasks"])
+        if task["task_type"] == "query_repair_review"
+        and task["pending_staged_repair_iris"] == [staged["revision_iri"]]
+    )
+    assert staged_task_index < query_task_index
+    assert query_task["pending_staged_repair_iris"] == [staged["revision_iri"]]
+    assert query_task["suggested_next_action"]["tool_name"] == (
+        "describe_query_context"
+    )
+
+    allowed_plan = draft_query_plan_tool(
+        db,
+        iri=orders,
+        candidate_index=relation_candidate_index,
+        allow_context_blocked_candidate=True,
+    )
+    assert allowed_plan["scan"]["relation_identifier"] == relation
+    assert allowed_plan["scan"]["connection_reference"] == "warehouse-prod"
+    assert allowed_plan["scan"]["uri_template"] is None
+    assert allowed_plan["handoff_kind"] == "database_relation_handoff"
+    assert allowed_plan["review_gate"]["ready_for_execution_attempt"] is False
 
 
 def test_project_brief_tool_serializes_hidden_staged_review_counts(
@@ -481,9 +717,10 @@ def test_project_brief_tool_serializes_hidden_staged_review_counts(
     assert result["staged_review"]["count"] == 3
     assert result["staged_review"]["returned_count"] == 1
     assert result["staged_review"]["omitted_count"] == 2
+    assert result["queue_counts"]["staged_frontier_review"] == 1
     assert result["queue_counts"]["staged_review"] == 3
-    assert result["returned_queue_counts"]["staged_review"] == 1
-    assert result["omitted_queue_counts"]["staged_review"] == 2
+    assert result["returned_queue_counts"]["staged_frontier_review"] == 1
+    assert result["omitted_queue_counts"]["staged_review"] == 3
 
 
 def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> None:

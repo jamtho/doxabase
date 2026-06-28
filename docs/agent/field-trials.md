@@ -2118,6 +2118,24 @@ few useful gaps:
   and recovery plans now expose `mutation_frontier_iris` for deduped resolved
   apply/restage/repair targets plus `requires_recheck_after_each_apply` as the
   boolean apply-one-then-recheck hazard.
+- A query/storage frontier trial confirmed non-table assets, database relation
+  handoffs, missing-storage repair candidates, and pending staged query repairs
+  route correctly through MCP wrappers. The durable lesson is operational:
+  `candidate_existing_storage_accesses` are review candidates, not permission to
+  auto-link the first storage access, and `pending_staged_repair_iris` should
+  stop agents from staging duplicate query repairs.
+- A project-brief frontier trial found that profile-review tasks could still
+  recommend duplicate `stage_profile_map_updates` while current staged profile
+  work for the same dataset/evidence was waiting. `project_brief` now emits a
+  `staged_frontier_review` task pointing to `plan_staged_revision_recovery` when
+  current staged work exists, and profile tasks with matching pending staged
+  profile updates fall back to read-only `draft_profile_map_updates`.
+- A review/export/privacy trial confirmed grouped Markdown and RDF exports are
+  faithful artifacts: privacy warnings redact warning text and point at final
+  artifact line numbers, but patch literals remain unredacted in Markdown,
+  history exports, and default project TriG. Use workflow/no-history exports
+  when staged patch payloads are not needed, and follow `resolved_target_iri` or
+  `mutation_frontier_iris` instead of row IRIs when automating from exports.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

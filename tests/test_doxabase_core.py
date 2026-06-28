@@ -187,14 +187,16 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     brief = db.project_brief(limit=2)
 
     assert brief.queue_counts["query_repair_review"] >= 3
+    assert brief.queue_counts["staged_frontier_review"] == 1
     assert brief.queue_counts["staged_review"] == 1
     assert brief.returned_queue_counts["query_repair_review"] == 1
-    assert brief.returned_queue_counts["staged_review"] == 1
+    assert brief.returned_queue_counts["staged_frontier_review"] == 1
     assert brief.omitted_queue_counts["query_repair_review"] >= 2
+    assert brief.omitted_queue_counts["staged_review"] == 1
     assert [
         task.task_type for task in brief.recommended_next_tasks
-    ] == ["query_repair_review", "staged_review"]
-    repair_task = brief.recommended_next_tasks[0]
+    ] == ["staged_frontier_review", "query_repair_review"]
+    repair_task = brief.recommended_next_tasks[1]
     assert repair_task.suggested_next_action is not None
     assert repair_task.suggested_next_action.tool_name == "describe_query_context"
     assert repair_task.suggested_next_action.arguments == {
@@ -203,9 +205,9 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     assert repair_task.suggested_next_call == (
         "describe_query_context(iri='https://example.test/project#Alpha')"
     )
-    assert brief.active_queue_type_count == 2
+    assert brief.active_queue_type_count == 3
     assert brief.returned_queue_type_count == 2
-    assert brief.limit_crowded_queue_types == []
+    assert brief.limit_crowded_queue_types == ["staged_review"]
 
 
 def test_project_brief_counts_staged_review_rows_hidden_by_limit(
@@ -238,9 +240,11 @@ def test_project_brief_counts_staged_review_rows_hidden_by_limit(
     assert brief.staged_review.returned_count == 2
     assert brief.staged_review.omitted_count == 2
     assert len(brief.staged_review.items) == 2
+    assert brief.queue_counts["staged_frontier_review"] == 1
     assert brief.queue_counts["staged_review"] == 4
-    assert brief.returned_queue_counts["staged_review"] == 2
-    assert brief.omitted_queue_counts["staged_review"] == 2
+    assert brief.returned_queue_counts["staged_frontier_review"] == 1
+    assert brief.returned_queue_counts["staged_review"] == 1
+    assert brief.omitted_queue_counts["staged_review"] == 3
 
 
 def test_project_brief_reports_limit_crowded_queue_types(
@@ -298,14 +302,19 @@ def test_project_brief_reports_limit_crowded_queue_types(
 
     brief = db.project_brief(limit=3, profile_candidate_limit=1)
 
-    assert brief.active_queue_type_count == 4
+    assert brief.active_queue_type_count == 5
     assert brief.returned_queue_type_count == 3
+    assert brief.queue_counts["staged_frontier_review"] == 1
     assert brief.queue_counts["staged_review"] == 1
     assert brief.omitted_queue_counts["staged_review"] == 1
-    assert brief.limit_crowded_queue_types == ["staged_review"]
+    assert brief.limit_crowded_queue_types == ["profile_review", "staged_review"]
     assert [
         task.task_type for task in brief.recommended_next_tasks
-    ] == ["query_repair_review", "non_tabular_asset_review", "profile_review"]
+    ] == [
+        "staged_frontier_review",
+        "query_repair_review",
+        "non_tabular_asset_review",
+    ]
 
 
 def test_project_brief_routes_non_tabular_assets_to_context_review(
@@ -15467,15 +15476,21 @@ def test_project_brief_prioritizes_pending_staged_query_repair(
     )
     staged = db.stage_map_assertion_change(**remove_arguments)
 
-    brief = db.project_brief(limit=2)
+    brief = db.project_brief(limit=3)
 
     assert brief.queue_counts["query_repair_review"] == 1
+    assert brief.queue_counts["staged_frontier_review"] == 1
     assert brief.queue_counts["staged_review"] == 1
     assert [task.task_type for task in brief.recommended_next_tasks] == [
+        "staged_frontier_review",
         "staged_review",
         "query_repair_review",
     ]
-    staged_task, query_task = brief.recommended_next_tasks
+    frontier_task, staged_task, query_task = brief.recommended_next_tasks
+    assert frontier_task.suggested_next_action is not None
+    assert frontier_task.suggested_next_action.tool_name == (
+        "plan_staged_revision_recovery"
+    )
     assert staged_task.suggested_next_action is not None
     assert staged_task.suggested_next_action.tool_name == "describe_staged_revision"
     assert staged_task.resource is not None

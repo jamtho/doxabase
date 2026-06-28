@@ -118,18 +118,20 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "profile_type_advisories": 0,
     },
     "queue_counts": {
+        "staged_frontier_review": 1,
         "query_repair_review": 2,
         "profile_review": 1,
         "staged_review": 1,
     },
     "returned_queue_counts": {
+        "staged_frontier_review": 1,
         "query_repair_review": 1,
         "profile_review": 1,
         "staged_review": 1,
     },
     "omitted_queue_counts": {"query_repair_review": 1},
-    "active_queue_type_count": 3,
-    "returned_queue_type_count": 3,
+    "active_queue_type_count": 4,
+    "returned_queue_type_count": 4,
     "limit_crowded_queue_types": [],
     "datasets": [
         {
@@ -175,17 +177,18 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         },
     ],
     "staged_review": {
-        "count": 0,
-        "returned_count": 0,
+        "count": 1,
+        "returned_count": 1,
         "omitted_count": 0,
-        "application_status_counts": {},
-        "next_action_queue_item_counts": {},
+        "application_status_counts": {"pending": 1},
+        "next_action_queue_item_counts": {"apply_after_review": 1},
         "items": [
             {
                 "revision_iri": "https://...",
                 "queue": "apply_after_review",
                 "resolved_target_iri": "https://...",
                 "revision_anchor_iris": ["https://..."],
+                "evidence_iris": ["https://..."],
                 "suggested_next_action": {...},
             }
         ],
@@ -200,6 +203,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "suggested_next_action": {...},
             "suggested_next_call": "describe_query_context(...)",
             "pending_staged_repair_iris": [],
+            "pending_staged_profile_update_iris": [],
         },
     ],
     "limit": 20,
@@ -209,17 +213,26 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
 
 `project_brief` is an orientation helper, not a proof of correctness. Follow
 its suggested actions into `describe_query_context`,
-`draft_profile_map_updates`, `list_graph_revisions`, or the relevant focused
-inspection helper before making durable graph changes.
+`draft_profile_map_updates`, `plan_staged_revision_recovery`,
+`list_graph_revisions`, or the relevant focused inspection helper before making
+durable graph changes.
 `dataset_query_readiness_counts`, `profile_queue_counts`, and `queue_counts`
 are computed across scanned table/dataset entities. For staged work,
-`queue_counts["staged_review"]` uses `staged_review.count`, while
+`queue_counts["staged_frontier_review"]` appears when current staged work
+exists. Its task points to `plan_staged_revision_recovery` so agents can inspect
+`mutation_frontier_iris` and apply-one-then-recheck hazards before staging more
+work. `queue_counts["staged_review"]` uses `staged_review.count`, while
 `staged_review.items` and `returned_queue_counts` stay bounded by `limit`.
 `staged_review.items[].revision_anchor_iris` lists graph revision anchors for
-the returned staged row. When a query repair task already has staged work
-anchored to the same dataset, `pending_staged_repair_iris` names those staged
-revision IRIs and the task is lowered behind `staged_review` so unattended agents
-review/apply the pending repair before staging another one.
+the returned staged row, and `evidence_iris` lists its direct revision evidence.
+When a query repair task already has staged work anchored to the same dataset,
+`pending_staged_repair_iris` names those staged revision IRIs and the task is
+lowered behind `staged_review` so unattended agents review/apply the pending
+repair before staging another one. When a profile task already has staged work
+anchored to the same dataset and evidence,
+`pending_staged_profile_update_iris` names those staged revision IRIs and the
+task's suggested action is read-only `draft_profile_map_updates` instead of
+another `stage_profile_map_updates` call.
 `datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue

@@ -278,6 +278,7 @@ class ProjectBriefStagedReviewItem:
     queue: str | None
     resolved_target_iri: str | None
     revision_anchor_iris: list[str]
+    evidence_iris: list[str]
     suggested_next_action: SuggestedNextAction | None
 
 
@@ -301,6 +302,7 @@ class ProjectBriefRecommendedTask:
     suggested_next_action: SuggestedNextAction | None
     suggested_next_call: str | None
     pending_staged_repair_iris: list[str] = field(default_factory=list)
+    pending_staged_profile_update_iris: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -3055,6 +3057,11 @@ class DoxaBase:
         recommended_tasks: list[ProjectBriefRecommendedTask] = []
         all_dataset_summaries: list[ProjectBriefDatasetSummary] = []
         staged_review = self._project_brief_staged_review(limit=limit)
+        staged_frontier_task = self._project_brief_staged_frontier_task(
+            staged_review
+        )
+        if staged_frontier_task is not None:
+            recommended_tasks.append(staged_frontier_task)
 
         for entity_index, entity in enumerate(dataset_entities):
             description = self.describe_dataset(entity.iri)
@@ -3264,6 +3271,47 @@ class DoxaBase:
         evidence_iris.extend(profile_summary.evidence_iris)
         return list(dict.fromkeys(evidence_iris))
 
+    def _project_brief_staged_frontier_task(
+        self,
+        staged_review: ProjectBriefStagedReviewSummary,
+    ) -> ProjectBriefRecommendedTask | None:
+        if staged_review.count <= 0:
+            return None
+        action = self._project_brief_plan_staged_revision_recovery_action()
+        return ProjectBriefRecommendedTask(
+            priority=5,
+            task_type="staged_frontier_review",
+            source="plan_staged_revision_recovery",
+            resource=None,
+            reason=(
+                "Current staged work exists; inspect the staged mutation frontier "
+                "and apply-one-then-recheck hazards before staging duplicate "
+                "profile or query repair work."
+            ),
+            suggested_next_action=action,
+            suggested_next_call=action.call,
+        )
+
+    def _project_brief_plan_staged_revision_recovery_action(
+        self,
+    ) -> SuggestedNextAction:
+        arguments = {"current_staged_work_only": True}
+        return SuggestedNextAction(
+            action_label="Plan current staged recovery",
+            tool_name="plan_staged_revision_recovery",
+            mcp_tool_name="doxabase.plan_staged_revision_recovery",
+            arguments=arguments,
+            reason=(
+                "Inspect current staged work, mutation_frontier_iris, and "
+                "requires_recheck_after_each_apply before taking another graph "
+                "mutation."
+            ),
+            call=self._suggested_call_string(
+                "plan_staged_revision_recovery",
+                arguments,
+            ),
+        )
+
     def _project_brief_staged_review(
         self,
         *,
@@ -3296,6 +3344,11 @@ class DoxaBase:
                         ["history"],
                         revision.iri,
                         "rc:revisionAnchor",
+                    ),
+                    evidence_iris=self._objects(
+                        ["history"],
+                        revision.iri,
+                        "rc:evidence",
                     ),
                     suggested_next_action=(
                         revision.suggested_next_actions[0]
@@ -3409,26 +3462,49 @@ class DoxaBase:
                 or draft.metric_advisory_count
                 or draft.type_advisory_count
             ):
-                action = (
-                    draft.suggested_next_actions[0]
-                    if draft.suggested_next_actions
-                    else self._project_brief_draft_profile_action(
+                pending_staged_profile_update_iris = (
+                    self._project_brief_pending_staged_profile_update_iris(
+                        dataset.dataset.iri,
+                        draft.evidence_iri,
+                        staged_review,
+                    )
+                )
+                if pending_staged_profile_update_iris:
+                    action = self._project_brief_draft_profile_action(
                         dataset.dataset.iri,
                         draft.evidence_iri,
                     )
+                else:
+                    action = (
+                        draft.suggested_next_actions[0]
+                        if draft.suggested_next_actions
+                        else self._project_brief_draft_profile_action(
+                            dataset.dataset.iri,
+                            draft.evidence_iri,
+                        )
+                    )
+                pending_note = (
+                    " Pending staged profile update(s) already anchor this "
+                    "dataset/evidence; review staged frontier work before "
+                    "staging another profile update."
+                    if pending_staged_profile_update_iris
+                    else ""
                 )
                 tasks.append(
                     ProjectBriefRecommendedTask(
-                        priority=30,
+                        priority=55 if pending_staged_profile_update_iris else 30,
                         task_type="profile_review",
                         source="draft_profile_map_updates",
                         resource=dataset.dataset,
                         reason=(
                             "Profile evidence has map updates, conflicts, "
-                            "metric vocabulary, or type findings to review."
+                            f"metric vocabulary, or type findings to review.{pending_note}"
                         ),
                         suggested_next_action=action,
                         suggested_next_call=action.call,
+                        pending_staged_profile_update_iris=(
+                            pending_staged_profile_update_iris
+                        ),
                     )
                 )
         return tasks
@@ -3588,6 +3664,28 @@ class DoxaBase:
             if item.suggested_next_action is not None
             and item.queue not in ignored_queues
             and dataset_value in item.revision_anchor_iris
+        ]
+
+    def _project_brief_pending_staged_profile_update_iris(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+        staged_review: ProjectBriefStagedReviewSummary,
+    ) -> list[str]:
+        dataset_value = self.expand_iri(dataset_iri)
+        evidence_value = self.expand_iri(evidence_iri)
+        ignored_queues = {
+            None,
+            "informational",
+            "inspect_already_applied",
+        }
+        return [
+            item.revision_iri
+            for item in staged_review.items
+            if item.suggested_next_action is not None
+            and item.queue not in ignored_queues
+            and dataset_value in item.revision_anchor_iris
+            and evidence_value in item.evidence_iris
         ]
 
     def _project_brief_staged_tasks(
