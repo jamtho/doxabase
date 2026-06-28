@@ -984,9 +984,10 @@ computes apply checks for patch-backed revisions, as does
 `describe_revision_lineage(revision_iri)` takes one staged source, restaged
 successor, or applied event IRI and returns the compact graph-level relationship
 card around it: selected row/role, paired staged/applied row when visible,
-applied and staged revision IRIs, restage chain, alternatives, related revision
-IRIs, latest/current pointers, warnings, and next-action routing. Use it when
-the question starts from a revision IRI rather than a resource IRI. It is
+applied and staged revision IRIs, `applied_source_revision_iri` for the staged
+row that actually applied, restage chain, alternatives, related revision IRIs,
+latest/current pointers, warnings, and next-action routing. Use it when the
+question starts from a revision IRI rather than a resource IRI. It is
 read-only and does not include patch payloads or arbitrary graph-version
 snapshots; use staged, applied-diff, or snapshot helpers for those. Exact diff
 availability still comes from the nested row `snapshot_evidence`, but lineage

@@ -7952,6 +7952,7 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     assert source_lineage.paired_revision is None
     assert source_lineage.applied_revision_iri == applied.applied_revision_iri
     assert source_lineage.staged_revision_iri == first.revision_iri
+    assert source_lineage.applied_source_revision_iri == first_restaged.revision_iri
     assert source_lineage.current_staged_revision_iri is None
     assert source_lineage.current_revision_iri is None
     assert source_lineage.latest_revision_iri == applied.applied_revision_iri
@@ -7982,7 +7983,11 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
         (
             "describe_applied_revision_diff(iri='"
             f"{applied.applied_revision_iri}')"
-        )
+        ),
+        (
+            "describe_staged_revision(iri='"
+            f"{first_restaged.revision_iri}')"
+        ),
     ]
     assert source_lineage.warnings == []
 
@@ -7993,6 +7998,7 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     assert staged_lineage.paired_revision.iri == applied.applied_revision_iri
     assert staged_lineage.paired_role == "applied_event"
     assert staged_lineage.staged_revision_iri == first_restaged.revision_iri
+    assert staged_lineage.applied_source_revision_iri == first_restaged.revision_iri
     assert staged_lineage.applied_revision_iri == applied.applied_revision_iri
 
     applied_lineage = db.describe_revision_lineage(applied.applied_revision_iri)
@@ -8001,6 +8007,7 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     assert applied_lineage.paired_revision is not None
     assert applied_lineage.paired_revision.iri == first_restaged.revision_iri
     assert applied_lineage.paired_role == "applied_source"
+    assert applied_lineage.applied_source_revision_iri == first_restaged.revision_iri
     assert applied_lineage.restage_chain_iris == [
         first.revision_iri,
         first_restaged.revision_iri,
@@ -8013,7 +8020,11 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
         (
             "describe_applied_revision_diff(iri='"
             f"{applied.applied_revision_iri}')"
-        )
+        ),
+        (
+            "describe_staged_revision(iri='"
+            f"{first_restaged.revision_iri}')"
+        ),
     ]
 
     active_lineage = db.describe_revision_lineage(second_restaged.revision_iri)
@@ -8022,6 +8033,7 @@ def test_describe_revision_lineage_summarizes_restage_and_apply_chain(
     assert active_lineage.current_staged_revision_iri == second_restaged.revision_iri
     assert active_lineage.current_revision_iri == second_restaged.revision_iri
     assert active_lineage.applied_revision_iri is None
+    assert active_lineage.applied_source_revision_iri is None
     assert active_lineage.latest_revision_iri == second_restaged.revision_iri
     assert active_lineage.next_action is not None
     assert active_lineage.next_action.queue == "restage_after_review"

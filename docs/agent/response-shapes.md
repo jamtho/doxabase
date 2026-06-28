@@ -2584,6 +2584,7 @@ lineage.paired_revision
 lineage.paired_role
 lineage.applied_revision_iri
 lineage.staged_revision_iri
+lineage.applied_source_revision_iri
 lineage.current_staged_revision_iri
 lineage.current_revision_iri
 lineage.latest_revision_iri
@@ -2608,10 +2609,15 @@ lineage.drift_detail
 non-patch history. `restage_chain_iris` walks from the oldest visible source to
 the latest visible successor for the selected proposal family. When a successor
 has already been applied, `latest_revision_iri` points at the applied event and
-`next_action` prefers the applied-event inspection route; if that route came
-from a derived list-row action, lineage also exposes it as a one-item
-`suggested_next_actions` / `suggested_next_calls` list for simple routers. When
-a successor is still live staged work, `current_staged_revision_iri` and
+`applied_source_revision_iri` names the staged successor that was actually
+applied. Older stale-source lineages keep `staged_revision_iri` on the selected
+source row for compatibility, so use `applied_source_revision_iri` when you need
+the source patch for the applied event. `next_action` prefers the applied-event
+inspection route; if that route came from a derived list-row action, lineage
+also exposes it in `suggested_next_actions` / `suggested_next_calls` for simple
+routers. When the applied source differs from the selected row, suggested
+actions also include `describe_staged_revision(applied_source_revision_iri)`.
+When a successor is still live staged work, `current_staged_revision_iri` and
 `current_revision_iri` both name that current row. `related_revision_iris`
 includes selected, paired, restage-chain, latest/current, alternative,
 applied-event IRIs reachable from alternative staged rows, and every visible

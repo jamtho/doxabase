@@ -1056,6 +1056,7 @@ class RevisionLineageDescription:
     paired_role: str | None
     applied_revision_iri: str | None
     staged_revision_iri: str | None
+    applied_source_revision_iri: str | None
     current_staged_revision_iri: str | None
     current_revision_iri: str | None
     latest_revision_iri: str | None
@@ -4432,6 +4433,33 @@ class DoxaBase:
             )
             if derived_action is not None:
                 suggested_next_actions = [derived_action]
+        if (
+            chain_applied_source is not None
+            and chain_applied_source.iri != selected.iri
+        ):
+            arguments = {"iri": chain_applied_source.iri}
+            if not any(
+                action.tool_name == "describe_staged_revision"
+                and action.arguments == arguments
+                for action in suggested_next_actions
+            ):
+                suggested_next_actions.append(
+                    SuggestedNextAction(
+                        action_label="Inspect applied staged source",
+                        tool_name="describe_staged_revision",
+                        mcp_tool_name="doxabase.describe_staged_revision",
+                        arguments=arguments,
+                        reason=(
+                            "Inspect the staged successor that was actually "
+                            "applied for this lineage, rather than inferring it "
+                            "from the restage chain."
+                        ),
+                        call=self._suggested_call_string(
+                            "describe_staged_revision",
+                            arguments,
+                        ),
+                    )
+                )
         suggested_next_actions = self._with_revision_snapshot_evidence_actions(
             suggested_next_actions,
             selected.snapshot_evidence,
@@ -4487,6 +4515,11 @@ class DoxaBase:
             ),
             staged_revision_iri=(
                 staged_revision.iri if staged_revision is not None else None
+            ),
+            applied_source_revision_iri=(
+                chain_applied_source.iri
+                if chain_applied_source is not None
+                else None
             ),
             current_staged_revision_iri=(
                 current_staged_revision.iri

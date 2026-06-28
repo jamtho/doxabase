@@ -1687,7 +1687,12 @@ few useful gaps:
   the live patch-only rows with `current_staged_work_only=True`, while
   `include_patch_mentions=False` remains unsafe for unanchored patch-only
   mutation queues. Lineage `next_action_queue_item` resolved the row-vs-target
-  ambiguity after a staged alternative lost the race to an applied branch; the
+  ambiguity after a staged alternative lost the race to an applied branch. A
+  follow-up restage/apply lineage trial found graph lineage still made agents
+  infer the actually applied staged successor from `restage_chain_iris[-1]`;
+  `describe_revision_lineage.applied_source_revision_iri` now names it
+  directly and suggested actions include `describe_staged_revision` for that
+  row when it differs from the selected stale source. The
   next larger staged-revision gap is a read-first
   `draft_staged_revision_rebase(...)` helper for validation-failed or stale
   overlapping alternatives, not another list/join tweak. Profile support versus

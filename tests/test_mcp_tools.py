@@ -1432,6 +1432,7 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert generic_lineage["paired_role"] == "applied_source"
     assert generic_lineage["applied_revision_iri"] == applied["applied_revision_iri"]
     assert generic_lineage["staged_revision_iri"] == staged["revision_iri"]
+    assert generic_lineage["applied_source_revision_iri"] == staged["revision_iri"]
     assert generic_lineage["latest_revision_iri"] == applied["applied_revision_iri"]
     assert generic_lineage["latest_role"] == "applied_event"
     assert generic_lineage["restage_chain_iris"] == [staged["revision_iri"]]
@@ -1450,6 +1451,7 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
             "describe_applied_revision_diff("
             f"iri='{applied['applied_revision_iri']}')"
         ),
+        f"describe_staged_revision(iri='{staged['revision_iri']}')",
     ]
     assert generic_lineage["warnings"] == []
 

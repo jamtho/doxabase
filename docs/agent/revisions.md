@@ -431,6 +431,12 @@ available in an imported capsule.
 When `staged_revision_iri` is `None` on an applied event lineage, read
 `warnings`: the applied event may point to a staged source that is absent from
 the visible history graph.
+When starting from an older stale source whose restage successor has been
+applied, graph lineage keeps `staged_revision_iri` on the selected stale row for
+compatibility and sets `applied_source_revision_iri` to the staged successor
+that was actually applied. Use `applied_source_revision_iri` or its
+`describe_staged_revision` suggested action when you need the patch content
+behind the applied event.
 
 A cold recovery script usually follows this order:
 
@@ -494,8 +500,9 @@ After the successor is applied, direct routes from the older stale source keep
 `restaged_by` / `current_restaged_by` pointing at the staged successor, but
 `check_staged_revision_apply()`, `list_graph_revisions()`, and grouped export
 rows can put `next_action.arguments["iri"]` on the applied event. Use lineage
-when you need the full chain; use row-local `next_action` when you just need the
-next inspection call.
+when you need the full chain and `applied_source_revision_iri` when you need the
+staged successor that actually applied; use row-local `next_action` when you
+just need the next inspection call.
 Lineage responses also expose `next_action_queue_item`, scoped to the selected
 row and lineage-level `next_action`; use its `resolved_target_iri` and
 `row_is_target` fields before mutating stale rows with successors.
