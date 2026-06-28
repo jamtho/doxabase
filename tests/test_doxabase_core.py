@@ -8413,6 +8413,98 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
     assert current_work.count == 0
 
 
+def test_post_apply_recheck_subset_does_not_replace_current_work_plan(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    first_map = db.stage_graph_revision(
+        summary="Stage alpha dataset",
+        rationale="First map sibling for post-apply recheck routing.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Alpha a rc:Dataset ;
+                        rdfs:label "Alpha" .
+                """,
+            }
+        ],
+    )
+    second_map = db.stage_graph_revision(
+        summary="Stage beta dataset",
+        rationale="Second map sibling that should be rechecked after alpha.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:Beta a rc:Dataset ;
+                        rdfs:label "Beta" .
+                """,
+            }
+        ],
+    )
+    ontology_revision = db.stage_graph_revision(
+        summary="Stage project ticket concept",
+        rationale="Independent ontology sibling in the same staged frontier.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:ProjectTicketConcept a rdfs:Class ;
+                        rdfs:subClassOf rc:Concept ;
+                        rdfs:label "Project ticket concept" .
+                """,
+            }
+        ],
+        validation_scope="ontology",
+    )
+
+    initial_plan = db.plan_staged_revision_recovery()
+
+    assert initial_plan.requires_recheck_after_each_apply is True
+    assert set(initial_plan.mutation_frontier_iris) == {
+        first_map.revision_iri,
+        second_map.revision_iri,
+        ontology_revision.revision_iri,
+    }
+    assert set(initial_plan.sequential_apply_recheck_candidate_iris) == {
+        first_map.revision_iri,
+        second_map.revision_iri,
+    }
+
+    applied = db.apply_staged_revision(first_map.revision_iri)
+
+    assert applied.post_apply_recheck_revision_iris == [second_map.revision_iri]
+    assert ontology_revision.revision_iri not in (
+        applied.post_apply_recheck_revision_iris
+    )
+
+    followup_plan = db.plan_staged_revision_recovery()
+
+    assert followup_plan.total_count == 2
+    assert followup_plan.next_action_queue == {
+        "apply_after_review": [ontology_revision.revision_iri],
+        "restage_after_review": [second_map.revision_iri],
+    }
+    assert set(followup_plan.mutation_frontier_iris) == {
+        second_map.revision_iri,
+        ontology_revision.revision_iri,
+    }
+    assert followup_plan.requires_recheck_after_each_apply is False
+
+
 def test_same_subject_alternative_restage_routes_max_count_repair(
     tmp_path: Path,
 ) -> None:

@@ -247,10 +247,14 @@ scoped to `current_revision_iri`, which avoids having to join the batch item to
 For recovery scripts, use this short loop: dry-run batch restage, inspect
 item-local `next_action_after` and `next_action_queue_item_after`, create only
 the mechanical successors you intend to review, apply at most one ready
-successor, then feed `apply_staged_revision().post_apply_recheck_revision_iris`
-into the next check/export/restage pass. Applying one ready successor can make
-siblings stale or no-op, so never treat a pre-apply grouped bundle as a durable
-apply queue.
+successor, then rerun
+`plan_staged_revision_recovery(current_staged_work_only=True)` before the next
+mutation. If a script keeps its own bundle worklist, union
+`apply_staged_revision().post_apply_recheck_revision_iris` with the unapplied
+members of the original bundle. The post-apply recheck list is only the
+affected-sibling subset for the mutation that just happened; it is not the
+remaining bundle queue. Applying one ready successor can make siblings stale or
+no-op, so never treat a pre-apply grouped bundle as a durable apply queue.
 
 Guarded same-slot conflicts that already suggest a
 `stage_map_assertion_change` replacement are skipped by batch restage with
@@ -654,6 +658,10 @@ queue for the mutation that just happened. For each row, inspect
 `recheck_reasons` and `shared_changed_graphs`, then use the row's fresh
 `application_status`, `decision`, `blocking_reasons`, `next_action`,
 `suggested_next_actions`, and `suggested_next_calls` to route the next step.
+Independent staged siblings from the original bundle may not appear in this
+subset, so rerun `plan_staged_revision_recovery(current_staged_work_only=True)`
+or keep an explicit union with unapplied original bundle members before choosing
+the next mutation.
 `validation_dependency_graph:shapes` means the applied project shape change may
 have changed whether the candidate validates even when its patch target did not
 change. Re-run
@@ -899,8 +907,11 @@ as `alternative_semantic_review_required`, `alternative_applied_source_iri`,
 and `alternative_applied_revision_iri`.
 In scripts, the practical loop is: batch restage, review
 `ready_restage_successor_revision_iris`, apply at most one ready successor,
-then feed `apply_staged_revision().post_apply_recheck_revision_iris` into the
-next check/export/restage pass.
+then rerun `plan_staged_revision_recovery(current_staged_work_only=True)` or
+union `apply_staged_revision().post_apply_recheck_revision_iris` with unapplied
+members of the original bundle before the next check/export/restage pass. The
+post-apply recheck list is the affected-sibling subset, not a complete
+remaining-work queue.
 Grouped Markdown also includes a `Review Queues` section that mirrors the
 top-level recommended-review sets, derived next-action buckets, and the
 compatibility apply/restage, repair, applied-inspection, and post-apply recheck
