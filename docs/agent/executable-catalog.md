@@ -316,12 +316,13 @@ result = db.record_query_result(
 ```
 
 Use `result_sources` for arbitrary result-table or aggregate payloads such as
-grouped counts, sums, or JSON output. The structured `row_count`, `null_count`,
-`distinct_count`, value-frequency, and metric fields are profile-shaped
-observation fields; only fill them when their meaning is clear in `summary`,
-`sample_scope`, and `sample_method`. For filtered or grouped aggregate query
-results, keep counts such as "two paid rows" or grouped totals in the result
-payload unless the value is genuinely the profiled population row count.
+grouped counts, sums, or JSON output. The structured `sample_size`,
+`row_count`, `null_count`, `distinct_count`, value-frequency, and metric fields
+are profile-shaped observation fields; only fill them when their meaning is
+clear in `summary`, `sample_scope`, and `sample_method`. For filtered or grouped
+aggregate query results, keep counts such as "six scanned source rows", "two
+paid rows", or grouped totals in the result payload unless the value is
+genuinely profile evidence for a population.
 
 For failed attempts, set `execution_status="failed"` and include
 `failure_summary` plus a query source or result/log source; do not pass row,

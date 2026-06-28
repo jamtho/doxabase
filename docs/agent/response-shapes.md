@@ -827,9 +827,13 @@ result.source_span_triples
 ```
 
 The helper does not run queries. It records an externally executed result or
-failure as an observation with evidence. Successful calls with profile/result
-counts become `observation_type="profile"`; failed, blocked, partial, or
-cancelled attempts stay ordinary observations and reject profile count fields.
+failure as an observation with evidence. Successful calls with profile-shaped
+fields such as `sample_size`, `row_count`, `null_count`, value frequencies, or
+profile metrics become `observation_type="profile"`; failed, blocked, partial,
+or cancelled attempts stay ordinary observations and reject profile count
+fields. For filtered or grouped aggregate result payloads, prefer
+`result_sources` plus clear `summary`/`sample_scope`/`sample_method` text unless
+the count-like value is intentionally profile evidence.
 
 For direct profile type findings, call it with `observation_type="profile"`,
 `observed_column`, and `observed_physical_type` / `observed_value_type`. These

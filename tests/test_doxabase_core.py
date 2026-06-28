@@ -18181,6 +18181,48 @@ def test_record_query_result_writes_query_source_evidence(
     assert result.observation_iri in {match.iri for match in matches.matches}
 
 
+def test_record_query_result_aggregate_payloads_stay_observations_without_profile_fields(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+
+    aggregate = db.record_query_result(
+        summary="Orders status aggregate wrote grouped counts to JSON.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path="queries/orders_status_counts.sql",
+        result_sources=["/tmp/orders-status-counts.json"],
+        sample_scope=(
+            "All source rows were scanned; grouped counts are in the result "
+            "artifact."
+        ),
+        sample_method="External read-only grouped aggregate query.",
+    )
+
+    assert aggregate.observation_type == "observation"
+
+    sampled_aggregate = db.record_query_result(
+        summary="Orders status aggregate also recorded source rows scanned.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path="queries/orders_status_counts.sql",
+        result_sources=["/tmp/orders-status-counts-with-source-count.json"],
+        sample_size=6,
+        sample_scope=(
+            "All source rows were scanned, but the result artifact is a grouped "
+            "aggregate."
+        ),
+        sample_method="External read-only grouped aggregate query.",
+    )
+
+    assert sampled_aggregate.observation_type == "profile"
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_record_query_result_records_failures_as_observations(
     tmp_path: Path,
 ) -> None:
