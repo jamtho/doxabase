@@ -10657,6 +10657,7 @@ class DoxaBase:
                     {
                         "review_lane": "query_context_review",
                         "route_group_key": route_group_key,
+                        "route_anchor_iris": [dataset.iri],
                         "readiness": context.readiness,
                         "readiness_note": context.readiness_note,
                         "blocking_issue_codes": issue_codes,

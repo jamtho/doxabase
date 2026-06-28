@@ -512,8 +512,9 @@ Prefer grouped routing: `profile_map_updates`,
 has physical-query metadata such as a path template or layout, but
 `describe_query_context` still reports blocking physical metadata issues. Its
 action points to `describe_query_context` and carries `source_query_context`
-with readiness, blocking issue codes, and repair group count; follow it before
-treating profile-derived map updates as query-ready context. The scalar
+with readiness, blocking issue codes, repair group count, and the dataset route
+anchor; follow it before treating profile-derived map updates as query-ready
+context. The scalar
 conflict lane is present when same-evidence scalar recommendations require a
 choose-one decision. Grouped metric/type actions carry
 `source_profile_advisory` with the source advisory kind, index field,

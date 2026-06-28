@@ -20939,6 +20939,7 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
         label="Support Events",
         is_table=True,
         row_count_snapshot=8,
+        path_templates=["support/events/*.parquet"],
     )
     db.record_map_column(
         status_column,
@@ -21002,6 +21003,13 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     )
 
     draft = db.draft_profile_map_updates(dataset, evidence)
+    query_context_action = draft.suggested_next_action_groups[
+        "query_context_review"
+    ][0]
+    query_route_key = query_context_action.source_query_context["route_group_key"]
+    assert query_context_action.source_query_context["route_anchor_iris"] == [
+        dataset
+    ]
     profile_map_route_key = draft.suggested_next_action_groups[
         "profile_map_updates"
     ][0].source_profile_map_update["route_group_key"]
@@ -21018,6 +21026,32 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     )
     metric_route_key = promotion_action.source_profile_advisory["route_group_key"]
     metric_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
+    storage_access = "https://example.test/profile-review#SupportEventsStorage"
+    query_repair_draft = db.stage_systematisation(
+        summary="Review Support Events storage access",
+        intent="Keep the query-context blocker repair reviewable beside profile-derived map updates.",
+        rationale=(
+            "The profile draft routed agents through query_context_review before "
+            "using profile-derived map updates as query-planning context."
+        ),
+        anchors=[dataset, storage_access],
+        framings=[
+            {
+                "label": "Map storage access",
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <{dataset}> rc:hasStorageAccess <{storage_access}> .
+
+                    <{storage_access}> a rc:StorageAccess ;
+                        rc:storageProtocol rc:LocalFilesystemStorage ;
+                        rc:storageRoot "/tmp/support-events.parquet" .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
     caveat_draft = db.stage_systematisation(
         summary="Review workflow flip caveat",
         intent="Keep the denominator caveat reviewable beside profile map updates.",
@@ -21081,13 +21115,14 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     expected_revision_iris = {
         staged_map.staged_revision.revision_iri,
         metric_promotion.staged_revisions[0].revision_iri,
+        query_repair_draft.staged_revisions[0].revision_iri,
         caveat_draft.staged_revisions[0].revision_iri,
     }
     assert set(result.candidate_revision_iris) == expected_revision_iris
     assert unrelated_draft.staged_revisions[0].revision_iri not in (
         result.candidate_revision_iris
     )
-    assert result.candidate_count == 3
+    assert result.candidate_count == 4
     assert result.export is not None
     assert set(result.export.revision_iris) == expected_revision_iris
     candidates_by_iri = {
@@ -21098,6 +21133,9 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     ].profile_route_keys
     assert metric_route_key in candidates_by_iri[
         metric_promotion.staged_revisions[0].revision_iri
+    ].profile_route_keys
+    assert query_route_key in candidates_by_iri[
+        query_repair_draft.staged_revisions[0].revision_iri
     ].profile_route_keys
     assert all(
         group["route_step_keys"]
@@ -21122,6 +21160,7 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert "### Profile Route Bridge" in exported
     assert profile_map_route_key in exported
     assert metric_route_key in exported
+    assert query_route_key in exported
     assert "Workflow flip denominator caveat" in exported
     assert secret_text in exported
     assert "WorkflowFlipRate" in exported
@@ -22639,6 +22678,13 @@ def test_profile_map_update_query_blocker_routes_before_default_stage_action(
     assert query_action.source_query_context["blocking_issue_codes"] == [
         "missing_storage_access"
     ]
+    assert query_action.source_query_context["route_anchor_iris"] == [dataset]
+    assert query_action.source_query_context["route_group_key"].startswith(
+        "query_context_review:"
+    )
+    assert query_action.source_query_context["route_step_key"].startswith(
+        "profile-route-step:"
+    )
     assert query_action.source_query_context[
         "suggested_repair_action_group_count"
     ] == 1

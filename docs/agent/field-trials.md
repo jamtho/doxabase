@@ -2060,6 +2060,12 @@ few useful gaps:
   actions keep `source_profile_advisory` with route keys; and profile insight
   bundle candidates plus Markdown expose a `Profile Route Bridge` so reviewers
   can see which draft route produced or motivated each staged row.
+- A follow-up project-brief pass found a remaining bridge gap for
+  `query_context_review`: the draft action had route keys, but no route anchor,
+  so a staged dataset-anchored storage/query repair could enter a profile
+  insight bundle without connecting back to the query-context lane.
+  `source_query_context.route_anchor_iris` now names the dataset, and the
+  Profile Route Bridge can show the query-context route for those repairs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -1485,6 +1485,7 @@ review actions carry `source_query_context`:
 action.source_query_context["review_lane"]
 action.source_query_context["route_group_key"]
 action.source_query_context["route_step_key"]
+action.source_query_context["route_anchor_iris"]
 action.source_query_context["readiness"]
 action.source_query_context["readiness_note"]
 action.source_query_context["blocking_issue_codes"]

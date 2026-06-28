@@ -91,6 +91,9 @@ adds a leading `query_context_review` lane. Follow that lane before relying on
 profile-derived map updates for query-planning work. The profile update lanes
 remain available for explicit review; the query lane is an ordering cue, not a
 rejection of the profile evidence.
+`source_query_context.route_anchor_iris` names the dataset, so a staged
+dataset-anchored query repair can still bridge back to the query-context route
+inside a later profile insight review bundle.
 
 ## Stage Accepted Facts
 

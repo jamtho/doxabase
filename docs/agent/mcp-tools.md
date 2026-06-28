@@ -428,8 +428,8 @@ routing; non-empty lanes are grouped as `query_context_review`,
 metadata such as a path template or layout, but `describe_query_context` still
 reports blocking physical metadata issues. Its action points to
 `describe_query_context` and carries `source_query_context` with readiness,
-blocking issue codes, and repair group count; follow it before treating
-profile-derived map updates as query-ready context.
+blocking issue codes, repair group count, and the dataset route anchor; follow
+it before treating profile-derived map updates as query-ready context.
 Use representative advisory indexes when you need one review row per duplicate
 metric or type advisory group; each row also carries `metric_advisory_index` or
 `type_advisory_index` for row-local routing. Group lanes may de-duplicate shared

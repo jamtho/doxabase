@@ -5630,6 +5630,13 @@ def test_draft_profile_map_updates_tool_routes_query_blockers_first(
     assert query_action["source_query_context"]["blocking_issue_codes"] == [
         "missing_storage_access"
     ]
+    assert query_action["source_query_context"]["route_anchor_iris"] == [table]
+    assert query_action["source_query_context"]["route_group_key"].startswith(
+        "query_context_review:"
+    )
+    assert query_action["source_query_context"]["route_step_key"].startswith(
+        "profile-route-step:"
+    )
     assert query_action == result["suggested_next_actions"][0]
     assert result["suggested_next_actions"][1]["tool_name"] == (
         "stage_profile_map_updates"
