@@ -1417,6 +1417,8 @@ advisory.mixed_support_pattern_count
 advisory.mixed_support_note
 advisory.context_patterns
 advisory.context_pattern_count
+advisory.pending_staged_promotion_iris
+advisory.pending_staged_promotion_count
 advisory.recommendation
 advisory.rationale
 advisory.suggested_next_actions
@@ -1436,7 +1438,12 @@ the profiled dataset before reviewing wider same-metric usage. Ambiguous metrics
 add existing-definition inspection before any repair path. If an undefined or
 ambiguous metric also has a same-evidence
 pattern that names the metric as a target or map implication, the advisory
-includes `promotion_patterns` and adds `describe_pattern` plus a reviewable
+includes `promotion_patterns` and adds `describe_pattern`. If matching current
+staged metric vocabulary work already exists for the same metric, evidence, and
+pattern support, `pending_staged_promotion_iris` names those staged revisions and
+the advisory routes to `describe_staged_revision` plus
+`export_staged_revisions` instead of proposing another duplicate
+`stage_pattern_promotion` skeleton. Otherwise it adds a reviewable
 `stage_pattern_promotion` ontology skeleton to `suggested_next_actions`.
 When a rerun reports `project_metric_defined`, do not stage duplicate
 vocabulary; use the observed-metric context action for the dataset handoff and a

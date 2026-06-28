@@ -6317,6 +6317,38 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
 
     assert len(promoted["staged_revisions"]) == 1
     assert promoted["staged_revisions"][0]["validation_conforms"] is True
+    rerun = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+    rerun_advisory = rerun["metric_advisories"][0]
+    staged_iri = promoted["staged_revisions"][0]["revision_iri"]
+    assert rerun_advisory["pending_staged_promotion_iris"] == [staged_iri]
+    assert rerun_advisory["pending_staged_promotion_count"] == 1
+    assert [
+        action["tool_name"] for action in rerun_advisory["suggested_next_actions"]
+    ] == [
+        "describe_context_slice",
+        "list_entities",
+        "describe_pattern",
+        "describe_staged_revision",
+        "export_staged_revisions",
+    ]
+    assert not any(
+        action["tool_name"] == "stage_pattern_promotion"
+        for action in rerun_advisory["suggested_next_actions"]
+    )
+    export_action = next(
+        action
+        for action in rerun["suggested_next_action_groups"][
+            "metric_vocabulary_review"
+        ]
+        if action["tool_name"] == "export_staged_revisions"
+    )
+    assert export_action["source_profile_advisory"][
+        "pending_staged_promotion_iris"
+    ] == [staged_iri]
 
 
 def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(

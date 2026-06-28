@@ -383,12 +383,15 @@ zero-null profiles are intentionally not promoted into non-null map
 recommendations. Metric advisory rows include `advisory_status`,
 `definition_found`, `observed_metric_iri`, optional `definition`, `promotion_patterns`,
 `mixed_support_patterns`, `mixed_support_note`, `context_patterns`, and
-structured `suggested_next_actions` so agents can inspect existing ontology
-definitions or nearby metric vocabulary before recording
-claims/patterns/promotions. When an undefined or ambiguously typed metric has a
-same-evidence pattern naming it as a target or map implication, the advisory
-also suggests `describe_pattern` and a reviewable
-`stage_pattern_promotion` skeleton for an ontology `rc:ProfileMetricKind`.
+`pending_staged_promotion_iris`, and structured `suggested_next_actions` so
+agents can inspect existing ontology definitions, pending staged vocabulary, or
+nearby metric vocabulary before recording claims/patterns/promotions. When an
+undefined or ambiguously typed metric has a same-evidence pattern naming it as a
+target or map implication, the advisory suggests `describe_pattern`. If no
+matching current staged metric vocabulary skeleton already exists, it also
+suggests a reviewable `stage_pattern_promotion` skeleton for an ontology
+`rc:ProfileMetricKind`; otherwise it routes to `describe_staged_revision` and
+`export_staged_revisions` for the pending staged skeleton.
 The first metric context action seeds `describe_context_slice` with
 `observed_metric_iri` so the initial handoff stays on the profiled dataset; use
 nearby metric-vocabulary actions when you intentionally want broader same-metric

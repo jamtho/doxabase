@@ -715,8 +715,10 @@ An already-effective stale source is different from a fresh `noop`: the target
 graph has count/digest drift, so the row still reports `status="conflict"` and
 drift blockers, but every patch already has zero effective add/remove delta.
 These rows route compact `next_action` to `inspect_no_effective_change` in the
-`informational` queue and omit restage suggestions. Do not call them
-`already_applied`; only an applied revision event proves durable review lineage.
+`informational` queue, omit restage suggestions, and show "Inspect
+already-effective stale source" in grouped Markdown decision matrices. Do not
+call them `already_applied`; only an applied revision event proves durable
+review lineage.
 If `blocking_reasons` contains `patch_conflict`, the stored patch itself could
 not be replayed. Inspect `patch_checks[].conflict` and export the staged
 revision before mutating. Common causes are malformed stored patch Turtle or a

@@ -581,13 +581,17 @@ including route group/step keys, but are not copied into the default flat
 `suggested_next_actions`. It does not mutate or stage graph changes, and it
 skips sampled zero-null promotions. Metric advisories
 carry `advisory_status`, `definition_found`, optional `definition`,
-`promotion_patterns`, `context_patterns`, duplicate-group metadata, and
-structured `suggested_next_actions` for ontology/context review. Undefined or
-ambiguously typed metrics with a same-evidence pattern that names the metric as
-a target or map implication also get a reviewable `stage_pattern_promotion`
-skeleton for an ontology `rc:ProfileMetricKind`; ambiguous metrics keep the
-existing-definition inspection action ahead of the repair skeleton. Prose-only
-same-evidence patterns that mention the metric appear as context patterns only.
+`promotion_patterns`, `context_patterns`, `pending_staged_promotion_iris`,
+duplicate-group metadata, and structured `suggested_next_actions` for
+ontology/context review. Undefined or ambiguously typed metrics with a
+same-evidence pattern that names the metric as a target or map implication get
+`describe_pattern`; when no matching current staged vocabulary skeleton exists,
+they also get a reviewable `stage_pattern_promotion` skeleton for an ontology
+`rc:ProfileMetricKind`. If such staged work is already pending, the advisory
+routes to inspect/export that staged revision instead of proposing a duplicate.
+Ambiguous metrics keep the existing-definition inspection action ahead of the
+repair skeleton. Prose-only same-evidence patterns that mention the metric
+appear as context patterns only.
 The skeleton seeds its `rdfs:comment` from promotion-pattern text, rationale, or
 summary only when that text names the metric IRI, local name, or normalized
 local-name phrase. Otherwise it uses a generic review-first comment. Review and

@@ -150,6 +150,9 @@ PROFILE_SCALAR_MAP_UPDATE_KINDS = frozenset(
         "column_nullable",
     }
 )
+PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER = (
+    "metric-vocabulary promotion skeleton from draft_profile_map_updates"
+)
 
 
 def to_jsonable(value: Any) -> Any:
@@ -2276,6 +2279,8 @@ class ProfileMetricVocabularyAdvisory:
     mixed_support_note: str | None
     context_patterns: list[ResourceSummary]
     context_pattern_count: int
+    pending_staged_promotion_iris: list[str]
+    pending_staged_promotion_count: int
     recommendation: str
     rationale: str
     suggested_next_actions: list[SuggestedNextAction]
@@ -19184,6 +19189,19 @@ class DoxaBase:
                     }
                     else []
                 )
+                pending_staged_promotion_iris = (
+                    self._pending_staged_metric_promotion_iris(
+                        metric_iri=metric_iri,
+                        evidence_iri=evidence_iri,
+                        promotion_pattern_iris=promotion_pattern_iris,
+                    )
+                    if advisory_status
+                    in {
+                        "project_metric_undefined",
+                        "project_metric_definition_ambiguous",
+                    }
+                    else []
+                )
                 suggested_next_actions = self._profile_metric_advisory_actions(
                     observed_metric_iri=metric.iri,
                     profile_observation_iri=profile.iri,
@@ -19192,6 +19210,7 @@ class DoxaBase:
                     promotion_pattern_iris=promotion_pattern_iris,
                     context_pattern_iris=context_pattern_iris,
                     evidence_iri=evidence_iri,
+                    pending_staged_promotion_iris=pending_staged_promotion_iris,
                 )
                 advisories.append(
                     ProfileMetricVocabularyAdvisory(
@@ -19220,6 +19239,10 @@ class DoxaBase:
                             context_pattern_iris,
                         ),
                         context_pattern_count=len(context_pattern_iris),
+                        pending_staged_promotion_iris=pending_staged_promotion_iris,
+                        pending_staged_promotion_count=len(
+                            pending_staged_promotion_iris
+                        ),
                         recommendation="review_metric_vocabulary_before_reuse",
                         rationale=(
                             "Project-specific profile metric IRIs are valid "
@@ -19555,6 +19578,21 @@ class DoxaBase:
                         observed_metric_iris,
                         observed_metric_iri,
                     )
+                pending_staged_promotion_iris = getattr(
+                    advisory,
+                    "pending_staged_promotion_iris",
+                    [],
+                )
+                if pending_staged_promotion_iris:
+                    pending_values = source.setdefault(
+                        "pending_staged_promotion_iris",
+                        [],
+                    )
+                    for staged_iri in pending_staged_promotion_iris:
+                        DoxaBase._append_unique(pending_values, staged_iri)
+                    source["pending_staged_promotion_count"] = len(
+                        pending_values
+                    )
 
         return [
             DoxaBase._profile_advisory_suggested_action(
@@ -19653,10 +19691,12 @@ class DoxaBase:
         promotion_pattern_iris: list[str] | None = None,
         context_pattern_iris: list[str] | None = None,
         evidence_iri: str | None = None,
+        pending_staged_promotion_iris: list[str] | None = None,
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         promotion_pattern_values = list(promotion_pattern_iris or [])
         context_pattern_values = list(context_pattern_iris or [])
+        pending_staged_promotion_values = list(pending_staged_promotion_iris or [])
         focused_seed_iri = observed_metric_iri or profile_observation_iri or metric_iri
 
         def add_action(
@@ -19749,23 +19789,126 @@ class DoxaBase:
                     action_label="Inspect metric promotion pattern",
                 )
             add_context_pattern_actions()
-            add_action(
-                "stage_pattern_promotion",
-                self._profile_metric_promotion_skeleton_arguments(
-                    metric_iri=metric_iri,
-                    pattern_iris=promotion_pattern_values,
-                    evidence_iri=evidence_iri,
-                ),
-                (
-                    "Stage a reviewable ontology skeleton for this project metric "
-                    "only after checking that the same-evidence pattern captures "
-                    "its calculation, unit, and comparison semantics."
-                ),
-                action_label="Stage metric vocabulary skeleton",
-            )
+            if pending_staged_promotion_values:
+                for staged_iri in pending_staged_promotion_values[:3]:
+                    add_action(
+                        "describe_staged_revision",
+                        {
+                            "iri": staged_iri,
+                            "include_current_apply_check": True,
+                        },
+                        (
+                            "A current staged metric vocabulary skeleton already "
+                            "targets this metric with the same evidence and pattern "
+                            "support. Inspect that staged revision before drafting "
+                            "another duplicate skeleton."
+                        ),
+                        action_label="Inspect pending metric vocabulary promotion",
+                    )
+                add_action(
+                    "export_staged_revisions",
+                    {
+                        "revision_iris": pending_staged_promotion_values,
+                        "path": self._suggested_review_export_path(
+                            "profile-metric-vocabulary-pending",
+                            pending_staged_promotion_values,
+                        ),
+                    },
+                    (
+                        "Write a grouped review bundle for pending staged metric "
+                        "vocabulary skeletons before deciding whether new metric "
+                        "promotion work is still needed."
+                    ),
+                    action_label="Export pending metric vocabulary promotions",
+                )
+            else:
+                add_action(
+                    "stage_pattern_promotion",
+                    self._profile_metric_promotion_skeleton_arguments(
+                        metric_iri=metric_iri,
+                        pattern_iris=promotion_pattern_values,
+                        evidence_iri=evidence_iri,
+                    ),
+                    (
+                        "Stage a reviewable ontology skeleton for this project metric "
+                        "only after checking that the same-evidence pattern captures "
+                        "its calculation, unit, and comparison semantics."
+                    ),
+                    action_label="Stage metric vocabulary skeleton",
+                )
         else:
             add_context_pattern_actions()
         return actions
+
+    def _pending_staged_metric_promotion_iris(
+        self,
+        *,
+        metric_iri: str,
+        evidence_iri: str,
+        promotion_pattern_iris: Iterable[str],
+    ) -> list[str]:
+        data_graphs = self._expand_graphs(["history"])
+        metric_value = self.expand_iri(metric_iri)
+        evidence_value = self.expand_iri(evidence_iri)
+        promotion_pattern_values = {
+            self.expand_iri(pattern_iri) for pattern_iri in promotion_pattern_iris
+        }
+        if not promotion_pattern_values:
+            return []
+
+        candidates: list[tuple[str, str]] = []
+        for revision_iri in self._subjects(
+            data_graphs,
+            "rc:revisionAnchor",
+            metric_value,
+        ):
+            if self._first_subject(
+                data_graphs,
+                "rc:appliesStagedRevision",
+                revision_iri,
+            ):
+                continue
+            if self._current_restage_successor_iri(revision_iri, graphs=data_graphs):
+                continue
+            if not self._objects(data_graphs, revision_iri, "rc:hasGraphPatch"):
+                continue
+            review_note = self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:reviewNote",
+            )
+            if (
+                PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER
+                not in (review_note or "")
+            ):
+                continue
+            if evidence_value not in self._objects(
+                data_graphs,
+                revision_iri,
+                "rc:evidence",
+            ):
+                continue
+            supporting_patterns = set(
+                self._objects(
+                    data_graphs,
+                    revision_iri,
+                    "rc:revisionSupportingPattern",
+                )
+            )
+            if not promotion_pattern_values & supporting_patterns:
+                continue
+            created_at = (
+                self._first_object(data_graphs, revision_iri, "rc:createdAt") or ""
+            )
+            candidates.append((created_at, revision_iri))
+        return [
+            revision_iri
+            for _, revision_iri in sorted(
+                candidates,
+                key=lambda item: (item[0], item[1]),
+                reverse=True,
+            )
+        ]
 
     def _profile_metric_promotion_pattern_iris(
         self,
@@ -19865,8 +20008,9 @@ class DoxaBase:
                     "graph": "ontology",
                     "content": content,
                     "review_note": (
-                        "Generated as a metric-vocabulary promotion skeleton from "
-                        "draft_profile_map_updates; review wording before applying."
+                        "Generated as a "
+                        f"{PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER}; "
+                        "review wording before applying."
                     ),
                     "review_recommendation": (
                         "Apply only after the metric calculation, unit, and "
@@ -30131,9 +30275,7 @@ class DoxaBase:
         review_note = description.review_note or ""
         if review_note.startswith("Generated by stage_profile_map_updates."):
             return "profile_map_updates"
-        if "metric-vocabulary promotion skeleton from draft_profile_map_updates" in (
-            review_note
-        ):
+        if PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER in review_note:
             return "metric_vocabulary_review"
         if "Generated from a profile type-finding advisory" in review_note:
             return "profile_type_review"
@@ -34885,6 +35027,11 @@ class DoxaBase:
         *,
         included_alternative_row: bool = False,
     ) -> str:
+        if (
+            summary.next_action is not None
+            and summary.next_action.action_type == "inspect_no_effective_change"
+        ):
+            return summary.next_action.action_label
         if summary.next_action is not None and summary.next_action.queue == (
             "repair_or_replace"
         ):

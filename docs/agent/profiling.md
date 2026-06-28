@@ -175,6 +175,9 @@ recommendation indexes. Metric advisories may suggest `stage_pattern_promotion`
 for vocabulary or pattern-supported modelling. Type advisories may suggest
 context slices, `record_pattern`, related column shells, or focused
 `stage_map_assertion_change` calls.
+If a metric advisory already has matching current staged vocabulary work, it
+sets `pending_staged_promotion_iris` and routes to inspect/export that staged
+revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.
 After a metric promotion applies, a rerun should report
 `project_metric_defined` and stop suggesting another promotion skeleton. Use the
 observed-metric context action for the local dataset handoff, and use a

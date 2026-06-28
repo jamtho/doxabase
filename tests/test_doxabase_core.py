@@ -6642,6 +6642,10 @@ def test_restaged_revision_with_realized_addition_reports_noop(
     )
     assert "Effective +" in exported_text
     assert "Inspect already-effective stale source" in exported_text
+    assert (
+        "| 1 | Stage messages dataset | Inspect already-effective stale source |"
+        in exported_text
+    )
 
 
 def test_export_staged_revisions_dedupes_duplicate_inputs(
@@ -24511,6 +24515,42 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     )
     assert {item.iri for item in staged.evidence} == {evidence}
     assert project_metric in {item.iri for item in staged.revision_anchors}
+    rerun = db.draft_profile_map_updates(dataset, evidence)
+    rerun_advisory = rerun.metric_advisories[0]
+    assert rerun_advisory.pending_staged_promotion_iris == [staged.iri]
+    assert rerun_advisory.pending_staged_promotion_count == 1
+    assert [action.tool_name for action in rerun_advisory.suggested_next_actions] == [
+        "describe_context_slice",
+        "list_entities",
+        "describe_pattern",
+        "describe_staged_revision",
+        "export_staged_revisions",
+    ]
+    assert not any(
+        action.tool_name == "stage_pattern_promotion"
+        for action in rerun_advisory.suggested_next_actions
+    )
+    inspect_action = rerun_advisory.suggested_next_actions[3]
+    assert inspect_action.arguments == {
+        "iri": staged.iri,
+        "include_current_apply_check": True,
+    }
+    export_action = rerun_advisory.suggested_next_actions[4]
+    assert export_action.arguments["revision_iris"] == [staged.iri]
+    grouped_export_action = next(
+        action
+        for action in rerun.suggested_next_action_groups["metric_vocabulary_review"]
+        if action.tool_name == "export_staged_revisions"
+    )
+    assert grouped_export_action.source_profile_advisory[
+        "pending_staged_promotion_iris"
+    ] == [staged.iri]
+    assert (
+        grouped_export_action.source_profile_advisory[
+            "pending_staged_promotion_count"
+        ]
+        == 1
+    )
     export_path = tmp_path / "metric-promotion-review.md"
     db.export_staged_revision(staged.iri, export_path)
     export_text = export_path.read_text()

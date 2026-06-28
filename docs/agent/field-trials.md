@@ -2248,6 +2248,17 @@ few useful gaps:
   default revision-stance terms are missing: export mutable project graphs,
   create a fresh seeded capsule, and import the project bundle there. A broader
   read-only seed freshness/status helper remains a future hardening task.
+- A profile metric-promotion rerun trial found `draft_profile_map_updates` could
+  propose a duplicate `stage_pattern_promotion` skeleton after the first
+  metric-vocabulary skeleton was staged but not applied. Metric advisories now
+  detect matching current staged skeletons by metric anchor, same evidence, and
+  supporting promotion pattern, expose `pending_staged_promotion_iris`, and route
+  to inspect/export pending staged work instead of creating another duplicate.
+- A staged version-browser trial found grouped Markdown decision matrices could
+  label already-effective stale rows as "Restage or replace" even though the
+  structured route was informational `inspect_no_effective_change`. Grouped
+  exports now use the compact next-action label "Inspect already-effective stale
+  source" for those rows.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
