@@ -358,7 +358,11 @@ access metadata, or a relative template that repeats the recorded key prefix
 will demote the candidate to review-only. A root-only storage-access candidate
 is ready only when `location_kind == "object"`; absent, directory, prefix, or
 connection location kinds are review-only until a path template narrows the
-dataset location. Partition-specific blockers stay attached to their own
+dataset location. For non-database storage, an exact object root remains
+available as a `storage_access_location` candidate even when dataset or
+partition templates are present; candidates that would append those templates to
+the object root are review-only with `storage_object_location_has_path_template`.
+Partition-specific blockers stay attached to their own
 partition candidate; sibling candidates receive an overall-context blocker
 instead.
 Use `direct_review_required` and `direct_review_reasons` when selecting a first

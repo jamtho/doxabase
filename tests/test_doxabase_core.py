@@ -12830,6 +12830,104 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     )
 
 
+def test_object_root_candidate_stays_visible_with_partition_templates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    event_date = db.record_map_column(
+        "https://example.test/project#orders__event_date",
+        column_name="event_date",
+        table_iri=dataset,
+    )
+    storage_root = str(tmp_path / "orders.parquet")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_local_storage",
+        label="Orders exact object storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=storage_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    partition = db.record_map_partition_scheme(
+        "https://example.test/project#orders_daily_partition",
+        path_template="orders/event_date={event_date}/*.parquet",
+        partition_columns=[event_date.iri],
+        granularity="rc:Daily",
+        layout_verification_status="rc:VerifiedByListingLayout",
+        datasets=[dataset],
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        columns=[event_date.iri],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "needs_review"
+    assert {issue.code for issue in context.issues} == {
+        "storage_object_location_has_path_template"
+    }
+    root_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.template_source == "storage_access_location"
+    )
+    assert root_target.source_resource.iri == storage.iri
+    assert root_target.candidate_path == storage_root
+    assert root_target.candidate_path_status == "ready"
+    assert root_target.review_required is False
+    assert root_target.direct_review_required is False
+    partition_target = next(
+        target
+        for target in context.query_target_candidates
+        if target.source_resource.iri == partition.iri
+    )
+    assert partition_target.candidate_path == (
+        f"{storage_root}/orders/event_date={{event_date}}/*.parquet"
+    )
+    assert partition_target.candidate_path_status == "orientation_only"
+    assert partition_target.review_required is True
+    assert partition_target.direct_review_required is True
+    assert [reason.code for reason in partition_target.direct_review_reasons] == [
+        "storage_object_location_has_path_template"
+    ]
+    assert context.query_target_decision.status == "ready"
+    assert context.query_target_decision.candidate_path == storage_root
+    assert context.ready_candidate_indexes == [
+        context.query_target_decision.candidate_index
+    ]
+    assert context.suggested_next_actions[0].arguments == {
+        "iri": dataset,
+        "candidate_index": context.query_target_decision.candidate_index,
+        "allow_context_blocked_candidate": True,
+    }
+
+    automatic_plan = db.draft_query_plan(dataset)
+
+    assert automatic_plan.handoff_kind == "context_review_required"
+    assert automatic_plan.review_gate.context_blocked_candidate_used is False
+
+    plan = db.draft_query_plan(**context.suggested_next_actions[0].arguments)
+
+    assert plan.selected_candidate is not None
+    assert plan.selected_candidate.template_source == "storage_access_location"
+    assert plan.scan.uri_template == storage_root
+    assert plan.review_gate.context_blocked_candidate_used is True
+    assert plan.review_gate.ready_for_execution_attempt is True
+    assert plan.handoff_kind == "execution_attempt_ready"
+
+
 def test_draft_query_plan_blocks_ambiguous_physical_layout_scan(
     tmp_path: Path,
 ) -> None:

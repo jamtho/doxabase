@@ -1858,6 +1858,16 @@ few useful gaps:
   The already-satisfied relation-template add action also carries
   `skip_when_already_satisfied=true` for scripts that should follow the ordered
   remove action without parsing prose.
+- A storage-metadata trial found one real query-planning bug in mixed physical
+  routes: a non-database storage access with `location_kind="object"` can name
+  the exact dataset object even when older dataset or partition templates still
+  exist as review context. `describe_query_context()` now keeps the exact
+  `storage_access_location` candidate visible for that route and marks
+  candidates that append templates to the object root as review-only with
+  `storage_object_location_has_path_template`. Use the explicit
+  `candidate_index` plus `allow_context_blocked_candidate=True` action when the
+  exact object candidate is direct-clean but sibling template metadata keeps the
+  whole context in review.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

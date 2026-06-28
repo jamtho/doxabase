@@ -88,6 +88,11 @@ agent runtime decides how profile X resolves.
    executable only when `location_kind="object"` confirms the root names the
    dataset object/location rather than a directory, prefix, or connection that
    still needs a template.
+   When an exact object root appears beside dataset or partition templates,
+   prefer the `storage_access_location` candidate for that object route; any
+   template-appended candidate is review-only with
+   `storage_object_location_has_path_template` unless the storage root is
+   remodelled as a directory or prefix.
 5. Read `physical_layouts`, `partition_schemes`, `path_templates`, and
    `storage_accesses` together when you need the raw graph facts behind a
    candidate.

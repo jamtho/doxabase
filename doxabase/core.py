@@ -12321,6 +12321,27 @@ class DoxaBase:
                 storage_access is not None
                 and template_source != "storage_access_location"
             ):
+                object_location_issue = (
+                    self._query_storage_object_location_template_issue(
+                        template=template,
+                        template_source=template_source,
+                        source_resource=source_resource,
+                        storage_access=storage_access,
+                    )
+                )
+                if object_location_issue is not None and not any(
+                    reason.code == object_location_issue.code
+                    and (
+                        reason.resource.iri if reason.resource is not None else None
+                    )
+                    == (
+                        object_location_issue.resource.iri
+                        if object_location_issue.resource is not None
+                        else None
+                    )
+                    for reason in review_reasons
+                ):
+                    review_reasons.append(object_location_issue)
                 relation_source_issue = (
                     self._query_database_relation_template_source_issue(
                         template=template,
@@ -12464,14 +12485,22 @@ class DoxaBase:
             access_resource = self._summary_from_description(storage_access)
             for template in storage_access.path_templates:
                 add_candidate(template, "storage_access", access_resource, storage_access)
-            if not template_sources and not storage_access.path_templates:
-                if storage_access.storage_root is not None:
-                    add_candidate(
-                        storage_access.storage_root,
-                        "storage_access_location",
-                        access_resource,
-                        storage_access,
-                    )
+            if storage_access.storage_root is not None and (
+                (
+                    not template_sources
+                    and not storage_access.path_templates
+                )
+                or (
+                    storage_access.location_kind == "object"
+                    and not self._is_database_storage(storage_access.storage_protocol)
+                )
+            ):
+                add_candidate(
+                    storage_access.storage_root,
+                    "storage_access_location",
+                    access_resource,
+                    storage_access,
+                )
 
         return candidates
 
@@ -13166,6 +13195,16 @@ class DoxaBase:
         issues: list[QueryPlanningIssue] = []
         for storage_access in dataset.storage_accesses:
             for template, template_source, source_resource in template_sources:
+                object_location_issue = (
+                    self._query_storage_object_location_template_issue(
+                        template=template,
+                        template_source=template_source,
+                        source_resource=source_resource,
+                        storage_access=storage_access,
+                    )
+                )
+                if object_location_issue is not None:
+                    issues.append(object_location_issue)
                 relation_source_issue = (
                     self._query_database_relation_template_source_issue(
                         template=template,
@@ -13185,6 +13224,16 @@ class DoxaBase:
                     issues.append(issue)
             access_resource = self._summary_from_description(storage_access)
             for template in storage_access.path_templates:
+                object_location_issue = (
+                    self._query_storage_object_location_template_issue(
+                        template=template,
+                        template_source="storage_access",
+                        source_resource=access_resource,
+                        storage_access=storage_access,
+                    )
+                )
+                if object_location_issue is not None:
+                    issues.append(object_location_issue)
                 issue = self._query_candidate_metadata_issue(
                     template=template,
                     source_resource=access_resource,
@@ -13197,6 +13246,44 @@ class DoxaBase:
                 if issue is not None:
                     issues.append(issue)
         return issues
+
+    def _query_storage_object_location_template_issue(
+        self,
+        *,
+        template: str,
+        template_source: str,
+        source_resource: ResourceSummary,
+        storage_access: StorageAccessDescription,
+    ) -> QueryPlanningIssue | None:
+        if self._is_database_storage(storage_access.storage_protocol):
+            return None
+        if storage_access.location_kind != "object" or not storage_access.storage_root:
+            return None
+        if template_source == "storage_access_location":
+            return None
+        source_label = source_resource.label or source_resource.iri
+        access_resource = self._summary_from_description(storage_access)
+        return QueryPlanningIssue(
+            code="storage_object_location_has_path_template",
+            severity="warning",
+            message=(
+                "Storage access location_kind='object' says the storage root "
+                "names the dataset object/location exactly, but a path template "
+                f"from {source_label} would be appended to that object root. "
+                "Use the storage_access_location candidate for the exact object "
+                "route, or model the storage root as a directory/prefix if "
+                "templates should be joined."
+            ),
+            resource=access_resource,
+            details={
+                "template": template,
+                "template_source": template_source,
+                "template_source_resource_iri": source_resource.iri,
+                "storage_access_iri": storage_access.iri,
+                "storage_root": storage_access.storage_root,
+                "location_kind": storage_access.location_kind,
+            },
+        )
 
     def _query_storage_access_location_kind_issue(
         self,
@@ -13383,7 +13470,10 @@ class DoxaBase:
         return review_reasons
 
     def _is_candidate_metadata_issue(self, issue: QueryPlanningIssue) -> bool:
-        if issue.code == "database_relation_template_source_mismatch":
+        if issue.code in {
+            "database_relation_template_source_mismatch",
+            "storage_object_location_has_path_template",
+        }:
             return True
         return (
             issue.code == "storage_protocol_location_mismatch"

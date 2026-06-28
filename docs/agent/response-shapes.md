@@ -1892,7 +1892,11 @@ duplicate that prefix.
 When `template_source == "storage_access_location"`, no path template was
 recorded and the storage root itself is the candidate location. Treat that as
 executable only when `candidate.location_kind == "object"` and the root is known
-to name the dataset object/location. Database storage is stricter: a root-only
+to name the dataset object/location. When that exact object root appears beside
+dataset or partition templates, template-appended candidates are review-only
+with `storage_object_location_has_path_template`; use the
+`storage_access_location` candidate for the exact object route. Database storage
+is stricter: a root-only
 database candidate is review-only with `database_relation_template_missing`
 until a storage-access-owned template records the relation identifier. If
 `location_kind` is absent or is `directory`, `prefix`, or `connection`, the

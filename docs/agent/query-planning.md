@@ -45,6 +45,10 @@ Start with `describe_query_context(dataset_iri)`:
    sampled, and unknown-scope count support.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
+   For non-database storage with `location_kind="object"`, prefer the exact
+   `storage_access_location` candidate; candidates that append dataset or
+   partition templates to that object root are review-only with
+   `storage_object_location_has_path_template`.
 5. Always compare `readiness` and `issues` with the selected candidate. Broader
    context blockers, including sibling storage facts, can make the whole
    context review-required even when `query_target_decision.status == "ready"`

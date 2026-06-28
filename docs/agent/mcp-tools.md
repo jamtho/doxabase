@@ -560,6 +560,11 @@ database storage without a storage-access relation template is also review-only
 with `database_relation_template_missing`, even when `location_kind="object"`;
 read `issues[].details.repair_hint` for the reviewed add-template action on the
 storage access.
+For non-database storage, `location_kind="object"` means the storage root is the
+exact dataset object/location. `describe_query_context` still exposes that
+`storage_access_location` candidate when dataset or partition templates are
+present, and any candidate that would append a template to the object root is
+review-only with `storage_object_location_has_path_template`.
 For storage protocol/location mismatch repairs, templated actions also name
 `placeholder_fields` and `reviewed_value_fields` for the reviewed value to fill
 in.
