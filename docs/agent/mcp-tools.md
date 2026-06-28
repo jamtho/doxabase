@@ -55,7 +55,10 @@ When current staged work exists, a `staged_frontier_review` task points to
 profile or query repair work.
 Tasks labelled `query_repair_review` point back to `describe_query_context`,
 not directly to `draft_query_plan`, so agents can inspect reviewed repair
-templates before drafting or executing any route.
+templates before drafting or executing any route. Tasks labelled
+`query_context_review` can also point at query blockers, but they mean the
+context currently has no lifted repair template; inspect the review gate or
+draft action instead of assuming a metadata repair is available.
 Tasks labelled `profile_review` are scoped by `profile_evidence_iri`; keep that
 evidence IRI with the work item even when the first suggested action is a shared
 dataset-level blocker review such as `describe_query_context`.

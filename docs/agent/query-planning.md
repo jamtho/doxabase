@@ -164,7 +164,10 @@ Start with `describe_query_context(dataset_iri)`:
 6. Use `suggested_repair_action_groups` when scripting metadata repairs. It is a
    top-level `query_repair_review` lane over existing
    `issues[].details.repair_hint.actions[]`, preserving issue index/code/resource
-   and ordered repair templates. Read `pending_action_count`,
+   and ordered repair templates. In `project_brief`, `query_repair_review`
+   means this lane exists, while `query_context_review` can mean the dataset is
+   blocked by layout, verification, runtime, or binding review but has no
+   repair template to follow yet. Read `pending_action_count`,
    `skippable_action_count`, `action_status_counts`, and
    `pending_action_options` before routing a group. `choice_mode="choose_one"`
    means the actions are alternatives; use the selected action's own
