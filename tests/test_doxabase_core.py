@@ -17123,6 +17123,168 @@ def test_resource_brief_context_slice_expands_shape_and_predicate_routes(
     assert "predicate_usage_subject" in reading_routes
 
 
+def test_resource_brief_context_slice_suggests_route_cap_recovery(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    outgoing_triples = "\n".join(
+        f"ex:Hub ex:linksTo ex:Outgoing{index:02d} ."
+        for index in range(30)
+    )
+    predicate_usage_triples = "\n".join(
+        f"ex:Use{index:02d} ex:stressPredicate ex:Value{index:02d} ."
+        for index in range(30)
+    )
+    db.import_turtle(
+        f"""
+        @prefix ex: <https://example.test/project#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+        ex:stressPredicate a rdf:Property .
+        {outgoing_triples}
+        {predicate_usage_triples}
+        """,
+        graph="map",
+    )
+
+    hub = "https://example.test/project#Hub"
+    hub_slice = db.describe_context_slice(
+        hub,
+        profile="resource_brief",
+        max_triples=1000,
+    )
+
+    assert hub_slice.truncated is False
+    assert any(
+        "omitted 5 outgoing reference(s)" in warning
+        and "Raising max_triples does not recover route-capped resources" in warning
+        for warning in hub_slice.warnings
+    )
+    outgoing_action = next(
+        action
+        for action in hub_slice.suggested_next_actions
+        if action.action_label == "Page outgoing resource references"
+    )
+    assert outgoing_action.tool_name == "describe_resource"
+    assert outgoing_action.arguments == {
+        "iri": hub,
+        "include_incoming": False,
+        "limit": 25,
+        "outgoing_offset": 25,
+    }
+
+    predicate = "https://example.test/project#stressPredicate"
+    predicate_slice = db.describe_context_slice(
+        predicate,
+        profile="resource_brief",
+        max_triples=1000,
+    )
+
+    assert predicate_slice.truncated is False
+    assert any(
+        "omitted 5 predicate usage subject(s)" in warning
+        and "no paged predicate-usage browser" in warning
+        for warning in predicate_slice.warnings
+    )
+    predicate_action = next(
+        action
+        for action in predicate_slice.suggested_next_actions
+        if action.action_label == "Export project graph for predicate scan"
+    )
+    assert predicate_action.tool_name == "export_graph"
+    assert predicate_action.arguments["graphs"] == "project"
+    assert "predicate-usage" in predicate_action.arguments["path"]
+
+
+def test_resource_brief_context_slice_suggests_blank_node_closure_on_route_cap(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    property_blocks = "\n".join(
+        (
+            "            sh:property [ "
+            f"sh:path ex:path{index:02d}; "
+            "sh:datatype xsd:string "
+            "] ;"
+        )
+        for index in range(30)
+    )
+    db.import_turtle(
+        f"""
+        @prefix ex: <https://example.test/project#> .
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        ex:WideShape a sh:NodeShape ;
+{property_blocks}
+            sh:targetClass ex:WideThing .
+        """,
+        graph="shapes",
+    )
+
+    shape = "https://example.test/project#WideShape"
+    context_slice = db.describe_context_slice(
+        shape,
+        profile="resource_brief",
+        max_triples=1000,
+    )
+
+    assert context_slice.truncated is False
+    assert any(
+        "blank-node reference(s)" in warning
+        and "inspect blank-node closure" in warning
+        for warning in context_slice.warnings
+    )
+    closure_action = next(
+        action
+        for action in context_slice.suggested_next_actions
+        if action.action_label == "Inspect blank-node closure"
+    )
+    assert closure_action.tool_name == "describe_resource"
+    assert closure_action.arguments == {
+        "iri": shape,
+        "include_blank_node_closure": True,
+        "blank_node_depth": 4,
+        "blank_node_limit": 100,
+    }
+
+
+def test_resource_brief_context_slice_warns_for_pattern_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    pattern = db.record_pattern(
+        summary="Messages preserve document identity.",
+        pattern_text="Message exports carry document identifiers through joins.",
+        rationale="Exercise resource-brief guidance for pattern seeds.",
+        pattern_targets=["https://example.test/project#Messages"],
+        evidence_sources=["test://pattern"],
+    )
+
+    context_slice = db.describe_context_slice(
+        pattern.pattern_iri,
+        profile="resource_brief",
+        max_triples=100,
+    )
+
+    assert any(
+        "Seed is an rc:Pattern; resource_brief gives a generic resource card."
+        in warning
+        for warning in context_slice.warnings
+    )
+    pattern_action = next(
+        action
+        for action in context_slice.suggested_next_actions
+        if action.action_label == "Rerun as pattern brief"
+    )
+    assert pattern_action.tool_name == "describe_context_slice"
+    assert pattern_action.arguments == {
+        "seed_iris": [pattern.pattern_iri],
+        "profile": "pattern_brief",
+        "max_triples": 100,
+    }
+
+
 def test_resource_brief_context_slice_finds_owner_for_blank_node_seed(
     tmp_path: Path,
 ) -> None:

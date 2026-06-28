@@ -7479,8 +7479,34 @@ class DoxaBase:
         described_evidence: set[str] = set()
         described_revisions: set[str] = set()
         warnings: list[str] = []
+        resource_brief_recovery_actions: dict[tuple[str, str], SuggestedNextAction] = {}
         resource_brief_graphs = self._context_slice_graphs(profile="resource_brief")
         resource_brief_route_limit = 25
+
+        def resource_brief_export_path(seed_iri: str, suffix: str) -> str:
+            label = re.sub(r"[^A-Za-z0-9]+", "-", self._local_name(seed_iri))
+            label = label.strip("-").lower() or "resource"
+            digest = hashlib.sha256(seed_iri.encode("utf-8")).hexdigest()[:12]
+            return f"/tmp/doxabase-resource-brief-{label[:40]}-{suffix}-{digest}.ttl"
+
+        def add_resource_brief_recovery_action(
+            key: tuple[str, str],
+            *,
+            action_label: str,
+            tool_name: str,
+            arguments: dict[str, Any],
+            reason: str,
+        ) -> None:
+            if key in resource_brief_recovery_actions:
+                return
+            resource_brief_recovery_actions[key] = SuggestedNextAction(
+                action_label=action_label,
+                tool_name=tool_name,
+                mcp_tool_name=f"doxabase.{tool_name}",
+                arguments=arguments,
+                reason=reason,
+                call=self._suggested_call_string(tool_name, arguments),
+            )
 
         def add_resource(
             iri: str | None,
@@ -8349,7 +8375,26 @@ class DoxaBase:
                     "resource_brief omitted "
                     f"{outgoing_total - len(outgoing_refs)} outgoing reference(s) "
                     f"for '{seed_iri}' after the route cap of "
-                    f"{resource_brief_route_limit}."
+                    f"{resource_brief_route_limit}. Raising max_triples does not "
+                    "recover route-capped resources; page direct resource triples "
+                    "with describe_resource when exact direct references matter."
+                )
+                add_resource_brief_recovery_action(
+                    ("outgoing_reference", seed_iri),
+                    action_label="Page outgoing resource references",
+                    tool_name="describe_resource",
+                    arguments={
+                        "iri": seed_iri,
+                        "include_incoming": False,
+                        "limit": resource_brief_route_limit,
+                        "outgoing_offset": len(outgoing_refs),
+                    },
+                    reason=(
+                        "resource_brief capped outgoing references for this seed. "
+                        "describe_resource supports offset paging over direct "
+                        "resource triples; increasing context-slice max_triples "
+                        "will not include omitted route-capped resources."
+                    ),
                 )
 
             (
@@ -8374,7 +8419,29 @@ class DoxaBase:
                     "resource_brief omitted "
                     f"{blank_node_total - len(blank_node_refs)} blank-node "
                     f"reference(s) for '{seed_iri}' after the route cap of "
-                    f"{resource_brief_route_limit}."
+                    f"{resource_brief_route_limit}. Raising max_triples does not "
+                    "recover route-capped resources; inspect blank-node closure "
+                    "with describe_resource when exact shape or nested RDF "
+                    "details matter."
+                )
+                add_resource_brief_recovery_action(
+                    ("blank_node_reference", seed_iri),
+                    action_label="Inspect blank-node closure",
+                    tool_name="describe_resource",
+                    arguments={
+                        "iri": seed_iri,
+                        "include_blank_node_closure": True,
+                        "blank_node_depth": 4,
+                        "blank_node_limit": max(
+                            blank_node_total,
+                            resource_brief_route_limit * 4,
+                        ),
+                    },
+                    reason=(
+                        "resource_brief capped references found through blank "
+                        "nodes. describe_resource with blank-node closure is the "
+                        "direct recovery route for exact nested shape/RDF details."
+                    ),
                 )
             if blank_node_depth_exhausted:
                 warnings.append(
@@ -8383,6 +8450,25 @@ class DoxaBase:
                     "describe_resource(..., include_blank_node_closure=True) "
                     "with a larger blank_node_depth when exact shape closure "
                     "is needed."
+                )
+                add_resource_brief_recovery_action(
+                    ("blank_node_depth", seed_iri),
+                    action_label="Inspect deeper blank-node closure",
+                    tool_name="describe_resource",
+                    arguments={
+                        "iri": seed_iri,
+                        "include_blank_node_closure": True,
+                        "blank_node_depth": 4,
+                        "blank_node_limit": max(
+                            blank_node_total,
+                            resource_brief_route_limit * 4,
+                        ),
+                    },
+                    reason=(
+                        "resource_brief reached its bounded blank-node depth. "
+                        "describe_resource exposes explicit blank_node_depth and "
+                        "blank_node_limit controls."
+                    ),
                 )
 
             incoming_refs, incoming_total = self._resource_brief_incoming_subjects(
@@ -8403,7 +8489,25 @@ class DoxaBase:
                     "resource_brief omitted "
                     f"{incoming_total - len(incoming_refs)} incoming reference(s) "
                     f"for '{seed_iri}' after the route cap of "
-                    f"{resource_brief_route_limit}."
+                    f"{resource_brief_route_limit}. Raising max_triples does not "
+                    "recover route-capped resources; page direct incoming triples "
+                    "with describe_resource when exact inbound references matter."
+                )
+                add_resource_brief_recovery_action(
+                    ("incoming_reference", seed_iri),
+                    action_label="Page incoming resource references",
+                    tool_name="describe_resource",
+                    arguments={
+                        "iri": seed_iri,
+                        "limit": resource_brief_route_limit,
+                        "incoming_offset": len(incoming_refs),
+                    },
+                    reason=(
+                        "resource_brief capped incoming references for this seed. "
+                        "describe_resource supports offset paging over direct "
+                        "incoming triples; increasing context-slice max_triples "
+                        "will not include omitted route-capped resources."
+                    ),
                 )
 
             (
@@ -8427,7 +8531,26 @@ class DoxaBase:
                     "resource_brief omitted "
                     f"{blank_node_owner_total - len(blank_node_owners)} incoming "
                     f"blank-node owner(s) for '{seed_iri}' after the route cap of "
-                    f"{resource_brief_route_limit}."
+                    f"{resource_brief_route_limit}. There is no paged blank-node "
+                    "owner browser yet; export or narrow the graph when exact "
+                    "owner recovery matters."
+                )
+                add_resource_brief_recovery_action(
+                    ("incoming_blank_node_owner", seed_iri),
+                    action_label="Export graph for blank-node owner scan",
+                    tool_name="export_graph",
+                    arguments={
+                        "path": resource_brief_export_path(
+                            seed_iri,
+                            "blank-node-owners",
+                        ),
+                        "graphs": "shapes",
+                    },
+                    reason=(
+                        "resource_brief capped incoming blank-node owners. DoxaBase "
+                        "does not yet expose paged blank-node owner browsing, so "
+                        "export the likely shape graph or narrow from a known owner."
+                    ),
                 )
             if self._is_blank_node_subject(resource_brief_graphs, seed_iri):
                 (
@@ -8452,7 +8575,27 @@ class DoxaBase:
                         "resource_brief omitted "
                         f"{seed_blank_node_owner_total - len(seed_blank_node_owners)} "
                         f"blank-node seed owner(s) for '{seed_iri}' after the "
-                        f"route cap of {resource_brief_route_limit}."
+                        f"route cap of {resource_brief_route_limit}. There is no "
+                        "paged blank-node owner browser yet; export or narrow the "
+                        "graph when exact owner recovery matters."
+                    )
+                    add_resource_brief_recovery_action(
+                        ("blank_node_seed_owner", seed_iri),
+                        action_label="Export graph for blank-node seed owner scan",
+                        tool_name="export_graph",
+                        arguments={
+                            "path": resource_brief_export_path(
+                                seed_iri,
+                                "blank-node-seed-owners",
+                            ),
+                            "graphs": "shapes",
+                        },
+                        reason=(
+                            "resource_brief capped owners for a blank-node seed. "
+                            "DoxaBase does not yet expose paged blank-node owner "
+                            "browsing, so export the likely shape graph or narrow "
+                            "from a known owner."
+                        ),
                     )
                 if seed_blank_node_depth_exhausted:
                     warnings.append(
@@ -8482,7 +8625,24 @@ class DoxaBase:
                     "resource_brief omitted "
                     f"{predicate_user_total - len(predicate_users)} predicate "
                     f"usage subject(s) for '{seed_iri}' after the route cap of "
-                    f"{resource_brief_route_limit}."
+                    f"{resource_brief_route_limit}. There is no paged predicate-"
+                    "usage browser yet; raising max_triples does not recover "
+                    "route-capped predicate users."
+                )
+                add_resource_brief_recovery_action(
+                    ("predicate_usage_subject", seed_iri),
+                    action_label="Export project graph for predicate scan",
+                    tool_name="export_graph",
+                    arguments={
+                        "path": resource_brief_export_path(seed_iri, "predicate-usage"),
+                        "graphs": "project",
+                    },
+                    reason=(
+                        "resource_brief capped subjects using this resource as a "
+                        "predicate. There is no paged predicate-usage browser yet; "
+                        "export project RDF or narrow from a known subject/search "
+                        "hit when exact usage matters."
+                    ),
                 )
 
         metric_kind_seed_limit = 25
@@ -8517,6 +8677,28 @@ class DoxaBase:
             add_resource(seed, "seed", "seed resource", depth=0)
             seed_types = self._types_from_graphs(all_graphs, seed)
             if profile == "resource_brief":
+                if self.expand_iri("rc:Pattern") in seed_types:
+                    warnings.append(
+                        "Seed is an rc:Pattern; resource_brief gives a generic "
+                        "resource card. Rerun with profile='pattern_brief' or "
+                        "'deep_lore' to recover support, evidence, and pattern "
+                        "routes."
+                    )
+                    add_resource_brief_recovery_action(
+                        ("pattern_profile", seed),
+                        action_label="Rerun as pattern brief",
+                        tool_name="describe_context_slice",
+                        arguments={
+                            "seed_iris": [seed],
+                            "profile": "pattern_brief",
+                            "max_triples": max_triples,
+                        },
+                        reason=(
+                            "The seed is an rc:Pattern. resource_brief is useful "
+                            "for a generic resource card, but pattern_brief exposes "
+                            "pattern support, evidence, and implication routes."
+                        ),
+                    )
                 add_resource_brief(seed)
             elif (
                 profile in {"dataset_brief", "deep_lore"}
@@ -8657,18 +8839,21 @@ class DoxaBase:
                 truncated=truncated,
             )
         )
-        suggested_next_actions = self._context_slice_next_actions(
-            seed_iris=seeds,
-            profile=profile,
-            max_triples=max_triples,
-            include_trig=include_trig,
-            candidate_triple_count=candidate_triple_count,
-            truncated=truncated,
-            dataset_contexts=dataset_contexts.values(),
-            pattern_contexts=pattern_contexts.values(),
-            resources=resources,
-            lookup_graphs=all_lookup_graphs,
-        )
+        suggested_next_actions = [
+            *resource_brief_recovery_actions.values(),
+            *self._context_slice_next_actions(
+                seed_iris=seeds,
+                profile=profile,
+                max_triples=max_triples,
+                include_trig=include_trig,
+                candidate_triple_count=candidate_triple_count,
+                truncated=truncated,
+                dataset_contexts=dataset_contexts.values(),
+                pattern_contexts=pattern_contexts.values(),
+                resources=resources,
+                lookup_graphs=all_lookup_graphs,
+            ),
+        ]
 
         return ContextSlice(
             profile=profile,

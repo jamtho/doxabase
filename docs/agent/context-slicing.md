@@ -60,6 +60,13 @@ in ontology, constrained in shapes, and used by map resources in the same
 slice. `incoming_blank_node_owner` walks through nested SHACL blank-node
 fragments, so a predicate used inside `sh:qualifiedValueShape` can still route
 back to the named owner shape.
+Route-cap warnings are separate from raw triple truncation. Raising
+`max_triples` only returns more triples for resources already selected; it does
+not recover omitted `resource_brief` route resources. Use the
+`suggested_next_actions`: direct outgoing/incoming caps page through
+`describe_resource`, blank-node reference caps inspect
+`include_blank_node_closure`, and predicate-usage caps currently require
+exporting/narrowing because there is no paged predicate-usage browser yet.
 This applies to durable graph content. Proposed ontology or SHACL resources
 inside staged patch Turtle are not materialized as ordinary graph resources
 until the staged revision is applied, so `resource_brief` and

@@ -745,7 +745,13 @@ counts may include `resource_type`, `outgoing_reference`,
 `triples`/`trig` to read the exact predicates behind those generic routes.
 `incoming_blank_node_owner` can reach through nested blank-node shape fragments,
 for example from a predicate used inside `sh:qualifiedValueShape` back to the
-named owner shape.
+named owner shape. When a resource-brief route cap fires, warnings and
+`suggested_next_actions` name the recovery route. Outgoing/incoming reference
+caps point to paged `describe_resource` calls, blank-node reference caps point to
+`describe_resource(..., include_blank_node_closure=True)`, and predicate usage
+caps point to graph export/narrowing because there is no paged predicate-usage
+browser yet. Raising `max_triples` does not recover route-capped resources; it
+only returns more raw triples for resources already selected.
 `suggested_next_actions` can include `describe_query_context` for seed
 datasets/tables whose nested `dataset_contexts[].operational_warnings` contain
 query-planning errors or warnings. Use that route to inspect readiness, target

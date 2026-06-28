@@ -2094,6 +2094,13 @@ few useful gaps:
   Reconsideration descriptions now hydrate their evidence details from the
   `evidence` graph too, so the direct claim card shows the source strings and
   source spans behind the reconsideration.
+- A high-degree `resource_brief` trial showed route-cap warnings could be
+  mistaken for raw triple truncation. `resource_brief` now says explicitly that
+  raising `max_triples` does not recover route-capped resources, adds recovery
+  actions for paged direct references and blank-node closure, and points
+  predicate-usage caps at graph export/narrowing until a paged predicate browser
+  exists. Pattern seeds also warn when `resource_brief` should be replaced by
+  `pattern_brief` or `deep_lore` for support/evidence routes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
