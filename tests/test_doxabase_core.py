@@ -1951,6 +1951,41 @@ def test_stage_map_assertion_change_packages_support_context(
     grouped_queue_item = grouped_export.bundle_summary.next_action_queue_items[0]
     assert grouped_queue_item.semantic_risk_level == "high"
     assert grouped_queue_item.semantic_risk_reasons == panel.semantic_risk_reasons
+    listed = db.list_graph_revisions(
+        include_apply_checks=True,
+        current_staged_work_only=True,
+    )
+    listed_row = next(
+        row
+        for row in listed.revisions
+        if row.iri == staged_change.staged_revision.revision_iri
+    )
+    assert listed_row.application_semantic_risk_level == "high"
+    assert listed_row.application_semantic_risk_reasons == panel.semantic_risk_reasons
+    listed_queue_item = next(
+        item
+        for item in listed.next_action_queue_items
+        if item.row_iri == staged_change.staged_revision.revision_iri
+    )
+    assert listed_queue_item.semantic_risk_level == "high"
+    assert listed_queue_item.semantic_risk_reasons == panel.semantic_risk_reasons
+    resource_revisions = db.list_resource_revisions(
+        "https://example.test/project#px_price",
+        include_apply_checks=True,
+        current_staged_work_only=True,
+    )
+    resource_queue_item = next(
+        item
+        for item in resource_revisions.next_action_queue_items
+        if item.row_iri == staged_change.staged_revision.revision_iri
+    )
+    assert resource_queue_item.semantic_risk_level == "high"
+    recovery = db.plan_staged_revision_recovery(
+        [staged_change.staged_revision.revision_iri]
+    )
+    recovery_queue_item = recovery.next_action_queue_items[0]
+    assert recovery_queue_item.semantic_risk_level == "high"
+    assert recovery_queue_item.semantic_risk_reasons == panel.semantic_risk_reasons
 
     comment_change = db.stage_map_assertion_change(
         subject="https://example.test/project#px_price",

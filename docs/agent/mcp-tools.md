@@ -1531,8 +1531,9 @@ row-vs-target flag, and semantic alternative gate fields for each queued row;
 `semantic_review_required_queue_counts` flags gated alternative rows by queue.
 `semantic_risk_queue_counts` separately counts queued rows with apply-check
 semantic risk (`attention` or `high`), including repair queues when semantic
-risk coexists with validation or conflict blockers. Grouped export queue items
-copy row-local `semantic_risk_level` and `semantic_risk_reasons`.
+risk coexists with validation or conflict blockers. List, recovery, and grouped
+export queue items copy row-local `semantic_risk_level` and
+`semantic_risk_reasons` when their apply check has already computed risk.
 `bundle_summary.warnings` calls out
 bundle-level sequencing hazards such as ready/no-op reviews sharing a changed
 graph that should be re-checked after each apply, plus source-only bundles whose

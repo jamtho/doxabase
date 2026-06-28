@@ -1306,6 +1306,8 @@ class GraphRevisionListItem:
     application_blocking_reasons: list[str]
     application_count_drifts: list[StagedGraphCountDrift]
     application_snapshot_drifts: list[StagedGraphSnapshotDrift]
+    application_semantic_risk_level: str | None
+    application_semantic_risk_reasons: list[str]
     snapshot_evidence: RevisionSnapshotEvidenceStatus
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
@@ -4978,6 +4980,8 @@ class DoxaBase:
             application_blocking_reasons: list[str] = []
             application_count_drifts: list[StagedGraphCountDrift] = []
             application_snapshot_drifts: list[StagedGraphSnapshotDrift] = []
+            application_semantic_risk_level: str | None = None
+            application_semantic_risk_reasons: list[str] = []
             suggested_next_actions: list[SuggestedNextAction] = []
             patch_iris = self._objects(
                 data_graphs,
@@ -5002,6 +5006,8 @@ class DoxaBase:
                     )
                     application_blocking_reasons = check.blocking_reasons
                     application_count_drifts = check.count_drifts
+                    application_semantic_risk_level = check.semantic_risk_level
+                    application_semantic_risk_reasons = check.semantic_risk_reasons
                     if drift_detail == "exact":
                         application_snapshot_drifts = check.snapshot_drifts
                     else:
@@ -5191,6 +5197,12 @@ class DoxaBase:
                     application_blocking_reasons=application_blocking_reasons,
                     application_count_drifts=application_count_drifts,
                     application_snapshot_drifts=application_snapshot_drifts,
+                    application_semantic_risk_level=(
+                        application_semantic_risk_level
+                    ),
+                    application_semantic_risk_reasons=(
+                        application_semantic_risk_reasons
+                    ),
                     snapshot_evidence=snapshot_evidence,
                     next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
@@ -5222,6 +5234,8 @@ class DoxaBase:
                 application_decision=item.application_decision,
                 stale_resolution_state=item.stale_resolution_state,
                 staged_validation_status=item.staged_validation_status,
+                semantic_risk_level=item.application_semantic_risk_level,
+                semantic_risk_reasons=item.application_semantic_risk_reasons,
                 alternative_gate=item.alternative_gate,
             )
             if queue_item is not None:
@@ -5480,6 +5494,8 @@ class DoxaBase:
             application_decision=selected.application_decision,
             stale_resolution_state=selected.stale_resolution_state,
             staged_validation_status=selected.staged_validation_status,
+            semantic_risk_level=selected.application_semantic_risk_level,
+            semantic_risk_reasons=selected.application_semantic_risk_reasons,
             alternative_gate=selected.alternative_gate,
         )
         alternative_revision_iris = self._revision_lineage_alternative_revision_iris(
@@ -6013,6 +6029,8 @@ class DoxaBase:
                 application_decision=item.revision.application_decision,
                 stale_resolution_state=item.revision.stale_resolution_state,
                 staged_validation_status=item.revision.staged_validation_status,
+                semantic_risk_level=item.revision.application_semantic_risk_level,
+                semantic_risk_reasons=item.revision.application_semantic_risk_reasons,
                 alternative_gate=item.revision.alternative_gate,
             )
             if queue_item is not None:
@@ -6266,6 +6284,10 @@ class DoxaBase:
             application_decision=selected.revision.application_decision,
             stale_resolution_state=selected.revision.stale_resolution_state,
             staged_validation_status=selected.revision.staged_validation_status,
+            semantic_risk_level=selected.revision.application_semantic_risk_level,
+            semantic_risk_reasons=(
+                selected.revision.application_semantic_risk_reasons
+            ),
             alternative_gate=selected.revision.alternative_gate,
         )
 
@@ -22898,6 +22920,8 @@ class DoxaBase:
             application_decision=check.decision,
             stale_resolution_state=check.stale_resolution_state,
             staged_validation_status=source_staged_validation_status,
+            semantic_risk_level=check.semantic_risk_level,
+            semantic_risk_reasons=check.semantic_risk_reasons,
             alternative_gate=check.alternative_gate,
         )
         draft_status, draft_kind, reason_codes, note = (
@@ -23879,6 +23903,8 @@ class DoxaBase:
                 application_decision=current_check.decision,
                 stale_resolution_state=stale_resolution_state_after,
                 staged_validation_status=current_staged_validation_status,
+                semantic_risk_level=current_check.semantic_risk_level,
+                semantic_risk_reasons=current_check.semantic_risk_reasons,
                 alternative_gate=current_check.alternative_gate,
             )
             if (

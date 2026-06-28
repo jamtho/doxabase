@@ -2888,6 +2888,9 @@ gate still requires semantic review; it does not count ordinary semantic-risk
 review cues. Grouped export bundle summaries also expose
 `semantic_risk_queue_counts` for queued rows whose apply check reported
 `semantic_risk_level` of `attention` or `high`.
+Revision lists and recovery plans copy row-local semantic-risk fields onto queue
+items when their apply checks have already computed that risk; grouped exports
+also provide the aggregate count.
 It is a routing surface, not a preference order for competing alternatives; use
 row details such as `review_recommendation`, `alternative_to`, and
 `current_alternative_to` when comparing alternative framings.
