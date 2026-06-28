@@ -1706,7 +1706,10 @@ result.review_note
 `result_kind` is `profile_insight_review_bundle`. `export` is the nested
 `StagedGraphRevisionsExportRecord` when at least one related staged revision was
 found; otherwise it is `None` and `warnings` explains that no bundle was
-written.
+written. When the nested staged Markdown export contains credential-like patch
+literals, `result.export.sensitive_literal_count` and
+`result.export.privacy_warnings` carry the same warning fields as direct grouped
+staged exports.
 
 Each `result.candidates[]` row explains why one staged revision was included:
 
@@ -4331,6 +4334,10 @@ when one or more revisions were refreshed from stale proposals. They include
 current comparison target is a refreshed successor.
 Stale original exports include a top metadata `Restaged by` line when a
 refreshed successor already exists.
+If the generated staged Markdown contains credential-like or secret-looking
+patch literals, the export inserts a top `Privacy Warning` section and returns
+redacted warning fields. The staged patch content itself is preserved and is not
+redacted.
 In grouped exports, `Staged validation` is the staged description's original
 preview result, while `Current validation` is derived from the live apply check
 and can be `skipped: conflicts_present`. Both cells include a result count when
@@ -4345,6 +4352,8 @@ export.revision_iris
 export.bytes_written
 export.revision_summaries
 export.bundle_summary
+export.sensitive_literal_count
+export.privacy_warnings
 ```
 
 `export.revision_iris` is normalized to first-seen unique revision IRIs; grouped

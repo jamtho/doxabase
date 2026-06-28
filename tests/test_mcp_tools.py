@@ -646,6 +646,53 @@ def test_staged_revision_tools_return_json_like_payloads(tmp_path: Path) -> None
     assert "exploratory hunch" in export_path.read_text()
 
 
+def test_staged_markdown_export_tools_return_privacy_warnings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_789"
+    secret_text = f"Bearer {fake_secret}"
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage risky review literal",
+        rationale="Export tools should surface privacy warnings.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:RiskyLiteral a rc:KnownCaveat ;
+                        rdfs:label "Risky literal" ;
+                        rc:caveatDescription "{secret_text}" .
+                """,
+            }
+        ],
+    )
+
+    single = export_staged_revision_tool(
+        db,
+        iri=staged["revision_iri"],
+        path=str(tmp_path / "single.md"),
+    )
+    grouped = export_staged_revisions_tool(
+        db,
+        revision_iris=[staged["revision_iri"]],
+        path=str(tmp_path / "grouped.md"),
+    )
+
+    assert single["sensitive_literal_count"] == 1
+    assert grouped["sensitive_literal_count"] == 1
+    assert single["privacy_warnings"]
+    assert grouped["privacy_warnings"]
+    assert fake_secret not in " ".join(single["privacy_warnings"])
+    assert fake_secret not in " ".join(grouped["privacy_warnings"])
+    assert "## Privacy Warning" in Path(single["path"]).read_text(encoding="utf-8")
+    assert "## Privacy Warning" in Path(grouped["path"]).read_text(encoding="utf-8")
+
+
 def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
     tmp_path: Path,
 ) -> None:

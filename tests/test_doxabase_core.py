@@ -1007,6 +1007,68 @@ def test_stage_graph_revision_records_reviewable_patch_without_mutating_map(
     assert "ex:Messages" in export_text
 
 
+def test_staged_markdown_exports_warn_about_sensitive_patch_literals(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_456"
+    secret_text = f"Bearer {fake_secret}"
+    staged = db.stage_graph_revision(
+        summary="Stage credential caveat",
+        rationale="The export should warn while preserving patch content.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:CredentialCaveat a rc:KnownCaveat ;
+                        rdfs:label "Credential caveat" ;
+                        rc:caveatDescription "{secret_text}" .
+                """,
+            }
+        ],
+    )
+
+    single_path = tmp_path / "single.md"
+    single_export = db.export_staged_revision(staged.revision_iri, single_path)
+    single_text = single_path.read_text(encoding="utf-8")
+
+    assert single_export.sensitive_literal_count == 1
+    assert single_export.privacy_warnings
+    assert fake_secret not in " ".join(single_export.privacy_warnings)
+    assert secret_text in single_text
+    assert "## Privacy Warning" in single_text
+    assert single_text.index("## Privacy Warning") < single_text.index(
+        "## Current Apply Check"
+    )
+    single_warning_prefix = single_text.split("## Current Apply Check", 1)[0]
+    assert fake_secret not in single_warning_prefix
+
+    grouped_path = tmp_path / "grouped.md"
+    grouped_export = db.export_staged_revisions(
+        [staged.revision_iri],
+        grouped_path,
+    )
+    grouped_text = grouped_path.read_text(encoding="utf-8")
+
+    assert grouped_export.sensitive_literal_count == 1
+    assert grouped_export.privacy_warnings
+    assert fake_secret not in " ".join(grouped_export.privacy_warnings)
+    assert secret_text in grouped_text
+    assert "## Privacy Warning" in grouped_text
+    assert grouped_text.index("## Privacy Warning") < grouped_text.index(
+        "## Reviewer Decision Matrix"
+    )
+    grouped_warning_prefix = grouped_text.split(
+        "## Reviewer Decision Matrix",
+        1,
+    )[0]
+    assert fake_secret not in grouped_warning_prefix
+
+
 def test_stage_graph_revision_exposes_seed_expanded_count_basis(
     tmp_path: Path,
 ) -> None:
@@ -20505,6 +20567,8 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     evidence = "https://example.test/profile-review#SupportEventsProfileEvidence"
     metric = "https://example.test/profile-review#WorkflowFlipRate"
     caveat = "https://example.test/profile-review#WorkflowFlipRateCaveat"
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_PROFILE"
+    secret_text = f"Bearer {fake_secret}"
 
     db.record_map_dataset(
         dataset,
@@ -20607,7 +20671,7 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
 
                     <{caveat}> a rc:KnownCaveat ;
                         rdfs:label "Workflow flip denominator caveat" ;
-                        rc:caveatDescription "Workflow flip rate excludes replay and backfill rows." .
+                        rc:caveatDescription "Workflow flip rate excludes replay and backfill rows. Scratch credential paste: {secret_text}" .
 
                     <{dataset}> rc:hasKnownCaveat <{caveat}> .
                 """,
@@ -20658,6 +20722,9 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert result.candidate_count == 3
     assert result.export is not None
     assert set(result.export.revision_iris) == expected_revision_iris
+    assert result.export.sensitive_literal_count == 1
+    assert result.export.privacy_warnings
+    assert fake_secret not in " ".join(result.export.privacy_warnings)
     assert related_pattern.pattern_iri in result.related_pattern_iris
     assert unrelated_pattern.pattern_iri not in result.related_pattern_iris
     assert all(candidate.relation_reasons for candidate in result.candidates)
@@ -20668,8 +20735,10 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert export_path.exists()
     exported = export_path.read_text(encoding="utf-8")
     assert "Profile insight review: Support Events" in exported
+    assert "## Privacy Warning" in exported
     assert "## Reviewer Decision Matrix" in exported
     assert "Workflow flip denominator caveat" in exported
+    assert secret_text in exported
     assert "WorkflowFlipRate" in exported
 
 

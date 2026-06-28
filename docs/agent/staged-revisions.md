@@ -135,7 +135,11 @@ Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
 proposal. The export includes a live `Current Apply Check` section generated at
 export time, so stale proposals carry their current conflict status, count or
 digest drift, validation-skipped reason, and suggested next calls in the review
-artifact itself. For simple single-assertion `map` changes that still replay
+artifact itself. If the generated Markdown contains credential-like or
+secret-looking staged patch literals, the export record returns
+`sensitive_literal_count` and `privacy_warnings`, and the artifact starts with a
+`Privacy Warning`; patch content is preserved and not redacted. For simple
+single-assertion `map` changes that still replay
 cleanly, the export may include a `Semantic Review Warning` before the apply
 check, and also includes a `Judgement Panel` section so human and agent
 reviewers can see the same compact values, value-type context, caveats, routes,

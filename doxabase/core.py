@@ -801,6 +801,8 @@ class StagedGraphRevisionExportRecord:
     format: str
     revision_iri: str
     bytes_written: int
+    sensitive_literal_count: int = 0
+    privacy_warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -875,6 +877,8 @@ class StagedGraphRevisionsExportRecord:
     bytes_written: int
     revision_summaries: list[StagedGraphRevisionExportSummary]
     bundle_summary: StagedGraphRevisionBundleSummary
+    sensitive_literal_count: int = 0
+    privacy_warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -28108,12 +28112,18 @@ class DoxaBase:
             apply_check=apply_check,
             apply_check_error=apply_check_error,
         )
+        sensitive_literal_count, privacy_warnings = (
+            self._markdown_export_privacy_warnings(data)
+        )
+        data = self._markdown_with_privacy_warning(data, privacy_warnings)
         bytes_written = self._write_export(path, data, overwrite=overwrite)
         return StagedGraphRevisionExportRecord(
             path=str(path),
             format=format,
             revision_iri=description.iri,
             bytes_written=bytes_written,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
         )
 
     def export_profile_insight_review_bundle(
@@ -28428,6 +28438,10 @@ class DoxaBase:
             title=title,
             executive_summary=executive_summary,
         )
+        sensitive_literal_count, privacy_warnings = (
+            self._markdown_export_privacy_warnings(data)
+        )
+        data = self._markdown_with_privacy_warning(data, privacy_warnings)
         bytes_written = self._write_export(path, data, overwrite=overwrite)
         return StagedGraphRevisionsExportRecord(
             path=str(path),
@@ -28436,6 +28450,8 @@ class DoxaBase:
             bytes_written=bytes_written,
             revision_summaries=revision_summaries,
             bundle_summary=bundle_summary,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
         )
 
     def _ensure_staged_revision_exportable(self, iri: str) -> None:
@@ -33997,6 +34013,57 @@ class DoxaBase:
         if scan.omitted_match_count:
             warning += f" ({scan.omitted_match_count} additional match(es) omitted.)"
         return scan.match_count, [warning]
+
+    def _markdown_export_privacy_warnings(
+        self,
+        data: str,
+        *,
+        limit: int = 5,
+    ) -> tuple[int, list[str]]:
+        match_count = 0
+        omitted_match_count = 0
+        examples: list[str] = []
+        for line_number, line in enumerate(data.splitlines(), start=1):
+            match_kind, redacted_snippet = self._sensitive_literal_match(line)
+            if match_kind is None or redacted_snippet is None:
+                continue
+            match_count += 1
+            if len(examples) < limit:
+                examples.append(f"line {line_number} {redacted_snippet}")
+            else:
+                omitted_match_count += 1
+        if match_count == 0:
+            return 0, []
+        example_text = "; ".join(examples)
+        warning = (
+            f"Markdown export includes {match_count} potential sensitive literal "
+            "match(es). Review the generated file before sharing; staged patch "
+            "content is preserved and not redacted. Redacted examples: "
+            f"{example_text}"
+        )
+        if omitted_match_count:
+            warning += f" ({omitted_match_count} additional match(es) omitted.)"
+        return match_count, [warning]
+
+    @staticmethod
+    def _markdown_with_privacy_warning(
+        data: str,
+        privacy_warnings: list[str],
+    ) -> str:
+        if not privacy_warnings:
+            return data
+        warning_lines = [
+            "## Privacy Warning",
+            "",
+            *(f"- {warning}" for warning in privacy_warnings),
+            "",
+        ]
+        lines = data.splitlines()
+        if len(lines) >= 2 and lines[0].startswith("# ") and lines[1] == "":
+            output_lines = [lines[0], "", *warning_lines, *lines[2:]]
+        else:
+            output_lines = [*warning_lines, *lines]
+        return "\n".join(output_lines).rstrip() + "\n"
 
     def _validate_graph_preview(
         self,
