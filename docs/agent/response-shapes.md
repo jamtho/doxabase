@@ -2900,8 +2900,9 @@ exports, so validation-failed framings land in `repair_or_replace` while
 mechanically ready framings land in `apply_after_review`.
 `next_action_queue_items` mirrors the grouped export queue-item shape, including
 `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
-fields, semantic-risk fields when populated, and alternative-gate fields for
-each staged framing. The suggested
+fields, semantic-risk fields when populated, row-local alternative-gate fields,
+and `alternative_set_iris` / `alternative_set_source_iri` /
+`alternative_set_role` when sibling framings in the response compete. The suggested
 actions normally include a grouped `export_staged_revisions` call plus
 per-revision `check_staged_revision_apply` calls for fresh live routing. When
 `first_alternative_anchor_not_ready` fires, the first suggested action is a
@@ -3062,7 +3063,10 @@ triples.
 row per routed item. It preserves the queued `row_iri`, adds
 `resolved_target_iri`, `resolved_target_record_kind`, and `row_is_target`, and
 carries row status, semantic-risk fields when available, and alternative-gate
-fields. `next_action_queue_item_counts` counts those items by queue.
+fields. When returned rows include unresolved alternatives, the queue items also
+carry `alternative_set_iris`, `alternative_set_source_iri`, and
+`alternative_set_role` for every member, including the source row.
+`next_action_queue_item_counts` counts those items by queue.
 `semantic_review_required_queue_counts` counts queued rows whose alternative
 gate still requires semantic review; it does not count ordinary semantic-risk
 review cues. Grouped export bundle summaries also expose

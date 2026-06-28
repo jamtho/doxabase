@@ -802,7 +802,10 @@ Queue values are the returned row IRIs; always read the row's
 applied event reached through a restaged successor. For automation, prefer the
 machine-readable `bundle_summary.next_action_queue_items`: each item includes
 `row_iri`, `resolved_target_iri`, `row_is_target`, row status fields, and the
-selected tool/call. `next_action_queue_item_counts` mirrors queue sizes, and
+selected tool/call. When rows in the same response are unresolved alternatives,
+every member, including the source/default row, carries `alternative_set_iris`,
+`alternative_set_source_iri`, and `alternative_set_role`.
+`next_action_queue_item_counts` mirrors queue sizes, and
 `semantic_review_required_queue_counts` highlights alternative-gated rows by
 queue. Use `semantic_risk_queue_counts` for the separate count of queued rows
 whose apply check reports semantic risk from linked support, judgement panels,

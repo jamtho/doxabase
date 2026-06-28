@@ -185,8 +185,9 @@ handled by restage. Responses include page-scoped `next_action_queue_items`,
 `next_action_queue_item_counts`, and `semantic_review_required_queue_counts`.
 Queue items preserve the old row-IRI queue while adding
 `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`, status
-fields, semantic-risk fields when populated, and alternative-gate fields for
-automation. Non-current rows include
+fields, semantic-risk fields when populated, alternative-gate fields, and
+`alternative_set_iris` / `alternative_set_source_iri` / `alternative_set_role`
+when returned rows compete as alternatives. Non-current rows include
 `not_current_staged_work_reason`,
 such as
 `already_applied_source`, `superseded_by_restage`, or `applied_event_record`.
@@ -1611,7 +1612,8 @@ and `recommended_applied_inspection_iris`. Prefer
 `bundle_summary.next_action_queue` when an autonomous script needs the most
 direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.next_action_queue_items` adds the resolved target IRI,
-row-vs-target flag, and semantic alternative gate fields for each queued row;
+row-vs-target flag, semantic alternative gate fields, and symmetric
+alternative-set fields for each queued row;
 `bundle_summary.snapshot_evidence` separately summarizes whether the included
 rows have complete stored snapshot rows. Its `complete=false` rows carry the
 same `import_revision_snapshots` suggested actions as the Markdown `Snapshot

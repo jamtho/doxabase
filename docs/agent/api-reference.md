@@ -1065,9 +1065,12 @@ into queues such as `apply_after_review`, `restage_after_review`,
 `next_action_queue_items` is the machine-readable companion: each item names the
 queued `row_iri`, `resolved_target_iri`, `resolved_target_record_kind`, whether
 `row_is_target`, the selected tool/call, row status fields, and alternative-gate
-fields. Use it when a queued stale source redirects to a refreshed successor or
-applied event, or when an `apply_after_review` row still requires semantic
-review. The `next_action_queue_item_counts` and
+fields. When returned rows compete as alternatives, items also carry
+`alternative_set_iris`, `alternative_set_source_iri`, and
+`alternative_set_role` for every member, including the source row. Use it when a
+queued stale source redirects to a refreshed successor or applied event, or when
+an `apply_after_review` row still requires semantic review. The
+`next_action_queue_item_counts` and
 `semantic_review_required_queue_counts` dictionaries are scoped to the same
 returned page as `next_action_queue`. `count` and `total_count` are the
 filtered total before pagination, while `returned_count` is the returned page
@@ -1464,6 +1467,9 @@ staged sources; treat them as semantic review targets even when mechanically
 ready. The same condition is visible in `bundle_summary.next_action_queue_items`
 through `alternative_semantic_review_required=True` and the applied-source /
 applied-revision fields.
+For unresolved alternatives that are bundled together, queue items use
+`alternative_set_iris`, `alternative_set_source_iri`, and `alternative_set_role`
+to mark both the source/default row and child alternatives.
 Each row also carries `next_action_after` and
 `next_action_queue_item_after` / `suggested_next_actions_after` for that
 `current_revision_iri`, so autonomous scripts can route the post-batch current

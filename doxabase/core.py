@@ -2809,6 +2809,9 @@ class RevisionNextActionQueueItem:
     alternative_semantic_review_required: bool
     alternative_applied_source_iri: str | None
     alternative_applied_revision_iri: str | None
+    alternative_set_iris: list[str]
+    alternative_set_source_iri: str | None
+    alternative_set_role: str | None
 
 
 @dataclass(frozen=True)
@@ -5724,6 +5727,15 @@ class DoxaBase:
             )
             if queue_item is not None:
                 next_action_queue_items.append(queue_item)
+        next_action_queue_items = (
+            self._revision_next_action_queue_items_with_alternative_sets(
+                next_action_queue_items,
+                (
+                    (item.iri, item.alternative_to, item.current_alternative_to)
+                    for item in sliced_items
+                ),
+            )
+        )
         return GraphRevisionList(
             revisions=sliced_items,
             count=len(items),
@@ -6524,6 +6536,19 @@ class DoxaBase:
             )
             if queue_item is not None:
                 next_action_queue_items.append(queue_item)
+        next_action_queue_items = (
+            self._revision_next_action_queue_items_with_alternative_sets(
+                next_action_queue_items,
+                (
+                    (
+                        item.revision.iri,
+                        item.revision.alternative_to,
+                        item.revision.current_alternative_to,
+                    )
+                    for item in sliced
+                ),
+            )
+        )
         return ResourceRevisionList(
             resource=self._resource_summary(lookup_graphs, resource_value),
             revisions=sliced,
@@ -25983,6 +26008,38 @@ class DoxaBase:
             for lane in lanes
             if lane.next_action_queue_item is not None
         ]
+        queue_items = self._revision_next_action_queue_items_with_alternative_sets(
+            queue_items,
+            (
+                (
+                    lane.row_iri,
+                    (
+                        lane.alternative_gate.alternative_to
+                        if lane.alternative_gate is not None
+                        else None
+                    ),
+                    (
+                        lane.alternative_gate.current_alternative_to
+                        if lane.alternative_gate is not None
+                        else None
+                    ),
+                )
+                for lane in lanes
+            ),
+        )
+        enriched_queue_item_by_row = {item.row_iri: item for item in queue_items}
+        lanes = [
+            replace(
+                lane,
+                next_action_queue_item=enriched_queue_item_by_row.get(
+                    lane.row_iri,
+                    lane.next_action_queue_item,
+                ),
+            )
+            if lane.next_action_queue_item is not None
+            else lane
+            for lane in lanes
+        ]
         mutation_frontier_iris = self._revision_mutation_frontier_iris(queue_items)
         requires_recheck_after_each_apply = bool(
             batch.bundle_summary.sequential_apply_recheck_candidate_iris
@@ -30005,7 +30062,86 @@ class DoxaBase:
                 if alternative_gate is not None
                 else None
             ),
+            alternative_set_iris=[],
+            alternative_set_source_iri=None,
+            alternative_set_role=None,
         )
+
+    @staticmethod
+    def _alternative_set_membership_by_iri(
+        rows: Iterable[tuple[str, str | None, str | None]],
+    ) -> dict[str, tuple[list[str], str, str]]:
+        row_list = list(rows)
+        row_order = {iri: index for index, (iri, _, _) in enumerate(row_list)}
+        row_iris = set(row_order)
+        alternatives_by_source: dict[str, list[str]] = {}
+        for iri, alternative_to, current_alternative_to in row_list:
+            source_iri = current_alternative_to or alternative_to
+            if (
+                source_iri is None
+                or source_iri == iri
+                or source_iri not in row_iris
+            ):
+                continue
+            alternatives_by_source.setdefault(source_iri, []).append(iri)
+
+        memberships: dict[str, tuple[list[str], str, str]] = {}
+        for source_iri, alternative_iris in alternatives_by_source.items():
+            member_iris = sorted(
+                {source_iri, *alternative_iris},
+                key=lambda iri: row_order[iri],
+            )
+            for member_iri in member_iris:
+                role = "source" if member_iri == source_iri else "alternative"
+                existing = memberships.get(member_iri)
+                if existing is None:
+                    memberships[member_iri] = (member_iris, source_iri, role)
+                    continue
+                existing_iris, existing_source, existing_role = existing
+                merged_iris = sorted(
+                    {*existing_iris, *member_iris},
+                    key=lambda iri: row_order[iri],
+                )
+                merged_source = min(
+                    [existing_source, source_iri],
+                    key=lambda iri: row_order[iri],
+                )
+                merged_role = (
+                    existing_role
+                    if existing_role == role
+                    else "source_and_alternative"
+                )
+                memberships[member_iri] = (
+                    merged_iris,
+                    merged_source,
+                    merged_role,
+                )
+        return memberships
+
+    @staticmethod
+    def _revision_next_action_queue_items_with_alternative_sets(
+        queue_items: list[RevisionNextActionQueueItem],
+        rows: Iterable[tuple[str, str | None, str | None]],
+    ) -> list[RevisionNextActionQueueItem]:
+        memberships = DoxaBase._alternative_set_membership_by_iri(rows)
+        if not memberships:
+            return queue_items
+        enriched: list[RevisionNextActionQueueItem] = []
+        for item in queue_items:
+            membership = memberships.get(item.row_iri)
+            if membership is None:
+                enriched.append(item)
+                continue
+            alternative_set_iris, source_iri, role = membership
+            enriched.append(
+                replace(
+                    item,
+                    alternative_set_iris=alternative_set_iris,
+                    alternative_set_source_iri=source_iri,
+                    alternative_set_role=role,
+                )
+            )
+        return enriched
 
     @staticmethod
     def _revision_next_action_queue_item_counts(
@@ -31069,6 +31205,19 @@ class DoxaBase:
             )
             if queue_item is not None:
                 next_action_queue_items.append(queue_item)
+        next_action_queue_items = (
+            self._revision_next_action_queue_items_with_alternative_sets(
+                next_action_queue_items,
+                (
+                    (
+                        summary.revision_iri,
+                        summary.alternative_to,
+                        summary.current_alternative_to,
+                    )
+                    for summary in summaries
+                ),
+            )
+        )
         mutation_frontier_iris = self._revision_mutation_frontier_iris(
             next_action_queue_items
         )

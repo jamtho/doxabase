@@ -71,7 +71,10 @@ Use `next_action_queue` to separate ready framings from validation failures,
 repair lanes, and informational rows. The queue is a routing surface, not a
 preference order among alternatives. Use `revision_summaries`,
 `review_recommendation`, `alternative_to`, and `current_alternative_to` to
-understand comparison meaning.
+understand comparison meaning. When linked alternatives are returned together,
+`next_action_queue_items` carries `alternative_set_iris`,
+`alternative_set_source_iri`, and `alternative_set_role` on every member,
+including the first/source framing.
 
 Before applying, repairing, or restaging a candidate, rerun
 `check_staged_revision_apply` if any graph changes may have happened since the

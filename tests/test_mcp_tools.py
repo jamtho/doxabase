@@ -3252,6 +3252,16 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
         item["resolved_target_iri"] for item in result["next_action_queue_items"]
     ] == revision_iris
     assert all(item["row_is_target"] for item in result["next_action_queue_items"])
+    assert [
+        item["alternative_set_iris"] for item in result["next_action_queue_items"]
+    ] == [revision_iris, revision_iris]
+    assert [
+        item["alternative_set_source_iri"]
+        for item in result["next_action_queue_items"]
+    ] == [revision_iris[0], revision_iris[0]]
+    assert [
+        item["alternative_set_role"] for item in result["next_action_queue_items"]
+    ] == ["source", "alternative"]
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "export_staged_revisions"
     )

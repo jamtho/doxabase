@@ -2178,6 +2178,11 @@ few useful gaps:
   remain separate from profile map patches. For complementary caveat plus
   vocabulary framings, set `link_alternatives=False` instead of accepting the
   default alternative-linking behavior.
+- A profile-frontier review trial found grouped Markdown identified competing
+  alternatives symmetrically, but queue-only automation saw only the child row's
+  row-local `alternative_to` gate. Queue items now add `alternative_set_iris`,
+  `alternative_set_source_iri`, and `alternative_set_role` for every returned
+  member of an unresolved alternative set.
 - A query/storage ranking follow-up found complete-but-unrelated storage access
   candidates could outrank a nearby dataset-specific access. Missing-storage
   candidate ranking now splits weak generic tokens such as `data`, `parquet`,

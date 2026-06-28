@@ -10999,6 +10999,15 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         item.resolved_target_iri for item in draft.next_action_queue_items
     ] == revision_iris
     assert all(item.row_is_target for item in draft.next_action_queue_items)
+    assert [
+        item.alternative_set_iris for item in draft.next_action_queue_items
+    ] == [revision_iris, revision_iris]
+    assert [
+        item.alternative_set_source_iri for item in draft.next_action_queue_items
+    ] == [revision_iris[0], revision_iris[0]]
+    assert [
+        item.alternative_set_role for item in draft.next_action_queue_items
+    ] == ["source", "alternative"]
     assert draft.suggested_next_actions[0].tool_name == "export_staged_revisions"
     assert draft.suggested_next_actions[0].arguments["revision_iris"] == revision_iris
     draft_export_path = draft.suggested_next_actions[0].arguments["path"]
@@ -11080,6 +11089,18 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         None,
         draft.staged_revisions[0].revision_iri,
     ]
+    assert [
+        item.alternative_set_iris
+        for item in export.bundle_summary.next_action_queue_items
+    ] == [revision_iris, revision_iris]
+    assert [
+        item.alternative_set_source_iri
+        for item in export.bundle_summary.next_action_queue_items
+    ] == [revision_iris[0], revision_iris[0]]
+    assert [
+        item.alternative_set_role
+        for item in export.bundle_summary.next_action_queue_items
+    ] == ["source", "alternative"]
     assert [item.apply_status for item in export.revision_summaries] == [
         "ready",
         "ready",
@@ -11153,6 +11174,16 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "\n# Explore identity-ladder modelling: Pattern first" not in exported
     assert "## Alternative To" in exported
     assert "IdentityLadderPattern" in exported
+
+    recovery = db.plan_staged_revision_recovery(revision_iris)
+    assert [
+        item.alternative_set_iris for item in recovery.next_action_queue_items
+    ] == [revision_iris, revision_iris]
+    assert [
+        lane.next_action_queue_item.alternative_set_role
+        for lane in recovery.lanes
+        if lane.next_action_queue_item is not None
+    ] == ["source", "alternative"]
 
 
 def test_stage_pattern_promotion_rolls_pattern_support_into_staged_revision(

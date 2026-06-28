@@ -238,8 +238,9 @@ For fast routing, prefer the queue fields in this order:
 2. Use `next_action_queue_items` when you need machine-readable row-vs-target
    routing or semantic gate state. Each item includes the queued `row_iri`,
    `resolved_target_iri`, `resolved_target_record_kind`, `row_is_target`,
-   status fields, and alternative-gate fields. `next_action_queue_item_counts` and
-   `semantic_review_required_queue_counts` are scoped to the same returned
+   status fields, row-local alternative-gate fields, and alternative-set fields
+   when returned rows compete with each other. `next_action_queue_item_counts`
+   and `semantic_review_required_queue_counts` are scoped to the same returned
    rows as `next_action_queue`.
 3. Use each row's `next_action.queue`, `next_action.action_label`, and
    `next_action.arguments` for row-level routing.
@@ -299,7 +300,11 @@ stored provenance edge; `current_alternative_to` follows a restaged alternative
 target to its current successor. Queue summaries also surface this as
 `semantic_review_required_queue_counts` and queue-item fields
 `alternative_semantic_review_required`, `alternative_applied_source_iri`, and
-`alternative_applied_revision_iri`. Then open the relevant row with
+`alternative_applied_revision_iri`. For unresolved alternatives where both
+members are returned, queue items carry `alternative_set_iris`,
+`alternative_set_source_iri`, and `alternative_set_role` on every member,
+including the source row whose row-local alternative gate may be
+`not_applicable`. Then open the relevant row with
 `describe_revision_lineage(revision_iri)` or
 `describe_resource_revision_lineage(resource_iri, revision_iri)`; lineage keeps
 the competing applied family in `related_revision_iris` without making handled
