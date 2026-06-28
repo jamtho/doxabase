@@ -3913,6 +3913,11 @@ def test_describe_query_context_tool_lifts_repair_action_groups(
     )
     assert repair_group["requires_review"] is True
     assert repair_group["action_count"] == len(repair_group["actions"])
+    assert repair_group["action_status_counts"] == {"pending_review": 6}
+    assert repair_group["pending_action_count"] == 6
+    assert repair_group["skippable_action_count"] == 0
+    assert repair_group["already_satisfied_action_count"] == 0
+    assert repair_group["pending_required_extra_arguments"] == ["rationale"]
     action_by_type = {
         action["action_type"]: action for action in repair_group["actions"]
     }
@@ -3955,6 +3960,17 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
     repair_group = result["suggested_repair_action_groups"][0]
     assert repair_group["issue_code"] == "missing_storage_access"
     assert repair_group["repair_action_type"] == "record_or_link_storage_access"
+    assert repair_group["action_status_counts"] == {"pending_review": 2}
+    assert repair_group["pending_action_count"] == 2
+    assert repair_group["skippable_action_count"] == 0
+    assert repair_group["already_satisfied_action_count"] == 0
+    assert repair_group["pending_required_extra_arguments"] == [
+        "iri",
+        "storage_protocol",
+        "storage_root",
+        "object",
+        "rationale",
+    ]
     action_by_type = {
         action["action_type"]: action for action in repair_group["actions"]
     }

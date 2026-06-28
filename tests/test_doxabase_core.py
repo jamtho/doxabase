@@ -12041,6 +12041,17 @@ def test_describe_query_context_reports_missing_planning_metadata(
         "candidate_existing_storage_accesses"
     ] == []
     assert repair_group.action_count == 2
+    assert repair_group.action_status_counts == {"pending_review": 2}
+    assert repair_group.pending_action_count == 2
+    assert repair_group.skippable_action_count == 0
+    assert repair_group.already_satisfied_action_count == 0
+    assert repair_group.pending_required_extra_arguments == [
+        "iri",
+        "storage_protocol",
+        "storage_root",
+        "object",
+        "rationale",
+    ]
     assert [action["action_type"] for action in repair_group.actions] == [
         "record_reviewed_storage_access",
         "stage_existing_storage_access_link",
@@ -14829,9 +14840,10 @@ def test_database_relation_repair_hint_prioritizes_remove_when_relation_exists(
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
 
+    context = db.describe_query_context(dataset)
     issue = next(
         issue
-        for issue in db.describe_query_context(dataset).issues
+        for issue in context.issues
         if issue.code == "database_relation_template_source_mismatch"
     )
     assert issue.details is not None
@@ -14857,6 +14869,16 @@ def test_database_relation_repair_hint_prioritizes_remove_when_relation_exists(
     assert "remove_misplaced_source_template" in repair_hint["actions"][1][
         "condition"
     ]
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.issue_code == "database_relation_template_source_mismatch"
+    assert repair_group.action_status_counts == {
+        "pending_review": 1,
+        "already_satisfied": 1,
+    }
+    assert repair_group.pending_action_count == 1
+    assert repair_group.skippable_action_count == 1
+    assert repair_group.already_satisfied_action_count == 1
+    assert repair_group.pending_required_extra_arguments == ["rationale"]
 
 
 @pytest.mark.parametrize("location_kind", ["object", "connection"])

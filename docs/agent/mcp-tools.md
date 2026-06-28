@@ -616,11 +616,13 @@ For storage protocol/location mismatch repairs, templated actions also name
 in.
 `suggested_repair_action_groups` lifts those existing nested repair hints into a
 top-level `query_repair_review` lane with the source issue index/code/resource,
-repair hint type, copied context, ordered action templates, and action count.
+repair hint type, copied context, ordered action templates, action count,
+status counts, pending/skippable counts, and pending required extra arguments.
 Use it for repair discovery and scripting, but keep the review gate: these rows
 are templates, not flat call-ready `suggested_next_actions`. Fill placeholders,
-add required extra arguments such as `rationale`, and review each action's
-condition before calling the named tool.
+add required extra arguments such as `rationale`, skip actions explicitly marked
+already satisfied, and review each action's condition before calling the named
+tool.
 When `missing_storage_access` appears, read `issues[].details.repair_hint` for
 reviewed repair templates: record a non-secret storage access and link it to the
 dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing

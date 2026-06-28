@@ -1669,6 +1669,11 @@ class QueryRepairActionGroup:
     repair_context: dict[str, Any]
     actions: list[dict[str, Any]]
     action_count: int
+    action_status_counts: dict[str, int]
+    pending_action_count: int
+    skippable_action_count: int
+    already_satisfied_action_count: int
+    pending_required_extra_arguments: list[str]
 
 
 @dataclass(frozen=True)
@@ -11938,6 +11943,13 @@ class DoxaBase:
                 if key != "actions"
             }
             action_type = repair_hint.get("action_type")
+            (
+                action_status_counts,
+                pending_action_count,
+                skippable_action_count,
+                already_satisfied_action_count,
+                pending_required_extra_arguments,
+            ) = self._query_repair_action_group_summary(actions)
             groups.append(
                 QueryRepairActionGroup(
                     group_name="query_repair_review",
@@ -11954,9 +11966,65 @@ class DoxaBase:
                     repair_context=repair_context,
                     actions=copy.deepcopy(actions),
                     action_count=len(actions),
+                    action_status_counts=action_status_counts,
+                    pending_action_count=pending_action_count,
+                    skippable_action_count=skippable_action_count,
+                    already_satisfied_action_count=(
+                        already_satisfied_action_count
+                    ),
+                    pending_required_extra_arguments=(
+                        pending_required_extra_arguments
+                    ),
                 )
             )
         return groups
+
+    @staticmethod
+    def _query_repair_action_group_summary(
+        actions: list[Any],
+    ) -> tuple[dict[str, int], int, int, int, list[str]]:
+        action_status_counts: dict[str, int] = {}
+        pending_action_count = 0
+        skippable_action_count = 0
+        already_satisfied_action_count = 0
+        pending_required_extra_arguments: list[str] = []
+
+        for action in actions:
+            if not isinstance(action, MappingABC):
+                status = "pending_review"
+                skippable = False
+                required_extra_arguments: list[Any] = []
+            else:
+                raw_status = action.get("action_status")
+                status = str(raw_status) if raw_status else "pending_review"
+                skippable = (
+                    status == "already_satisfied"
+                    and action.get("skip_when_already_satisfied") is True
+                )
+                required_extra_arguments = action.get("required_extra_arguments")
+                if not isinstance(required_extra_arguments, list):
+                    required_extra_arguments = []
+
+            action_status_counts[status] = action_status_counts.get(status, 0) + 1
+            if status == "already_satisfied":
+                already_satisfied_action_count += 1
+            if skippable:
+                skippable_action_count += 1
+                continue
+
+            pending_action_count += 1
+            for argument in required_extra_arguments:
+                argument_name = str(argument)
+                if argument_name not in pending_required_extra_arguments:
+                    pending_required_extra_arguments.append(argument_name)
+
+        return (
+            action_status_counts,
+            pending_action_count,
+            skippable_action_count,
+            already_satisfied_action_count,
+            pending_required_extra_arguments,
+        )
 
     def _query_context_next_actions(
         self,

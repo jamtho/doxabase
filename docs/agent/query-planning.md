@@ -154,9 +154,14 @@ Start with `describe_query_context(dataset_iri)`:
 6. Use `suggested_repair_action_groups` when scripting metadata repairs. It is a
    top-level `query_repair_review` lane over existing
    `issues[].details.repair_hint.actions[]`, preserving issue index/code/resource
-   and ordered repair templates. These are reviewed templates, not call-ready
-   `suggested_next_actions`: fill placeholders, add required fields such as
-   `rationale`, and check each `condition` before calling the named tool.
+   and ordered repair templates. Read `pending_action_count`,
+   `skippable_action_count`, `action_status_counts`, and
+   `pending_required_extra_arguments` before routing a group; mixed database
+   relation repairs can include an already-satisfied action that should be
+   skipped after the pending cleanup is reviewed. These are reviewed templates,
+   not call-ready `suggested_next_actions`: fill placeholders, add required
+   fields such as `rationale`, and check each `condition` before calling the
+   named tool.
 7. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, profile evidence inspection actions come before query-plan
    drafting; when multiple candidate runs need review, several

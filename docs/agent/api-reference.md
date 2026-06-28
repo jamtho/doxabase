@@ -286,9 +286,13 @@ direct/upstream caveats, `row_count_snapshot`, `profile_summary`,
 for drafting the selected route. `suggested_repair_action_groups` lifts existing
 `issues[].details.repair_hint.actions[]` into a top-level `query_repair_review`
 lane with the issue index/code/resource, repair hint type, copied context, and
-ordered action templates. These repair rows are reviewed templates rather than
-call-ready next actions: fill placeholders, add required extra arguments such as
-`rationale`, and check conditions before calling the named tool. For database
+ordered action templates. Each group also reports `action_status_counts`,
+`pending_action_count`, `skippable_action_count`, and
+`pending_required_extra_arguments` so scripts can triage mixed pending and
+already-satisfied repair groups before reviewing the templates. These repair
+rows are reviewed templates rather than call-ready next actions: fill
+placeholders, add required extra arguments such as `rationale`, and check
+conditions before calling the named tool. For database
 template-source mismatches and
 storage protocol/location mismatches, `issues[].details.repair_hint` gives
 ordered, review-gated repair templates; follow `repair_hint.actions` order.

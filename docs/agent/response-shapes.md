@@ -1996,6 +1996,11 @@ repair_group.requires_review
 repair_group.repair_context
 repair_group.actions
 repair_group.action_count
+repair_group.action_status_counts
+repair_group.pending_action_count
+repair_group.skippable_action_count
+repair_group.already_satisfied_action_count
+repair_group.pending_required_extra_arguments
 ```
 
 `group_name` is currently `query_repair_review`. `issue_index` points back into
@@ -2010,6 +2015,13 @@ action's `arguments` or fill its `arguments_template`, add every
 `required_extra_arguments` value such as `rationale`, replace fields named in
 `placeholder_fields` / `reviewed_value_fields`, and review `condition` before
 calling the named tool.
+Use `pending_action_count` and `skippable_action_count` for first-pass routing:
+an action with `action_status="already_satisfied"` and
+`skip_when_already_satisfied=true` is counted as skippable, while pending
+actions contribute their unique `required_extra_arguments` values to
+`pending_required_extra_arguments`. These summaries save scripts from walking
+every nested action just to decide whether the repair group still needs work;
+they do not remove the review requirement.
 
 Read `query.query_target_decision` before choosing from
 `query_target_candidates`. It is a derived handoff hint, not a new graph fact.
