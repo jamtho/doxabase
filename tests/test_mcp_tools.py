@@ -1,3 +1,4 @@
+import inspect
 from pathlib import Path
 
 import pytest
@@ -154,6 +155,36 @@ async def test_profile_mcp_tools_expose_sampled_snapshot_gate(
         assert "allow_sampled_row_count_snapshot" in properties
         assert properties["allow_sampled_row_count_snapshot"]["default"] is False
         assert properties["allow_sampled_row_count_snapshot"]["type"] == "boolean"
+
+
+@pytest.mark.anyio
+async def test_mcp_tool_schemas_match_tool_layer_signatures(
+    tmp_path: Path,
+) -> None:
+    server = build_server(tmp_path / "mcp.sqlite")
+    mismatches: dict[str, dict[str, list[str]]] = {}
+
+    for tool in await server.list_tools():
+        short_name = tool.name.removeprefix("doxabase.")
+        tool_func = getattr(mcp_tools, f"{short_name}_tool", None)
+        if tool_func is None:
+            continue
+        tool_parameters = [
+            name
+            for name in inspect.signature(tool_func).parameters
+            if name != "db"
+        ]
+        schema_properties = list(tool.inputSchema.get("properties", {}))
+        missing = [
+            name for name in tool_parameters if name not in schema_properties
+        ]
+        extra = [
+            name for name in schema_properties if name not in tool_parameters
+        ]
+        if missing or extra:
+            mismatches[tool.name] = {"missing": missing, "extra": extra}
+
+    assert mismatches == {}
 
 
 def test_doc_tools_return_json_like_payloads() -> None:
