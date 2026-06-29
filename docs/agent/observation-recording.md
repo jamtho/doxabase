@@ -192,6 +192,9 @@ implications default to the profiled dataset or column plus any project-specific
 profile metric kind IRIs named in `profile_metrics`. Built-in `rc:` metrics
 remain profile evidence only. Passing `pattern_map_implications` explicitly
 overrides those defaults.
+Profile helpers preflight optional pattern metadata, including map implications
+and controlled confidence/status/stability values, before writing profile
+observations. Invalid pattern metadata should leave the capsule unchanged.
 
 ```python
 bundle = db.record_profile_bundle(

@@ -23155,6 +23155,16 @@ class DoxaBase:
             pattern_text,
             pattern_rationale,
         )
+        pattern_implication_values: list[str] | None = None
+        if should_record_pattern:
+            pattern_implication_values = self._preflight_profile_pattern(
+                primary_resource_iri=dataset_value,
+                pattern_map_implications=pattern_map_implications,
+                profile_metric_sets=(("profile_metrics", profile_metric_items),),
+                pattern_confidence=pattern_confidence,
+                pattern_status=pattern_status,
+                pattern_stability=pattern_stability,
+            )
 
         observation = self.record_observation(
             summary=summary,
@@ -23204,11 +23214,7 @@ class DoxaBase:
             assert pattern_summary is not None
             assert pattern_text is not None
             assert pattern_rationale is not None
-            implication_values = self._profile_pattern_map_implications(
-                dataset_value,
-                pattern_map_implications,
-                ("profile_metrics", profile_metric_items),
-            )
+            assert pattern_implication_values is not None
             pattern = self.record_pattern(
                 summary=pattern_summary,
                 pattern_text=pattern_text,
@@ -23219,7 +23225,7 @@ class DoxaBase:
                 confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
-                map_implications=implication_values,
+                map_implications=pattern_implication_values,
                 pattern_iri=pattern_iri,
             )
 
@@ -23301,6 +23307,16 @@ class DoxaBase:
             pattern_text,
             pattern_rationale,
         )
+        pattern_implication_values: list[str] | None = None
+        if should_record_pattern:
+            pattern_implication_values = self._preflight_profile_pattern(
+                primary_resource_iri=column_value,
+                pattern_map_implications=pattern_map_implications,
+                profile_metric_sets=(("profile_metrics", profile_metric_items),),
+                pattern_confidence=pattern_confidence,
+                pattern_status=pattern_status,
+                pattern_stability=pattern_stability,
+            )
 
         observation = self.record_observation(
             summary=summary,
@@ -23352,11 +23368,7 @@ class DoxaBase:
             assert pattern_summary is not None
             assert pattern_text is not None
             assert pattern_rationale is not None
-            implication_values = self._profile_pattern_map_implications(
-                column_value,
-                pattern_map_implications,
-                ("profile_metrics", profile_metric_items),
-            )
+            assert pattern_implication_values is not None
             pattern = self.record_pattern(
                 summary=pattern_summary,
                 pattern_text=pattern_text,
@@ -23367,7 +23379,7 @@ class DoxaBase:
                 confidence=pattern_confidence,
                 pattern_status=pattern_status,
                 pattern_stability=pattern_stability,
-                map_implications=implication_values,
+                map_implications=pattern_implication_values,
                 pattern_iri=pattern_iri,
             )
 
@@ -23530,14 +23542,13 @@ class DoxaBase:
                     )
                     for index, column_kwargs in enumerate(prepared_column_profiles)
                 )
-            bundle_pattern_implications = self._profile_pattern_map_implications(
-                dataset_value,
-                pattern_map_implications,
-                *metric_sets,
-            )
-            self._validate_resource_values(
-                "pattern_map_implications",
-                bundle_pattern_implications,
+            bundle_pattern_implications = self._preflight_profile_pattern(
+                primary_resource_iri=dataset_value,
+                pattern_map_implications=pattern_map_implications,
+                profile_metric_sets=metric_sets,
+                pattern_confidence=pattern_confidence,
+                pattern_status=pattern_status,
+                pattern_stability=pattern_stability,
             )
 
         self._preflight_profile_bundle_evidence_summaries(
@@ -23975,14 +23986,62 @@ class DoxaBase:
             column_kwargs.get("pattern_text"),
             column_kwargs.get("pattern_rationale"),
         ):
-            implication_values = self._string_values(
-                f"column_profiles[{index}].pattern_map_implications",
-                column_kwargs.get("pattern_map_implications"),
+            self._preflight_profile_pattern(
+                primary_resource_iri=column_value,
+                pattern_map_implications=column_kwargs.get(
+                    "pattern_map_implications"
+                ),
+                profile_metric_sets=(
+                    (
+                        f"column_profiles[{index}].profile_metrics",
+                        column_kwargs.get("profile_metrics"),
+                    ),
+                ),
+                pattern_confidence=column_kwargs.get("pattern_confidence"),
+                pattern_status=column_kwargs.get("pattern_status"),
+                pattern_stability=column_kwargs.get("pattern_stability"),
             )
-            self._validate_resource_values(
-                f"column_profiles[{index}].pattern_map_implications",
-                implication_values or [column_value],
+
+    def _preflight_profile_pattern(
+        self,
+        *,
+        primary_resource_iri: str,
+        pattern_map_implications: Iterable[str] | str | None,
+        profile_metric_sets: Iterable[
+            tuple[str, Iterable[Mapping[str, Any]] | None]
+        ],
+        pattern_confidence: str | None,
+        pattern_status: str | None,
+        pattern_stability: str | None,
+    ) -> list[str]:
+        implication_values = self._profile_pattern_map_implications(
+            primary_resource_iri,
+            pattern_map_implications,
+            *tuple(profile_metric_sets),
+        )
+        self._validate_resource_values(
+            "pattern_map_implications",
+            implication_values,
+        )
+        if pattern_confidence is not None and pattern_confidence.strip():
+            self._controlled_resource_ref(
+                "pattern_confidence",
+                pattern_confidence,
+                CONFIDENCE_LEVELS,
             )
+        if pattern_status is not None and pattern_status.strip():
+            self._controlled_resource_ref(
+                "pattern_status",
+                pattern_status,
+                PATTERN_OBSERVATION_STATUSES,
+            )
+        if pattern_stability is not None and pattern_stability.strip():
+            self._controlled_resource_ref(
+                "pattern_stability",
+                pattern_stability,
+                PATTERN_STABILITY_LEVELS,
+            )
+        return implication_values
 
     def _profile_pattern_requested(
         self,

@@ -22973,6 +22973,32 @@ def test_describe_dataset_profile_without_value_frequencies_returns_empty_list(
     assert description.profile_observations[0].value_frequencies == []
 
 
+def test_record_dataset_profile_preflights_pattern_validation_without_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="pattern_map_implications"):
+        db.record_dataset_profile(
+            dataset,
+            summary="Invalid dataset profile pattern should not write.",
+            evidence_summary="Synthetic profile output.",
+            evidence_sources=["test://orders-profile"],
+            row_count=10,
+            update_map_snapshot=False,
+            pattern_summary="Orders profile has an invalid implication.",
+            pattern_text="This pattern is intentionally invalid.",
+            pattern_rationale="The test uses a prose map implication.",
+            pattern_map_implications=["plain implication"],
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.search("Invalid dataset profile pattern", graph="observations").matches == []
+    assert db.search("Synthetic profile output", graph="evidence").matches == []
+
+
 def test_record_column_profile_writes_observation_map_column_and_pattern(
     tmp_path: Path,
 ) -> None:
@@ -23054,6 +23080,35 @@ def test_record_column_profile_writes_observation_map_column_and_pattern(
 
     validation = db.validate_graph(scope="all")
     assert validation.conforms, validation.report_text
+
+
+def test_record_column_profile_preflights_pattern_validation_without_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/project#Orders"
+    column = "https://example.test/project#OrdersStatus"
+    db.record_map_dataset(table, label="Orders", is_table=True)
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="pattern_stability"):
+        db.record_column_profile(
+            column,
+            column_name="status",
+            table_iri=table,
+            summary="Invalid column profile pattern should not write.",
+            evidence_summary="Synthetic column profile output.",
+            evidence_sources=["test://orders-status-profile"],
+            update_map_column=False,
+            pattern_summary="Status profile has an invalid stability.",
+            pattern_text="This pattern is intentionally invalid.",
+            pattern_rationale="The test uses an unknown stability value.",
+            pattern_stability="rc:NotAStability",
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.search("Invalid column profile pattern", graph="observations").matches == []
+    assert db.search("Synthetic column profile output", graph="evidence").matches == []
 
 
 def test_describe_dataset_surfaces_unmapped_column_profile_observations(
