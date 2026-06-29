@@ -1262,8 +1262,10 @@ of `staged_revision.revision_iri` for parity with generic staged-revision tools.
 Check the panel first for current/proposed values, caveat
 scopes, semantic risk level/reasons, value-type context, reasons the current
 value may be intentional, strongest route summaries, impact spotlight entries,
-and safety notes. For physical type changes, `value_type_context` surfaces
-current `rc:valueType` resources and declared `rc:requiredPhysicalType` values.
+and safety notes. For physical type and value type changes,
+`value_type_context` surfaces relevant `rc:valueType` resources and declared
+`rc:requiredPhysicalType` values, including whether a proposed value type fits
+the column's current `rc:physicalType`.
 `target_value` names the requested object for add, replace, and remove changes;
 `removed_value` is populated for remove changes so reviewers do not have to
 interpret legacy `proposed_value` as the removed value. For typed or

@@ -34601,6 +34601,26 @@ class DoxaBase:
                 "changed_layout_or_path",
                 "physical layout",
             ),
+            self.expand_iri("rc:hasRelationship"): (
+                "changed_relationship",
+                "relationship link",
+            ),
+            self.expand_iri("rc:foreignKeyFrom"): (
+                "changed_relationship",
+                "foreign-key source column",
+            ),
+            self.expand_iri("rc:foreignKeyTo"): (
+                "changed_relationship",
+                "foreign-key target column",
+            ),
+            self.expand_iri("rc:sourceDataset"): (
+                "changed_relationship",
+                "source dataset",
+            ),
+            self.expand_iri("rc:targetDataset"): (
+                "changed_relationship",
+                "target dataset",
+            ),
         }
         documentation_predicates: dict[str, tuple[str, str]] = {
             str(RDFS.comment): ("changed_documentation", "documentation comment"),
@@ -35358,9 +35378,22 @@ class DoxaBase:
         current_values: list[MapAssertionJudgementValue],
         proposed_value: MapAssertionJudgementValue | None,
     ) -> list[MapAssertionJudgementValueTypeContext]:
-        if support.predicate != self.expand_iri("rc:physicalType"):
+        physical_type_predicate = self.expand_iri("rc:physicalType")
+        value_type_predicate = self.expand_iri("rc:valueType")
+        if support.predicate not in {
+            physical_type_predicate,
+            value_type_predicate,
+        }:
             return []
         lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        if support.predicate == value_type_predicate:
+            return self._map_assertion_value_type_replacement_context(
+                support,
+                current_values=current_values,
+                proposed_value=proposed_value,
+                lookup_graphs=lookup_graphs,
+            )
+
         current_physical_type_values = {
             value.value
             for value in current_values
@@ -35416,6 +35449,102 @@ class DoxaBase:
                         required_physical_type=required_value,
                         current_matches=current_matches,
                         proposed_matches=proposed_matches,
+                        context_kind="physical_type_change",
+                        value_type_role="current",
+                        lookup_graphs=lookup_graphs,
+                    ),
+                )
+            )
+        return contexts
+
+    def _map_assertion_value_type_replacement_context(
+        self,
+        support: AssertionSupportDescription,
+        *,
+        current_values: list[MapAssertionJudgementValue],
+        proposed_value: MapAssertionJudgementValue | None,
+        lookup_graphs: list[str],
+    ) -> list[MapAssertionJudgementValueTypeContext]:
+        current_value_type_values = list(
+            dict.fromkeys(
+                value.value
+                for value in current_values
+                if value.value_kind in {"iri", "uri"}
+            )
+        )
+        proposed_value_type = (
+            proposed_value.value
+            if proposed_value is not None
+            and proposed_value.value_kind in {"iri", "uri"}
+            else None
+        )
+        value_type_iris = list(current_value_type_values)
+        if proposed_value_type is not None and proposed_value_type not in value_type_iris:
+            value_type_iris.append(proposed_value_type)
+        if not value_type_iris:
+            return []
+
+        current_physical_type_values = set(
+            self._objects(lookup_graphs, support.subject.iri, "rc:physicalType")
+        )
+        contexts: list[MapAssertionJudgementValueTypeContext] = []
+        for value_type_iri in value_type_iris:
+            required_iri = self._first_object(
+                lookup_graphs,
+                value_type_iri,
+                "rc:requiredPhysicalType",
+            )
+            required_value = (
+                self._map_assertion_judgement_resource_value(
+                    lookup_graphs,
+                    required_iri,
+                )
+                if required_iri is not None
+                else None
+            )
+            is_current = value_type_iri in current_value_type_values
+            is_proposed = value_type_iri == proposed_value_type
+            required_matches_current_physical_type = (
+                required_iri in current_physical_type_values
+                if required_iri is not None
+                else None
+            )
+            contexts.append(
+                MapAssertionJudgementValueTypeContext(
+                    value_type=self._resource_summary(
+                        lookup_graphs,
+                        value_type_iri,
+                        display_label=True,
+                    ),
+                    required_physical_type=required_value,
+                    current_physical_type_matches=(
+                        required_matches_current_physical_type
+                        if is_current
+                        else None
+                    ),
+                    proposed_physical_type_matches=(
+                        required_matches_current_physical_type
+                        if is_proposed
+                        else None
+                    ),
+                    note=self._map_assertion_value_type_note(
+                        value_type_iri=value_type_iri,
+                        required_physical_type=required_value,
+                        current_matches=(
+                            required_matches_current_physical_type
+                            if is_current
+                            else None
+                        ),
+                        proposed_matches=(
+                            required_matches_current_physical_type
+                            if is_proposed
+                            else None
+                        ),
+                        context_kind="value_type_change",
+                        value_type_role=self._value_type_context_role(
+                            is_current=is_current,
+                            is_proposed=is_proposed,
+                        ),
                         lookup_graphs=lookup_graphs,
                     ),
                 )
@@ -35441,6 +35570,8 @@ class DoxaBase:
         required_physical_type: MapAssertionJudgementValue | None,
         current_matches: bool | None,
         proposed_matches: bool | None,
+        context_kind: str,
+        value_type_role: str,
         lookup_graphs: list[str],
     ) -> str:
         value_type_label = (
@@ -35451,6 +35582,38 @@ class DoxaBase:
         if required_physical_type is None:
             return f"Value type {value_type_label} has no required physical type recorded."
         required_label = required_physical_type.label or required_physical_type.value
+        if context_kind == "value_type_change":
+            role_label = {
+                "current": "Current value type",
+                "proposed": "Proposed value type",
+                "current_proposed": "Current/proposed value type",
+            }.get(value_type_role, "Value type")
+            if current_matches is True and proposed_matches is True:
+                return (
+                    f"{role_label} {value_type_label} requires physical type "
+                    f"{required_label}, matching the column's current physical type."
+                )
+            if current_matches is True:
+                return (
+                    f"{role_label} {value_type_label} requires physical type "
+                    f"{required_label}, matching the column's current physical type."
+                )
+            if proposed_matches is True:
+                return (
+                    f"{role_label} {value_type_label} requires physical type "
+                    f"{required_label}, matching the column's current physical type."
+                )
+            if current_matches is False or proposed_matches is False:
+                return (
+                    f"{role_label} {value_type_label} requires physical type "
+                    f"{required_label}, which does not match the column's "
+                    "current physical type."
+                )
+            return (
+                f"{role_label} {value_type_label} requires physical type "
+                f"{required_label}; no current column physical type was available "
+                "for comparison."
+            )
         if current_matches is True:
             return (
                 f"Value type {value_type_label} requires physical type "
@@ -35467,6 +35630,20 @@ class DoxaBase:
             f"{required_label}, which does not directly explain the current or "
             "proposed physical type."
         )
+
+    @staticmethod
+    def _value_type_context_role(
+        *,
+        is_current: bool,
+        is_proposed: bool,
+    ) -> str:
+        if is_current and is_proposed:
+            return "current_proposed"
+        if is_proposed:
+            return "proposed"
+        if is_current:
+            return "current"
+        return "related"
 
     def _map_assertion_judgement_caveat(
         self,

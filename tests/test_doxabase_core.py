@@ -2908,6 +2908,36 @@ def test_describe_assertion_support_suggests_dataset_context_for_relationships(
         guessed_dataset_relationship.support_scope_note
     )
 
+    relationship_replacements = [
+        ("rc:foreignKeyFrom", customer_pk),
+        ("rc:foreignKeyTo", customer_id),
+        ("rc:sourceDataset", customers),
+        ("rc:targetDataset", orders),
+    ]
+    for predicate, replacement in relationship_replacements:
+        staged = db.stage_map_assertion_change(
+            relationship,
+            predicate,
+            replacement,
+            change_kind="replace",
+            rationale=(
+                "Exercise relationship review impact routing for staged "
+                f"{predicate} changes."
+            ),
+        )
+
+        assert any(
+            impact.impact_type == "changed_relationship"
+            for impact in staged.judgement_panel.impacts
+        )
+        description = db.describe_staged_revision(
+            staged.staged_revision.revision_iri
+        )
+        assert any(
+            impact.impact_type == "changed_relationship"
+            for impact in description.impacts
+        )
+
 
 def test_stage_map_assertion_change_packages_support_context(
     tmp_path: Path,
@@ -2927,6 +2957,11 @@ def test_stage_map_assertion_change_packages_support_context(
                 rdfs:label "Raw price payload" ;
                 rdfs:comment "Raw API payload before parsing invalid rows." ;
                 rc:requiredPhysicalType rc:Varchar .
+
+            ex:CleanProbability a rc:ValueType ;
+                rdfs:label "Clean probability" ;
+                rdfs:comment "Parsed numeric probability value." ;
+                rc:requiredPhysicalType rc:Double .
         }
 
         rcg:map {
@@ -3173,6 +3208,54 @@ def test_stage_map_assertion_change_packages_support_context(
     recovery_queue_item = recovery.next_action_queue_items[0]
     assert recovery_queue_item.semantic_risk_level == "high"
     assert recovery_queue_item.semantic_risk_reasons == panel.semantic_risk_reasons
+
+    value_type_change = db.stage_map_assertion_change(
+        subject="https://example.test/project#px_price",
+        predicate="rc:valueType",
+        object="https://example.test/project#CleanProbability",
+        change_kind="replace",
+        rationale=(
+            "Testing a tempting semantic cleanup so reviewers can compare the "
+            "current raw value type with the proposed parsed value type."
+        ),
+    )
+    value_type_panel = value_type_change.judgement_panel
+    assert value_type_panel.proposed_value is not None
+    assert value_type_panel.proposed_value.label == "Clean probability"
+    value_type_context_by_label = {
+        context.value_type.label: context
+        for context in value_type_panel.value_type_context
+    }
+    assert set(value_type_context_by_label) == {
+        "Raw price payload",
+        "Clean probability",
+    }
+    raw_context = value_type_context_by_label["Raw price payload"]
+    assert raw_context.required_physical_type is not None
+    assert raw_context.required_physical_type.label == "VARCHAR"
+    assert raw_context.current_physical_type_matches is True
+    assert raw_context.proposed_physical_type_matches is None
+    assert "Current value type Raw price payload" in raw_context.note
+    clean_context = value_type_context_by_label["Clean probability"]
+    assert clean_context.required_physical_type is not None
+    assert clean_context.required_physical_type.label == "DOUBLE"
+    assert clean_context.current_physical_type_matches is None
+    assert clean_context.proposed_physical_type_matches is False
+    assert "Proposed value type Clean probability" in clean_context.note
+    assert "proposed physical type" not in clean_context.note
+    assert any(
+        impact.impact_type == "changed_value_type"
+        for impact in value_type_panel.impacts
+    )
+    value_type_description = db.describe_staged_revision(
+        value_type_change.staged_revision.revision_iri
+    )
+    assert value_type_description.judgement_panel is not None
+    assert len(value_type_description.judgement_panel.value_type_context) == 2
+    assert any(
+        impact.impact_type == "changed_value_type"
+        for impact in value_type_description.impacts
+    )
 
     comment_change = db.stage_map_assertion_change(
         subject="https://example.test/project#px_price",

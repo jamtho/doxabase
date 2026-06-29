@@ -780,12 +780,16 @@ For `replace`, if `panel.assertion_present_before` is true and
 of those other values. Check `panel.safety_notes`,
 `panel.semantic_risk_reasons`, and the related support routes before applying.
 
-For physical type changes, `panel.value_type_context` lists current
-`rc:valueType` resources and any `rc:requiredPhysicalType` they declare, with
-booleans for whether that required type matches the current or proposed physical
-type. `panel.strongest_routes[*].generic_value_only` is true when a route only
-matched a generic shared value such as `rc:Varchar`; treat those as weak context
-unless other routes tie the lore to the assertion subject or owner dataset.
+For physical type and value type changes, `panel.value_type_context` lists
+relevant `rc:valueType` resources and any `rc:requiredPhysicalType` they
+declare. Physical type changes compare those requirements with the current and
+proposed physical type. Value type changes compare current/proposed value types'
+requirements with the column's current `rc:physicalType`, so a proposed value
+type whose required physical type does not fit the current storage type remains
+visible in the review panel. `panel.strongest_routes[*].generic_value_only` is
+true when a route only matched a generic shared value such as `rc:Varchar`; treat
+those as weak context unless other routes tie the lore to the assertion subject
+or owner dataset.
 Each value-type context row has:
 
 ```python
