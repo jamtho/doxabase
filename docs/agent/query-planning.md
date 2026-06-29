@@ -457,8 +457,9 @@ database connection outside DoxaBase.
 For database storage, only a storage-access-owned path template is treated as a
 relation identifier. Dataset or partition path templates paired with database
 storage are review-only inventory cards with
-`database_relation_template_source_mismatch`; record the schema/table/relation
-on the storage access before using a database handoff. The issue carries
+`database_relation_template_source_mismatch`, even when the template text looks
+like `schema.table`; record the schema/table/relation on the storage access
+before using a database handoff. The issue carries
 `details.repair_hint` with ordered, review-gated
 `stage_map_assertion_change` templates; follow `repair_hint.actions` order. In
 the common move case, add the reviewed relation identifier to the storage

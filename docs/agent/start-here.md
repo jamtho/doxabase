@@ -34,10 +34,10 @@ When arriving cold, use this route before reading every reference doc.
    profile draft counts, staged review queues, and bounded recommended next
    tasks.
    Check `project_brief.next_best_expansion` before trusting a tight frontier,
-   use `project_brief.full_frontier_expansion` when you need a one-call full
-   rerun, then read `project_brief.health_tasks[]` before repeating the same
-   visible recommended tasks; it can point to omitted queues, redacted export
-   preflights, or stale seed recovery.
+   and in unattended loops run `project_brief.full_frontier_expansion` when it
+   is non-null before repeating the same visible recommended tasks. Then read
+   `project_brief.health_tasks[]`; it can point to omitted queues, redacted
+   export preflights, or stale seed recovery.
 4. If `project_brief.recommended_next_tasks[]` includes
    `staged_frontier_review`, call `doxabase.plan_staged_revision_recovery`
    before staging more profile or query repair work.

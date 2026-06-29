@@ -217,6 +217,11 @@ staged proposals, or `stale_resolution_state="stale_unresolved"` for stale
 sources that still need recovery. Filters on `application_status` and
 `stale_resolution_state` automatically compute apply checks for staged patch
 rows.
+List rows use compact `record_kind` values: staged patch proposals are
+`staged_patch`, applied staged-revision events are `applied_event`, and generic
+history-only rows may be `history_record`, `export_record`, or `import_record`.
+Do not filter for `record_kind="staged_revision"`; use `revision_type` when you
+need the RDF type such as `rc:StagedRevision`.
 Use `current_staged_work_only=True` when you want the live mutation-review queue
 without stale originals that already have restaged successors or staged sources
 that already have applied events. The excluded rows remain useful history; they

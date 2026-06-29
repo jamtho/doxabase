@@ -2658,6 +2658,12 @@ few useful gaps:
   `profile_candidate_limit` hide work. `project_brief.full_frontier_expansion`
   now provides a deliberate one-call rerun that expands both bounds enough to
   expose all currently counted task payloads and hidden profile draft candidates.
+- A broader project-brief frontier trial confirmed the low-limit brief is still
+  a trap for unattended loops if the agent repeats visible staged-review work.
+  Treat `full_frontier_expansion` and `health_tasks` as mandatory before
+  repeating visible tasks when `full_frontier_expansion` is non-null; it exposed
+  hidden query repair, profile, non-tabular, ready-query, and privacy/export
+  work in one rerun.
 - A storage/query-planning trial with local files, partitioned CSV, and multiple
   database relations confirmed ready handoffs are discoverable, but also showed
   agents can follow candidate 0 too literally when it is an archive relation.
@@ -2754,6 +2760,17 @@ few useful gaps:
   now reports `missing_current_graph_roles` and promotes `import_trig` /
   `complete_handoff_import` before apply, restage, or repair planning in that
   state.
+- A storage/query planning trial confirmed local CSV directory storage and
+  database relation handoffs stay distinct. Misplaced database-looking
+  dataset/partition templates remain repair inventory with
+  `database_relation_template_source_mismatch`; only storage-access-owned
+  templates become `relation_identifier` handoffs, even when the misplaced text
+  already looks like `schema.table`.
+- A staged recovery frontier trial confirmed agents can avoid bad bulk moves by
+  following recovery lanes, `would_restage_revision_iris`, helper mutation
+  calls, and post-apply replans. The only durable confusion was terminology:
+  list rows use compact `record_kind` values such as `staged_patch`, not
+  `staged_revision`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

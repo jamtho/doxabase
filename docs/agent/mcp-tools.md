@@ -87,10 +87,10 @@ non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
 Check `next_best_expansion` before repeating visible recommended tasks; if it is
 non-null, follow or evaluate that rerun before trusting a tight brief's frontier.
-When the loop should avoid iterative reruns, prefer `full_frontier_expansion`
-when it is non-null; it expands both `limit` and `profile_candidate_limit` enough
-to expose the currently counted task frontier and hidden profile draft
-candidates together.
+In unattended loops, run `full_frontier_expansion` when it is non-null before
+repeating visible recommended tasks; it expands both `limit` and
+`profile_candidate_limit` enough to expose the currently counted task frontier
+and hidden profile draft candidates together.
 Then read `health_tasks`, which is not limited by `recommended_next_tasks` and
 can also route agents to widen the brief, increase `profile_candidate_limit`, run
 redacted privacy/export review, or handle stale immutable seed graphs.
