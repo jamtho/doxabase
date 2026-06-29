@@ -5656,6 +5656,30 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
         "database_relation_template_source_mismatch"
     ]
     assert plan["handoff_kind"] == "metadata_review_required"
+    assert plan["handoff_summary"]["primary_repair_issue_index"] == 0
+    assert plan["handoff_summary"]["primary_repair_issue_code"] == (
+        "database_relation_template_source_mismatch"
+    )
+    assert plan["handoff_summary"]["primary_repair_group_action_type"] == (
+        "move_database_relation_template_to_storage_access"
+    )
+    assert plan["handoff_summary"]["primary_repair_action_index"] == 0
+    assert plan["handoff_summary"]["primary_repair_action_type"] == (
+        "add_reviewed_relation_template"
+    )
+    assert plan["handoff_summary"]["primary_repair_action_label"] == (
+        "Add reviewed relation template"
+    )
+    assert plan["handoff_summary"]["primary_repair_tool_name"] == (
+        "stage_map_assertion_change"
+    )
+    assert plan["handoff_summary"]["primary_repair_mcp_tool_name"] == (
+        "doxabase.stage_map_assertion_change"
+    )
+    assert plan["handoff_summary"]["primary_repair_required_extra_arguments"] == [
+        "object",
+        "rationale",
+    ]
 
 
 def test_describe_query_context_tool_matches_python_target_candidates(

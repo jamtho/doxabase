@@ -2289,6 +2289,15 @@ class DraftQueryPlanHandoffSummary:
     caveat_count: int
     unselected_ready_candidate_indexes: list[int]
     unselected_direct_clean_candidate_indexes: list[int]
+    primary_repair_issue_index: int | None = None
+    primary_repair_issue_code: str | None = None
+    primary_repair_group_action_type: str | None = None
+    primary_repair_action_index: int | None = None
+    primary_repair_action_type: str | None = None
+    primary_repair_action_label: str | None = None
+    primary_repair_tool_name: str | None = None
+    primary_repair_mcp_tool_name: str | None = None
+    primary_repair_required_extra_arguments: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -16880,6 +16889,7 @@ class DoxaBase:
             scan=scan,
             review_gate=review_gate,
             required_bindings=required_bindings,
+            issues=effective_issues,
             analysis_warnings=context.analysis_warnings,
             caveats=context.caveats,
         )
@@ -17038,6 +17048,7 @@ class DoxaBase:
             scan=scan,
             review_gate=review_gate,
             required_bindings=[],
+            issues=context.issues,
             analysis_warnings=context.analysis_warnings,
             caveats=context.caveats,
         )
@@ -17502,17 +17513,19 @@ class DoxaBase:
             )
         return note
 
-    @staticmethod
     def _draft_query_plan_handoff_summary(
+        self,
         *,
         handoff_kind: str,
         source_context: DraftQueryPlanSourceContext,
         scan: DraftQueryPlanScan,
         review_gate: DraftQueryPlanReviewGate,
         required_bindings: list[str],
+        issues: list[QueryPlanningIssue],
         analysis_warnings: list[QueryPlanningIssue],
         caveats: list[CaveatDescription],
     ) -> DraftQueryPlanHandoffSummary:
+        primary_repair_cue = self._draft_query_plan_primary_repair_cue(issues)
         return DraftQueryPlanHandoffSummary(
             handoff_kind=handoff_kind,
             selected_candidate_index=source_context.selected_candidate_index,
@@ -17542,7 +17555,91 @@ class DoxaBase:
             unselected_direct_clean_candidate_indexes=list(
                 source_context.unselected_direct_clean_candidate_indexes
             ),
+            **primary_repair_cue,
         )
+
+    def _draft_query_plan_primary_repair_cue(
+        self,
+        issues: list[QueryPlanningIssue],
+    ) -> dict[str, Any]:
+        empty_cue: dict[str, Any] = {
+            "primary_repair_issue_index": None,
+            "primary_repair_issue_code": None,
+            "primary_repair_group_action_type": None,
+            "primary_repair_action_index": None,
+            "primary_repair_action_type": None,
+            "primary_repair_action_label": None,
+            "primary_repair_tool_name": None,
+            "primary_repair_mcp_tool_name": None,
+            "primary_repair_required_extra_arguments": [],
+        }
+        for issue_index, issue in enumerate(issues):
+            if issue.details is None:
+                continue
+            repair_hint = issue.details.get("repair_hint")
+            if not isinstance(repair_hint, MappingABC):
+                continue
+            actions = repair_hint.get("actions")
+            if not isinstance(actions, list) or not actions:
+                continue
+            (
+                _action_status_counts,
+                _pending_action_count,
+                _skippable_action_count,
+                _already_satisfied_action_count,
+                _pending_required_extra_arguments,
+                pending_action_options,
+            ) = self._query_repair_action_group_summary(actions)
+            if not pending_action_options:
+                continue
+            first_option = pending_action_options[0]
+            group_action_type = repair_hint.get("action_type")
+            action_index = first_option.get("action_index")
+            action_type = first_option.get("action_type")
+            action_label = first_option.get("action_label")
+            if action_label is None and action_type is not None:
+                action_label = self._repair_action_type_label(str(action_type))
+            return {
+                "primary_repair_issue_index": issue_index,
+                "primary_repair_issue_code": issue.code,
+                "primary_repair_group_action_type": (
+                    str(group_action_type)
+                    if group_action_type is not None
+                    else None
+                ),
+                "primary_repair_action_index": (
+                    action_index if isinstance(action_index, int) else None
+                ),
+                "primary_repair_action_type": (
+                    str(action_type) if action_type is not None else None
+                ),
+                "primary_repair_action_label": (
+                    str(action_label) if action_label is not None else None
+                ),
+                "primary_repair_tool_name": self._optional_string(
+                    first_option.get("tool_name")
+                ),
+                "primary_repair_mcp_tool_name": self._optional_string(
+                    first_option.get("mcp_tool_name")
+                ),
+                "primary_repair_required_extra_arguments": [
+                    str(argument)
+                    for argument in first_option.get(
+                        "required_extra_arguments",
+                        [],
+                    )
+                    if isinstance(argument, str)
+                ],
+            }
+        return empty_cue
+
+    @staticmethod
+    def _repair_action_type_label(action_type: str) -> str:
+        return action_type.replace("_", " ").capitalize()
+
+    @staticmethod
+    def _optional_string(value: Any) -> str | None:
+        return str(value) if value is not None else None
 
     def _draft_query_plan_storage_access(
         self,

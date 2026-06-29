@@ -206,8 +206,11 @@ Start with `describe_query_context(dataset_iri)`:
    blocked by layout, verification, runtime, or binding review but has no
    repair template to follow yet. Follow that task's `describe_query_context`
    action before using any review-gated `draft_query_plan` action preserved in
-   the dataset summary. Read `pending_action_count`, `skippable_action_count`,
-   `action_status_counts`, and
+   the dataset summary. Review-gated `draft_query_plan` handoffs also copy the
+   first non-skippable pending repair option into
+   `handoff_summary.primary_repair_*`; use that as a compact cue, then read the
+   full repair group before staging a metadata change. Read
+   `pending_action_count`, `skippable_action_count`, `action_status_counts`, and
    `pending_action_options` before routing a group. The compact options carry
    branch labels plus available `reason`, `condition`, and
    `review_rationale_guidance`; database relation template mismatch options also

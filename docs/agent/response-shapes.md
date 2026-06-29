@@ -2938,11 +2938,25 @@ handoff_summary.analysis_warning_count
 handoff_summary.caveat_count
 handoff_summary.unselected_ready_candidate_indexes
 handoff_summary.unselected_direct_clean_candidate_indexes
+handoff_summary.primary_repair_issue_index
+handoff_summary.primary_repair_issue_code
+handoff_summary.primary_repair_group_action_type
+handoff_summary.primary_repair_action_index
+handoff_summary.primary_repair_action_type
+handoff_summary.primary_repair_action_label
+handoff_summary.primary_repair_tool_name
+handoff_summary.primary_repair_mcp_tool_name
+handoff_summary.primary_repair_required_extra_arguments
 ```
 
 Use it to decide and report the first handoff state, then inspect `scan`,
 `storage_environment`, `review_gate`, `issues`, and caveats for the supporting
 detail.
+When a query-planning issue carries structured repair actions,
+`primary_repair_*` copies the first non-skippable pending action option into the
+summary. Use it as a compact next repair cue, then read
+`issues[].details.repair_hint` or `suggested_repair_action_groups` before
+staging a metadata change.
 `binding_values_required` appears when URI-template placeholders still need
 caller-supplied runtime values; in that case
 `review_gate.ready_for_execution_attempt` is false.

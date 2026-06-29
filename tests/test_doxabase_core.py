@@ -18237,6 +18237,32 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
         "database_relation_template_source_mismatch"
     ]
     assert "query_context_has_other_blockers" in plan.review_gate.blocking_reason_codes
+    assert plan.handoff_summary.primary_repair_issue_index == context.issues.index(
+        issue
+    )
+    assert plan.handoff_summary.primary_repair_issue_code == (
+        "database_relation_template_source_mismatch"
+    )
+    assert plan.handoff_summary.primary_repair_group_action_type == (
+        "move_database_relation_template_to_storage_access"
+    )
+    assert plan.handoff_summary.primary_repair_action_index == 0
+    assert plan.handoff_summary.primary_repair_action_type == (
+        "remove_misplaced_source_template"
+    )
+    assert (
+        plan.handoff_summary.primary_repair_action_label
+        == "Remove misplaced source template"
+    )
+    assert plan.handoff_summary.primary_repair_tool_name == (
+        "stage_map_assertion_change"
+    )
+    assert plan.handoff_summary.primary_repair_mcp_tool_name == (
+        "doxabase.stage_map_assertion_change"
+    )
+    assert plan.handoff_summary.primary_repair_required_extra_arguments == [
+        "rationale"
+    ]
     assert partition_template not in {
         plan.selected_candidate.candidate_path,
         plan.scan.relation_identifier,
