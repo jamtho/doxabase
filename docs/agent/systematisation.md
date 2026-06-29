@@ -17,6 +17,13 @@ Use anchors for the resources the hunch is about: datasets, columns, caveats,
 relationships, observations, patterns, or other graph resources. Use
 supporting observations, claims, patterns, and evidence for justification; do
 not use anchors as a substitute for evidence.
+When a systematisation framing directly implements a lane from
+`draft_profile_map_updates`, pass that action source through
+`profile_route_sources`, for example
+`profile_route_sources=[query_action.source_query_context]`. This persists the
+profile route on the staged revision so
+`export_profile_insight_review_bundle` can mark the lane as `direct_action`
+instead of only related support.
 
 Put the preferred comparison anchor first when `link_alternatives=True`, because
 later framings are linked with `alternative_to` pointing at the first framing by

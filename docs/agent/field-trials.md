@@ -2771,6 +2771,13 @@ few useful gaps:
   calls, and post-apply replans. The only durable confusion was terminology:
   list rows use compact `record_kind` values such as `staged_patch`, not
   `staged_revision`.
+- A profile/systematisation trial confirmed awkward profile evidence can move
+  through profile map updates, pattern promotion, systematisation alternatives,
+  staged recovery, and profile insight exports. The concrete gap was direct
+  route closure for caller-authored query repairs: `stage_systematisation` now
+  accepts `profile_route_sources`, so agents can pass
+  `query_action.source_query_context` and let the profile review bundle mark the
+  lane as `direct_action`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -1095,6 +1095,13 @@ indexes to move into per-framing patches if fallback alternatives should avoid
 that provisional semantic context. The warning also carries
 `shared_patch_summaries` and
 `fallback_revision_iris_with_shared_semantic_context` for structured inspection.
+Pass `profile_route_sources` when a caller-authored framing is meant to resolve
+a route from `draft_profile_map_updates`, for example
+`profile_route_sources=[query_action.source_query_context]` for a
+`query_context_review` repair. Explicit route sources are persisted on each
+staged framing as direct profile review routes, so
+`export_profile_insight_review_bundle()` can close that lane instead of treating
+the revision as support-only context.
 
 `stage_pattern_promotion()` stages one or more caller-authored RDF framings
 supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;

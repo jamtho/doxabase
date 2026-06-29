@@ -30343,6 +30343,9 @@ class DoxaBase:
         evidence: Iterable[str] | str | None = None,
         alternative_to: str | None = None,
         link_alternatives: bool = True,
+        profile_route_sources: Iterable[Mapping[str, Any]]
+        | Mapping[str, Any]
+        | None = None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -30383,6 +30386,9 @@ class DoxaBase:
             shared_context_summary.strip()
             if shared_context_summary is not None
             else None
+        )
+        profile_route_source_values = self._explicit_profile_route_sources(
+            profile_route_sources
         )
 
         warnings: list[str] = []
@@ -30488,6 +30494,10 @@ class DoxaBase:
                 review_note=framing_review_note,
                 review_recommendation=framing_review_recommendation,
                 validation_scope=framing_scope,  # type: ignore[arg-type]
+            )
+            self._record_profile_insight_route_sources(
+                staged.revision_iri,
+                profile_route_source_values,
             )
             if first_revision_iri is None:
                 first_revision_iri = staged.revision_iri
@@ -30631,6 +30641,7 @@ class DoxaBase:
                     supporting_patterns=supporting_patterns,
                     evidence=evidence,
                     alternative_to=alternative_to,
+                    profile_route_sources=profile_route_source_values,
                     validation_scope=validation_scope,
                 )
                 warning_suggested_actions.append(
@@ -30677,6 +30688,30 @@ class DoxaBase:
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
+
+    @staticmethod
+    def _explicit_profile_route_sources(
+        sources: Iterable[Mapping[str, Any]] | Mapping[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        if sources is None:
+            return []
+        if isinstance(sources, MappingABC):
+            source_values = [sources]
+        else:
+            source_values = list(sources)
+        route_sources: list[dict[str, Any]] = []
+        for source in source_values:
+            if not isinstance(source, MappingABC):
+                raise DoxaBaseError("profile_route_sources entries must be objects")
+            route_source = dict(source)
+            review_lane = route_source.get("review_lane")
+            if (
+                isinstance(review_lane, str)
+                and "direct_review_lane" not in route_source
+            ):
+                route_source["direct_review_lane"] = review_lane
+            route_sources.append(route_source)
+        return DoxaBase._dedupe_profile_route_sources(route_sources)
 
     def _systematisation_shared_patch_summaries(
         self,
@@ -30763,6 +30798,7 @@ class DoxaBase:
         supporting_patterns: Iterable[str] | str | None,
         evidence: Iterable[str] | str | None,
         alternative_to: str | None,
+        profile_route_sources: Iterable[Mapping[str, Any]],
         validation_scope: str,
     ) -> dict[str, Any]:
         arguments: dict[str, Any] = {
@@ -30822,6 +30858,10 @@ class DoxaBase:
             arguments["evidence"] = self._string_values("evidence", evidence)
         if alternative_to is not None:
             arguments["alternative_to"] = alternative_to
+        if profile_route_sources:
+            arguments["profile_route_sources"] = [
+                copy.deepcopy(dict(source)) for source in profile_route_sources
+            ]
         return arguments
 
     @staticmethod

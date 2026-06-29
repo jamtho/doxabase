@@ -1432,6 +1432,13 @@ same provisional vocabulary or validation shapes. That warning carries
 `suggested_rerun_arguments.shared_patch_sources_to_move` so MCP clients can
 construct the rerun without parsing prose or guessing which shared patch entry
 to move.
+When a caller-authored framing directly resolves a profile draft route, such as
+a `query_context_review` lane from `draft_profile_map_updates`, pass the
+action's source block in `profile_route_sources`:
+`profile_route_sources=[query_action.source_query_context]`. The stored staged
+revision then closes that route as a direct action in
+`export_profile_insight_review_bundle`, rather than appearing only as related
+support through shared anchors.
 
 `doxabase.stage_pattern_promotion`
 

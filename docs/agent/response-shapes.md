@@ -3260,6 +3260,11 @@ automation can create a cleaner review bundle before exporting the anchored
 draft. Suggested export paths include a readable revision slug and short hash to
 reduce collisions across concurrent scratch runs; callers can still pass their
 own run-specific path.
+`profile_route_sources` is an optional input, not a returned field. Use it to
+persist explicit profile review routes onto caller-authored framings, for
+example by passing `query_action.source_query_context` from
+`draft_profile_map_updates`. Explicit sources default to direct for their
+`review_lane`, allowing profile insight review bundles to close that lane.
 
 `draft.structured_warnings` is a machine-readable companion to selected prose
 warnings. For example, when the first framing is not routed to

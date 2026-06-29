@@ -25610,6 +25610,7 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
             "using profile-derived map updates as query-planning context."
         ),
         anchors=[dataset, storage_access],
+        profile_route_sources=[query_context_action.source_query_context],
         framings=[
             {
                 "label": "Map storage access",
@@ -25736,6 +25737,15 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert query_route_key in candidates_by_iri[
         query_repair_draft.staged_revisions[0].revision_iri
     ].profile_route_keys
+    query_route_groups = {
+        group["review_lane"]: group
+        for group in candidates_by_iri[
+            query_repair_draft.staged_revisions[0].revision_iri
+        ].profile_route_groups
+    }
+    assert query_route_groups["query_context_review"]["match_strength"] == (
+        "direct_action"
+    )
     assert all(
         group["route_step_keys"]
         for candidate in result.candidates

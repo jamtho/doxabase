@@ -93,7 +93,11 @@ Use the step key when several actions belong to the same group.
 When the dataset already has physical-query metadata such as a path template or
 layout but `describe_query_context` reports blocking metadata issues, the draft
 adds a leading `query_context_review` lane. Follow that lane before relying on
-profile-derived map updates for query-planning work. The profile update lanes
+profile-derived map updates for query-planning work. If you stage a
+caller-authored systematisation repair for that lane, pass the route source from
+the query context action with
+`profile_route_sources=[query_action.source_query_context]` so later profile
+insight exports treat the repair as a `direct_action`. The profile update lanes
 remain available for explicit review; the query lane is an ordering cue, not a
 rejection of the profile evidence.
 `source_query_context.route_anchor_iris` names the dataset, so a staged
