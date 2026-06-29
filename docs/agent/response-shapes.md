@@ -3866,7 +3866,10 @@ RDF. Pass `fail_on_sensitive=True` to block before creating or overwriting an
 RDF export when the selected graph roles scan dirty. Call
 `scan_sensitive_literals(graphs=...)`
 for redacted match rows with `term_position` and `term_kind`; sensitive-looking
-context fields in those rows are redacted too. These fields are not a
+context fields in those rows are redacted too. The scan response counts are
+`match_count`, `returned_match_count`, and `omitted_match_count`; export
+responses translate the same privacy preflight into `sensitive_literal_count`.
+These fields are not a
 path/shareability hygiene signal: non-secret local paths, object-store URIs,
 endpoint URLs, and relative paths remain in faithful exports unless the caller
 keeps them out of the graph or replaces them before export.

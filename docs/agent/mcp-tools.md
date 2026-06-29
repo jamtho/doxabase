@@ -32,7 +32,10 @@ from a subject IRI, predicate IRI, or object value. Use it before sharing
 identifiers, or descriptions may contain secrets. This is a conservative audit
 helper, not a proof that the graph is secret-free. Export helpers report
 `sensitive_literal_count` and `privacy_warnings` when this scan finds matches,
-but exports remain faithful RDF and do not redact automatically.
+but exports remain faithful RDF and do not redact automatically. The scan result
+itself uses `match_count`, `returned_match_count`, and `omitted_match_count`;
+do not look for export-only `sensitive_literal_count` on
+`scan_sensitive_literals`.
 If a returned context field such as `subject` or `predicate` itself contains a
 sensitive-looking value, that context field is also replaced with a redacted
 marker.
