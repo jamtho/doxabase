@@ -5823,6 +5823,55 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     assert "missing_storage_access" in warning_action["reason"]
     assert warning_result["suggested_next_calls"] == [warning_action["call"]]
 
+    repair_db = DoxaBase.create(tmp_path / "repair-capsule.sqlite")
+    repair_dataset = "https://example.test/project#WarehouseOrders"
+    relation = "mart.orders"
+    repair_storage = record_map_storage_access_tool(
+        repair_db,
+        iri="https://example.test/project#orders_database_storage",
+        label="Orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    repair_layout = record_map_physical_layout_tool(
+        repair_db,
+        iri="https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        repair_db,
+        iri=repair_dataset,
+        label="Warehouse orders",
+        is_table=True,
+        path_templates=[relation],
+        storage_accesses=[repair_storage["iri"]],
+        physical_layouts=[repair_layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    repair_result = describe_context_slice_tool(
+        repair_db,
+        seed_iris=[repair_dataset],
+        profile="dataset_brief",
+    )
+    assert repair_result["truncated"] is False
+    assert repair_result["dataset_contexts"][0]["operational_warnings"] == []
+    assert [
+        action["tool_name"] for action in repair_result["suggested_next_actions"]
+    ] == ["describe_query_context"]
+    repair_action = repair_result["suggested_next_actions"][0]
+    assert repair_action["arguments"] == {"iri": repair_dataset}
+    assert (
+        "database_relation_template_source_mismatch" in repair_action["reason"]
+    )
+    repair_context = describe_query_context_tool(repair_db, iri=repair_dataset)
+    assert repair_context["suggested_repair_action_groups"][0]["issue_code"] == (
+        "database_relation_template_source_mismatch"
+    )
+    assert repair_result["suggested_next_calls"] == [repair_action["call"]]
+
     mismatch = describe_context_slice_tool(
         db,
         seed_iris=[pattern["pattern_iri"]],

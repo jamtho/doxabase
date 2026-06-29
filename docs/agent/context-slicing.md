@@ -172,11 +172,12 @@ Useful fields:
   to retry, for example rerunning an `rc:Pattern` seed with `pattern_brief` or
   `deep_lore`.
 - `suggested_next_actions` and `suggested_next_calls`: structured follow-up
-  routes. When a seed table carries operational query-planning warnings,
-  a `describe_query_context` action points to readiness, target candidates, and
-  repair hints even if raw triples were not truncated. When raw triples are
-  truncated, pattern narrowing actions come before the same-seed
-  higher-`max_triples` retry because structured context is often enough.
+  routes. When a seed table carries operational query-planning warnings or
+  query-context repair groups, a `describe_query_context` action points to
+  readiness, target candidates, and repair hints even if raw triples were not
+  truncated. When raw triples are truncated, pattern narrowing actions come
+  before the same-seed higher-`max_triples` retry because structured context is
+  often enough.
 - `triples`: selected RDF triples, preserving graph roles.
 - `trig`: optional TriG text when `include_trig=true`.
 - `resource_count`, `candidate_triple_count`, `returned_triple_count`, and
