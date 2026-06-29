@@ -2471,6 +2471,13 @@ few useful gaps:
   `project_brief` queues emptied, and a dataset context slice stopped suggesting
   repair actions. Keep that as a regression when changing staged query repairs so
   pending staged repair IRIs do not survive after the reviewed repair is applied.
+- A follow-up query-repair lifecycle trial found staged repairs on linked storage
+  access resources, such as database relation-template adds or storage protocol
+  replacements, were not counted as pending repairs for the owning dataset.
+  Project brief pending repair detection now associates dataset query contexts
+  with linked storage, layout, partition, and column resources, and
+  `describe_query_context` marks exact matching repair actions as
+  `already_pending` so agents do not stage duplicate metadata repairs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

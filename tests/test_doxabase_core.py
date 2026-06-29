@@ -15080,6 +15080,46 @@ def test_describe_query_context_warns_on_protocol_location_mismatch(
         "graph": "map",
     }
 
+    protocol_arguments = dict(
+        action_by_type["set_reviewed_storage_protocol"]["arguments_template"]
+    )
+    protocol_arguments["object"] = "rc:S3CompatibleStorage"
+    protocol_arguments["rationale"] = (
+        "Reviewed snapshots storage as S3-compatible object storage."
+    )
+    staged_protocol = db.stage_map_assertion_change(**protocol_arguments)
+
+    pending_context = db.describe_query_context(dataset)
+    pending_group = pending_context.suggested_repair_action_groups[0]
+    pending_action_by_type = {
+        action["action_type"]: action for action in pending_group.actions
+    }
+    assert pending_group.action_status_counts == {
+        "already_pending": 1,
+        "pending_review": 5,
+    }
+    assert pending_group.pending_action_count == 5
+    assert pending_group.skippable_action_count == 1
+    assert pending_action_by_type["set_reviewed_storage_protocol"][
+        "action_status"
+    ] == "already_pending"
+    assert pending_action_by_type["set_reviewed_storage_protocol"][
+        "pending_staged_repair_iris"
+    ] == [staged_protocol.revision_iri]
+    assert "set_reviewed_storage_protocol" not in {
+        option["action_type"] for option in pending_group.pending_action_options
+    }
+
+    pending_brief = db.project_brief(limit=3)
+    pending_query_task = next(
+        task
+        for task in pending_brief.recommended_next_tasks
+        if task.task_type == "query_repair_review"
+    )
+    assert pending_query_task.pending_staged_repair_iris == [
+        staged_protocol.revision_iri
+    ]
+
 
 def test_describe_query_context_warns_on_non_s3_bucket_prefix(
     tmp_path: Path,
@@ -17093,6 +17133,41 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
     add_arguments["rationale"] = "Reviewed mart.events as the database relation."
     add_revision = db.stage_map_assertion_change(**add_arguments)
     assert db.check_staged_revision_apply(add_revision.revision_iri).status == "ready"
+
+    pending_context = db.describe_query_context(dataset)
+    pending_group = next(
+        group
+        for group in pending_context.suggested_repair_action_groups
+        if group.issue_code == "database_relation_template_source_mismatch"
+    )
+    pending_action_by_type = {
+        action["action_type"]: action for action in pending_group.actions
+    }
+    assert pending_group.action_status_counts == {
+        "already_pending": 1,
+        "pending_review": 1,
+    }
+    assert pending_group.pending_action_count == 1
+    assert pending_group.skippable_action_count == 1
+    assert pending_group.pending_required_extra_arguments == ["rationale"]
+    assert [
+        option["action_type"] for option in pending_group.pending_action_options
+    ] == ["remove_misplaced_source_template"]
+    pending_add = pending_action_by_type["add_reviewed_relation_template"]
+    assert pending_add["action_status"] == "already_pending"
+    assert pending_add["skip_when_already_pending"] is True
+    assert pending_add["pending_staged_repair_iris"] == [add_revision.revision_iri]
+
+    pending_brief = db.project_brief(limit=3)
+    pending_query_task = next(
+        task
+        for task in pending_brief.recommended_next_tasks
+        if task.task_type == "query_repair_review"
+    )
+    assert pending_query_task.pending_staged_repair_iris == [
+        add_revision.revision_iri
+    ]
+
     db.apply_staged_revision(add_revision.revision_iri)
 
     add_only_context = db.describe_query_context(dataset)

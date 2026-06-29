@@ -218,10 +218,13 @@ Start with `describe_query_context(dataset_iri)`:
    If `project_brief.recommended_next_tasks[]` reports
    `pending_staged_repair_iris` for a query repair task, review the corresponding
    `staged_frontier_review` / `staged_review` item before staging another
-   repair. The pending staged row is already anchored to the same dataset and
-   changes query-planning metadata such as storage links, path templates, storage
-   fields, physical-layout fields, or partition metadata; unrelated same-dataset
-   caveat/profile work remains only in the staged-review lanes.
+   repair. The pending staged row is already anchored to the dataset or a linked
+   query resource such as a storage access, physical layout, partition scheme, or
+   column, and changes query-planning metadata such as storage links, path
+   templates, storage fields, physical-layout fields, or partition metadata.
+   Exact matching actions in `describe_query_context.suggested_repair_action_groups`
+   are marked `already_pending`; unrelated same-dataset caveat/profile work
+   remains only in the staged-review lanes.
 7. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, profile evidence inspection actions come before query-plan
    drafting; when multiple candidate runs need review, several

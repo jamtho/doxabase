@@ -337,8 +337,9 @@ Context-blocked direct-clean routes can expose
 `remove_stale_partition_scheme_link` for reviewed removal of a stale
 `rc:partitionedBy` assertion. For database
 template-source mismatches and
-storage protocol/location mismatches, `issues[].details.repair_hint` gives
-ordered, review-gated repair templates; follow `repair_hint.actions` order.
+storage protocol/location mismatches, use `suggested_repair_action_groups` for
+ordered, review-gated repair templates; `repair_hint_path` points back to the
+nested source detail when needed.
 In the common database template-source move, add the reviewed relation
 identifier to the storage access, then remove the misplaced source template
 only if it was relation metadata rather than a real file/object path. If
@@ -347,7 +348,10 @@ the storage access already has relation template(s); the remove action is first,
 and the add action is marked `action_status="already_satisfied"` with
 `skip_when_already_satisfied=true`. `already_on_storage_access` remains the
 exact-value flag for whether the misplaced source template itself is already on
-the storage access. Protocol/location hints offer reviewed
+the storage access. Exact matching pending staged repairs on linked storage,
+layout, partition, or column resources are marked `already_pending` in compact
+repair options and appear in project-brief `pending_staged_repair_iris`.
+Protocol/location hints offer reviewed
 protocol/root/bucket/prefix edits
 and exact path-template add/remove repairs when a template caused the mismatch.
 Their templated actions name `placeholder_fields` and `reviewed_value_fields`

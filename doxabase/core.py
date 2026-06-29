@@ -4037,7 +4037,9 @@ class DoxaBase:
         dataset_iri: str,
         staged_review: ProjectBriefStagedReviewSummary,
     ) -> list[str]:
-        dataset_value = self.expand_iri(dataset_iri)
+        query_repair_anchor_iris = self._dataset_query_repair_anchor_iris(
+            dataset_iri
+        )
         ignored_queues = {
             None,
             "informational",
@@ -4048,9 +4050,28 @@ class DoxaBase:
             for item in staged_review.items
             if item.suggested_next_action is not None
             and item.queue not in ignored_queues
-            and dataset_value in item.revision_anchor_iris
+            and query_repair_anchor_iris & set(item.revision_anchor_iris)
             and self._project_brief_staged_item_is_query_repair(item)
         ]
+
+    def _dataset_query_repair_anchor_iris(
+        self,
+        dataset_iri: str,
+        dataset: DatasetDescription | None = None,
+    ) -> set[str]:
+        if dataset is None:
+            try:
+                dataset = self.describe_dataset(dataset_iri)
+            except DoxaBaseError:
+                return {self.expand_iri(dataset_iri)}
+        anchors = {self.expand_iri(dataset.iri)}
+        anchors.update(access.iri for access in dataset.storage_accesses)
+        anchors.update(layout.iri for layout in dataset.physical_layouts)
+        anchors.update(partition.iri for partition in dataset.partition_schemes)
+        anchors.update(column.iri for column in dataset.columns)
+        for partition in dataset.partition_schemes:
+            anchors.update(column.iri for column in partition.partition_columns)
+        return anchors
 
     def _project_brief_staged_item_is_query_repair(
         self,
@@ -13023,6 +13044,10 @@ class DoxaBase:
             decision=query_target_decision,
             candidates=query_target_candidates,
         )
+        issues = self._query_context_issues_with_pending_repair_actions(
+            issues,
+            dataset,
+        )
         suggested_repair_action_groups = self._query_repair_action_groups(issues)
         unselected_ready_candidate_indexes = [
             index
@@ -13242,6 +13267,222 @@ class DoxaBase:
                 )
             )
         return groups
+
+    def _query_context_issues_with_pending_repair_actions(
+        self,
+        issues: list[QueryPlanningIssue],
+        dataset: DatasetDescription,
+    ) -> list[QueryPlanningIssue]:
+        pending_rows = self._current_staged_query_repair_patch_rows(dataset)
+        if not pending_rows:
+            return issues
+        updated_issues: list[QueryPlanningIssue] = []
+        for issue in issues:
+            if issue.details is None:
+                updated_issues.append(issue)
+                continue
+            repair_hint = issue.details.get("repair_hint")
+            if not isinstance(repair_hint, MappingABC):
+                updated_issues.append(issue)
+                continue
+            actions = repair_hint.get("actions")
+            if not isinstance(actions, list) or not actions:
+                updated_issues.append(issue)
+                continue
+            changed = False
+            updated_actions: list[Any] = []
+            for action in actions:
+                if not isinstance(action, MappingABC):
+                    updated_actions.append(action)
+                    continue
+                if action.get("action_status") not in {None, "pending_review"}:
+                    updated_actions.append(action)
+                    continue
+                if action.get("already_pending_candidate_count") is not None:
+                    updated_actions.append(action)
+                    continue
+                pending_iris = self._pending_query_repair_iris_for_action(
+                    action,
+                    pending_rows,
+                )
+                if not pending_iris:
+                    updated_actions.append(action)
+                    continue
+                changed = True
+                updated_action = dict(action)
+                updated_action["action_status"] = "already_pending"
+                updated_action["skip_when_already_pending"] = True
+                updated_action["pending_staged_repair_iris"] = pending_iris
+                pending_note = (
+                    "Current staged repair(s) already propose this query "
+                    "metadata change: "
+                    f"{', '.join(pending_iris)}. Review the staged work before "
+                    "staging a duplicate."
+                )
+                condition = updated_action.get("condition")
+                updated_action["condition"] = (
+                    f"{condition} {pending_note}"
+                    if isinstance(condition, str) and condition.strip()
+                    else pending_note
+                )
+                updated_actions.append(updated_action)
+            if not changed:
+                updated_issues.append(issue)
+                continue
+            updated_repair_hint = dict(repair_hint)
+            updated_repair_hint["actions"] = updated_actions
+            updated_details = dict(issue.details)
+            updated_details["repair_hint"] = updated_repair_hint
+            updated_issues.append(
+                QueryPlanningIssue(
+                    code=issue.code,
+                    severity=issue.severity,
+                    message=issue.message,
+                    domain=issue.domain,
+                    resource=issue.resource,
+                    details=updated_details,
+                )
+            )
+        return updated_issues
+
+    def _current_staged_query_repair_patch_rows(
+        self,
+        dataset: DatasetDescription,
+    ) -> list[dict[str, str]]:
+        anchor_iris = self._dataset_query_repair_anchor_iris(dataset.iri, dataset)
+        query_repair_predicates = {
+            self.expand_iri(predicate) for predicate in QUERY_REPAIR_PREDICATE_CURIES
+        }
+        history_graphs = self._expand_graphs(["history"])
+        addition_operation = self.expand_iri("rc:AdditionPatch")
+        removal_operation = self.expand_iri("rc:RemovalPatch")
+        rows: list[dict[str, str]] = []
+        for revision_iri in self._subjects(
+            history_graphs,
+            str(RDF.type),
+            self.expand_iri("rc:GraphRevision"),
+        ):
+            if self._first_subject(
+                history_graphs,
+                "rc:appliesStagedRevision",
+                revision_iri,
+            ) is not None:
+                continue
+            if (
+                self._current_restage_successor_iri(
+                    revision_iri,
+                    graphs=history_graphs,
+                )
+                is not None
+            ):
+                continue
+            revision_anchors = set(
+                self._objects(history_graphs, revision_iri, "rc:revisionAnchor")
+            )
+            if not (anchor_iris & revision_anchors):
+                continue
+            try:
+                staged = self.describe_staged_revision(revision_iri)
+            except DoxaBaseError:
+                continue
+            for patch in staged.patches:
+                if patch.target_graph != "map":
+                    continue
+                if patch.operation == addition_operation:
+                    operation = "add"
+                elif patch.operation == removal_operation:
+                    operation = "remove"
+                else:
+                    continue
+                try:
+                    patch_graph = self._parse_staged_patch_description(patch)
+                except DoxaBaseError:
+                    continue
+                for row in self._rdf_graph_storage_rows(patch_graph):
+                    if row[2] not in query_repair_predicates:
+                        continue
+                    rows.append(
+                        {
+                            "revision_iri": revision_iri,
+                            "operation": operation,
+                            "subject": row[0],
+                            "predicate": row[2],
+                            "object": row[3],
+                            "object_kind": row[4],
+                        }
+                    )
+        return rows
+
+    def _pending_query_repair_iris_for_action(
+        self,
+        action: MappingABC[str, Any],
+        pending_rows: list[dict[str, str]],
+    ) -> list[str]:
+        action_arguments = action.get("arguments")
+        if not isinstance(action_arguments, MappingABC):
+            action_arguments = action.get("arguments_template")
+        if not isinstance(action_arguments, MappingABC):
+            return []
+        graph = action_arguments.get("graph", "map")
+        subject = action_arguments.get("subject")
+        predicate = action_arguments.get("predicate")
+        change_kind = action_arguments.get("change_kind")
+        if (
+            graph != "map"
+            or not isinstance(subject, str)
+            or not isinstance(predicate, str)
+            or not isinstance(change_kind, str)
+        ):
+            return []
+        operations = {
+            "add": {"add"},
+            "remove": {"remove"},
+            "replace": {"add", "remove"},
+        }.get(change_kind)
+        if not operations:
+            return []
+        normalized_subject = self.expand_iri(subject)
+        normalized_predicate = self.expand_iri(predicate)
+        object_filter = self._query_repair_action_object_filter(
+            action,
+            action_arguments,
+        )
+        pending_iris: list[str] = []
+        for row in pending_rows:
+            if row["operation"] not in operations:
+                continue
+            if row["subject"] != normalized_subject:
+                continue
+            if row["predicate"] != normalized_predicate:
+                continue
+            if object_filter is not None:
+                expected_object, expected_kind = object_filter
+                if row["object"] != expected_object:
+                    continue
+                if row["object_kind"] != expected_kind:
+                    continue
+            revision_iri = row["revision_iri"]
+            if revision_iri not in pending_iris:
+                pending_iris.append(revision_iri)
+        return pending_iris
+
+    def _query_repair_action_object_filter(
+        self,
+        action: MappingABC[str, Any],
+        action_arguments: MappingABC[str, Any],
+    ) -> tuple[str, str] | None:
+        object_value = action_arguments.get("object")
+        if not isinstance(object_value, str):
+            return None
+        placeholder_fields = action.get("placeholder_fields")
+        if isinstance(placeholder_fields, list) and "object" in placeholder_fields:
+            return None
+        if object_value.startswith("<") and object_value.endswith(">"):
+            return None
+        object_kind = action_arguments.get("object_kind", "literal")
+        if object_kind in {"iri", "uri"}:
+            return self.expand_iri(object_value), "uri"
+        return object_value, "literal"
 
     def _query_context_repair_hinted_issues(
         self,

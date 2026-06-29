@@ -2248,7 +2248,11 @@ choose a branch without parsing every full action template. Use the selected
 full action when you need `arguments`, `arguments_template`,
 `rationale_template`, or protocol-specific guidance. Actions marked
 `action_status="already_pending"` with `skip_when_already_pending=true` are
-skippable too. These summaries do not remove the review requirement.
+skippable too. Exact matching pending staged repairs can be anchored to the
+dataset itself or to linked query resources such as storage accesses, physical
+layouts, partition schemes, or columns; project-brief
+`pending_staged_repair_iris` uses the same query-resource association. These
+summaries do not remove the review requirement.
 When a missing-storage group has visible storage candidates that are already
 pending, `repair_context.already_pending_candidate_count`,
 `repair_context.already_pending_storage_access_iris`, and

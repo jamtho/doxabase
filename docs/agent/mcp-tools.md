@@ -660,10 +660,12 @@ relation templates, the repair action list puts
 `remove_misplaced_source_template` first and marks the add action
 `already_satisfied` with `skip_when_already_satisfied=true` so automation can
 skip the duplicate add.
-Read `issues[].details.repair_hint.actions` and follow the returned order. In
-the common move case, stage an add of the reviewed relation identifier onto the
-storage access, then stage removal of the misplaced source template only if
-review confirms it was relation metadata rather than a real file/object path.
+Use `suggested_repair_action_groups` as the scripting entrypoint; each group
+preserves the source `repair_hint_path` when you need to jump back to
+`issues[].details.repair_hint`. In the common move case, stage an add of the
+reviewed relation identifier onto the storage access, then stage removal of the
+misplaced source template only if review confirms it was relation metadata
+rather than a real file/object path.
 When `candidate_relation_identifier.storage_access_relation_templates` is
 present, inspect those storage-owned relation templates against the target
 candidates; skip the already-satisfied add action when one is the reviewed
@@ -675,8 +677,8 @@ the reviewed relation identifier and add a reviewed rationale before calling
 context, not the relation identifier. Root-only
 database storage without a storage-access relation template is also review-only
 with `database_relation_template_missing`, even when `location_kind="object"`;
-read `issues[].details.repair_hint` for the reviewed add-template action on the
-storage access.
+use the lifted `suggested_repair_action_groups` row for the reviewed
+add-template action on the storage access.
 For non-database storage, `location_kind="object"` means the storage root is the
 exact dataset object/location. `describe_query_context` still exposes that
 `storage_access_location` candidate when dataset or partition templates are
@@ -709,10 +711,10 @@ When storage is already linked but no physical layout is present,
 the reviewed `file_format`; database relation handoffs should use table-layout
 formats such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or `rc:MySQLTable` when
 those match the engine.
-When `missing_storage_access` appears, read `issues[].details.repair_hint` for
-reviewed repair templates: record a non-secret storage access and link it to the
-dataset, or stage a reviewed `rc:hasStorageAccess` assertion to an existing
-storage access. Candidate ranking uses exact path-template matches, dataset-token
+When `missing_storage_access` appears, use the lifted repair group for reviewed
+repair templates: record a non-secret storage access and link it to the dataset,
+or stage a reviewed `rc:hasStorageAccess` assertion to an existing storage
+access. Candidate ranking uses exact path-template matches, dataset-token
 overlap, weak generic-token overlap, and a linked-dataset caution for accesses
 already attached elsewhere; read `dataset_token_matches`,
 `generic_dataset_token_matches`, `dataset_partial_token_matches`,
@@ -732,8 +734,11 @@ stage-existing-link option expose `already_pending_candidate_count`,
 link action can still be pending if other non-pending candidates remain
 available for review. In `project_brief`, top-level
 `pending_staged_repair_iris` is limited to current staged rows that change
-query-planning metadata, not arbitrary same-dataset staged caveats or profile
-work. For the record-new-storage action,
+query-planning metadata on the dataset or linked query resources such as storage
+accesses, physical layouts, partition schemes, or columns, not arbitrary staged
+caveats or profile work. `describe_query_context` also marks exact matching
+repair actions as `already_pending` so compact `pending_action_options` can skip
+duplicate storage/path/protocol/layout mutations. For the record-new-storage action,
 include the optional `path_templates` field only when the storage access itself
 owns the path or database relation template. Omit it when a dataset or partition
 already carries the reviewed file/object path template, or you can create
