@@ -1192,6 +1192,11 @@ facts directly. Use `source_profile_evidence` to verify the source query result
 or profile run, `reviewed_overlay` to audit the supplied storage metadata, and
 `stage_arguments` only after confirming the overlay describes the queried
 source data rather than query text, logs, or result output.
+When existing dataset-level layout verification status or note values would
+conflict with the reviewed overlay, `reviewed_overlay` lists the replaced values
+and `stage_arguments["removals"]` carries the Turtle removal patch. Preserve
+those removals when staging; they are what keeps the draft validation-clean
+against single-value layout verification constraints.
 
 For direct profile type findings, call it with `observation_type="profile"`,
 `observed_column`, and `observed_physical_type` / `observed_value_type`. These

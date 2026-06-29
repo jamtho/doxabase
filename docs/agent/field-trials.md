@@ -2877,6 +2877,13 @@ few useful gaps:
   context slice can include selected `history`/`rc:GraphRevision` triples and
   still lack SQLite-side snapshot rows, so history-bearing context-slice exports
   now warn and point to `export_handoff_bundle` for recovery-complete handoffs.
+- A storage-metadata-assisted query-planning trial confirmed database relation,
+  S3 prefix/runtime, exact local object, ambiguous-layout, and query-evidence
+  overlay routes reach safe non-executed handoffs or repair gates. It also found
+  query-evidence overlays could fail validation when a dataset already had
+  `rc:CandidateLayout`; `draft_query_evidence_storage_overlay` now carries
+  replacement removals for old dataset layout verification status/note values
+  so reviewed query overlays stage cleanly.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

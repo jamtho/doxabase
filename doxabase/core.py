@@ -17288,11 +17288,16 @@ class DoxaBase:
             layout_verification_status=layout_verification_status_ref,
             layout_verification_note=layout_verification_note,
         )
+        removals = self._query_evidence_storage_overlay_removals(
+            dataset_iri=dataset_value,
+            layout_verification_status=layout_verification_status_ref,
+            layout_verification_note=layout_verification_note,
+        )
         content = graph_payload.serialize(format="turtle")
         additions = [{"graph": "map", "format": "turtle", "content": content}]
         parsed_patches = self._parse_staged_patch_specs(
             additions=additions,
-            removals=None,
+            removals=removals,
         )
         preview = self._preview_staged_graph_patches(
             parsed_patches,
@@ -17334,6 +17339,8 @@ class DoxaBase:
             "review_recommendation": review_recommendation,
             "validation_scope": validation_scope,
         }
+        if removals:
+            stage_arguments["removals"] = removals
         stage_action = SuggestedNextAction(
             action_label="Stage query evidence storage overlay",
             tool_name="stage_graph_revision",
@@ -17361,6 +17368,22 @@ class DoxaBase:
             ),
             "layout_verification_status": str(layout_verification_status_ref),
             "layout_verification_note": layout_verification_note,
+            "replaced_dataset_layout_verification_statuses": (
+                self._query_evidence_overlay_existing_values_replaced(
+                    dataset_value,
+                    "rc:layoutVerificationStatus",
+                    str(layout_verification_status_ref),
+                )
+            ),
+            "replaced_dataset_layout_verification_notes": (
+                self._query_evidence_overlay_existing_values_replaced(
+                    dataset_value,
+                    "rc:layoutVerificationNote",
+                    layout_verification_note,
+                )
+                if layout_verification_note is not None
+                else []
+            ),
         }
         return QueryEvidenceStorageOverlayDraft(
             result_kind="query_evidence_storage_overlay_draft",
@@ -17521,6 +17544,67 @@ class DoxaBase:
             layout_verification_note,
         )
         return graph
+
+    def _query_evidence_storage_overlay_removals(
+        self,
+        *,
+        dataset_iri: str,
+        layout_verification_status: URIRef,
+        layout_verification_note: str | None,
+    ) -> list[dict[str, str]] | None:
+        removal_graph = Graph()
+        self._bind_prefixes(removal_graph)
+        dataset = URIRef(dataset_iri)
+        status_predicate = URIRef(self.expand_iri("rc:layoutVerificationStatus"))
+        note_predicate = URIRef(self.expand_iri("rc:layoutVerificationNote"))
+        for existing_status in self._query_evidence_overlay_existing_values_replaced(
+            dataset_iri,
+            "rc:layoutVerificationStatus",
+            str(layout_verification_status),
+        ):
+            removal_graph.add(
+                (
+                    dataset,
+                    status_predicate,
+                    URIRef(existing_status),
+                )
+            )
+        if layout_verification_note is not None:
+            for existing_note in self._query_evidence_overlay_existing_values_replaced(
+                dataset_iri,
+                "rc:layoutVerificationNote",
+                layout_verification_note,
+            ):
+                removal_graph.add(
+                    (
+                        dataset,
+                        note_predicate,
+                        Literal(existing_note),
+                    )
+                )
+        if len(removal_graph) == 0:
+            return None
+        return [
+            {
+                "graph": "map",
+                "format": "turtle",
+                "content": removal_graph.serialize(format="turtle"),
+            }
+        ]
+
+    def _query_evidence_overlay_existing_values_replaced(
+        self,
+        subject_iri: str,
+        predicate: str,
+        replacement_value: str | None,
+    ) -> list[str]:
+        if replacement_value is None:
+            return []
+        return [
+            value
+            for value in self._objects(["map"], subject_iri, predicate)
+            if value != replacement_value
+        ]
 
     @staticmethod
     def _query_evidence_overlay_generated_iri(

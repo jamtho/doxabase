@@ -1312,6 +1312,74 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert plan["scan"]["uri_template"] == str(csv_path)
 
 
+def test_draft_query_evidence_storage_overlay_tool_replaces_status(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text("order_id,status\n1,paid\n", encoding="utf-8")
+    query_path = tmp_path / "orders_status.sql"
+    query_path.write_text("select count(*) from orders;\n", encoding="utf-8")
+    result_path = tmp_path / "orders_status.json"
+    result_path.write_text('{"row_count": 1}\n', encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note="Candidate note before query review.",
+    )
+    result = record_query_result_tool(
+        db,
+        summary="Orders aggregate scanned the reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(query_path),
+        query_hash="sha256:mcp-orders-status-replace",
+        result_sources=[str(result_path)],
+        sample_size=1,
+        sample_scope="All rows in the reviewed Orders CSV.",
+        sample_method="External read-only aggregate query.",
+        row_count=1,
+    )
+
+    draft = draft_query_evidence_storage_overlay_tool(
+        db,
+        dataset_iri=dataset,
+        evidence_iri=result["evidence_iri"],
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        path_templates=["orders.csv"],
+        file_format="rc:CSV",
+        layout_verification_note="Reviewed query evidence scanned orders.csv.",
+    )
+
+    assert draft["validation_conforms"] is True
+    assert draft["reviewed_overlay"][
+        "replaced_dataset_layout_verification_statuses"
+    ] == [RC + "CandidateLayout"]
+    assert draft["reviewed_overlay"]["replaced_dataset_layout_verification_notes"] == [
+        "Candidate note before query review."
+    ]
+    assert "removals" in draft["stage_arguments"]
+    assert "CandidateLayout" in draft["stage_arguments"]["removals"][0]["content"]
+
+    staged = stage_graph_revision_tool(db, **draft["stage_arguments"])
+    assert staged["validation_conforms"] is True
+    applied = apply_staged_revision_tool(db, staged["revision_iri"])
+    assert applied["patches_applied"] == 2
+    plan = draft_query_plan_tool(db, iri=dataset)
+    assert plan["handoff_kind"] == "execution_attempt_ready"
+    assert plan["scan"]["uri_template"] == str(csv_path)
+
+
 def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)

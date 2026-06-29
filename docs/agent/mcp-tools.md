@@ -1016,8 +1016,12 @@ query context and source profile/query evidence, previews validation for the
 Turtle addition, and returns `stage_arguments` plus a
 `doxabase.stage_graph_revision` suggested action. Call that staged-revision
 helper, check/apply the staged row, then rerun `describe_query_context` before
-drafting a query plan. This route preserves graph-revision rationale and keeps
-the draft step side-effect free.
+drafting a query plan. When the dataset already has a different
+`rc:layoutVerificationStatus` or note, `stage_arguments` includes removal
+patches for those old dataset-level values alongside the reviewed overlay;
+those removals are part of making the staged preview validation-clean.
+This route preserves graph-revision rationale and keeps the draft step
+side-effect free.
 
 `doxabase.describe_context_slice`
 

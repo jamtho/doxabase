@@ -418,6 +418,10 @@ does not parse query artifacts to guess storage. It returns validation-previewed
 `stage_graph_revision` arguments that add storage access and physical layout
 metadata with the query/profile observation as support. Stage, check, apply,
 and rerun `describe_query_context` before drafting the next plan.
+If the dataset already has a different layout verification status or note, the
+drafted stage arguments may include removal patches for those old dataset-level
+values. Keep them with the addition patch; otherwise the reviewed overlay can
+fail the single-status/single-note SHACL constraints.
 
 When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call

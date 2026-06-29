@@ -17659,6 +17659,94 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_query_evidence_storage_overlay_replaces_dataset_layout_status(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text(
+        "order_id,status\n1,paid\n2,pending\n",
+        encoding="utf-8",
+    )
+    query_path = tmp_path / "orders_status.sql"
+    query_path.write_text("select count(*) from orders;\n", encoding="utf-8")
+    result_path = tmp_path / "orders_status.result.json"
+    result_path.write_text('{"row_count": 2}\n', encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        layout_verification_status="rc:CandidateLayout",
+        layout_verification_note="Candidate manifest metadata before query review.",
+    )
+    result = db.record_query_result(
+        summary="Orders query scanned a reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(query_path),
+        query_hash="sha256:orders-status-replace",
+        result_sources=[str(result_path)],
+        sample_size=2,
+        sample_scope="All rows in the reviewed Orders CSV.",
+        sample_method="External read-only aggregate query.",
+        row_count=2,
+    )
+    before_counts = _mutable_graph_counts(db)
+
+    draft = db.draft_query_evidence_storage_overlay(
+        dataset,
+        result.evidence_iri,
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        path_templates=["orders.csv"],
+        file_format="rc:CSV",
+        layout_verification_note=(
+            "Reviewed query evidence scanned warehouse/orders.csv."
+        ),
+    )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert draft.validation_conforms is True
+    assert "removals" in draft.stage_arguments
+    removal_content = draft.stage_arguments["removals"][0]["content"]
+    assert "CandidateLayout" in removal_content
+    assert "Candidate manifest metadata before query review" in removal_content
+    assert draft.reviewed_overlay[
+        "replaced_dataset_layout_verification_statuses"
+    ] == [RC + "CandidateLayout"]
+    assert draft.reviewed_overlay["replaced_dataset_layout_verification_notes"] == [
+        "Candidate manifest metadata before query review."
+    ]
+    assert [
+        patch.operation for patch in draft.patches
+    ] == [
+        RC + "AdditionPatch",
+        RC + "RemovalPatch",
+    ]
+
+    staged = db.stage_graph_revision(**draft.stage_arguments)
+    assert staged.validation_conforms is True
+    assert db.check_staged_revision_apply(staged.revision_iri).status == "ready"
+    db.apply_staged_revision(staged.revision_iri)
+
+    assert db.validate_graph(scope="all").conforms
+    context = db.describe_query_context(dataset)
+    assert context.layout_verification_status is not None
+    assert context.layout_verification_status.iri == RC + "VerifiedByQueryLayout"
+    assert context.layout_verification_note == (
+        "Reviewed query evidence scanned warehouse/orders.csv."
+    )
+    plan = db.draft_query_plan(dataset)
+    assert plan.handoff_kind == "execution_attempt_ready"
+    assert plan.scan.uri_template == str(csv_path)
+
+
 def test_object_root_candidate_stays_visible_with_partition_templates(
     tmp_path: Path,
 ) -> None:
