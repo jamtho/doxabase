@@ -489,6 +489,175 @@ def test_project_brief_counts_staged_review_rows_hidden_by_limit(
     assert brief.omitted_queue_counts["staged_review"] == 3
 
 
+def test_project_brief_detects_hidden_pending_query_repairs(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    relation = "mart.orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_database_storage",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=[relation],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        path_templates=[relation],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    repair_group = db.describe_query_context(
+        dataset,
+    ).suggested_repair_action_groups[0]
+    remove_arguments = dict(repair_group.actions[0]["arguments"])
+    remove_arguments["rationale"] = (
+        "Reviewed dataset path template as misplaced database relation metadata."
+    )
+    hidden_staged = db.stage_map_assertion_change(**remove_arguments)
+    for index in range(4):
+        db.stage_graph_revision(
+            summary=f"Stage later unrelated caveat {index}",
+            rationale="Make the pending query repair fall outside the visible brief slice.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:LaterCaveat{index} a rc:KnownCaveat ;
+                        rdfs:label "Later caveat {index}" ;
+                        rc:caveatDescription "Later unrelated caveat {index}." .
+                    """,
+                }
+            ],
+        )
+
+    brief = db.project_brief(limit=3)
+
+    visible_staged_iris = {
+        item.revision_iri for item in brief.staged_review.items
+    }
+    assert hidden_staged.revision_iri not in visible_staged_iris
+    assert brief.staged_review.count == 5
+    assert brief.staged_review.returned_count == 3
+    repair_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "query_repair_review"
+    )
+    assert repair_task.pending_staged_repair_iris == [
+        hidden_staged.revision_iri
+    ]
+    assert repair_task.priority == 45
+    assert "Pending staged repair(s)" in repair_task.reason
+
+
+def test_project_brief_detects_hidden_pending_profile_updates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#SupportEvents"
+    evidence = "https://example.test/project#SupportEventsProfileEvidence"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#support_events_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "warehouse"),
+        path_templates=["support-events.csv"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#support_events_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Support events",
+        is_table=True,
+        row_count_snapshot=10,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Support events were profiled with a full scan.",
+        evidence_summary="Support events profile evidence.",
+        evidence_sources=["test://support-events-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Support events table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=12,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+    )
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    staged = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=draft.representative_recommendation_indexes,
+    )
+    assert staged.staged_revision is not None
+    hidden_staged_iri = staged.staged_revision.revision_iri
+    for index in range(4):
+        db.stage_graph_revision(
+            summary=f"Stage later profile-unrelated caveat {index}",
+            rationale="Make the pending profile update fall outside the visible brief slice.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:LaterProfileCaveat{index} a rc:KnownCaveat ;
+                        rdfs:label "Later profile caveat {index}" ;
+                        rc:caveatDescription "Later unrelated profile caveat {index}." .
+                    """,
+                }
+            ],
+        )
+
+    brief = db.project_brief(limit=4, profile_candidate_limit=1)
+
+    visible_staged_iris = {
+        item.revision_iri for item in brief.staged_review.items
+    }
+    assert hidden_staged_iri not in visible_staged_iris
+    assert brief.staged_review.count == 5
+    assert brief.staged_review.returned_count == 4
+    profile_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "profile_review"
+    )
+    assert profile_task.pending_staged_profile_update_iris == [
+        hidden_staged_iri
+    ]
+    assert profile_task.priority == 55
+    assert "Pending staged profile update(s)" in profile_task.reason
+    assert profile_task.suggested_next_action is not None
+    assert profile_task.suggested_next_action.tool_name == (
+        "draft_profile_map_updates"
+    )
+
+
 def test_project_brief_reports_limit_crowded_queue_types(
     tmp_path: Path,
 ) -> None:

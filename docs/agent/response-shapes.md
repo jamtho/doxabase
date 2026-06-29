@@ -261,14 +261,18 @@ repair before staging another one. This pending-repair field is query-specific:
 the staged row must change query-planning metadata such as storage links, path
 templates, storage fields, physical-layout fields, or partition metadata.
 Unrelated same-dataset caveats or profile-map updates remain visible through
-staged-review queues without marking the query repair pending. When a profile
+staged-review queues without marking the query repair pending. Pending detection
+uses current staged work beyond the bounded `staged_review.items` slice, so the
+IRI may not appear in returned staged rows when `staged_review.omitted_count > 0`.
+When a profile
 task already has a staged profile-map-update revision anchored to the same
 dataset and evidence,
 `pending_staged_profile_update_iris` names those staged revision IRIs and the
 task's suggested action is read-only `draft_profile_map_updates` instead of
 another `stage_profile_map_updates` call. Generic same-evidence staged work
 remains visible through `staged_frontier_review` / `staged_review` but does not
-populate `pending_staged_profile_update_iris`. Pending profile-map updates only
+populate `pending_staged_profile_update_iris`. Like query pending detection, this
+can name current staged rows outside the returned staged-review slice. Pending profile-map updates only
 demote pure map-update reruns; if scalar conflict, metric vocabulary, or type
 advisory lanes remain open, the profile task stays at normal priority.
 For `profile_review` tasks, `profile_evidence_iri` names the profile evidence

@@ -2496,6 +2496,11 @@ few useful gaps:
   with linked storage, layout, partition, and column resources, and
   `describe_query_context` marks exact matching repair actions as
   `already_pending` so agents do not stage duplicate metadata repairs.
+- A project-brief frontier trial found pending query repairs and profile-map
+  updates could disappear when the matching staged row was outside the bounded
+  `staged_review.items` slice. Project brief still keeps displayed staged rows
+  limited, but pending query/profile detection now scans the current staged work
+  set so hidden staged rows can still lower duplicate repair/staging tasks.
 - A storage-seeded handoff trial found `resource_brief` showed an owning dataset
   through `incoming_reference` but left agents to infer the
   `describe_query_context` follow-up manually. Resource briefs now treat

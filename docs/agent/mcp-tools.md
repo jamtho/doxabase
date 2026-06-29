@@ -58,6 +58,11 @@ run redacted privacy/export review, or handle stale immutable seed graphs.
 When current staged work exists, a `staged_frontier_review` task points to
 `plan_staged_revision_recovery`; follow that first before staging duplicate
 profile or query repair work.
+Pending query/profile fields are computed from current staged work beyond the
+bounded `staged_review.items` slice, so a pending IRI may be hidden from the
+returned staged rows when the brief is limited; use the IRI with
+`plan_staged_revision_recovery` or rerun `project_brief` with a larger limit for
+more display context.
 Tasks labelled `query_repair_review` point back to `describe_query_context`,
 not directly to `draft_query_plan`, so agents can inspect reviewed repair
 templates before drafting or executing any route. Tasks labelled

@@ -3294,6 +3294,11 @@ class DoxaBase:
         recommended_tasks: list[ProjectBriefRecommendedTask] = []
         all_dataset_summaries: list[ProjectBriefDatasetSummary] = []
         staged_review = self._project_brief_staged_review(limit=limit)
+        pending_detection_staged_review = staged_review
+        if staged_review.omitted_count:
+            pending_detection_staged_review = self._project_brief_staged_review(
+                limit=staged_review.count
+            )
         staged_frontier_task = self._project_brief_staged_frontier_task(
             staged_review
         )
@@ -3335,7 +3340,7 @@ class DoxaBase:
             recommended_tasks.extend(
                 self._project_brief_dataset_tasks(
                     dataset_summary,
-                    staged_review=staged_review,
+                    staged_review=pending_detection_staged_review,
                 )
             )
 
