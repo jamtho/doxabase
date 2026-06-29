@@ -2821,6 +2821,12 @@ few useful gaps:
   `staged-revisions.md` now has a compact cookbook: plan, complete imports,
   dry-run, restage only `would_restage_revision_iris`, check/apply one row,
   rerun the planner, and handle repair lanes through explicit helper actions.
+- An export/privacy handoff trial confirmed scanner-clean context slices can be
+  imported from dirty capsules, while staged/profile Markdown exports are
+  review-only and workflow TriG is importable but not a complete recovery
+  handoff. Export records now expose `artifact_kind`, `importable`,
+  `recommended_import_tool`, and `recovery_complete` so agents can route these
+  artifact classes mechanically.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

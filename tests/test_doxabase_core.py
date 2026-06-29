@@ -1932,6 +1932,10 @@ def test_export_preflight_returns_scanner_clean_export_action(
 
     workflow_export = db.export_trig(tmp_path / "workflow.trig", graphs="workflow")
     assert "review context only" in workflow_export.warnings[0]
+    assert workflow_export.artifact_kind == "workflow_review_trig"
+    assert workflow_export.importable is True
+    assert workflow_export.recommended_import_tool == "doxabase.import_trig"
+    assert workflow_export.recovery_complete is False
 
     project_preflight = db.export_preflight(export_kind="trig", graphs="project")
     assert project_preflight.warnings == [project_preflight.scanner_note]
@@ -25935,6 +25939,15 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
         for candidate in result.candidates
         for group in candidate.profile_route_groups
     )
+    assert result.artifact_kind == "profile_insight_review_bundle"
+    assert result.importable is False
+    assert result.recommended_import_tool is None
+    assert result.recovery_complete is False
+    assert result.export is not None
+    assert result.export.artifact_kind == "staged_revisions_review_markdown"
+    assert result.export.importable is False
+    assert result.export.recommended_import_tool is None
+    assert result.export.recovery_complete is False
     assert result.export.sensitive_literal_count == 1
     assert result.export.privacy_warnings
     assert fake_secret not in " ".join(result.export.privacy_warnings)

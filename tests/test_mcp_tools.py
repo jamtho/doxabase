@@ -1241,6 +1241,10 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     assert graph_result["triples"] == db.triple_count("map")
     assert graph_result["sensitive_literal_count"] == 0
     assert graph_result["privacy_warnings"] == []
+    assert graph_result["artifact_kind"] == "graph_rdf_export"
+    assert graph_result["importable"] is True
+    assert graph_result["recommended_import_tool"] == "DoxaBase.import_turtle"
+    assert graph_result["recovery_complete"] is False
     assert graph_path.exists()
 
     assert trig_result["path"] == str(trig_path)
@@ -1257,6 +1261,10 @@ def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     assert "base_ontology" not in trig_result["graphs"]
     assert trig_result["sensitive_literal_count"] == 0
     assert trig_result["privacy_warnings"] == []
+    assert trig_result["artifact_kind"] == "project_trig"
+    assert trig_result["importable"] is True
+    assert trig_result["recommended_import_tool"] == "doxabase.import_trig"
+    assert trig_result["recovery_complete"] is False
     assert trig_result["triples"] == sum(trig_result["graph_counts"].values())
     assert trig_path.exists()
 
@@ -1536,14 +1544,37 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert result["snapshot_graph_roles"] == ["map"]
     assert result["sensitive_literal_count"] == 0
     assert result["privacy_warnings"] == []
+    assert result["artifact_kind"] == "handoff_bundle"
+    assert result["importable"] is True
+    assert result["recommended_import_tool"] == (
+        "doxabase.import_trig then doxabase.import_revision_snapshots"
+    )
+    assert result["recovery_complete"] is True
+    assert result["trig"]["artifact_kind"] == "handoff_trig"
+    assert result["trig"]["recommended_import_tool"] == "doxabase.import_trig"
+    assert result["trig"]["recovery_complete"] is False
+    assert result["revision_snapshots"]["artifact_kind"] == (
+        "revision_snapshot_bundle"
+    )
+    assert result["revision_snapshots"]["recommended_import_tool"] == (
+        "doxabase.import_revision_snapshots"
+    )
+    assert result["revision_snapshots"]["recovery_complete"] is False
     assert trig_path.exists()
     assert snapshot_path.exists()
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest == result["manifest"]
     assert manifest["format"] == "doxabase.handoff_bundle.v1"
+    assert manifest["artifact_kind"] == "handoff_bundle"
+    assert manifest["importable"] is True
+    assert manifest["recovery_complete"] is True
     assert manifest["artifacts"]["trig"]["path"] == str(trig_path)
+    assert manifest["artifacts"]["trig"]["artifact_kind"] == "handoff_trig"
     assert manifest["artifacts"]["revision_snapshots"]["path"] == str(snapshot_path)
+    assert manifest["artifacts"]["revision_snapshots"]["artifact_kind"] == (
+        "revision_snapshot_bundle"
+    )
     assert [
         step["tool_name"] for step in manifest["recommended_import_sequence"]
     ] == ["import_trig", "import_revision_snapshots"]
@@ -1762,6 +1793,14 @@ def test_staged_markdown_export_tools_return_privacy_warnings(
 
     assert single["sensitive_literal_count"] == 1
     assert grouped["sensitive_literal_count"] == 1
+    assert single["artifact_kind"] == "staged_revision_review_markdown"
+    assert grouped["artifact_kind"] == "staged_revisions_review_markdown"
+    assert single["importable"] is False
+    assert grouped["importable"] is False
+    assert single["recommended_import_tool"] is None
+    assert grouped["recommended_import_tool"] is None
+    assert single["recovery_complete"] is False
+    assert grouped["recovery_complete"] is False
     assert single["privacy_warnings"]
     assert grouped["privacy_warnings"]
     assert fake_secret not in " ".join(single["privacy_warnings"])
@@ -6625,6 +6664,10 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert preflight["sensitive_literal_count"] == 0
     assert preflight["matches"] == []
     assert preflight["privacy_warnings"] == []
+    assert preflight["artifact_kind"] == "context_slice_trig"
+    assert preflight["importable"] is True
+    assert preflight["recommended_import_tool"] == "doxabase.import_trig"
+    assert preflight["recovery_complete"] is False
     assert preflight["scanner_note"] in preflight["warnings"]
     assert [
         action["tool_name"] for action in preflight["suggested_next_actions"]
@@ -6648,6 +6691,10 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert export["path"] == str(export_path)
     assert export["bytes_written"] > 0
     assert export["sensitive_literal_count"] == 0
+    assert export["artifact_kind"] == "context_slice_trig"
+    assert export["importable"] is True
+    assert export["recommended_import_tool"] == "doxabase.import_trig"
+    assert export["recovery_complete"] is False
     assert export["suggested_next_actions"] == []
     assert export_path.exists()
 

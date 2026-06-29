@@ -526,6 +526,10 @@ class GraphExportRecord:
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    artifact_kind: str = "graph_rdf_export"
+    importable: bool = True
+    recommended_import_tool: str | None = "DoxaBase.import_turtle"
+    recovery_complete: bool = False
 
 
 @dataclass(frozen=True)
@@ -553,6 +557,10 @@ class ContextSliceExportRecord:
     scanner_note: str
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
+    artifact_kind: str = "context_slice_trig"
+    importable: bool = True
+    recommended_import_tool: str | None = "doxabase.import_trig"
+    recovery_complete: bool = False
 
 
 @dataclass(frozen=True)
@@ -593,6 +601,10 @@ class RevisionSnapshotBundleExportRecord:
     bytes_written: int
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    artifact_kind: str = "revision_snapshot_bundle"
+    importable: bool = True
+    recommended_import_tool: str | None = "doxabase.import_revision_snapshots"
+    recovery_complete: bool = False
 
 
 @dataclass(frozen=True)
@@ -608,6 +620,12 @@ class HandoffBundleExportRecord:
     manifest_bytes_written: int | None = None
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    artifact_kind: str = "handoff_bundle"
+    importable: bool = True
+    recommended_import_tool: str | None = (
+        "doxabase.import_trig then doxabase.import_revision_snapshots"
+    )
+    recovery_complete: bool = True
 
 
 @dataclass(frozen=True)
@@ -1070,6 +1088,10 @@ class StagedGraphRevisionExportRecord:
     bytes_written: int
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    artifact_kind: str = "staged_revision_review_markdown"
+    importable: bool = False
+    recommended_import_tool: str | None = None
+    recovery_complete: bool = False
 
 
 @dataclass(frozen=True)
@@ -1217,6 +1239,10 @@ class StagedGraphRevisionsExportRecord:
     bundle_summary: StagedGraphRevisionBundleSummary
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    artifact_kind: str = "staged_revisions_review_markdown"
+    importable: bool = False
+    recommended_import_tool: str | None = None
+    recovery_complete: bool = False
 
 
 @dataclass(frozen=True)
@@ -1261,6 +1287,10 @@ class ProfileInsightReviewBundleRecord:
     export: StagedGraphRevisionsExportRecord | None
     warnings: list[str]
     review_note: str
+    artifact_kind: str = "profile_insight_review_bundle"
+    importable: bool = False
+    recommended_import_tool: str | None = None
+    recovery_complete: bool = False
 
 
 @dataclass(frozen=True)
@@ -42466,6 +42496,16 @@ class DoxaBase:
             "export_revision_snapshots for recovery."
         ]
 
+    @staticmethod
+    def _trig_export_artifact_kind(graph_names: list[str]) -> str:
+        if graph_names == list(EXPORT_PRESETS["workflow"]):
+            return "workflow_review_trig"
+        if graph_names == list(EXPORT_PRESETS["project"]):
+            return "project_trig"
+        if any(graph in SEED_GRAPH_NAMES for graph in graph_names):
+            return "trig_with_seed_graphs"
+        return "custom_trig"
+
     def export_handoff_bundle(
         self,
         trig_path: str | Path,
@@ -42550,6 +42590,9 @@ class DoxaBase:
             bytes_written=trig_bytes_written,
             sensitive_literal_count=trig_sensitive_count,
             privacy_warnings=trig_privacy_warnings,
+            artifact_kind="handoff_trig",
+            recommended_import_tool="doxabase.import_trig",
+            recovery_complete=False,
         )
         snapshot_record = RevisionSnapshotBundleExportRecord(
             path=str(revision_snapshot_path),
@@ -42613,6 +42656,10 @@ class DoxaBase:
                 "trig": {
                     "path": trig.path,
                     "format": trig.format,
+                    "artifact_kind": trig.artifact_kind,
+                    "importable": trig.importable,
+                    "recommended_import_tool": trig.recommended_import_tool,
+                    "recovery_complete": trig.recovery_complete,
                     "graph_roles": trig.graphs,
                     "graph_counts": trig.graph_counts,
                     "triples": trig.triples,
@@ -42623,6 +42670,12 @@ class DoxaBase:
                 "revision_snapshots": {
                     "path": revision_snapshots.path,
                     "format": revision_snapshots.format,
+                    "artifact_kind": revision_snapshots.artifact_kind,
+                    "importable": revision_snapshots.importable,
+                    "recommended_import_tool": (
+                        revision_snapshots.recommended_import_tool
+                    ),
+                    "recovery_complete": revision_snapshots.recovery_complete,
                     "revision_iris": revision_snapshots.revision_iris,
                     "graph_roles": revision_snapshots.graph_roles,
                     "snapshot_count": revision_snapshots.snapshot_count,
@@ -42654,6 +42707,12 @@ class DoxaBase:
                     ),
                 },
             ],
+            "artifact_kind": "handoff_bundle",
+            "importable": True,
+            "recommended_import_tool": (
+                "doxabase.import_trig then doxabase.import_revision_snapshots"
+            ),
+            "recovery_complete": True,
             "json_first_status": "snapshot_rows_without_history",
             "final_snapshot_evidence_status": "history_plus_snapshot_rows",
             "revision_iris": revision_snapshots.revision_iris,
@@ -43235,6 +43294,9 @@ class DoxaBase:
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
             warnings=[*privacy_warnings, *export_scope_warnings],
+            artifact_kind=self._trig_export_artifact_kind(graph_names),
+            recommended_import_tool="doxabase.import_trig",
+            recovery_complete=False,
         )
 
     def clear_graph(self, graph: str, *, allow_immutable: bool = False) -> None:

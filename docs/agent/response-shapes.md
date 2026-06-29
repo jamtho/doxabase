@@ -962,6 +962,10 @@ export.warnings
 export.scanner_note
 export.suggested_next_actions
 export.suggested_next_calls
+export.artifact_kind
+export.importable
+export.recommended_import_tool
+export.recovery_complete
 ```
 
 `preflight_context_slice_export()` does not write a file, so `path` is `None`
@@ -2118,6 +2122,10 @@ result.open_profile_review_lane_count
 result.export
 result.warnings
 result.review_note
+result.artifact_kind
+result.importable
+result.recommended_import_tool
+result.recovery_complete
 ```
 
 `result_kind` is `profile_insight_review_bundle`. `export` is the nested
@@ -4340,6 +4348,10 @@ export.bytes_written
 export.sensitive_literal_count
 export.privacy_warnings
 export.warnings
+export.artifact_kind
+export.importable
+export.recommended_import_tool
+export.recovery_complete
 ```
 
 `sensitive_literal_count` and `privacy_warnings` come from a conservative
@@ -4360,6 +4372,12 @@ For TriG workflow/review exports, `warnings` also says that the artifact is
 review context only and omits history plus revision snapshot rows. Use
 `export_handoff_bundle()` or project TriG plus `export_revision_snapshots()` for
 recovery handoffs.
+Classification fields keep artifact type separate from privacy scanning:
+`artifact_kind` distinguishes flattened RDF, project TriG, workflow-review TriG,
+context-slice TriG, Markdown review bundles, snapshot JSON, and full handoff
+bundles. `importable` means DoxaBase has a direct import route for the artifact;
+Markdown review bundles are not importable. `recovery_complete` is true only for
+full handoff bundles that pair project/history RDF with snapshot JSON.
 
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None, fail_on_sensitive=False)`
 returns `RevisionSnapshotBundleExportRecord`:
@@ -4374,6 +4392,10 @@ bundle.quad_count
 bundle.bytes_written
 bundle.sensitive_literal_count
 bundle.privacy_warnings
+bundle.artifact_kind
+bundle.importable
+bundle.recommended_import_tool
+bundle.recovery_complete
 ```
 
 The JSON bundle is an opt-in companion to RDF exports. It preserves
@@ -4402,6 +4424,10 @@ handoff.manifest_path
 handoff.manifest_bytes_written
 handoff.sensitive_literal_count
 handoff.privacy_warnings
+handoff.artifact_kind
+handoff.importable
+handoff.recommended_import_tool
+handoff.recovery_complete
 ```
 
 The nested `trig` and `revision_snapshots` fields have the same shapes as
@@ -5297,6 +5323,10 @@ export.revision_summaries
 export.bundle_summary
 export.sensitive_literal_count
 export.privacy_warnings
+export.artifact_kind
+export.importable
+export.recommended_import_tool
+export.recovery_complete
 ```
 
 `export.revision_iris` is normalized to first-seen unique revision IRIs; grouped

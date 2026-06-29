@@ -1979,6 +1979,11 @@ sensitive-looking subject URI, predicate URI, object URI, or literal terms.
 Use `doxabase.export_preflight(export_kind="graph", graphs=[...])` first when an
 agent needs a read-only decision, redacted match IDs, and the exact blocking
 export action before choosing a path.
+Export result records expose `artifact_kind`, `importable`,
+`recommended_import_tool`, and `recovery_complete`. Use those fields rather
+than file extension alone: staged/profile Markdown bundles are review artifacts
+and not importable, workflow TriG is importable review context but not a full
+recovery handoff, and `export_handoff_bundle` is the recovery-complete pair.
 
 `doxabase.replace_graph_triples`
 

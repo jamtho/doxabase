@@ -105,6 +105,12 @@ its preflight scans only selected context-slice triples; scanner-clean still
 requires separate shareability review. Use
 `export_handoff_bundle()` or project TriG plus `export_revision_snapshots()` for
 recovery handoffs.
+Export records carry `artifact_kind`, `importable`, `recommended_import_tool`,
+and `recovery_complete` so scripts do not have to infer artifact class from the
+helper name or file extension. Markdown staged/profile review bundles are
+`importable=False`; workflow TriG is importable review context but
+`recovery_complete=False`; a full handoff bundle is the recovery-complete
+artifact because it pairs project/history RDF with revision snapshot JSON.
 `export_preflight()` is a read-only companion for `export_graph()`,
 `export_trig()`, `export_revision_snapshots()`, and `export_handoff_bundle()`.
 It selects the same graph roles and snapshot rows, returns redacted match
