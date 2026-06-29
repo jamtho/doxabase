@@ -1257,7 +1257,9 @@ persisted review/support metadata and exports render it as `Stored Review
 Context`; it is not a replayed panel. The export also includes `Linked Support`
 when the revision records supporting observations, claims, patterns, or
 evidence, so single ontology or shape promotion reviews can show their evidence
-chain.
+chain. Evidence entries include recorded sources and source spans, including
+path, section, and line labels when available, so reviewers can follow linked
+support from the Markdown artifact alone.
 Restaged exports include a top metadata `Restage headline` before the current
 apply check. Stale original exports include a top metadata `Restaged by` line
 when a refreshed successor already exists. Suggested export actions use

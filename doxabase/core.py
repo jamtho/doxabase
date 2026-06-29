@@ -37822,7 +37822,6 @@ class DoxaBase:
             ("Supporting observations", description.supporting_observations),
             ("Supporting claims", description.supporting_claims),
             ("Supporting patterns", description.supporting_patterns),
-            ("Evidence", description.evidence),
         ]
         lines: list[str] = []
         for label, resources in sections:
@@ -37831,7 +37830,68 @@ class DoxaBase:
             lines.append(f"- {label}:")
             for resource in resources:
                 lines.append(f"  - {resource.label or resource.iri} (`{resource.iri}`)")
+        if description.evidence:
+            lines.append("- Evidence:")
+            for resource in description.evidence:
+                lines.extend(self._staged_revision_evidence_support_markdown(resource))
         return lines
+
+    def _staged_revision_evidence_support_markdown(
+        self,
+        resource: ResourceSummary,
+    ) -> list[str]:
+        lookup_graphs = self._lookup_graphs(self._expand_graphs(["all"]))
+        evidence = self._describe_evidence(
+            resource.iri,
+            self._evidence_detail_graphs(self._expand_graphs(["history"])),
+            lookup_graphs,
+        )
+        label = evidence.label or resource.label or evidence.summary or resource.iri
+        lines = [f"  - {label} (`{resource.iri}`)"]
+        if evidence.summary and evidence.summary != label:
+            lines.append(f"    - Summary: {evidence.summary}")
+        for source in evidence.sources:
+            lines.append(f"    - Source: `{source}`")
+        for source_span in evidence.source_spans:
+            lines.append(
+                "    - Source span: "
+                f"{self._source_span_description_markdown(source_span)}"
+            )
+        return lines
+
+    @staticmethod
+    def _source_span_description_markdown(
+        source_span: SourceSpanDescription,
+    ) -> str:
+        label = (
+            f"`{source_span.source_path}`"
+            if source_span.source_path is not None
+            else f"`{source_span.iri}`"
+        )
+        details: list[str] = []
+        if source_span.source_section is not None:
+            details.append(f'section "{source_span.source_section}"')
+        line_label = DoxaBase._source_span_line_label(source_span)
+        if line_label is not None:
+            details.append(line_label)
+        source_kind = source_span.source_kind_label or source_span.source_kind
+        if source_kind is not None:
+            details.append(f"kind {source_kind}")
+        if not details:
+            return label
+        return f"{label} ({'; '.join(details)})"
+
+    @staticmethod
+    def _source_span_line_label(source_span: SourceSpanDescription) -> str | None:
+        if source_span.start_line is not None and source_span.end_line is not None:
+            if source_span.start_line == source_span.end_line:
+                return f"line {source_span.start_line}"
+            return f"lines {source_span.start_line}-{source_span.end_line}"
+        if source_span.start_line is not None:
+            return f"starts at line {source_span.start_line}"
+        if source_span.end_line is not None:
+            return f"ends at line {source_span.end_line}"
+        return None
 
     def _staged_revision_impact_markdown(
         self,

@@ -174,7 +174,9 @@ alternative points to a stale revision whose successor is also in play, an
 Single-revision exports include `Linked Support` when the staged revision has
 supporting observations, claims, patterns, or evidence, so ontology promotions
 and other non-map patches still show their justification chain without requiring
-a separate `describe_staged_revision` call.
+a separate `describe_staged_revision` call. Evidence entries expand recorded
+sources and source spans, including path, section, and line labels when present,
+so the Markdown artifact is enough to locate the supporting material.
 
 A stale export should be read like this:
 

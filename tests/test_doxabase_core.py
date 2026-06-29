@@ -26200,6 +26200,55 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert bundle.handoff_entrypoints.profile_observation_iris[0] in export_text
 
 
+def test_export_staged_revision_linked_support_includes_evidence_source_spans(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    query_result = db.record_query_result(
+        "Lifecycle query found terminal states in the orders sample.",
+        observed_asset="https://example.test/project#Orders",
+        engine="duckdb",
+        query_source_path="analysis/orders_lifecycle.sql",
+        query_source_section="terminal_state_cte",
+        start_line=12,
+        end_line=20,
+        result_sources=["duckdb://orders/lifecycle-sample"],
+    )
+    staged = db.stage_graph_revision(
+        summary="Define lifecycle-state class",
+        rationale=(
+            "The query result supports preserving lifecycle-state semantics as "
+            "project vocabulary before map assertions consume it."
+        ),
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:LifecycleState a rdfs:Class ;
+                        rdfs:label "Lifecycle state" .
+                """,
+            }
+        ],
+        supporting_observations=[query_result.observation_iri],
+        evidence=[query_result.evidence_iri],
+        validation_scope="all",
+    )
+
+    export_path = tmp_path / "lifecycle-state-review.md"
+    db.export_staged_revision(staged.revision_iri, export_path)
+    export_text = export_path.read_text()
+
+    assert "## Linked Support" in export_text
+    assert query_result.evidence_iri in export_text
+    assert "Source: `duckdb://orders/lifecycle-sample`" in export_text
+    assert "Source span: `analysis/orders_lifecycle.sql`" in export_text
+    assert 'section "terminal_state_cte"' in export_text
+    assert "lines 12-20" in export_text
+
+
 def test_metric_advisory_context_action_stays_on_observed_metric(
     tmp_path: Path,
 ) -> None:
