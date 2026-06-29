@@ -2445,6 +2445,11 @@ few useful gaps:
   resources through `revision_anchor_match`, so dataset/storage/layout/partition
   handoffs can show staged or applied query-metadata repairs even without
   supporting claim, observation, or pattern links.
+- A query-repair lifecycle trial found the database-relation remove flow already
+  cleared routing after apply: `describe_query_context` became ready,
+  `project_brief` queues emptied, and a dataset context slice stopped suggesting
+  repair actions. Keep that as a regression when changing staged query repairs so
+  pending staged repair IRIs do not survive after the reviewed repair is applied.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

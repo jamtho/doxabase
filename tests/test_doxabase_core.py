@@ -17204,6 +17204,23 @@ def test_project_brief_prioritizes_pending_staged_query_repair(
     assert to_dict(query_task)["pending_staged_repair_iris"] == [staged.revision_iri]
     assert brief.staged_review.items[0].queue == "apply_after_review"
     assert brief.staged_review.items[0].revision_anchor_iris == [dataset]
+    recovery = db.plan_staged_revision_recovery(
+        current_staged_work_only=True,
+        limit=3,
+    )
+    assert recovery.next_action_queue == {"apply_after_review": [staged.revision_iri]}
+
+    db.apply_staged_revision(staged.revision_iri)
+    repaired_context = db.describe_query_context(dataset)
+    assert repaired_context.readiness == "ready_for_query_planning"
+    assert repaired_context.issues == []
+    assert repaired_context.suggested_repair_action_groups == []
+    post_apply_brief = db.project_brief(limit=3)
+    assert post_apply_brief.queue_counts == {}
+    assert post_apply_brief.recommended_next_tasks == []
+    post_apply_slice = db.describe_context_slice(dataset, profile="dataset_brief")
+    assert post_apply_slice.suggested_next_actions == []
+    assert post_apply_slice.warnings == []
 
 
 @pytest.mark.parametrize("location_kind", ["object", "connection"])
