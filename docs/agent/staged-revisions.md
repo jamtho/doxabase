@@ -840,8 +840,9 @@ again in the recheck phase when the bundle requires apply-one-then-recheck
 behavior.
 Grouped Markdown also includes a `Resolved Targets` table derived from those
 queue items, so Markdown-only reviewers can see each row's queue, action,
-resolved target IRI, target kind, and whether the row itself is the target
-without opening every row's detailed apply check.
+resolved target IRI, target kind, whether the row itself is the target, semantic
+risk level, and alternative gate status without opening every row's detailed
+apply check.
 If a staged-review handoff turns on pending query-repair candidate state, for
 example a `missing_storage_access` storage candidate marked
 `already_pending`, attach the relevant `describe_query_context` output or a

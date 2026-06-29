@@ -1290,6 +1290,8 @@ When the concrete follow-up target can differ from the queued row, use
 point at an applied event. The bundle also exposes
 `next_action_queue_item_counts` and `semantic_review_required_queue_counts`, so
 queue-only scripts can notice semantic review gates inside `apply_after_review`.
+Grouped Markdown mirrors semantic risk and alternative gate status in the
+`Resolved Targets` table for Markdown-only review.
 For a single cross-lane worklist, read `bundle_summary.review_sequence` first:
 it orders the queue items into inspect-redirect, repair, restage, review/apply,
 and recheck phases with row numbers, summaries, resolved targets, tools, and a

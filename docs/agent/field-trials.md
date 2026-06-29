@@ -2409,6 +2409,13 @@ few useful gaps:
   lanes remained open. Project brief priority now only demotes pure map-update
   reruns; open advisory/conflict lanes keep profile review at normal priority and
   the task reason names the remaining lanes.
+- A human-review artifact trial confirmed grouped staged export JSON is
+  sufficient for autonomous routing across alternatives, restage lineage,
+  snapshot evidence, resolved targets, and review sequence. Markdown was mostly
+  self-contained, but `Resolved Targets` hid `semantic_risk_level` and
+  `alternative_gate_status`. Grouped Markdown now includes semantic risk and
+  alternative gate columns in `Resolved Targets` so Markdown-only reviewers can
+  scan row-vs-target routing and semantic gates together.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

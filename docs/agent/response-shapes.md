@@ -4927,7 +4927,8 @@ does not name an existing `iri`.
 `semantic_review_required_queue_counts`, which only counts alternative-gate
 semantic-review requirements. Semantic risk can coexist with validation or
 conflict blockers, so risk counts can appear under repair queues as well as
-`apply_after_review`.
+`apply_after_review`. Grouped Markdown mirrors each queue item's semantic risk
+level and alternative gate status in the `Resolved Targets` table.
 `ready_restage_successor_alternative_to_applied_source_iris` lists ready
 refreshed successors whose `current_alternative_to` / `alternative_to` target is
 already applied. Treat these rows as semantic review targets, not automatic

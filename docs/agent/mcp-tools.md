@@ -1661,8 +1661,9 @@ and `recommended_applied_inspection_iris`. Prefer
 `bundle_summary.next_action_queue` when an autonomous script needs the most
 direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.next_action_queue_items` adds the resolved target IRI,
-row-vs-target flag, semantic alternative gate fields, and symmetric
-alternative-set fields for each queued row. `bundle_summary.review_sequence`
+row-vs-target flag, semantic risk level, semantic alternative gate fields, and
+symmetric alternative-set fields for each queued row. Grouped Markdown mirrors
+the risk and gate fields in `Resolved Targets`. `bundle_summary.review_sequence`
 orders those queue items into inspect-redirect, repair, restage, review/apply,
 and recheck phases so unattended agents can follow one cross-lane worklist
 before opening lower-level queue buckets;

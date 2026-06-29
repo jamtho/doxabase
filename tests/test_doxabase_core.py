@@ -5169,13 +5169,15 @@ def test_restage_staged_revision_refreshes_counts_after_conflict(
     assert grouped_export.index("## Resolved Targets") < grouped_export.index(
         "## Restage Context"
     )
-    assert "| Queue | Row | Action | Resolved target | Target kind | Row is target |" in (
-        grouped_export
-    )
+    assert (
+        "| Queue | Row | Action | Resolved target | Target kind | Row is target | "
+        "Semantic risk | Alternative gate |"
+    ) in grouped_export
     assert f"`{staged.revision_iri}`" in grouped_export
     assert f"`{restaged.revision_iri}`" in grouped_export
     assert "Inspect current refreshed successor" in grouped_export
-    assert "staged_patch | False |" in grouped_export
+    assert "staged_patch | False | none | not_applicable |" in grouped_export
+    assert "staged_patch | True | none | not_applicable |" in grouped_export
     assert "## Restage Context" in grouped_export
     assert grouped_export.index("## Restage Context") < grouped_export.index(
         "## Revisions"

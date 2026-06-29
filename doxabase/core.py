@@ -36742,8 +36742,11 @@ class DoxaBase:
         if not bundle_summary.next_action_queue_items:
             return []
         lines = [
-            "| Queue | Row | Action | Resolved target | Target kind | Row is target |",
-            "|---|---|---|---|---|---|",
+            (
+                "| Queue | Row | Action | Resolved target | Target kind | "
+                "Row is target | Semantic risk | Alternative gate |"
+            ),
+            "|---|---|---|---|---|---|---|---|",
         ]
         for item in bundle_summary.next_action_queue_items:
             row = f"`{item.row_iri}`"
@@ -36764,6 +36767,12 @@ class DoxaBase:
                             item.resolved_target_record_kind or "(none)"
                         ),
                         str(item.row_is_target),
+                        self._markdown_table_cell(
+                            item.semantic_risk_level or "(none)"
+                        ),
+                        self._markdown_table_cell(
+                            item.alternative_gate_status or "(none)"
+                        ),
                     ]
                 )
                 + " |"
