@@ -837,7 +837,9 @@ paged `describe_resource` action when you need the exhaustive inbound list.
 `suggested_next_actions` can include `describe_query_context` for seed tables or
 seed-reached owner tables whose query context has repair groups or whose nested
 `dataset_contexts[].operational_warnings` contain query-planning errors or
-warnings. This includes mapped column seeds that expand to an owning table.
+warnings. This includes mapped column, storage access, physical-layout, and
+partition-scheme seeds that expand to an owning table through direct
+incoming/reference routes.
 Non-table dataset seeds stay on context-slice/resource routes even when they
 carry storage or layout metadata. Use that route to inspect readiness, target
 candidates, and repair hints before drafting a query.

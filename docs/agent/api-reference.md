@@ -739,6 +739,11 @@ There is no `route_summaries` field; `reading_order`, `route_counts`, and
 current map context, observation context, pattern synthesis, evidence support,
 revision history, vocabulary context, validation shape context, mixed context,
 or only referenced by the slice. Set
+`resource_brief` slices can suggest `describe_query_context` when a seed or
+direct seed-reached resource is an owning table with query repair groups or
+operational warnings; this covers storage access, physical-layout,
+partition-scheme, and mapped-column handoffs without making the slice a full
+dataset brief. Set
 `include_trig=True` when an agent needs importable TriG text for review or a
 scratch capsule. `max_triples` only truncates raw triples/TriG; top-level
 resources, routes, and structured contexts continue to describe the full

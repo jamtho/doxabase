@@ -19377,6 +19377,54 @@ def test_resource_brief_context_slice_finds_owner_for_blank_node_seed(
     assert not any("owner lookup" in warning for warning in context_slice.warnings)
 
 
+def test_resource_brief_context_slice_routes_storage_seed_to_query_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#warehouse_orders_storage",
+        label="Warehouse orders database",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["public.orders"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context_slice = db.describe_context_slice(
+        storage.iri,
+        profile="resource_brief",
+    )
+
+    dataset_resource = next(
+        resource for resource in context_slice.resources if resource.iri == dataset
+    )
+    assert any(
+        route.route == "incoming_reference"
+        for route in dataset_resource.routes
+    )
+    query_actions = [
+        action
+        for action in context_slice.suggested_next_actions
+        if action.tool_name == "describe_query_context"
+    ]
+    assert len(query_actions) == 1
+    assert query_actions[0].arguments == {"iri": dataset}
+    assert "missing_physical_layout" in query_actions[0].reason
+    query_context = db.describe_query_context(**query_actions[0].arguments)
+    assert query_context.suggested_repair_action_groups[0].issue_code == (
+        "missing_physical_layout"
+    )
+
+
 def test_resource_brief_context_slice_finds_owner_for_nested_predicate_seed(
     tmp_path: Path,
 ) -> None:

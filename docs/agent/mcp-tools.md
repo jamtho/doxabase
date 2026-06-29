@@ -899,11 +899,13 @@ contexts still describe the full selected slice.
 There is no `route_summaries` field; use `reading_order`, `route_counts`, and
 `route_legend` as the first route summary before inspecting each resource's
 `primary_route` and `routes`.
-For seed tables, `suggested_next_actions` can include
-`describe_query_context` when either dataset-owned operational warnings or
-query-context repair groups are present. This catches query-only metadata issues
-such as misplaced database relation templates that are not stored in
-`dataset_contexts[].operational_warnings`.
+For seed tables and table resources reached directly from the seed,
+`suggested_next_actions` can include `describe_query_context` when either
+dataset-owned operational warnings or query-context repair groups are present.
+This includes storage access, physical-layout, partition-scheme, and mapped
+column handoffs whose incoming/reference routes identify an owning table. It
+catches query-only metadata issues such as misplaced database relation templates
+that are not stored in `dataset_contexts[].operational_warnings`.
 
 `doxabase.describe_pattern`
 

@@ -12,6 +12,14 @@ and `draft_query_plan` returns
 scan. Use `describe_context_slice` or `describe_resource` for those assets
 unless a separate queryable table route has been modeled.
 
+When starting from a query metadata resource instead of a dataset, such as a
+storage access, physical layout, partition scheme, or mapped column, call
+`describe_context_slice(seed, profile="resource_brief")` first. If the slice
+finds a directly owning table whose query context has repair groups or
+operational warnings, `suggested_next_actions` will point to
+`describe_query_context(table_iri)` so agents do not have to infer the dataset
+handoff from generic incoming routes.
+
 Query-planning helpers preserve reviewed non-secret handles faithfully:
 source paths, result-source paths, endpoint profile names, credential-reference
 handles, storage roots, URI templates, relation identifiers, and database

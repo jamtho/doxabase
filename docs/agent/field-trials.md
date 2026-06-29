@@ -2478,6 +2478,13 @@ few useful gaps:
   with linked storage, layout, partition, and column resources, and
   `describe_query_context` marks exact matching repair actions as
   `already_pending` so agents do not stage duplicate metadata repairs.
+- A storage-seeded handoff trial found `resource_brief` showed an owning dataset
+  through `incoming_reference` but left agents to infer the
+  `describe_query_context` follow-up manually. Resource briefs now treat
+  directly seed-reached owner tables like table handoffs for query-context
+  suggestions, so storage access, layout, partition, and column seeds can route
+  to repair groups such as `missing_physical_layout` without changing the slice
+  into a dataset brief.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

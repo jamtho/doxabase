@@ -9555,6 +9555,9 @@ class DoxaBase:
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         dataset_context_list = list(dataset_contexts)
+        dataset_context_by_iri = {
+            dataset.iri: dataset for dataset in dataset_context_list
+        }
 
         def add_slice_action(
             arguments: dict[str, Any],
@@ -9577,6 +9580,30 @@ class DoxaBase:
             )
 
         seed_iris_set = set(seed_iris)
+        if profile == "resource_brief":
+            dataset_type_iris = {
+                self.expand_iri("rc:Dataset"),
+                self.expand_iri("rc:Table"),
+            }
+            for resource_iri, routes in resources.items():
+                if resource_iri in dataset_context_by_iri:
+                    continue
+                if resource_iri not in seed_iris_set and not any(
+                    route.source_iri in seed_iris_set for route in routes
+                ):
+                    continue
+                if not (
+                    set(self._types_from_graphs(lookup_graphs, resource_iri))
+                    & dataset_type_iris
+                ):
+                    continue
+                try:
+                    dataset_context_by_iri[resource_iri] = self.describe_dataset(
+                        resource_iri
+                    )
+                except DoxaBaseError:
+                    continue
+            dataset_context_list = list(dataset_context_by_iri.values())
 
         def dataset_reached_from_seed(dataset_iri: str) -> bool:
             if dataset_iri in seed_iris_set:
