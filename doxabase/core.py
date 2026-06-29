@@ -29197,6 +29197,13 @@ class DoxaBase:
         helper_mutation_frontier_actions = (
             self._staged_recovery_helper_mutation_frontier_actions(lanes)
         )
+        if helper_mutation_frontier_actions:
+            warnings.append(
+                "Plan includes repair helper actions that are required before "
+                "a concrete successor exists; these helper mutations are listed "
+                "in helper_mutation_frontier_actions and are not represented by "
+                "mutation_frontier_iris."
+            )
         resolved_target_groups = self._staged_recovery_resolved_target_groups(
             lanes,
             requested_revision_iris=requested_revision_iris,

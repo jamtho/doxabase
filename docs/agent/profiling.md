@@ -195,6 +195,17 @@ Markdown bundle. The profile Markdown bridge shows the staged row and route, but
 compact candidate-pending fields such as `already_pending_candidate_count` live
 in the query-context payload or recovered project-history capsule.
 
+## Awkward Metric And Type Lanes
+
+Metric/type advisories are review lanes, not orders to mint vocabulary. When a
+metric advisory skeleton is semantically thin or mixed-support notes show the
+same pattern supporting several interpretations, compare alternatives before
+applying anything: one framing might define an ontology
+`rc:ProfileMetricKind`, while another records a caveat or pattern-backed
+fallback without promoting a metric term yet. Use `stage_systematisation` for
+those alternatives when the graph move needs modelling judgement, and export the
+grouped staged review before selecting a durable path.
+
 When `stage_profile_map_updates` creates a staged revision, its
 `suggested_next_actions` includes an `export_profile_insight_review_bundle`
 action seeded with that revision. Use it for the first focused review bundle,

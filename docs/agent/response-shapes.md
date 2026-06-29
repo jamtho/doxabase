@@ -4980,6 +4980,9 @@ even when the lane is actionable. When `include_drafts=True`,
 actions for those repair lanes, and `helper_mutation_frontier_calls` gives their
 display calls. If that list is empty, drive the repair from
 `repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
+When helper mutation actions are present, `plan.warnings` explicitly says they
+are required and are not represented by `mutation_frontier_iris`; do not treat
+the IRI list as a complete mutation queue.
 When `include_drafts=True` and a no-repair embedded draft already removed
 `draft_staged_revision_rebase` from its own suggestions, the lane and top-level
 plan suggestions use that draft's inspection/export route too. Do not call the

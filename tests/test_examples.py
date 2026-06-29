@@ -76,3 +76,30 @@ def test_profile_frontier_workflow_example_runs() -> None:
     assert "Staged profile revision:" in output
     assert "Recovery queue counts: {'apply_after_review': 1}" in output
     assert "Validation conforms: True" in output
+
+
+def test_local_csv_query_smoke_example_runs() -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "examples" / "local-csv-query-smoke.py")],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    output = result.stdout
+
+    assert "# DoxaBase Local CSV Query Smoke" in output
+    assert "Rows checked: 6" in output
+    assert (
+        "Header checked: order_id, status, amount_cents, customer_state, order_date"
+        in output
+    )
+    assert "Query readiness: ready_for_query_planning" in output
+    assert "Draft handoff: execution_attempt_ready" in output
+    assert "Ready for execution: True" in output
+    assert "Scan function: read_csv_auto" in output
+    assert "Engine used: python-csv" in output
+    assert "Evidence status: succeeded" in output
+    assert "Evidence engine: python-csv" in output
+    assert "Validation conforms: True" in output

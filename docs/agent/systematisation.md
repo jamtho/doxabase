@@ -104,6 +104,10 @@ Use it for reviewable moves such as promoting a pattern-backed caveat,
 relationship, project vocabulary term, shape, or map assertion. If the exact
 graph move is not yet clear, keep the synthesis in `patterns` and stage several
 candidate framings instead of forcing one current-best fact.
+This is especially useful for profile-derived metric or type findings whose
+meaning is still ambiguous: compare a project vocabulary definition against a
+caveat/pattern fallback rather than blindly applying a generated metric
+promotion skeleton.
 
 For exact response fields, read `response_shapes` section "Staged Revisions".
 For staged revision apply/restage/rebase behaviour, read `staged_revisions`.

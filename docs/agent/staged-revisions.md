@@ -240,6 +240,9 @@ existing revision target. When `include_drafts=True`, use
 top-level deduped list of preferred repair helper mutations. If that list is
 empty, fall back to `lane.next_action.arguments` or
 `lane.repair_draft.preferred_action.arguments` for that reviewed repair.
+When helper mutation actions are present, the planner also warns that they are
+not represented by `mutation_frontier_iris`; treat that warning as an unattended
+loop guard, not as a blocker.
 When the planner selection includes an `rc:StagedRevision` history row with no
 staged patch payload, including in `current_staged_work_only=False` scans, the
 planner keeps valid patch rows in the same request and returns an

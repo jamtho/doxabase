@@ -7141,6 +7141,11 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert plan.helper_mutation_frontier_calls == [
         plan.helper_mutation_frontier_actions[0].call
     ]
+    assert any(
+        "helper_mutation_frontier_actions" in warning
+        and "not represented by mutation_frontier_iris" in warning
+        for warning in plan.warnings
+    )
     assert plan.resolved_target_group_counts == plan.next_action_queue_item_counts
     assert plan.requires_recheck_after_each_apply is True
     assert set(plan.sequential_apply_recheck_candidate_iris) == {

@@ -2715,7 +2715,8 @@ few useful gaps:
   and SHACL validation. The runtime gap was not query planning itself:
   custom `evidence_summary` text could hide execution status, engine, and query
   hash from later `describe_query_context` handoffs. Query-result evidence now
-  stores those fields structurally.
+  stores those fields structurally, and `examples/local-csv-query-smoke.py`
+  preserves the exact scratch workflow as a tracked smoke example.
 - A privacy/export trial confirmed scanner warnings and `fail_on_sensitive=True`
   block paths behave consistently without leaking synthetic canaries. The
   remaining risk is over-reading scanner-clean exports as shareable; export
@@ -2726,6 +2727,18 @@ few useful gaps:
   `restage_after_review` with `history_plus_snapshot_rows` after importing
   revision snapshot JSON. Snapshot evidence made real source-side drift
   distinguishable from handoff damage; no implementation change was needed.
+- A project-brief frontier trial with simultaneous staged, query, profile,
+  non-tabular, query-handoff, and export-health queues confirmed low-limit
+  briefs can hide work but expose enough expansion hints. In read-only trials,
+  after classifying a staged frontier you cannot mutate, continue through
+  `full_frontier_expansion`, `health_tasks`, and non-mutating routes such as
+  `draft_profile_map_updates(profile_evidence_iri=...)` instead of repeatedly
+  inspecting the same staged row.
+- A staged repair/rebase trial confirmed same-slot replacements route to
+  repair helper actions while unrelated stale additions route to mechanical
+  restage. Planner warnings now call out that helper repair mutations live in
+  `helper_mutation_frontier_actions`, not `mutation_frontier_iris`, so
+  unattended scripts do not treat the IRI frontier as complete.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
