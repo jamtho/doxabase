@@ -451,7 +451,7 @@ def stage_profile_map_updates_tool(
     revision_anchors: list[str] | None = None,
     validation_scope: str = "all",
 ) -> dict[str, Any]:
-    return to_dict(
+    payload = to_dict(
         db.stage_profile_map_updates(
             dataset_iri=dataset_iri,
             evidence_iri=evidence_iri,
@@ -468,6 +468,8 @@ def stage_profile_map_updates_tool(
             validation_scope=validation_scope,  # type: ignore[arg-type]
         )
     )
+    payload["revision_iri"] = payload["staged_revision"]["revision_iri"]
+    return payload
 
 
 def describe_query_context_tool(

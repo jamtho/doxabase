@@ -2012,6 +2012,7 @@ result.type_advisory_status_counts
 result.type_review_required
 result.type_advisory_suggested_next_actions
 result.type_advisory_suggested_next_calls
+result.revision_iri
 result.staged_revision
 result.suggested_next_actions
 result.suggested_next_calls
@@ -2042,7 +2043,8 @@ item.supporting_profile_observation_iris
 
 When at least one accepted recommendation passes safety checks,
 `result.staged_revision` is a normal `StagedGraphRevisionRecord` for one grouped
-`map` revision. `suggested_next_actions` then starts with
+`map` revision, and `result.revision_iri` is the same staged revision IRI exposed
+as a top-level routing alias. `suggested_next_actions` then starts with
 `check_staged_revision_apply` for that staged revision, followed by an
 `export_profile_insight_review_bundle` action seeded with the same staged
 revision. Run the read-only check before reviewing or applying, and re-run the

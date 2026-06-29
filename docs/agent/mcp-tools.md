@@ -2029,6 +2029,13 @@ If a copied or older capsule fails staging because immutable `base_ontology`
 is missing current staging vocabulary, `seed_base_graphs()` will not refresh a
 non-empty seed graph. Export the mutable project graphs with the default project
 export, create a fresh seeded capsule, and import that project bundle there.
+When current staged rows exist, `project_brief` reports
+`current_staged_revision_count` on the `seed_recovery_review` health task and
+points first to `export_preflight(export_kind="handoff_bundle")`. Preserve the
+project/history TriG plus companion revision snapshot JSON, import both into the
+fresh capsule, then run
+`plan_staged_revision_recovery(current_staged_work_only=True)` and follow its
+restage/apply guidance.
 
 `doxabase.export_handoff_bundle`
 

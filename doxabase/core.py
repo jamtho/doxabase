@@ -423,6 +423,7 @@ class ProjectBriefHealthTask:
     profile_candidate_omitted_count: int | None = None
     sensitive_literal_count: int | None = None
     missing_seed_terms: list[str] = field(default_factory=list)
+    current_staged_revision_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -3758,6 +3759,7 @@ class DoxaBase:
             omitted_queue_counts=omitted_queue_counts,
             limit_crowded_queue_types=limit_crowded_queue_types,
             total_queue_count=sum(queue_counts.values()),
+            current_staged_revision_count=staged_review.count,
         )
         next_best_expansion = self._project_brief_next_best_expansion(
             health_tasks
@@ -3992,6 +3994,7 @@ class DoxaBase:
         omitted_queue_counts: dict[str, int],
         limit_crowded_queue_types: list[str],
         total_queue_count: int,
+        current_staged_revision_count: int,
     ) -> list[ProjectBriefHealthTask]:
         tasks: list[ProjectBriefHealthTask] = []
         expand_task = self._project_brief_expand_health_task(
@@ -4023,7 +4026,9 @@ class DoxaBase:
         if privacy_task is not None:
             tasks.append(privacy_task)
 
-        seed_task = self._project_brief_seed_recovery_health_task()
+        seed_task = self._project_brief_seed_recovery_health_task(
+            current_staged_revision_count=current_staged_revision_count,
+        )
         if seed_task is not None:
             tasks.append(seed_task)
 
@@ -4266,6 +4271,8 @@ class DoxaBase:
 
     def _project_brief_seed_recovery_health_task(
         self,
+        *,
+        current_staged_revision_count: int,
     ) -> ProjectBriefHealthTask | None:
         required_terms = list(
             dict.fromkeys(
@@ -4278,21 +4285,44 @@ class DoxaBase:
         missing_seed_terms = self._missing_base_ontology_terms(required_terms)
         if not missing_seed_terms:
             return None
-        arguments = {
-            "doc_id": "api_reference",
-            "section": "Create or Open a Capsule",
-        }
-        action = SuggestedNextAction(
-            action_label="Read stale seed recovery guidance",
-            tool_name="get_doc",
-            mcp_tool_name="doxabase.get_doc",
-            arguments=arguments,
-            reason=(
-                "The immutable base_ontology is missing current staging seed "
-                "terms; read the recovery guidance before staging graph changes."
-            ),
-            call=self._suggested_call_string("get_doc", arguments),
-        )
+        if current_staged_revision_count > 0:
+            arguments = {
+                "export_kind": "handoff_bundle",
+                "graphs": ["project"],
+                "limit": 20,
+            }
+            action = SuggestedNextAction(
+                action_label="Preflight stale seed handoff export",
+                tool_name="export_preflight",
+                mcp_tool_name="doxabase.export_preflight",
+                arguments=arguments,
+                reason=(
+                    "Current staged graph revision rows exist; preflight a "
+                    "project/history plus revision snapshots handoff before "
+                    "recovering into a fresh seeded capsule."
+                ),
+                call=self._suggested_call_string("export_preflight", arguments),
+            )
+            queue_types = ["staged_review"]
+            staged_count: int | None = current_staged_revision_count
+        else:
+            arguments = {
+                "doc_id": "api_reference",
+                "section": "Create or Open a Capsule",
+            }
+            action = SuggestedNextAction(
+                action_label="Read stale seed recovery guidance",
+                tool_name="get_doc",
+                mcp_tool_name="doxabase.get_doc",
+                arguments=arguments,
+                reason=(
+                    "The immutable base_ontology is missing current staging seed "
+                    "terms; read the recovery guidance before staging graph changes."
+                ),
+                call=self._suggested_call_string("get_doc", arguments),
+            )
+            queue_types = []
+            staged_count = None
         return ProjectBriefHealthTask(
             priority=5,
             task_type="seed_recovery_review",
@@ -4300,7 +4330,9 @@ class DoxaBase:
             reason=self._stale_seed_recovery_message(missing_seed_terms),
             suggested_next_action=action,
             suggested_next_call=action.call,
+            queue_types=queue_types,
             missing_seed_terms=missing_seed_terms,
+            current_staged_revision_count=staged_count,
         )
 
     def _project_brief_staged_review(
@@ -39574,7 +39606,12 @@ class DoxaBase:
             "seed_base_graphs() only seeds empty immutable graphs and will not "
             "update stale seed graphs. Export mutable project graphs and import "
             "them into a fresh DoxaBase.create(...) capsule, or run an explicit "
-            "seed migration before staging."
+            "seed migration before staging. When history rows or exact staged "
+            "revision recovery matter, preserve revision snapshots with "
+            "export_handoff_bundle() or pair export_trig() with "
+            "export_revision_snapshots(), import both into the fresh capsule, "
+            "then run "
+            "plan_staged_revision_recovery(current_staged_work_only=True)."
         )
 
     def _missing_base_ontology_terms(

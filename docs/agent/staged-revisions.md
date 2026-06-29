@@ -74,6 +74,26 @@ ex:Orders a rc:Dataset, rc:Table ;
     rc:schemaStability rc:FixedSchema .
 ```
 
+For query/storage repair patches, use controlled resource values for modeled
+kinds. For example, `rc:fileFormat` points at an `rc:FileFormat` resource such
+as `rc:Parquet`, not a quoted string:
+
+```turtle
+@prefix ex: <https://example.test/project#> .
+@prefix rc: <https://richcanopy.org/ns/rc#> .
+
+ex:OrdersStorage a rc:StorageAccess ;
+    rc:storageProtocol rc:LocalFilesystemStorage ;
+    rc:locationKind "object" ;
+    rc:storageRoot "/warehouse/orders.parquet" .
+
+ex:OrdersLayout a rc:PhysicalLayout ;
+    rc:fileFormat rc:Parquet .
+
+ex:Orders rc:hasStorageAccess ex:OrdersStorage ;
+    rc:hasPhysicalLayout ex:OrdersLayout .
+```
+
 For a single `map` subject/predicate assertion, prefer
 `doxabase.draft_map_assertion_change` when you are still deciding whether the
 change should exist, then call `doxabase.stage_map_assertion_change` only after

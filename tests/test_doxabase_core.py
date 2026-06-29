@@ -642,6 +642,15 @@ def test_project_brief_ready_query_handoff_uses_full_query_actions(
         "draft_query_plan",
     ]
 
+    tight_brief = db.project_brief(limit=1, profile_candidate_limit=3)
+
+    assert tight_brief.queue_counts["query_plan_handoff"] == 1
+    assert tight_brief.returned_queue_counts.get("query_plan_handoff", 0) == 0
+    assert tight_brief.omitted_queue_counts["query_plan_handoff"] == 1
+    assert tight_brief.next_best_expansion is not None
+    assert "query_plan_handoff" in tight_brief.next_best_expansion.queue_types
+    assert tight_brief.next_best_expansion.exhaustive_suggested_limit >= 2
+
     brief = db.project_brief(limit=20, profile_candidate_limit=3)
 
     assert [
@@ -1204,6 +1213,49 @@ def test_project_brief_surfaces_stale_seed_health_task(
     assert seed_task.suggested_next_action.arguments == {
         "doc_id": "api_reference",
         "section": "Create or Open a Capsule",
+    }
+    assert seed_task.current_staged_revision_count is None
+
+
+def test_project_brief_stale_seed_health_task_routes_staged_work_to_handoff(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    staged = db.stage_graph_revision(
+        summary="Stage stale-seed recovery sample",
+        rationale="Exercise staged-work recovery guidance for stale seeds.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                @prefix ex: <https://example.test/project#> .
+                ex:stagedSeedSubject ex:stagedSeedPredicate ex:stagedSeedObject .
+                """,
+            }
+        ],
+    )
+    _delete_base_ontology_seed_terms(
+        db,
+        ["rc:GraphPatchRole", "rc:CandidateRevision"],
+    )
+
+    brief = db.project_brief(limit=5)
+
+    assert brief.staged_review.count == 1
+    assert brief.staged_review.items[0].revision_iri == staged.revision_iri
+    seed_task = next(
+        task for task in brief.health_tasks if task.task_type == "seed_recovery_review"
+    )
+    assert seed_task.current_staged_revision_count == 1
+    assert seed_task.queue_types == ["staged_review"]
+    assert "revision snapshots" in seed_task.reason
+    assert "plan_staged_revision_recovery" in seed_task.reason
+    assert seed_task.suggested_next_action is not None
+    assert seed_task.suggested_next_action.tool_name == "export_preflight"
+    assert seed_task.suggested_next_action.arguments == {
+        "export_kind": "handoff_bundle",
+        "graphs": ["project"],
+        "limit": 20,
     }
 
 
