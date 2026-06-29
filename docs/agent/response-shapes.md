@@ -4742,6 +4742,7 @@ check.validation_results
 check.patches_checked
 check.triples_to_add
 check.triples_to_remove
+check.effective_delta_summary
 check.next_action
 check.suggested_next_actions
 check.suggested_next_calls
@@ -4889,6 +4890,15 @@ partial or no-op replay before applying. `count_basis` is usually
 `target_graph_only`; ontology and shape previews report
 `target_graph_plus_base_ontology` or `target_graph_plus_base_shapes` because
 their staged preview counts include immutable seed context.
+`effective_delta_summary` is the first-read interpretation of those deltas. It
+separates `replayable_triples_to_add/remove` from
+`blocked_patch_triples_to_add/remove` when conflict checks exclude a stale patch,
+adds `total_effective_triples_to_add/remove`, and reports
+`already_effective`, `has_conflicted_patches`, `patch_triple_status_counts`, and
+`basis`. When `basis="conflicted_patches_excluded"`, a top-level
+`triples_to_add=0` means no patch is replayable now; it does not prove the stale
+proposal is a no-op. Check `blocked_patch_triples_to_add/remove` and
+`already_effective` before deciding whether to restage, inspect, or ignore it.
 `count_drifts` gives patch-level count drift context: target graph, patch
 sequence, expected-before count, current count, delta, and whether exact changed
 triples are available. `expected_before_basis` explains whether the expected

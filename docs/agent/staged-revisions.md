@@ -844,6 +844,11 @@ realized the proposed addition or removal. Inspect/export or stage a replacement
 instead of applying it. `triples_to_add` and `triples_to_remove` are effective
 current-preview deltas; `patch_checks` also reports effective add/remove counts
 and already-present/absent payload triples.
+Use `effective_delta_summary` as the top-level interpretation. On conflicts,
+`replayable_triples_to_add/remove` match the top-level delta because conflicted
+patches are excluded, while `blocked_patch_triples_to_add/remove` reports the
+current effective payload of those blocked patches. This prevents mistaking
+`triples_to_add=0` on a stale conflict for proof that the proposal is a no-op.
 An already-effective stale source is different from a fresh `noop`: the target
 graph has count/digest drift, so the row still reports `status="conflict"` and
 drift blockers, but every patch already has zero effective add/remove delta.

@@ -736,6 +736,21 @@ class StagedPatchApplyCheck:
 
 
 @dataclass(frozen=True)
+class StagedRevisionEffectiveDeltaSummary:
+    replayable_triples_to_add: int
+    replayable_triples_to_remove: int
+    blocked_patch_triples_to_add: int
+    blocked_patch_triples_to_remove: int
+    total_effective_triples_to_add: int
+    total_effective_triples_to_remove: int
+    already_effective: bool
+    has_conflicted_patches: bool
+    patch_triple_status_counts: dict[str, int]
+    basis: str
+    note: str
+
+
+@dataclass(frozen=True)
 class StagedRevisionAlternativeGate:
     status: str
     alternative_to: str | None
@@ -870,6 +885,7 @@ class StagedRevisionApplyCheck:
     patches_checked: int
     triples_to_add: int
     triples_to_remove: int
+    effective_delta_summary: StagedRevisionEffectiveDeltaSummary
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -901,6 +917,7 @@ class StagedRevisionApplySummary:
     patches_checked: int | None
     triples_to_add: int | None
     triples_to_remove: int | None
+    effective_delta_summary: StagedRevisionEffectiveDeltaSummary | None
     count_drifts: list[StagedGraphCountDrift]
     snapshot_drifts: list[StagedGraphSnapshotDrift]
     next_action: RevisionNextAction | None
@@ -9223,6 +9240,7 @@ class DoxaBase:
                 patches_checked=None,
                 triples_to_add=None,
                 triples_to_remove=None,
+                effective_delta_summary=None,
                 count_drifts=[],
                 snapshot_drifts=[],
                 next_action=None,
@@ -9255,6 +9273,7 @@ class DoxaBase:
             patches_checked=check.patches_checked,
             triples_to_add=check.triples_to_add,
             triples_to_remove=check.triples_to_remove,
+            effective_delta_summary=check.effective_delta_summary,
             count_drifts=check.count_drifts,
             snapshot_drifts=self._summary_snapshot_drifts(check.snapshot_drifts),
             next_action=check.next_action,
@@ -32102,6 +32121,11 @@ class DoxaBase:
         )
         if existing_applied:
             status = "already_applied"
+            effective_delta_summary = self._staged_apply_effective_delta_summary(
+                [],
+                replayable_triples_to_add=0,
+                replayable_triples_to_remove=0,
+            )
             stale_resolution_state = self._stale_resolution_state(
                 status=status,
                 has_patch_payload=bool(staged.patches),
@@ -32208,6 +32232,7 @@ class DoxaBase:
                 patches_checked=0,
                 triples_to_add=0,
                 triples_to_remove=0,
+                effective_delta_summary=effective_delta_summary,
                 next_action=next_action,
                 suggested_next_actions=suggested_next_actions,
                 suggested_next_calls=[
@@ -32417,6 +32442,11 @@ class DoxaBase:
             )
 
         has_effective_patch_triples = (triples_to_add + triples_to_remove) > 0
+        effective_delta_summary = self._staged_apply_effective_delta_summary(
+            patch_checks,
+            replayable_triples_to_add=triples_to_add,
+            replayable_triples_to_remove=triples_to_remove,
+        )
         can_apply = (
             not conflicts
             and validation_conforms is True
@@ -32448,6 +32478,9 @@ class DoxaBase:
             already_applied_by=None,
             restaged_by=restaged_by_iri,
             current_restaged_by=current_restaged_by_iri,
+            already_effective=(
+                status == "conflict" and effective_delta_summary.already_effective
+            ),
         )
         blocking_reasons = self._staged_apply_check_blocking_reasons(
             status=status,
@@ -32547,6 +32580,7 @@ class DoxaBase:
             patches_checked=len(patch_checks),
             triples_to_add=triples_to_add,
             triples_to_remove=triples_to_remove,
+            effective_delta_summary=effective_delta_summary,
             next_action=next_action,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
@@ -33059,6 +33093,7 @@ class DoxaBase:
         already_applied_by: str | None,
         restaged_by: str | None = None,
         current_restaged_by: str | None = None,
+        already_effective: bool = False,
     ) -> str:
         graph_text = ", ".join(changed_graphs) if changed_graphs else "(none)"
         if status == "ready":
@@ -33108,6 +33143,13 @@ class DoxaBase:
                     f"{successor_iri}. Stale source is still blocked by "
                     f"{len(conflicts)} conflict(s); first conflict: "
                     f"{first_conflict}"
+                )
+            if already_effective:
+                return (
+                    "Already-effective stale source; target graph drift blocks "
+                    "raw replay, but the staged patch payload has no current "
+                    f"effective delta across {patches_checked} patch(es). First "
+                    f"conflict: {first_conflict}"
                 )
             return (
                 f"Blocked by {len(conflicts)} conflict(s); first conflict: "
@@ -33244,6 +33286,91 @@ class DoxaBase:
             patch_check.effective_triples_to_add == 0
             and patch_check.effective_triples_to_remove == 0
             for patch_check in patch_checks
+        )
+
+    def _staged_apply_effective_delta_summary(
+        self,
+        patch_checks: list[StagedPatchApplyCheck],
+        *,
+        replayable_triples_to_add: int,
+        replayable_triples_to_remove: int,
+    ) -> StagedRevisionEffectiveDeltaSummary:
+        blocked_triples_to_add = 0
+        blocked_triples_to_remove = 0
+        has_conflicted_patches = False
+        patch_triple_status_counts: dict[str, int] = {}
+        for patch_check in patch_checks:
+            if patch_check.conflict is not None:
+                has_conflicted_patches = True
+                blocked_triples_to_add += patch_check.effective_triples_to_add or 0
+                blocked_triples_to_remove += (
+                    patch_check.effective_triples_to_remove or 0
+                )
+            patch_triple_status = (
+                self._staged_patch_triple_presence_status_from_apply_check(
+                    patch_check
+                )
+            )
+            if patch_triple_status is not None:
+                patch_triple_status_counts[patch_triple_status] = (
+                    patch_triple_status_counts.get(patch_triple_status, 0) + 1
+                )
+
+        if not patch_checks:
+            basis = "no_patch_checks"
+            note = "No staged patch replay was inspected for this apply check."
+        elif has_conflicted_patches:
+            basis = "conflicted_patches_excluded"
+            note = (
+                "Replayable deltas exclude conflicted patches. Use "
+                "blocked_patch_triples_to_add/remove to see the current effective "
+                "payload of patches that could not be replayed directly."
+            )
+        else:
+            basis = "all_patches_replayable"
+            note = (
+                "All inspected patches replayed mechanically; replayable deltas "
+                "cover the full current effective payload."
+            )
+
+        return StagedRevisionEffectiveDeltaSummary(
+            replayable_triples_to_add=replayable_triples_to_add,
+            replayable_triples_to_remove=replayable_triples_to_remove,
+            blocked_patch_triples_to_add=blocked_triples_to_add,
+            blocked_patch_triples_to_remove=blocked_triples_to_remove,
+            total_effective_triples_to_add=(
+                replayable_triples_to_add + blocked_triples_to_add
+            ),
+            total_effective_triples_to_remove=(
+                replayable_triples_to_remove + blocked_triples_to_remove
+            ),
+            already_effective=self._patch_checks_have_no_effective_delta(
+                patch_checks
+            ),
+            has_conflicted_patches=has_conflicted_patches,
+            patch_triple_status_counts=patch_triple_status_counts,
+            basis=basis,
+            note=note,
+        )
+
+    def _staged_patch_triple_presence_status_from_apply_check(
+        self,
+        patch_check: StagedPatchApplyCheck,
+    ) -> str | None:
+        if patch_check.already_present_triples is None:
+            return None
+        if patch_check.triple_count is not None:
+            patch_triples_checked = patch_check.triple_count
+        elif patch_check.already_absent_triples is not None:
+            patch_triples_checked = (
+                patch_check.already_present_triples
+                + patch_check.already_absent_triples
+            )
+        else:
+            return None
+        return self._patch_triple_presence_status(
+            patch_triples_checked=patch_triples_checked,
+            patch_triples_present=patch_check.already_present_triples,
         )
 
     def _staged_apply_check_blocking_reasons(

@@ -5832,6 +5832,18 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert check.recommended_resolution is not None
     assert "Restage the proposal" in check.recommended_resolution
     assert check.summary.startswith("Blocked by 1 conflict(s); first conflict:")
+    assert check.effective_delta_summary.replayable_triples_to_add == 0
+    assert check.effective_delta_summary.replayable_triples_to_remove == 0
+    assert check.effective_delta_summary.blocked_patch_triples_to_add == 1
+    assert check.effective_delta_summary.blocked_patch_triples_to_remove == 0
+    assert check.effective_delta_summary.total_effective_triples_to_add == 1
+    assert check.effective_delta_summary.total_effective_triples_to_remove == 0
+    assert check.effective_delta_summary.already_effective is False
+    assert check.effective_delta_summary.has_conflicted_patches is True
+    assert check.effective_delta_summary.patch_triple_status_counts == {
+        "all_patch_triples_absent": 1,
+    }
+    assert check.effective_delta_summary.basis == "conflicted_patches_excluded"
     assert check.validation_conforms is None
     assert check.validation_skipped_reason == "conflicts_present"
     assert len(check.conflicts) == 1
@@ -5883,6 +5895,11 @@ def test_apply_staged_revision_rejects_count_conflicts(tmp_path: Path) -> None:
     assert stale_summary.decision == "restage_against_current_graph"
     assert stale_summary.blocking_reasons == ["target_count_drift"]
     assert stale_summary.validation_skipped_reason == "conflicts_present"
+    assert stale_summary.effective_delta_summary is not None
+    assert stale_summary.effective_delta_summary.blocked_patch_triples_to_add == 1
+    assert stale_summary.effective_delta_summary.basis == (
+        "conflicted_patches_excluded"
+    )
     assert stale_summary.next_action is not None
     assert stale_summary.next_action.action_type == "restage_after_review"
     assert stale_summary.next_action.queue == "restage_after_review"
@@ -8051,6 +8068,20 @@ def test_stale_authored_replacement_with_target_already_current_routes_to_inspec
     assert check.status == "conflict"
     assert check.decision == "restage_against_current_graph"
     assert check.routing_decision == "inspect_no_effective_change"
+    assert check.summary.startswith("Already-effective stale source")
+    assert check.effective_delta_summary.replayable_triples_to_add == 0
+    assert check.effective_delta_summary.replayable_triples_to_remove == 0
+    assert check.effective_delta_summary.blocked_patch_triples_to_add == 0
+    assert check.effective_delta_summary.blocked_patch_triples_to_remove == 0
+    assert check.effective_delta_summary.total_effective_triples_to_add == 0
+    assert check.effective_delta_summary.total_effective_triples_to_remove == 0
+    assert check.effective_delta_summary.already_effective is True
+    assert check.effective_delta_summary.has_conflicted_patches is True
+    assert check.effective_delta_summary.patch_triple_status_counts == {
+        "all_patch_triples_absent": 1,
+        "all_patch_triples_present": 1,
+    }
+    assert check.effective_delta_summary.basis == "conflicted_patches_excluded"
     assert check.already_applied_by is None
     assert check.next_action is not None
     assert check.next_action.action_type == "inspect_no_effective_change"
@@ -8497,6 +8528,13 @@ def test_restaged_revision_with_realized_addition_reports_noop(
     stale_check = db.check_staged_revision_apply(staged.revision_iri)
     assert stale_check.status == "conflict"
     assert stale_check.decision == "restage_against_current_graph"
+    assert stale_check.summary.startswith("Already-effective stale source")
+    assert stale_check.effective_delta_summary.already_effective is True
+    assert stale_check.effective_delta_summary.total_effective_triples_to_add == 0
+    assert stale_check.effective_delta_summary.blocked_patch_triples_to_add == 0
+    assert stale_check.effective_delta_summary.patch_triple_status_counts == {
+        "all_patch_triples_present": 1,
+    }
     assert stale_check.already_applied_by is None
     assert stale_check.next_action is not None
     assert stale_check.next_action.action_type == "inspect_no_effective_change"

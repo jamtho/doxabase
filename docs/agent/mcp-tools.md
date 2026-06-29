@@ -1546,8 +1546,9 @@ Previews whether one staged revision can apply without mutating graph state.
 Returns `can_apply`, already-applied state, per-patch current/preview/effective counts,
 count-drift and snapshot-digest conflicts, preview validation diagnostics,
 `status`, `decision`, `summary`, `review_recommended`, `blocking_reasons`,
-`recommended_resolution`, `validation_skipped_reason`, `count_drifts`,
-`snapshot_drifts`, `next_action`, and structured `suggested_next_actions`.
+`recommended_resolution`, `validation_skipped_reason`,
+`effective_delta_summary`, `count_drifts`, `snapshot_drifts`, `next_action`,
+and structured `suggested_next_actions`.
 `next_action` is the compact route derived from the status/decision and the
 same action list used by revision-list rows and grouped exports. The response
 includes both `staged_revision_iri` and the alias `revision_iri` for
@@ -1572,6 +1573,12 @@ target graph. `patch_sequence_index` and `expected_before_basis` explain
 sequence-based counts in multi-patch revisions. `patch_checks` records
 effective add/remove counts and already-present/absent payload triples for
 partial or no-op replay.
+Read `effective_delta_summary` before interpreting top-level
+`triples_to_add=0` on conflicts. Its replayable fields match the top-level
+delta, while `blocked_patch_triples_to_add/remove` reports the current effective
+payload of conflicted patches that were excluded from direct replay. If
+`already_effective=true`, inspect the stale row instead of mechanically
+restaging it.
 When stale count/digest drift remains a `conflict` but every patch already has
 zero effective add/remove delta, compact `next_action` routes to
 `inspect_no_effective_change` in the `informational` queue and mutation

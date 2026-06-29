@@ -1666,6 +1666,11 @@ few useful gaps:
   routed away from mechanical restage. Apply checks and batch restage items now
   expose `routing_decision` fields as the effective next route while preserving
   `decision` as the replay/status explanation.
+- A stale-delta field trial found agents could misread `triples_to_add=0` on a
+  conflicted stale row as no-op, even when the blocked patch still had effective
+  payload if restaged. Apply checks now expose `effective_delta_summary`, which
+  separates replayable deltas from blocked conflicted-patch deltas and flags
+  truly already-effective stale sources.
 - A profile/systematisation follow-up trial found grouped metric/type review
   lanes were mechanically correct but made agents cross-reference repeated
   action labels back to advisory rows. Grouped profile advisory actions now
