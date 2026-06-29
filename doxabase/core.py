@@ -2860,6 +2860,36 @@ class QueryResultRecord:
 
 
 @dataclass(frozen=True)
+class QueryEvidenceStorageOverlayDraft:
+    result_kind: str
+    helper: str
+    mode: str
+    dataset: ResourceSummary
+    evidence: EvidenceDescription
+    evidence_iri: str
+    source_query_context_readiness: str
+    source_query_context_issue_codes: list[str]
+    source_profile_evidence: dict[str, Any]
+    profile_observation_iris: list[str]
+    storage_access_iri: str
+    physical_layout_iri: str
+    reviewed_overlay: dict[str, Any]
+    additions: list[dict[str, str]]
+    changed_graphs: list[str]
+    patches: list[StagedGraphPatchDescription]
+    validation_scope: str
+    validation_conforms: bool
+    validation_result_count: int
+    validation_results: list[ValidationDiagnostic]
+    validation_report_text: str
+    review_note: str
+    review_recommendation: str
+    stage_arguments: dict[str, Any]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class ClaimObservationRecord:
     observation_iri: str
     claim_iri: str
@@ -17118,6 +17148,388 @@ class DoxaBase:
                 ),
             ],
         )
+
+    def draft_query_evidence_storage_overlay(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+        *,
+        storage_protocol: str,
+        storage_root: str,
+        location_kind: str,
+        file_format: str,
+        graph: str | None = "map",
+        storage_access_iri: str | None = None,
+        physical_layout_iri: str | None = None,
+        storage_label: str | None = None,
+        physical_layout_label: str | None = None,
+        access_mode: str | None = "rc:ReadOnlyAccess",
+        endpoint_profile: str | None = None,
+        bucket_name: str | None = None,
+        key_prefix: str | None = None,
+        region: str | None = None,
+        path_style_access: bool | None = None,
+        credential_reference: str | None = None,
+        path_templates: Iterable[str] | str | None = None,
+        compression_codec: str | None = None,
+        layout_verification_status: str | None = None,
+        layout_verification_note: str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ] = "all",
+    ) -> QueryEvidenceStorageOverlayDraft:
+        dataset_value = self._required_iri("dataset_iri", dataset_iri)
+        evidence_value = self._required_iri("evidence_iri", evidence_iri)
+        storage_root_value = storage_root.strip()
+        if not storage_root_value:
+            raise DoxaBaseError("storage_root must not be empty")
+        location_kind_value = self._storage_location_kind(location_kind)
+        if location_kind_value is None:
+            raise DoxaBaseError("location_kind must not be empty")
+        storage_protocol_ref = self._resource_ref(
+            "storage_protocol",
+            storage_protocol,
+        )
+        file_format_ref = self._resource_ref("file_format", file_format)
+        access_mode_ref = (
+            self._resource_ref("access_mode", access_mode)
+            if access_mode is not None
+            else None
+        )
+        compression_codec_ref = (
+            self._resource_ref("compression_codec", compression_codec)
+            if compression_codec is not None
+            else None
+        )
+
+        profile_run = self.describe_profile_run(
+            dataset_value,
+            evidence_value,
+            graph=graph,
+            limit=None,
+        )
+        if profile_run.total_profile_count == 0:
+            raise DoxaBaseError(
+                "draft_query_evidence_storage_overlay requires profile or "
+                "query-result evidence linked to the dataset"
+            )
+        source_query_context = self.describe_query_context(dataset_value, graph=graph)
+        all_profiles = [
+            *profile_run.dataset_profile_observations,
+            *profile_run.mapped_column_profile_observations,
+            *profile_run.unmapped_column_profile_observations,
+        ]
+        source_profile_evidence = self._query_context_source_profile_evidence(
+            evidence_value,
+            all_profiles,
+        )
+        execution_status = source_profile_evidence.get("execution_status")
+        effective_layout_status = layout_verification_status or (
+            "rc:VerifiedByQueryLayout"
+            if execution_status == "succeeded"
+            else "rc:CandidateLayout"
+        )
+        layout_verification_status_ref = self._controlled_resource_ref(
+            "layout_verification_status",
+            effective_layout_status,
+            LAYOUT_VERIFICATION_STATUSES,
+        )
+
+        path_template_values = self._string_values(
+            "path_templates",
+            path_templates,
+        )
+        storage_access_value = (
+            self._required_iri("storage_access_iri", storage_access_iri)
+            if storage_access_iri is not None
+            else self._query_evidence_overlay_generated_iri(
+                "storage-access",
+                dataset_value,
+                evidence_value,
+                storage_root_value,
+                path_template_values,
+            )
+        )
+        physical_layout_value = (
+            self._required_iri("physical_layout_iri", physical_layout_iri)
+            if physical_layout_iri is not None
+            else self._query_evidence_overlay_generated_iri(
+                "physical-layout",
+                dataset_value,
+                evidence_value,
+                str(file_format_ref),
+                compression_codec,
+            )
+        )
+
+        graph_payload = self._query_evidence_storage_overlay_graph(
+            dataset_iri=dataset_value,
+            storage_access_iri=storage_access_value,
+            physical_layout_iri=physical_layout_value,
+            storage_label=storage_label,
+            physical_layout_label=physical_layout_label,
+            storage_protocol=storage_protocol_ref,
+            access_mode=access_mode_ref,
+            location_kind=location_kind_value,
+            storage_root=storage_root_value,
+            endpoint_profile=endpoint_profile,
+            bucket_name=bucket_name,
+            key_prefix=key_prefix,
+            region=region,
+            path_style_access=path_style_access,
+            credential_reference=credential_reference,
+            path_templates=path_template_values,
+            file_format=file_format_ref,
+            compression_codec=compression_codec_ref,
+            layout_verification_status=layout_verification_status_ref,
+            layout_verification_note=layout_verification_note,
+        )
+        content = graph_payload.serialize(format="turtle")
+        additions = [{"graph": "map", "format": "turtle", "content": content}]
+        parsed_patches = self._parse_staged_patch_specs(
+            additions=additions,
+            removals=None,
+        )
+        preview = self._preview_staged_graph_patches(
+            parsed_patches,
+            validation_scope=validation_scope,
+            revision_has_support_metadata=True,
+        )
+
+        dataset_label = profile_run.dataset.label or self._local_name(dataset_value)
+        summary = f"Stage query evidence storage overlay for {dataset_label or dataset_value}"
+        review_note = (
+            "Generated by draft_query_evidence_storage_overlay from reviewed "
+            "query/profile evidence. The helper did not infer storage paths from "
+            "artifacts; the caller supplied reviewed storage, path, and layout "
+            "values."
+        )
+        review_recommendation = (
+            "Apply only after confirming the storage root/templates describe the "
+            "queried source data rather than query text, logs, or result output."
+        )
+        rationale = (
+            "Profile/query evidence "
+            f"{evidence_value} supports adding reviewed storage access and "
+            "physical layout metadata so query planning can draft a physical "
+            "handoff without hand-authored RDF."
+        )
+        stage_arguments: dict[str, Any] = {
+            "summary": summary,
+            "rationale": rationale,
+            "additions": additions,
+            "supporting_observations": list(profile_run.profile_observation_iris),
+            "evidence": [evidence_value],
+            "revision_anchors": [
+                dataset_value,
+                storage_access_value,
+                physical_layout_value,
+            ],
+            "included_graphs": ["map", "observations", "evidence"],
+            "review_note": review_note,
+            "review_recommendation": review_recommendation,
+            "validation_scope": validation_scope,
+        }
+        stage_action = SuggestedNextAction(
+            action_label="Stage query evidence storage overlay",
+            tool_name="stage_graph_revision",
+            mcp_tool_name="doxabase.stage_graph_revision",
+            arguments=stage_arguments,
+            reason=(
+                "Stage the reviewed storage/path/layout overlay as a graph "
+                "revision before applying it to current map facts."
+            ),
+            call=self._suggested_call_string(
+                "stage_graph_revision",
+                stage_arguments,
+            ),
+        )
+        reviewed_overlay = {
+            "storage_protocol": str(storage_protocol_ref),
+            "storage_root": storage_root_value,
+            "location_kind": location_kind_value,
+            "path_templates": path_template_values,
+            "file_format": str(file_format_ref),
+            "compression_codec": (
+                str(compression_codec_ref)
+                if compression_codec_ref is not None
+                else None
+            ),
+            "layout_verification_status": str(layout_verification_status_ref),
+            "layout_verification_note": layout_verification_note,
+        }
+        return QueryEvidenceStorageOverlayDraft(
+            result_kind="query_evidence_storage_overlay_draft",
+            helper="draft_query_evidence_storage_overlay",
+            mode="non_mutating_stage_arguments",
+            dataset=profile_run.dataset,
+            evidence=profile_run.evidence,
+            evidence_iri=evidence_value,
+            source_query_context_readiness=source_query_context.readiness,
+            source_query_context_issue_codes=self._query_issue_codes(
+                source_query_context.issues
+            ),
+            source_profile_evidence=source_profile_evidence,
+            profile_observation_iris=list(profile_run.profile_observation_iris),
+            storage_access_iri=storage_access_value,
+            physical_layout_iri=physical_layout_value,
+            reviewed_overlay=reviewed_overlay,
+            additions=additions,
+            changed_graphs=preview.changed_graphs,
+            patches=preview.patch_descriptions,
+            validation_scope=preview.validation.scope,
+            validation_conforms=preview.validation.conforms,
+            validation_result_count=preview.validation.result_count,
+            validation_results=preview.validation.results,
+            validation_report_text=preview.validation.report_text,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
+            stage_arguments=stage_arguments,
+            suggested_next_actions=[stage_action],
+            suggested_next_calls=[stage_action.call],
+        )
+
+    def _query_evidence_storage_overlay_graph(
+        self,
+        *,
+        dataset_iri: str,
+        storage_access_iri: str,
+        physical_layout_iri: str,
+        storage_label: str | None,
+        physical_layout_label: str | None,
+        storage_protocol: URIRef,
+        access_mode: URIRef | None,
+        location_kind: str,
+        storage_root: str,
+        endpoint_profile: str | None,
+        bucket_name: str | None,
+        key_prefix: str | None,
+        region: str | None,
+        path_style_access: bool | None,
+        credential_reference: str | None,
+        path_templates: list[str],
+        file_format: URIRef,
+        compression_codec: URIRef | None,
+        layout_verification_status: URIRef,
+        layout_verification_note: str | None,
+    ) -> Graph:
+        graph = Graph()
+        self._bind_prefixes(graph)
+        dataset = URIRef(dataset_iri)
+        storage = URIRef(storage_access_iri)
+        layout = URIRef(physical_layout_iri)
+        graph.add((dataset, URIRef(self.expand_iri("rc:hasStorageAccess")), storage))
+        graph.add((dataset, URIRef(self.expand_iri("rc:hasPhysicalLayout")), layout))
+        graph.add(
+            (
+                dataset,
+                URIRef(self.expand_iri("rc:layoutVerificationStatus")),
+                layout_verification_status,
+            )
+        )
+        self._add_optional_literal(
+            graph,
+            dataset,
+            "rc:layoutVerificationNote",
+            layout_verification_note,
+        )
+
+        graph.add((storage, RDF.type, URIRef(self.expand_iri("rc:StorageAccess"))))
+        self._add_optional_literal(graph, storage, str(RDFS.label), storage_label)
+        graph.add(
+            (
+                storage,
+                URIRef(self.expand_iri("rc:storageProtocol")),
+                storage_protocol,
+            )
+        )
+        if access_mode is not None:
+            graph.add(
+                (storage, URIRef(self.expand_iri("rc:accessMode")), access_mode)
+            )
+        for predicate, value in (
+            ("rc:locationKind", location_kind),
+            ("rc:storageRoot", storage_root),
+            ("rc:endpointProfile", endpoint_profile),
+            ("rc:bucketName", bucket_name),
+            ("rc:keyPrefix", key_prefix),
+            ("rc:region", region),
+            ("rc:credentialReference", credential_reference),
+        ):
+            self._add_optional_literal(graph, storage, predicate, value)
+        if path_style_access is not None:
+            graph.add(
+                (
+                    storage,
+                    URIRef(self.expand_iri("rc:pathStyleAccess")),
+                    Literal(path_style_access, datatype=XSD.boolean),
+                )
+            )
+        for path_template in path_templates:
+            graph.add(
+                (
+                    storage,
+                    URIRef(self.expand_iri("rc:pathTemplate")),
+                    Literal(path_template),
+                )
+            )
+        graph.add(
+            (
+                storage,
+                URIRef(self.expand_iri("rc:layoutVerificationStatus")),
+                layout_verification_status,
+            )
+        )
+        self._add_optional_literal(
+            graph,
+            storage,
+            "rc:layoutVerificationNote",
+            layout_verification_note,
+        )
+
+        graph.add((layout, RDF.type, URIRef(self.expand_iri("rc:PhysicalLayout"))))
+        self._add_optional_literal(
+            graph,
+            layout,
+            str(RDFS.label),
+            physical_layout_label,
+        )
+        graph.add((layout, URIRef(self.expand_iri("rc:fileFormat")), file_format))
+        if compression_codec is not None:
+            graph.add(
+                (
+                    layout,
+                    URIRef(self.expand_iri("rc:compressionCodec")),
+                    compression_codec,
+                )
+            )
+        graph.add(
+            (
+                layout,
+                URIRef(self.expand_iri("rc:layoutVerificationStatus")),
+                layout_verification_status,
+            )
+        )
+        self._add_optional_literal(
+            graph,
+            layout,
+            "rc:layoutVerificationNote",
+            layout_verification_note,
+        )
+        return graph
+
+    @staticmethod
+    def _query_evidence_overlay_generated_iri(
+        kind: str,
+        *values: Any,
+    ) -> str:
+        payload = json.dumps(values, sort_keys=True, default=str)
+        digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+        return f"https://richcanopy.org/doxabase/generated/{kind}/{digest}"
 
     def _non_tabular_draft_query_plan(
         self,

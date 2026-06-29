@@ -26,6 +26,7 @@ from doxabase.mcp_tools import (
     describe_revision_snapshot_evidence_tool,
     describe_staged_revision_tool,
     draft_map_assertion_change_tool,
+    draft_query_evidence_storage_overlay_tool,
     draft_profile_map_updates_tool,
     draft_query_plan_tool,
     draft_staged_revision_rebase_tool,
@@ -1220,6 +1221,95 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
     assert profile_run["evidence"]["source_spans"][0]["source_path"] == (
         "queries/orders_paid_aggregate.sql"
     )
+
+
+def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text(
+        "order_id,status,amount\n1,paid,12.00\n2,pending,8.00\n",
+        encoding="utf-8",
+    )
+    query_path = tmp_path / "orders_status.sql"
+    query_path.write_text("select status, count(*) from orders;\n", encoding="utf-8")
+    result_path = tmp_path / "orders_status.json"
+    result_path.write_text('{"paid": 1, "pending": 1}\n', encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    result = record_query_result_tool(
+        db,
+        summary="Orders status aggregate scanned the reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(query_path),
+        query_hash="sha256:mcp-orders-status",
+        result_sources=[str(result_path)],
+        sample_size=2,
+        sample_scope="All rows in the reviewed Orders CSV.",
+        sample_method="External read-only aggregate query.",
+        row_count=2,
+    )
+
+    before_context = describe_query_context_tool(db, iri=dataset)
+    assert before_context["readiness"] == "insufficient_metadata"
+    assert before_context["query_target_candidates"] == []
+
+    draft = draft_query_evidence_storage_overlay_tool(
+        db,
+        dataset_iri=dataset,
+        evidence_iri=result["evidence_iri"],
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        path_templates=["orders.csv"],
+        file_format="rc:CSV",
+        layout_verification_note="Reviewed query evidence scanned orders.csv.",
+    )
+
+    assert draft["result_kind"] == "query_evidence_storage_overlay_draft"
+    assert draft["mode"] == "non_mutating_stage_arguments"
+    assert draft["source_query_context_readiness"] == "insufficient_metadata"
+    assert draft["source_profile_evidence"]["query_hash"] == (
+        "sha256:mcp-orders-status"
+    )
+    assert draft["source_profile_evidence"]["query_source_paths"] == [
+        str(query_path)
+    ]
+    assert draft["source_profile_evidence"]["result_sources"] == [str(result_path)]
+    assert draft["reviewed_overlay"]["storage_root"] == str(warehouse)
+    assert draft["reviewed_overlay"]["path_templates"] == ["orders.csv"]
+    assert draft["reviewed_overlay"]["file_format"] == RC + "CSV"
+    assert draft["validation_conforms"] is True
+    assert draft["changed_graphs"] == ["map"]
+    assert draft["stage_arguments"]["supporting_observations"] == [
+        result["observation_iri"]
+    ]
+    assert draft["suggested_next_actions"][0]["mcp_tool_name"] == (
+        "doxabase.stage_graph_revision"
+    )
+
+    still_before_apply = describe_query_context_tool(db, iri=dataset)
+    assert still_before_apply["readiness"] == "insufficient_metadata"
+    assert still_before_apply["query_target_candidates"] == []
+
+    staged = stage_graph_revision_tool(db, **draft["stage_arguments"])
+    assert staged["validation_conforms"] is True
+    check = check_staged_revision_apply_tool(db, staged["revision_iri"])
+    assert check["status"] == "ready"
+    applied = apply_staged_revision_tool(db, staged["revision_iri"])
+    assert applied["patches_applied"] == 1
+
+    repaired_context = describe_query_context_tool(db, iri=dataset)
+    assert repaired_context["readiness"] == "ready_for_query_planning"
+    plan = draft_query_plan_tool(db, iri=dataset)
+    assert plan["handoff_kind"] == "execution_attempt_ready"
+    assert plan["scan"]["uri_template"] == str(csv_path)
 
 
 def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:

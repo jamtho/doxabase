@@ -1149,6 +1149,46 @@ The linked evidence stores `query_execution_status`, `query_engine`, and
 `query_hash` as structured metadata when those values are supplied, so later
 query-context handoffs do not depend on parsing evidence summary prose.
 
+`db.draft_query_evidence_storage_overlay(...)` returns a
+`QueryEvidenceStorageOverlayDraft`:
+
+```python
+draft.result_kind
+draft.helper
+draft.mode
+draft.dataset
+draft.evidence
+draft.evidence_iri
+draft.source_query_context_readiness
+draft.source_query_context_issue_codes
+draft.source_profile_evidence
+draft.profile_observation_iris
+draft.storage_access_iri
+draft.physical_layout_iri
+draft.reviewed_overlay
+draft.additions
+draft.changed_graphs
+draft.patches
+draft.validation_scope
+draft.validation_conforms
+draft.validation_result_count
+draft.validation_results
+draft.validation_report_text
+draft.review_note
+draft.review_recommendation
+draft.stage_arguments
+draft.suggested_next_actions
+draft.suggested_next_calls
+```
+
+The helper is a side-effect-free bridge from query/profile evidence to a staged
+storage-layout overlay. It requires caller-reviewed storage/path/layout values
+and returns ready `stage_graph_revision` arguments rather than writing map
+facts directly. Use `source_profile_evidence` to verify the source query result
+or profile run, `reviewed_overlay` to audit the supplied storage metadata, and
+`stage_arguments` only after confirming the overlay describes the queried
+source data rather than query text, logs, or result output.
+
 For direct profile type findings, call it with `observation_type="profile"`,
 `observed_column`, and `observed_physical_type` / `observed_value_type`. These
 persist observed type evidence without asserting current map facts.

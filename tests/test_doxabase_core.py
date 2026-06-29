@@ -17431,6 +17431,108 @@ def test_local_csv_query_handoff_can_record_result_artifact(
     assert result.observation_iri in {match.iri for match in matches.matches}
 
 
+def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
+    tmp_path: Path,
+) -> None:
+    warehouse = tmp_path / "warehouse"
+    warehouse.mkdir()
+    csv_path = warehouse / "orders.csv"
+    csv_path.write_text(
+        "order_id,status,amount_cents\n"
+        "1,paid,1200\n"
+        "2,pending,800\n"
+        "3,paid,3100\n",
+        encoding="utf-8",
+    )
+    query_path = tmp_path / "orders_status.sql"
+    query_path.write_text("select count(*) from read_csv_auto(?);\n", encoding="utf-8")
+    result_path = tmp_path / "orders_status.result.json"
+    result_path.write_text('{"row_count": 3}\n', encoding="utf-8")
+
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        "https://example.test/project#orders__status",
+        table_iri=dataset,
+        column_name="status",
+    )
+    result = db.record_query_result(
+        summary="Orders status query scanned the reviewed local CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path=str(query_path),
+        query_hash="sha256:orders-status",
+        result_sources=[str(result_path)],
+        sample_size=3,
+        sample_scope="All rows in the reviewed Orders CSV.",
+        sample_method="External read-only aggregate query.",
+        row_count=3,
+    )
+    before_counts = _mutable_graph_counts(db)
+    before_context = db.describe_query_context(dataset)
+
+    assert before_context.readiness == "insufficient_metadata"
+    assert before_context.query_target_candidates == []
+
+    draft = db.draft_query_evidence_storage_overlay(
+        dataset,
+        result.evidence_iri,
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(warehouse),
+        location_kind="directory",
+        path_templates=["orders.csv"],
+        file_format="rc:CSV",
+        layout_verification_note=(
+            "Reviewed query-result evidence scanned warehouse/orders.csv."
+        ),
+    )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert draft.result_kind == "query_evidence_storage_overlay_draft"
+    assert draft.mode == "non_mutating_stage_arguments"
+    assert draft.source_query_context_readiness == "insufficient_metadata"
+    assert set(draft.source_query_context_issue_codes) >= {
+        "missing_storage_access",
+        "missing_physical_layout",
+    }
+    assert draft.source_profile_evidence["execution_status"] == "succeeded"
+    assert draft.source_profile_evidence["query_hash"] == "sha256:orders-status"
+    assert draft.source_profile_evidence["result_sources"] == [str(result_path)]
+    assert draft.source_profile_evidence["query_source_paths"] == [str(query_path)]
+    assert draft.reviewed_overlay["storage_root"] == str(warehouse)
+    assert draft.reviewed_overlay["path_templates"] == ["orders.csv"]
+    assert draft.reviewed_overlay["file_format"] == RC + "CSV"
+    assert draft.reviewed_overlay["layout_verification_status"] == (
+        RC + "VerifiedByQueryLayout"
+    )
+    assert draft.validation_conforms is True
+    assert draft.changed_graphs == ["map"]
+    assert draft.stage_arguments["supporting_observations"] == [
+        result.observation_iri
+    ]
+    assert draft.stage_arguments["evidence"] == [result.evidence_iri]
+    assert draft.suggested_next_actions[0].tool_name == "stage_graph_revision"
+    assert draft.suggested_next_actions[0].arguments == draft.stage_arguments
+
+    staged = db.stage_graph_revision(**draft.stage_arguments)
+    assert staged.validation_conforms is True
+    check = db.check_staged_revision_apply(staged.revision_iri)
+    assert check.status == "ready"
+    applied = db.apply_staged_revision(staged.revision_iri)
+    assert applied.patches_applied == 1
+
+    repaired_context = db.describe_query_context(dataset)
+    assert repaired_context.readiness == "ready_for_query_planning"
+    plan = db.draft_query_plan(dataset)
+    assert plan.handoff_kind == "execution_attempt_ready"
+    assert plan.scan.function == "read_csv_auto"
+    assert plan.scan.uri_template == str(csv_path)
+    assert plan.review_gate.ready_for_execution_attempt is True
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_object_root_candidate_stays_visible_with_partition_templates(
     tmp_path: Path,
 ) -> None:

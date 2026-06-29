@@ -503,6 +503,60 @@ def draft_query_plan_tool(
     )
 
 
+def draft_query_evidence_storage_overlay_tool(
+    db: DoxaBase,
+    dataset_iri: str,
+    evidence_iri: str,
+    storage_protocol: str,
+    storage_root: str,
+    location_kind: str,
+    file_format: str,
+    graph: str | None = "map",
+    storage_access_iri: str | None = None,
+    physical_layout_iri: str | None = None,
+    storage_label: str | None = None,
+    physical_layout_label: str | None = None,
+    access_mode: str | None = "rc:ReadOnlyAccess",
+    endpoint_profile: str | None = None,
+    bucket_name: str | None = None,
+    key_prefix: str | None = None,
+    region: str | None = None,
+    path_style_access: bool | None = None,
+    credential_reference: str | None = None,
+    path_templates: list[str] | None = None,
+    compression_codec: str | None = None,
+    layout_verification_status: str | None = None,
+    layout_verification_note: str | None = None,
+    validation_scope: str = "all",
+) -> dict[str, Any]:
+    result = db.draft_query_evidence_storage_overlay(
+        dataset_iri=dataset_iri,
+        evidence_iri=evidence_iri,
+        storage_protocol=storage_protocol,
+        storage_root=storage_root,
+        location_kind=location_kind,
+        file_format=file_format,
+        graph=graph,
+        storage_access_iri=storage_access_iri,
+        physical_layout_iri=physical_layout_iri,
+        storage_label=storage_label,
+        physical_layout_label=physical_layout_label,
+        access_mode=access_mode,
+        endpoint_profile=endpoint_profile,
+        bucket_name=bucket_name,
+        key_prefix=key_prefix,
+        region=region,
+        path_style_access=path_style_access,
+        credential_reference=credential_reference,
+        path_templates=path_templates,
+        compression_codec=compression_codec,
+        layout_verification_status=layout_verification_status,
+        layout_verification_note=layout_verification_note,
+        validation_scope=validation_scope,  # type: ignore[arg-type]
+    )
+    return to_dict(result)
+
+
 def describe_context_slice_tool(
     db: DoxaBase,
     seed_iris: list[str],

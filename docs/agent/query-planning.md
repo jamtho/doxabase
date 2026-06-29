@@ -411,6 +411,14 @@ actually ran. `record_query_result` stores execution status, engine, and query
 hash as structured evidence metadata, so custom evidence summaries still remain
 machine-readable in later query-context handoffs.
 
+If that evidence identifies a reviewed source but the map still lacks physical
+query-planning metadata, call `draft_query_evidence_storage_overlay` with the
+dataset IRI, evidence IRI, and reviewed storage/path/layout values. The helper
+does not parse query artifacts to guess storage. It returns validation-previewed
+`stage_graph_revision` arguments that add storage access and physical layout
+metadata with the query/profile observation as support. Stage, check, apply,
+and rerun `describe_query_context` before drafting the next plan.
+
 When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call
 `draft_query_plan(..., candidate_index=..., allow_context_blocked_candidate=True)`

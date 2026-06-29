@@ -984,6 +984,26 @@ surprising shared or inherited path templates stay attached to their source
 resource and warning notes. It does not resolve endpoint profiles, credentials,
 object existence, or execute SQL.
 
+### doxabase.draft_query_evidence_storage_overlay
+
+Returns non-mutating `stage_graph_revision` arguments for turning reviewed
+query/profile evidence into storage access and physical layout map metadata.
+Use it after `record_query_result` or `describe_profile_run` shows that an
+external query scanned a real source, but `describe_query_context` is still
+blocked by missing storage, path, or layout metadata.
+
+The helper does not infer storage values from query text, result artifacts, or
+logs. The caller supplies reviewed values such as `storage_protocol`,
+`storage_root`, `location_kind`, `path_templates`, `file_format`, optional
+endpoint/credential hints, compression, and a layout verification note. The
+response echoes those reviewed values in `reviewed_overlay`, reports the source
+query context and source profile/query evidence, previews validation for the
+Turtle addition, and returns `stage_arguments` plus a
+`doxabase.stage_graph_revision` suggested action. Call that staged-revision
+helper, check/apply the staged row, then rerun `describe_query_context` before
+drafting a query plan. This route preserves graph-revision rationale and keeps
+the draft step side-effect free.
+
 `doxabase.describe_context_slice`
 
 Returns a bounded, route-explained subgraph around one or more seed IRIs. Use

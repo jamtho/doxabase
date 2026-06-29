@@ -2851,6 +2851,14 @@ few useful gaps:
   When staging from `advisory_followthrough_plan`, pass the selected source block
   to the staging helper and check `profile_route_source_count` before treating an
   advisory lane as closed.
+- A query-evidence overlay trial found that `record_query_result` made source
+  paths, result artifacts, execution status, and query hashes visible, but an
+  agent still had to hand-author RDF before that evidence could repair missing
+  storage/path/layout query-planning metadata. Use
+  `draft_query_evidence_storage_overlay` after reviewing the actual source
+  storage values; it drafts a non-mutating staged overlay with the query/profile
+  observation and evidence attached, then agents can check/apply and rerun
+  `describe_query_context`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
