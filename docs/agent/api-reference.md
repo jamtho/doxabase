@@ -1101,7 +1101,10 @@ a route from `draft_profile_map_updates`, for example
 `query_context_review` repair. Explicit route sources are persisted on each
 staged framing as direct profile review routes, so
 `export_profile_insight_review_bundle()` can close that lane instead of treating
-the revision as support-only context.
+the revision as support-only context. The returned
+`profile_route_source_count` echoes how many usable sources were persisted; a
+provided input with count `0` emits a warning and usually means the source block
+was shaped incorrectly.
 
 `stage_pattern_promotion()` stages one or more caller-authored RDF framings
 supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;

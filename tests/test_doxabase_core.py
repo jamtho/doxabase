@@ -12504,6 +12504,7 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
 
     assert draft.result_kind == "systematisation_draft"
     assert draft.summary == "Explore identity-ladder modelling"
+    assert draft.profile_route_source_count == 0
     assert draft.anchors == [
         observation.observation_iri,
         "https://example.test/project#Messages",
@@ -13362,6 +13363,41 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     ) in exported
     assert f"- Repair review: `{revision_iris[0]}`" in exported
     assert "Temporal scopes must name the timezone evidence column." in exported
+
+
+def test_stage_systematisation_warns_on_unusable_profile_route_sources(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+
+    draft = db.stage_systematisation(
+        summary="Review route source shape",
+        intent="Exercise profile route source validation feedback.",
+        profile_route_sources=[
+            {
+                "tool_name": "describe_query_context",
+                "arguments": {"iri": "https://example.test/project#Messages"},
+            }
+        ],
+        framings=[
+            {
+                "label": "Map dataset",
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:Messages a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    assert draft.profile_route_source_count == 0
+    assert any(
+        "profile_route_sources was provided" in warning
+        for warning in draft.warnings
+    )
 
 
 def test_stage_systematisation_queue_items_surface_applied_alternative_gate(
@@ -25628,6 +25664,7 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
         ],
         validation_scope="all",
     )
+    assert query_repair_draft.profile_route_source_count == 1
     caveat_draft = db.stage_systematisation(
         summary="Review workflow flip caveat",
         intent="Keep the denominator caveat reviewable beside profile map updates.",

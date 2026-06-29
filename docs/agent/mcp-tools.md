@@ -1438,7 +1438,9 @@ action's source block in `profile_route_sources`:
 `profile_route_sources=[query_action.source_query_context]`. The stored staged
 revision then closes that route as a direct action in
 `export_profile_insight_review_bundle`, rather than appearing only as related
-support through shared anchors.
+support through shared anchors. The returned `profile_route_source_count` should
+be greater than `0`; if it is `0`, the draft warning usually means the caller
+passed the whole suggested action instead of its source block.
 
 `doxabase.stage_pattern_promotion`
 

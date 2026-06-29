@@ -3866,6 +3866,7 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["result_kind"] == "systematisation_draft"
     assert result["summary"] == "Explore identity-ladder modelling"
     assert result["anchors"] == [observation.observation_iri]
+    assert result["profile_route_source_count"] == 0
     assert len(result["framings"]) == 2
     assert len(result["staged_revisions"]) == 2
     revision_iris = [

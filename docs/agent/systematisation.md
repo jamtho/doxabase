@@ -23,7 +23,9 @@ When a systematisation framing directly implements a lane from
 `profile_route_sources=[query_action.source_query_context]`. This persists the
 profile route on the staged revision so
 `export_profile_insight_review_bundle` can mark the lane as `direct_action`
-instead of only related support.
+instead of only related support. Check the returned
+`profile_route_source_count`; when it is `0` after you supplied sources, use the
+draft warning to correct the source shape before relying on the review bundle.
 
 Put the preferred comparison anchor first when `link_alternatives=True`, because
 later framings are linked with `alternative_to` pointing at the first framing by

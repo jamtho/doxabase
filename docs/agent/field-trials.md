@@ -2777,7 +2777,9 @@ few useful gaps:
   route closure for caller-authored query repairs: `stage_systematisation` now
   accepts `profile_route_sources`, so agents can pass
   `query_action.source_query_context` and let the profile review bundle mark the
-  lane as `direct_action`.
+  lane as `direct_action`. The draft returns `profile_route_source_count` and
+  warns when supplied input normalises to zero usable route sources, which helps
+  unattended agents catch passing the whole action instead of its source block.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

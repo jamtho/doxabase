@@ -984,6 +984,7 @@ class SystematisationDraftRecord:
     summary: str
     intent: str
     anchors: list[str]
+    profile_route_source_count: int
     warnings: list[str]
     structured_warnings: list[SystematisationWarningRecord]
     framings: list[SystematisationFramingRecord]
@@ -30393,6 +30394,13 @@ class DoxaBase:
 
         warnings: list[str] = []
         structured_warnings: list[SystematisationWarningRecord] = []
+        if profile_route_sources is not None and not profile_route_source_values:
+            warnings.append(
+                "profile_route_sources was provided, but no usable profile "
+                "route source objects were found. Pass the action source block, "
+                "for example query_action.source_query_context, rather than the "
+                "whole suggested action object."
+            )
         if not anchor_values:
             warnings.append(
                 "No anchors were supplied; future reviewers may have less context."
@@ -30673,6 +30681,7 @@ class DoxaBase:
             summary=summary_value,
             intent=intent_value,
             anchors=anchor_values,
+            profile_route_source_count=len(profile_route_source_values),
             warnings=warnings,
             structured_warnings=structured_warnings,
             framings=framing_records,

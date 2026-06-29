@@ -97,9 +97,11 @@ profile-derived map updates for query-planning work. If you stage a
 caller-authored systematisation repair for that lane, pass the route source from
 the query context action with
 `profile_route_sources=[query_action.source_query_context]` so later profile
-insight exports treat the repair as a `direct_action`. The profile update lanes
-remain available for explicit review; the query lane is an ordering cue, not a
-rejection of the profile evidence.
+insight exports treat the repair as a `direct_action`. The systematisation draft
+returns `profile_route_source_count`; when it is `0` after you supplied route
+sources, fix the source shape before treating the lane as closed. The profile
+update lanes remain available for explicit review; the query lane is an
+ordering cue, not a rejection of the profile evidence.
 `source_query_context.route_anchor_iris` names the dataset, so a staged
 dataset-anchored query repair can still bridge back to the query-context route
 inside a later profile insight review bundle.
