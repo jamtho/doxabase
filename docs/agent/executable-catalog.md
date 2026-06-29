@@ -26,6 +26,9 @@ are safe to share with project collaborators:
   S3-compatible object storage, HTTPS, or database-backed.
 - `rc:storageRoot`, `rc:bucketName`, `rc:keyPrefix`, and `rc:pathTemplate`
   describe where data lives.
+  For `storage_protocol="rc:DatabaseStorage"`, storage-access-owned
+  `path_templates` are database relation identifiers such as `schema.table`;
+  `storage_root` is the connection reference, not a file/object root.
 - `rc:locationKind` says whether a root names an exact `object`/location,
   `directory`, `prefix`, or `connection`. Root-only query targets are executable
   candidates only when this is `object`; broader roots need path templates.

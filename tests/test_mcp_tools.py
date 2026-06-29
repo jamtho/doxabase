@@ -85,10 +85,35 @@ def _line_number_containing(text: str, needle: str) -> int:
     raise AssertionError(f"Expected text to contain {needle!r}")
 
 
+def _assert_repair_action_option(
+    option: dict[str, object],
+    *,
+    action_index: int,
+    action_type: str,
+    tool_name: str,
+    mcp_tool_name: str,
+    action_label: str,
+    required_extra_arguments: list[str],
+    placeholder_fields: list[str],
+    reviewed_value_fields: list[str],
+    action_status: str = "pending_review",
+) -> None:
+    assert option["action_index"] == action_index
+    assert option["action_type"] == action_type
+    assert option["tool_name"] == tool_name
+    assert option["mcp_tool_name"] == mcp_tool_name
+    assert option["action_label"] == action_label
+    assert option["action_status"] == action_status
+    assert option["required_extra_arguments"] == required_extra_arguments
+    assert option["placeholder_fields"] == placeholder_fields
+    assert option["reviewed_value_fields"] == reviewed_value_fields
+
+
 @pytest.mark.anyio
 async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     server = build_server(tmp_path / "mcp.sqlite")
-    tool_names = {tool.name for tool in await server.list_tools()}
+    tools = await server.list_tools()
+    tool_names = {tool.name for tool in tools}
 
     assert "doxabase.list_docs" in tool_names
     assert "doxabase.get_doc" in tool_names
@@ -152,6 +177,14 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.apply_staged_revision" in tool_names
     assert "doxabase.load_example_fixtures" in tool_names
     assert "doxabase.validate_graph" in tool_names
+
+    tool_by_name = {tool.name: tool for tool in tools}
+    storage_access_description = (
+        tool_by_name["doxabase.record_map_storage_access"].description or ""
+    )
+    assert "rc:DatabaseStorage" in storage_access_description
+    assert "database relation identifiers" in storage_access_description
+    assert "storage_root" in storage_access_description
 
 
 @pytest.mark.anyio
@@ -4770,27 +4803,32 @@ def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
     assert "rc:PostgreSQLTable" in repair_group["repair_context"][
         "file_format_guidance"
     ]["rc:DatabaseStorage"]
-    assert repair_group["pending_action_options"] == [
-        {
-            "action_index": 0,
-            "action_type": "record_reviewed_physical_layout",
-            "tool_name": "record_map_physical_layout",
-            "mcp_tool_name": "doxabase.record_map_physical_layout",
-            "action_label": "Record physical layout and link dataset",
-            "action_status": "pending_review",
-            "required_extra_arguments": ["iri", "file_format"],
-            "placeholder_fields": [
-                "file_format",
-                "layout_verification_status",
-                "layout_verification_note",
-            ],
-            "reviewed_value_fields": [
-                "file_format",
-                "layout_verification_status",
-                "layout_verification_note",
-            ],
-        }
-    ]
+    assert len(repair_group["pending_action_options"]) == 1
+    layout_option = repair_group["pending_action_options"][0]
+    _assert_repair_action_option(
+        layout_option,
+        action_index=0,
+        action_type="record_reviewed_physical_layout",
+        tool_name="record_map_physical_layout",
+        mcp_tool_name="doxabase.record_map_physical_layout",
+        action_label="Record physical layout and link dataset",
+        required_extra_arguments=["iri", "file_format"],
+        placeholder_fields=[
+            "file_format",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+        reviewed_value_fields=[
+            "file_format",
+            "layout_verification_status",
+            "layout_verification_note",
+        ],
+    )
+    assert "file format or database table layout" in layout_option["reason"]
+    assert "rc:PostgreSQLTable" in layout_option["condition"]
+    assert "record_map_physical_layout writes current-best map facts directly" in (
+        layout_option["review_rationale_guidance"]
+    )
     action = repair_group["actions"][0]
     assert action["tool_name"] == "record_map_physical_layout"
     assert action["arguments_template"]["datasets"] == [dataset]
@@ -5400,34 +5438,41 @@ def test_describe_query_context_tool_lists_missing_storage_candidates(
         "object",
         "rationale",
     ]
-    assert repair_group["pending_action_options"] == [
-        {
-            "action_index": 0,
-            "action_type": "record_reviewed_storage_access",
-            "tool_name": "record_map_storage_access",
-            "mcp_tool_name": "doxabase.record_map_storage_access",
-            "action_label": "Record storage access and link dataset",
-            "action_status": "pending_review",
-            "required_extra_arguments": [
-                "iri",
-                "storage_protocol",
-                "storage_root",
-            ],
-            "placeholder_fields": ["path_templates"],
-            "reviewed_value_fields": ["path_templates"],
-        },
-        {
-            "action_index": 1,
-            "action_type": "stage_existing_storage_access_link",
-            "tool_name": "stage_map_assertion_change",
-            "mcp_tool_name": "doxabase.stage_map_assertion_change",
-            "action_label": "Stage link to an existing storage access",
-            "action_status": "pending_review",
-            "required_extra_arguments": ["object", "rationale"],
-            "placeholder_fields": ["object"],
-            "reviewed_value_fields": ["object"],
-        },
-    ]
+    assert len(repair_group["pending_action_options"]) == 2
+    storage_option = repair_group["pending_action_options"][0]
+    _assert_repair_action_option(
+        storage_option,
+        action_index=0,
+        action_type="record_reviewed_storage_access",
+        tool_name="record_map_storage_access",
+        mcp_tool_name="doxabase.record_map_storage_access",
+        action_label="Record storage access and link dataset",
+        required_extra_arguments=[
+            "iri",
+            "storage_protocol",
+            "storage_root",
+        ],
+        placeholder_fields=["path_templates"],
+        reviewed_value_fields=["path_templates"],
+    )
+    assert "non-secret storage protocol" in storage_option["reason"]
+    assert "Database relation identifiers" in storage_option["condition"]
+    assert "record_map_storage_access writes current-best map facts directly" in (
+        storage_option["review_rationale_guidance"]
+    )
+    link_option = repair_group["pending_action_options"][1]
+    _assert_repair_action_option(
+        link_option,
+        action_index=1,
+        action_type="stage_existing_storage_access_link",
+        tool_name="stage_map_assertion_change",
+        mcp_tool_name="doxabase.stage_map_assertion_change",
+        action_label="Stage link to an existing storage access",
+        required_extra_arguments=["object", "rationale"],
+        placeholder_fields=["object"],
+        reviewed_value_fields=["object"],
+    )
+    assert "suitable storage access resource already exists" in link_option["reason"]
     action_by_type = {
         action["action_type"]: action for action in repair_group["actions"]
     }

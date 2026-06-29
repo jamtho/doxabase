@@ -13355,6 +13355,10 @@ class DoxaBase:
                     action_option["already_pending_candidate_count"] = (
                         pending_candidate_count
                     )
+                for key in ("reason", "condition", "review_rationale_guidance"):
+                    value = action.get(key)
+                    if isinstance(value, str):
+                        action_option[key] = value
 
             action_status_counts[status] = action_status_counts.get(status, 0) + 1
             if status == "already_satisfied":

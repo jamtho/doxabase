@@ -2423,6 +2423,15 @@ few useful gaps:
   fallback revision IRIs, and original shared patch source selectors; grouped
   exports reconstruct shared ontology/shapes context from stored patch roles so
   export-only agents can inspect or restage fallback alternatives before apply.
+- A query-planning repair-option audit found the compact
+  `pending_action_options[]` route was the right scripting entrypoint, but it
+  dropped safety text from the full action templates. Compact pending options
+  now carry available `reason`, `condition`, and `review_rationale_guidance` so
+  agents can choose branches without losing review gates. The same audit found
+  `record_map_storage_access(path_templates=...)` is easy to misread for
+  database storage: for `rc:DatabaseStorage`, path templates are reviewed
+  storage-owned relation identifiers such as `schema.table`, while
+  `storage_root` is the connection reference.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

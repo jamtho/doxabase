@@ -59,6 +59,10 @@ def test_storage_access_docs_distinguish_protocol_from_location_kind() -> None:
         assert '"directory"' in content or "`directory`" in content
         assert '"prefix"' in content or "`prefix`" in content
         assert '"connection"' in content or "`connection`" in content
+        assert "rc:DatabaseStorage" in content
+        assert "path_templates" in content
+        assert "database relation identifiers" in content
+        assert "storage_root" in content
 
 
 def test_high_value_sections_are_addressable_for_cold_start() -> None:

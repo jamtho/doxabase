@@ -1098,6 +1098,11 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         location_kind is one of object, directory, prefix, or connection. Use
         storage_protocol="rc:LocalFilesystemStorage" for local paths; do not use
         location_kind="local_path".
+
+        For storage_protocol="rc:DatabaseStorage", path_templates are
+        storage-access-owned database relation identifiers such as schema.table;
+        storage_root is the connection reference. Do not copy dataset or
+        partition file/object path templates here.
         """
 
         return record_map_storage_access_tool(

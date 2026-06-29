@@ -724,7 +724,10 @@ include the optional `path_templates` field only when the storage access itself
 owns the path or database relation template. Omit it when a dataset or partition
 already carries the reviewed file/object path template, or you can create
 duplicate equivalent query target candidates. Database relation identifiers are
-the important storage-owned exception. After direct database-storage repair,
+the important storage-owned exception: for
+`storage_protocol="rc:DatabaseStorage"`, `path_templates` are reviewed database
+relation identifiers such as `schema.table`, and `storage_root` is the
+connection reference. After direct database-storage repair,
 rerun `describe_query_context`; if the same relation-like value remains on the
 dataset or partition, follow the `database_relation_template_source_mismatch`
 repair group. The direct `record_map_storage_access` template carries
@@ -1116,6 +1119,12 @@ relative templates that already include the recorded key prefix are treated as
 review-only because path composition would duplicate that prefix. A relative
 dataset path template does not make an otherwise rootless storage access ready
 for query planning; record the storage access location as well.
+For `storage_protocol="rc:DatabaseStorage"`, `path_templates` are
+storage-access-owned database relation identifiers such as `schema.table`, and
+`storage_root` is the connection reference. Do not copy dataset or partition
+file/object path templates here; if the relation is not reviewed yet, omit
+`path_templates` and let `describe_query_context` surface the missing database
+relation template.
 `location_kind` is a root-shape value, not a protocol value: use exactly one of
 `"object"`, `"directory"`, `"prefix"`, or `"connection"`. Do not use
 `"local_path"`; localness belongs in

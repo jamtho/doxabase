@@ -2229,8 +2229,11 @@ an action with `action_status="already_satisfied"` and
 actions contribute their unique `required_extra_arguments` values to
 `pending_required_extra_arguments`. `pending_action_options[]` repeats the
 pending non-skippable actions' index, type, tool, label, required extra
-arguments, placeholder fields, and reviewed value fields so scripts can choose a
-branch without parsing every full action template. Actions marked
+arguments, placeholder fields, reviewed value fields, and available safety text
+such as `reason`, `condition`, and `review_rationale_guidance` so scripts can
+choose a branch without parsing every full action template. Use the selected
+full action when you need `arguments`, `arguments_template`,
+`rationale_template`, or protocol-specific guidance. Actions marked
 `action_status="already_pending"` with `skip_when_already_pending=true` are
 skippable too. These summaries do not remove the review requirement.
 When a missing-storage group has visible storage candidates that are already

@@ -192,7 +192,10 @@ Start with `describe_query_context(dataset_iri)`:
    action before using any review-gated `draft_query_plan` action preserved in
    the dataset summary. Read `pending_action_count`, `skippable_action_count`,
    `action_status_counts`, and
-   `pending_action_options` before routing a group. `choice_mode="choose_one"`
+   `pending_action_options` before routing a group. The compact options carry
+   branch labels plus available `reason`, `condition`, and
+   `review_rationale_guidance`; use the full action templates when you need
+   call arguments or rationale/protocol templates. `choice_mode="choose_one"`
    means the actions are alternatives; use the selected action's own
    `required_extra_arguments` rather than the group-level union in
    `pending_required_extra_arguments`. Mixed database relation repairs can
