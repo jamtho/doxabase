@@ -2576,6 +2576,7 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["bundle_summary"]["recommended_review_iris"] == [
         staged["revision_iri"]
     ]
+    assert export["bundle_summary"]["external_recommended_review_iris"] == []
     assert export["bundle_summary"]["recommended_mutation_review_iris"] == [
         staged["revision_iri"]
     ]

@@ -1714,7 +1714,9 @@ stale sources, ready successors, all validation-failed revisions by current
 apply status, deduped
 `recommended_review_iris`, `recommended_mutation_review_iris`,
 `recommended_apply_or_restage_review_iris`, `recommended_repair_review_iris`,
-and `recommended_applied_inspection_iris`. Prefer
+`recommended_applied_inspection_iris`, and
+`external_recommended_review_iris` for current review targets omitted from the
+caller-requested export bundle. Prefer
 `bundle_summary.next_action_queue` when an autonomous script needs the most
 direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.next_action_queue_items` adds the resolved target IRI,

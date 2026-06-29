@@ -2589,6 +2589,11 @@ few useful gaps:
   `scope_hint.status="seed_heavy_unscoped_results"` plus scoped retry actions
   when the returned page is seed-heavy; follow `graph="map"` and the other
   project graph retries before treating a project fact as absent.
+- A staged-export omitted-successor trial confirmed direct exports should stay
+  caller-scoped even when a stale source's current successor is outside the
+  bundle. `bundle_summary.external_recommended_review_iris` now exposes those
+  omitted current review targets structurally while `mutation_frontier_iris`
+  remains limited to included rows.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

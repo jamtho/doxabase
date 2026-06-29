@@ -9063,6 +9063,10 @@ def test_restage_chain_routes_to_current_successor(
     assert export.bundle_summary.recommended_review_iris == [
         current_successor.revision_iri
     ]
+    assert export.bundle_summary.external_recommended_review_iris == [
+        current_successor.revision_iri
+    ]
+    assert export.bundle_summary.mutation_frontier_iris == []
     assert len(export.bundle_summary.warnings) == 1
     assert "outside this bundle" in export.bundle_summary.warnings[0]
     assert current_successor.revision_iri in export.bundle_summary.warnings[0]
@@ -9077,6 +9081,18 @@ def test_restage_chain_routes_to_current_successor(
     assert "**Inspect handled stale source:**" in exported
     assert "- Recommended review: " in exported
     assert current_successor.revision_iri in exported
+
+    current_export = db.export_staged_revisions(
+        [original.revision_iri, current_successor.revision_iri],
+        tmp_path / "current-chain-review.md",
+    )
+    assert current_export.bundle_summary.recommended_review_iris == [
+        current_successor.revision_iri
+    ]
+    assert current_export.bundle_summary.external_recommended_review_iris == []
+    assert current_export.bundle_summary.mutation_frontier_iris == [
+        current_successor.revision_iri
+    ]
 
     batch = db.restage_staged_revisions(
         [original.revision_iri],

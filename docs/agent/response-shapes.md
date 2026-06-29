@@ -5013,7 +5013,11 @@ replay validates but has no effective graph delta.
 `restaged_successor_stale_unresolved` marks a refreshed successor that has
 itself become stale again and needs restaging or replacement. The bundle's
 `recommended_review_iris` de-duplicates the current review set in bundle order,
-replacing handled stale sources with their successors. `next_action_queue`
+replacing handled stale sources with their successors. In direct exports,
+`external_recommended_review_iris` lists recommended review targets outside the
+requested bundle; `mutation_frontier_iris` stays scoped to included rows, so
+automation should export or describe the external targets before acting from a
+source-only bundle. `next_action_queue`
 groups the returned row IRIs by action class; inspect each row's
 `next_action.arguments` for the target to call, because handled stale rows may
 point to an applied event even though the queued row is the stale source.

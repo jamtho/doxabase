@@ -1087,6 +1087,7 @@ class StagedGraphRevisionBundleSummary:
     validation_failed_revision_iris: list[str]
     staged_validation_failed_revision_iris: list[str]
     recommended_review_iris: list[str]
+    external_recommended_review_iris: list[str]
     recommended_mutation_review_iris: list[str]
     recommended_apply_or_restage_review_iris: list[str]
     recommended_repair_review_iris: list[str]
@@ -33302,6 +33303,7 @@ class DoxaBase:
             validation_failed_revision_iris=validation_failed,
             staged_validation_failed_revision_iris=staged_validation_failed,
             recommended_review_iris=recommended_review,
+            external_recommended_review_iris=external_recommended_review,
             recommended_mutation_review_iris=recommended_mutation_review,
             recommended_apply_or_restage_review_iris=(
                 recommended_apply_or_restage_review
