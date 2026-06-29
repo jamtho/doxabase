@@ -650,7 +650,12 @@ change.review_recommendation
 ```
 
 Use this response when reviewing a single map assertion add/remove/replace. The
-`judgement_panel` is the compact reviewer view to check first:
+staged validation summary is nested under `change.staged_revision`; scripts
+should read `change.staged_revision.validation_conforms` and
+`change.staged_revision.validation_result_count`, not top-level fields on the
+wrapper record. The wrapper's `revision_iri` is the staged revision IRI to pass
+to generic staged-revision helpers. The `judgement_panel` is the compact
+reviewer view to check first:
 
 ```python
 panel.headline
@@ -3190,7 +3195,9 @@ When `is_current_staged_work` is false,
 the revision has staged patch payloads, except applied revision events report
 `application_status="applied_event"` for scanning. `record_kind` is a compact row
 class such as `staged_patch`, `applied_event`, `export_record`, `import_record`,
-or `history_record`.
+or `history_record`. Direct `check_staged_revision_apply()` responses use
+`decision`; `list_graph_revisions(include_apply_checks=True)` rows use
+`application_decision` for the same routing concept.
 
 A minimal staged/applied scan looks like:
 
@@ -4206,7 +4213,8 @@ check.suggested_next_calls
 carry the checked resource under the same name used by list and export rows.
 Use `check.status` on the direct apply-check object. Revision list rows, grouped
 export summaries, and compact nested description rows use `application_status`
-for the live or summarized apply-check status.
+for the live or summarized apply-check status. Likewise, use `check.decision`
+on direct apply checks and `item.application_decision` on revision list rows.
 Each `check.patch_checks[]` row summarizes one staged patch replay:
 
 ```python

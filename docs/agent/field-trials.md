@@ -2522,6 +2522,18 @@ few useful gaps:
   metric appeared across multiple profile observations. Markdown now groups
   repeated lane labels with a route-group count while preserving full route keys
   in JSON.
+- A staged-recovery workflow trial exercised two stale rows plus one ready row
+  through recovery planning, dry-run batch restage, real batch restage/export,
+  apply-one-then-replan, sibling restage, and exact applied diff inspection. The
+  workflow behaved as intended. The main scripting reminder is field naming:
+  direct apply checks expose `decision`, while list rows expose
+  `application_decision`.
+- An AIS query-planning workflow trial confirmed the documented DailyIndex
+  overlay route: a fresh scratch capsule moved from stale broadcast layout
+  review to a wildcard daily-index handoff after applying the reviewed stale
+  partition-scheme removal. No query-planning code change was justified. The
+  active MCP capsule may lag fixture state; sanity-check `graph_overview`
+  counts when a long-lived capsule reports unexpectedly sparse storage metadata.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
