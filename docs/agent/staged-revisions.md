@@ -310,6 +310,12 @@ current successor, and the response also carries `next_action_after`,
 `next_action_queue_item_after`, and `suggested_next_actions_after` from a fresh
 apply check on that successor. Follow those fields before applying or restaging
 anything else.
+When `describe_staged_revision(..., include_current_apply_check=True)` is called
+on an old stale source, `current_apply_check.status` is the old source's replay
+status, not the resolution state of the whole lineage. Use
+`restaged_by` / `current_restaged_by` and `describe_revision_lineage` to decide
+whether that stale source is already handled by a current successor or applied
+event before mutating anything.
 Each item also carries `source_staged_validation_status` /
 `source_validation_result_count` and `current_staged_validation_status` /
 `current_validation_result_count`, so a dry-run consumer can see stored

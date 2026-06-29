@@ -731,9 +731,13 @@ relation templates, the repair action list puts
 skip the duplicate add.
 Use `suggested_repair_action_groups` as the scripting entrypoint; each group
 preserves the source `repair_hint_path` when you need to jump back to
-`issues[].details.repair_hint`. In the common move case, stage an add of the
-reviewed relation identifier onto the storage access, then stage removal of the
-misplaced source template only if review confirms it was relation metadata
+`issues[].details.repair_hint`. Database relation mismatch groups and compact
+pending action options carry `misplaced_template_subject_iri`,
+`misplaced_template_source`, and `misplaced_template`, so scripts can distinguish
+dataset and partition source templates without parsing action arguments. In the
+common move case, stage an add of the reviewed relation identifier onto the
+storage access, then stage removal of the misplaced source template only if
+review confirms it was relation metadata
 rather than a real file/object path.
 When `candidate_relation_identifier.storage_access_relation_templates` is
 present, inspect those storage-owned relation templates against the target
@@ -1314,9 +1318,11 @@ answer depends on caveats, related observations, value-type context, impacts, or
 validation. The response includes addition/removal Turtle payloads, patch count
 previews, validation fields, impact entries, `assertion_support`,
 `judgement_panel`, and `stage_arguments`. If the panel still justifies the
-write, follow `suggested_next_actions[0]` to call
-`doxabase.stage_map_assertion_change`. The draft is read-only; history counts and
-staged-revision queues should not change.
+write, follow the staging action in `suggested_next_actions` or pass
+`stage_arguments` to `doxabase.stage_map_assertion_change`. High-risk or
+do-not-stage drafts put `doxabase.describe_assertion_support` first and demote
+staging to an explicit override action. The draft is read-only; history counts
+and staged-revision queues should not change.
 
 `doxabase.stage_map_assertion_change`
 

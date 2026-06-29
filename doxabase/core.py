@@ -5638,23 +5638,11 @@ class DoxaBase:
             recommendation=prepared.review_recommendation,
             impacts=impacts,
         )
-        suggested_next_actions = [
-            SuggestedNextAction(
-                action_label="Stage map assertion change",
-                tool_name="stage_map_assertion_change",
-                mcp_tool_name="doxabase.stage_map_assertion_change",
-                arguments=prepared.stage_arguments,
-                reason=(
-                    "Stage this reviewed map assertion change only after the draft "
-                    "support, impacts, validation preview, and judgement panel still "
-                    "justify the write."
-                ),
-                call=self._suggested_call_string(
-                    "stage_map_assertion_change",
-                    prepared.stage_arguments,
-                ),
-            )
-        ]
+        suggested_next_actions = self._draft_map_assertion_change_next_actions(
+            prepared,
+            judgement_panel,
+            limit=limit,
+        )
         return DraftMapAssertionChangeRecord(
             result_kind="draft_map_assertion_change",
             change_kind=prepared.change_kind,
@@ -5685,6 +5673,100 @@ class DoxaBase:
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
+
+    def _draft_map_assertion_change_next_actions(
+        self,
+        prepared: _MapAssertionChangePrepared,
+        judgement_panel: MapAssertionJudgementPanel,
+        *,
+        limit: int,
+    ) -> list[SuggestedNextAction]:
+        stage_action = SuggestedNextAction(
+            action_label="Stage map assertion change",
+            tool_name="stage_map_assertion_change",
+            mcp_tool_name="doxabase.stage_map_assertion_change",
+            arguments=prepared.stage_arguments,
+            reason=(
+                "Stage this reviewed map assertion change only after the draft "
+                "support, impacts, validation preview, and judgement panel still "
+                "justify the write."
+            ),
+            call=self._suggested_call_string(
+                "stage_map_assertion_change",
+                prepared.stage_arguments,
+            ),
+        )
+        if not self._draft_map_assertion_change_requires_support_review(
+            judgement_panel
+        ):
+            return [stage_action]
+
+        review_arguments = self._draft_assertion_support_review_arguments(
+            prepared,
+            limit=limit,
+        )
+        review_action = SuggestedNextAction(
+            action_label="Review assertion support before staging",
+            tool_name="describe_assertion_support",
+            mcp_tool_name="doxabase.describe_assertion_support",
+            arguments=review_arguments,
+            reason=(
+                "This draft is high-risk or marked do-not-stage; inspect support "
+                "routes, caveat scopes, and current-value rationale before any "
+                "write. Mechanical validation means the patch can replay, not that "
+                "the semantic change is good."
+            ),
+            call=self._suggested_call_string(
+                "describe_assertion_support",
+                review_arguments,
+            ),
+        )
+        override_stage_action = replace(
+            stage_action,
+            action_label="Stage map assertion change after explicit override",
+            reason=(
+                "Override the draft review warning only after explicitly deciding "
+                "the high-risk or do-not-stage judgement is outweighed by current "
+                "project evidence."
+            ),
+        )
+        return [review_action, override_stage_action]
+
+    @staticmethod
+    def _draft_map_assertion_change_requires_support_review(
+        judgement_panel: MapAssertionJudgementPanel,
+    ) -> bool:
+        recommendation = (judgement_panel.recommendation or "").strip().lower()
+        return judgement_panel.semantic_risk_level == "high" or recommendation in {
+            "do_not_stage",
+            "do-not-stage",
+            "do not stage",
+        }
+
+    def _draft_assertion_support_review_arguments(
+        self,
+        prepared: _MapAssertionChangePrepared,
+        *,
+        limit: int,
+    ) -> dict[str, Any]:
+        arguments: dict[str, Any] = {
+            "subject": prepared.subject,
+            "predicate": prepared.predicate,
+            "graph": prepared.graph,
+        }
+        if prepared.object_value is not None:
+            arguments["object"] = prepared.object_value
+            arguments["object_kind"] = prepared.stage_arguments.get(
+                "object_kind",
+                "auto",
+            )
+            if prepared.object_datatype is not None:
+                arguments["object_datatype"] = prepared.object_datatype
+            if prepared.object_lang is not None:
+                arguments["object_lang"] = prepared.object_lang
+        if limit != 20:
+            arguments["limit"] = limit
+        return arguments
 
     def stage_map_assertion_change(
         self,
@@ -15271,6 +15353,15 @@ class DoxaBase:
                     values = action.get(key)
                     if isinstance(values, list):
                         action_option[key] = [str(value) for value in values]
+                for key in (
+                    "source_subject_iri",
+                    "misplaced_template_subject_iri",
+                    "misplaced_template_source",
+                    "misplaced_template",
+                ):
+                    value = action.get(key)
+                    if isinstance(value, str):
+                        action_option[key] = value
                 pending_candidate_count = action.get(
                     "already_pending_candidate_count"
                 )
@@ -18236,6 +18327,10 @@ class DoxaBase:
             "action_type": "add_reviewed_relation_template",
             "tool_name": "stage_map_assertion_change",
             "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "source_subject_iri": source_resource.iri,
+            "misplaced_template_subject_iri": source_resource.iri,
+            "misplaced_template_source": template_source,
+            "misplaced_template": template,
             "required_extra_arguments": ["object", "rationale"],
             "rationale_template": (
                 "Reviewed database relation identifier for "
@@ -18260,6 +18355,10 @@ class DoxaBase:
             "action_type": "remove_misplaced_source_template",
             "tool_name": "stage_map_assertion_change",
             "mcp_tool_name": "doxabase.stage_map_assertion_change",
+            "source_subject_iri": source_resource.iri,
+            "misplaced_template_subject_iri": source_resource.iri,
+            "misplaced_template_source": template_source,
+            "misplaced_template": template,
             "required_extra_arguments": ["rationale"],
             "rationale_template": (
                 "Reviewed source template as misplaced database "
@@ -18329,6 +18428,10 @@ class DoxaBase:
         return {
             "action_type": "move_database_relation_template_to_storage_access",
             "requires_review": True,
+            "source_subject_iri": source_resource.iri,
+            "misplaced_template_subject_iri": source_resource.iri,
+            "misplaced_template_source": template_source,
+            "misplaced_template": template,
             "source": {
                 "subject_iri": source_resource.iri,
                 "template_source": template_source,

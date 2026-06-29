@@ -754,9 +754,11 @@ draft.suggested_next_calls
 Use the draft form when you need the assertion-support snapshot, validation
 preview, impacts, and semantic-risk panel before deciding to write. It does not
 create a staged revision, so there is no `revision_iri` or `staged_revision`
-field. If the review still justifies a write, follow
-`draft.suggested_next_actions[0]` or pass `draft.stage_arguments` to
-`stage_map_assertion_change`.
+field. High-risk or do-not-stage drafts put `describe_assertion_support` first
+and demote staging to an explicit override action; otherwise the first suggested
+action is usually `stage_map_assertion_change`. If the review still justifies a
+write, follow the staging action in `draft.suggested_next_actions` or pass
+`draft.stage_arguments` to `stage_map_assertion_change`.
 
 `db.stage_map_assertion_change(subject, predicate, object, rationale, ...)`
 returns a `StagedMapAssertionChangeRecord`:
@@ -2445,9 +2447,12 @@ actions contribute their unique `required_extra_arguments` values to
 `pending_required_extra_arguments`. `pending_action_options[]` repeats the
 pending non-skippable actions' index, type, tool, label, required extra
 arguments, placeholder fields, reviewed value fields, and available safety text
-such as `reason`, `condition`, and `review_rationale_guidance` so scripts can
-choose a branch without parsing every full action template. Use the selected
-full action when you need `arguments`, `arguments_template`,
+such as `reason`, `condition`, and `review_rationale_guidance`. Database relation
+template mismatch options also carry `source_subject_iri`,
+`misplaced_template_subject_iri`, `misplaced_template_source`, and
+`misplaced_template` so scripts can distinguish dataset-owned and
+partition-owned stale templates without parsing action arguments. Use the
+selected full action when you need `arguments`, `arguments_template`,
 `rationale_template`, or protocol-specific guidance. Actions marked
 `action_status="already_pending"` with `skip_when_already_pending=true` are
 skippable too. Exact matching pending staged repairs can be anchored to the
@@ -2699,6 +2704,11 @@ stage a duplicate relation template. `already_on_storage_access` remains the
 exact-value flag for whether the misplaced source template itself is already
 on the storage access. Automation can also read
 `skip_when_already_satisfied=True` on that add action.
+The repair hint and each action expose `source_subject_iri`,
+`misplaced_template_subject_iri`, `misplaced_template_source`, and
+`misplaced_template`; use these first-class fields when several mismatch groups
+share the same storage access but remove different dataset or partition source
+templates.
 `database_relation_template_missing` includes the affected storage access IRI,
 storage protocol IRI, storage root, location kind, allowed relation-template
 sources, and a `repair_hint` with a reviewed add-template action on the storage
@@ -2716,6 +2726,10 @@ repair_hint.candidate_existing_storage_accesses[].pending_staged_repair_iris
 repair_hint.already_pending_candidate_count
 repair_hint.already_pending_storage_access_iris
 repair_hint.pending_staged_repair_iris
+repair_hint.source_subject_iri
+repair_hint.misplaced_template_subject_iri
+repair_hint.misplaced_template_source
+repair_hint.misplaced_template
 repair_hint.source
 repair_hint.target
 repair_hint.candidate_relation_identifier
@@ -2731,6 +2745,10 @@ repair_hint.actions[].tool_name
 repair_hint.actions[].mcp_tool_name
 repair_hint.actions[].action_label
 repair_hint.actions[].reason
+repair_hint.actions[].source_subject_iri
+repair_hint.actions[].misplaced_template_subject_iri
+repair_hint.actions[].misplaced_template_source
+repair_hint.actions[].misplaced_template
 repair_hint.actions[].required_extra_arguments
 repair_hint.actions[].rationale_template
 repair_hint.actions[].placeholder_fields

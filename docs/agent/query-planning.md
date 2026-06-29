@@ -210,7 +210,10 @@ Start with `describe_query_context(dataset_iri)`:
    `action_status_counts`, and
    `pending_action_options` before routing a group. The compact options carry
    branch labels plus available `reason`, `condition`, and
-   `review_rationale_guidance`; use the full action templates when you need
+   `review_rationale_guidance`; database relation template mismatch options also
+   carry `misplaced_template_subject_iri`, `misplaced_template_source`, and
+   `misplaced_template` so scripts can distinguish dataset and partition sources
+   without parsing action arguments. Use the full action templates when you need
    call arguments or rationale/protocol templates. `choice_mode="choose_one"`
    means the actions are alternatives; use the selected action's own
    `required_extra_arguments` rather than the group-level union in
@@ -463,6 +466,10 @@ already carries relation template(s), the remove action is first and the add
 action is marked `action_status="already_satisfied"` with
 `skip_when_already_satisfied=true`, so automation should skip that duplicate
 add and inspect `candidate_relation_identifier.storage_access_relation_templates`
+instead. Repair hints and compact pending options carry
+`misplaced_template_subject_iri`, `misplaced_template_source`, and
+`misplaced_template` for distinguishing dataset-owned and partition-owned stale
+templates that share the same storage access issue resource; compare them
 against the query target candidates. Each add-template repair declares
 `required_extra_arguments=["object", "rationale"]` and
 `placeholder_fields=["object"]`; replace `object` with the reviewed relation

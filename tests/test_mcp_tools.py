@@ -3165,10 +3165,14 @@ def test_draft_map_assertion_change_tool_returns_json_like_payload_without_write
         impact["impact_type"] == "changed_physical_type"
         for impact in result["impacts"]
     )
-    assert result["suggested_next_actions"][0]["tool_name"] == (
-        "stage_map_assertion_change"
-    )
+    assert [
+        action["tool_name"] for action in result["suggested_next_actions"]
+    ] == ["describe_assertion_support", "stage_map_assertion_change"]
     assert result["suggested_next_actions"][0]["mcp_tool_name"] == (
+        "doxabase.describe_assertion_support"
+    )
+    assert "high-risk" in result["suggested_next_actions"][0]["reason"]
+    assert result["suggested_next_actions"][1]["mcp_tool_name"] == (
         "doxabase.stage_map_assertion_change"
     )
     assert result["stage_arguments"]["summary"] == (
@@ -5479,6 +5483,10 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
         "repair_hint": {
             "action_type": "move_database_relation_template_to_storage_access",
             "requires_review": True,
+            "source_subject_iri": dataset,
+            "misplaced_template_subject_iri": dataset,
+            "misplaced_template_source": "dataset",
+            "misplaced_template": dataset_template,
             "source": {
                 "subject_iri": dataset,
                 "template_source": "dataset",
@@ -5505,6 +5513,10 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
                     "action_type": "add_reviewed_relation_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "source_subject_iri": dataset,
+                    "misplaced_template_subject_iri": dataset,
+                    "misplaced_template_source": "dataset",
+                    "misplaced_template": dataset_template,
                     "required_extra_arguments": ["object", "rationale"],
                     "rationale_template": (
                         "Reviewed database relation identifier for "
@@ -5529,6 +5541,10 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
                     "action_type": "remove_misplaced_source_template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "source_subject_iri": dataset,
+                    "misplaced_template_subject_iri": dataset,
+                    "misplaced_template_source": "dataset",
+                    "misplaced_template": dataset_template,
                     "required_extra_arguments": ["rationale"],
                     "rationale_template": (
                         "Reviewed source template as misplaced database "

@@ -241,6 +241,10 @@ action carries a
 `preconditions.staged_revision_applied` field naming the staged revision that
 must be reviewed and applied before the rerun will show map-present follow-up
 recommendations.
+An independently ready `query_plan_handoff` task can remain useful while this
+profile follow-up is open; follow the profile queue when the goal is map cleanup,
+or the handoff queue when the goal is to produce an executable or runtime-ready
+query handoff from already-sufficient context.
 
 For exact response fields, read `response_shapes` sections "Profile Helper
 Records", "Describe Profile Run", and "Profile Map Update Drafts". For broader

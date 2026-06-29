@@ -2680,6 +2680,15 @@ few useful gaps:
   Use `draft_map_assertion_change` first when evaluating a single assertion:
   it returns support, patch, validation, impact, semantic-risk, and stage-action
   previews without writing `history`.
+- A four-way workflow trial wave retested assertion judgement, staged drift
+  recovery, profile-to-query handoff, and storage-aware query planning. The main
+  workflows all completed end-to-end. The follow-up fixes were steering, not new
+  workflow machinery: high-risk or do-not-stage assertion drafts now put support
+  review before the explicit stage override; database relation mismatch repair
+  groups/options expose first-class misplaced-template source fields; docs now
+  distinguish stale-source replay status from lineage resolution and note that
+  post-apply profile follow-up can remain queued while a ready query handoff is
+  still independently useful.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -3408,9 +3408,12 @@ def test_stage_map_assertion_change_packages_support_context(
         for impact in draft_change.impacts
     )
     assert draft_change.judgement_panel.semantic_risk_level == "high"
-    assert draft_change.suggested_next_actions[0].tool_name == (
-        "stage_map_assertion_change"
-    )
+    assert [action.tool_name for action in draft_change.suggested_next_actions] == [
+        "describe_assertion_support",
+        "stage_map_assertion_change",
+    ]
+    assert "high-risk" in draft_change.suggested_next_actions[0].reason
+    assert "explicit override" in draft_change.suggested_next_actions[1].action_label
     assert draft_change.stage_arguments["rationale"].startswith(
         "Testing a tempting but risky coercion"
     )
@@ -17881,6 +17884,10 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
         "repair_hint": {
             "action_type": "move_database_relation_template_to_storage_access",
             "requires_review": True,
+            "source_subject_iri": partition.iri,
+            "misplaced_template_subject_iri": partition.iri,
+            "misplaced_template_source": "partition_scheme",
+            "misplaced_template": partition_template,
             "source": {
                 "subject_iri": partition.iri,
                 "template_source": "partition_scheme",
@@ -17911,6 +17918,10 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                         "action_type": "remove_misplaced_source_template",
                         "tool_name": "stage_map_assertion_change",
                         "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "source_subject_iri": partition.iri,
+                        "misplaced_template_subject_iri": partition.iri,
+                        "misplaced_template_source": "partition_scheme",
+                        "misplaced_template": partition_template,
                         "required_extra_arguments": ["rationale"],
                         "rationale_template": (
                             "Reviewed source template as misplaced database "
@@ -17934,6 +17945,10 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                         "action_type": "add_reviewed_relation_template",
                         "tool_name": "stage_map_assertion_change",
                         "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "source_subject_iri": partition.iri,
+                        "misplaced_template_subject_iri": partition.iri,
+                        "misplaced_template_source": "partition_scheme",
+                        "misplaced_template": partition_template,
                         "required_extra_arguments": ["object", "rationale"],
                         "rationale_template": (
                             "Reviewed database relation identifier for "
@@ -18349,6 +18364,10 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
     issue = context.issues[0]
     assert issue.details is not None
     repair_hint = issue.details["repair_hint"]
+    assert repair_hint["source_subject_iri"] == dataset
+    assert repair_hint["misplaced_template_subject_iri"] == dataset
+    assert repair_hint["misplaced_template_source"] == "dataset"
+    assert repair_hint["misplaced_template"] == dataset_template
     assert repair_hint["source"] == {
         "subject_iri": dataset,
         "template_source": "dataset",
@@ -18368,6 +18387,9 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         "change_kind": "add",
         "graph": "map",
     }
+    assert repair_hint["actions"][0]["source_subject_iri"] == dataset
+    assert repair_hint["actions"][0]["misplaced_template_subject_iri"] == dataset
+    assert repair_hint["actions"][0]["misplaced_template"] == dataset_template
     assert repair_hint["actions"][0]["required_extra_arguments"] == [
         "object",
         "rationale",
@@ -18385,6 +18407,9 @@ def test_database_storage_does_not_treat_dataset_template_as_relation(
         "change_kind": "remove",
         "graph": "map",
     }
+    assert repair_hint["actions"][1]["source_subject_iri"] == dataset
+    assert repair_hint["actions"][1]["misplaced_template_subject_iri"] == dataset
+    assert repair_hint["actions"][1]["misplaced_template"] == dataset_template
     assert repair_hint["actions"][1]["required_extra_arguments"] == ["rationale"]
     assert repair_hint["actions"][1]["rationale_template"] == (
         "Reviewed source template as misplaced database relation metadata."
@@ -18507,6 +18532,11 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
     assert [
         option["action_type"] for option in pending_group.pending_action_options
     ] == ["remove_misplaced_source_template"]
+    pending_remove_option = pending_group.pending_action_options[0]
+    assert pending_remove_option["source_subject_iri"] == dataset
+    assert pending_remove_option["misplaced_template_subject_iri"] == dataset
+    assert pending_remove_option["misplaced_template_source"] == "dataset"
+    assert pending_remove_option["misplaced_template"] == dataset_template
     pending_add = pending_action_by_type["add_reviewed_relation_template"]
     assert pending_add["action_status"] == "already_pending"
     assert pending_add["skip_when_already_pending"] is True
