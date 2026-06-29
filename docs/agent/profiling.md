@@ -80,6 +80,11 @@ Use `suggested_next_action_groups` instead of flattening every review lane into
 one mutation queue. If the draft has no recommendations but metric or type
 advisories are present, it is advisory-only: do not call
 `stage_profile_map_updates` just to clear the draft.
+If same dataset/evidence profile map updates are already staged, the draft sets
+`pending_staged_profile_update_iris` and puts a
+`plan_staged_revision_recovery` action first in `profile_map_updates`. Review
+that staged frontier before using any following `stage_profile_map_updates`
+action for a deliberate alternative or duplicate.
 Grouped action source blocks expose stable `route_group_key` and
 `route_step_key` fields. Use the group key to connect a draft lane, such as a
 profile map-update duplicate group or metric/type advisory group, to later

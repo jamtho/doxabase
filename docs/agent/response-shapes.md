@@ -1402,6 +1402,8 @@ draft.dataset
 draft.evidence
 draft.evidence_iri
 draft.map_dataset_found
+draft.pending_staged_profile_update_iris
+draft.pending_staged_profile_update_count
 draft.profile_observation_iris
 draft.recommendations
 draft.recommendation_count
@@ -1471,6 +1473,13 @@ one column, are also non-default-stageable until one value is chosen explicitly.
 `unmapped_profiled_column` duplicate groups are keyed by the helper mutation,
 not profile-specific sample details, so one accepted representative can stage the
 column shell while preserving all supporting profile observations.
+When current staged work already contains a profile map update for the same
+dataset/evidence pair, `pending_staged_profile_update_iris` names those staged
+rows and `pending_staged_profile_update_count` gives the count. In that case the
+`profile_map_updates` action group starts with a read-only
+`plan_staged_revision_recovery(revision_iris=[...])` action before any fresh
+`stage_profile_map_updates` action, and `review_note` warns the caller to review
+the staged frontier before staging another copy.
 
 `scalar_conflict_groups[]` gives a structured choose-one route for those
 non-default-stageable scalar conflicts:
@@ -1661,9 +1670,9 @@ context; the profile recommendations remain available for explicit review.
 `suggested_next_call_groups`
 mirrors those groups with display call strings. The flat top-level
 `suggested_next_actions` / `suggested_next_calls` fields remain for compatibility
-and include only bulk-safe default map/advisory lanes plus the leading
-query-context review action when present; scalar-conflict option actions stay
-grouped only. Group lanes may de-duplicate shared actions, such as one
+and include only bulk-safe default map/advisory lanes plus leading
+query-context or pending-staged review actions when present; scalar-conflict
+option actions stay grouped only. Group lanes may de-duplicate shared actions, such as one
 `describe_pattern` action used by several metric advisories. Query-context
 review actions carry `source_query_context`:
 
@@ -1699,7 +1708,16 @@ action.source_profile_map_update["duplicate_recommendation_indexes"]
 action.source_profile_map_update["duplicate_profile_observation_iris"]
 action.source_profile_map_update["route_anchor_iris"]
 action.source_profile_map_update["route_pattern_iris"]
+action.source_profile_map_update["action_status"]
+action.source_profile_map_update["pending_staged_profile_update_iris"]
+action.source_profile_map_update["pending_staged_profile_update_count"]
 ```
+
+`action_status` is usually `available`. It is `already_pending` on the
+read-only staged-frontier review action inserted for same dataset/evidence
+pending work, and `available_after_pending_review` on a fresh staging action
+that remains available for deliberate alternative or duplicate review after the
+pending staged rows have been inspected.
 
 Grouped metric/type actions are `ProfileAdvisorySuggestedNextAction` rows and
 carry source metadata:

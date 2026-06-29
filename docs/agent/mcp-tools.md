@@ -485,6 +485,11 @@ Prefer `suggested_next_action_groups` / `suggested_next_call_groups` for quick
 routing; non-empty lanes are grouped as `query_context_review`,
 `profile_map_updates`, `profile_scalar_conflict_review`,
 `metric_vocabulary_review`, and `profile_type_review`.
+When same dataset/evidence profile map updates are already staged, the draft
+sets `pending_staged_profile_update_iris` and the `profile_map_updates` group
+starts with `plan_staged_revision_recovery` for those staged rows. Treat any
+following `stage_profile_map_updates` action as available only after reviewing
+the pending staged work.
 `query_context_review` appears first when the dataset already has physical-query
 metadata such as a path template or layout, but `describe_query_context` still
 reports blocking physical metadata issues. Its action points to

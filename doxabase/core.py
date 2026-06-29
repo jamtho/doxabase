@@ -2524,6 +2524,8 @@ class ProfileMapUpdateDraft:
     evidence: EvidenceDescription
     evidence_iri: str
     map_dataset_found: bool
+    pending_staged_profile_update_iris: list[str]
+    pending_staged_profile_update_count: int
     profile_observation_iris: list[str]
     recommendations: list[ProfileMapUpdateRecommendation]
     recommendation_count: int
@@ -4352,13 +4354,76 @@ class DoxaBase:
             and self._project_brief_staged_item_is_profile_map_update(item)
         ]
 
+    def _pending_staged_profile_update_iris(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+    ) -> list[str]:
+        dataset_value = self.expand_iri(dataset_iri)
+        evidence_value = self.expand_iri(evidence_iri)
+        listing = self.list_graph_revisions(
+            current_staged_work_only=True,
+            include_apply_checks=True,
+            limit=200,
+        )
+        if listing.count > listing.returned_count:
+            listing = self.list_graph_revisions(
+                current_staged_work_only=True,
+                include_apply_checks=True,
+                limit=listing.count,
+            )
+        queue_by_row = {
+            item.row_iri: item for item in listing.next_action_queue_items
+        }
+        ignored_queues = {
+            None,
+            "informational",
+            "inspect_already_applied",
+        }
+        pending: list[str] = []
+        for revision in listing.revisions:
+            queue_item = queue_by_row.get(revision.iri)
+            queue = (
+                queue_item.queue
+                if queue_item is not None
+                else revision.next_action.queue
+                if revision.next_action is not None
+                else None
+            )
+            if queue in ignored_queues:
+                continue
+            if not revision.suggested_next_actions and queue_item is None:
+                continue
+            if dataset_value not in self._objects(
+                ["history"],
+                revision.iri,
+                "rc:revisionAnchor",
+            ):
+                continue
+            if evidence_value not in self._objects(
+                ["history"],
+                revision.iri,
+                "rc:evidence",
+            ):
+                continue
+            if not self._staged_revision_is_profile_map_update(revision.iri):
+                continue
+            pending.append(revision.iri)
+        return pending
+
     def _project_brief_staged_item_is_profile_map_update(
         self,
         item: ProjectBriefStagedReviewItem,
     ) -> bool:
+        return self._staged_revision_is_profile_map_update(item.revision_iri)
+
+    def _staged_revision_is_profile_map_update(
+        self,
+        revision_iri: str,
+    ) -> bool:
         review_note = self._first_object(
             self._expand_graphs(["history"]),
-            item.revision_iri,
+            revision_iri,
             "rc:reviewNote",
         )
         return bool(
@@ -11891,11 +11956,20 @@ class DoxaBase:
             if dataset_description is not None
             else []
         )
+        pending_staged_profile_update_iris = (
+            self._pending_staged_profile_update_iris(
+                dataset_value,
+                evidence_value,
+            )
+        )
         suggested_next_action_groups = (
             self._profile_map_update_draft_action_groups(
                 dataset_iri=dataset_value,
                 evidence_iri=evidence_value,
                 query_context_review_actions=query_context_review_actions,
+                pending_staged_profile_update_iris=(
+                    pending_staged_profile_update_iris
+                ),
                 recommendations=recommendations,
                 default_stageable_representative_indexes=(
                     default_stageable_representative_indexes
@@ -11920,6 +11994,12 @@ class DoxaBase:
             evidence=profile_run.evidence,
             evidence_iri=evidence_value,
             map_dataset_found=map_dataset_found,
+            pending_staged_profile_update_iris=(
+                pending_staged_profile_update_iris
+            ),
+            pending_staged_profile_update_count=len(
+                pending_staged_profile_update_iris
+            ),
             profile_observation_iris=profile_run.profile_observation_iris,
             recommendations=recommendations,
             recommendation_count=len(recommendations),
@@ -11946,7 +12026,10 @@ class DoxaBase:
             suggested_next_call_groups=suggested_next_call_groups,
             review_note=(
                 self._profile_map_update_draft_review_note(
-                    query_context_review_actions=query_context_review_actions
+                    query_context_review_actions=query_context_review_actions,
+                    pending_staged_profile_update_iris=(
+                        pending_staged_profile_update_iris
+                    ),
                 )
             ),
         )
@@ -11957,6 +12040,7 @@ class DoxaBase:
         dataset_iri: str,
         evidence_iri: str,
         query_context_review_actions: list[SuggestedNextAction],
+        pending_staged_profile_update_iris: list[str],
         recommendations: list[ProfileMapUpdateRecommendation],
         default_stageable_representative_indexes: list[int],
         scalar_conflict_groups: list[ProfileScalarConflictGroup],
@@ -11975,6 +12059,9 @@ class DoxaBase:
                 default_stageable_representative_indexes
             ),
             supporting_patterns=supporting_patterns,
+            pending_staged_profile_update_iris=(
+                pending_staged_profile_update_iris
+            ),
         )
         if profile_map_actions:
             groups["profile_map_updates"] = profile_map_actions
@@ -12091,6 +12178,7 @@ class DoxaBase:
     def _profile_map_update_draft_review_note(
         *,
         query_context_review_actions: list[SuggestedNextAction],
+        pending_staged_profile_update_iris: list[str],
     ) -> str:
         note = (
             "This draft is read-only review context derived from profile "
@@ -12098,6 +12186,14 @@ class DoxaBase:
             "through map helpers or staged revisions after checking sample "
             "scope, evidence, caveats, and project modelling intent."
         )
+        if pending_staged_profile_update_iris:
+            pending_count = len(pending_staged_profile_update_iris)
+            note = (
+                f"{note} {pending_count} pending staged profile map update"
+                f"{'' if pending_count == 1 else 's'} already anchor this "
+                "dataset/evidence pair; review the staged frontier before "
+                "staging another profile-derived map update."
+            )
         if query_context_review_actions:
             return (
                 f"{note} Query context has blocking physical metadata issues; "
@@ -12644,14 +12740,28 @@ class DoxaBase:
         recommendations: list[ProfileMapUpdateRecommendation],
         default_stageable_representative_indexes: list[int],
         supporting_patterns: list[str],
+        pending_staged_profile_update_iris: list[str],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
+        if pending_staged_profile_update_iris:
+            actions.append(
+                self._profile_map_update_pending_staged_action(
+                    dataset_iri=dataset_iri,
+                    evidence_iri=evidence_iri,
+                    pending_staged_profile_update_iris=(
+                        pending_staged_profile_update_iris
+                    ),
+                )
+            )
         if default_stageable_representative_indexes:
             action = self._profile_map_update_stage_action(
                 dataset_iri=dataset_iri,
                 evidence_iri=evidence_iri,
                 recommendation_indexes=default_stageable_representative_indexes,
                 supporting_patterns=supporting_patterns,
+                pending_staged_profile_update_iris=(
+                    pending_staged_profile_update_iris
+                ),
             )
             source_profile_map_update = self._profile_map_update_route_source(
                 dataset_iri=dataset_iri,
@@ -12660,6 +12770,9 @@ class DoxaBase:
                 recommendation_indexes=default_stageable_representative_indexes,
                 supporting_patterns=supporting_patterns,
                 action=action,
+                pending_staged_profile_update_iris=(
+                    pending_staged_profile_update_iris
+                ),
             )
             actions.append(
                 ProfileMapUpdateSuggestedNextAction(
@@ -12675,6 +12788,74 @@ class DoxaBase:
 
         return actions
 
+    def _profile_map_update_pending_staged_action(
+        self,
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+        pending_staged_profile_update_iris: list[str],
+    ) -> ProfileMapUpdateSuggestedNextAction:
+        arguments = {
+            "revision_iris": list(pending_staged_profile_update_iris),
+        }
+        action = SuggestedNextAction(
+            action_label="Review pending staged profile map updates",
+            tool_name="plan_staged_revision_recovery",
+            mcp_tool_name="doxabase.plan_staged_revision_recovery",
+            arguments=arguments,
+            reason=(
+                "Pending staged profile map update(s) already anchor this "
+                "dataset/evidence pair. Review the staged frontier before "
+                "staging another profile-derived map update from the same "
+                "draft."
+            ),
+            call=self._suggested_call_string(
+                "plan_staged_revision_recovery",
+                arguments,
+            ),
+        )
+        route_group_key = self._profile_route_group_key(
+            "profile_map_updates",
+            {
+                "dataset_iri": dataset_iri,
+                "evidence_iri": evidence_iri,
+                "pending_staged_profile_update_iris": (
+                    pending_staged_profile_update_iris
+                ),
+            },
+        )
+        source_profile_map_update = self._with_profile_route_step_key(
+            {
+                "review_lane": "profile_map_updates",
+                "route_group_key": route_group_key,
+                "evidence_iri": evidence_iri,
+                "profile_evidence_iri": evidence_iri,
+                "action_status": "already_pending",
+                "recommendation_indexes": [],
+                "duplicate_group_keys": [],
+                "duplicate_recommendation_indexes": [],
+                "duplicate_profile_observation_iris": [],
+                "pending_staged_profile_update_iris": (
+                    list(pending_staged_profile_update_iris)
+                ),
+                "pending_staged_profile_update_count": len(
+                    pending_staged_profile_update_iris
+                ),
+                "route_anchor_iris": [dataset_iri],
+                "route_pattern_iris": [],
+            },
+            action,
+        )
+        return ProfileMapUpdateSuggestedNextAction(
+            action_label=action.action_label,
+            tool_name=action.tool_name,
+            mcp_tool_name=action.mcp_tool_name,
+            arguments=action.arguments,
+            reason=action.reason,
+            call=action.call,
+            source_profile_map_update=source_profile_map_update,
+        )
+
     def _profile_map_update_stage_action(
         self,
         *,
@@ -12682,6 +12863,7 @@ class DoxaBase:
         evidence_iri: str,
         recommendation_indexes: list[int],
         supporting_patterns: list[str],
+        pending_staged_profile_update_iris: list[str] | None = None,
     ) -> SuggestedNextAction:
         arguments: dict[str, Any] = {
             "dataset_iri": dataset_iri,
@@ -12690,13 +12872,20 @@ class DoxaBase:
         }
         if supporting_patterns:
             arguments["supporting_patterns"] = list(supporting_patterns)
+        pending_intro = ""
+        if pending_staged_profile_update_iris:
+            pending_intro = (
+                "Pending staged profile map update(s) already anchor this "
+                "dataset/evidence pair; review them before staging another "
+                "profile-derived map update. "
+            )
         return SuggestedNextAction(
             action_label="Review and stage profile map updates",
             tool_name="stage_profile_map_updates",
             mcp_tool_name="doxabase.stage_profile_map_updates",
             arguments=arguments,
             reason=(
-                "Review recommendation rows, sample scope, default staging "
+                f"{pending_intro}Review recommendation rows, sample scope, default staging "
                 "guardrails, evidence, and metric/type advisory lanes; then "
                 "pass accepted default-stageable indexes to "
                 "stage_profile_map_updates. Sampled row-count updates require "
@@ -12718,6 +12907,7 @@ class DoxaBase:
         recommendation_indexes: list[int],
         supporting_patterns: list[str],
         action: SuggestedNextAction,
+        pending_staged_profile_update_iris: list[str] | None = None,
     ) -> dict[str, Any]:
         selected_recommendations = [
             recommendations[index]
@@ -12769,6 +12959,17 @@ class DoxaBase:
                 ),
                 "route_anchor_iris": route_anchor_iris,
                 "route_pattern_iris": list(supporting_patterns),
+                "action_status": (
+                    "available_after_pending_review"
+                    if pending_staged_profile_update_iris
+                    else "available"
+                ),
+                "pending_staged_profile_update_iris": list(
+                    pending_staged_profile_update_iris or []
+                ),
+                "pending_staged_profile_update_count": len(
+                    pending_staged_profile_update_iris or []
+                ),
             },
             action,
         )
@@ -12804,6 +13005,9 @@ class DoxaBase:
                 evidence_iri=draft.evidence_iri,
                 recommendation_indexes=staged_indexes,
                 supporting_patterns=supporting_patterns,
+                pending_staged_profile_update_iris=(
+                    draft.pending_staged_profile_update_iris
+                ),
             )
             map_sources = [
                 self._profile_map_update_route_source(
@@ -12813,6 +13017,9 @@ class DoxaBase:
                     recommendation_indexes=staged_indexes,
                     supporting_patterns=supporting_patterns,
                     action=action,
+                    pending_staged_profile_update_iris=(
+                        draft.pending_staged_profile_update_iris
+                    ),
                 )
             ]
 
@@ -32951,6 +33158,8 @@ class DoxaBase:
                         source = dict(value)
                         break
                 if source is None:
+                    continue
+                if source.get("action_status") == "already_pending":
                     continue
                 route_step_key = source.get("route_step_key")
                 if not isinstance(route_step_key, str):

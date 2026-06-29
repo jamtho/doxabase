@@ -24698,6 +24698,8 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
 
     assert draft.map_dataset_found is True
     assert draft.evidence_iri == evidence
+    assert draft.pending_staged_profile_update_iris == []
+    assert draft.pending_staged_profile_update_count == 0
     assert len(draft.profile_observation_iris) == 4
     assert "read-only review context" in draft.review_note
     assert draft.recommendation_count == 3
@@ -24817,6 +24819,40 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert metric_pattern.pattern_iri not in {
         item.iri for item in described_staged.supporting_patterns
     }
+
+    rerun_draft = db.draft_profile_map_updates(dataset, evidence)
+    assert rerun_draft.pending_staged_profile_update_iris == [
+        staged_from_suggestion.staged_revision.revision_iri
+    ]
+    assert rerun_draft.pending_staged_profile_update_count == 1
+    assert "pending staged profile map update" in rerun_draft.review_note
+    rerun_profile_map_actions = rerun_draft.suggested_next_action_groups[
+        "profile_map_updates"
+    ]
+    assert [action.tool_name for action in rerun_profile_map_actions] == [
+        "plan_staged_revision_recovery",
+        "stage_profile_map_updates",
+    ]
+    pending_action = rerun_profile_map_actions[0]
+    assert pending_action.arguments == {
+        "revision_iris": [staged_from_suggestion.staged_revision.revision_iri]
+    }
+    pending_source = pending_action.source_profile_map_update
+    assert pending_source["action_status"] == "already_pending"
+    assert pending_source["pending_staged_profile_update_iris"] == [
+        staged_from_suggestion.staged_revision.revision_iri
+    ]
+    assert pending_source["pending_staged_profile_update_count"] == 1
+    duplicate_stage_action = rerun_profile_map_actions[1]
+    assert "Pending staged profile map update" in duplicate_stage_action.reason
+    duplicate_stage_source = duplicate_stage_action.source_profile_map_update
+    assert duplicate_stage_source["action_status"] == (
+        "available_after_pending_review"
+    )
+    assert duplicate_stage_source["pending_staged_profile_update_iris"] == [
+        staged_from_suggestion.staged_revision.revision_iri
+    ]
+    assert rerun_draft.suggested_next_actions[0] == pending_action
 
     row_count = draft.recommendations[0]
     assert row_count.action == "replace_map_value"
