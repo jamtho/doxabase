@@ -225,8 +225,10 @@ grouped staged review before selecting a durable path.
 When you stage a caller-authored alternative from a plan item, pass the matching
 `source_profile_advisories` entry through `profile_route_sources` so profile
 insight review can close that advisory lane as a direct action.
-`stage_pattern_promotion` and `stage_systematisation` both accept that
-passthrough.
+`stage_map_assertion_change`, `stage_pattern_promotion`, and
+`stage_systematisation` accept that passthrough. A profile insight review bundle
+now reserves `direct_action` for persisted route sources; live draft overlap is
+support context and should not be treated as a closed lane.
 
 When `stage_profile_map_updates` creates a staged revision, its
 `suggested_next_actions` includes an `export_profile_insight_review_bundle`
@@ -253,7 +255,10 @@ carry the returned `pattern_iri` into the later assertion stage, for example
 `stage_map_assertion_change(..., supporting_patterns=[pattern_iri])`, when the
 candidate map assertion should preserve that pattern support. The review bundle
 can then show the staged assertion as directly supported by the advisory pattern
-instead of leaving the reviewer to reconnect the two rows manually.
+instead of leaving the reviewer to reconnect the two rows manually. Also pass the
+selected action's `source_profile_advisory` through
+`profile_route_sources=[...]`; otherwise the staged assertion may appear as
+strong support but will not close the advisory lane as `direct_action`.
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.

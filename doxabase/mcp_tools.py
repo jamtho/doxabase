@@ -1592,6 +1592,7 @@ def stage_map_assertion_change_tool(
     restages_revision: str | None = None,
     review_note: str | None = None,
     review_recommendation: str | None = None,
+    profile_route_sources: list[dict[str, Any]] | None = None,
     validation_scope: str = "all",
     limit: int = 20,
 ) -> dict[str, Any]:
@@ -1621,6 +1622,7 @@ def stage_map_assertion_change_tool(
         restages_revision=restages_revision,
         review_note=review_note,
         review_recommendation=review_recommendation,
+        profile_route_sources=profile_route_sources,
         validation_scope=validation_scope,  # type: ignore[arg-type]
         limit=limit,
     )

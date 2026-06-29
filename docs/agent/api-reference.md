@@ -1152,6 +1152,13 @@ the revision as support-only context. The returned
 provided input with count `0` emits a warning and usually means the source block
 was shaped incorrectly.
 
+`stage_map_assertion_change()` also accepts `profile_route_sources`. Use
+`profile_route_sources=[action.source_profile_advisory]` when a profile
+type-review assertion is meant to close the selected advisory route. The returned
+`profile_route_source_count` reports how many usable source blocks were stored.
+Profile insight review bundles reserve `direct_action` for persisted route
+sources; shared live draft support is not enough to close a lane.
+
 `stage_pattern_promotion()` stages one or more caller-authored RDF framings
 supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;
 the helper records the selected patterns as support, rolls up their supporting

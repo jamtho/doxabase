@@ -3305,6 +3305,7 @@ class StagedMapAssertionChangeRecord:
     judgement_panel: MapAssertionJudgementPanel
     review_note: str
     review_recommendation: str | None
+    profile_route_source_count: int
 
 
 @dataclass(frozen=True)
@@ -5996,6 +5997,9 @@ class DoxaBase:
         restages_revision: str | None = None,
         review_note: str | None = None,
         review_recommendation: str | None = None,
+        profile_route_sources: Iterable[Mapping[str, Any]]
+        | Mapping[str, Any]
+        | None = None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -6005,6 +6009,9 @@ class DoxaBase:
         ] = "all",
         limit: int = 20,
     ) -> StagedMapAssertionChangeRecord:
+        profile_route_source_values = self._explicit_profile_route_sources(
+            profile_route_sources
+        )
         prepared = self._prepare_map_assertion_change(
             subject=subject,
             predicate=predicate,
@@ -6056,6 +6063,15 @@ class DoxaBase:
             review_recommendation=prepared.review_recommendation,
             validation_scope=validation_scope,
         )
+        extra_route_source_triples = self._record_profile_insight_route_sources(
+            staged.revision_iri,
+            profile_route_source_values,
+        )
+        if extra_route_source_triples:
+            staged = replace(
+                staged,
+                triples=staged.triples + extra_route_source_triples,
+            )
         staged_description = self.describe_staged_revision(staged.revision_iri)
         judgement_panel = self._map_assertion_change_judgement_panel(
             prepared.assertion_support,
@@ -6082,6 +6098,7 @@ class DoxaBase:
             judgement_panel=judgement_panel,
             review_note=prepared.review_note,
             review_recommendation=prepared.review_recommendation,
+            profile_route_source_count=len(profile_route_source_values),
         )
 
     def describe_graph_revision(
@@ -35218,14 +35235,11 @@ class DoxaBase:
         direct_review_lane = self._profile_insight_candidate_direct_review_lane(
             description
         )
-        live_sources_can_be_direct = (
-            self._applied_event_for_staged_revision(description.iri) is None
-        )
         live_route_sources = [
             self._profile_insight_candidate_route_source(
                 source,
                 source_origin="live_draft",
-                direct_allowed=live_sources_can_be_direct,
+                direct_allowed=False,
             )
             for source in profile_route_sources
         ]

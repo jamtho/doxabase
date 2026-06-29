@@ -2827,6 +2827,15 @@ few useful gaps:
   handoff. Export records now expose `artifact_kind`, `importable`,
   `recommended_import_tool`, and `recovery_complete` so agents can route these
   artifact classes mechanically.
+- A profile advisory grouping trial found that broad same-lane evidence could
+  make sibling type routes look directly closed when only one assertion or
+  promotion had actually been selected. `stage_map_assertion_change` now accepts
+  `profile_route_sources`, matching `stage_pattern_promotion` and
+  `stage_systematisation`; profile insight bundles reserve `direct_action` for
+  persisted route sources and leave live draft overlap as support-only context.
+  When staging from `advisory_followthrough_plan`, pass the selected source block
+  to the staging helper and check `profile_route_source_count` before treating an
+  advisory lane as closed.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

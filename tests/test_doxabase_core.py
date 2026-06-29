@@ -25981,7 +25981,11 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
         if action.tool_name == "stage_pattern_promotion"
     )
     metric_route_key = promotion_action.source_profile_advisory["route_group_key"]
-    metric_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
+    metric_promotion = db.stage_pattern_promotion(
+        **promotion_action.arguments,
+        profile_route_sources=[promotion_action.source_profile_advisory],
+    )
+    assert metric_promotion.profile_route_source_count == 1
     storage_access = "https://example.test/profile-review#SupportEventsStorage"
     query_repair_draft = db.stage_systematisation(
         summary="Review Support Events storage access",
@@ -27087,6 +27091,123 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert "profile_type_review" not in {
         lane.review_lane for lane in review.open_profile_review_lanes
     }
+
+
+def test_profile_type_assertion_route_source_closes_only_selected_advisory(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    channel_column = "https://example.test/project#OrdersChannel"
+    status_value_type = "https://example.test/project#StatusCodeValue"
+    channel_value_type = "https://example.test/project#ChannelCodeValue"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    db.record_map_column(
+        channel_column,
+        table_iri=dataset,
+        column_name="channel",
+        physical_type="rc:Varchar",
+    )
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with two project value types.",
+        evidence_summary="Synthetic type-finding profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status carried a reviewed lifecycle code.",
+                "physical_type": "rc:Varchar",
+                "value_type": status_value_type,
+            },
+            {
+                "column_iri": channel_column,
+                "column_name": "channel",
+                "summary": "Channel carried a reviewed acquisition code.",
+                "physical_type": "rc:Varchar",
+                "value_type": channel_value_type,
+            },
+        ],
+    )
+    broad_pattern = db.record_pattern(
+        summary="Orders coded columns need value-type review.",
+        pattern_text=(
+            "Orders status and channel codes both need value-type review before "
+            "profile findings become current map assertions."
+        ),
+        rationale="One profile review pattern intentionally supports two type lanes.",
+        pattern_targets=[status_value_type, channel_value_type],
+        supporting_observations=bundle.handoff_entrypoints.profile_observation_iris,
+        evidence_iri=evidence,
+        map_implications=[status_value_type, channel_value_type],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    type_actions = draft.suggested_next_action_groups["profile_type_review"]
+    status_action = next(
+        action
+        for action in type_actions
+        if action.tool_name == "stage_map_assertion_change"
+        and action.arguments["subject"] == status_column
+        and action.arguments["predicate"] == "rc:valueType"
+    )
+    channel_action = next(
+        action
+        for action in type_actions
+        if action.tool_name == "stage_map_assertion_change"
+        and action.arguments["subject"] == channel_column
+        and action.arguments["predicate"] == "rc:valueType"
+    )
+    status_route_key = status_action.source_profile_advisory["route_group_key"]
+    channel_route_key = channel_action.source_profile_advisory["route_group_key"]
+    assert status_route_key != channel_route_key
+
+    status_arguments = dict(status_action.arguments)
+    status_arguments["supporting_patterns"] = [broad_pattern.pattern_iri]
+    status_arguments["profile_route_sources"] = [
+        status_action.source_profile_advisory
+    ]
+    staged_status = db.stage_map_assertion_change(**status_arguments)
+
+    assert staged_status.profile_route_source_count == 1
+
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "orders-profile-type-routes.md",
+    )
+    candidate = next(
+        candidate
+        for candidate in review.candidates
+        if candidate.revision_iri == staged_status.revision_iri
+    )
+    route_groups = {
+        group["route_group_key"]: group for group in candidate.profile_route_groups
+    }
+
+    assert route_groups[status_route_key]["match_strength"] == "direct_action"
+    assert route_groups[channel_route_key]["match_strength"] == "strong_support"
+
+    open_route_keys = {
+        route_group_key
+        for lane in review.open_profile_review_lanes
+        for route_group_key in lane.route_group_keys
+    }
+    assert status_route_key not in open_route_keys
+    assert channel_route_key in open_route_keys
 
 
 def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(

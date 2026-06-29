@@ -3262,9 +3262,17 @@ def test_stage_map_assertion_change_tool_returns_json_like_payload(
             "travels with the staged revision."
         ),
         change_kind="replace",
+        profile_route_sources=[
+            {
+                "review_lane": "profile_type_review",
+                "route_group_key": "profile_type_review:test-route",
+                "route_step_key": "profile-route-step:test-route",
+            }
+        ],
     )
 
     assert result["change_kind"] == "replace"
+    assert result["profile_route_source_count"] == 1
     assert result["assertion_present_before"] is False
     assert result["assertion_support"]["absence_note"] is not None
     assert "Current same-subject/predicate value(s): VARCHAR" in (

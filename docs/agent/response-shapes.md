@@ -790,6 +790,7 @@ change.staged_revision
 change.judgement_panel
 change.review_note
 change.review_recommendation
+change.profile_route_source_count
 ```
 
 Use this response when reviewing a single map assertion add/remove/replace. The
@@ -797,8 +798,14 @@ staged validation summary is nested under `change.staged_revision`; scripts
 should read `change.staged_revision.validation_conforms` and
 `change.staged_revision.validation_result_count`, not top-level fields on the
 wrapper record. The wrapper's `revision_iri` is the staged revision IRI to pass
-to generic staged-revision helpers. The `judgement_panel` is the compact
-reviewer view to check first:
+to generic staged-revision helpers. When a map assertion stages a selected
+profile advisory route, pass the action source block with
+`profile_route_sources=[action.source_profile_advisory]`; the returned
+`profile_route_source_count` should be greater than `0` before a profile insight
+review bundle can mark that advisory lane as `direct_action`. Shared live draft
+support may still surface the staged row as related or strong support, but it
+does not close the lane. The `judgement_panel` is the compact reviewer view to
+check first:
 
 ```python
 panel.headline
