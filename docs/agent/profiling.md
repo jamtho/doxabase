@@ -153,6 +153,10 @@ group led to each staged row without reverse-joining action indexes by hand.
 The bridge `Row` column uses the same row number as the grouped review bundle's
 `Revision N` sections and repeats the candidate summary, so a Markdown-only
 reviewer can map route lanes back to the detailed revision section directly.
+When several route groups map to the same lane, match strength, and support
+kind, the Markdown lane label is grouped with a route-group count; the returned
+`profile_route_keys` and `profile_route_groups` still preserve every route key
+for scripts.
 New `stage_profile_map_updates` revisions persist their profile route source in
 history, so post-apply exports can still show the original
 `profile_map_updates` direct-action lane after the live draft no longer proposes

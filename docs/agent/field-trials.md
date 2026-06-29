@@ -2517,10 +2517,11 @@ few useful gaps:
 - A profile-insight frontier trial confirmed awkward project metric and value
   type workflows can record profile bundles, stage map updates, stage metric
   vocabulary promotions, detect pending duplicate metric promotions, and export
-  related profile insight review bundles. Remaining presentation friction:
-  profile route bridge Markdown can repeat the same review lane several times
-  when one project metric appears across multiple profile observations; consider
-  grouping repeated lane labels while preserving full route keys in JSON.
+  related profile insight review bundles. The trial found profile route bridge
+  Markdown could repeat the same review lane several times when one project
+  metric appeared across multiple profile observations. Markdown now groups
+  repeated lane labels with a route-group count while preserving full route keys
+  in JSON.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -32161,9 +32161,9 @@ class DoxaBase:
                 f"`{key}`" for key in candidate.profile_route_keys
             )
             review_lanes = ", ".join(
-                self._profile_insight_route_bridge_lane_cell(group)
-                for group in candidate.profile_route_groups
-                if group.get("review_lane")
+                self._profile_insight_route_bridge_lane_cells(
+                    candidate.profile_route_groups
+                )
             )
             matched_by = ", ".join(
                 sorted(
@@ -32195,11 +32195,48 @@ class DoxaBase:
         return "\n".join(lines)
 
     @staticmethod
+    def _profile_insight_route_bridge_lane_cells(
+        groups: Iterable[dict[str, Any]],
+    ) -> list[str]:
+        counts: dict[tuple[str, str, tuple[str, ...]], int] = {}
+        ordered_keys: list[tuple[str, str, tuple[str, ...]]] = []
+        for group in groups:
+            review_lane = group.get("review_lane")
+            if not review_lane:
+                continue
+            match_strength = str(group.get("match_strength") or "related_support")
+            matched_by = tuple(
+                sorted(str(match) for match in group.get("matched_by", []))
+            )
+            key = (str(review_lane), match_strength, matched_by)
+            if key not in counts:
+                ordered_keys.append(key)
+                counts[key] = 0
+            counts[key] += 1
+        cells: list[str] = []
+        for key in ordered_keys:
+            review_lane, match_strength, _matched_by = key
+            cells.append(
+                DoxaBase._profile_insight_route_bridge_lane_cell(
+                    review_lane,
+                    match_strength,
+                    route_group_count=counts[key],
+                )
+            )
+        return cells
+
+    @staticmethod
     def _profile_insight_route_bridge_lane_cell(
-        group: dict[str, Any],
+        review_lane: str,
+        match_strength: str,
+        *,
+        route_group_count: int = 1,
     ) -> str:
-        review_lane = str(group.get("review_lane"))
-        match_strength = str(group.get("match_strength") or "related_support")
+        if route_group_count > 1:
+            return (
+                f"{review_lane} ({match_strength}; "
+                f"{route_group_count} route groups)"
+            )
         return f"{review_lane} ({match_strength})"
 
     def export_staged_revisions(

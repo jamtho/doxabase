@@ -11,6 +11,7 @@ from doxabase import (
     DoxaBase,
     DoxaBaseError,
     ImmutableGraphError,
+    ProfileInsightReviewCandidate,
     to_dict,
     to_jsonable,
 )
@@ -24047,6 +24048,58 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
             fail_on_sensitive=True,
         )
     assert not blocked_profile_path.exists()
+
+
+def test_profile_insight_route_bridge_groups_repeated_lane_labels(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    candidate = ProfileInsightReviewCandidate(
+        revision_iri="https://example.test/revision#metric-promotion",
+        summary="Promote freshness metric vocabulary",
+        changed_graphs=["ontology"],
+        relation_reasons=["profile_derived_anchor"],
+        profile_route_keys=["route:dataset", "route:column-a", "route:column-b"],
+        profile_route_groups=[
+            {
+                "route_group_key": "route:dataset",
+                "review_lane": "metric_vocabulary_review",
+                "route_step_keys": ["step:dataset"],
+                "matched_by": ["revision_anchor"],
+                "match_strength": "direct_action",
+            },
+            {
+                "route_group_key": "route:column-a",
+                "review_lane": "metric_vocabulary_review",
+                "route_step_keys": ["step:column-a"],
+                "matched_by": ["revision_anchor"],
+                "match_strength": "direct_action",
+            },
+            {
+                "route_group_key": "route:column-b",
+                "review_lane": "metric_vocabulary_review",
+                "route_step_keys": ["step:column-b"],
+                "matched_by": ["revision_anchor"],
+                "match_strength": "direct_action",
+            },
+        ],
+        matched_evidence_iris=[],
+        matched_profile_observation_iris=[],
+        matched_supporting_pattern_iris=[],
+        matched_revision_anchor_iris=["https://example.test/project#FreshnessMetric"],
+        explicit=False,
+    )
+
+    bridge = db._profile_insight_route_bridge_markdown([candidate])
+
+    assert "route:dataset" in bridge
+    assert "route:column-a" in bridge
+    assert "route:column-b" in bridge
+    assert (
+        "metric_vocabulary_review (direct_action; 3 route groups)"
+        in bridge
+    )
+    assert "metric_vocabulary_review (direct_action), " not in bridge
 
 
 def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(

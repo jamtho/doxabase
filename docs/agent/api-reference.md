@@ -706,8 +706,10 @@ candidates expose `profile_route_keys` and `profile_route_groups`, and the
 Markdown review summary includes a `Profile Route Bridge` table when candidates
 match draft route groups. The bridge's `Row` column uses the same `Revision N`
 row number as the grouped bundle sections and repeats the candidate summary so
-Markdown-only reviewers can map lanes back to detailed rows. It does not stage
-missing advisory-lane work for you. Already-applied profile-map candidates keep
+Markdown-only reviewers can map lanes back to detailed rows. Repeated same-lane
+route groups are grouped in Markdown with a route-group count, while the JSON
+payload keeps every `profile_route_key` and `profile_route_group`. It does not
+stage missing advisory-lane work for you. Already-applied profile-map candidates keep
 their persisted direct route source, while fresh same-lane live follow-ups are
 support routes until staged separately.
 Pass `fail_on_sensitive=True` when unattended or shareable profile review
