@@ -2541,6 +2541,20 @@ few useful gaps:
   only failed later under SHACL. `record_pattern()` now preflights pattern
   confidence, status, and stability controlled values before writing RDF, and
   `record_claim_observation()` preflights claim confidence values.
+- A context-slice handoff trial found `deep_lore` on a storage-access seed
+  included the seed but did not route to the owner table, while
+  `resource_brief` did. Storage/layout/partition seeds that mismatch
+  `deep_lore` now get a `Retry with resource brief` action so agents can reach
+  owner-table `incoming_reference` routes and then `describe_query_context`.
+- A staged same-slot repair trial confirmed the repair route works, but showed
+  `mutation_frontier_iris` can be empty before a successor exists. For those
+  lanes, follow `lane.next_action.arguments` or
+  `lane.repair_draft.preferred_action.arguments` instead of treating the empty
+  frontier as no actionable repair.
+- A cold handoff/import trial found applied-diff snapshot recovery actions stay
+  nested under `snapshot_evidence.suggested_next_actions` and
+  `source_snapshot_evidence.suggested_next_actions`. Do not expect a top-level
+  `describe_applied_revision_diff().suggested_next_actions` promotion.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

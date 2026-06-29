@@ -9486,6 +9486,35 @@ class DoxaBase:
                         metric_kind_metric_iris=metric_kind_metric_iris,
                     )
                 )
+                resource_brief_seed_types = {
+                    self.expand_iri("rc:StorageAccess"),
+                    self.expand_iri("rc:PhysicalLayout"),
+                    self.expand_iri("rc:PartitionScheme"),
+                }
+                if (
+                    profile == "deep_lore"
+                    and set(seed_types) & resource_brief_seed_types
+                ):
+                    arguments: dict[str, Any] = {
+                        "seed_iris": [seed],
+                        "profile": "resource_brief",
+                        "max_triples": max_triples,
+                    }
+                    if include_trig:
+                        arguments["include_trig"] = True
+                    add_resource_brief_recovery_action(
+                        ("deep_lore_resource_brief_retry", seed),
+                        action_label="Retry with resource brief",
+                        tool_name="describe_context_slice",
+                        arguments=arguments,
+                        reason=(
+                            "The seed is physical/query metadata rather than a "
+                            "dataset, pattern, claim, observation, or revision. "
+                            "resource_brief follows incoming owner-table routes "
+                            "and can then suggest describe_query_context when "
+                            "query-planning repair context exists."
+                        ),
+                    )
 
         if profile == "deep_lore":
             self._add_revision_context_for_slice(
@@ -9916,6 +9945,21 @@ class DoxaBase:
             return (
                 f"{base} Seed is an rc:ObservedProfileMetric; rerun with "
                 f"{dataset_profiles}."
+            )
+        if self.expand_iri("rc:StorageAccess") in seed_types:
+            return (
+                f"{base} Seed is an rc:StorageAccess; rerun with "
+                "profile='resource_brief' to recover owner-table routes."
+            )
+        if self.expand_iri("rc:PhysicalLayout") in seed_types:
+            return (
+                f"{base} Seed is an rc:PhysicalLayout; rerun with "
+                "profile='resource_brief' to recover owner-table routes."
+            )
+        if self.expand_iri("rc:PartitionScheme") in seed_types:
+            return (
+                f"{base} Seed is an rc:PartitionScheme; rerun with "
+                "profile='resource_brief' to recover owner-table routes."
             )
         if self.expand_iri("rc:GraphRevision") in seed_types:
             return (

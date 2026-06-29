@@ -221,6 +221,10 @@ mechanical restage list, and treat `repair_first_revision_iris` /
 `repair_or_replace` lanes as repair or replacement work before any same-payload
 restage. If `requires_recheck_after_each_apply` is true, apply at most one ready
 row, then rerun the planner.
+For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
+can be empty because the concrete mutation is a helper call rather than an
+existing revision target. Use `lane.next_action.arguments` or
+`lane.repair_draft.preferred_action.arguments` for that reviewed repair.
 When RDF/history handoffs have incomplete snapshot evidence, top-level
 `suggested_next_actions` starts with `import_revision_snapshots` or `import_trig`
 preflight before apply/restage actions. After those preflight actions, when

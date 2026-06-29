@@ -19782,6 +19782,62 @@ def test_resource_brief_context_slice_routes_storage_seed_to_query_context(
     )
 
 
+def test_deep_lore_storage_seed_suggests_resource_brief_retry(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#warehouse_orders_storage",
+        label="Warehouse orders database",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["public.orders"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    deep_slice = db.describe_context_slice(
+        storage.iri,
+        profile="deep_lore",
+        max_triples=75,
+    )
+
+    assert any(
+        "Seed is an rc:StorageAccess; rerun with profile='resource_brief'"
+        in warning
+        for warning in deep_slice.warnings
+    )
+    retry_action = next(
+        action
+        for action in deep_slice.suggested_next_actions
+        if action.action_label == "Retry with resource brief"
+    )
+    assert retry_action.tool_name == "describe_context_slice"
+    assert retry_action.arguments == {
+        "seed_iris": [storage.iri],
+        "profile": "resource_brief",
+        "max_triples": 75,
+    }
+
+    resource_slice = db.describe_context_slice(**retry_action.arguments)
+    assert any(resource.iri == dataset for resource in resource_slice.resources)
+    query_action = next(
+        action
+        for action in resource_slice.suggested_next_actions
+        if action.tool_name == "describe_query_context"
+    )
+    assert query_action.arguments == {"iri": dataset}
+    assert "missing_physical_layout" in query_action.reason
+
+
 def test_resource_brief_context_slice_finds_owner_for_nested_predicate_seed(
     tmp_path: Path,
 ) -> None:

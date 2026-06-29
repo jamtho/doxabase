@@ -849,6 +849,10 @@ seed-reached owner tables whose query context has repair groups or whose nested
 warnings. This includes mapped column, storage access, physical-layout, and
 partition-scheme seeds that expand to an owning table through direct
 incoming/reference routes.
+If `profile="deep_lore"` starts directly from storage access, physical layout,
+or partition scheme metadata and reports that profile-specific expansion did
+not apply, follow the `Retry with resource brief` action. That rerun is the
+owner-table recovery route and can then surface `describe_query_context`.
 Non-table dataset seeds stay on context-slice/resource routes even when they
 carry storage or layout metadata. Use that route to inspect readiness, target
 candidates, and repair hints before drafting a query.
@@ -3774,7 +3778,10 @@ after-snapshot rows for changed graphs. `snapshot_evidence` describes the
 applied event's after-snapshot recovery state; `source_snapshot_evidence`
 describes the staged source's before-snapshot recovery state. Read their
 `suggested_next_actions` before parsing graph-diff notes when exact rows are
-missing. The default response keeps exact
+missing. Import-recovery actions for this helper live under
+`snapshot_evidence.suggested_next_actions` and
+`source_snapshot_evidence.suggested_next_actions`; they are not promoted to a
+top-level `diff.suggested_next_actions` field. The default response keeps exact
 added/removed counts but omits changed-triple arrays. Pass
 `include_triples=True` when an agent needs raw triples; `max_triples` caps each
 added/removed array and truncation flags say whether arrays were shortened.
@@ -4594,6 +4601,9 @@ same as the mutation or inspection target. Repair lanes may include
 apply/restage/repair queues; it intentionally excludes informational rows,
 already-applied inspection targets, and repair helper calls that do not resolve
 to an existing target IRI.
+For same-slot repair lanes before a successor exists, this field can be empty
+even when the lane is actionable. Drive that repair from
+`repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
 When `include_drafts=True` and a no-repair embedded draft already removed
 `draft_staged_revision_rebase` from its own suggestions, the lane and top-level
 plan suggestions use that draft's inspection/export route too. Do not call the
@@ -4983,6 +4993,10 @@ apply/restage/repair queues. Use it when an unattended script needs current
 mutation targets rather than returned row IRIs; it omits informational handled
 stale rows, already-applied inspection targets, and repair helpers whose action
 does not name an existing `iri`.
+For same-slot repair suggestions that create the first successor for a stale
+source, the helper action may not name an existing target IRI yet; use the
+row's `next_action.arguments` or embedded `repair_draft.preferred_action` rather
+than treating an empty frontier as no work.
 `semantic_risk_queue_counts` counts queued rows whose row summary carries
 `semantic_risk_level` of `attention` or `high`. This is separate from
 `semantic_review_required_queue_counts`, which only counts alternative-gate

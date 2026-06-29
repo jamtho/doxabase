@@ -130,6 +130,11 @@ When a selected map resource such as a dataset, storage access, physical layout,
 or partition scheme is named by `rc:revisionAnchor`, `deep_lore` also includes
 the staged or applied revision through `revision_anchor_match`; use this when
 asking what changed around a dataset's physical/query metadata.
+When the seed itself is storage access, physical layout, or partition scheme
+metadata, `deep_lore` may only include the seed directly because it is a
+lore/history profile. Follow the `Retry with resource brief` suggested action
+to recover owner-table `incoming_reference` routes and any
+`describe_query_context` repair follow-up.
 
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference
