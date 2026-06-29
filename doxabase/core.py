@@ -439,6 +439,7 @@ class ProjectBrief:
     returned_queue_type_count: int
     limit_crowded_queue_types: list[str]
     health_tasks: list[ProjectBriefHealthTask]
+    next_best_expansion: ProjectBriefHealthTask | None
     datasets: list[ProjectBriefDatasetSummary]
     staged_review: ProjectBriefStagedReviewSummary
     recommended_next_tasks: list[ProjectBriefRecommendedTask]
@@ -3465,6 +3466,9 @@ class DoxaBase:
             limit_crowded_queue_types=limit_crowded_queue_types,
             total_queue_count=sum(queue_counts.values()),
         )
+        next_best_expansion = self._project_brief_next_best_expansion(
+            health_tasks
+        )
 
         return ProjectBrief(
             key_counts=overview.key_counts,
@@ -3484,6 +3488,7 @@ class DoxaBase:
             returned_queue_type_count=len(returned_queue_counts),
             limit_crowded_queue_types=limit_crowded_queue_types,
             health_tasks=health_tasks,
+            next_best_expansion=next_best_expansion,
             datasets=datasets,
             staged_review=staged_review,
             recommended_next_tasks=selected_tasks,
@@ -3718,6 +3723,20 @@ class DoxaBase:
             tasks.append(seed_task)
 
         return sorted(tasks, key=lambda task: (task.priority, task.task_type))
+
+    @staticmethod
+    def _project_brief_next_best_expansion(
+        health_tasks: list[ProjectBriefHealthTask],
+    ) -> ProjectBriefHealthTask | None:
+        expansion_priority = (
+            "expand_project_brief",
+            "expand_profile_candidate_limit",
+        )
+        for task_type in expansion_priority:
+            for task in health_tasks:
+                if task.task_type == task_type:
+                    return task
+        return None
 
     def _project_brief_profile_candidate_limit_health_task(
         self,

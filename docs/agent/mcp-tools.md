@@ -55,10 +55,11 @@ tasks. Use it when arriving cold or when a loop may be over-polishing one
 workflow while missing another active queue. If `limit_crowded_queue_types` is
 non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
-Read `health_tasks` before repeating visible recommended tasks. It is not
-limited by `recommended_next_tasks` and can route agents to widen the brief,
-increase `profile_candidate_limit`, run redacted privacy/export review, or
-handle stale immutable seed graphs.
+Check `next_best_expansion` before repeating visible recommended tasks; if it is
+non-null, follow or evaluate that rerun before trusting a tight brief's frontier.
+Then read `health_tasks`, which is not limited by `recommended_next_tasks` and
+can also route agents to widen the brief, increase `profile_candidate_limit`, run
+redacted privacy/export review, or handle stale immutable seed graphs.
 `profile_queue_counts["profile_candidate_omitted"]` and the
 `expand_profile_candidate_limit` health task mean some profile evidence was not
 drafted at all under the current candidate bound; rerun `project_brief` with the

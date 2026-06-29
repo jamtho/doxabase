@@ -185,6 +185,13 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "missing_seed_terms": [],
         },
     ],
+    "next_best_expansion": {
+        "priority": 10,
+        "task_type": "expand_project_brief",
+        "suggested_next_action": {...},
+        "suggested_next_call": "project_brief(...)",
+        ...
+    },
     "datasets": [
         {
             "dataset": {"iri": "https://...", "label": "...", "description": ...},
@@ -327,8 +334,11 @@ stable follow-ups such as `expand_project_brief` for omitted queues,
 `expand_profile_candidate_limit` for profile drafts hidden by
 `profile_candidate_limit`, `privacy_export_review` when a redacted project scan
 finds potential sensitive literals, and `seed_recovery_review` when immutable
-seed graphs are missing current staging vocabulary. Check it before repeating
-the same visible task types in an unattended loop.
+seed graphs are missing current staging vocabulary. `next_best_expansion` is
+either `null` or a copy of the highest-priority expansion health task, preferring
+`expand_project_brief` over `expand_profile_candidate_limit` when both are
+needed. Check it before repeating the same visible task types in an unattended
+loop, then read `health_tasks` for the full health queue.
 For `expand_project_brief`, `suggested_limit` is the next bounded rerun and may
 still be iterative on large or skewed queues. `exhaustive_suggested_limit` is the
 one-shot bound for every task payload currently counted in `queue_counts`.

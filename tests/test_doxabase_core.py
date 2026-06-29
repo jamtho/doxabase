@@ -316,6 +316,7 @@ def test_project_brief_reports_profile_candidates_hidden_by_limit(
         "limit": brief.limit,
         "profile_candidate_limit": 3,
     }
+    assert brief.next_best_expansion == health_task
 
 
 def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
@@ -510,6 +511,7 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
         "limit": health_task.suggested_limit,
         "profile_candidate_limit": brief.profile_candidate_limit,
     }
+    assert brief.next_best_expansion == health_task
 
 
 def test_project_brief_selects_pending_staged_representative_per_queue() -> None:
@@ -860,6 +862,7 @@ def test_project_brief_reports_limit_crowded_queue_types(
     assert expand_task.exhaustive_suggested_limit >= expand_task.suggested_limit
     assert expand_task.suggested_next_action is not None
     assert "exhaustive_suggested_limit" in expand_task.suggested_next_action.reason
+    assert brief.next_best_expansion == expand_task
     privacy_task = next(
         task for task in brief.health_tasks if task.task_type == "privacy_export_review"
     )

@@ -33,7 +33,8 @@ When arriving cold, use this route before reading every reference doc.
 3. Call `doxabase.project_brief` to see datasets, query-readiness buckets,
    profile draft counts, staged review queues, and bounded recommended next
    tasks.
-   Check `project_brief.health_tasks[]` before repeating the same visible
+   Check `project_brief.next_best_expansion` before trusting a tight frontier,
+   then read `project_brief.health_tasks[]` before repeating the same visible
    recommended tasks; it can point to omitted queues, redacted privacy scans,
    or stale seed recovery.
 4. If `project_brief.recommended_next_tasks[]` includes
