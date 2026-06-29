@@ -2943,6 +2943,17 @@ few useful gaps:
   now matches graph lineage and returns `None` for unapplied stale or
   still-current staged rows; use `current_staged_revision_iri` for those live
   staged targets.
+- The next broad wave passed profile metric/type followthrough, and found two
+  remaining rough edges worth carrying forward. Profile bundles preserve metric
+  implications, but project value-type findings may need an explicit targeted
+  pattern before type-review assertions have the same support trail.
+  Shared-context systematisation recovery is possible from patch roles without
+  Turtle surgery, but export-only recovery still requires a documented rerun
+  recipe and semantic target-framing choice. Mixed object/database query
+  planning can produce a clean object-storage `draft_query_plan` action while
+  sibling database-template repair remains noisy; a future code fix should make
+  route applicability avoid pairing file/object templates with database storage
+  when a clean non-database candidate already exists.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

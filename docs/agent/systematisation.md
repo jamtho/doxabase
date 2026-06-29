@@ -67,6 +67,13 @@ Grouped review exports reconstruct the same shared-context signal from stored
 patch roles as `bundle_summary.shared_semantic_context_warnings`; carry the
 draft warning into `executive_summary` only when reviewers need additional
 agent judgement beyond the structured fields.
+When recovering from export-only state, call `describe_staged_revision` on the
+affected rows and read patch roles. Copy `SharedContextPatch` ontology/shapes
+patches only into the semantically selected framing's `additions`, copy each
+fallback's own `FramingPatch` content into that fallback, remove shared
+ontology/shapes from the rerun, then check/export the rerun. This still requires
+semantic judgement: use review notes, evidence, and target framing intent to
+decide which framing keeps the ontology or shape context.
 
 ## Project Ontology And Shapes
 

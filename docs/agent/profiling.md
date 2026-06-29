@@ -260,6 +260,12 @@ recommendation indexes. Metric advisories may suggest `stage_pattern_promotion`
 for vocabulary or pattern-supported modelling. Type advisories may suggest
 context slices, `record_pattern`, related column shells, or focused
 `stage_map_assertion_change` calls.
+Profile-bundle helper pattern implication synthesis carries project-specific
+metric IRIs, but observed project value-type IRIs may need a targeted
+`record_pattern` before their type-review lane has the same support trail. When
+a value-type finding should travel with metric/type review routing, record a
+pattern that targets or implies the value type and shares the profile evidence
+before staging the assertion or systematisation alternative.
 When a type advisory or modelling note first routes through `record_pattern`,
 carry the returned `pattern_iri` into the later assertion stage, for example
 `stage_map_assertion_change(..., supporting_patterns=[pattern_iri])`, when the
