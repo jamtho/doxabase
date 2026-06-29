@@ -582,7 +582,9 @@ filename. Override the path when a run directory should own the artifact.
 Grouped staged exports accept staged patch revision IRIs. If you have an
 applied event IRI, inspect it with `describe_graph_revision`,
 `describe_revision_lineage`, or `describe_applied_revision_diff`, or pass the
-applied event's staged source IRI to the grouped export.
+applied event's staged source IRI to the grouped export. Recovery planning and
+batch restage dry-runs use the same staged-patch input rule and report the
+staged source IRI when an applied event is passed by mistake.
 
 The staged revision rationale records the systematisation intent, anchors,
 overall rationale, shared-context summary, and framing-specific rationale. The

@@ -2367,6 +2367,11 @@ few useful gaps:
   `post_apply_recheck_is_partial_queue=true` and start their top-level
   suggestions with `plan_staged_revision_recovery(current_staged_work_only=True)`
   so independent staged siblings remain visible.
+- A mixed recovery routing trial found applied event IRIs failed safely in
+  recovery planning and batch restage dry-runs, but with a generic no-patch
+  message. `describe_staged_revision()` now identifies applied events and points
+  callers to inspect the event or retry with its staged source IRI, matching
+  grouped export guidance.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

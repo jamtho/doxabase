@@ -1413,6 +1413,10 @@ staged rows may be ready, stale, already handled by restage, already applied, or
 repair-first. With no `revision_iris`, it discovers current staged work through
 `list_graph_revisions(include_apply_checks=True, current_staged_work_only=True)`.
 With explicit `revision_iris`, it preserves caller order after pagination.
+Explicit inputs must be staged patch revision IRIs. If an applied event IRI is
+passed, recovery planning reports that it should be inspected with
+`describe_graph_revision` or `describe_applied_revision_diff`, or retried with
+the applied event's staged source IRI.
 
 The helper wraps `restage_staged_revisions(..., dry_run=True, path=None)` for
 classification, grouped queue summaries, old-to-current mappings, and

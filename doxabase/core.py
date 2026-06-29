@@ -7591,6 +7591,19 @@ class DoxaBase:
 
         patch_iris = self._objects(data_graphs, revision_iri, "rc:hasGraphPatch")
         if not patch_iris:
+            applies_staged_revision = self._first_object(
+                data_graphs,
+                revision_iri,
+                "rc:appliesStagedRevision",
+            )
+            if applies_staged_revision is not None:
+                raise DoxaBaseError(
+                    f"Graph revision '{iri}' is an applied revision event, "
+                    "not a staged patch revision. Inspect it with "
+                    "describe_graph_revision or describe_applied_revision_diff, "
+                    "or pass the applied event's staged source IRI "
+                    f"'{applies_staged_revision}'."
+                )
             raise DoxaBaseError(f"Graph revision '{iri}' has no staged patch entries")
 
         revision_type = self._first_object(data_graphs, revision_iri, "rc:revisionType")

@@ -3567,6 +3567,29 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert result.applied_revision_iri in mixed_export_message
     assert staged.revision_iri in mixed_export_message
 
+    with pytest.raises(DoxaBaseError) as recovery_event_exc:
+        db.plan_staged_revision_recovery([result.applied_revision_iri])
+
+    recovery_event_message = str(recovery_event_exc.value)
+    assert "is an applied revision event, not a staged patch revision" in (
+        recovery_event_message
+    )
+    assert "describe_graph_revision" in recovery_event_message
+    assert "describe_applied_revision_diff" in recovery_event_message
+    assert staged.revision_iri in recovery_event_message
+
+    with pytest.raises(DoxaBaseError) as restage_event_exc:
+        db.restage_staged_revisions(
+            [result.applied_revision_iri],
+            dry_run=True,
+        )
+
+    restage_event_message = str(restage_event_exc.value)
+    assert "is an applied revision event, not a staged patch revision" in (
+        restage_event_message
+    )
+    assert staged.revision_iri in restage_event_message
+
 
 def test_recovery_plan_promotes_snapshot_import_for_rdf_only_staged_handoff(
     tmp_path: Path,
