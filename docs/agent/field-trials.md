@@ -2534,6 +2534,13 @@ few useful gaps:
   partition-scheme removal. No query-planning code change was justified. The
   active MCP capsule may lag fixture state; sanity-check `graph_overview`
   counts when a long-lived capsule reports unexpectedly sparse storage metadata.
+- A profile-derived systematisation trial confirmed profile bundles, map-update
+  staging, caveat claims/patterns, pattern promotions, and profile insight
+  exports can stay connected across ambiguous semantic choices. It also found
+  `record_pattern(confidence=...)` accepted unsupported confidence terms and
+  only failed later under SHACL. `record_pattern()` now preflights pattern
+  confidence, status, and stability controlled values before writing RDF, and
+  `record_claim_observation()` preflights claim confidence values.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

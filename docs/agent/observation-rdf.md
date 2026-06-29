@@ -101,6 +101,10 @@ Use `rc:confidence` on `rc:Claim` resources:
 - `rc:MediumConfidence`
 - `rc:HighConfidence`
 
+`record_claim_observation()` preflights these confidence values before writing
+RDF. Use the listed confidence levels rather than severity terms or ad hoc
+confidence names.
+
 ## Proposed Assertions
 
 `rc:proposedAssertion` points at a named resource representing a candidate future

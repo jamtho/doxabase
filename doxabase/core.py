@@ -137,6 +137,27 @@ CAVEAT_SEVERITY_LEVELS = (
     "rc:Severe",
 )
 
+CONFIDENCE_LEVELS = (
+    "rc:LowConfidence",
+    "rc:MediumConfidence",
+    "rc:HighConfidence",
+)
+
+PATTERN_OBSERVATION_STATUSES = (
+    "rc:Tentative",
+    "rc:Checked",
+    "rc:Weakened",
+    "rc:Contradicted",
+    "rc:Superseded",
+    "rc:Promoted",
+)
+
+PATTERN_STABILITY_LEVELS = (
+    "rc:EmergingPattern",
+    "rc:RepeatedPattern",
+    "rc:InvariantPattern",
+)
+
 REQUIRED_STAGING_ONTOLOGY_TERMS = (
     "rc:GraphPatchRole",
     "rc:FramingPatch",
@@ -21930,6 +21951,12 @@ class DoxaBase:
             "proposed_assertions",
             proposed_assertion_values,
         )
+        if confidence_value is not None:
+            self._controlled_resource_ref(
+                "confidence",
+                confidence_value,
+                CONFIDENCE_LEVELS,
+            )
         if not evidence_source_values and source_path_value is None:
             raise DoxaBaseError(
                 "record_claim_observation requires evidence_sources or source_path"
@@ -22243,6 +22270,24 @@ class DoxaBase:
             if evidence_iri and evidence_iri.strip()
             else None
         )
+        if confidence_value is not None:
+            self._controlled_resource_ref(
+                "confidence",
+                confidence_value,
+                CONFIDENCE_LEVELS,
+            )
+        if pattern_status_value is not None:
+            self._controlled_resource_ref(
+                "pattern_status",
+                pattern_status_value,
+                PATTERN_OBSERVATION_STATUSES,
+            )
+        if pattern_stability_value is not None:
+            self._controlled_resource_ref(
+                "pattern_stability",
+                pattern_stability_value,
+                PATTERN_STABILITY_LEVELS,
+            )
 
         if (
             not supporting_observation_values

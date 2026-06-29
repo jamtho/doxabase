@@ -40,6 +40,10 @@ The common fields are:
 - `rc:mapImplication`: map resources or named candidate implications suggested
   by the pattern.
 
+`record_pattern()` preflights the controlled `confidence`, `pattern_status`, and
+`pattern_stability` values before writing RDF. Use the listed RC terms rather
+than severity terms such as `rc:Moderate` or ad hoc confidence names.
+
 Use `rc:mapImplication` for soft forward links. It does not mean the map has
 already been edited.
 

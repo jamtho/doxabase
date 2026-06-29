@@ -21718,6 +21718,45 @@ def test_record_pattern_requires_support_or_source(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        (
+            {"confidence": "rc:ModerateConfidence"},
+            "confidence must be one of",
+        ),
+        (
+            {"pattern_status": "rc:Archived"},
+            "pattern_status must be one of",
+        ),
+        (
+            {"pattern_stability": "rc:MediumConfidence"},
+            "pattern_stability must be one of",
+        ),
+    ],
+)
+def test_record_pattern_rejects_unsupported_controlled_values_without_mutating(
+    tmp_path: Path,
+    kwargs: dict[str, str],
+    message: str,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match=message):
+        db.record_pattern(
+            summary="Unsupported pattern controlled value.",
+            pattern_text="This pattern should be rejected before RDF is written.",
+            rationale="Controlled values should match the SHACL enumeration.",
+            pattern_targets=["https://example.test/project#Orders"],
+            evidence_sources=["test://pattern-controlled-value"],
+            **kwargs,
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_record_pattern_rejects_prose_map_implications(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 
@@ -21776,6 +21815,26 @@ def test_record_claim_observation_requires_source(tmp_path: Path) -> None:
             claim_targets=["https://example.test/enron#eml_messages"],
             evidence_summary="Summary alone is not enough for source-backed evidence.",
         )
+
+
+def test_record_claim_observation_rejects_unsupported_confidence_without_mutating(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="confidence must be one of"):
+        db.record_claim_observation(
+            summary="Unsupported claim confidence.",
+            claim_text="The claim should be rejected before RDF is written.",
+            claim_kind="rc:CaveatClaim",
+            claim_targets=["https://example.test/project#Orders"],
+            evidence_sources=["test://claim-confidence"],
+            confidence="rc:ModerateConfidence",
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.validate_graph(scope="all").conforms
 
 
 def test_record_claim_observation_rejects_prose_proposed_assertions(
