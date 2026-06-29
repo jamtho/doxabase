@@ -5108,7 +5108,11 @@ For single-row or per-item batch-restage automation, prefer
 otherwise. `restaged_revision_iri` is only
 populated for items whose current batch call created a new successor. In the
 single-revision restage response, `revision_iri` is the newly created current
-successor.
+successor, and the response also carries `status_after`, `decision_after`,
+`routing_decision_after`, `stale_resolution_state_after`,
+`blocking_reasons_after`, `next_action_after`, `next_action_queue_item_after`,
+and `suggested_next_actions_after` from a fresh apply check on that successor.
+Follow `next_action_after` before applying or restaging anything else.
 `routing_decision_before` and `routing_decision_after` mirror the effective
 route behind each row's compact next action. Use them when `decision_before` or
 `decision_after` says `restage_against_current_graph` but the actual route is a

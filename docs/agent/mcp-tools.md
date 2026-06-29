@@ -1541,7 +1541,12 @@ run `check_staged_revision_apply` again. If the stale source already has a
 parallel successor; inspect or restage the current successor instead. The
 immediate return includes `restaged_from`, `restage_reason`, `alternative_to`,
 and `current_restaged_by` so the handoff can record provenance without an
-immediate describe call.
+immediate describe call. It also includes post-restage routing fields
+`status_after`, `decision_after`, `routing_decision_after`,
+`stale_resolution_state_after`, `blocking_reasons_after`, `next_action_after`,
+`next_action_queue_item_after`, and `suggested_next_actions_after`, derived from
+a fresh apply check on the new successor. Follow `next_action_after` before
+applying or restaging anything else.
 If the old payload needs a human/model-authored repair, use
 `doxabase.stage_graph_revision(..., restages_revision=...)` or
 `doxabase.stage_map_assertion_change(..., restages_revision=...)`; this helper

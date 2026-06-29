@@ -282,7 +282,10 @@ Scripts should drive follow-up calls from `next_action_after.arguments["iri"]`
 when present, or `current_revision_iri` otherwise. `restaged_revision_iri` is
 only populated for a batch item that created a successor in that batch. For a
 single `restage_staged_revision()` response, `revision_iri` is the newly created
-current successor.
+current successor, and the response also carries `next_action_after`,
+`next_action_queue_item_after`, and `suggested_next_actions_after` from a fresh
+apply check on that successor. Follow those fields before applying or restaging
+anything else.
 Each item also carries `source_staged_validation_status` /
 `source_validation_result_count` and `current_staged_validation_status` /
 `current_validation_result_count`, so a dry-run consumer can see stored

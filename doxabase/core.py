@@ -567,6 +567,21 @@ class StagedGraphRevisionRecord:
 
 
 @dataclass(frozen=True)
+class RestagedGraphRevisionRecord(StagedGraphRevisionRecord):
+    status_after: str | None = None
+    decision_after: str | None = None
+    routing_decision_after: str | None = None
+    stale_resolution_state_after: str | None = None
+    blocking_reasons_after: list[str] = field(default_factory=list)
+    current_staged_validation_status: str | None = None
+    next_action_after: RevisionNextAction | None = None
+    next_action_queue_item_after: RevisionNextActionQueueItem | None = None
+    suggested_next_actions_after: list[SuggestedNextAction] = field(
+        default_factory=list
+    )
+
+
+@dataclass(frozen=True)
 class StagedPatchApplyCheck:
     patch_iri: str
     target_graph: str | None
@@ -26122,7 +26137,7 @@ class DoxaBase:
             "all",
         ]
         | None = None,
-    ) -> StagedGraphRevisionRecord:
+    ) -> RestagedGraphRevisionRecord:
         source = self.describe_staged_revision(iri)
         existing_successor = source.current_restaged_by or source.restaged_by
         if existing_successor is not None:
@@ -26215,7 +26230,11 @@ class DoxaBase:
         if extra_triples:
             staged = replace(staged, triples=staged.triples + extra_triples)
         staged_description = self.describe_staged_revision(staged.revision_iri)
-        return replace(
+        post_restage_check = self.check_staged_revision_apply(
+            staged.revision_iri,
+            validation_scope=validation_scope,
+        )
+        base_record = replace(
             staged,
             alternative_to=(
                 staged_description.alternative_to.iri
@@ -26229,6 +26248,63 @@ class DoxaBase:
                 if staged_description.current_restaged_by is not None
                 else None
             ),
+        )
+        current_direct_restaged_by = (
+            staged_description.restaged_by.iri
+            if staged_description.restaged_by is not None
+            else None
+        )
+        stale_resolution_state_after = self._stale_resolution_state(
+            status=post_restage_check.status,
+            has_patch_payload=bool(staged_description.patches),
+            restaged_from=source.iri,
+            restaged_by=current_direct_restaged_by,
+        )
+        current_staged_validation_status = self._staged_validation_status(
+            conforms=staged_description.validation_conforms,
+            result_count=staged_description.validation_result_count,
+        )
+        next_action_after = self._revision_next_action(
+            staged.revision_iri,
+            apply_status=post_restage_check.status,
+            apply_decision=post_restage_check.decision,
+            stale_resolution_state=stale_resolution_state_after,
+            suggested_next_actions=post_restage_check.suggested_next_actions,
+            restaged_by=current_direct_restaged_by,
+            staged_validation_status=current_staged_validation_status,
+        )
+        routing_decision_after = self._staged_apply_check_routing_decision(
+            post_restage_check.decision,
+            next_action_after,
+        )
+        next_action_queue_item_after = self._revision_next_action_queue_item(
+            row_iri=staged.revision_iri,
+            next_action=next_action_after,
+            record_kind=self._graph_revision_record_kind_for_iri(
+                staged.revision_iri
+            ),
+            application_status=post_restage_check.status,
+            application_decision=post_restage_check.decision,
+            stale_resolution_state=stale_resolution_state_after,
+            staged_validation_status=current_staged_validation_status,
+            semantic_risk_level=post_restage_check.semantic_risk_level,
+            semantic_risk_reasons=post_restage_check.semantic_risk_reasons,
+            alternative_gate=post_restage_check.alternative_gate,
+        )
+        return RestagedGraphRevisionRecord(
+            **{
+                record_field.name: getattr(base_record, record_field.name)
+                for record_field in fields(StagedGraphRevisionRecord)
+            },
+            status_after=post_restage_check.status,
+            decision_after=post_restage_check.decision,
+            routing_decision_after=routing_decision_after,
+            stale_resolution_state_after=stale_resolution_state_after,
+            blocking_reasons_after=post_restage_check.blocking_reasons,
+            current_staged_validation_status=current_staged_validation_status,
+            next_action_after=next_action_after,
+            next_action_queue_item_after=next_action_queue_item_after,
+            suggested_next_actions_after=post_restage_check.suggested_next_actions,
         )
 
     def _restage_source_summary(self, summary: str | None) -> str | None:

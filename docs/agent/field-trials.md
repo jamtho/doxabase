@@ -1059,6 +1059,12 @@ few useful gaps:
   say to use `next_action_after.arguments["iri"]` or `current_revision_iri`
   after batch restage, while single restage `revision_iri` is the created
   successor.
+- A direct restage recovery trial found `restage_staged_revision()` created a
+  successor with provenance but no immediate route, so unattended agents had to
+  remember to re-check the successor before applying. Direct restage responses
+  now include `status_after`, `routing_decision_after`, `next_action_after`,
+  `next_action_queue_item_after`, and `suggested_next_actions_after` from a
+  fresh apply check on the created successor.
 - A profile-bundle handoff trial showed two `describe_context_slice` actions in
   map-present bundles are useful, not accidental duplication: the dataset seed
   loads current map context, while profile-observation seeds carry the direct

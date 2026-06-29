@@ -2017,6 +2017,24 @@ def test_restage_staged_revision_tool_returns_json_like_payload(
     assert "prior status conflict" in restaged["restage_reason"]
     assert "blockers target_count_drift" in restaged["restage_reason"]
     assert restaged["current_restaged_by"] is None
+    assert restaged["status_after"] == "ready"
+    assert restaged["decision_after"] == "review_then_apply"
+    assert restaged["routing_decision_after"] == "apply_after_review"
+    assert restaged["stale_resolution_state_after"] == "restaged_successor_ready"
+    assert restaged["blocking_reasons_after"] == []
+    assert restaged["current_staged_validation_status"] == "conforms"
+    assert restaged["next_action_after"]["action_type"] == "apply_after_review"
+    assert restaged["next_action_after"]["tool_name"] == "apply_staged_revision"
+    assert restaged["next_action_after"]["arguments"] == {
+        "iri": restaged["revision_iri"]
+    }
+    assert restaged["next_action_queue_item_after"]["queue"] == "apply_after_review"
+    assert restaged["next_action_queue_item_after"]["resolved_target_iri"] == (
+        restaged["revision_iri"]
+    )
+    assert restaged["suggested_next_actions_after"][-1]["tool_name"] == (
+        "apply_staged_revision"
+    )
     with pytest.raises(DoxaBaseError, match=restaged["revision_iri"]):
         restage_staged_revision_tool(db, iri=staged["revision_iri"])
     stale_description = describe_staged_revision_tool(db, staged["revision_iri"])

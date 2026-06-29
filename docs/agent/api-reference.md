@@ -1472,7 +1472,12 @@ create a parallel successor when the stale source already has `restaged_by` /
 `current_restaged_by`; inspect or restage the current successor instead. The
 immediate return includes `restaged_from`, `restage_reason`, `alternative_to`,
 and `current_restaged_by` fields so handoffs do not need a separate
-`describe_staged_revision()` call just to record restage provenance.
+`describe_staged_revision()` call just to record restage provenance. It also
+includes `status_after`, `decision_after`, `routing_decision_after`,
+`stale_resolution_state_after`, `blocking_reasons_after`, `next_action_after`,
+`next_action_queue_item_after`, and `suggested_next_actions_after`, derived from
+a fresh apply check on the new successor. Follow `next_action_after` before
+applying or restaging anything else.
 When the drift review shows the payload itself needs editing, stage the repaired
 payload with `stage_graph_revision(..., restages_revision=...)` or
 `stage_map_assertion_change(..., restages_revision=...)` instead of calling this
