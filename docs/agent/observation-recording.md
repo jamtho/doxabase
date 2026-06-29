@@ -483,6 +483,14 @@ transformation, access, source-span, or proposed-map claims. See
 For the common middle case, use `doxabase.record_claim_observation`. It writes
 the standard `rc:Observation` + `rc:Claim` + `rc:Evidence` + optional
 `rc:SourceSpan` pattern without requiring hand-authored TriG.
+Use `observation_status` only for the controlled observation-status terms:
+`rc:Tentative`, `rc:Checked`, `rc:Weakened`, `rc:Contradicted`,
+`rc:Superseded`, or `rc:Promoted`. Terms such as
+`rc:ConfirmedObservation` are not valid status values and should be rejected
+before writing RDF.
+If you pass `proposed_assertions`, pass IRIs or CURIEs for candidate assertion
+resources, not inline Turtle or prose. Put the explanation in `claim_text` or
+promote a broader synthesis with `record_pattern`.
 
 When several observations or claims belong together, use
 `doxabase.record_pattern`. Patterns are the preferred bridge from noticed facts

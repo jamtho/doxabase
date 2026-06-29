@@ -338,6 +338,14 @@ aggregate query results, keep counts such as "six scanned source rows", "two
 paid rows", or grouped totals in the result payload unless the value is
 genuinely profile evidence for a population.
 
+For a disposable exact local CSV trial, use local object storage plus
+`layout_verification_status="rc:VerifiedByListingLayout"` after checking the
+path and header. `rc:CandidateLayout` is appropriate for unverified guesses, but
+it can keep `draft_query_plan` review-gated. After an execution-ready draft and
+an external full-scan aggregate, a reviewed assertion draft such as
+`rc:rowCountSnapshot` can be justified by the query result evidence without
+putting aggregate-only counts into profile fields.
+
 For failed attempts, set `execution_status="failed"` and include
 `failure_summary` plus a query source or result/log source; do not pass row,
 null, distinct, value-frequency, or metric fields.

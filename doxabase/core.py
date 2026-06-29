@@ -23677,6 +23677,12 @@ class DoxaBase:
                 confidence_value,
                 CONFIDENCE_LEVELS,
             )
+        if observation_status_value is not None:
+            self._controlled_resource_ref(
+                "observation_status",
+                observation_status_value,
+                PATTERN_OBSERVATION_STATUSES,
+            )
         if not evidence_source_values and source_path_value is None:
             raise DoxaBaseError(
                 "record_claim_observation requires evidence_sources or source_path"

@@ -23244,6 +23244,26 @@ def test_record_claim_observation_rejects_unsupported_confidence_without_mutatin
     assert db.validate_graph(scope="all").conforms
 
 
+def test_record_claim_observation_rejects_unsupported_status_without_mutating(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="observation_status must be one of"):
+        db.record_claim_observation(
+            summary="Unsupported observation status.",
+            claim_text="The claim should be rejected before RDF is written.",
+            claim_kind="rc:CaveatClaim",
+            claim_targets=["https://example.test/project#Orders"],
+            evidence_sources=["test://claim-status"],
+            observation_status="rc:ConfirmedObservation",
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_record_claim_observation_rejects_prose_proposed_assertions(
     tmp_path: Path,
 ) -> None:

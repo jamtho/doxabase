@@ -104,6 +104,11 @@ faithful and may preserve historical sensitive-looking values; review its
 `sensitive_literal_count` and `privacy_warnings`, including matches in stored
 quad subjects, predicates, and object terms, or pass `fail_on_sensitive=True`,
 before sharing the artifact.
+For a staged cross-capsule handoff, run `export_preflight` first, export the
+handoff bundle, import the project TriG into the receiving capsule, inspect
+snapshot evidence, import the companion revision-snapshot JSON, and then
+describe or check the staged revisions. Treat `clean_by_scanner_only` as a
+scanner result, not general shareability approval.
 Choose the export artifact by the receiving task:
 
 - `export_trig(graphs="workflow")` / `graphs="review_bundle"` is for review

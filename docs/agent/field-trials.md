@@ -2689,6 +2689,15 @@ few useful gaps:
   distinguish stale-source replay status from lineage resolution and note that
   post-apply profile follow-up can remain queued while a ready query handoff is
   still independently useful.
+- A broad query/systematisation/handoff/version wave confirmed agents can carry
+  query evidence through claim, pattern, staged assertion, and apply; preserve
+  awkward cross-table modelling as systematisation alternatives; and move staged
+  work across capsules with TriG plus revision-snapshot JSON. The concrete
+  follow-up was guardrail and recipe work: claim observations now reject
+  unsupported status terms before writing RDF; local CSV query trials should use
+  verified layout status after checking the path/header; and cross-capsule
+  staged handoffs should spell out preflight, TriG import, snapshot-evidence
+  check, snapshot JSON import, and staged-revision inspection.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
