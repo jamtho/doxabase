@@ -4187,16 +4187,46 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert result.applied_revision_iri in mixed_export_message
     assert staged.revision_iri in mixed_export_message
 
-    with pytest.raises(DoxaBaseError) as recovery_event_exc:
-        db.plan_staged_revision_recovery([result.applied_revision_iri])
-
-    recovery_event_message = str(recovery_event_exc.value)
-    assert "is an applied revision event, not a staged patch revision" in (
-        recovery_event_message
+    recovery_event_plan = db.plan_staged_revision_recovery(
+        [result.applied_revision_iri]
     )
-    assert "describe_graph_revision" in recovery_event_message
-    assert "describe_applied_revision_diff" in recovery_event_message
-    assert staged.revision_iri in recovery_event_message
+    assert recovery_event_plan.returned_count == 1
+    assert recovery_event_plan.lane_counts == {"inspect_already_applied": 1}
+    assert recovery_event_plan.next_action_queue_item_counts == {
+        "inspect_already_applied": 1
+    }
+    assert recovery_event_plan.not_restageable_revision_iris_by_reason == {
+        "applied_event_record": [result.applied_revision_iri]
+    }
+    assert recovery_event_plan.recommended_applied_inspection_iris == [
+        result.applied_revision_iri
+    ]
+    assert recovery_event_plan.review_revision_iris == [result.applied_revision_iri]
+    applied_event_lane = recovery_event_plan.lanes[0]
+    assert applied_event_lane.source_revision_iri == result.applied_revision_iri
+    assert applied_event_lane.current_revision_iri == result.applied_revision_iri
+    assert applied_event_lane.lane == "inspect_already_applied"
+    assert applied_event_lane.batch_action == "skipped_applied_event"
+    assert applied_event_lane.not_restageable_reason == "applied_event_record"
+    assert applied_event_lane.next_action is not None
+    assert applied_event_lane.next_action.tool_name == "describe_graph_revision"
+    assert applied_event_lane.next_action.arguments == {
+        "iri": result.applied_revision_iri
+    }
+    assert applied_event_lane.next_action_queue_item is not None
+    assert applied_event_lane.next_action_queue_item.record_kind == "applied_event"
+    assert applied_event_lane.next_action_queue_item.row_is_target is True
+    assert applied_event_lane.next_action_queue_item.resolved_target_iri == (
+        result.applied_revision_iri
+    )
+    assert [
+        action.tool_name for action in applied_event_lane.suggested_next_actions
+    ] == ["describe_graph_revision", "describe_applied_revision_diff"]
+    assert any(
+        action.tool_name == "describe_applied_revision_diff"
+        and action.arguments == {"iri": result.applied_revision_iri}
+        for action in recovery_event_plan.suggested_next_actions
+    )
 
     with pytest.raises(DoxaBaseError) as restage_event_exc:
         db.restage_staged_revisions(
@@ -6814,6 +6844,26 @@ def test_plan_staged_revision_recovery_keeps_valid_rows_with_patchless_history(
     assert patchless_only.lanes[0].lane == "informational"
     assert patchless_only.lanes[0].not_restageable_reason == "missing_patch_payload"
     assert patchless_only.next_action_queue_item_counts == {"informational": 1}
+
+    all_staged_plan = db.plan_staged_revision_recovery(
+        current_staged_work_only=False
+    )
+    assert all_staged_plan.returned_count == 2
+    assert set(all_staged_plan.processed_revision_iris) == {
+        ready.revision_iri,
+        patchless_iri,
+    }
+    assert all_staged_plan.next_action_queue_item_counts == {
+        "apply_after_review": 1,
+        "informational": 1,
+    }
+    all_lanes_by_source = {
+        lane.source_revision_iri: lane for lane in all_staged_plan.lanes
+    }
+    assert all_lanes_by_source[patchless_iri].lane == "informational"
+    assert all_lanes_by_source[patchless_iri].not_restageable_reason == (
+        "missing_patch_payload"
+    )
 
 
 def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(

@@ -4580,7 +4580,12 @@ plan.note
 or write files. With no explicit `revision_iris`, `selection_mode` is
 `current_staged_work` by default and the helper plans over the bounded current
 staged queue. With explicit `revision_iris`, it preserves first-seen order after
-`limit` and `offset`.
+`limit` and `offset`. Patchless staged-history rows are returned as
+`informational` / `missing_patch_payload` lanes instead of aborting the rest of
+the plan, including when `current_staged_work_only=False` scans all staged
+revision history. Explicit applied revision events are returned as
+`inspect_already_applied` / `applied_event_record` lanes with
+`describe_graph_revision` and `describe_applied_revision_diff` follow-ups.
 
 Each `plan.lanes[]` row is a `StagedRevisionRecoveryLane`:
 
@@ -4640,7 +4645,9 @@ example `would_restage`, `skipped_already_handled`, or
 `current_revision_iri` is still the stale source. A handled stale lane can have
 `current_revision_iri` and `row_iri` set to a refreshed successor. An
 already-applied source can have `resolved_target_iri` set to the applied event
-and `row_is_target=False`.
+and `row_is_target=False`. An applied-event input is already the resolved row:
+`batch_action` is `skipped_applied_event`, `not_restageable_reason` is
+`applied_event_record`, and `row_is_target=True`.
 
 `plan.resolved_target_groups[]` is the target-family view over those source
 lanes. It collapses rows that point at the same queue and resolved target while
