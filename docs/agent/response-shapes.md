@@ -268,7 +268,9 @@ dataset and evidence,
 task's suggested action is read-only `draft_profile_map_updates` instead of
 another `stage_profile_map_updates` call. Generic same-evidence staged work
 remains visible through `staged_frontier_review` / `staged_review` but does not
-populate `pending_staged_profile_update_iris`.
+populate `pending_staged_profile_update_iris`. Pending profile-map updates only
+demote pure map-update reruns; if scalar conflict, metric vocabulary, or type
+advisory lanes remain open, the profile task stays at normal priority.
 For `profile_review` tasks, `profile_evidence_iri` names the profile evidence
 that scoped the task. Use it even when `suggested_next_action` is a shared
 blocker action such as `describe_query_context`, because multiple profile

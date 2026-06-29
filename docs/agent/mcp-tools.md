@@ -62,7 +62,10 @@ context currently has no lifted repair template; the task action points to
 review-gated `draft_query_plan` action for deeper inspection.
 Tasks labelled `profile_review` are scoped by `profile_evidence_iri`; keep that
 evidence IRI with the work item even when the first suggested action is a shared
-dataset-level blocker review such as `describe_query_context`.
+dataset-level blocker review such as `describe_query_context`. Pending staged
+profile-map updates only lower the priority of pure map-update reruns; open
+scalar conflict, metric vocabulary, or type advisory lanes keep the profile task
+visible at normal priority.
 
 `doxabase.list_entities`
 

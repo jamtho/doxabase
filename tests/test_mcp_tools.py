@@ -630,6 +630,87 @@ def test_project_brief_tool_gates_duplicate_profile_staging(
     }
 
 
+def test_project_brief_tool_keeps_profile_advisories_visible_with_pending_map_update(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#SupportEvents"
+    evidence = "https://example.test/project#SupportEventsProfileEvidence"
+    metric = "https://example.test/project#SupportCompletenessMetric"
+    storage = record_map_storage_access_tool(
+        db,
+        "https://example.test/project#SupportEventsStorage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "warehouse"),
+        path_templates=["support-events.csv"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#SupportEventsLayout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        dataset,
+        label="Support events",
+        is_table=True,
+        row_count_snapshot=10,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=dataset,
+        dataset_summary="Support events were profiled with a full scan.",
+        evidence_summary="Support events profile evidence.",
+        evidence_sources=["test://support-events-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All rows in the local Support events table.",
+        sample_method="DuckDB full-table profile.",
+        row_count=12,
+        profile_metrics=[
+            {
+                "metric": metric,
+                "target": dataset,
+                "value": "0.9",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+    )
+    draft = draft_profile_map_updates_tool(db, dataset, evidence)
+    staged = stage_profile_map_updates_tool(
+        db,
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=(
+            draft["representative_recommendation_indexes"]
+        ),
+    )
+
+    result = project_brief_tool(db, limit=3, profile_candidate_limit=1)
+
+    assert draft["recommendation_count"] >= 1
+    assert draft["metric_advisory_count"] == 1
+    assert [
+        task["task_type"] for task in result["recommended_next_tasks"]
+    ] == ["staged_frontier_review", "profile_review", "staged_review"]
+    profile_task = result["recommended_next_tasks"][1]
+    assert profile_task["pending_staged_profile_update_iris"] == [
+        staged["staged_revision"]["revision_iri"]
+    ]
+    assert "profile advisory/conflict lanes remain open" in profile_task["reason"]
+    assert profile_task["suggested_next_action"]["tool_name"] == (
+        "draft_profile_map_updates"
+    )
+
+
 def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
     tmp_path: Path,
 ) -> None:

@@ -3809,6 +3809,11 @@ class DoxaBase:
                         staged_review,
                     )
                 )
+                open_profile_advisory_count = (
+                    draft.scalar_conflict_group_count
+                    + draft.metric_advisory_count
+                    + draft.type_advisory_count
+                )
                 if pending_staged_profile_update_iris:
                     action = self._project_brief_draft_profile_action(
                         dataset.dataset.iri,
@@ -3823,16 +3828,29 @@ class DoxaBase:
                             draft.evidence_iri,
                         )
                     )
-                pending_note = (
-                    " Pending staged profile update(s) already anchor this "
-                    "dataset/evidence; review staged frontier work before "
-                    "staging another profile update."
-                    if pending_staged_profile_update_iris
-                    else ""
-                )
+                if pending_staged_profile_update_iris and open_profile_advisory_count:
+                    pending_note = (
+                        " Pending staged profile update(s) already anchor this "
+                        "dataset/evidence, but profile advisory/conflict lanes "
+                        "remain open; review the profile draft before assuming "
+                        "staged work covers it."
+                    )
+                elif pending_staged_profile_update_iris:
+                    pending_note = (
+                        " Pending staged profile update(s) already anchor this "
+                        "dataset/evidence; review staged frontier work before "
+                        "staging another profile update."
+                    )
+                else:
+                    pending_note = ""
                 tasks.append(
                     ProjectBriefRecommendedTask(
-                        priority=55 if pending_staged_profile_update_iris else 30,
+                        priority=(
+                            55
+                            if pending_staged_profile_update_iris
+                            and not open_profile_advisory_count
+                            else 30
+                        ),
                         task_type="profile_review",
                         source="draft_profile_map_updates",
                         resource=dataset.dataset,

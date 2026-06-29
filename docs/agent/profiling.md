@@ -140,7 +140,10 @@ If `project_brief` shows `staged_frontier_review` or a profile task with
 review the staged profile-map update before calling `stage_profile_map_updates`
 again for the same dataset/evidence. Other staged revisions that merely share
 the same profile evidence remain staged-frontier work, but they should not be
-treated as duplicate profile-map-update staging.
+treated as duplicate profile-map-update staging. Pending profile-map updates
+only demote pure map-update reruns; if scalar conflict, metric vocabulary, or
+type advisory lanes remain open, `project_brief` keeps the `profile_review` task
+at normal priority and its reason says advisory/conflict lanes remain open.
 For any `profile_review` task, keep `profile_evidence_iri` with the work item.
 It distinguishes multiple profile drafts on the same dataset even when their
 first suggested action is the same dataset-level `describe_query_context` call.

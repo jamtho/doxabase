@@ -2403,6 +2403,12 @@ few useful gaps:
   identifiers, and connection references. Treat raw helper payloads as
   collaborator-visible planning metadata; summarize or redact unexpected
   local/runtime references in reports.
+- A project-brief frontier trial found `pending_staged_profile_update_iris`
+  correctly prevented duplicate profile-map staging, but also demoted the whole
+  `profile_review` task when metric vocabulary, type advisory, or scalar conflict
+  lanes remained open. Project brief priority now only demotes pure map-update
+  reruns; open advisory/conflict lanes keep profile review at normal priority and
+  the task reason names the remaining lanes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
