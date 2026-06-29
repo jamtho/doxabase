@@ -27041,6 +27041,27 @@ def test_profile_map_update_scalar_only_conflict_exposes_choose_one_options(
         staged.staged_revision.revision_iri
     ).status == "ready"
 
+    export_path = tmp_path / "scalar-profile-insight-review.md"
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        export_path,
+        revision_iris=[staged.staged_revision.revision_iri],
+    )
+
+    assert review.open_profile_review_lanes == []
+    assert review.candidate_count == 1
+    candidate = review.candidates[0]
+    route_groups_by_lane = {
+        group["review_lane"]: group for group in candidate.profile_route_groups
+    }
+    assert route_groups_by_lane["profile_scalar_conflict_review"][
+        "match_strength"
+    ] == "direct_action"
+    assert "profile_scalar_conflict_review (direct_action)" in export_path.read_text(
+        encoding="utf-8"
+    )
+
 
 def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
     tmp_path: Path,

@@ -12752,6 +12752,7 @@ class DoxaBase:
         if not staged_indexes:
             return []
         staged_index_set = set(staged_indexes)
+        map_sources: list[dict[str, Any]] = []
         for action in draft.suggested_next_action_groups.get(
             "profile_map_updates",
             [],
@@ -12763,24 +12764,62 @@ class DoxaBase:
             if not isinstance(source_indexes, list):
                 continue
             if set(source_indexes) == staged_index_set:
-                return [dict(source)]
+                map_sources = [dict(source)]
+                break
 
-        action = self._profile_map_update_stage_action(
-            dataset_iri=draft.dataset.iri,
-            evidence_iri=draft.evidence_iri,
-            recommendation_indexes=staged_indexes,
-            supporting_patterns=supporting_patterns,
-        )
-        return [
-            self._profile_map_update_route_source(
+        if not map_sources:
+            action = self._profile_map_update_stage_action(
                 dataset_iri=draft.dataset.iri,
                 evidence_iri=draft.evidence_iri,
-                recommendations=draft.recommendations,
                 recommendation_indexes=staged_indexes,
                 supporting_patterns=supporting_patterns,
-                action=action,
             )
-        ]
+            map_sources = [
+                self._profile_map_update_route_source(
+                    dataset_iri=draft.dataset.iri,
+                    evidence_iri=draft.evidence_iri,
+                    recommendations=draft.recommendations,
+                    recommendation_indexes=staged_indexes,
+                    supporting_patterns=supporting_patterns,
+                    action=action,
+                )
+            ]
+
+        scalar_sources = self._profile_scalar_conflict_staging_route_sources(
+            draft,
+            staged_indexes=staged_indexes,
+        )
+        return self._merge_profile_route_sources(map_sources, scalar_sources)
+
+    @staticmethod
+    def _profile_scalar_conflict_staging_route_sources(
+        draft: ProfileMapUpdateDraft,
+        *,
+        staged_indexes: list[int],
+    ) -> list[dict[str, Any]]:
+        staged_index_set = set(staged_indexes)
+        sources: list[dict[str, Any]] = []
+        for action in draft.suggested_next_action_groups.get(
+            "profile_scalar_conflict_review",
+            [],
+        ):
+            source = getattr(action, "source_scalar_conflict", None)
+            if not isinstance(source, MappingABC):
+                continue
+            recommendation_indexes = source.get("recommendation_indexes")
+            if not isinstance(recommendation_indexes, list):
+                continue
+            source_index_set = {
+                index
+                for index in recommendation_indexes
+                if isinstance(index, int) and not isinstance(index, bool)
+            }
+            if not staged_index_set.intersection(source_index_set):
+                continue
+            route_source = dict(source)
+            route_source["direct_review_lane"] = "profile_scalar_conflict_review"
+            sources.append(route_source)
+        return sources
 
     def _profile_map_update_supporting_pattern_iris(
         self,
@@ -32921,6 +32960,11 @@ class DoxaBase:
         route_source = dict(source)
         route_source["_profile_route_source_origin"] = source_origin
         route_source["_profile_route_source_direct_allowed"] = direct_allowed
+        direct_review_lane = route_source.get("direct_review_lane")
+        if isinstance(direct_review_lane, str):
+            route_source["_profile_route_source_direct_review_lane"] = (
+                direct_review_lane
+            )
         return route_source
 
     @staticmethod
@@ -32957,9 +33001,17 @@ class DoxaBase:
             if not matched_by:
                 continue
             review_lane = source.get("review_lane")
+            source_direct_review_lane = source.get(
+                "_profile_route_source_direct_review_lane"
+            )
+            effective_direct_review_lane = (
+                source_direct_review_lane
+                if isinstance(source_direct_review_lane, str)
+                else direct_review_lane
+            )
             match_strength = DoxaBase._profile_insight_route_match_strength(
                 review_lane=review_lane,
-                direct_review_lane=direct_review_lane,
+                direct_review_lane=effective_direct_review_lane,
                 matched_by=matched_by,
                 direct_allowed=bool(
                     source.get("_profile_route_source_direct_allowed")

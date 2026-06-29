@@ -170,9 +170,12 @@ fields such as `group["review_lane"]` rather than using attribute access.
 New `stage_profile_map_updates` revisions persist their profile route source in
 history, so post-apply exports can still show the original
 `profile_map_updates` direct-action lane after the live draft no longer proposes
-that map update. Fresh same-lane live follow-ups after apply remain support
-routes, not direct-action satisfaction for the already-applied row. Generated
-query-planning repair rows with review notes such as
+that map update. When the staged recommendation was chosen from
+`profile_scalar_conflict_review`, the stored route also marks that scalar
+conflict lane as the direct action, so choosing one option closes the route
+group in `open_profile_review_lanes`. Fresh same-lane live follow-ups after
+apply remain support routes, not direct-action satisfaction for the
+already-applied row. Generated query-planning repair rows with review notes such as
 `missing_storage_access query planning guidance` are also recovered as
 `query_context_review` direct-action rows when the repair has already been
 applied and the blocker no longer appears in the live draft.
