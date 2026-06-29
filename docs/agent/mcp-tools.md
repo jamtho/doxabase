@@ -2155,6 +2155,9 @@ paths, records redacted privacy warnings, and lists the recommended
 evidence statuses. The result contains nested `trig` and `revision_snapshots`
 export records, the manifest payload, optional manifest write metadata, plus
 combined `sensitive_literal_count` and `privacy_warnings`.
+Read `recovery_complete` at the paired handoff level for the bundle as a whole;
+the nested TriG and snapshot JSON records are components and are not
+recovery-complete by themselves.
 Use `doxabase.export_preflight(export_kind="handoff_bundle")` before choosing
 paths when you need to review both the RDF graph roles and stored snapshot rows
 without creating artifacts.

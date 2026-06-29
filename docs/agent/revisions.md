@@ -136,10 +136,20 @@ On the receiving capsule:
 5. Then call `check_staged_revision_apply()` for staged proposals,
    `describe_applied_revision_diff()` for applied events, or
    `describe_revision_lineage()` when you need the whole chain before mutating.
+6. For a cold continuation check, confirm
+   `describe_revision_lineage().applied_revision_iri` /
+   `latest_revision_iri`, inspect `describe_applied_revision_diff().graph_diffs`
+   for the role-local changed-triple counts, and run
+   `plan_staged_revision_recovery(current_staged_work_only=True)` to verify the
+   remaining staged queue.
 
 Suggested import actions may carry `path_is_placeholder=True`; replace those
 placeholder paths with the real handoff artifact paths before calling import
 tools.
+When reading a handoff manifest, distinguish the top-level paired operation from
+its component artifact records: the handoff bundle can be
+`recovery_complete=true` even though the nested TriG and snapshot JSON records
+each say `recovery_complete=false` because neither artifact is complete alone.
 
 Choose the export artifact by the receiving task:
 

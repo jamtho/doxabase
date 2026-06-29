@@ -228,6 +228,12 @@ private or noisy resources. By contrast, `describe_context_slice(include_trig=Tr
 is an inspection surface; it may include base ontology or base shape triples
 selected for route context and should not be assumed to be a recovery or
 shareable handoff bundle.
+Scanner-clean context-slice exports only prove that the selected slice triples
+passed the scanner. They may omit staged patch payload literals, unrelated
+history rows, or stored revision snapshots that a full handoff would scan. For
+staged/privacy review, run `export_preflight(export_kind="handoff_bundle")` or
+the grouped staged/profile export with `fail_on_sensitive=True` rather than
+treating a clean slice as whole-capsule privacy clearance.
 
 If a context-slice export includes the `history` graph, treat it as importable
 review context, not a recovery-complete revision handoff. It can carry

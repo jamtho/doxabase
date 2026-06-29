@@ -323,6 +323,12 @@ Then call `draft_query_plan(dataset_iri)` for a non-executed handoff:
    come from storage-access-owned templates, not dataset or partition file paths.
    `scan.connection_reference` without `scan.relation_identifier` is
    repair/review context, not a database relation handoff.
+   A successful database-storage repair loop can still leave
+   `ready_for_execution_attempt=false`: clear `missing_storage_access`, add the
+   reviewed physical layout, move/add the relation template onto the storage
+   access, remove the misplaced dataset or partition template, then treat
+   `handoff_kind="database_relation_handoff"` plus `scan.relation_identifier`
+   as the non-executed handoff success signal.
 6. `scan.function` is only a hint when the physical layout is unambiguous. If a
    dataset links multiple distinct file formats or compression codecs,
    `ambiguous_physical_layout` blocks execution-readiness and leaves the scan

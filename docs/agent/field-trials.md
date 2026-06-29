@@ -2925,6 +2925,18 @@ few useful gaps:
   context handoffs: they stay visible in profile draft summaries and raw queue
   counts, but do not create `profile_review` tasks without map updates, scalar
   conflicts, open metric vocabulary, or type findings.
+- A broad post-fix wave passed across staged recovery, storage query planning,
+  review-bundle/export hygiene, and project-brief frontier selection. Staged
+  recovery handled same-count digest drift, batch restage, sequential
+  post-apply recheck, handoff bundle import, and exact applied diffs in a cold
+  capsule. Storage query planning reached a database relation handoff through
+  missing storage/layout repair, moving a relation template onto storage, and
+  removing the misplaced dataset template; `ready_for_execution_attempt=false`
+  remained correct because runtime execution was still external. Review/export
+  hygiene blocked staged/profile/handoff artifacts with strict scanner gates
+  and confirmed that scanner-clean context slices only cover selected triples.
+  Mixed `project_brief` frontiers routed to `full_frontier_expansion` and the
+  defined-metric context-only draft no longer created `profile_review`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
