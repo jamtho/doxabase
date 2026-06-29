@@ -114,7 +114,10 @@ make agents stage the same shell twice; the accepted representative still carrie
 all supporting profile observations. For scalar conflicts, choose at most one option
 from `profile_scalar_conflict_review` or from
 `scalar_conflict_groups[].options[]`; those options intentionally stay out of
-flat `suggested_next_actions`.
+flat `suggested_next_actions`. A focused option call to
+`stage_profile_map_updates` still returns full-draft accounting: unrelated draft
+recommendations appear as `not_selected` in `status_counts` / `items[]` even
+though the selected scalar option was the only accepted index.
 
 Sampled row-count updates are skipped by default unless the caller explicitly
 allows sampled row-count updates and the sample scope really is the durable
@@ -156,7 +159,8 @@ reviewer can map route lanes back to the detailed revision section directly.
 When several route groups map to the same lane, match strength, and support
 kind, the Markdown lane label is grouped with a route-group count; the returned
 `profile_route_keys` and `profile_route_groups` still preserve every route key
-for scripts.
+for scripts. `profile_route_groups` rows are dict-shaped; scripts should index
+fields such as `group["review_lane"]` rather than using attribute access.
 New `stage_profile_map_updates` revisions persist their profile route source in
 history, so post-apply exports can still show the original
 `profile_map_updates` direct-action lane after the live draft no longer proposes

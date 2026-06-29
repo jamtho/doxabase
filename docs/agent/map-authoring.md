@@ -161,7 +161,9 @@ An accepted index is still routed through guardrails: it may be `staged` or
 call. Accepted sampled row counts can be skipped by default, and accepted
 same-evidence scalar conflicts are skipped when the same call chooses multiple
 values for one row-count or nullable assertion. Check `status_counts` first,
-then item reasons.
+then item reasons. Those counts describe the full draft, not only the accepted
+indexes in the call; a one-option scalar conflict stage can legitimately report
+many `not_selected` rows.
 When a profile-derived change is backed by synthesized lore, pass
 `supporting_claims`, `supporting_patterns`, or extra `revision_anchors`; these
 links are recorded on the staged revision for later review.

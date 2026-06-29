@@ -2571,6 +2571,11 @@ few useful gaps:
   IRIs referenced only through `rc:observedValueType`, expand through matching
   profile observations, and preserve the exact rows in
   `seed_profile_observations`.
+- A profile-systematisation trial confirmed profile route bridge rows preserve
+  every route key, but surfaced two response-shape traps: `profile_route_groups`
+  rows are dicts, and `stage_profile_map_updates.status_counts` covers the full
+  draft even for one-option scalar conflict calls. The agent docs now make both
+  shapes explicit.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
