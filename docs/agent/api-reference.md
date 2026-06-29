@@ -483,8 +483,13 @@ database-backed storage, scan-adjacent `execution_attempt_ready`,
 `execution_attempt_blocking_reason_codes` mirrors of the review gate, parsed
 placeholder names in `required_bindings`, structured `binding_requirements`
 rows for handoff work, non-secret storage environment hints, copied issues and
-analysis warnings, caveats, and a `review_gate`. Top-level `handoff_kind` is a
-machine-readable route for the draft: `no_query_target`,
+analysis warnings, caveats, and a `review_gate`. Top-level `handoff_summary`
+copies the compact routing fields most useful for reports: selected candidate
+index/note, scan function, URI or database relation identifier, execution gate
+booleans, ordered execution blockers, required bindings, issue codes,
+warning/caveat counts, and unselected ready/direct-clean peer indexes. Read it
+first for handoff routing, then inspect the full fields it summarizes. Top-level
+`handoff_kind` is a machine-readable route for the draft: `no_query_target`,
 `metadata_review_required`,
 `context_review_required`, `runtime_resolution_required`,
 `database_relation_handoff`, `binding_values_required`, or

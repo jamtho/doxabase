@@ -2177,10 +2177,35 @@ class DraftQueryPlanReviewGate:
 
 
 @dataclass(frozen=True)
+class DraftQueryPlanHandoffSummary:
+    handoff_kind: str
+    selected_candidate_index: int | None
+    selected_candidate_note: str
+    scan_function: str | None
+    uri_template: str | None
+    relation_identifier: str | None
+    connection_reference: str | None
+    candidate_path_status: str | None
+    executable_without_review: bool
+    ready_for_execution_attempt: bool
+    primary_execution_attempt_blocking_reason_code: str | None
+    execution_attempt_blocking_reason_codes: list[str]
+    runtime_resolution_required: bool
+    binding_values_required: bool
+    required_bindings: list[str]
+    all_issue_codes: list[str]
+    analysis_warning_count: int
+    caveat_count: int
+    unselected_ready_candidate_indexes: list[int]
+    unselected_direct_clean_candidate_indexes: list[int]
+
+
+@dataclass(frozen=True)
 class DraftQueryPlan:
     helper: str
     mode: str
     handoff_kind: str
+    handoff_summary: DraftQueryPlanHandoffSummary
     engine: DraftQueryPlanEngine
     dataset: ResourceSummary
     source_context: DraftQueryPlanSourceContext
@@ -4048,6 +4073,25 @@ class DoxaBase:
                         suggested_next_call=review_action.call,
                     )
                 )
+            else:
+                handoff_action = self._project_brief_query_plan_handoff_action(
+                    dataset
+                )
+                tasks.append(
+                    ProjectBriefRecommendedTask(
+                        priority=60,
+                        task_type="query_plan_handoff",
+                        source=handoff_action.tool_name,
+                        resource=dataset.dataset,
+                        reason=(
+                            "Dataset query context is ready for a non-executed "
+                            "query-plan handoff; draft or inspect the handoff "
+                            "before treating ready query work as exhausted."
+                        ),
+                        suggested_next_action=handoff_action,
+                        suggested_next_call=handoff_action.call,
+                    )
+                )
 
         for draft in dataset.profile.drafts:
             if (
@@ -4161,6 +4205,28 @@ class DoxaBase:
                 "describe_query_context",
                 arguments,
             ),
+        )
+
+    def _project_brief_query_plan_handoff_action(
+        self,
+        dataset: ProjectBriefDatasetSummary,
+    ) -> SuggestedNextAction:
+        for action in dataset.query.suggested_next_actions:
+            if action.tool_name == "draft_query_plan":
+                return action
+        if dataset.query.suggested_next_actions:
+            return dataset.query.suggested_next_actions[0]
+        arguments = {"iri": dataset.dataset.iri}
+        return SuggestedNextAction(
+            action_label="Draft query plan handoff",
+            tool_name="draft_query_plan",
+            mcp_tool_name="doxabase.draft_query_plan",
+            arguments=arguments,
+            reason=(
+                "Draft a non-executed query-plan handoff for a dataset whose "
+                "query context is ready for planning."
+            ),
+            call=self._suggested_call_string("draft_query_plan", arguments),
         )
 
     @staticmethod
@@ -15370,54 +15436,65 @@ class DoxaBase:
         direct_clean_candidate_indexes = self._query_direct_clean_candidate_indexes(
             context.query_target_candidates
         )
+        selected_candidate_note = self._draft_query_plan_selected_candidate_note(
+            selected_candidate,
+            selected_candidate_index,
+            handoff_kind=handoff_kind,
+            review_gate=review_gate,
+            context_blocking_reasons=context_blocking_reasons,
+        )
+        source_context = DraftQueryPlanSourceContext(
+            api="DoxaBase.describe_query_context",
+            readiness=context.readiness,
+            readiness_note=context.readiness_note,
+            query_target_decision=context.query_target_decision,
+            selected_candidate_index=selected_candidate_index,
+            candidate_count=len(context.query_target_candidates),
+            ready_candidate_indexes=ready_candidate_indexes,
+            unselected_ready_candidate_indexes=[
+                index
+                for index in ready_candidate_indexes
+                if index != selected_candidate_index
+            ],
+            direct_clean_candidate_indexes=direct_clean_candidate_indexes,
+            unselected_direct_clean_candidate_indexes=[
+                index
+                for index in direct_clean_candidate_indexes
+                if index != selected_candidate_index
+            ],
+            selection_mode=selection_mode,
+            requested_candidate_index=candidate_index,
+            requested_storage_access_iri=requested_storage_access_iri,
+            requested_physical_layout_iri=requested_physical_layout_iri,
+            selection_status=selection_status,
+            selection_note=selection_note,
+            selected_candidate_note=selected_candidate_note,
+            allow_context_blocked_candidate=allow_context_blocked_candidate,
+        )
+        required_bindings = [binding.name for binding in binding_requirements]
+        handoff_summary = self._draft_query_plan_handoff_summary(
+            handoff_kind=handoff_kind,
+            source_context=source_context,
+            scan=scan,
+            review_gate=review_gate,
+            required_bindings=required_bindings,
+            analysis_warnings=context.analysis_warnings,
+            caveats=context.caveats,
+        )
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
             handoff_kind=handoff_kind,
+            handoff_summary=handoff_summary,
             engine=DraftQueryPlanEngine(
                 name=engine_value,
                 source="caller_requested_target_engine",
             ),
             dataset=context.dataset,
-            source_context=DraftQueryPlanSourceContext(
-                api="DoxaBase.describe_query_context",
-                readiness=context.readiness,
-                readiness_note=context.readiness_note,
-                query_target_decision=context.query_target_decision,
-                selected_candidate_index=selected_candidate_index,
-                candidate_count=len(context.query_target_candidates),
-                ready_candidate_indexes=ready_candidate_indexes,
-                unselected_ready_candidate_indexes=[
-                    index
-                    for index in ready_candidate_indexes
-                    if index != selected_candidate_index
-                ],
-                direct_clean_candidate_indexes=direct_clean_candidate_indexes,
-                unselected_direct_clean_candidate_indexes=[
-                    index
-                    for index in direct_clean_candidate_indexes
-                    if index != selected_candidate_index
-                ],
-                selection_mode=selection_mode,
-                requested_candidate_index=candidate_index,
-                requested_storage_access_iri=requested_storage_access_iri,
-                requested_physical_layout_iri=requested_physical_layout_iri,
-                selection_status=selection_status,
-                selection_note=selection_note,
-                selected_candidate_note=(
-                    self._draft_query_plan_selected_candidate_note(
-                        selected_candidate,
-                        selected_candidate_index,
-                        handoff_kind=handoff_kind,
-                        review_gate=review_gate,
-                        context_blocking_reasons=context_blocking_reasons,
-                    )
-                ),
-                allow_context_blocked_candidate=allow_context_blocked_candidate,
-            ),
+            source_context=source_context,
             selected_candidate=selected_candidate,
             scan=scan,
-            required_bindings=[binding.name for binding in binding_requirements],
+            required_bindings=required_bindings,
             binding_requirements=binding_requirements,
             binding_note=(
                 "Bindings are placeholder names parsed from the selected path "
@@ -15527,41 +15604,52 @@ class DoxaBase:
             direct_blocking_reason_codes=[reason_code],
             context_blocking_reason_codes=[],
         )
+        source_context = DraftQueryPlanSourceContext(
+            api="DoxaBase.describe_query_context",
+            readiness=context.readiness,
+            readiness_note=context.readiness_note,
+            query_target_decision=context.query_target_decision,
+            selected_candidate_index=None,
+            candidate_count=0,
+            ready_candidate_indexes=[],
+            unselected_ready_candidate_indexes=[],
+            direct_clean_candidate_indexes=[],
+            unselected_direct_clean_candidate_indexes=[],
+            selection_mode="not_applicable",
+            requested_candidate_index=candidate_index,
+            requested_storage_access_iri=storage_access_iri,
+            requested_physical_layout_iri=physical_layout_iri,
+            selection_status="not_applicable_non_tabular_asset",
+            selection_note=(
+                "Candidate selection is not applicable because the dataset "
+                "is not typed as rc:Table."
+            ),
+            selected_candidate_note=(
+                "No query target candidate is selected for a non-tabular "
+                "asset."
+            ),
+            allow_context_blocked_candidate=allow_context_blocked_candidate,
+        )
+        handoff_summary = self._draft_query_plan_handoff_summary(
+            handoff_kind="not_applicable_non_tabular_asset",
+            source_context=source_context,
+            scan=scan,
+            review_gate=review_gate,
+            required_bindings=[],
+            analysis_warnings=context.analysis_warnings,
+            caveats=context.caveats,
+        )
         return DraftQueryPlan(
             helper="draft_query_plan",
             mode="non_executed_review_draft",
             handoff_kind="not_applicable_non_tabular_asset",
+            handoff_summary=handoff_summary,
             engine=DraftQueryPlanEngine(
                 name=engine,
                 source="caller_requested_target_engine",
             ),
             dataset=context.dataset,
-            source_context=DraftQueryPlanSourceContext(
-                api="DoxaBase.describe_query_context",
-                readiness=context.readiness,
-                readiness_note=context.readiness_note,
-                query_target_decision=context.query_target_decision,
-                selected_candidate_index=None,
-                candidate_count=0,
-                ready_candidate_indexes=[],
-                unselected_ready_candidate_indexes=[],
-                direct_clean_candidate_indexes=[],
-                unselected_direct_clean_candidate_indexes=[],
-                selection_mode="not_applicable",
-                requested_candidate_index=candidate_index,
-                requested_storage_access_iri=storage_access_iri,
-                requested_physical_layout_iri=physical_layout_iri,
-                selection_status="not_applicable_non_tabular_asset",
-                selection_note=(
-                    "Candidate selection is not applicable because the dataset "
-                    "is not typed as rc:Table."
-                ),
-                selected_candidate_note=(
-                    "No query target candidate is selected for a non-tabular "
-                    "asset."
-                ),
-                allow_context_blocked_candidate=allow_context_blocked_candidate,
-            ),
+            source_context=source_context,
             selected_candidate=None,
             scan=scan,
             required_bindings=[],
@@ -16011,6 +16099,48 @@ class DoxaBase:
                 f"{', '.join(review_gate.blocking_reason_codes)}."
             )
         return note
+
+    @staticmethod
+    def _draft_query_plan_handoff_summary(
+        *,
+        handoff_kind: str,
+        source_context: DraftQueryPlanSourceContext,
+        scan: DraftQueryPlanScan,
+        review_gate: DraftQueryPlanReviewGate,
+        required_bindings: list[str],
+        analysis_warnings: list[QueryPlanningIssue],
+        caveats: list[CaveatDescription],
+    ) -> DraftQueryPlanHandoffSummary:
+        return DraftQueryPlanHandoffSummary(
+            handoff_kind=handoff_kind,
+            selected_candidate_index=source_context.selected_candidate_index,
+            selected_candidate_note=source_context.selected_candidate_note,
+            scan_function=scan.function,
+            uri_template=scan.uri_template,
+            relation_identifier=scan.relation_identifier,
+            connection_reference=scan.connection_reference,
+            candidate_path_status=scan.candidate_path_status,
+            executable_without_review=review_gate.executable_without_review,
+            ready_for_execution_attempt=review_gate.ready_for_execution_attempt,
+            primary_execution_attempt_blocking_reason_code=(
+                review_gate.primary_execution_attempt_blocking_reason_code
+            ),
+            execution_attempt_blocking_reason_codes=list(
+                review_gate.execution_attempt_blocking_reason_codes
+            ),
+            runtime_resolution_required=review_gate.runtime_resolution_required,
+            binding_values_required=review_gate.binding_values_required,
+            required_bindings=list(required_bindings),
+            all_issue_codes=list(review_gate.all_issue_codes),
+            analysis_warning_count=len(analysis_warnings),
+            caveat_count=len(caveats),
+            unselected_ready_candidate_indexes=list(
+                source_context.unselected_ready_candidate_indexes
+            ),
+            unselected_direct_clean_candidate_indexes=list(
+                source_context.unselected_direct_clean_candidate_indexes
+            ),
+        )
 
     def _draft_query_plan_storage_access(
         self,

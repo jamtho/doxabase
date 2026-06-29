@@ -2613,6 +2613,28 @@ few useful gaps:
   review. Do not treat verified Parquet plus candidate CSV as automatic stale
   cleanup; select the intended layout for drafting, then verify or remove the
   non-selected layout through a reviewed graph change.
+- A project-brief frontier trial confirmed `next_best_expansion` prevents a
+  low-limit brief from hiding query/profile/non-tabular work, but mixed
+  `limit` and `profile_candidate_limit` constraints can still require several
+  reruns. A future combined expansion affordance could collapse those steps
+  without changing queue semantics.
+- A query-handoff trial found ready query plans were discoverable inside
+  `datasets[].query.suggested_next_actions` but absent from
+  `recommended_next_tasks`, so queue-following agents could miss ready physical
+  handoffs. Project brief now emits low-priority `query_plan_handoff` tasks for
+  `ready_for_query_planning` datasets, and `draft_query_plan` includes
+  `handoff_summary` for compact non-executed handoff reports.
+- A staged review-bundle handoff trial confirmed same-capsule staged Markdown
+  exports are compact and actionable, but cross-capsule TriG/snapshot handoffs
+  can produce false `target_digest_drift` conflicts when blank node identifiers
+  change across export/import. Treat blank-node-canonical graph digests or
+  RDF-isomorphism-aware drift checks as a project-level follow-up before relying
+  on fixture-heavy cross-capsule apply/rebase handoffs.
+- A privacy/export trial found `privacy_export_review`, redacted scans, export
+  warnings, and `fail_on_sensitive=True` block paths work without exposing
+  planted sensitive-looking values. The main remaining affordance gap is a
+  first-class export preflight decision helper that distinguishes `block`,
+  scanner-clean-only, and broader shareability-review states.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

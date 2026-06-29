@@ -89,6 +89,11 @@ templates before drafting or executing any route. Tasks labelled
 context currently has no lifted repair template; the task action points to
 `describe_query_context` even when the dataset summary still lists a
 review-gated `draft_query_plan` action for deeper inspection.
+Tasks labelled `query_plan_handoff` are low-priority ready-query lanes. They
+appear when `describe_query_context` reports `ready_for_query_planning` and point
+to the query context's `draft_query_plan` action when one is available, so ready
+physical query handoffs are visible in `recommended_next_tasks` instead of only
+inside `datasets[].query.suggested_next_actions`.
 Tasks labelled `profile_review` are scoped by `profile_evidence_iri`; keep that
 evidence IRI with the work item even when the first suggested action is a shared
 dataset-level blocker review such as `describe_query_context`. Pending staged
@@ -855,7 +860,14 @@ as best-effort handoff hints, not runtime binding values.
 `ambiguous`; review ambiguous rows before choosing any source column, even when
 individual matches have `confidence="high"`. Confidence is per match, while the
 status summarizes the whole hint set. Top-level
-`handoff_kind` gives a compact machine-readable route, such as
+`handoff_kind` gives a compact machine-readable route, and top-level
+`handoff_summary` copies the first-pass handoff facts most often needed in
+reports: selected candidate index/note, scan function, URI or database relation
+identifier, readiness gate booleans, execution-attempt blockers, required
+bindings, issue codes, warning/caveat counts, and unselected ready/direct-clean
+candidate indexes. Read `handoff_summary` first for routing, then inspect the
+full `scan`, `storage_environment`, `review_gate`, `issues`, and caveats before
+execution. `handoff_kind` values include
 `metadata_review_required`, `context_review_required`,
 `runtime_resolution_required`, `database_relation_handoff`,
 `binding_values_required`, or `execution_attempt_ready`. `review_gate`

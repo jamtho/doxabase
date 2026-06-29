@@ -138,6 +138,10 @@ references before export.
    execution attempt. When it is false,
    `plan.review_gate.primary_execution_attempt_blocking_reason_code` names the
    first ordered execution-attempt blocker, or `None` if no blocker remains.
+   Read `plan.handoff_summary` first when preparing a compact handoff report; it
+   copies the selected candidate index/note, scan function, URI or relation
+   identifier, readiness gate booleans, blocker codes, required bindings, issue
+   codes, warning/caveat counts, and peer ready/direct-clean candidate indexes.
    Use `plan.handoff_kind` for first-pass machine routing:
    it distinguishes review-required drafts, runtime-resolution work, database
    relation handoffs, URI-template binding work, and execution-attempt-ready

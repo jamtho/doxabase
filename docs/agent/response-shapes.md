@@ -122,12 +122,14 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
     "queue_counts": {
         "staged_frontier_review": 1,
         "query_repair_review": 2,
+        "query_plan_handoff": 1,
         "profile_review": 1,
         "staged_review": 1,
     },
     "returned_queue_counts": {
         "staged_frontier_review": 1,
         "query_repair_review": 1,
+        "query_plan_handoff": 1,
         "profile_review": 1,
         "staged_review": 1,
     },
@@ -288,6 +290,11 @@ the returned staged row, and `evidence_iris` lists its direct revision evidence.
 When current staged work exists, `staged_review` tasks are ordered ahead of
 fresh mutation-capable `query_repair_review` and `profile_review` tasks; omitted
 fresh queues are reported through `omitted_queue_counts` and `health_tasks`.
+Ready physical query handoffs use `query_plan_handoff`, a low-priority queue
+that appears when a table's query context is `ready_for_query_planning`. It
+points to `draft_query_plan` when the query context exposes that action, keeping
+ready handoffs visible in `recommended_next_tasks` rather than only inside
+`datasets[].query.suggested_next_actions`.
 When a query repair task already has staged work anchored to the same dataset,
 `pending_staged_repair_iris` names those staged revision IRIs and the task is
 lowered behind `staged_review` so unattended agents review/apply the pending
@@ -2720,6 +2727,7 @@ pattern handoff in `describe_dataset`.
 plan.helper
 plan.mode
 plan.handoff_kind
+plan.handoff_summary
 plan.engine
 plan.dataset
 plan.source_context
@@ -2746,6 +2754,35 @@ selected draft. It is one of `no_query_target`, `metadata_review_required`,
 `execution_attempt_ready`. The field is derived from the selected candidate,
 review gate, runtime-resolution state, scan shape, and binding requirements; it
 is a shortcut for routing, not a replacement for reading the underlying fields.
+`plan.handoff_summary` copies the compact routing facts agents most often need
+for reports or handoffs:
+
+```python
+handoff_summary.handoff_kind
+handoff_summary.selected_candidate_index
+handoff_summary.selected_candidate_note
+handoff_summary.scan_function
+handoff_summary.uri_template
+handoff_summary.relation_identifier
+handoff_summary.connection_reference
+handoff_summary.candidate_path_status
+handoff_summary.executable_without_review
+handoff_summary.ready_for_execution_attempt
+handoff_summary.primary_execution_attempt_blocking_reason_code
+handoff_summary.execution_attempt_blocking_reason_codes
+handoff_summary.runtime_resolution_required
+handoff_summary.binding_values_required
+handoff_summary.required_bindings
+handoff_summary.all_issue_codes
+handoff_summary.analysis_warning_count
+handoff_summary.caveat_count
+handoff_summary.unselected_ready_candidate_indexes
+handoff_summary.unselected_direct_clean_candidate_indexes
+```
+
+Use it to decide and report the first handoff state, then inspect `scan`,
+`storage_environment`, `review_gate`, `issues`, and caveats for the supporting
+detail.
 `binding_values_required` appears when URI-template placeholders still need
 caller-supplied runtime values; in that case
 `review_gate.ready_for_execution_attempt` is false.

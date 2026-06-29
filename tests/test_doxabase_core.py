@@ -450,6 +450,54 @@ def test_project_brief_routes_blocked_context_tasks_to_context_review(
     )
 
 
+def test_project_brief_routes_ready_query_handoffs_to_draft_plan(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage_root = str(tmp_path / "orders.parquet")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#OrdersLocalStorage",
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=storage_root,
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#OrdersParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    brief = db.project_brief(limit=5)
+
+    assert brief.datasets[0].query.readiness == "ready_for_query_planning"
+    assert brief.queue_counts == {"query_plan_handoff": 1}
+    task = brief.recommended_next_tasks[0]
+    assert task.priority == 60
+    assert task.task_type == "query_plan_handoff"
+    assert task.source == "draft_query_plan"
+    assert task.suggested_next_action is not None
+    assert task.suggested_next_action.tool_name == "draft_query_plan"
+    assert task.suggested_next_action.arguments == {
+        "iri": dataset,
+        "candidate_index": 0,
+    }
+    assert task.suggested_next_call == (
+        "draft_query_plan(iri='https://example.test/project#Orders', "
+        "candidate_index=0)"
+    )
+
+
 def test_project_brief_reserves_recommendation_slots_by_queue(
     tmp_path: Path,
 ) -> None:
@@ -15315,6 +15363,19 @@ def test_query_target_decision_prefers_ready_wildcard_without_bindings(
     assert plan.review_gate.execution_attempt_blocking_reason_codes == [
         "runtime_resolution_required"
     ]
+    summary = plan.handoff_summary
+    assert summary.handoff_kind == "runtime_resolution_required"
+    assert summary.selected_candidate_index == wildcard_index
+    assert summary.scan_function == "read_parquet"
+    assert summary.uri_template == "s3://ais-noaa/index/*/*.parquet"
+    assert summary.required_bindings == []
+    assert summary.executable_without_review is True
+    assert summary.ready_for_execution_attempt is False
+    assert summary.primary_execution_attempt_blocking_reason_code == (
+        "runtime_resolution_required"
+    )
+    assert summary.runtime_resolution_required is True
+    assert summary.binding_values_required is False
 
 
 def test_query_context_suggests_stale_partition_link_repair(
@@ -16609,6 +16670,9 @@ def test_describe_query_context_surfaces_storage_root_only_location(
     assert plan.review_gate.binding_values_required is False
     assert plan.review_gate.ready_for_execution_attempt is True
     assert plan.scan.execution_attempt_ready is True
+    assert plan.handoff_summary.ready_for_execution_attempt is True
+    assert plan.handoff_summary.primary_execution_attempt_blocking_reason_code is None
+    assert plan.handoff_summary.uri_template == storage_root
     assert plan.review_gate.primary_execution_attempt_blocking_reason_code is None
     assert plan.scan.primary_execution_attempt_blocking_reason_code is None
     assert plan.scan.execution_attempt_blocking_reason_codes == []
@@ -18391,8 +18455,10 @@ def test_project_brief_prioritizes_pending_staged_query_repair(
     assert repaired_context.issues == []
     assert repaired_context.suggested_repair_action_groups == []
     post_apply_brief = db.project_brief(limit=3)
-    assert post_apply_brief.queue_counts == {}
-    assert post_apply_brief.recommended_next_tasks == []
+    assert post_apply_brief.queue_counts == {"query_plan_handoff": 1}
+    assert post_apply_brief.recommended_next_tasks[0].task_type == (
+        "query_plan_handoff"
+    )
     post_apply_slice = db.describe_context_slice(dataset, profile="dataset_brief")
     assert post_apply_slice.suggested_next_actions == []
     assert post_apply_slice.warnings == []

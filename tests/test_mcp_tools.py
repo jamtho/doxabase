@@ -501,6 +501,49 @@ def test_project_brief_tool_routes_blocked_context_tasks_to_context_review(
     )
 
 
+def test_project_brief_tool_routes_ready_query_handoffs_to_draft_plan(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#OrdersLocalStorage",
+        label="Orders local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=str(tmp_path / "orders.parquet"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#OrdersParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = project_brief_tool(db, limit=5)
+
+    assert result["queue_counts"] == {"query_plan_handoff": 1}
+    task = result["recommended_next_tasks"][0]
+    assert task["task_type"] == "query_plan_handoff"
+    assert task["source"] == "draft_query_plan"
+    assert task["suggested_next_action"]["tool_name"] == "draft_query_plan"
+    assert task["suggested_next_action"]["arguments"] == {
+        "iri": dataset,
+        "candidate_index": 0,
+    }
+
+
 def test_project_brief_tool_marks_pending_staged_query_repairs(
     tmp_path: Path,
 ) -> None:
@@ -4449,6 +4492,11 @@ def test_query_tools_mark_non_tabular_asset_not_applicable(
     plan = draft_query_plan_tool(db, iri=asset)
 
     assert plan["handoff_kind"] == "not_applicable_non_tabular_asset"
+    assert plan["handoff_summary"]["handoff_kind"] == (
+        "not_applicable_non_tabular_asset"
+    )
+    assert plan["handoff_summary"]["selected_candidate_index"] is None
+    assert plan["handoff_summary"]["ready_for_execution_attempt"] is False
     assert plan["selected_candidate"] is None
     assert plan["scan"]["function"] is None
     assert plan["review_gate"]["status"] == "not_applicable_non_tabular_asset"
@@ -4466,6 +4514,7 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["helper"] == "draft_query_plan"
     assert result["mode"] == "non_executed_review_draft"
     assert result["handoff_kind"] == "metadata_review_required"
+    assert result["handoff_summary"]["handoff_kind"] == "metadata_review_required"
     assert result["engine"] == {
         "name": "duckdb",
         "source": "caller_requested_target_engine",
@@ -4480,6 +4529,11 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["scan"]["uri_template"] == (
         "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
     )
+    assert result["handoff_summary"]["scan_function"] == "read_parquet"
+    assert result["handoff_summary"]["uri_template"] == (
+        "s3://ais-noaa/broadcasts/{year}/ais-{date}.parquet"
+    )
+    assert result["handoff_summary"]["selected_candidate_index"] == 0
     assert result["scan"]["candidate_path_status"] == "orientation_only"
     assert result["scan"]["dataset_verification_status"] is None
     assert result["scan"]["dataset_verification_note"] is None
@@ -4547,10 +4601,18 @@ def test_draft_query_plan_tool_returns_review_draft(tmp_path: Path) -> None:
     assert result["review_gate"]["runtime_resolution_required"] is True
     assert result["review_gate"]["binding_values_required"] is True
     assert result["review_gate"]["ready_for_execution_attempt"] is False
+    assert result["handoff_summary"]["ready_for_execution_attempt"] is False
+    assert result["handoff_summary"]["runtime_resolution_required"] is True
+    assert result["handoff_summary"]["binding_values_required"] is True
+    assert result["handoff_summary"]["required_bindings"] == ["year", "date"]
     assert result["review_gate"]["blocking_reason_codes"] == [
         "layout_needs_verification"
     ]
     assert result["review_gate"]["all_issue_codes"] == [
+        "layout_needs_verification",
+        "verification_status_not_recorded",
+    ]
+    assert result["handoff_summary"]["all_issue_codes"] == [
         "layout_needs_verification",
         "verification_status_not_recorded",
     ]
@@ -5120,6 +5182,8 @@ def test_draft_query_plan_tool_returns_database_relation_handoff(
     assert result["scan"]["uri_template"] is None
     assert result["scan"]["relation_identifier"] == "mart.orders"
     assert result["scan"]["connection_reference"] == "warehouse-prod"
+    assert result["handoff_summary"]["relation_identifier"] == "mart.orders"
+    assert result["handoff_summary"]["connection_reference"] == "warehouse-prod"
     assert result["scan"]["composition"] == "database_connection_and_relation"
     assert result["scan"]["execution_attempt_ready"] is False
     assert result["scan"]["execution_attempt_blocking_reason_codes"] == [
