@@ -45,6 +45,30 @@ def test_start_here_names_exact_discovery_tools() -> None:
     assert "doxabase.describe_context_slice" in content
     assert "profiling" in content
     assert "systematisation" in content
+    assert "Staged Handoff Recovery Cookbook" in content
+
+
+def test_revision_docs_include_handoff_recovery_cookbook() -> None:
+    doc = get_agent_doc(
+        "revisions",
+        section="Staged Handoff Recovery Cookbook",
+        max_chars=10_000,
+    )
+    content = str(doc["content"])
+
+    assert doc["selected_section"]["heading"] == (
+        "Staged Handoff Recovery Cookbook"
+    )
+    assert "export_preflight" in content
+    assert "export_handoff_bundle" in content
+    assert "export_staged_revisions" in content
+    assert "import_trig" in content
+    assert "import_revision_snapshots" in content
+    assert "describe_revision_snapshot_evidence" in content
+    assert "check_staged_revision_apply" in content
+    assert "history_only_count_digest" in content
+    assert "snapshot_rows_without_history" in content
+    assert "history_plus_snapshot_rows" in content
 
 
 def test_storage_access_docs_distinguish_protocol_from_location_kind() -> None:

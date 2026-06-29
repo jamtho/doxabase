@@ -104,12 +104,43 @@ faithful and may preserve historical sensitive-looking values; review its
 `sensitive_literal_count` and `privacy_warnings`, including matches in stored
 quad subjects, predicates, and object terms, or pass `fail_on_sensitive=True`,
 before sharing the artifact.
-For a staged cross-capsule handoff, run `export_preflight` first, export the
-handoff bundle, import the project TriG into the receiving capsule, inspect
-snapshot evidence, import the companion revision-snapshot JSON, and then
-describe or check the staged revisions. Treat `clean_by_scanner_only` as a
-scanner result, not general shareability approval; the matching
-`shareability_review_status` remains `required_not_completed`.
+## Staged Handoff Recovery Cookbook
+
+Use this route when a staged or applied revision must move between capsules and
+the receiving agent may need exact apply checks, stale-drift reconstruction, or
+applied diffs. The staged Markdown review bundle is useful context, but it is
+not a recovery artifact by itself.
+
+On the source capsule:
+
+1. Run `export_preflight(export_kind="handoff_bundle", ...)` and inspect
+   privacy warnings before writing artifacts. Treat `clean_by_scanner_only` as a
+   scanner result, not general shareability approval; the matching
+   `shareability_review_status` remains `required_not_completed`.
+2. Optionally write Markdown review context with `export_staged_revision()` or
+   `export_staged_revisions()`. This helps human review but is not importable.
+3. Run `export_handoff_bundle(trig_path, revision_snapshot_path,
+   manifest_path=...)` for the project/history TriG plus companion snapshot
+   JSON. Use `revision_iris` or `snapshot_graph_roles` only when the receiver
+   intentionally needs a narrowed snapshot bundle.
+
+On the receiving capsule:
+
+1. Import the project/history RDF with `import_trig(trig_path)`.
+2. If revision helpers report `history_only_count_digest`, import the companion
+   snapshot JSON with `import_revision_snapshots(revision_snapshot_path)`.
+3. If snapshot JSON arrived first and helpers report
+   `snapshot_rows_without_history`, import the project/history TriG.
+4. Call `describe_revision_snapshot_evidence(revision_iri)` until the relevant
+   rows reach `history_plus_snapshot_rows`.
+5. Then call `check_staged_revision_apply()` for staged proposals,
+   `describe_applied_revision_diff()` for applied events, or
+   `describe_revision_lineage()` when you need the whole chain before mutating.
+
+Suggested import actions may carry `path_is_placeholder=True`; replace those
+placeholder paths with the real handoff artifact paths before calling import
+tools.
+
 Choose the export artifact by the receiving task:
 
 - `export_trig(graphs="workflow")` / `graphs="review_bundle"` is for review
@@ -530,8 +561,10 @@ For a stale-restage-apply handoff between capsules:
 2. Check the successor with
    `check_staged_revision_apply(restaged.revision_iri)`.
 3. Apply only after review with `apply_staged_revision(restaged.revision_iri)`.
-4. Export both the project/history RDF and SQLite-side snapshot rows:
-   `export_trig(project_path, graphs="project")` plus
+4. Export both the project/history RDF and SQLite-side snapshot rows with
+   `export_handoff_bundle(project_path, snapshot_path,
+   revision_iris=[applied_iri], fail_on_sensitive=True)`. The lower-level
+   equivalent is `export_trig(project_path, graphs="project")` plus
    `export_revision_snapshots(snapshot_path, revision_iris=[applied_iri],
    fail_on_sensitive=True)`.
    Include older stale ancestor IRIs explicitly if exact full-chain recovery
