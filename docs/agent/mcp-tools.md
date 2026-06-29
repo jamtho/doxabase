@@ -1542,6 +1542,10 @@ source-lane count looks inflated.
 apply queue. `repair_or_replace_source_revision_iris` is the broad source-row
 worklist for lanes currently routing to `repair_or_replace`; it includes
 same-slot replacement routes that may not appear in `repair_first_revision_iris`.
+For repair lanes whose concrete mutation is a helper call rather than an
+existing revision target, `helper_mutation_frontier_actions` and
+`helper_mutation_frontier_calls` expose the deduped preferred repair helper
+mutations when `include_drafts=True`.
 `repair_first_revision_iris` and lanes with `lane="repair_or_replace"` should be
 inspected or drafted before any restage.
 If `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one

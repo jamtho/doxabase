@@ -4585,6 +4585,8 @@ plan.next_action_queue_item_counts
 plan.resolved_target_groups
 plan.resolved_target_group_counts
 plan.mutation_frontier_iris
+plan.helper_mutation_frontier_actions
+plan.helper_mutation_frontier_calls
 plan.requires_recheck_after_each_apply
 plan.semantic_review_required_queue_counts
 plan.would_restage_revision_iris
@@ -4726,7 +4728,10 @@ apply/restage/repair queues; it intentionally excludes informational rows,
 already-applied inspection targets, and repair helper calls that do not resolve
 to an existing target IRI.
 For same-slot repair lanes before a successor exists, this field can be empty
-even when the lane is actionable. Drive that repair from
+even when the lane is actionable. When `include_drafts=True`,
+`helper_mutation_frontier_actions` gives the deduped preferred helper mutation
+actions for those repair lanes, and `helper_mutation_frontier_calls` gives their
+display calls. If that list is empty, drive the repair from
 `repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
 When `include_drafts=True` and a no-repair embedded draft already removed
 `draft_staged_revision_rebase` from its own suggestions, the lane and top-level

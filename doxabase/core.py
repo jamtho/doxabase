@@ -1329,6 +1329,8 @@ class StagedRevisionRecoveryPlan:
     resolved_target_groups: list[StagedRevisionResolvedTargetGroup]
     resolved_target_group_counts: dict[str, int]
     mutation_frontier_iris: list[str]
+    helper_mutation_frontier_actions: list[SuggestedNextAction]
+    helper_mutation_frontier_calls: list[str]
     requires_recheck_after_each_apply: bool
     semantic_review_required_queue_counts: dict[str, int]
     would_restage_revision_iris: list[str]
@@ -28000,6 +28002,9 @@ class DoxaBase:
             for lane in lanes
         ]
         mutation_frontier_iris = self._revision_mutation_frontier_iris(queue_items)
+        helper_mutation_frontier_actions = (
+            self._staged_recovery_helper_mutation_frontier_actions(lanes)
+        )
         resolved_target_groups = self._staged_recovery_resolved_target_groups(
             lanes,
             requested_revision_iris=requested_revision_iris,
@@ -28077,6 +28082,12 @@ class DoxaBase:
                 )
             ),
             mutation_frontier_iris=mutation_frontier_iris,
+            helper_mutation_frontier_actions=helper_mutation_frontier_actions,
+            helper_mutation_frontier_calls=[
+                action.call
+                for action in helper_mutation_frontier_actions
+                if action.call
+            ],
             requires_recheck_after_each_apply=requires_recheck_after_each_apply,
             semantic_review_required_queue_counts=(
                 self._semantic_review_required_queue_counts(queue_items)
@@ -28436,6 +28447,8 @@ class DoxaBase:
             resolved_target_groups=[],
             resolved_target_group_counts={},
             mutation_frontier_iris=[],
+            helper_mutation_frontier_actions=[],
+            helper_mutation_frontier_calls=[],
             requires_recheck_after_each_apply=False,
             semantic_review_required_queue_counts={},
             would_restage_revision_iris=[],
@@ -28829,6 +28842,21 @@ class DoxaBase:
         for lane in lanes:
             counts[lane.lane] = counts.get(lane.lane, 0) + 1
         return counts
+
+    def _staged_recovery_helper_mutation_frontier_actions(
+        self,
+        lanes: Iterable[StagedRevisionRecoveryLane],
+    ) -> list[SuggestedNextAction]:
+        actions: list[SuggestedNextAction] = []
+        for lane in lanes:
+            if lane.lane != "repair_or_replace":
+                continue
+            if (
+                lane.repair_draft is not None
+                and lane.repair_draft.preferred_action is not None
+            ):
+                actions.append(lane.repair_draft.preferred_action)
+        return self._dedupe_suggested_next_actions(actions)
 
     def _staged_recovery_suggested_next_actions(
         self,

@@ -226,7 +226,10 @@ restage. If `requires_recheck_after_each_apply` is true, apply at most one ready
 row, then rerun the planner.
 For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
 can be empty because the concrete mutation is a helper call rather than an
-existing revision target. Use `lane.next_action.arguments` or
+existing revision target. When `include_drafts=True`, use
+`helper_mutation_frontier_actions` / `helper_mutation_frontier_calls` as the
+top-level deduped list of preferred repair helper mutations. If that list is
+empty, fall back to `lane.next_action.arguments` or
 `lane.repair_draft.preferred_action.arguments` for that reviewed repair.
 When the planner selection includes an `rc:StagedRevision` history row with no
 staged patch payload, including in `current_staged_work_only=False` scans, the

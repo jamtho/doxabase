@@ -6805,6 +6805,15 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         stale.revision_iri,
         handled_successor.revision_iri,
     ]
+    assert [
+        action.tool_name for action in plan.helper_mutation_frontier_actions
+    ] == ["stage_map_assertion_change"]
+    assert plan.helper_mutation_frontier_actions[0].arguments[
+        "restages_revision"
+    ] == repair_source.revision_iri
+    assert plan.helper_mutation_frontier_calls == [
+        plan.helper_mutation_frontier_actions[0].call
+    ]
     assert plan.resolved_target_group_counts == plan.next_action_queue_item_counts
     assert plan.requires_recheck_after_each_apply is True
     assert set(plan.sequential_apply_recheck_candidate_iris) == {
@@ -7172,6 +7181,8 @@ def test_invalid_row_semantics_object_does_not_draft_rebase_repair(
         action.tool_name != "draft_staged_revision_rebase"
         for action in plan.suggested_next_actions
     )
+    assert plan.helper_mutation_frontier_actions == []
+    assert plan.helper_mutation_frontier_calls == []
 
 
 def test_same_slot_replacement_preserves_applied_alternative_gate(
