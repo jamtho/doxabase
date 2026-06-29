@@ -901,6 +901,88 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
     assert result["source_span_triples"] > 0
 
 
+def test_describe_query_context_tool_routes_singleton_query_result_evidence(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    csv_path = tmp_path / "orders.csv"
+    csv_path.write_text("order_id,status,amount\n1,paid,12.00\n", encoding="utf-8")
+    result_path = tmp_path / "orders-paid-aggregate.json"
+    result_path.write_text('{"paid_order_count": 1}\n', encoding="utf-8")
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_csv_storage",
+        label="Orders CSV storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        location_kind="object",
+        storage_root=str(csv_path),
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    result = record_query_result_tool(
+        db,
+        summary="Orders paid aggregate scanned the scratch CSV.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path="queries/orders_paid_aggregate.sql",
+        query_hash="sha256:abc123",
+        result_sources=[str(result_path)],
+        sample_size=1,
+        sample_scope="All rows in the scratch Orders CSV.",
+        sample_method="External read-only aggregate query.",
+        row_count=1,
+    )
+
+    context = describe_query_context_tool(db, iri=dataset)
+
+    assert context["profile_summary"]["evidence_iris"] == [result["evidence_iri"]]
+    assert context["profile_summary"]["profile_run_candidates"] == []
+    assert [
+        action["tool_name"] for action in context["suggested_next_actions"][:2]
+    ] == [
+        "describe_profile_run",
+        "draft_query_plan",
+    ]
+    profile_action = context["suggested_next_actions"][0]
+    assert profile_action["action_label"] == "Inspect singleton profile evidence"
+    assert profile_action["arguments"] == {
+        "dataset_iri": dataset,
+        "evidence_iri": result["evidence_iri"],
+    }
+    source_profile_evidence = profile_action["source_profile_evidence"]
+    assert source_profile_evidence["execution_status"] == "succeeded"
+    assert source_profile_evidence["engine"] == "python-csv"
+    assert source_profile_evidence["query_hash"] == "sha256:abc123"
+    assert source_profile_evidence["query_source_paths"] == [
+        "queries/orders_paid_aggregate.sql"
+    ]
+    assert source_profile_evidence["result_sources"] == [str(result_path)]
+    assert source_profile_evidence["profile_summaries"][0]["summary"] == (
+        "Orders paid aggregate scanned the scratch CSV."
+    )
+
+    profile_run = describe_profile_run_tool(db, **profile_action["arguments"])
+    assert profile_run["returned_profile_count"] == 1
+    assert profile_run["evidence"]["sources"] == [str(result_path)]
+    assert profile_run["evidence"]["source_spans"][0]["source_path"] == (
+        "queries/orders_paid_aggregate.sql"
+    )
+
+
 def test_export_tools_write_review_artifacts(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     load_example_fixtures_tool(db)

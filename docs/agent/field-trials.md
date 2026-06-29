@@ -2063,6 +2063,14 @@ few useful gaps:
   filtered or grouped aggregate makes the result look like profile evidence and
   can surface profile-review work. Keep arbitrary aggregate counts in
   `result_sources` unless the value is genuinely population-profile evidence.
+  A later query-result handoff trial found that singleton profile evidence from
+  `record_query_result` was visible in `profile_summary.evidence_iris` but did
+  not produce a `profile_run_candidates[]` row or suggested profile action.
+  `describe_query_context` now inserts a bounded singleton
+  `describe_profile_run` action before `draft_query_plan`; its
+  `source_profile_evidence` preview carries the evidence summary, short profile
+  summary, result sources, query-source paths, and parsed execution
+  status/engine/query hash when the standard evidence summary is present.
 - An ontology/SHACL frontier trial for late-arriving snapshot corrections
   confirmed that pattern-only, map-only, and complete ontology+shape framings
   can be staged side by side, while an intentionally incomplete shape-backed

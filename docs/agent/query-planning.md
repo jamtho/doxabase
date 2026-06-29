@@ -117,6 +117,13 @@ Start with `describe_query_context(dataset_iri)`:
    `profile_summary.profile_run_candidates[].row_count_snapshot_basis` with
    each candidate's `dataset_profile_row_count_bases` to distinguish full-scan,
    sampled, and unknown-scope count support.
+   When `profile_summary.evidence_iris` is non-empty but
+   `profile_run_candidates` is empty, follow the singleton
+   `describe_profile_run` action before drafting. This commonly means a
+   profile-like `record_query_result` observation has one evidence-linked profile
+   row; the action's `source_profile_evidence` preview carries query-source
+   paths, result sources, execution status, engine, query hash when available,
+   and the short profile summary.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
    For non-database storage with `location_kind="object"`, prefer the exact

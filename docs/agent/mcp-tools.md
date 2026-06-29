@@ -588,6 +588,12 @@ actions before treating a profile-derived count as current. Also read
 `row_count_snapshot_basis` and `dataset_profile_row_count_bases` on
 `profile_summary.profile_run_candidates[]`; a matching row count can still come
 from sampled, unknown, or mixed-basis profile evidence.
+When `profile_summary.evidence_iris` is non-empty but there are no
+`profile_run_candidates`, query context still adds a bounded
+`describe_profile_run` action for singleton profile evidence. That action carries
+`source_profile_evidence` with the evidence summary, query-source paths, result
+sources, parsed execution status/engine/query hash when available, and short
+profile summaries.
 Use `dataset_profile_row_counts`, `dataset_profile_row_count_bases`,
 `row_count_snapshot_matches`, and `row_count_snapshot_basis` on
 `describe_profile_run` results to preserve that normalized row-count context
@@ -888,6 +894,10 @@ Use it after `draft_query_plan` and an external runtime attempt. Supply
 `query_source_path` when the query text has a durable non-secret location.
 Failed, blocked, cancelled, or partial attempts are ordinary observations; do
 not pass profile count fields unless `execution_status="succeeded"`.
+After recording a successful profile-like result, rerun
+`describe_query_context`. If the result is the only returned profile observation,
+the query context will route it through a singleton `describe_profile_run`
+suggested action before drafting another query plan.
 
 `doxabase.record_dataset_profile`
 

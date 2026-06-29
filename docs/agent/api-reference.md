@@ -369,6 +369,12 @@ sampled, or unknown-scope support.
 When candidate row counts disagree, or when the snapshot-matching run is
 sampled, unknown, or mixed basis, `suggested_next_actions` includes additional
 `describe_profile_run` actions before query-plan drafting.
+When profile evidence exists but all returned evidence is singleton evidence, so
+`profile_run_candidates` is empty, `suggested_next_actions` still includes a
+bounded `describe_profile_run` action before query-plan drafting. Its
+`source_profile_evidence` preview carries the evidence summary, result sources,
+query-source paths, parsed execution status/engine/query hash when the standard
+`record_query_result()` evidence summary is present, and short profile summaries.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
 when candidate order selected a different route than intended. These indexes
@@ -729,6 +735,9 @@ ordinary observations and reject profile count fields. Use `query_source_path`
 for a non-secret query file or query artifact, which is stored as an
 `rc:SourceSpan` with `rc:QuerySource`, and `result_sources` for result files,
 logs, or output artifacts.
+After recording a profile-like result, rerun `describe_query_context()`; singleton
+query-result profile evidence now gets an explicit `describe_profile_run()`
+handoff even when it is not a multi-observation profile-run candidate.
 
 `record_dataset_profile()` records a profile observation for one dataset and can
 also update the map row-count snapshot and write an agent-authored profile

@@ -1226,6 +1226,8 @@ profile; each candidate has `evidence_iri`, `returned_profile_count`,
 `profile_observation_iris`, `dataset_profile_row_counts`,
 `dataset_profile_row_count_bases`, `row_count_snapshot_matches`,
 `row_count_snapshot_basis`, and `shared_by_all_returned_profiles`.
+Singleton evidence remains visible in `evidence_iris` and
+`evidence_profile_counts` even when it is not a `profile_run_candidates[]` row.
 Candidates are ordered by returned profile count, then by whether a returned
 dataset-profile `row_count` matches `row_count_snapshot`, then by evidence IRI.
 `dataset_profile_row_count_bases` is keyed by row-count string and records the
@@ -2076,6 +2078,25 @@ profile history, match the dataset-profile
 profile-derived count, and check
 `profile_summary.profile_run_candidates[].row_count_snapshot_basis` before
 treating the matching count as full-scan evidence.
+When `query.profile_summary.evidence_iris` is non-empty but
+`profile_run_candidates` is empty, `suggested_next_actions` includes a bounded
+singleton `describe_profile_run` action. That action has the normal
+`SuggestedNextAction` fields plus `source_profile_evidence`:
+
+```python
+action.source_profile_evidence["evidence_iri"]
+action.source_profile_evidence["profile_observation_count"]
+action.source_profile_evidence["profile_observation_iris"]
+action.source_profile_evidence["profile_summaries"]
+action.source_profile_evidence["evidence_summary"]
+action.source_profile_evidence["execution_status"]
+action.source_profile_evidence["engine"]
+action.source_profile_evidence["query_hash"]
+action.source_profile_evidence["result_sources"]
+action.source_profile_evidence["query_source_paths"]
+action.source_profile_evidence["query_source_spans"]
+action.source_profile_evidence["handoff_note"]
+```
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
 `insufficient_metadata`, `blocked_by_contradiction`, or

@@ -2762,6 +2762,11 @@ class ProfileScalarConflictSuggestedNextAction(SuggestedNextAction):
 
 
 @dataclass(frozen=True)
+class ProfileEvidenceSuggestedNextAction(SuggestedNextAction):
+    source_profile_evidence: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class ProfileQueryContextSuggestedNextAction(SuggestedNextAction):
     source_query_context: dict[str, Any]
 
@@ -12777,11 +12782,10 @@ class DoxaBase:
             if index != query_target_decision.candidate_index
         ]
         suggested_next_actions = self._query_context_next_actions(
-            dataset_iri=dataset.iri,
+            dataset=dataset,
             graph=graph,
             readiness=readiness,
             issues=issues,
-            profile_summary=dataset.profile_summary,
             decision=query_target_decision,
             candidates=query_target_candidates,
             unselected_ready_candidate_indexes=unselected_ready_candidate_indexes,
@@ -13248,17 +13252,18 @@ class DoxaBase:
     def _query_context_next_actions(
         self,
         *,
-        dataset_iri: str,
+        dataset: DatasetDescription,
         graph: str | None,
         readiness: str,
         issues: list[QueryPlanningIssue],
-        profile_summary: ProfileSummary,
         decision: QueryTargetDecision,
         candidates: list[QueryTargetCandidate],
         unselected_ready_candidate_indexes: list[int],
         unselected_direct_clean_candidate_indexes: list[int],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
+        dataset_iri = dataset.iri
+        profile_summary = dataset.profile_summary
         if profile_summary.profile_run_candidates:
             profile_candidates = profile_summary.profile_run_candidates
             for candidate_index, candidate_run in enumerate(
@@ -13305,6 +13310,13 @@ class DoxaBase:
                         ),
                     )
                 )
+        elif profile_summary.evidence_iris:
+            actions.extend(
+                self._query_context_singleton_profile_evidence_actions(
+                    dataset,
+                    profile_summary,
+                )
+            )
         if (
             decision.candidate_index is None
             or decision.candidate_index < 0
@@ -13462,8 +13474,213 @@ class DoxaBase:
                         )
                     ),
                 )
+        )
+        return actions
+
+    def _query_context_singleton_profile_evidence_actions(
+        self,
+        dataset: DatasetDescription,
+        profile_summary: ProfileSummary,
+    ) -> list[SuggestedNextAction]:
+        evidence_iris = [
+            evidence_iri
+            for evidence_iri in profile_summary.evidence_iris
+            if profile_summary.evidence_profile_counts.get(evidence_iri, 0) > 0
+        ]
+        if not evidence_iris:
+            return []
+        profiles_by_evidence = self._query_context_profiles_by_evidence(dataset)
+        action_limit = 3
+        actions: list[SuggestedNextAction] = []
+        for action_index, evidence_iri in enumerate(evidence_iris[:action_limit]):
+            arguments = {
+                "dataset_iri": dataset.iri,
+                "evidence_iri": evidence_iri,
+            }
+            omitted_count = 0
+            if action_index == action_limit - 1:
+                omitted_count = max(len(evidence_iris) - action_limit, 0)
+            omitted_note = (
+                f" {omitted_count} additional singleton profile evidence IRI(s) "
+                "are listed in profile_summary.evidence_iris."
+                if omitted_count
+                else ""
+            )
+            actions.append(
+                ProfileEvidenceSuggestedNextAction(
+                    action_label="Inspect singleton profile evidence",
+                    tool_name="describe_profile_run",
+                    mcp_tool_name="doxabase.describe_profile_run",
+                    arguments=arguments,
+                    reason=(
+                        "This query context has profile evidence, but no "
+                        "multi-observation profile_run_candidates. Inspect this "
+                        "singleton evidence before draft_query_plan; it may be a "
+                        "recorded external query result or another one-observation "
+                        "profile handoff."
+                        f"{omitted_note}"
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_profile_run",
+                        arguments,
+                    ),
+                    source_profile_evidence=(
+                        self._query_context_source_profile_evidence(
+                            evidence_iri,
+                            profiles_by_evidence.get(evidence_iri, []),
+                        )
+                    ),
+                )
             )
         return actions
+
+    def _query_context_profiles_by_evidence(
+        self,
+        dataset: DatasetDescription,
+    ) -> dict[str, list[ProfileObservationSummary]]:
+        profiles = [
+            *dataset.profile_observations,
+            *dataset.unmapped_column_profile_observations,
+            *(
+                profile
+                for column in dataset.columns
+                for profile in column.profile_observations
+            ),
+        ]
+        profiles_by_evidence: dict[str, dict[str, ProfileObservationSummary]] = {}
+        for profile in profiles:
+            for evidence in profile.evidence:
+                profiles_by_evidence.setdefault(evidence.iri, {})[profile.iri] = profile
+        return {
+            evidence_iri: list(profile_by_iri.values())
+            for evidence_iri, profile_by_iri in profiles_by_evidence.items()
+        }
+
+    def _query_context_source_profile_evidence(
+        self,
+        evidence_iri: str,
+        profiles: list[ProfileObservationSummary],
+    ) -> dict[str, Any]:
+        evidence = self._profile_evidence_description(evidence_iri, profiles)
+        evidence_summary = evidence.summary if evidence is not None else None
+        metadata = self._query_result_metadata_from_evidence_summary(evidence_summary)
+        result_sources = evidence.sources if evidence is not None else []
+        source_spans = evidence.source_spans if evidence is not None else []
+        query_source_kind = self.expand_iri("rc:QuerySource")
+        query_source_spans = [
+            span for span in source_spans if span.source_kind == query_source_kind
+        ]
+        preview_spans = query_source_spans or source_spans
+        result_source_limit = 5
+        span_limit = 3
+        profile_limit = 3
+        query_source_paths = [
+            span.source_path for span in query_source_spans if span.source_path
+        ]
+        return {
+            "evidence_iri": evidence_iri,
+            "profile_observation_count": len(profiles),
+            "profile_observation_iris": [profile.iri for profile in profiles],
+            "profile_summaries": [
+                self._query_context_profile_summary_preview(profile)
+                for profile in profiles[:profile_limit]
+            ],
+            "omitted_profile_summary_count": max(len(profiles) - profile_limit, 0),
+            "evidence_summary": evidence_summary,
+            "execution_status": metadata["execution_status"],
+            "engine": metadata["engine"],
+            "query_hash": metadata["query_hash"],
+            "result_sources": result_sources[:result_source_limit],
+            "omitted_result_source_count": max(
+                len(result_sources) - result_source_limit,
+                0,
+            ),
+            "query_source_paths": query_source_paths[:span_limit],
+            "query_source_spans": [
+                self._query_context_source_span_preview(span)
+                for span in preview_spans[:span_limit]
+            ],
+            "omitted_query_source_span_count": max(
+                len(preview_spans) - span_limit,
+                0,
+            ),
+            "handoff_note": (
+                "Singleton profile evidence is not a profile_run_candidate because "
+                "it is attached to one returned profile observation; use "
+                "describe_profile_run for the full bounded handoff."
+            ),
+        }
+
+    @staticmethod
+    def _profile_evidence_description(
+        evidence_iri: str,
+        profiles: list[ProfileObservationSummary],
+    ) -> EvidenceDescription | None:
+        for profile in profiles:
+            for evidence in profile.evidence:
+                if evidence.iri == evidence_iri:
+                    return evidence
+        return None
+
+    @staticmethod
+    def _query_result_metadata_from_evidence_summary(
+        evidence_summary: str | None,
+    ) -> dict[str, str | None]:
+        metadata: dict[str, str | None] = {
+            "execution_status": None,
+            "engine": None,
+            "query_hash": None,
+        }
+        if not evidence_summary:
+            return metadata
+        status_match = re.search(
+            r"(?:^|\s)External query execution ([^.]+)\.",
+            evidence_summary,
+        )
+        if status_match:
+            metadata["execution_status"] = status_match.group(1).strip()
+        engine_match = re.search(r"(?:^|\s)Engine: ([^.]+)\.", evidence_summary)
+        if engine_match:
+            metadata["engine"] = engine_match.group(1).strip()
+        hash_match = re.search(r"(?:^|\s)Query hash: ([^.]+)\.", evidence_summary)
+        if hash_match:
+            metadata["query_hash"] = hash_match.group(1).strip()
+        return metadata
+
+    @staticmethod
+    def _query_context_profile_summary_preview(
+        profile: ProfileObservationSummary,
+    ) -> dict[str, Any]:
+        return {
+            "profile_observation_iri": profile.iri,
+            "summary": profile.summary,
+            "sample_size": profile.sample_size,
+            "sample_scope": profile.sample_scope,
+            "sample_method": profile.sample_method,
+            "row_count": profile.row_count,
+            "null_count": profile.null_count,
+            "distinct_count": profile.distinct_count,
+            "observed_column_iri": (
+                profile.observed_column.iri
+                if profile.observed_column is not None
+                else None
+            ),
+            "observed_column_name": profile.observed_column_name,
+        }
+
+    @staticmethod
+    def _query_context_source_span_preview(
+        span: SourceSpanDescription,
+    ) -> dict[str, Any]:
+        return {
+            "iri": span.iri,
+            "source_path": span.source_path,
+            "source_section": span.source_section,
+            "start_line": span.start_line,
+            "end_line": span.end_line,
+            "source_kind": span.source_kind,
+            "source_kind_label": span.source_kind_label,
+        }
 
     @staticmethod
     def _query_context_should_inspect_profile_candidate(
