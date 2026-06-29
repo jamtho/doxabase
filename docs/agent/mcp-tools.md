@@ -57,7 +57,12 @@ non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
 Read `health_tasks` before repeating visible recommended tasks. It is not
 limited by `recommended_next_tasks` and can route agents to widen the brief,
-run redacted privacy/export review, or handle stale immutable seed graphs.
+increase `profile_candidate_limit`, run redacted privacy/export review, or
+handle stale immutable seed graphs.
+`profile_queue_counts["profile_candidate_omitted"]` and the
+`expand_profile_candidate_limit` health task mean some profile evidence was not
+drafted at all under the current candidate bound; rerun `project_brief` with the
+suggested `profile_candidate_limit` before treating profile queues as exhausted.
 When current staged work exists, a `staged_frontier_review` task points to
 `plan_staged_revision_recovery`; follow that first before staging duplicate
 profile or query repair work. `staged_review` rows are also ordered ahead of

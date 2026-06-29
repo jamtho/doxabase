@@ -256,6 +256,67 @@ def test_project_brief_surfaces_singleton_profile_draft(
     )
 
 
+def test_project_brief_reports_profile_candidates_hidden_by_limit(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence_iris = [
+        f"https://example.test/project#OrdersProfileEvidence{index}"
+        for index in range(3)
+    ]
+
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    for index, evidence_iri in enumerate(evidence_iris):
+        db.record_dataset_profile(
+            dataset,
+            summary=f"Orders profile pass {index}.",
+            evidence_summary=f"Synthetic profile output {index}.",
+            evidence_sources=[f"test://orders-profile/{index}"],
+            evidence_iri=evidence_iri,
+            sample_size=12 + index,
+            sample_scope="All rows in the local Orders table.",
+            sample_method="DuckDB full-table aggregate profile.",
+            row_count=12 + index,
+            update_map_snapshot=False,
+        )
+
+    brief = db.project_brief(limit=5, profile_candidate_limit=1)
+    profile = brief.datasets[0].profile
+
+    assert profile.draft_candidate_count == 3
+    assert profile.draft_count == 1
+    assert profile.draft_evidence_iris == [evidence_iris[0]]
+    assert profile.profile_candidate_omitted_count == 2
+    assert profile.omitted_draft_evidence_iris == evidence_iris[1:]
+    assert brief.profile_queue_counts["profile_draft_candidates"] == 3
+    assert brief.profile_queue_counts["profile_candidate_omitted"] == 2
+    assert brief.profile_queue_counts["profile_drafts"] == 1
+    assert brief.queue_counts["profile_review"] == 1
+    assert brief.omitted_queue_counts == {}
+
+    health_task = next(
+        task
+        for task in brief.health_tasks
+        if task.task_type == "expand_profile_candidate_limit"
+    )
+    assert health_task.profile_candidate_omitted_count == 2
+    assert health_task.suggested_limit == brief.limit
+    assert health_task.suggested_profile_candidate_limit == 3
+    assert health_task.queue_types == ["profile_review"]
+    assert health_task.suggested_next_action is not None
+    assert health_task.suggested_next_action.tool_name == "project_brief"
+    assert health_task.suggested_next_action.arguments == {
+        "limit": brief.limit,
+        "profile_candidate_limit": 3,
+    }
+
+
 def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
     tmp_path: Path,
 ) -> None:

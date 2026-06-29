@@ -2529,6 +2529,13 @@ few useful gaps:
   export. Profile insight bundles now expose `open_profile_review_lanes` and an
   `Open Profile Review Lanes` Markdown table for live draft route groups that
   lack a direct-action candidate.
+- A project-brief frontier trial showed low `limit` omissions were already
+  visible through `omitted_queue_counts`, `limit_crowded_queue_types`, and
+  `health_tasks`, but low `profile_candidate_limit` could hide profile evidence
+  before drafts entered `queue_counts`. Project brief now reports per-dataset
+  `profile_candidate_omitted_count`, top-level
+  `profile_queue_counts["profile_candidate_omitted"]`, and an
+  `expand_profile_candidate_limit` health task.
 - A staged-recovery workflow trial exercised two stale rows plus one ready row
   through recovery planning, dry-run batch restage, real batch restage/export,
   apply-one-then-replan, sibling restage, and exact applied diff inspection. The

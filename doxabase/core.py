@@ -350,6 +350,9 @@ class ProjectBriefDatasetProfileSummary:
     profile_evidence_iris: list[str]
     profile_run_candidate_count: int
     profile_run_evidence_iris: list[str]
+    draft_candidate_count: int
+    profile_candidate_omitted_count: int
+    omitted_draft_evidence_iris: list[str]
     draft_count: int
     draft_evidence_iris: list[str]
     drafts: list[ProjectBriefProfileDraftSummary]
@@ -411,6 +414,8 @@ class ProjectBriefHealthTask:
     queue_types: list[str] = field(default_factory=list)
     omitted_queue_counts: dict[str, int] = field(default_factory=dict)
     suggested_limit: int | None = None
+    suggested_profile_candidate_limit: int | None = None
+    profile_candidate_omitted_count: int | None = None
     sensitive_literal_count: int | None = None
     missing_seed_terms: list[str] = field(default_factory=list)
 
@@ -3430,9 +3435,23 @@ class DoxaBase:
                 limit=limit,
             )
         )
+        profile_queue_counts = self._project_brief_profile_queue_counts(
+            all_dataset_summaries
+        )
+        suggested_profile_candidate_limit = (
+            self._project_brief_suggested_profile_candidate_limit(
+                all_dataset_summaries,
+                profile_candidate_limit=profile_candidate_limit,
+            )
+        )
         health_tasks = self._project_brief_health_tasks(
             limit=limit,
             profile_candidate_limit=profile_candidate_limit,
+            profile_candidate_omitted_count=profile_queue_counts.get(
+                "profile_candidate_omitted",
+                0,
+            ),
+            suggested_profile_candidate_limit=suggested_profile_candidate_limit,
             active_queue_type_count=len(queue_counts),
             omitted_queue_counts=omitted_queue_counts,
             limit_crowded_queue_types=limit_crowded_queue_types,
@@ -3448,9 +3467,7 @@ class DoxaBase:
             returned_dataset_count=len(datasets),
             dataset_query_readiness_counts=readiness_counts,
             returned_dataset_query_readiness_counts=returned_readiness_counts,
-            profile_queue_counts=self._project_brief_profile_queue_counts(
-                all_dataset_summaries
-            ),
+            profile_queue_counts=profile_queue_counts,
             queue_counts=queue_counts,
             returned_queue_counts=returned_queue_counts,
             omitted_queue_counts=omitted_queue_counts,
@@ -3532,8 +3549,10 @@ class DoxaBase:
         draft_evidence_iris = self._project_brief_profile_draft_evidence_iris(
             profile_summary
         )
+        selected_draft_evidence_iris = draft_evidence_iris[:profile_candidate_limit]
+        omitted_draft_evidence_iris = draft_evidence_iris[profile_candidate_limit:]
         drafts: list[ProjectBriefProfileDraftSummary] = []
-        for evidence_iri in draft_evidence_iris[:profile_candidate_limit]:
+        for evidence_iri in selected_draft_evidence_iris:
             draft = self.draft_profile_map_updates(
                 dataset.iri,
                 evidence_iri,
@@ -3565,6 +3584,9 @@ class DoxaBase:
             profile_run_evidence_iris=[
                 candidate.evidence_iri for candidate in candidates
             ],
+            draft_candidate_count=len(draft_evidence_iris),
+            profile_candidate_omitted_count=len(omitted_draft_evidence_iris),
+            omitted_draft_evidence_iris=omitted_draft_evidence_iris,
             draft_count=len(drafts),
             draft_evidence_iris=[draft.evidence_iri for draft in drafts],
             drafts=drafts,
@@ -3580,6 +3602,24 @@ class DoxaBase:
         evidence_iris.extend(profile_summary.shared_evidence_iris)
         evidence_iris.extend(profile_summary.evidence_iris)
         return list(dict.fromkeys(evidence_iris))
+
+    @staticmethod
+    def _project_brief_suggested_profile_candidate_limit(
+        datasets: list[ProjectBriefDatasetSummary],
+        *,
+        profile_candidate_limit: int,
+    ) -> int | None:
+        required_limit = max(
+            (
+                dataset.profile.draft_candidate_count
+                for dataset in datasets
+                if dataset.profile.profile_candidate_omitted_count > 0
+            ),
+            default=0,
+        )
+        if required_limit <= profile_candidate_limit:
+            return None
+        return required_limit
 
     def _project_brief_staged_frontier_task(
         self,
@@ -3627,6 +3667,8 @@ class DoxaBase:
         *,
         limit: int,
         profile_candidate_limit: int,
+        profile_candidate_omitted_count: int,
+        suggested_profile_candidate_limit: int | None,
         active_queue_type_count: int,
         omitted_queue_counts: dict[str, int],
         limit_crowded_queue_types: list[str],
@@ -3642,6 +3684,20 @@ class DoxaBase:
         if expand_task is not None:
             tasks.append(expand_task)
 
+        profile_candidate_task = (
+            self._project_brief_profile_candidate_limit_health_task(
+                limit=limit,
+                profile_candidate_omitted_count=(
+                    profile_candidate_omitted_count
+                ),
+                suggested_profile_candidate_limit=(
+                    suggested_profile_candidate_limit
+                ),
+            )
+        )
+        if profile_candidate_task is not None:
+            tasks.append(profile_candidate_task)
+
         privacy_task = self._project_brief_privacy_health_task()
         if privacy_task is not None:
             tasks.append(privacy_task)
@@ -3651,6 +3707,51 @@ class DoxaBase:
             tasks.append(seed_task)
 
         return sorted(tasks, key=lambda task: (task.priority, task.task_type))
+
+    def _project_brief_profile_candidate_limit_health_task(
+        self,
+        *,
+        limit: int,
+        profile_candidate_omitted_count: int,
+        suggested_profile_candidate_limit: int | None,
+    ) -> ProjectBriefHealthTask | None:
+        if (
+            profile_candidate_omitted_count <= 0
+            or suggested_profile_candidate_limit is None
+        ):
+            return None
+        arguments = {
+            "limit": limit,
+            "profile_candidate_limit": suggested_profile_candidate_limit,
+        }
+        action = SuggestedNextAction(
+            action_label="Expand profile candidate frontier",
+            tool_name="project_brief",
+            mcp_tool_name="doxabase.project_brief",
+            arguments=arguments,
+            reason=(
+                "Some profile evidence candidates were omitted before draft "
+                "queues were built; rerun project_brief with a larger "
+                "profile_candidate_limit before assuming profile_review is "
+                "exhausted."
+            ),
+            call=self._suggested_call_string("project_brief", arguments),
+        )
+        return ProjectBriefHealthTask(
+            priority=10,
+            task_type="expand_profile_candidate_limit",
+            source="project_brief",
+            reason=(
+                "The current profile_candidate_limit hides profile draft "
+                "candidates before they can enter profile_review queues."
+            ),
+            suggested_next_action=action,
+            suggested_next_call=action.call,
+            queue_types=["profile_review"],
+            suggested_limit=limit,
+            suggested_profile_candidate_limit=suggested_profile_candidate_limit,
+            profile_candidate_omitted_count=profile_candidate_omitted_count,
+        )
 
     def _project_brief_expand_health_task(
         self,
@@ -4094,6 +4195,14 @@ class DoxaBase:
             ),
             "profile_run_candidates": sum(
                 dataset.profile.profile_run_candidate_count
+                for dataset in datasets
+            ),
+            "profile_draft_candidates": sum(
+                dataset.profile.draft_candidate_count
+                for dataset in datasets
+            ),
+            "profile_candidate_omitted": sum(
+                dataset.profile.profile_candidate_omitted_count
                 for dataset in datasets
             ),
             "profile_drafts": len(drafts),

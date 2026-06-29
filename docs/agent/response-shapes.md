@@ -111,6 +111,8 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "profile_observations": 4,
         "profile_evidence": 2,
         "profile_run_candidates": 1,
+        "profile_draft_candidates": 3,
+        "profile_candidate_omitted": 1,
         "profile_drafts": 2,
         "profile_draft_recommendations": 3,
         "profile_scalar_conflict_groups": 0,
@@ -144,6 +146,23 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "queue_types": ["query_repair_review"],
             "omitted_queue_counts": {"query_repair_review": 1},
             "suggested_limit": 21,
+            "suggested_profile_candidate_limit": null,
+            "profile_candidate_omitted_count": null,
+            "sensitive_literal_count": null,
+            "missing_seed_terms": [],
+        },
+        {
+            "priority": 10,
+            "task_type": "expand_profile_candidate_limit",
+            "source": "project_brief",
+            "reason": "...",
+            "suggested_next_action": {...},
+            "suggested_next_call": "project_brief(...)",
+            "queue_types": ["profile_review"],
+            "omitted_queue_counts": {},
+            "suggested_limit": 20,
+            "suggested_profile_candidate_limit": 3,
+            "profile_candidate_omitted_count": 1,
             "sensitive_literal_count": null,
             "missing_seed_terms": [],
         },
@@ -157,6 +176,8 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "queue_types": [],
             "omitted_queue_counts": {},
             "suggested_limit": null,
+            "suggested_profile_candidate_limit": null,
+            "profile_candidate_omitted_count": null,
             "sensitive_literal_count": 1,
             "missing_seed_terms": [],
         },
@@ -282,16 +303,26 @@ For `profile_review` tasks, `profile_evidence_iri` names the profile evidence
 that scoped the task. Use it even when `suggested_next_action` is a shared
 blocker action such as `describe_query_context`, because multiple profile
 drafts for the same dataset can point at the same blocker first.
+`profile_candidate_limit` is applied before profile drafts become
+`profile_review` tasks. Each dataset profile summary reports
+`draft_candidate_count`, `profile_candidate_omitted_count`, and
+`omitted_draft_evidence_iris`; top-level `profile_queue_counts` also reports
+`profile_draft_candidates` and `profile_candidate_omitted`. When omitted
+candidates are nonzero, `health_tasks` includes
+`expand_profile_candidate_limit` with a `project_brief` action whose
+`profile_candidate_limit` is large enough to include the largest currently
+truncated dataset.
 `datasets` and
 `returned_dataset_query_readiness_counts` describe the bounded returned slice.
 The recommended task selector keeps at least one task from each active queue
 when the limit allows, then fills remaining slots by priority.
 `health_tasks` is outside the bounded `recommended_next_tasks` slice. It reports
 stable follow-ups such as `expand_project_brief` for omitted queues,
-`privacy_export_review` when a redacted project scan finds potential sensitive
-literals, and `seed_recovery_review` when immutable seed graphs are missing
-current staging vocabulary. Check it before repeating the same visible task
-types in an unattended loop.
+`expand_profile_candidate_limit` for profile drafts hidden by
+`profile_candidate_limit`, `privacy_export_review` when a redacted project scan
+finds potential sensitive literals, and `seed_recovery_review` when immutable
+seed graphs are missing current staging vocabulary. Check it before repeating
+the same visible task types in an unattended loop.
 When `limit_crowded_queue_types` is non-empty, the current `limit` was too low
 to return a task from every active queue type. Rerun with a larger limit or
 inspect `queue_counts`/`omitted_queue_counts` before choosing the next loop

@@ -409,8 +409,13 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert result["datasets"][0]["dataset"]["iri"].startswith("https://")
     assert "readiness" in result["datasets"][0]["query"]
     assert "profile_run_candidate_count" in result["datasets"][0]["profile"]
+    assert "draft_candidate_count" in result["datasets"][0]["profile"]
+    assert "profile_candidate_omitted_count" in result["datasets"][0]["profile"]
+    assert "omitted_draft_evidence_iris" in result["datasets"][0]["profile"]
     assert "returned_dataset_query_readiness_counts" in result
     assert "profile_queue_counts" in result
+    assert "profile_draft_candidates" in result["profile_queue_counts"]
+    assert "profile_candidate_omitted" in result["profile_queue_counts"]
     assert "queue_counts" in result
     assert "returned_queue_counts" in result
     assert "omitted_queue_counts" in result
@@ -419,6 +424,9 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert "limit_crowded_queue_types" in result
     assert "health_tasks" in result
     assert isinstance(result["health_tasks"], list)
+    for task in result["health_tasks"]:
+        assert "suggested_profile_candidate_limit" in task
+        assert "profile_candidate_omitted_count" in task
     assert isinstance(result["recommended_next_tasks"], list)
 
 
