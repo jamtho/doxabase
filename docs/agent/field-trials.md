@@ -2117,6 +2117,12 @@ few useful gaps:
   `missing_storage_access query planning guidance` also synthesize a
   `query_context_review` direct-action route when the repair has already been
   applied.
+- A profile follow-up route trial found the merge could then over-correct:
+  after applying an unmapped-column profile update, a fresh live nullable update
+  on the same column was labelled `profile_map_updates (direct_action)` for the
+  applied source. Profile route merging now tracks candidate-local source
+  provenance, so stored/generated sources can remain direct for applied rows
+  while fresh same-lane live follow-ups are support until staged separately.
 - A Profile Route Bridge usability trial found Markdown-only reviewers could see
   lane keys and revision IRIs, but still had to reverse-map them to the grouped
   bundle rows. The bridge now carries the same row number and candidate summary

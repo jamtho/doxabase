@@ -156,7 +156,9 @@ reviewer can map route lanes back to the detailed revision section directly.
 New `stage_profile_map_updates` revisions persist their profile route source in
 history, so post-apply exports can still show the original
 `profile_map_updates` direct-action lane after the live draft no longer proposes
-that map update. Generated query-planning repair rows with review notes such as
+that map update. Fresh same-lane live follow-ups after apply remain support
+routes, not direct-action satisfaction for the already-applied row. Generated
+query-planning repair rows with review notes such as
 `missing_storage_access query planning guidance` are also recovered as
 `query_context_review` direct-action rows when the repair has already been
 applied and the blocker no longer appears in the live draft.

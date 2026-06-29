@@ -31835,15 +31835,44 @@ class DoxaBase:
         direct_review_lane = self._profile_insight_candidate_direct_review_lane(
             description
         )
-        candidate_route_sources = self._merge_profile_route_sources(
-            profile_route_sources,
-            self._stored_profile_insight_route_sources(description.iri),
-            self._profile_insight_generated_route_sources(
+        live_sources_can_be_direct = (
+            self._applied_event_for_staged_revision(description.iri) is None
+        )
+        live_route_sources = [
+            self._profile_insight_candidate_route_source(
+                source,
+                source_origin="live_draft",
+                direct_allowed=live_sources_can_be_direct,
+            )
+            for source in profile_route_sources
+        ]
+        stored_route_sources = [
+            self._profile_insight_candidate_route_source(
+                source,
+                source_origin="stored_revision",
+                direct_allowed=True,
+            )
+            for source in self._stored_profile_insight_route_sources(
+                description.iri
+            )
+        ]
+        generated_route_sources = [
+            self._profile_insight_candidate_route_source(
+                source,
+                source_origin="generated_revision",
+                direct_allowed=True,
+            )
+            for source in self._profile_insight_generated_route_sources(
                 description,
                 evidence_iri=evidence_iri,
                 matched_revision_anchor_iris=matched_anchors,
                 direct_review_lane=direct_review_lane,
-            ),
+            )
+        ]
+        candidate_route_sources = self._merge_profile_route_sources(
+            stored_route_sources,
+            generated_route_sources,
+            live_route_sources,
         )
         profile_route_groups = self._profile_insight_candidate_route_groups(
             matched_profile_observation_iris=matched_observations,
@@ -31867,6 +31896,18 @@ class DoxaBase:
             matched_revision_anchor_iris=matched_anchors,
             explicit=explicit,
         )
+
+    @staticmethod
+    def _profile_insight_candidate_route_source(
+        source: MappingABC[str, Any],
+        *,
+        source_origin: str,
+        direct_allowed: bool,
+    ) -> dict[str, Any]:
+        route_source = dict(source)
+        route_source["_profile_route_source_origin"] = source_origin
+        route_source["_profile_route_source_direct_allowed"] = direct_allowed
+        return route_source
 
     @staticmethod
     def _profile_insight_candidate_route_groups(
@@ -31906,6 +31947,9 @@ class DoxaBase:
                 review_lane=review_lane,
                 direct_review_lane=direct_review_lane,
                 matched_by=matched_by,
+                direct_allowed=bool(
+                    source.get("_profile_route_source_direct_allowed")
+                ),
             )
 
             route_group = by_route_key.setdefault(
@@ -32023,8 +32067,13 @@ class DoxaBase:
         review_lane: Any,
         direct_review_lane: str | None,
         matched_by: list[str],
+        direct_allowed: bool = True,
     ) -> str:
-        if isinstance(review_lane, str) and review_lane == direct_review_lane:
+        if (
+            direct_allowed
+            and isinstance(review_lane, str)
+            and review_lane == direct_review_lane
+        ):
             return "direct_action"
         if "supporting_pattern" in matched_by or len(matched_by) > 1:
             return "strong_support"

@@ -23919,6 +23919,86 @@ def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
     assert current_only.candidate_revision_iris == [caveat_revision_iri]
 
 
+def test_profile_review_bundle_keeps_live_followup_routes_supportive(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/profile-followup#Payments"
+    status_column = "https://example.test/profile-followup#PaymentsStatus"
+    evidence = "https://example.test/profile-followup#PaymentsProfileEvidence"
+
+    db.record_map_dataset(
+        dataset,
+        label="Payments",
+        is_table=True,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Payments were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run with an unmapped nullable column.",
+        evidence_sources=["test://payments-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=10,
+        sample_scope="All rows in the Payments table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status was profiled before being mapped.",
+                "null_count": 2,
+                "physical_type": "rc:Varchar",
+            }
+        ],
+    )
+    initial_draft = db.draft_profile_map_updates(dataset, evidence)
+    initial_route_key = initial_draft.suggested_next_action_groups[
+        "profile_map_updates"
+    ][0].source_profile_map_update["route_group_key"]
+    staged = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[0],
+    )
+    assert staged.staged_revision is not None
+    applied_source_iri = staged.staged_revision.revision_iri
+    db.apply_staged_revision(applied_source_iri)
+
+    followup_draft = db.draft_profile_map_updates(dataset, evidence)
+    followup_route_key = followup_draft.suggested_next_action_groups[
+        "profile_map_updates"
+    ][0].source_profile_map_update["route_group_key"]
+    assert followup_route_key != initial_route_key
+    assert followup_draft.recommendations[0].kind == "column_nullable"
+
+    export_path = tmp_path / "profile-followup-review.md"
+    result = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        export_path,
+    )
+
+    assert result.candidate_revision_iris == [applied_source_iri]
+    applied_candidate = result.candidates[0]
+    route_groups_by_key = {
+        group["route_group_key"]: group
+        for group in applied_candidate.profile_route_groups
+    }
+    assert route_groups_by_key[initial_route_key]["match_strength"] == (
+        "direct_action"
+    )
+    assert route_groups_by_key[followup_route_key]["match_strength"] == (
+        "strong_support"
+    )
+    exported = export_path.read_text(encoding="utf-8")
+    assert initial_route_key in exported
+    assert followup_route_key in exported
+    assert "profile_map_updates (direct_action)" in exported
+    assert "profile_map_updates (strong_support)" in exported
+
+
 def test_export_profile_insight_review_bundle_recovers_applied_query_repair_route(
     tmp_path: Path,
 ) -> None:

@@ -583,7 +583,10 @@ use `direct_action` for the lane a staged row appears to implement, and treat
 `strong_support` / `related_support` as related context rather than lane
 satisfaction. New profile-map staged revisions persist their route source in
 history, so already-applied sources can still show their original
-`profile_map_updates` direct-action lane after the live draft is resolved.
+`profile_map_updates` direct-action lane after the live draft is resolved. If a
+fresh live draft later emits another `profile_map_updates` lane for the same
+already-applied source, that follow-up is shown as `strong_support` or
+`related_support`, not as another direct action for the applied row.
 Generated query-planning repair rows can similarly recover a
 `query_context_review` direct-action lane from their review note when the blocker
 has already been fixed. Same evidence alone does not make an unrelated pattern a

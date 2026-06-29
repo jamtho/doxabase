@@ -1907,7 +1907,9 @@ row appears to implement that draft lane, while strong/related support means it
 shares profile observations, support patterns, or anchors with the lane. The
 route keys can also come from profile route source metadata persisted on a staged
 profile-map revision, or from generated query-planning repair review notes for
-already-applied query repairs whose live blocker is gone.
+already-applied query repairs whose live blocker is gone. For already-applied
+profile-map sources, persisted/generated route sources can be direct; fresh live
+draft follow-up routes for the same lane are support until staged separately.
 Markdown export includes a `Profile Route Bridge` table in the review summary
 when candidates match draft routes, and renders lane names with their strength.
 The bridge includes the grouped bundle row number and candidate summary beside
