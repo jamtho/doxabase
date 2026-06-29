@@ -1135,6 +1135,17 @@ class ProfileInsightReviewCandidate:
 
 
 @dataclass(frozen=True)
+class ProfileInsightOpenReviewLane:
+    review_lane: str
+    route_group_count: int
+    route_group_keys: list[str]
+    route_step_keys: list[str]
+    action_count: int
+    matched_candidate_revision_iris: list[str]
+    matched_candidate_count: int
+
+
+@dataclass(frozen=True)
 class ProfileInsightReviewBundleRecord:
     result_kind: str
     dataset: ResourceSummary
@@ -1145,6 +1156,8 @@ class ProfileInsightReviewBundleRecord:
     candidate_revision_iris: list[str]
     candidate_count: int
     candidates: list[ProfileInsightReviewCandidate]
+    open_profile_review_lanes: list[ProfileInsightOpenReviewLane]
+    open_profile_review_lane_count: int
     export: StagedGraphRevisionsExportRecord | None
     warnings: list[str]
     review_note: str
@@ -31927,6 +31940,10 @@ class DoxaBase:
                 seen_revision_iris.add(candidate.revision_iri)
 
         candidate_revision_iris = [candidate.revision_iri for candidate in candidates]
+        open_profile_review_lanes = self._profile_insight_open_review_lanes(
+            profile_route_sources,
+            candidates,
+        )
         export: StagedGraphRevisionsExportRecord | None = None
         if candidate_revision_iris:
             export = self.export_staged_revisions(
@@ -31938,6 +31955,7 @@ class DoxaBase:
                     profile.dataset,
                     evidence_value,
                     candidates,
+                    open_profile_review_lanes=open_profile_review_lanes,
                     executive_summary=executive_summary,
                 ),
                 format=format,
@@ -31961,14 +31979,17 @@ class DoxaBase:
             candidate_revision_iris=candidate_revision_iris,
             candidate_count=len(candidates),
             candidates=candidates,
+            open_profile_review_lanes=open_profile_review_lanes,
+            open_profile_review_lane_count=len(open_profile_review_lanes),
             export=export,
             warnings=warnings,
             review_note=(
                 "Export groups current staged revisions and already-applied "
                 "staged sources connected to the profile run by evidence, profile "
                 "observations, supporting patterns, or profile-derived anchors. "
-                "Follow remaining draft advisory lanes separately if expected "
-                "metric or type review revisions are not staged yet."
+                "Follow remaining draft advisory or conflict lanes separately if "
+                "expected scalar conflict, metric, or type review revisions are "
+                "not staged yet."
             ),
         )
 
@@ -32506,6 +32527,85 @@ class DoxaBase:
         return current
 
     @staticmethod
+    def _profile_insight_open_review_lanes(
+        profile_route_sources: Iterable[MappingABC[str, Any]],
+        candidates: list[ProfileInsightReviewCandidate],
+    ) -> list[ProfileInsightOpenReviewLane]:
+        direct_satisfied_route_keys = {
+            str(group["route_group_key"])
+            for candidate in candidates
+            for group in candidate.profile_route_groups
+            if isinstance(group.get("route_group_key"), str)
+            and group.get("match_strength") == "direct_action"
+        }
+        candidate_iris_by_route_key: dict[str, list[str]] = {}
+        for candidate in candidates:
+            for group in candidate.profile_route_groups:
+                route_group_key = group.get("route_group_key")
+                if not isinstance(route_group_key, str):
+                    continue
+                DoxaBase._append_unique(
+                    candidate_iris_by_route_key.setdefault(route_group_key, []),
+                    candidate.revision_iri,
+                )
+
+        lane_order: list[str] = []
+        by_lane: dict[str, dict[str, Any]] = {}
+        for source in profile_route_sources:
+            review_lane = source.get("review_lane")
+            route_group_key = source.get("route_group_key")
+            route_step_key = source.get("route_step_key")
+            if not isinstance(review_lane, str) or not isinstance(
+                route_group_key,
+                str,
+            ):
+                continue
+            if route_group_key in direct_satisfied_route_keys:
+                continue
+            lane = by_lane.get(review_lane)
+            if lane is None:
+                lane = {
+                    "review_lane": review_lane,
+                    "route_group_keys": [],
+                    "route_step_keys": [],
+                    "action_count": 0,
+                }
+                by_lane[review_lane] = lane
+                lane_order.append(review_lane)
+            DoxaBase._append_unique(lane["route_group_keys"], route_group_key)
+            if isinstance(route_step_key, str):
+                DoxaBase._append_unique(lane["route_step_keys"], route_step_key)
+            lane["action_count"] += 1
+
+        open_lanes: list[ProfileInsightOpenReviewLane] = []
+        for review_lane in lane_order:
+            lane = by_lane[review_lane]
+            matched_candidate_revision_iris: list[str] = []
+            for route_group_key in lane["route_group_keys"]:
+                for revision_iri in candidate_iris_by_route_key.get(
+                    route_group_key,
+                    [],
+                ):
+                    DoxaBase._append_unique(
+                        matched_candidate_revision_iris,
+                        revision_iri,
+                    )
+            open_lanes.append(
+                ProfileInsightOpenReviewLane(
+                    review_lane=review_lane,
+                    route_group_count=len(lane["route_group_keys"]),
+                    route_group_keys=lane["route_group_keys"],
+                    route_step_keys=lane["route_step_keys"],
+                    action_count=lane["action_count"],
+                    matched_candidate_revision_iris=(
+                        matched_candidate_revision_iris
+                    ),
+                    matched_candidate_count=len(matched_candidate_revision_iris),
+                )
+            )
+        return open_lanes
+
+    @staticmethod
     def _profile_insight_review_title(dataset: ResourceSummary) -> str:
         label = dataset.label or dataset.iri
         return f"Profile insight review: {label}"
@@ -32515,6 +32615,8 @@ class DoxaBase:
         dataset: ResourceSummary,
         evidence_iri: str,
         candidates: list[ProfileInsightReviewCandidate],
+        *,
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
         executive_summary: str | None = None,
     ) -> str:
         label = dataset.label or dataset.iri
@@ -32529,10 +32631,59 @@ class DoxaBase:
                 "profile-derived graph changes before applying any one lane."
             )
         )
+        sections: list[str] = []
+        open_lanes_markdown = self._profile_insight_open_review_lanes_markdown(
+            open_profile_review_lanes
+        )
+        if open_lanes_markdown:
+            sections.append(
+                f"### Open Profile Review Lanes\n\n{open_lanes_markdown}"
+            )
         route_bridge = self._profile_insight_route_bridge_markdown(candidates)
         if route_bridge:
-            return f"{summary}\n\n### Profile Route Bridge\n\n{route_bridge}"
+            sections.append(f"### Profile Route Bridge\n\n{route_bridge}")
+        if sections:
+            return f"{summary}\n\n" + "\n\n".join(sections)
         return summary
+
+    def _profile_insight_open_review_lanes_markdown(
+        self,
+        open_profile_review_lanes: list[ProfileInsightOpenReviewLane],
+    ) -> str:
+        if not open_profile_review_lanes:
+            return ""
+        lines = [
+            (
+                "These live draft route groups do not yet have a direct-action "
+                "candidate in this bundle."
+            ),
+            "",
+            (
+                "| Review lane | Route groups | Actions | "
+                "Matched exported revisions |"
+            ),
+            "|---|---:|---:|---|",
+        ]
+        for lane in open_profile_review_lanes:
+            matched_revisions = ", ".join(
+                f"`{revision_iri}`"
+                for revision_iri in lane.matched_candidate_revision_iris
+            )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        self._markdown_table_cell(lane.review_lane),
+                        str(lane.route_group_count),
+                        str(lane.action_count),
+                        self._markdown_table_cell(
+                            matched_revisions or "none"
+                        ),
+                    ]
+                )
+                + " |"
+            )
+        return "\n".join(lines)
 
     def _profile_insight_route_bridge_markdown(
         self,

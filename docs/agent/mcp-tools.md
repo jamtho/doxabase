@@ -585,7 +585,11 @@ credential-like or secret-looking literals.
 The returned payload includes `candidates[]` with `relation_reasons`, matched
 support/evidence/anchor fields, `profile_route_keys`,
 `profile_route_groups`, `candidate_revision_iris`, and the nested
-`export_staged_revisions` record when a bundle was written. The grouped
+`export_staged_revisions` record when a bundle was written. It also includes
+`open_profile_review_lanes`: live draft route groups that still lack a
+`direct_action` candidate in the exported bundle. Treat support-only matches as
+context, not completion; for example, a staged profile-map update can support a
+metric or type lane while that lane remains open. The grouped
 Markdown review summary includes a `Profile Route Bridge` table when candidates
 match draft route groups. The bridge's `Row` column uses the same `Revision N`
 row number as the later grouped bundle sections, and `Candidate` repeats the

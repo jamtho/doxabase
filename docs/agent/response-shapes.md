@@ -1884,6 +1884,8 @@ result.related_pattern_iris
 result.candidate_revision_iris
 result.candidate_count
 result.candidates
+result.open_profile_review_lanes
+result.open_profile_review_lane_count
 result.export
 result.warnings
 result.review_note
@@ -1945,8 +1947,28 @@ query-planning repair review notes for already-applied query repairs whose live
 blocker is gone. For already-applied profile-map sources,
 persisted/generated route sources can be direct; fresh live draft follow-up
 routes for the same lane are support until staged separately.
+`open_profile_review_lanes[]` groups live draft route groups that still do not
+have a `direct_action` candidate in the bundle:
+
+```python
+lane.review_lane
+lane.route_group_count
+lane.route_group_keys
+lane.route_step_keys
+lane.action_count
+lane.matched_candidate_revision_iris
+lane.matched_candidate_count
+```
+
+Use this field to keep scalar conflicts, metric vocabulary review, profile type
+review, and query-context repair lanes visible after one related staged row has
+been exported. `matched_candidate_revision_iris` can name support-only staged
+rows that should travel with the lane, but it does not mean the lane is
+satisfied unless the lane is absent from `open_profile_review_lanes`.
 Markdown export includes a `Profile Route Bridge` table in the review summary
 when candidates match draft routes, and renders lane names with their strength.
+When open lanes exist, the summary also includes an `Open Profile Review Lanes`
+table before the bridge.
 The bridge includes the grouped bundle row number and candidate summary beside
 the revision IRI so Markdown-only reviewers can move from a route lane to the
 matching `Revision N` section without consulting the JSON payload.

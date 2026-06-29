@@ -153,6 +153,12 @@ first suggested action is the same dataset-level `describe_query_context` call.
 The returned candidates and Markdown `Profile Route Bridge` table preserve
 matched profile route keys, so reviewers can see which draft duplicate/advisory
 group led to each staged row without reverse-joining action indexes by hand.
+The returned `open_profile_review_lanes` list and Markdown
+`Open Profile Review Lanes` table show live draft route groups that still lack
+a `direct_action` candidate in the bundle. A staged profile-map update may be
+included as `strong_support` or `related_support` for metric/type lanes, but
+those lanes remain open until their own direct promotion or assertion revision
+is staged.
 The bridge `Row` column uses the same row number as the grouped review bundle's
 `Revision N` sections and repeats the candidate summary, so a Markdown-only
 reviewer can map route lanes back to the detailed revision section directly.

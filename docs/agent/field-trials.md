@@ -2522,6 +2522,13 @@ few useful gaps:
   metric appeared across multiple profile observations. Markdown now groups
   repeated lane labels with a route-group count while preserving full route keys
   in JSON.
+- A profile-insight lane visibility trial staged only the default map update
+  from a profile run that still had row-count scalar conflicts plus metric and
+  type advisory lanes. The route bridge correctly linked the staged map row to
+  metric/type support, but the unresolved scalar lane was invisible in the
+  export. Profile insight bundles now expose `open_profile_review_lanes` and an
+  `Open Profile Review Lanes` Markdown table for live draft route groups that
+  lack a direct-action candidate.
 - A staged-recovery workflow trial exercised two stale rows plus one ready row
   through recovery planning, dry-run batch restage, real batch restage/export,
   apply-one-then-replan, sibling restage, and exact applied diff inspection. The

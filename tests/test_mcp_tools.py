@@ -7648,6 +7648,8 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert result["candidates"][0]["profile_route_groups"][0][
         "match_strength"
     ] == "direct_action"
+    assert result["open_profile_review_lanes"] == []
+    assert result["open_profile_review_lane_count"] == 0
     assert result["export"]["path"] == str(export_path)
     assert result["export"]["revision_iris"] == result["candidate_revision_iris"]
     assert result["candidates"][0]["relation_reasons"]
@@ -7698,6 +7700,161 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     )
     assert current_only["candidate_revision_iris"] == []
     assert current_only["export"] is None
+
+
+def test_export_profile_insight_review_bundle_tool_lists_open_profile_lanes(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/profile-review-lanes#"
+    table = f"{base}Orders"
+    status_column = f"{base}OrdersStatus"
+    shared_evidence = f"{base}ProfileEvidence"
+    project_metric = f"{base}CompletenessScore"
+    value_type = f"{base}StatusCodeValue"
+
+    db.record_map_dataset(
+        table,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=table,
+        column_name="status",
+        nullable=False,
+        physical_type="rc:Varchar",
+    )
+    latest_bundle = None
+    for index, row_count in enumerate((120, 121)):
+        latest_bundle = record_profile_bundle_tool(
+            db,
+            dataset_iri=table,
+            dataset_summary=f"Orders profile pass {index}.",
+            evidence_summary="Orders shared profile evidence.",
+            evidence_sources=[f"test://orders-profile/{index}"],
+            shared_evidence_iri=shared_evidence,
+            sample_size=row_count,
+            sample_scope="All rows in Orders.",
+            sample_method="DuckDB full-table profile.",
+            row_count=row_count,
+            update_map_snapshot=False,
+            profile_metrics=[
+                {
+                    "metric": project_metric,
+                    "target": table,
+                    "value": "0.91",
+                    "datatype": "xsd:decimal",
+                }
+            ]
+            if index == 0
+            else None,
+            column_defaults={"update_map_column": False},
+            column_profiles=[
+                {
+                    "column_iri": status_column,
+                    "column_name": "status",
+                    "summary": "Status had nulls and a value type.",
+                    "null_count": 1,
+                    "physical_type": "rc:Varchar",
+                    "value_type": value_type,
+                }
+            ]
+            if index == 0
+            else [],
+        )
+    assert latest_bundle is not None
+    record_pattern_tool(
+        db,
+        summary="Orders profile needs metric and value type vocabulary.",
+        pattern_text="CompletenessScore and StatusCodeValue need review.",
+        rationale="The profile evidence supports both review lanes.",
+        pattern_targets=[project_metric, value_type],
+        supporting_observations=(
+            latest_bundle["handoff_entrypoints"]["profile_observation_iris"]
+        ),
+        evidence_iri=shared_evidence,
+        map_implications=[project_metric, value_type],
+    )
+    draft = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+    nullable_indexes = [
+        recommendation["recommendation_index"]
+        for recommendation in draft["recommendations"]
+        if recommendation["kind"] == "column_nullable"
+    ]
+    assert nullable_indexes == [2]
+    staged = stage_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        accepted_recommendation_indexes=nullable_indexes,
+    )
+
+    export_path = tmp_path / "orders-profile-review-lanes.md"
+    result = export_profile_insight_review_bundle_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        path=str(export_path),
+    )
+
+    staged_iri = staged["staged_revision"]["revision_iri"]
+    assert result["candidate_revision_iris"] == [staged_iri]
+    assert result["open_profile_review_lane_count"] == 3
+    open_lanes = {
+        lane["review_lane"]: lane for lane in result["open_profile_review_lanes"]
+    }
+    assert set(open_lanes) == {
+        "profile_scalar_conflict_review",
+        "metric_vocabulary_review",
+        "profile_type_review",
+    }
+    assert open_lanes["profile_scalar_conflict_review"][
+        "route_group_count"
+    ] == 1
+    assert open_lanes["profile_scalar_conflict_review"]["action_count"] == 2
+    assert open_lanes["profile_scalar_conflict_review"][
+        "matched_candidate_revision_iris"
+    ] == []
+    assert open_lanes["metric_vocabulary_review"][
+        "matched_candidate_revision_iris"
+    ] == [staged_iri]
+    assert open_lanes["profile_type_review"][
+        "matched_candidate_revision_iris"
+    ] == [staged_iri]
+    assert all(lane["route_step_keys"] for lane in open_lanes.values())
+
+    candidate_groups = {
+        group["review_lane"]: group
+        for group in result["candidates"][0]["profile_route_groups"]
+    }
+    assert candidate_groups["profile_map_updates"]["match_strength"] == (
+        "direct_action"
+    )
+    assert candidate_groups["profile_type_review"]["match_strength"] == (
+        "strong_support"
+    )
+    assert candidate_groups["metric_vocabulary_review"]["match_strength"] == (
+        "related_support"
+    )
+    assert "expected scalar conflict" in result["review_note"]
+
+    exported = export_path.read_text(encoding="utf-8")
+    assert "### Open Profile Review Lanes" in exported
+    assert "### Profile Route Bridge" in exported
+    open_section = exported.split("### Open Profile Review Lanes", 1)[1].split(
+        "### Profile Route Bridge",
+        1,
+    )[0]
+    assert "| profile_scalar_conflict_review | 1 | 2 | none |" in open_section
+    assert "metric_vocabulary_review" in open_section
+    assert "profile_type_review" in open_section
+    assert "profile_map_updates" not in open_section
 
 
 def test_stage_profile_map_updates_tool_marks_rerun_precondition(
