@@ -2747,6 +2747,13 @@ few useful gaps:
   live-resource/context lookups for remembered proposal IRIs should route to
   `list_resource_revisions(include_patch_mentions=True)` or
   `search_staged_patch_payloads` before declaring the resource absent.
+- A partial handoff hygiene trial showed most incomplete imports route safely,
+  but history-plus-snapshot-only capsules were misleading: exact snapshot rows
+  were present while current project graphs were absent, so recovery planning
+  could propose mutation routes against an incomplete capsule. Snapshot evidence
+  now reports `missing_current_graph_roles` and promotes `import_trig` /
+  `complete_handoff_import` before apply, restage, or repair planning in that
+  state.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

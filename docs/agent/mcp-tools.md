@@ -225,6 +225,11 @@ the real handoff artifact path before executing the action. Revision list,
 detail, and lineage responses promote these import actions to top-level
 `suggested_next_actions`; list and lineage `next_action` use the
 `complete_handoff_import` queue before exact diff or stale-drift inspection.
+`history_plus_snapshot_rows` can still emit an `import_trig` action when
+`missing_current_graph_roles` is non-empty. That means history and snapshot rows
+were imported, but one or more current project graph roles needed by the
+snapshots are empty, so mutation recovery should wait for the complete project
+RDF bundle.
 
 `doxabase.describe_revision_graph_snapshot`
 

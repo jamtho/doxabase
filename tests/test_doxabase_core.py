@@ -21983,6 +21983,72 @@ def test_search_staged_patch_payloads_routes_staged_only_terms(
     assert historical.matches[0].revision_is_current_staged_work is False
 
 
+def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "source.sqlite")
+    dataset = "https://example.test/project#Messages"
+    db.record_map_dataset(dataset, label="Messages", is_table=True)
+    staged = db.stage_graph_revision(
+        summary="Add message freshness caveat",
+        rationale="Exercise history plus snapshots without current map import.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <{dataset}> rc:hasCaveat <https://example.test/project#FreshnessCaveat> .
+                """,
+            }
+        ],
+        revision_anchors=[dataset],
+        validation_scope="all",
+    )
+
+    history_path = tmp_path / "history-only.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    db.export_trig(history_path, graphs="history")
+    db.export_revision_snapshots(snapshot_path, revision_iris=[staged.revision_iri])
+
+    partial = DoxaBase.create(tmp_path / "history-snapshots-only.sqlite")
+    partial.import_trig(history_path)
+    partial.import_revision_snapshots(snapshot_path)
+
+    assert partial.triple_count("map") == 0
+    snapshot_evidence = partial.describe_revision_snapshot_evidence(
+        staged.revision_iri
+    )
+    assert snapshot_evidence.status == "history_plus_snapshot_rows"
+    assert snapshot_evidence.exact_snapshot_graph_roles == ["map"]
+    assert snapshot_evidence.missing_current_graph_roles == ["map"]
+    assert [action.tool_name for action in snapshot_evidence.suggested_next_actions] == [
+        "import_trig"
+    ]
+    assert "complete project RDF bundle" in (
+        snapshot_evidence.suggested_next_actions[0].reason
+    )
+
+    listing = partial.list_graph_revisions(
+        revision_type="rc:StagedRevision",
+        include_apply_checks=True,
+    )
+    assert listing.next_action_queue == {
+        "complete_handoff_import": [staged.revision_iri]
+    }
+    assert listing.revisions[0].next_action is not None
+    assert listing.revisions[0].next_action.queue == "complete_handoff_import"
+    assert listing.revisions[0].next_action.tool_name == "import_trig"
+
+    plan = partial.plan_staged_revision_recovery([staged.revision_iri])
+    assert plan.lane_counts == {"complete_handoff_import": 1}
+    assert plan.next_action_queue == {
+        "complete_handoff_import": [staged.revision_iri]
+    }
+    assert plan.lanes[0].next_action is not None
+    assert plan.lanes[0].next_action.tool_name == "import_trig"
+
+
 def test_scratch_capsule_observation_write_recovers_search_index(
     tmp_path: Path,
 ) -> None:

@@ -156,6 +156,11 @@ workflow-only RDF handoff, and normal revision helpers still need a project or
 history RDF import. The status includes structured `suggested_next_actions`:
 missing exact rows point at `import_revision_snapshots`, and orphan snapshot
 rows point at `import_trig` for the project/history RDF.
+`history_plus_snapshot_rows` proves the history and exact snapshot rows are
+paired, but not that the current project graphs were imported. If
+`missing_current_graph_roles` is non-empty, treat the capsule as
+history/snapshots-only for mutation recovery and import the complete project RDF
+bundle before applying, restaging, or repairing staged rows.
 Those import actions include placeholder paths plus
 `path_is_placeholder=True`; replace them with the actual handoff artifact paths
 before calling the import tools. Revision list, detail, and lineage responses

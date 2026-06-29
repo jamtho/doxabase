@@ -3916,6 +3916,7 @@ snapshot_evidence.stored_snapshot_graph_roles
 snapshot_evidence.exact_snapshot_graph_roles
 snapshot_evidence.missing_snapshot_row_graph_roles
 snapshot_evidence.orphan_snapshot_row_graph_roles
+snapshot_evidence.missing_current_graph_roles
 snapshot_evidence.note
 snapshot_evidence.suggested_next_actions
 snapshot_evidence.suggested_next_calls
@@ -3929,6 +3930,11 @@ helpers still need the matching RDF history records. When snapshot evidence has
 an import action, `describe_graph_revision()`, list rows, and lineage helpers
 also promote it into top-level `suggested_next_actions`; list and lineage
 `next_action` route to `complete_handoff_import`.
+`missing_current_graph_roles` can be non-empty even when
+`status == "history_plus_snapshot_rows"`: exact history/snapshot evidence is
+present, but the current project graph role is empty despite non-empty snapshot
+rows. Treat that as a history/snapshots-only handoff for mutation recovery and
+import the complete project RDF bundle before applying, restaging, or repairing.
 
 `applied_source` has:
 
@@ -4150,6 +4156,10 @@ placeholder paths and include `path_is_placeholder=True`; substitute the real
 handoff artifact path before executing them. Revision list/detail/lineage
 responses promote these actions to their top-level `suggested_next_actions`, and
 list/lineage `next_action` uses queue `complete_handoff_import`.
+If `missing_current_graph_roles` is non-empty under
+`history_plus_snapshot_rows`, the history/snapshot pairing is exact but current
+project graph import is incomplete. The same `import_trig` /
+`complete_handoff_import` route applies before mutation planning.
 
 `db.export_preflight(export_kind="handoff_bundle", ...)` returns
 `ExportPreflightRecord`:
@@ -4323,6 +4333,10 @@ Existing snapshot pairs are skipped unless `replace=True`.
 If snapshot JSON was imported before history RDF, rows report
 `status="snapshot_rows_without_history"` and include an `import_trig` suggested
 action.
+If history and snapshot JSON were imported without the current project graphs,
+rows can report `status="history_plus_snapshot_rows"` with
+`missing_current_graph_roles`; import the complete project RDF before using
+staged recovery mutation routes.
 
 ### Staged Detail And Current Apply Summary
 

@@ -1447,6 +1447,7 @@ class RevisionSnapshotEvidenceStatus:
     exact_snapshot_graph_roles: list[str]
     missing_snapshot_row_graph_roles: list[str]
     orphan_snapshot_row_graph_roles: list[str]
+    missing_current_graph_roles: list[str]
     note: str
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -6218,6 +6219,12 @@ class DoxaBase:
         orphan_snapshot_row_graph_roles = [
             role for role in stored_snapshot_graph_roles if role not in rdf_role_set
         ]
+        missing_current_graph_roles = (
+            self._revision_snapshot_missing_current_graph_roles(
+                revision_iri,
+                exact_snapshot_graph_roles,
+            )
+        )
 
         if not history_revision_found:
             if stored_snapshot_graph_roles:
@@ -6261,12 +6268,20 @@ class DoxaBase:
                     "snapshot metadata in the selected history graph: "
                     f"{', '.join(orphan_snapshot_row_graph_roles)}."
                 )
+            if missing_current_graph_roles:
+                note = (
+                    f"{note} Current project graph role(s) appear empty even "
+                    "though imported snapshot rows for those roles are non-empty: "
+                    f"{', '.join(missing_current_graph_roles)}. Import the "
+                    "complete project RDF bundle before mutation recovery."
+                )
 
         suggested_next_actions = self._revision_snapshot_evidence_next_actions(
             status=status,
             revision_iri=revision_iri,
             missing_snapshot_row_graph_roles=missing_snapshot_row_graph_roles,
             orphan_snapshot_row_graph_roles=orphan_snapshot_row_graph_roles,
+            missing_current_graph_roles=missing_current_graph_roles,
         )
         return RevisionSnapshotEvidenceStatus(
             revision_iri=revision_iri,
@@ -6277,12 +6292,27 @@ class DoxaBase:
             exact_snapshot_graph_roles=exact_snapshot_graph_roles,
             missing_snapshot_row_graph_roles=missing_snapshot_row_graph_roles,
             orphan_snapshot_row_graph_roles=orphan_snapshot_row_graph_roles,
+            missing_current_graph_roles=missing_current_graph_roles,
             note=note,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions
             ],
         )
+
+    def _revision_snapshot_missing_current_graph_roles(
+        self,
+        revision_iri: str,
+        exact_snapshot_graph_roles: Iterable[str],
+    ) -> list[str]:
+        missing_roles: list[str] = []
+        for role in exact_snapshot_graph_roles:
+            metadata = self._graph_snapshot_storage_metadata(revision_iri, role)
+            if metadata is None or int(metadata["triple_count"]) <= 0:
+                continue
+            if self.triple_count(role) == 0:
+                missing_roles.append(role)
+        return missing_roles
 
     def _revision_snapshot_evidence_next_actions(
         self,
@@ -6291,6 +6321,7 @@ class DoxaBase:
         revision_iri: str,
         missing_snapshot_row_graph_roles: list[str],
         orphan_snapshot_row_graph_roles: list[str],
+        missing_current_graph_roles: list[str],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
 
@@ -6340,6 +6371,20 @@ class DoxaBase:
                     "its real handoff path before using normal revision helpers."
                 ),
                 action_label="Import project/history RDF bundle",
+            )
+        if missing_current_graph_roles:
+            add_action(
+                "import_trig",
+                {"path": "/tmp/project.trig", "path_is_placeholder": True},
+                (
+                    "RDF history metadata and exact snapshot rows are present "
+                    f"for '{revision_iri}', but current project graph role(s) "
+                    "appear empty despite non-empty stored snapshot rows: "
+                    f"{', '.join(missing_current_graph_roles)}. Import the "
+                    "complete project RDF bundle at its real handoff path before "
+                    "planning apply, restage, or repair mutations."
+                ),
+                action_label="Import complete project RDF bundle",
             )
         return actions
 
@@ -29926,6 +29971,37 @@ class DoxaBase:
                 if next_action is not None
                 else lane
             )
+            row_iri = (
+                queue_item.row_iri
+                if queue_item is not None
+                else item.current_revision_iri
+            )
+        snapshot_next_action = self._snapshot_evidence_completion_next_action(
+            suggested_next_actions
+        )
+        missing_current_graph_import = bool(
+            item.source_snapshot_evidence.missing_current_graph_roles
+            or item.current_snapshot_evidence.missing_current_graph_roles
+        )
+        if snapshot_next_action is not None and missing_current_graph_import:
+            next_action = snapshot_next_action
+            queue_item = self._revision_next_action_queue_item(
+                row_iri=item.current_revision_iri,
+                next_action=next_action,
+                record_kind=self._graph_revision_record_kind_for_iri(
+                    item.current_revision_iri
+                ),
+                application_status=item.status_after,
+                application_decision=item.decision_after,
+                stale_resolution_state=item.stale_resolution_state_after,
+                staged_validation_status=item.current_staged_validation_status,
+                alternative_gate=(
+                    current_summary.alternative_gate
+                    if current_summary is not None
+                    else None
+                ),
+            )
+            lane = queue_item.queue if queue_item is not None else next_action.queue
             row_iri = (
                 queue_item.row_iri
                 if queue_item is not None
