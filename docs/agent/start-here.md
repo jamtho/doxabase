@@ -113,6 +113,10 @@ jump past the default prefix.
 Use the topic docs `profiling`, `systematisation`, and `query_planning` when a
 task obviously lives in one of those workflows; they point to the relevant
 helpers and response-shape sections without requiring a full-doc scan.
+For export or handoff privacy choices, read the privacy/export route matrix in
+`mcp_tools` before writing artifacts; `project_brief` privacy health uses the
+handoff-bundle preflight scope, which includes revision snapshots as well as
+current project graphs.
 
 ## If You Are Resuming After Compaction
 

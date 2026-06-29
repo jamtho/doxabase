@@ -352,9 +352,10 @@ when the limit allows, then fills remaining slots by priority.
 `health_tasks` is outside the bounded `recommended_next_tasks` slice. It reports
 stable follow-ups such as `expand_project_brief` for omitted queues,
 `expand_profile_candidate_limit` for profile drafts hidden by
-`profile_candidate_limit`, `privacy_export_review` when a redacted project
-export preflight finds potential sensitive literals, and `seed_recovery_review`
-when immutable seed graphs are missing current staging vocabulary.
+`profile_candidate_limit`, `privacy_export_review` when the default
+handoff-bundle export preflight finds potential sensitive project-graph or
+revision-snapshot terms, and `seed_recovery_review` when immutable seed graphs
+are missing current staging vocabulary.
 `next_best_expansion` is
 either `null` or a copy of the highest-priority expansion health task, preferring
 `expand_project_brief` over `expand_profile_candidate_limit` when both are

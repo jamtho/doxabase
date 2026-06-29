@@ -4284,14 +4284,14 @@ class DoxaBase:
     def _project_brief_privacy_health_task(
         self,
     ) -> ProjectBriefHealthTask | None:
-        scan = self.scan_sensitive_literals(graphs="project", limit=1)
-        if scan.match_count == 0:
-            return None
         arguments = {
             "export_kind": "handoff_bundle",
             "graphs": ["project"],
             "limit": 20,
         }
+        preflight = self.export_preflight(**arguments)
+        if preflight.sensitive_literal_count == 0:
+            return None
         action = SuggestedNextAction(
             action_label="Review export privacy",
             tool_name="export_preflight",
@@ -4309,13 +4309,13 @@ class DoxaBase:
             task_type="privacy_export_review",
             source="export_preflight",
             reason=(
-                "Project graph roles contain potential sensitive graph terms; "
-                "project_brief reports only the count and a redacted export "
-                "preflight route."
+                "The default handoff-bundle export scope contains potential "
+                "sensitive graph or revision-snapshot terms; project_brief "
+                "reports only the count and a redacted export preflight route."
             ),
             suggested_next_action=action,
             suggested_next_call=action.call,
-            sensitive_literal_count=scan.match_count,
+            sensitive_literal_count=preflight.sensitive_literal_count,
         )
 
     def _project_brief_seed_recovery_health_task(

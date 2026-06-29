@@ -77,6 +77,21 @@ is not proof that paths, endpoints, project facts, or history payloads are
 appropriate to share. Follow the suggested export action with
 `fail_on_sensitive=true` after that separate review.
 
+Privacy/export route matrix:
+
+| Artifact goal | Preflight route | Write route |
+| --- | --- | --- |
+| Flattened graph/Turtle | `export_preflight(export_kind="graph", graphs=[...])` | `export_graph(..., fail_on_sensitive=true)` |
+| Named-graph TriG | `export_preflight(export_kind="trig", graphs=...)` | `export_trig(..., fail_on_sensitive=true)` |
+| Revision snapshot JSON | `export_preflight(export_kind="revision_snapshots", ...)` | `export_revision_snapshots(..., fail_on_sensitive=true)` |
+| Recovery-complete project handoff | `export_preflight(export_kind="handoff_bundle", graphs=["project"])` | `export_handoff_bundle(..., fail_on_sensitive=true)` |
+| Context slice TriG | `preflight_context_slice_export(...)` | `export_context_slice(..., fail_on_sensitive=true)` |
+| Staged/profile Markdown review | Attempt the relevant export with `fail_on_sensitive=true` | `export_staged_revision`, `export_staged_revisions`, or `export_profile_insight_review_bundle` |
+
+`project_brief` privacy health follows the handoff-bundle route, so its
+`sensitive_literal_count` can include both current project graph matches and
+stored revision-snapshot matches.
+
 `doxabase.project_brief`
 
 Returns a read-only orientation brief over datasets and active queues. It

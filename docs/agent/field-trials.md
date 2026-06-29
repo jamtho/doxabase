@@ -2859,6 +2859,18 @@ few useful gaps:
   storage values; it drafts a non-mutating staged overlay with the query/profile
   observation and evidence attached, then agents can check/apply and rerun
   `describe_query_context`.
+- A project-brief frontier trial confirmed low-limit briefs can initially show
+  only staged work, but `health_tasks`, `next_best_expansion`, and
+  `full_frontier_expansion` route agents to hidden query repair, profile,
+  non-tabular, privacy, and ready-query queues. The same trial found the
+  privacy health count must match the handoff-bundle preflight it recommends,
+  because revision snapshots can contain additional sensitive-looking terms
+  beyond current project graphs.
+- A privacy/export handoff trial confirmed the scanner and fail-on-sensitive
+  guards work for graph/TriG/snapshot/handoff, context-slice, staged-review, and
+  profile-review artifacts, but agents need a compact route matrix to choose
+  the right preflight/write helper under pressure. Use the `mcp_tools`
+  privacy/export matrix before writing handoff artifacts.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

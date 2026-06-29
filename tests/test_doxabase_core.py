@@ -1154,7 +1154,13 @@ def test_project_brief_reports_limit_crowded_queue_types(
     assert [
         task.task_type for task in brief.health_tasks
     ] == ["expand_project_brief", "privacy_export_review"]
-    assert privacy_task.sensitive_literal_count == 1
+    handoff_preflight = db.export_preflight(
+        export_kind="handoff_bundle",
+        graphs=["project"],
+    )
+    assert privacy_task.sensitive_literal_count == (
+        handoff_preflight.sensitive_literal_count
+    )
     assert privacy_task.suggested_next_action is not None
     assert privacy_task.suggested_next_action.tool_name == "export_preflight"
     assert "FAKE_SECRET" not in json.dumps(to_jsonable(brief.health_tasks))
@@ -1185,6 +1191,53 @@ def test_project_brief_surfaces_sanitized_privacy_health_task(
         "limit": 20,
     }
     assert "FAKE_SECRET" not in json.dumps(to_dict(privacy_task))
+
+
+def test_project_brief_privacy_health_uses_handoff_preflight_scope(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_PROJECT_BRIEF_HANDOFF"
+    db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/orders",
+    )
+    db.stage_graph_revision(
+        summary="Stage project brief privacy probe",
+        rationale="Create revision snapshots over the sensitive map graph.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrdersBriefProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    handoff_preflight = db.export_preflight(
+        export_kind="handoff_bundle",
+        graphs=["project"],
+    )
+    graph_scan = db.scan_sensitive_literals(graphs="project")
+    assert handoff_preflight.graph_sensitive_literal_count == graph_scan.match_count
+    assert handoff_preflight.snapshot_sensitive_literal_count >= 1
+    assert handoff_preflight.sensitive_literal_count > graph_scan.match_count
+
+    brief = db.project_brief(limit=5)
+
+    privacy_task = next(
+        task for task in brief.health_tasks if task.task_type == "privacy_export_review"
+    )
+    assert privacy_task.sensitive_literal_count == (
+        handoff_preflight.sensitive_literal_count
+    )
+    assert "revision-snapshot" in privacy_task.reason
+    assert fake_secret not in json.dumps(to_dict(privacy_task))
 
 
 def test_project_brief_surfaces_stale_seed_health_task(
