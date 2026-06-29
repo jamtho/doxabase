@@ -580,8 +580,9 @@ also includes `recommendation_count`, `representative_recommendation_indexes`,
 `scalar_conflict_groups`, `scalar_conflict_group_count`, metric advisory counts
 plus `representative_metric_advisory_indexes`, type advisory counts plus
 `representative_type_advisory_indexes`, grouped
-`suggested_next_action_groups` / `suggested_next_call_groups`, and flat
-top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
+`suggested_next_action_groups` / `suggested_next_call_groups`,
+`advisory_followthrough_plan`, and flat top-level `suggested_next_actions` /
+`suggested_next_calls` for compatibility.
 Each metric/type advisory row also carries its row-local
 `metric_advisory_index` or `type_advisory_index`.
 Prefer grouped routing: `profile_map_updates`,
@@ -609,6 +610,11 @@ key to bridge draft lanes to profile insight bundle candidates. If
 `source_profile_advisory.mixed_support` is present on promotion or assertion
 actions in both metric and type lanes, review or export those generated drafts
 together before applying either lane independently.
+`advisory_followthrough_plan` summarizes those grouped advisory actions by
+semantic move: `define_metric`, `define_value_type`, `assert_map_type`, or
+`caveat_fallback`. Use its primary call, advisory indexes, status counts, route
+keys, route anchors/patterns, and `source_profile_advisories` when a script
+needs the next review move without rejoining every advisory row.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and

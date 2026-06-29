@@ -26417,6 +26417,20 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
         for action in advisory.suggested_next_actions
         if action.tool_name == "stage_map_assertion_change"
     ] == ["rc:physicalType", "rc:valueType"]
+    plan_by_move = {
+        item.semantic_move: item for item in draft.advisory_followthrough_plan
+    }
+    assert set(plan_by_move) == {"assert_map_type", "caveat_fallback"}
+    assert plan_by_move["assert_map_type"].review_lane == "profile_type_review"
+    assert plan_by_move["assert_map_type"].primary_tool_name == (
+        "stage_map_assertion_change"
+    )
+    assert plan_by_move["assert_map_type"].type_advisory_indexes == [0]
+    assert plan_by_move["assert_map_type"].advisory_status_counts == {
+        "type_finding_conflicts_current_map": 1,
+    }
+    assert plan_by_move["caveat_fallback"].primary_tool_name == "record_pattern"
+    assert plan_by_move["caveat_fallback"].type_advisory_indexes == [0]
     staged_type_actions = [
         action
         for action in advisory.suggested_next_actions
@@ -26637,6 +26651,21 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
         "stage_map_assertion_change",
         "stage_map_assertion_change",
     ]
+    value_type_plan = next(
+        item
+        for item in draft.advisory_followthrough_plan
+        if item.semantic_move == "define_value_type"
+    )
+    assert value_type_plan.review_lane == "profile_type_review"
+    assert value_type_plan.primary_tool_name == "stage_pattern_promotion"
+    assert value_type_plan.type_advisory_indexes == [0]
+    assert set(value_type_plan.route_pattern_iris) == {
+        target_pattern.pattern_iri,
+        implication_pattern.pattern_iri,
+    }
+    assert {
+        item.semantic_move for item in draft.advisory_followthrough_plan
+    } == {"assert_map_type", "caveat_fallback", "define_value_type"}
     promotion_action = [
         action
         for action in advisory.suggested_next_actions
@@ -28107,6 +28136,19 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         "describe_pattern",
         "stage_pattern_promotion",
     ]
+    assert len(draft.advisory_followthrough_plan) == 1
+    metric_plan = draft.advisory_followthrough_plan[0]
+    assert metric_plan.semantic_move == "define_metric"
+    assert metric_plan.review_lane == "metric_vocabulary_review"
+    assert metric_plan.primary_tool_name == "stage_pattern_promotion"
+    assert metric_plan.metric_advisory_indexes == [0]
+    assert metric_plan.advisory_status_counts == {
+        "project_metric_undefined": 1,
+    }
+    assert metric_plan.route_pattern_iris == [pattern.pattern_iri]
+    assert metric_plan.source_profile_advisories[0]["route_group_key"].startswith(
+        "metric_vocabulary_review:"
+    )
 
     staged_promotion = db.stage_pattern_promotion(**promotion_args)
 

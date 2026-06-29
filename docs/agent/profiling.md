@@ -80,6 +80,9 @@ Use `suggested_next_action_groups` instead of flattening every review lane into
 one mutation queue. If the draft has no recommendations but metric or type
 advisories are present, it is advisory-only: do not call
 `stage_profile_map_updates` just to clear the draft.
+Use `advisory_followthrough_plan` for a compact next-step menu over metric/type
+lanes. It groups existing actions by `semantic_move`: `define_metric`,
+`define_value_type`, `assert_map_type`, or `caveat_fallback`.
 If same dataset/evidence profile map updates are already staged, the draft sets
 `pending_staged_profile_update_iris` and puts a
 `plan_staged_revision_recovery` action first in `profile_map_updates`. Review
@@ -214,6 +217,9 @@ applying anything: one framing might define an ontology
 fallback without promoting a metric term yet. Use `stage_systematisation` for
 those alternatives when the graph move needs modelling judgement, and export the
 grouped staged review before selecting a durable path.
+When you stage a caller-authored alternative from a plan item, pass the matching
+`source_profile_advisories` entry through `profile_route_sources` so profile
+insight review can close that advisory lane as a direct action.
 
 When `stage_profile_map_updates` creates a staged revision, its
 `suggested_next_actions` includes an `export_profile_insight_review_bundle`

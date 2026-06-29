@@ -2780,6 +2780,12 @@ few useful gaps:
   lane as `direct_action`. The draft returns `profile_route_source_count` and
   warns when supplied input normalises to zero usable route sources, which helps
   unattended agents catch passing the whole action instead of its source block.
+- A richer profile-metrics trial showed metric/type advisory lanes could remain
+  open even after related staged promotions or systematisations existed, because
+  agents had to mentally regroup many advisory actions. `draft_profile_map_updates`
+  now returns `advisory_followthrough_plan`, grouping metric/type actions by
+  semantic move: define metric, define value type, assert map type, or record a
+  caveat/pattern fallback.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

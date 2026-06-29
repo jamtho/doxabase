@@ -2609,6 +2609,30 @@ class ProfileTypeFindingAdvisory:
 
 
 @dataclass(frozen=True)
+class ProfileAdvisoryFollowthroughPlanItem:
+    semantic_move: str
+    review_lane: str
+    route_group_key: str
+    action_count: int
+    tool_names: list[str]
+    action_labels: list[str]
+    suggested_next_calls: list[str]
+    primary_tool_name: str | None
+    primary_next_call: str | None
+    metric_advisory_indexes: list[int]
+    type_advisory_indexes: list[int]
+    duplicate_group_keys: list[str]
+    duplicate_advisory_indexes: list[int]
+    duplicate_profile_observation_iris: list[str]
+    advisory_status_counts: dict[str, int]
+    route_step_keys: list[str]
+    route_anchor_iris: list[str]
+    route_pattern_iris: list[str]
+    source_profile_advisories: list[dict[str, Any]]
+    note: str
+
+
+@dataclass(frozen=True)
 class ProfileMapUpdateDraft:
     dataset: ResourceSummary
     evidence: EvidenceDescription
@@ -2634,6 +2658,7 @@ class ProfileMapUpdateDraft:
     suggested_next_calls: list[str]
     suggested_next_action_groups: dict[str, list[SuggestedNextAction]]
     suggested_next_call_groups: dict[str, list[str]]
+    advisory_followthrough_plan: list[ProfileAdvisoryFollowthroughPlanItem]
     review_note: str
 
 
@@ -13151,6 +13176,11 @@ class DoxaBase:
             group: [action.call for action in actions]
             for group, actions in suggested_next_action_groups.items()
         }
+        advisory_followthrough_plan = self._profile_advisory_followthrough_plan(
+            suggested_next_action_groups,
+            metric_advisories=metric_advisories,
+            type_advisories=type_advisories,
+        )
         return ProfileMapUpdateDraft(
             dataset=profile_run.dataset,
             evidence=profile_run.evidence,
@@ -13186,6 +13216,7 @@ class DoxaBase:
             ],
             suggested_next_action_groups=suggested_next_action_groups,
             suggested_next_call_groups=suggested_next_call_groups,
+            advisory_followthrough_plan=advisory_followthrough_plan,
             review_note=(
                 self._profile_map_update_draft_review_note(
                     query_context_review_actions=query_context_review_actions,
@@ -13243,6 +13274,247 @@ class DoxaBase:
         if type_actions:
             groups["profile_type_review"] = type_actions
         return groups
+
+    def _profile_advisory_followthrough_plan(
+        self,
+        suggested_next_action_groups: Mapping[str, list[SuggestedNextAction]],
+        *,
+        metric_advisories: list[ProfileMetricVocabularyAdvisory],
+        type_advisories: list[ProfileTypeFindingAdvisory],
+    ) -> list[ProfileAdvisoryFollowthroughPlanItem]:
+        metric_status_by_index = {
+            advisory.metric_advisory_index: advisory.advisory_status
+            for advisory in metric_advisories
+        }
+        type_status_by_index = {
+            advisory.type_advisory_index: advisory.advisory_status
+            for advisory in type_advisories
+        }
+        grouped: dict[tuple[str, str, str], dict[str, Any]] = {}
+        group_order: list[tuple[str, str, str]] = []
+
+        for review_lane in ("metric_vocabulary_review", "profile_type_review"):
+            for action in suggested_next_action_groups.get(review_lane, []):
+                source = getattr(action, "source_profile_advisory", None)
+                if not isinstance(source, MappingABC):
+                    continue
+                semantic_move = self._profile_advisory_semantic_move(
+                    action,
+                    source,
+                )
+                if semantic_move is None:
+                    continue
+                route_group_key = source.get("route_group_key")
+                if not isinstance(route_group_key, str):
+                    continue
+                key = (semantic_move, review_lane, route_group_key)
+                if key not in grouped:
+                    grouped[key] = {
+                        "semantic_move": semantic_move,
+                        "review_lane": review_lane,
+                        "route_group_key": route_group_key,
+                        "tool_names": [],
+                        "action_labels": [],
+                        "suggested_next_calls": [],
+                        "metric_advisory_indexes": [],
+                        "type_advisory_indexes": [],
+                        "duplicate_group_keys": [],
+                        "duplicate_advisory_indexes": [],
+                        "duplicate_profile_observation_iris": [],
+                        "route_step_keys": [],
+                        "route_anchor_iris": [],
+                        "route_pattern_iris": [],
+                        "source_profile_advisories": [],
+                    }
+                    group_order.append(key)
+                item = grouped[key]
+                item["tool_names"].append(action.tool_name)
+                item["action_labels"].append(action.action_label)
+                item["suggested_next_calls"].append(action.call)
+                self._append_profile_followthrough_source_fields(item, source)
+
+        return [
+            self._profile_advisory_followthrough_plan_item(
+                grouped[key],
+                metric_status_by_index=metric_status_by_index,
+                type_status_by_index=type_status_by_index,
+            )
+            for key in group_order
+        ]
+
+    @staticmethod
+    def _profile_advisory_semantic_move(
+        action: SuggestedNextAction,
+        source_profile_advisory: MappingABC[str, Any],
+    ) -> str | None:
+        review_lane = source_profile_advisory.get("review_lane")
+        action_label = action.action_label.lower()
+        if review_lane == "metric_vocabulary_review":
+            return "define_metric"
+        if review_lane != "profile_type_review":
+            return None
+        if action.tool_name == "stage_pattern_promotion":
+            return "define_value_type"
+        if action.tool_name == "describe_pattern" and "value type" in action_label:
+            return "define_value_type"
+        if action.tool_name == "stage_map_assertion_change":
+            return "assert_map_type"
+        if action.tool_name == "describe_context_slice":
+            return "assert_map_type"
+        if action.tool_name == "record_pattern":
+            return "caveat_fallback"
+        return None
+
+    @staticmethod
+    def _append_profile_followthrough_source_fields(
+        item: dict[str, Any],
+        source_profile_advisory: MappingABC[str, Any],
+    ) -> None:
+        DoxaBase._append_unique(
+            item["source_profile_advisories"],
+            copy.deepcopy(dict(source_profile_advisory)),
+        )
+        index_field = source_profile_advisory.get("index_field")
+        advisory_indexes = DoxaBase._int_values(
+            source_profile_advisory.get("advisory_indexes"),
+        )
+        if index_field == "metric_advisory_index":
+            for index in advisory_indexes:
+                DoxaBase._append_unique(item["metric_advisory_indexes"], index)
+        elif index_field == "type_advisory_index":
+            for index in advisory_indexes:
+                DoxaBase._append_unique(item["type_advisory_indexes"], index)
+        for field_name in (
+            "duplicate_group_keys",
+            "duplicate_profile_observation_iris",
+            "route_anchor_iris",
+            "route_pattern_iris",
+        ):
+            for value in DoxaBase._string_values_from_any(
+                source_profile_advisory.get(field_name),
+            ):
+                DoxaBase._append_unique(item[field_name], value)
+        for index in DoxaBase._int_values(
+            source_profile_advisory.get("duplicate_advisory_indexes"),
+        ):
+            DoxaBase._append_unique(item["duplicate_advisory_indexes"], index)
+        route_step_key = source_profile_advisory.get("route_step_key")
+        if isinstance(route_step_key, str):
+            DoxaBase._append_unique(item["route_step_keys"], route_step_key)
+
+    @staticmethod
+    def _profile_advisory_followthrough_plan_item(
+        item: Mapping[str, Any],
+        *,
+        metric_status_by_index: Mapping[int, str],
+        type_status_by_index: Mapping[int, str],
+    ) -> ProfileAdvisoryFollowthroughPlanItem:
+        semantic_move = str(item["semantic_move"])
+        metric_indexes = list(item["metric_advisory_indexes"])
+        type_indexes = list(item["type_advisory_indexes"])
+        statuses: list[str] = []
+        for index in metric_indexes:
+            status = metric_status_by_index.get(index)
+            if status is not None:
+                statuses.append(status)
+        for index in type_indexes:
+            status = type_status_by_index.get(index)
+            if status is not None:
+                statuses.append(status)
+        status_counts = {
+            status: statuses.count(status) for status in sorted(set(statuses))
+        }
+        primary_tool_name, primary_next_call = (
+            DoxaBase._profile_followthrough_primary_action(
+                list(item["tool_names"]),
+                list(item["suggested_next_calls"]),
+            )
+        )
+        return ProfileAdvisoryFollowthroughPlanItem(
+            semantic_move=semantic_move,
+            review_lane=str(item["review_lane"]),
+            route_group_key=str(item["route_group_key"]),
+            action_count=len(item["suggested_next_calls"]),
+            tool_names=list(item["tool_names"]),
+            action_labels=list(item["action_labels"]),
+            suggested_next_calls=list(item["suggested_next_calls"]),
+            primary_tool_name=primary_tool_name,
+            primary_next_call=primary_next_call,
+            metric_advisory_indexes=metric_indexes,
+            type_advisory_indexes=type_indexes,
+            duplicate_group_keys=list(item["duplicate_group_keys"]),
+            duplicate_advisory_indexes=list(item["duplicate_advisory_indexes"]),
+            duplicate_profile_observation_iris=list(
+                item["duplicate_profile_observation_iris"]
+            ),
+            advisory_status_counts=status_counts,
+            route_step_keys=list(item["route_step_keys"]),
+            route_anchor_iris=list(item["route_anchor_iris"]),
+            route_pattern_iris=list(item["route_pattern_iris"]),
+            source_profile_advisories=list(item["source_profile_advisories"]),
+            note=DoxaBase._profile_followthrough_note(semantic_move),
+        )
+
+    @staticmethod
+    def _profile_followthrough_primary_action(
+        tool_names: list[str],
+        suggested_next_calls: list[str],
+    ) -> tuple[str | None, str | None]:
+        priority = {
+            "stage_pattern_promotion": 0,
+            "stage_map_assertion_change": 1,
+            "record_pattern": 2,
+            "export_staged_revisions": 3,
+            "describe_staged_revision": 4,
+            "describe_pattern": 5,
+            "describe_resource": 6,
+            "list_entities": 7,
+            "describe_context_slice": 8,
+        }
+        if not tool_names or not suggested_next_calls:
+            return None, None
+        best_index = min(
+            range(min(len(tool_names), len(suggested_next_calls))),
+            key=lambda index: priority.get(tool_names[index], 99),
+        )
+        return tool_names[best_index], suggested_next_calls[best_index]
+
+    @staticmethod
+    def _profile_followthrough_note(semantic_move: str) -> str:
+        return {
+            "define_metric": (
+                "Review or stage project metric vocabulary before reusing the "
+                "profile metric in durable comparisons, policy, or map facts."
+            ),
+            "define_value_type": (
+                "Review or stage project value-type vocabulary before treating "
+                "the observed value type as durable map semantics."
+            ),
+            "assert_map_type": (
+                "Review profile evidence, value-type context, and related "
+                "patterns before staging physical or value type map assertions."
+            ),
+            "caveat_fallback": (
+                "Record a pattern or caveat-backed fallback when the profile "
+                "type finding is too ambiguous to assert directly."
+            ),
+        }.get(semantic_move, "Review this advisory lane before staging changes.")
+
+    @staticmethod
+    def _int_values(values: Any) -> list[int]:
+        if not isinstance(values, list):
+            return []
+        return [
+            value
+            for value in values
+            if isinstance(value, int) and not isinstance(value, bool)
+        ]
+
+    @staticmethod
+    def _string_values_from_any(values: Any) -> list[str]:
+        if not isinstance(values, list):
+            return []
+        return [value for value in values if isinstance(value, str)]
 
     def _profile_query_context_review_actions(
         self,

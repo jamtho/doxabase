@@ -1509,6 +1509,7 @@ draft.suggested_next_actions
 draft.suggested_next_calls
 draft.suggested_next_action_groups
 draft.suggested_next_call_groups
+draft.advisory_followthrough_plan
 draft.review_note
 ```
 
@@ -1840,6 +1841,36 @@ duplicate-group fields, and own
 `suggested_next_actions`. `profile_type_review`
 is a representative action queue; labels such as `Inspect profile type context`
 and `Stage physical type assertion` can repeat across advisory groups.
+`advisory_followthrough_plan[]` is a compact derived summary over those grouped
+metric/type actions. It groups route-compatible advisory actions by
+`semantic_move`, currently `define_metric`, `define_value_type`,
+`assert_map_type`, or `caveat_fallback`, and carries the same route source
+blocks needed for later `profile_route_sources` handoff:
+
+```python
+item.semantic_move
+item.review_lane
+item.route_group_key
+item.action_count
+item.tool_names
+item.action_labels
+item.suggested_next_calls
+item.primary_tool_name
+item.primary_next_call
+item.metric_advisory_indexes
+item.type_advisory_indexes
+item.advisory_status_counts
+item.route_step_keys
+item.route_anchor_iris
+item.route_pattern_iris
+item.source_profile_advisories
+item.note
+```
+
+Use this plan when a profile draft leaves metric/type lanes open but you need a
+small next-step menu: define project metric vocabulary, define project value
+type vocabulary, stage reviewed map type assertions, or record a pattern/caveat
+fallback before systematising alternatives.
 Drafts with at least one default-stageable representative recommendation include
 a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled

@@ -7123,6 +7123,27 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert type_action_source["duplicate_advisory_indexes"] == [0]
     assert type_action_source["route_group_key"].startswith("profile_type_review:")
     assert type_action_source["route_step_key"].startswith("profile-route-step:")
+    plan_by_move = {
+        item["semantic_move"]: item
+        for item in result["advisory_followthrough_plan"]
+    }
+    assert set(plan_by_move) == {
+        "assert_map_type",
+        "caveat_fallback",
+        "define_metric",
+    }
+    assert plan_by_move["define_metric"]["review_lane"] == (
+        "metric_vocabulary_review"
+    )
+    assert plan_by_move["define_metric"]["primary_tool_name"] == "list_entities"
+    assert plan_by_move["define_metric"]["metric_advisory_indexes"] == [0]
+    assert plan_by_move["assert_map_type"]["primary_tool_name"] == (
+        "stage_map_assertion_change"
+    )
+    assert plan_by_move["assert_map_type"]["type_advisory_indexes"] == [0]
+    assert plan_by_move["caveat_fallback"]["source_profile_advisories"][0][
+        "route_group_key"
+    ].startswith("profile_type_review:")
     assert result["suggested_next_call_groups"]["profile_map_updates"] == [
         result["suggested_next_calls"][0]
     ]

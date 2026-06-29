@@ -26,6 +26,8 @@ profile route on the staged revision so
 instead of only related support. Check the returned
 `profile_route_source_count`; when it is `0` after you supplied sources, use the
 draft warning to correct the source shape before relying on the review bundle.
+For metric/type followthrough alternatives, use the matching
+`advisory_followthrough_plan[].source_profile_advisories` entry the same way.
 
 Put the preferred comparison anchor first when `link_alternatives=True`, because
 later framings are linked with `alternative_to` pointing at the first framing by

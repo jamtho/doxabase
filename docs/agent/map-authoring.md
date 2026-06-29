@@ -107,7 +107,9 @@ supporting profile observations. Prefer the draft's
 indexes whose rows are `default_stageable`, `profile_scalar_conflict_review`
 surfaces mutually exclusive choose-one scalar options, and
 `metric_vocabulary_review` / `profile_type_review` keep advisories out of the
-map-staging batch. Sampled row-count representatives stay visible for review but
+map-staging batch. Use `advisory_followthrough_plan` for the compact metric/type
+next-step menu before staging vocabulary, type assertions, or fallback
+systematisations. Sampled row-count representatives stay visible for review but
 require an explicit override call. Same-evidence scalar conflicts stay visible
 too, but the default map-staging action omits them; choose at most one observed
 row-count or nullable value from the `profile_scalar_conflict_review` lane or

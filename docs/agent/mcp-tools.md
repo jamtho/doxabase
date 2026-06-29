@@ -530,7 +530,8 @@ also includes `recommendation_count`, `representative_recommendation_indexes`,
 `metric_advisory_count`, `representative_metric_advisory_indexes`,
 `metric_advisory_status_counts`, `type_advisory_count`,
 `representative_type_advisory_indexes`, `type_advisory_status_counts`, and
-top-level `suggested_next_actions` / `suggested_next_calls` for compatibility.
+`advisory_followthrough_plan`, and top-level `suggested_next_actions` /
+`suggested_next_calls` for compatibility.
 Prefer `suggested_next_action_groups` / `suggested_next_call_groups` for quick
 routing; non-empty lanes are grouped as `query_context_review`,
 `profile_map_updates`, `profile_scalar_conflict_review`,
@@ -564,6 +565,12 @@ row's own `suggested_next_actions` for per-metric or per-column follow-through.
 Recommendation rows carry `recommendation_index`, `default_stageable`,
 `default_skip_reason`, and duplicate-group fields; metric and type advisories
 carry duplicate-group fields too.
+Use `advisory_followthrough_plan` when you need a compact menu over the
+metric/type lanes. Its `semantic_move` values group existing advisory actions
+as `define_metric`, `define_value_type`, `assert_map_type`, or
+`caveat_fallback`; each item echoes route keys, advisory indexes, status counts,
+primary call, route anchors/patterns, and `source_profile_advisories` blocks for
+later `profile_route_sources` handoff.
 If a top-level `stage_profile_map_updates` action is present, review the draft
 and use that action as a starting point. Its accepted indexes default to the
 representative indexes whose rows have `default_stageable=True`. Sampled
