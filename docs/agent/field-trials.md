@@ -2786,6 +2786,10 @@ few useful gaps:
   now returns `advisory_followthrough_plan`, grouping metric/type actions by
   semantic move: define metric, define value type, assert map type, or record a
   caveat/pattern fallback.
+- A follow-up profile plan trial confirmed that agents can complete this route
+  end to end. The remaining gap was consistency: plan primary calls often use
+  `stage_pattern_promotion`, so that helper now forwards `profile_route_sources`
+  just like `stage_systematisation`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

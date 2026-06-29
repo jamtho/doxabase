@@ -220,6 +220,8 @@ grouped staged review before selecting a durable path.
 When you stage a caller-authored alternative from a plan item, pass the matching
 `source_profile_advisories` entry through `profile_route_sources` so profile
 insight review can close that advisory lane as a direct action.
+`stage_pattern_promotion` and `stage_systematisation` both accept that
+passthrough.
 
 When `stage_profile_map_updates` creates a staged revision, its
 `suggested_next_actions` includes an `export_profile_insight_review_bundle`

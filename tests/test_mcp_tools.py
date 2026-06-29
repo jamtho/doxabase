@@ -4380,6 +4380,13 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
         db,
         patterns=[pattern.pattern_iri],
         summary="Promote body_top caveat",
+        profile_route_sources=[
+            {
+                "review_lane": "metric_vocabulary_review",
+                "route_group_key": "metric_vocabulary_review:test",
+                "route_step_key": "profile-route-step:test",
+            }
+        ],
         framings=[
             {
                 "label": "Map caveat",
@@ -4404,6 +4411,7 @@ def test_stage_pattern_promotion_tool_returns_json_like_payload(tmp_path: Path) 
     assert result["intent"] == (
         "Stage one or more graph changes supported by selected patterns."
     )
+    assert result["profile_route_source_count"] == 1
     assert result["anchors"] == [pattern.pattern_iri, target, implication]
     revision_iri = result["staged_revisions"][0]["revision_iri"]
     assert result["next_action_queue"] == {"apply_after_review": [revision_iri]}

@@ -1739,6 +1739,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         evidence: list[str] | None = None,
         alternative_to: str | None = None,
         link_alternatives: bool = True,
+        profile_route_sources: list[dict[str, Any]] | None = None,
         validation_scope: str = "all",
     ) -> dict[str, Any]:
         """Stage graph changes supported by existing patterns."""
@@ -1764,6 +1765,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             evidence=evidence,
             alternative_to=alternative_to,
             link_alternatives=link_alternatives,
+            profile_route_sources=profile_route_sources,
             validation_scope=validation_scope,
         )
 

@@ -426,7 +426,7 @@ counts live under `totals`.
 
 ## Search
 
-`db.search(...)` returns a `SearchResult` with:
+`db.search(...)` returns a `SearchResults` with:
 
 ```python
 result.query
@@ -453,6 +453,9 @@ match.snippet
 ```
 
 Use `match.iri` for the matched resource. There is no `match.subject` field.
+There is no top-level `result.count`; use `len(result.matches)` when you need
+the number returned, and compare it with `result.limit` / `result.offset` before
+assuming the search was exhaustive.
 Search text can come from a literal object or a URI-valued graph term. URI
 matches are useful for exact project vocabulary tokens such as custom profile
 metric kinds; add labels or descriptions in the ontology when agents need

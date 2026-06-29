@@ -34,6 +34,8 @@ or database connection.
 `doxabase.graph_overview`
 
 Returns named graph counts, top classes, top predicates, key entity counts, and known namespaces.
+The response field is `named_graphs`; there is no top-level `graph_counts`
+field. Derive graph counts from `named_graphs[].triple_count`.
 
 `doxabase.scan_sensitive_literals`
 
@@ -371,6 +373,8 @@ as custom profile metric kinds. When an unscoped search page is dominated by
 immutable seed graph hits, the response includes `scope_hint` and scoped retry
 `suggested_next_actions`; follow those before concluding project map,
 observation, pattern, or evidence facts are absent.
+The result has `matches`; there is no `count` field. Use
+`len(result.matches)` when scripting against the Python API.
 
 `doxabase.describe_dataset`
 
@@ -1458,7 +1462,10 @@ remain reviewable. The helper does not infer the map shape. It uses the selected
 patterns as `supporting_patterns`, rolls up their supporting observations,
 claims, and evidence, and uses pattern targets plus `map_implication` resources
 as revision anchors before delegating to the staged systematisation workflow.
-It returns the same `systematisation_draft` result shape and routing fields.
+It accepts `profile_route_sources` and forwards them to
+`stage_systematisation`, so profile followthrough plan primary promotion calls
+can persist explicit route closure. It returns the same
+`systematisation_draft` result shape and routing fields.
 
 `doxabase.describe_staged_revision`
 

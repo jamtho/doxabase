@@ -175,6 +175,11 @@ the graph revision.
 
 ## Inspect
 
+`graph_overview()` returns `named_graphs`; it does not expose a `.graph_counts`
+attribute. Derive per-graph counts from each card's `triple_count`.
+`search()` returns `SearchResults` with `.matches`; it does not expose a
+`.count` attribute.
+
 ```python
 overview = db.graph_overview(limit=100)
 brief = db.project_brief(limit=20, profile_candidate_limit=2)
@@ -1117,9 +1122,11 @@ supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;
 the helper records the selected patterns as support, rolls up their supporting
 observations/claims/evidence, uses pattern targets and map implications as
 revision anchors, and delegates validation/review packaging to
-`stage_systematisation()`. It does not apply the changes or infer the graph
-shape. It returns the same `systematisation_draft` routing fields as
-`stage_systematisation()`.
+`stage_systematisation()`. It accepts `profile_route_sources` and forwards them
+to `stage_systematisation()`, so promotion calls selected from
+`advisory_followthrough_plan` can persist explicit profile review route closure.
+It does not apply the changes or infer the graph shape. It returns the same
+`systematisation_draft` routing fields as `stage_systematisation()`.
 
 `describe_graph_revision()` returns compact revision context: summary,
 rationale, `record_kind`, changed/included graph roles, graph snapshots with
@@ -1681,6 +1688,8 @@ then returns matched resources, their graph role, RDF types, matched predicate,
 matched text, and snippet. Use it to rediscover labels, caveats, source
 descriptions, path templates, observations, evidence, and exact project
 vocabulary tokens before deciding what to trust or inspect next.
+The result object has `matches`, not `count`; use `len(result.matches)` for the
+returned match count.
 
 ## Validate
 

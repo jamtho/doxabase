@@ -26685,8 +26685,14 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert status_value_type in framing_content
     assert "reviewed order lifecycle domain" in framing_content
 
-    staged_promotion = db.stage_pattern_promotion(**promotion_args)
+    staged_promotion = db.stage_pattern_promotion(
+        **promotion_args,
+        profile_route_sources=value_type_plan.source_profile_advisories,
+    )
 
+    assert staged_promotion.profile_route_source_count == len(
+        value_type_plan.source_profile_advisories
+    )
     assert len(staged_promotion.staged_revisions) == 1
     staged = db.describe_staged_revision(
         staged_promotion.staged_revisions[0].revision_iri
@@ -28150,8 +28156,14 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         "metric_vocabulary_review:"
     )
 
-    staged_promotion = db.stage_pattern_promotion(**promotion_args)
+    staged_promotion = db.stage_pattern_promotion(
+        **promotion_args,
+        profile_route_sources=metric_plan.source_profile_advisories,
+    )
 
+    assert staged_promotion.profile_route_source_count == len(
+        metric_plan.source_profile_advisories
+    )
     assert len(staged_promotion.staged_revisions) == 1
     staged = db.describe_staged_revision(
         staged_promotion.staged_revisions[0].revision_iri

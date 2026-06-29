@@ -31254,6 +31254,9 @@ class DoxaBase:
         evidence: Iterable[str] | str | None = None,
         alternative_to: str | None = None,
         link_alternatives: bool = True,
+        profile_route_sources: Iterable[Mapping[str, Any]]
+        | Mapping[str, Any]
+        | None = None,
         validation_scope: TypingLiteral[
             "map",
             "ontology",
@@ -31358,6 +31361,7 @@ class DoxaBase:
             evidence=promotion_evidence,
             alternative_to=alternative_to,
             link_alternatives=link_alternatives,
+            profile_route_sources=profile_route_sources,
             validation_scope=validation_scope,
         )
 
