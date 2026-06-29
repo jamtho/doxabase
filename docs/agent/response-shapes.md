@@ -1896,6 +1896,8 @@ item.tool_names
 item.action_labels
 item.suggested_next_calls
 item.primary_tool_name
+item.primary_action_kind
+item.primary_action_writes_graph
 item.primary_next_call
 item.metric_advisory_indexes
 item.type_advisory_indexes
@@ -1911,6 +1913,11 @@ Use this plan when a profile draft leaves metric/type lanes open but you need a
 small next-step menu: define project metric vocabulary, define project value
 type vocabulary, stage reviewed map type assertions, or record a pattern/caveat
 fallback before systematising alternatives.
+Multiple rows can share the same `semantic_move` when one route only inspects
+context and another stages or records a change. Scripts that intend to mutate
+should match `semantic_move` plus `primary_action_kind`
+(`stage_reviewable_change` or `direct_graph_write`) instead of selecting by
+`semantic_move` alone.
 Drafts with at least one default-stageable representative recommendation include
 a `stage_profile_map_updates` action whose
 `accepted_recommendation_indexes` defaults to those representatives. Sampled

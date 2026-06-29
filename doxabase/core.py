@@ -2656,6 +2656,8 @@ class ProfileAdvisoryFollowthroughPlanItem:
     action_labels: list[str]
     suggested_next_calls: list[str]
     primary_tool_name: str | None
+    primary_action_kind: str | None
+    primary_action_writes_graph: bool
     primary_next_call: str | None
     metric_advisory_indexes: list[int]
     type_advisory_indexes: list[int]
@@ -13468,6 +13470,11 @@ class DoxaBase:
                 list(item["suggested_next_calls"]),
             )
         )
+        primary_action_kind = (
+            DoxaBase._profile_followthrough_primary_action_kind(
+                primary_tool_name
+            )
+        )
         return ProfileAdvisoryFollowthroughPlanItem(
             semantic_move=semantic_move,
             review_lane=str(item["review_lane"]),
@@ -13477,6 +13484,11 @@ class DoxaBase:
             action_labels=list(item["action_labels"]),
             suggested_next_calls=list(item["suggested_next_calls"]),
             primary_tool_name=primary_tool_name,
+            primary_action_kind=primary_action_kind,
+            primary_action_writes_graph=primary_action_kind in {
+                "stage_reviewable_change",
+                "direct_graph_write",
+            },
             primary_next_call=primary_next_call,
             metric_advisory_indexes=metric_indexes,
             type_advisory_indexes=type_indexes,
@@ -13492,6 +13504,40 @@ class DoxaBase:
             source_profile_advisories=list(item["source_profile_advisories"]),
             note=DoxaBase._profile_followthrough_note(semantic_move),
         )
+
+    @staticmethod
+    def _profile_followthrough_primary_action_kind(
+        primary_tool_name: str | None,
+    ) -> str | None:
+        if primary_tool_name is None:
+            return None
+        if primary_tool_name.startswith("stage_"):
+            return "stage_reviewable_change"
+        if primary_tool_name.startswith("record_") or primary_tool_name in {
+            "apply_staged_revision",
+            "import_revision_snapshots",
+            "import_trig",
+            "replace_graph_triples",
+            "restage_staged_revision",
+            "restage_staged_revisions",
+        }:
+            return "direct_graph_write"
+        if primary_tool_name.startswith("export_"):
+            return "export_artifact"
+        if primary_tool_name in {
+            "describe_assertion_support",
+            "describe_context_slice",
+            "describe_dataset",
+            "describe_graph_revision",
+            "describe_pattern",
+            "describe_profile_run",
+            "describe_query_context",
+            "describe_resource",
+            "list_entities",
+            "search",
+        }:
+            return "inspect_context"
+        return "other"
 
     @staticmethod
     def _profile_followthrough_primary_action(

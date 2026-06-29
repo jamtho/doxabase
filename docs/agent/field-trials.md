@@ -2808,6 +2808,12 @@ few useful gaps:
   review context. `export_preflight` and `export_trig` now warn when a TriG
   export omits history and snapshot rows so agents do not mistake review bundles
   for recovery bundles.
+- A broader profile-metrics trial showed `advisory_followthrough_plan` could
+  still be misused by scripts that selected only `semantic_move`: a lane such
+  as `define_metric` may have inspect-context rows and a separate staging row.
+  Followthrough items now expose `primary_action_kind` and
+  `primary_action_writes_graph`; scripts should match both the semantic move
+  and intended action kind before staging or recording changes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -638,9 +638,12 @@ actions in both metric and type lanes, review or export those generated drafts
 together before applying either lane independently.
 `advisory_followthrough_plan` summarizes those grouped advisory actions by
 semantic move: `define_metric`, `define_value_type`, `assert_map_type`, or
-`caveat_fallback`. Use its primary call, advisory indexes, status counts, route
-keys, route anchors/patterns, and `source_profile_advisories` when a script
-needs the next review move without rejoining every advisory row.
+`caveat_fallback`. Use its primary call, `primary_action_kind`, graph-write
+flag, advisory indexes, status counts, route keys, route anchors/patterns, and
+`source_profile_advisories` when a script needs the next review move without
+rejoining every advisory row. Match `semantic_move` plus `primary_action_kind`
+when selecting a mutation; the same semantic move can include inspect-only and
+staging rows.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and

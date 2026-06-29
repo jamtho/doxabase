@@ -83,6 +83,11 @@ advisories are present, it is advisory-only: do not call
 Use `advisory_followthrough_plan` for a compact next-step menu over metric/type
 lanes. It groups existing actions by `semantic_move`: `define_metric`,
 `define_value_type`, `assert_map_type`, or `caveat_fallback`.
+Do not select rows by `semantic_move` alone when scripting. A draft can expose
+several `define_metric` rows, for example context inspection and a staging call.
+Use `primary_action_kind` to choose the route you intend:
+`stage_reviewable_change` for staged review work, `direct_graph_write` for
+direct record helpers, and `inspect_context` for non-mutating review.
 If same dataset/evidence profile map updates are already staged, the draft sets
 `pending_staged_profile_update_iris` and puts a
 `plan_staged_revision_recovery` action first in `profile_map_updates`. Review

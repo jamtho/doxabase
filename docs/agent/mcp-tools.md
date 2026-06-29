@@ -573,8 +573,11 @@ Use `advisory_followthrough_plan` when you need a compact menu over the
 metric/type lanes. Its `semantic_move` values group existing advisory actions
 as `define_metric`, `define_value_type`, `assert_map_type`, or
 `caveat_fallback`; each item echoes route keys, advisory indexes, status counts,
-primary call, route anchors/patterns, and `source_profile_advisories` blocks for
-later `profile_route_sources` handoff.
+primary call, `primary_action_kind`, whether the primary call writes graph state,
+route anchors/patterns, and `source_profile_advisories` blocks for later
+`profile_route_sources` handoff. Match both `semantic_move` and
+`primary_action_kind` when scripting a mutation; `semantic_move` alone can match
+context-inspection rows and staging rows for the same metric/type lane.
 If a top-level `stage_profile_map_updates` action is present, review the draft
 and use that action as a starting point. Its accepted indexes default to the
 representative indexes whose rows have `default_stageable=True`. Sampled

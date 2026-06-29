@@ -26572,11 +26572,19 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert plan_by_move["assert_map_type"].primary_tool_name == (
         "stage_map_assertion_change"
     )
+    assert plan_by_move["assert_map_type"].primary_action_kind == (
+        "stage_reviewable_change"
+    )
+    assert plan_by_move["assert_map_type"].primary_action_writes_graph is True
     assert plan_by_move["assert_map_type"].type_advisory_indexes == [0]
     assert plan_by_move["assert_map_type"].advisory_status_counts == {
         "type_finding_conflicts_current_map": 1,
     }
     assert plan_by_move["caveat_fallback"].primary_tool_name == "record_pattern"
+    assert plan_by_move["caveat_fallback"].primary_action_kind == (
+        "direct_graph_write"
+    )
+    assert plan_by_move["caveat_fallback"].primary_action_writes_graph is True
     assert plan_by_move["caveat_fallback"].type_advisory_indexes == [0]
     staged_type_actions = [
         action
@@ -28294,6 +28302,8 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert metric_plan.semantic_move == "define_metric"
     assert metric_plan.review_lane == "metric_vocabulary_review"
     assert metric_plan.primary_tool_name == "stage_pattern_promotion"
+    assert metric_plan.primary_action_kind == "stage_reviewable_change"
+    assert metric_plan.primary_action_writes_graph is True
     assert metric_plan.metric_advisory_indexes == [0]
     assert metric_plan.advisory_status_counts == {
         "project_metric_undefined": 1,

@@ -7251,10 +7251,16 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         "metric_vocabulary_review"
     )
     assert plan_by_move["define_metric"]["primary_tool_name"] == "list_entities"
+    assert plan_by_move["define_metric"]["primary_action_kind"] == "inspect_context"
+    assert plan_by_move["define_metric"]["primary_action_writes_graph"] is False
     assert plan_by_move["define_metric"]["metric_advisory_indexes"] == [0]
     assert plan_by_move["assert_map_type"]["primary_tool_name"] == (
         "stage_map_assertion_change"
     )
+    assert plan_by_move["assert_map_type"]["primary_action_kind"] == (
+        "stage_reviewable_change"
+    )
+    assert plan_by_move["assert_map_type"]["primary_action_writes_graph"] is True
     assert plan_by_move["assert_map_type"]["type_advisory_indexes"] == [0]
     assert plan_by_move["caveat_fallback"]["source_profile_advisories"][0][
         "route_group_key"
