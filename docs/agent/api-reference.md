@@ -1533,7 +1533,11 @@ before any further apply, and `post_apply_recheck_revisions`, compact rows with
 each sibling's `changed_graphs`, `shared_changed_graphs`, `recheck_reasons`,
 fresh `application_status`, `decision`, `blocking_reasons`, `next_action`,
 `suggested_next_actions`, and `suggested_next_calls` explaining why it is in the
-post-apply queue and how to route it.
+post-apply queue and how to route it. `post_apply_recheck_is_partial_queue` is
+always true: this is the affected-sibling subset, not the complete remaining
+frontier. Follow the top-level `suggested_next_actions[0]`
+`plan_staged_revision_recovery(current_staged_work_only=True)` before deciding
+the next mutation when unattended.
 
 `describe_pattern()` returns compact handoff context for a pattern: pattern text,
 rationale, targets, supporting observations and claims, evidence/source spans,

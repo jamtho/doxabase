@@ -2361,6 +2361,12 @@ few useful gaps:
   Profile insight review exports now scan already-applied staged sources by the
   same profile evidence/observation/pattern/anchor routes, with an opt-out flag
   for current-staged-only bundles.
+- Staged grouped apply/recheck trials confirmed `Review Sequence` gives a clear
+  apply-one-then-recheck route, but `apply_staged_revision()` could still be
+  misread as returning the whole remaining queue. Apply responses now mark
+  `post_apply_recheck_is_partial_queue=true` and start their top-level
+  suggestions with `plan_staged_revision_recovery(current_staged_work_only=True)`
+  so independent staged siblings remain visible.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -396,8 +396,10 @@ for item in stale.revisions:
 ```
 
 After any apply, treat old readiness as stale. Re-list
-`current_staged_work_only=True` or follow
-`post_apply_recheck_revision_iris` before applying another same-graph proposal.
+`current_staged_work_only=True` before the next mutation. The apply response's
+`post_apply_recheck_revision_iris` is only the affected-sibling subset; follow
+its top-level `plan_staged_revision_recovery(current_staged_work_only=True)`
+suggested action so independent staged work is not dropped.
 Use `record_kind="applied_event"` when you are browsing history after the live
 mutation queue is empty.
 If the compact route is `repair_or_replace`, call

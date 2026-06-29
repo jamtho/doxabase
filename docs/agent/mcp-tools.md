@@ -1586,7 +1586,11 @@ rows with each revision's `changed_graphs`, `shared_changed_graphs`,
 `recheck_reasons`, fresh `application_status`, `decision`, `blocking_reasons`,
 `next_action`, `suggested_next_actions`, and `suggested_next_calls`. Re-run
 apply checks on those rows before further mutation when other graph changes may
-have happened. It is a first apply path, not a full merge/rebase workflow.
+have happened. `post_apply_recheck_is_partial_queue=true` makes explicit that
+those rows are only the affected-sibling subset, not the full remaining staged
+frontier; the top-level `suggested_next_actions` therefore starts with
+`plan_staged_revision_recovery(current_staged_work_only=True)`. It is a first
+apply path, not a full merge/rebase workflow.
 
 `doxabase.export_staged_revision`
 

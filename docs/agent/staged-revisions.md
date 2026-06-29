@@ -653,7 +653,11 @@ conservative:
 - it returns `post_apply_recheck_revision_iris` and
   `post_apply_recheck_revisions` for other current staged revisions sharing
   changed graphs or validation dependencies that should be rechecked before any
-  further apply.
+  further apply;
+- it returns `post_apply_recheck_is_partial_queue=true` and a top-level
+  `plan_staged_revision_recovery(current_staged_work_only=True)` suggested
+  action because affected recheck siblings are not the full remaining staged
+  frontier.
 
 Patch previews report `count_basis` anywhere patch rows are exposed. Most
 patches use `target_graph_only`, but `ontology` and `shapes` patches preview
@@ -675,7 +679,9 @@ queue for the mutation that just happened. For each row, inspect
 Independent staged siblings from the original bundle may not appear in this
 subset, so rerun `plan_staged_revision_recovery(current_staged_work_only=True)`
 or keep an explicit union with unapplied original bundle members before choosing
-the next mutation.
+the next mutation. Prefer the top-level apply response suggested action for this
+replan; row-level `post_apply_recheck_revisions[].suggested_next_actions` only
+route affected siblings.
 `validation_dependency_graph:shapes` means the applied project shape change may
 have changed whether the candidate validates even when its patch target did not
 change. Re-run

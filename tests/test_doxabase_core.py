@@ -3015,6 +3015,16 @@ def test_apply_staged_revision_mutates_graph_and_records_history(
     assert result.changed_graphs == ["map"]
     assert result.post_apply_recheck_revisions == []
     assert result.post_apply_recheck_revision_iris == []
+    assert result.post_apply_recheck_is_partial_queue is True
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "plan_staged_revision_recovery"
+    ]
+    assert result.suggested_next_actions[0].arguments == {
+        "current_staged_work_only": True
+    }
+    assert result.suggested_next_calls == [
+        "plan_staged_revision_recovery(current_staged_work_only=True)"
+    ]
     assert result.patches_applied == 1
     assert result.triples_added == 3
     assert result.triples_removed == 0
@@ -9034,6 +9044,21 @@ def test_post_apply_recheck_subset_does_not_replace_current_work_plan(
     assert applied.post_apply_recheck_revision_iris == [second_map.revision_iri]
     assert ontology_revision.revision_iri not in (
         applied.post_apply_recheck_revision_iris
+    )
+    assert applied.post_apply_recheck_is_partial_queue is True
+    assert applied.suggested_next_actions[0].tool_name == (
+        "plan_staged_revision_recovery"
+    )
+    assert applied.suggested_next_actions[0].arguments == {
+        "current_staged_work_only": True
+    }
+    assert applied.suggested_next_actions[0].reason.startswith(
+        "Post-apply recheck rows are only the affected sibling subset."
+    )
+    assert any(
+        action.tool_name == "restage_staged_revision"
+        and action.arguments == {"iri": second_map.revision_iri}
+        for action in applied.suggested_next_actions
     )
 
     followup_plan = db.plan_staged_revision_recovery()

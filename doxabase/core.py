@@ -887,6 +887,9 @@ class AppliedStagedRevisionRecord:
     changed_graphs: list[str]
     post_apply_recheck_revisions: list[PostApplyRecheckRevision]
     post_apply_recheck_revision_iris: list[str]
+    post_apply_recheck_is_partial_queue: bool
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
     patches_applied: int
     triples_added: int
     triples_removed: int
@@ -27779,6 +27782,9 @@ class DoxaBase:
             staged_revision_iri=staged.iri,
             changed_graphs=changed_graphs,
         )
+        suggested_next_actions = self._post_apply_suggested_next_actions(
+            post_apply_recheck_revisions
+        )
         return AppliedStagedRevisionRecord(
             applied_revision_iri=applied_subject,
             staged_revision_iri=staged.iri,
@@ -27789,6 +27795,11 @@ class DoxaBase:
             post_apply_recheck_revision_iris=[
                 item.iri for item in post_apply_recheck_revisions
             ],
+            post_apply_recheck_is_partial_queue=True,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions if action.call
+            ],
             patches_applied=len(preview.parsed_patches),
             triples_added=triples_added,
             triples_removed=triples_removed,
@@ -27797,6 +27808,32 @@ class DoxaBase:
             validation_result_count=check.validation_result_count or 0,
             validation_results=check.validation_results,
         )
+
+    def _post_apply_suggested_next_actions(
+        self,
+        post_apply_recheck_revisions: list[PostApplyRecheckRevision],
+    ) -> list[SuggestedNextAction]:
+        arguments: dict[str, Any] = {"current_staged_work_only": True}
+        actions = [
+            SuggestedNextAction(
+                action_label="Replan current staged frontier",
+                tool_name="plan_staged_revision_recovery",
+                mcp_tool_name="doxabase.plan_staged_revision_recovery",
+                arguments=arguments,
+                reason=(
+                    "Post-apply recheck rows are only the affected sibling "
+                    "subset. Replan the current staged frontier before deciding "
+                    "the next mutation so independent staged work is not dropped."
+                ),
+                call=self._suggested_call_string(
+                    "plan_staged_revision_recovery",
+                    arguments,
+                ),
+            )
+        ]
+        for recheck in post_apply_recheck_revisions:
+            actions.extend(recheck.suggested_next_actions)
+        return self._dedupe_suggested_next_actions(actions)
 
     def _post_apply_recheck_revisions(
         self,

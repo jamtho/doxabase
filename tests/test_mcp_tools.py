@@ -3117,6 +3117,16 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["staged_revision_iri"] == staged["revision_iri"]
     assert result["changed_graphs"] == ["map"]
     assert result["post_apply_recheck_revision_iris"] == [sibling["revision_iri"]]
+    assert result["post_apply_recheck_is_partial_queue"] is True
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "plan_staged_revision_recovery"
+    )
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "current_staged_work_only": True
+    }
+    assert result["suggested_next_calls"][0] == (
+        "plan_staged_revision_recovery(current_staged_work_only=True)"
+    )
     assert len(result["post_apply_recheck_revisions"]) == 1
     recheck = result["post_apply_recheck_revisions"][0]
     assert recheck["iri"] == sibling["revision_iri"]
