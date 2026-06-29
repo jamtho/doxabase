@@ -615,9 +615,15 @@ with explicit alternative routing, so callers do not have to parse prose or
 reconstruct the original framings by hand. Multi-framing drafts with shared
 `ontology` or `shapes` patches
 also emit `shared_semantic_context_applies_to_all_framings`; use its suggested
-rerun arguments as a cue to move those patches into per-framing additions or
-removals when fallback alternatives should not carry the provisional vocabulary
-or validation shape. That shared-context warning can remain after a
+rerun arguments, `shared_patch_summaries`, and
+`fallback_revision_iris_with_shared_semantic_context` as a cue to move those
+patches into per-framing additions or removals when fallback alternatives should
+not carry the provisional vocabulary or validation shape. Fallback IRIs are an
+inspection subset, not a preference order; interpret them alongside
+`review_recommendation`, `alternative_to`, and `current_alternative_to`.
+Grouped exports reconstruct the same signal as
+`bundle_summary.shared_semantic_context_warnings` when the original draft
+response is not available. That shared-context warning can remain after a
 `link_alternatives=False` rerun when the shared ontology or shapes still
 intentionally apply to every framing.
 

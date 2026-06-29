@@ -2416,6 +2416,13 @@ few useful gaps:
   `alternative_gate_status`. Grouped Markdown now includes semantic risk and
   alternative gate columns in `Resolved Targets` so Markdown-only reviewers can
   scan row-vs-target routing and semantic gates together.
+- A staged-systematisation shared-context trial showed that the draft-level
+  `shared_semantic_context_applies_to_all_framings` warning was useful, but
+  graph roles alone were ambiguous and grouped exports lost the warning after
+  handoff. Structured warnings now include parsed shared patch summaries,
+  fallback revision IRIs, and original shared patch source selectors; grouped
+  exports reconstruct shared ontology/shapes context from stored patch roles so
+  export-only agents can inspect or restage fallback alternatives before apply.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

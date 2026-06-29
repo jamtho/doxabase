@@ -1044,8 +1044,11 @@ with explicit alternative routing. Per-framing `alternative_to` values reroute
 siblings without that warning. When multiple framings share `ontology` or
 `shapes` patches, `structured_warnings` includes
 `warning_code="shared_semantic_context_applies_to_all_framings"` and suggested
-rerun arguments naming the shared graph roles to move into per-framing patches
-if fallback alternatives should avoid that provisional semantic context.
+rerun arguments naming the shared graph roles and original shared patch source
+indexes to move into per-framing patches if fallback alternatives should avoid
+that provisional semantic context. The warning also carries
+`shared_patch_summaries` and
+`fallback_revision_iris_with_shared_semantic_context` for structured inspection.
 
 `stage_pattern_promotion()` stages one or more caller-authored RDF framings
 supported by existing `rc:Pattern` resources. Pass pattern IRIs and framings;
@@ -1259,7 +1262,8 @@ of the grouped status rows with current apply status, blockers, validation
 state, alternative/restage links, authored review recommendations, live
 `apply_recommended_resolution` guidance, effective `summary_recommendation`
 text matching the grouped Markdown table, recommendation source/scope fields,
-per-row `next_action`, and suggested next actions. Grouped Markdown and
+per-row shared-context patch counts/graphs, per-row `next_action`, and
+suggested next actions. Grouped Markdown and
 `bundle_summary.next_action_queue` expose the same compact next-action buckets
 for routing; the older recommended queues remain for compatibility and broader
 review grouping.
@@ -1292,6 +1296,12 @@ point at an applied event. The bundle also exposes
 queue-only scripts can notice semantic review gates inside `apply_after_review`.
 Grouped Markdown mirrors semantic risk and alternative gate status in the
 `Resolved Targets` table for Markdown-only review.
+For export-only handoffs from systematisation drafts, use
+`bundle_summary.shared_context_graphs`,
+`bundle_summary.shared_context_patch_summaries`,
+`bundle_summary.fallback_revision_iris_with_shared_semantic_context`, and
+`bundle_summary.shared_semantic_context_warnings` to recover shared ontology or
+shape context that applies to fallback alternatives.
 For a single cross-lane worklist, read `bundle_summary.review_sequence` first:
 it orders the queue items into inspect-redirect, repair, restage, review/apply,
 and recheck phases with row numbers, summaries, resolved targets, tools, and a

@@ -3586,17 +3586,41 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["next_action_queue"] == {"apply_after_review": revision_iris}
     assert result["next_action_queue_item_counts"] == {"apply_after_review": 2}
     assert result["semantic_review_required_queue_counts"] == {}
-    assert result["structured_warnings"] == [
+    assert len(result["structured_warnings"]) == 1
+    shared_warning = result["structured_warnings"][0]
+    assert shared_warning["warning_code"] == (
+        "shared_semantic_context_applies_to_all_framings"
+    )
+    assert shared_warning["message"] == result["warnings"][-1]
+    assert shared_warning["affected_revision_iris"] == revision_iris
+    assert shared_warning["suggested_action"] == (
+        "rerun_with_shared_semantic_context_moved_to_framings"
+    )
+    assert shared_warning["suggested_rerun_arguments"] == {
+        "move_shared_patch_graphs_into_framing_patches": ["ontology"],
+        "shared_patch_sources_to_move": [
+            {
+                "source_argument": "shared_additions",
+                "source_index": 0,
+                "operation": "addition",
+                "graph": "ontology",
+            }
+        ],
+    }
+    assert shared_warning["fallback_revision_iris_with_shared_semantic_context"] == [
+        revision_iris[1]
+    ]
+    assert shared_warning["shared_patch_summaries"] == [
         {
-            "warning_code": "shared_semantic_context_applies_to_all_framings",
-            "message": result["warnings"][-1],
-            "affected_revision_iris": revision_iris,
-            "suggested_action": (
-                "rerun_with_shared_semantic_context_moved_to_framings"
-            ),
-            "suggested_rerun_arguments": {
-                "move_shared_patch_graphs_into_framing_patches": ["ontology"]
-            },
+            "target_graph": "ontology",
+            "operation": RC + "AdditionPatch",
+            "operation_label": "addition patch",
+            "patch_role": RC + "SharedContextPatch",
+            "patch_role_label": "shared context patch",
+            "sequence_index": 1,
+            "triple_count": 2,
+            "count_basis": "target_graph_plus_base_ontology",
+            "format": "turtle",
         }
     ]
     assert [
@@ -3683,9 +3707,38 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert export["revision_iris"] == [
         revision["revision_iri"] for revision in result["staged_revisions"]
     ]
+    assert export["bundle_summary"]["shared_context_graphs"] == ["ontology"]
+    assert export["bundle_summary"][
+        "fallback_revision_iris_with_shared_semantic_context"
+    ] == [revision_iris[1]]
+    assert export["bundle_summary"]["shared_context_patch_summaries"] == [
+        {
+            "target_graph": "ontology",
+            "operation": RC + "AdditionPatch",
+            "operation_label": "addition patch",
+            "patch_role": RC + "SharedContextPatch",
+            "patch_role_label": "shared context patch",
+            "sequence_index": 1,
+            "triple_count": 2,
+            "count_basis": "target_graph_plus_base_ontology",
+            "format": "turtle",
+        }
+    ]
+    assert len(export["bundle_summary"]["shared_semantic_context_warnings"]) == 1
+    assert export["bundle_summary"]["shared_semantic_context_warnings"][0][
+        "warning_code"
+    ] == "shared_semantic_context_applies_to_all_framings"
+    assert [
+        summary["shared_context_patch_count"]
+        for summary in export["revision_summaries"]
+    ] == [1, 1]
+    assert [
+        summary["shared_context_graphs"] for summary in export["revision_summaries"]
+    ] == [["ontology"], ["ontology"]]
     assert exported.startswith("# Identity ladder MCP bundle\n")
     assert "## Review Summary" in exported
     assert "Pattern-first is preferred" in exported
+    assert "Shared ontology or shapes context patches are present" in exported
     assert "## Reviewer Decision Matrix" in exported
     assert "Rows 1 and 2 are competing alternatives" in exported
     assert "Authored recommendation" in exported
@@ -3767,26 +3820,54 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
         and "link_alternatives=False" in warning
         for warning in result["warnings"]
     )
-    assert result["structured_warnings"] == [
+    assert len(result["structured_warnings"]) == 2
+    shared_warning = result["structured_warnings"][0]
+    assert shared_warning["warning_code"] == (
+        "shared_semantic_context_applies_to_all_framings"
+    )
+    assert shared_warning["message"] == result["warnings"][-2]
+    assert shared_warning["affected_revision_iris"] == revision_iris
+    assert shared_warning["suggested_action"] == (
+        "rerun_with_shared_semantic_context_moved_to_framings"
+    )
+    assert shared_warning["suggested_rerun_arguments"] == {
+        "move_shared_patch_graphs_into_framing_patches": ["shapes"],
+        "shared_patch_sources_to_move": [
+            {
+                "source_argument": "shared_additions",
+                "source_index": 0,
+                "operation": "addition",
+                "graph": "shapes",
+            }
+        ],
+    }
+    assert shared_warning["fallback_revision_iris_with_shared_semantic_context"] == [
+        revision_iris[1],
+        revision_iris[2],
+    ]
+    assert shared_warning["shared_patch_summaries"] == [
         {
-            "warning_code": "shared_semantic_context_applies_to_all_framings",
-            "message": result["warnings"][-2],
-            "affected_revision_iris": revision_iris,
-            "suggested_action": (
-                "rerun_with_shared_semantic_context_moved_to_framings"
-            ),
-            "suggested_rerun_arguments": {
-                "move_shared_patch_graphs_into_framing_patches": ["shapes"]
-            },
-        },
-        {
-            "warning_code": "first_alternative_anchor_not_ready",
-            "message": result["warnings"][-1],
-            "affected_revision_iris": revision_iris,
-            "suggested_action": "rerun_with_explicit_alternative_routing",
-            "suggested_rerun_arguments": {"link_alternatives": False},
+            "target_graph": "shapes",
+            "operation": RC + "AdditionPatch",
+            "operation_label": "addition patch",
+            "patch_role": RC + "SharedContextPatch",
+            "patch_role_label": "shared context patch",
+            "sequence_index": 1,
+            "triple_count": 5,
+            "count_basis": "target_graph_plus_base_shapes",
+            "format": "turtle",
         }
     ]
+    anchor_warning = result["structured_warnings"][1]
+    assert anchor_warning == {
+        "warning_code": "first_alternative_anchor_not_ready",
+        "message": result["warnings"][-1],
+        "affected_revision_iris": revision_iris,
+        "suggested_action": "rerun_with_explicit_alternative_routing",
+        "suggested_rerun_arguments": {"link_alternatives": False},
+        "shared_patch_summaries": [],
+        "fallback_revision_iris_with_shared_semantic_context": [],
+    }
     rerun_action = result["suggested_next_actions"][0]
     assert rerun_action["tool_name"] == "stage_systematisation"
     assert rerun_action["action_label"] == (
@@ -3908,17 +3989,42 @@ def test_stage_systematisation_tool_suppresses_anchor_warning_for_explicit_sibli
         "repair_or_replace": [revision_iris[0]],
         "apply_after_review": [revision_iris[1], revision_iris[2]],
     }
-    assert result["structured_warnings"] == [
+    assert len(result["structured_warnings"]) == 1
+    shared_warning = result["structured_warnings"][0]
+    assert shared_warning["warning_code"] == (
+        "shared_semantic_context_applies_to_all_framings"
+    )
+    assert shared_warning["message"] == result["warnings"][-1]
+    assert shared_warning["affected_revision_iris"] == revision_iris
+    assert shared_warning["suggested_action"] == (
+        "rerun_with_shared_semantic_context_moved_to_framings"
+    )
+    assert shared_warning["suggested_rerun_arguments"] == {
+        "move_shared_patch_graphs_into_framing_patches": ["shapes"],
+        "shared_patch_sources_to_move": [
+            {
+                "source_argument": "shared_additions",
+                "source_index": 0,
+                "operation": "addition",
+                "graph": "shapes",
+            }
+        ],
+    }
+    assert shared_warning["fallback_revision_iris_with_shared_semantic_context"] == [
+        revision_iris[1],
+        revision_iris[2],
+    ]
+    assert shared_warning["shared_patch_summaries"] == [
         {
-            "warning_code": "shared_semantic_context_applies_to_all_framings",
-            "message": result["warnings"][-1],
-            "affected_revision_iris": revision_iris,
-            "suggested_action": (
-                "rerun_with_shared_semantic_context_moved_to_framings"
-            ),
-            "suggested_rerun_arguments": {
-                "move_shared_patch_graphs_into_framing_patches": ["shapes"]
-            },
+            "target_graph": "shapes",
+            "operation": RC + "AdditionPatch",
+            "operation_label": "addition patch",
+            "patch_role": RC + "SharedContextPatch",
+            "patch_role_label": "shared context patch",
+            "sequence_index": 1,
+            "triple_count": 5,
+            "count_basis": "target_graph_plus_base_shapes",
+            "format": "turtle",
         }
     ]
     assert not any(

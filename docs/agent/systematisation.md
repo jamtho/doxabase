@@ -39,8 +39,17 @@ including fallback framings.
 For multi-framing drafts, read `structured_warnings`. The warning code
 `shared_semantic_context_applies_to_all_framings` means shared `ontology` or
 `shapes` patches also apply to fallback alternatives; its
-`suggested_rerun_arguments` names the graph roles to move into per-framing
+`suggested_rerun_arguments` names the graph roles and original
+`shared_additions` / `shared_removals` source indexes to move into per-framing
 patches when a fallback should avoid that semantic context.
+Use `shared_patch_summaries` to see the parsed shared patch target, operation,
+count basis, format, and triple count, then map
+`fallback_revision_iris_with_shared_semantic_context` back to
+`framings[].revision_iri` before rerunning.
+Grouped review exports reconstruct the same shared-context signal from stored
+patch roles as `bundle_summary.shared_semantic_context_warnings`; carry the
+draft warning into `executive_summary` only when reviewers need additional
+agent judgement beyond the structured fields.
 
 ## Project Ontology And Shapes
 

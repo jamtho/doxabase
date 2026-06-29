@@ -11876,8 +11876,41 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         == "rerun_with_shared_semantic_context_moved_to_framings"
     )
     assert shared_warning.suggested_rerun_arguments == {
-        "move_shared_patch_graphs_into_framing_patches": ["ontology", "shapes"]
+        "move_shared_patch_graphs_into_framing_patches": ["ontology", "shapes"],
+        "shared_patch_sources_to_move": [
+            {
+                "source_argument": "shared_additions",
+                "source_index": 0,
+                "operation": "addition",
+                "graph": "ontology",
+            },
+            {
+                "source_argument": "shared_additions",
+                "source_index": 1,
+                "operation": "addition",
+                "graph": "shapes",
+            },
+        ],
     }
+    assert (
+        shared_warning.fallback_revision_iris_with_shared_semantic_context
+        == revision_iris[1:]
+    )
+    assert [
+        (summary.target_graph, summary.triple_count, summary.count_basis)
+        for summary in shared_warning.shared_patch_summaries
+    ] == [
+        ("ontology", 13, "target_graph_plus_base_ontology"),
+        ("shapes", 7, "target_graph_plus_base_shapes"),
+    ]
+    assert all(
+        summary.operation == RC + "AdditionPatch"
+        and summary.operation_label == "addition patch"
+        and summary.patch_role == RC + "SharedContextPatch"
+        and summary.patch_role_label == "shared context patch"
+        and summary.format == "turtle"
+        for summary in shared_warning.shared_patch_summaries
+    )
     structured_warning = draft.structured_warnings[1]
     assert structured_warning.warning_code == "first_alternative_anchor_not_ready"
     assert structured_warning.message in draft.warnings
@@ -11941,6 +11974,34 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         "apply_after_review": 2,
     }
     assert export.bundle_summary.semantic_review_required_queue_counts == {}
+    assert export.bundle_summary.shared_context_graphs == ["ontology", "shapes"]
+    assert (
+        export.bundle_summary.fallback_revision_iris_with_shared_semantic_context
+        == revision_iris[1:]
+    )
+    assert [
+        (summary.target_graph, summary.triple_count, summary.count_basis)
+        for summary in export.bundle_summary.shared_context_patch_summaries
+    ] == [
+        ("ontology", 13, "target_graph_plus_base_ontology"),
+        ("shapes", 7, "target_graph_plus_base_shapes"),
+    ]
+    assert len(export.bundle_summary.shared_semantic_context_warnings) == 1
+    bundle_shared_warning = export.bundle_summary.shared_semantic_context_warnings[0]
+    assert bundle_shared_warning.warning_code == (
+        "shared_semantic_context_applies_to_all_framings"
+    )
+    assert bundle_shared_warning.affected_revision_iris == revision_iris
+    assert bundle_shared_warning.shared_context_graphs == ["ontology", "shapes"]
+    assert (
+        bundle_shared_warning.fallback_revision_iris_with_shared_semantic_context
+        == revision_iris[1:]
+    )
+    assert any(
+        "Shared ontology or shapes context patches are present across this staged bundle"
+        in warning
+        for warning in export.bundle_summary.warnings
+    )
     assert export.bundle_summary.recommended_repair_review_iris == [
         revision_iris[0]
     ]
@@ -11961,6 +12022,12 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         "attention",
     ]
     assert [
+        summary.shared_context_patch_count for summary in export.revision_summaries
+    ] == [2, 2, 2]
+    assert [
+        summary.shared_context_graphs for summary in export.revision_summaries
+    ] == [["ontology", "shapes"], ["ontology", "shapes"], ["ontology", "shapes"]]
+    assert [
         item.semantic_risk_level
         for item in export.bundle_summary.next_action_queue_items
     ] == [
@@ -11972,6 +12039,7 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         summary.semantic_risk_reasons for summary in export.revision_summaries
     )
     assert "## Review Queues" in exported
+    assert "Shared ontology or shapes context patches are present" in exported
     assert (
         "- Next action - apply after review: "
         f"`{revision_iris[1]}`, `{revision_iris[2]}`"
@@ -12126,8 +12194,29 @@ def test_stage_systematisation_shared_context_validates_each_framing(
         == "rerun_with_shared_semantic_context_moved_to_framings"
     )
     assert shared_warning.suggested_rerun_arguments == {
-        "move_shared_patch_graphs_into_framing_patches": ["ontology"]
+        "move_shared_patch_graphs_into_framing_patches": ["ontology"],
+        "shared_patch_sources_to_move": [
+            {
+                "source_argument": "shared_additions",
+                "source_index": 0,
+                "operation": "addition",
+                "graph": "ontology",
+            }
+        ],
     }
+    assert shared_warning.fallback_revision_iris_with_shared_semantic_context == [
+        draft.staged_revisions[1].revision_iri
+    ]
+    assert [
+        (summary.target_graph, summary.triple_count, summary.count_basis)
+        for summary in shared_warning.shared_patch_summaries
+    ] == [("ontology", 2, "target_graph_plus_base_ontology")]
+    shared_patch_summary = shared_warning.shared_patch_summaries[0]
+    assert shared_patch_summary.operation == RC + "AdditionPatch"
+    assert shared_patch_summary.operation_label == "addition patch"
+    assert shared_patch_summary.patch_role == RC + "SharedContextPatch"
+    assert shared_patch_summary.patch_role_label == "shared context patch"
+    assert shared_patch_summary.format == "turtle"
     assert db.triple_count("ontology") == before_ontology_count
     assert db.triple_count("map") == before_map_count
     assert db.triple_count("patterns") == before_patterns_count

@@ -837,12 +837,42 @@ class SystematisationFramingRecord:
 
 
 @dataclass(frozen=True)
+class SystematisationSharedPatchSummary:
+    target_graph: str
+    operation: str
+    operation_label: str | None
+    patch_role: str
+    patch_role_label: str | None
+    sequence_index: int
+    triple_count: int
+    count_basis: str
+    format: str
+
+
+@dataclass(frozen=True)
 class SystematisationWarningRecord:
     warning_code: str
     message: str
     affected_revision_iris: list[str]
     suggested_action: str
     suggested_rerun_arguments: dict[str, Any]
+    shared_patch_summaries: list[SystematisationSharedPatchSummary] = field(
+        default_factory=list
+    )
+    fallback_revision_iris_with_shared_semantic_context: list[str] = field(
+        default_factory=list
+    )
+
+
+@dataclass(frozen=True)
+class SharedSemanticContextBundleWarning:
+    warning_code: str
+    message: str
+    affected_revision_iris: list[str]
+    shared_context_graphs: list[str]
+    shared_context_patch_summaries: list[SystematisationSharedPatchSummary]
+    fallback_revision_iris_with_shared_semantic_context: list[str]
+    suggested_action: str
 
 
 @dataclass(frozen=True)
@@ -945,6 +975,8 @@ class StagedGraphRevisionExportSummary:
     restaged_by: str | None
     current_restaged_by: str | None
     stale_resolution_state: str | None
+    shared_context_patch_count: int
+    shared_context_graphs: list[str]
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -1020,6 +1052,10 @@ class StagedGraphRevisionBundleSummary:
     requires_recheck_after_each_apply: bool
     semantic_risk_queue_counts: dict[str, int]
     semantic_review_required_queue_counts: dict[str, int]
+    shared_context_graphs: list[str]
+    shared_context_patch_summaries: list[SystematisationSharedPatchSummary]
+    fallback_revision_iris_with_shared_semantic_context: list[str]
+    shared_semantic_context_warnings: list[SharedSemanticContextBundleWarning]
 
 
 @dataclass(frozen=True)
@@ -26207,6 +26243,7 @@ class DoxaBase:
             )
             bundle_summary = self._staged_revisions_bundle_summary(
                 revision_summaries,
+                descriptions=review_descriptions,
                 snapshot_evidence=(
                     self._staged_revisions_snapshot_evidence_summary(
                         review_descriptions
@@ -27258,6 +27295,19 @@ class DoxaBase:
             )
         if len(staged_revisions) > 1 and shared_semantic_context_graphs:
             shared_graph_summary = ", ".join(shared_semantic_context_graphs)
+            shared_patch_summaries = (
+                self._systematisation_shared_patch_summaries(staged_revisions)
+            )
+            shared_patch_sources_to_move = (
+                self._systematisation_shared_patch_sources_to_move(
+                    shared_addition_specs,
+                    shared_removal_specs,
+                    shared_semantic_context_graphs,
+                )
+            )
+            fallback_revision_iris = [
+                revision.revision_iri for revision in staged_revisions[1:]
+            ]
             warning_message = (
                 "Shared ontology or shapes context patches are included in "
                 "every staged framing preview and patch bundle, including "
@@ -27280,8 +27330,13 @@ class DoxaBase:
                     suggested_rerun_arguments={
                         "move_shared_patch_graphs_into_framing_patches": (
                             shared_semantic_context_graphs
-                        )
+                        ),
+                        "shared_patch_sources_to_move": shared_patch_sources_to_move,
                     },
+                    shared_patch_summaries=shared_patch_summaries,
+                    fallback_revision_iris_with_shared_semantic_context=(
+                        fallback_revision_iris
+                    ),
                 )
             )
         if (
@@ -27394,6 +27449,70 @@ class DoxaBase:
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
 
+    def _systematisation_shared_patch_summaries(
+        self,
+        staged_revisions: list[StagedGraphRevisionRecord],
+    ) -> list[SystematisationSharedPatchSummary]:
+        if not staged_revisions:
+            return []
+        shared_role = self.expand_iri("rc:SharedContextPatch")
+        summaries: list[SystematisationSharedPatchSummary] = []
+        for patch in staged_revisions[0].patches:
+            if (
+                patch.patch_role != shared_role
+                or patch.target_graph not in {"ontology", "shapes"}
+            ):
+                continue
+            summaries.append(
+                SystematisationSharedPatchSummary(
+                    target_graph=patch.target_graph,
+                    operation=patch.operation,
+                    operation_label=self._label_for_resource(patch.operation),
+                    patch_role=patch.patch_role,
+                    patch_role_label=self._label_for_resource(patch.patch_role),
+                    sequence_index=patch.sequence_index,
+                    triple_count=patch.triple_count,
+                    count_basis=patch.count_basis,
+                    format=patch.format,
+                )
+            )
+        return summaries
+
+    def _systematisation_shared_patch_sources_to_move(
+        self,
+        shared_additions: list[dict[str, str]],
+        shared_removals: list[dict[str, str]],
+        shared_semantic_context_graphs: list[str],
+    ) -> list[dict[str, Any]]:
+        semantic_graphs = set(shared_semantic_context_graphs)
+        sources: list[dict[str, Any]] = []
+        for source_argument, operation, specs in (
+            ("shared_additions", "addition", shared_additions),
+            ("shared_removals", "removal", shared_removals),
+        ):
+            for source_index, spec in enumerate(specs):
+                graph_value = str(
+                    spec.get("graph")
+                    or spec.get("target_graph")
+                    or spec.get("targetGraph")
+                    or ""
+                ).strip()
+                graph_names = self._graph_names_for_export([graph_value])
+                if len(graph_names) != 1:
+                    continue
+                graph = graph_names[0]
+                if graph not in semantic_graphs:
+                    continue
+                sources.append(
+                    {
+                        "source_argument": source_argument,
+                        "source_index": source_index,
+                        "operation": operation,
+                        "graph": graph,
+                    }
+                )
+        return sources
+
     def _systematisation_rerun_arguments(
         self,
         *,
@@ -27503,6 +27622,7 @@ class DoxaBase:
         )
         bundle_summary = self._staged_revisions_bundle_summary(
             revision_summaries,
+            descriptions=descriptions,
             snapshot_evidence=(
                 self._staged_revisions_snapshot_evidence_summary(descriptions)
             ),
@@ -31425,6 +31545,7 @@ class DoxaBase:
         )
         bundle_summary = self._staged_revisions_bundle_summary(
             revision_summaries,
+            descriptions=descriptions,
             snapshot_evidence=snapshot_evidence_summary,
         )
         data = self._staged_revisions_markdown(
@@ -31589,6 +31710,11 @@ class DoxaBase:
                     next_action=next_action,
                 )
             )
+            shared_context_patch_summaries = (
+                self._staged_description_shared_semantic_context_patch_summaries(
+                    description
+                )
+            )
             summaries.append(
                 StagedGraphRevisionExportSummary(
                     revision_iri=description.iri,
@@ -31675,6 +31801,13 @@ class DoxaBase:
                     restaged_by=restaged_by,
                     current_restaged_by=current_restaged_by,
                     stale_resolution_state=stale_resolution_state,
+                    shared_context_patch_count=len(shared_context_patch_summaries),
+                    shared_context_graphs=sorted(
+                        {
+                            summary.target_graph
+                            for summary in shared_context_patch_summaries
+                        }
+                    ),
                     next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=(
@@ -31686,10 +31819,108 @@ class DoxaBase:
             )
         return summaries
 
+    def _staged_description_shared_semantic_context_patch_summaries(
+        self,
+        description: StagedGraphRevisionDescription,
+    ) -> list[SystematisationSharedPatchSummary]:
+        shared_role = self.expand_iri("rc:SharedContextPatch")
+        summaries: list[SystematisationSharedPatchSummary] = []
+        for patch in description.patches:
+            if (
+                patch.patch_role != shared_role
+                or patch.target_graph not in {"ontology", "shapes"}
+                or patch.operation is None
+                or patch.count_basis is None
+                or patch.format is None
+                or patch.sequence_index is None
+                or patch.triple_count is None
+            ):
+                continue
+            summaries.append(
+                SystematisationSharedPatchSummary(
+                    target_graph=patch.target_graph,
+                    operation=patch.operation,
+                    operation_label=patch.operation_label,
+                    patch_role=patch.patch_role,
+                    patch_role_label=patch.patch_role_label,
+                    sequence_index=patch.sequence_index,
+                    triple_count=patch.triple_count,
+                    count_basis=patch.count_basis,
+                    format=patch.format,
+                )
+            )
+        return summaries
+
+    def _staged_revisions_shared_semantic_context_patch_summaries(
+        self,
+        descriptions: list[StagedGraphRevisionDescription],
+    ) -> list[SystematisationSharedPatchSummary]:
+        seen: set[tuple[str, str, str, int, int, str, str]] = set()
+        summaries: list[SystematisationSharedPatchSummary] = []
+        for description in descriptions:
+            for summary in (
+                self._staged_description_shared_semantic_context_patch_summaries(
+                    description
+                )
+            ):
+                key = (
+                    summary.target_graph,
+                    summary.operation,
+                    summary.patch_role,
+                    summary.sequence_index,
+                    summary.triple_count,
+                    summary.count_basis,
+                    summary.format,
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                summaries.append(summary)
+        return summaries
+
+    def _staged_revisions_shared_semantic_context_warnings(
+        self,
+        *,
+        affected_revision_iris: list[str],
+        shared_context_graphs: list[str],
+        shared_context_patch_summaries: list[SystematisationSharedPatchSummary],
+        fallback_revision_iris: list[str],
+    ) -> list[SharedSemanticContextBundleWarning]:
+        if (
+            len(affected_revision_iris) < 2
+            or not shared_context_graphs
+            or not fallback_revision_iris
+        ):
+            return []
+        shared_graph_summary = ", ".join(shared_context_graphs)
+        message = (
+            "Shared ontology or shapes context patches are present across this "
+            "staged bundle, including fallback alternatives. Shared graph roles: "
+            f"{shared_graph_summary}. Inspect the shared context before applying "
+            "or restage alternatives without shared semantic context when only "
+            "some framings should carry provisional vocabulary or validation shapes."
+        )
+        return [
+            SharedSemanticContextBundleWarning(
+                warning_code="shared_semantic_context_applies_to_all_framings",
+                message=message,
+                affected_revision_iris=affected_revision_iris,
+                shared_context_graphs=shared_context_graphs,
+                shared_context_patch_summaries=shared_context_patch_summaries,
+                fallback_revision_iris_with_shared_semantic_context=(
+                    fallback_revision_iris
+                ),
+                suggested_action=(
+                    "inspect_shared_context_before_apply_or_restage_fallbacks"
+                ),
+            )
+        ]
+
     def _staged_revisions_bundle_summary(
         self,
         summaries: list[StagedGraphRevisionExportSummary],
         *,
+        descriptions: list[StagedGraphRevisionDescription],
         snapshot_evidence: StagedGraphRevisionSnapshotEvidenceSummary,
     ) -> StagedGraphRevisionBundleSummary:
         apply_status_counts: dict[str, int] = {}
@@ -31880,6 +32111,36 @@ class DoxaBase:
             next_action_queue_items=next_action_queue_items,
             post_apply_recheck_revision_iris=post_apply_recheck,
         )
+        shared_context_patch_summaries = (
+            self._staged_revisions_shared_semantic_context_patch_summaries(
+                descriptions
+            )
+        )
+        shared_context_graphs = sorted(
+            {
+                graph
+                for summary in summaries
+                for graph in summary.shared_context_graphs
+            }
+        )
+        shared_context_revision_iris = [
+            summary.revision_iri
+            for summary in summaries
+            if summary.shared_context_patch_count > 0
+        ]
+        fallback_shared_context_iris = (
+            shared_context_revision_iris[1:]
+            if len(shared_context_revision_iris) > 1
+            else []
+        )
+        shared_semantic_context_warnings = (
+            self._staged_revisions_shared_semantic_context_warnings(
+                affected_revision_iris=shared_context_revision_iris,
+                shared_context_graphs=shared_context_graphs,
+                shared_context_patch_summaries=shared_context_patch_summaries,
+                fallback_revision_iris=fallback_shared_context_iris,
+            )
+        )
         return StagedGraphRevisionBundleSummary(
             total_revisions=len(summaries),
             apply_status_counts=apply_status_counts,
@@ -31892,17 +32153,23 @@ class DoxaBase:
             ),
             post_apply_recheck_revision_iris=post_apply_recheck,
             sequential_apply_recheck_candidate_iris=post_apply_recheck,
-            warnings=self._staged_revisions_bundle_warnings(
-                post_apply_recheck,
-                snapshot_evidence=snapshot_evidence,
-                external_recommended_review_iris=external_recommended_review,
-                ready_restage_successor_alternative_to_applied_source_iris=(
-                    ready_applied_alternative_successors
+            warnings=[
+                *self._staged_revisions_bundle_warnings(
+                    post_apply_recheck,
+                    snapshot_evidence=snapshot_evidence,
+                    external_recommended_review_iris=external_recommended_review,
+                    ready_restage_successor_alternative_to_applied_source_iris=(
+                        ready_applied_alternative_successors
+                    ),
+                    parallel_applied_restage_successors=(
+                        parallel_applied_restage_successors
+                    ),
                 ),
-                parallel_applied_restage_successors=(
-                    parallel_applied_restage_successors
+                *(
+                    warning.message
+                    for warning in shared_semantic_context_warnings
                 ),
-            ),
+            ],
             validation_failed_revision_iris=validation_failed,
             staged_validation_failed_revision_iris=staged_validation_failed,
             recommended_review_iris=recommended_review,
@@ -31931,6 +32198,12 @@ class DoxaBase:
                     next_action_queue_items
                 )
             ),
+            shared_context_graphs=shared_context_graphs,
+            shared_context_patch_summaries=shared_context_patch_summaries,
+            fallback_revision_iris_with_shared_semantic_context=(
+                fallback_shared_context_iris
+            ),
+            shared_semantic_context_warnings=shared_semantic_context_warnings,
         )
 
     def _staged_revisions_review_sequence(

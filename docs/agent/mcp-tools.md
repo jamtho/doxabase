@@ -1264,7 +1264,12 @@ reroute siblings without that warning. When multiple framings share `ontology`
 or `shapes` patches, `structured_warnings` includes
 `shared_semantic_context_applies_to_all_framings`; move those patches into
 per-framing additions/removals when fallback alternatives should not carry the
-same provisional vocabulary or validation shapes.
+same provisional vocabulary or validation shapes. That warning carries
+`shared_patch_summaries`,
+`fallback_revision_iris_with_shared_semantic_context`, and
+`suggested_rerun_arguments.shared_patch_sources_to_move` so MCP clients can
+construct the rerun without parsing prose or guessing which shared patch entry
+to move.
 
 `doxabase.stage_pattern_promotion`
 
@@ -1663,7 +1668,14 @@ direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.next_action_queue_items` adds the resolved target IRI,
 row-vs-target flag, semantic risk level, semantic alternative gate fields, and
 symmetric alternative-set fields for each queued row. Grouped Markdown mirrors
-the risk and gate fields in `Resolved Targets`. `bundle_summary.review_sequence`
+the risk and gate fields in `Resolved Targets`. When stored staged rows include
+shared `ontology` or `shapes` context patches, `revision_summaries` exposes
+per-row `shared_context_patch_count` and `shared_context_graphs`, while
+`bundle_summary.shared_context_graphs`,
+`bundle_summary.shared_context_patch_summaries`,
+`bundle_summary.fallback_revision_iris_with_shared_semantic_context`, and
+`bundle_summary.shared_semantic_context_warnings` reconstruct the draft-level
+shared-context warning for export-only handoffs. `bundle_summary.review_sequence`
 orders those queue items into inspect-redirect, repair, restage, review/apply,
 and recheck phases so unattended agents can follow one cross-lane worklist
 before opening lower-level queue buckets;

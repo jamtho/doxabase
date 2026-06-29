@@ -2982,6 +2982,8 @@ warning.message
 warning.affected_revision_iris
 warning.suggested_action
 warning.suggested_rerun_arguments
+warning.shared_patch_summaries
+warning.fallback_revision_iris_with_shared_semantic_context
 ```
 
 For that invalid-anchor case, `warning.warning_code` is
@@ -2991,10 +2993,13 @@ only fires when a sibling actually default-linked to the first framing; use
 per-framing `alternative_to` when ready siblings should point elsewhere. A
 multi-framing draft with shared `ontology` or `shapes` patches also reports
 `shared_semantic_context_applies_to_all_framings`; its suggested rerun arguments
-name the shared graph roles that should move into per-framing patches if a
-fallback alternative should avoid the provisional vocabulary or validation
-shape. Use the structured fields for automation; keep `warnings` for readable
-handoffs.
+name the shared graph roles and original `shared_additions` / `shared_removals`
+source indexes that should move into per-framing patches if a fallback
+alternative should avoid the provisional vocabulary or validation shape.
+`shared_patch_summaries` gives the parsed target graph, operation, role, count
+basis, format, and triple count; `fallback_revision_iris_with_shared_semantic_context`
+is the affected fallback subset to inspect before rerunning. Use the structured
+fields for automation; keep `warnings` for readable handoffs.
 
 Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:
 
@@ -4779,6 +4784,8 @@ item.restaged_from
 item.restaged_by
 item.current_restaged_by
 item.stale_resolution_state
+item.shared_context_patch_count
+item.shared_context_graphs
 item.next_action
 item.suggested_next_actions
 item.suggested_next_calls
@@ -4809,6 +4816,9 @@ grouped rows, unless they are deliberately inspecting raw apply-check context.
 `current_restaged_by`, and `stale_resolution_state` let recovery scripts keep
 alternative groups and stale/restaged chains together without a second revision
 list lookup.
+`shared_context_patch_count` and `shared_context_graphs` mark rows whose stored
+patches include shared `ontology` or `shapes` context, reconstructed from
+`rc:SharedContextPatch` roles for grouped handoffs.
 The relation fields in `revision_summaries` are nullable IRI strings, not
 `ResourceSummary` objects.
 `alternative_to` preserves the stored provenance target; `current_alternative_to`
@@ -4846,6 +4856,10 @@ bundle.mutation_frontier_iris
 bundle.requires_recheck_after_each_apply
 bundle.semantic_risk_queue_counts
 bundle.semantic_review_required_queue_counts
+bundle.shared_context_graphs
+bundle.shared_context_patch_summaries
+bundle.fallback_revision_iris_with_shared_semantic_context
+bundle.shared_semantic_context_warnings
 ```
 
 `bundle.review_sequence[]` is the ordered cross-lane route for queued grouped
@@ -4901,6 +4915,15 @@ route. For RDF-only handoffs, use `bundle.snapshot_evidence.complete`,
 snapshot-import gate before relying on exact stale drift or applied-diff
 triples. When the gate is incomplete, `bundle.warnings` repeats that handoff
 preflight so Markdown readers see it before the review/apply queues.
+When grouped rows carry shared semantic context, `bundle.shared_context_graphs`,
+`bundle.shared_context_patch_summaries`, and
+`bundle.fallback_revision_iris_with_shared_semantic_context` reconstruct the
+draft-level shared-context signal from stored patch roles. Treat
+`bundle.shared_semantic_context_warnings` as the export-time equivalent of
+`shared_semantic_context_applies_to_all_framings`: inspect those fallback IRIs
+before applying, or restage alternatives without shared context when only some
+framings should carry provisional vocabulary or validation shapes. The grouped
+Markdown repeats the warning in `Bundle Warnings`.
 
 Use `stale_resolution_state == "stale_unresolved"` to find stale proposals that
 still need restaging. `stale_handled_by_restage` means the source already
