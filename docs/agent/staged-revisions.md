@@ -158,11 +158,14 @@ Stale original exports include a top metadata `Restaged by` line when a
 refreshed successor already exists. Use
 `doxabase.export_staged_revisions` when
 several alternatives, failed candidates, and repaired candidates should be
-reviewed together. The grouped export starts with a `Reviewer Decision Matrix`
-that gives row numbers, plain human actions, reasons, and authored review
-recommendations before the technical tables. Its summary table then includes
-the current apply status and decision, plus current and staged-time validation
-state for each staged revision. When competing alternatives are bundled
+reviewed together. When critical bundle warnings exist, grouped Markdown shows
+`Bundle Warnings` before the decision matrix so Markdown-only reviewers see
+missing snapshot imports, omitted recommended targets, or sequential-apply
+hazards first. The `Reviewer Decision Matrix` gives row numbers, plain human
+actions, reasons, and authored review recommendations before the technical
+tables. Its summary table then includes the current apply status and decision,
+plus current and staged-time validation state for each staged revision. When
+competing alternatives are bundled
 together, the decision matrix warns reviewers to apply at most one before
 regenerating or rechecking the bundle and labels every row in the included
 alternative group as a choose-one candidate, including the source row another

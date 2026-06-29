@@ -37035,6 +37035,10 @@ class DoxaBase:
         )
         if executive_summary_text:
             lines.extend(["## Review Summary", "", executive_summary_text, ""])
+        if bundle_summary.warnings:
+            lines.extend(["## Bundle Warnings", ""])
+            lines.extend(f"- {warning}" for warning in bundle_summary.warnings)
+            lines.append("")
         decision_matrix = self._staged_revisions_reviewer_decision_matrix_markdown(
             descriptions,
             revision_summaries,
@@ -37098,9 +37102,6 @@ class DoxaBase:
                 )
                 + " |"
             )
-        if bundle_summary.warnings:
-            lines.extend(["", "## Bundle Warnings", ""])
-            lines.extend(f"- {warning}" for warning in bundle_summary.warnings)
         count_basis_context = self._staged_revisions_count_basis_markdown(
             descriptions
         )

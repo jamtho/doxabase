@@ -5028,8 +5028,9 @@ This is a review-artifact shortcut over each row's `snapshot_evidence` /
 `describe_revision_snapshot_evidence()` payload. Use
 `describe_revision_snapshot_evidence()` or the JSON `snapshot_evidence` fields
 for positive machine-readable confirmation. Incomplete evidence is also
-repeated in `Bundle Warnings` before `Review Queues`; those queues still
-describe the post-preflight apply/restage/repair route.
+repeated in `Bundle Warnings` before the `Reviewer Decision Matrix` and
+`Review Queues`; those queues still describe the post-preflight
+apply/restage/repair route.
 `validation_failed_revision_iris` lists rows whose patch counts
 replay but whose current preview validation does not conform.
 `staged_validation_failed_revision_iris` lists rows whose stored staged-time

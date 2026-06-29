@@ -2555,6 +2555,12 @@ few useful gaps:
   nested under `snapshot_evidence.suggested_next_actions` and
   `source_snapshot_evidence.suggested_next_actions`. Do not expect a top-level
   `describe_applied_revision_diff().suggested_next_actions` promotion.
+- A staged-review Markdown trial found that warnings about omitted recommended
+  review targets could appear after the `Reviewer Decision Matrix`, letting a
+  Markdown-only reviewer act before seeing that a refreshed successor was
+  outside the bundle. Grouped staged exports now put `Bundle Warnings` before
+  the decision matrix so missing imports, omitted targets, and sequencing
+  hazards are visible first.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

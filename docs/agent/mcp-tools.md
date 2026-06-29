@@ -1731,7 +1731,8 @@ positive `Snapshot Evidence` confirmation when `complete=true`; `complete=false`
 rows carry the same `import_revision_snapshots` suggested actions as the
 Markdown table, while `next_action_queue` keeps normal review/apply routing.
 `bundle_summary.warnings` repeats incomplete snapshot evidence as a handoff
-preflight so grouped Markdown readers see it before `Review Queues`.
+preflight so grouped Markdown readers see it in `Bundle Warnings` before the
+`Reviewer Decision Matrix` and review queues.
 `semantic_review_required_queue_counts` flags gated alternative rows by queue.
 `semantic_risk_queue_counts` separately counts queued rows with apply-check
 semantic risk (`attention` or `high`), including repair queues when semantic

@@ -9067,6 +9067,9 @@ def test_restage_chain_routes_to_current_successor(
     assert current_successor.revision_iri in export.bundle_summary.warnings[0]
     exported = export_path.read_text(encoding="utf-8")
     assert "## Bundle Warnings" in exported
+    assert exported.index("## Bundle Warnings") < exported.index(
+        "## Reviewer Decision Matrix"
+    )
     assert "- Restaged by: " in exported
     assert "- Current restaged by: " in exported
     assert "**Inspect current refreshed successor:**" in exported
