@@ -919,7 +919,7 @@ def test_project_brief_reports_limit_crowded_queue_types(
     ] == ["expand_project_brief", "privacy_export_review"]
     assert privacy_task.sensitive_literal_count == 1
     assert privacy_task.suggested_next_action is not None
-    assert privacy_task.suggested_next_action.tool_name == "scan_sensitive_literals"
+    assert privacy_task.suggested_next_action.tool_name == "export_preflight"
     assert "FAKE_SECRET" not in json.dumps(to_jsonable(brief.health_tasks))
 
 
@@ -941,9 +941,10 @@ def test_project_brief_surfaces_sanitized_privacy_health_task(
     assert privacy_task.sensitive_literal_count == 1
     assert "FAKE_SECRET" not in privacy_task.reason
     assert privacy_task.suggested_next_action is not None
-    assert privacy_task.suggested_next_action.tool_name == "scan_sensitive_literals"
+    assert privacy_task.suggested_next_action.tool_name == "export_preflight"
     assert privacy_task.suggested_next_action.arguments == {
-        "graphs": "project",
+        "export_kind": "handoff_bundle",
+        "graphs": ["project"],
         "limit": 20,
     }
     assert "FAKE_SECRET" not in json.dumps(to_dict(privacy_task))
@@ -1688,6 +1689,103 @@ def test_export_handoff_bundle_blocks_sensitive_literals_before_writing(
     assert not (tmp_path / "manifest-project.trig").exists()
     assert not (tmp_path / "manifest-revision-snapshots.json").exists()
     assert existing_manifest_path.read_text(encoding="utf-8") == "keep me\n"
+
+
+def test_export_preflight_blocks_sensitive_handoff_scope(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_PREFLIGHT"
+    db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/orders",
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage preflight probe",
+        rationale="Create a revision snapshot over the sensitive map graph.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrdersPreflightProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    preflight = db.export_preflight(
+        export_kind="handoff_bundle",
+        revision_iris=[staged.revision_iri],
+        limit=1,
+    )
+
+    assert preflight.decision == "block"
+    assert preflight.scanner_clean is False
+    assert preflight.shareability_review_required is True
+    assert preflight.would_block_sensitive_export is True
+    assert preflight.graphs == [
+        "ontology",
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+        "shapes",
+        "history",
+    ]
+    assert preflight.revision_iris == [staged.revision_iri]
+    assert preflight.snapshot_graph_roles == ["map"]
+    assert preflight.sensitive_literal_count >= 2
+    assert preflight.graph_sensitive_literal_count >= 1
+    assert preflight.snapshot_sensitive_literal_count >= 1
+    assert preflight.returned_match_count == 1
+    assert preflight.omitted_match_count == (
+        preflight.sensitive_literal_count - preflight.returned_match_count
+    )
+    assert preflight.matches[0].match_id.startswith("redacted-sha256:")
+    assert preflight.privacy_warnings
+    assert preflight.scanner_note in preflight.warnings
+    assert [
+        action.tool_name for action in preflight.suggested_next_actions
+    ] == ["scan_sensitive_literals", "export_preflight"]
+    assert fake_secret not in json.dumps(to_dict(preflight))
+
+
+def test_export_preflight_returns_scanner_clean_export_action(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.record_map_dataset(
+        "https://example.test/project#Orders",
+        label="Orders",
+        is_table=True,
+    )
+
+    preflight = db.export_preflight(export_kind="trig", graphs="workflow")
+
+    assert preflight.decision == "clean_by_scanner_only"
+    assert preflight.scanner_clean is True
+    assert preflight.shareability_review_required is True
+    assert preflight.would_block_sensitive_export is False
+    assert preflight.sensitive_literal_count == 0
+    assert preflight.matches == []
+    assert preflight.privacy_warnings == []
+    assert preflight.warnings == [preflight.scanner_note]
+    assert [action.tool_name for action in preflight.suggested_next_actions] == [
+        "export_trig"
+    ]
+    action = preflight.suggested_next_actions[0]
+    assert action.arguments["graphs"] == [
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+    ]
+    assert action.arguments["fail_on_sensitive"] is True
+    assert not (tmp_path / "<project-review-bundle.trig>").exists()
 
 
 def test_replace_graph_triples_can_create_same_count_digest_drift(

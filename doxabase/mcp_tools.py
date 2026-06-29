@@ -52,6 +52,24 @@ def scan_sensitive_literals_tool(
     return to_dict(result)
 
 
+def export_preflight_tool(
+    db: DoxaBase,
+    export_kind: str = "handoff_bundle",
+    graphs: list[str] | str | None = None,
+    revision_iris: list[str] | None = None,
+    snapshot_graph_roles: list[str] | None = None,
+    limit: int = 20,
+) -> dict[str, Any]:
+    result = db.export_preflight(
+        export_kind=export_kind,  # type: ignore[arg-type]
+        graphs=graphs,
+        revision_iris=revision_iris,
+        snapshot_graph_roles=snapshot_graph_roles,
+        limit=limit,
+    )
+    return to_dict(result)
+
+
 def project_brief_tool(
     db: DoxaBase,
     limit: int = 20,

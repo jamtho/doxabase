@@ -272,10 +272,13 @@ Useful first tool calls for an agent:
     durable graph state after conflict and validation checks
 32. `doxabase.record_map_dataset` and related map helpers for current-best facts
 33. `doxabase.validate_graph` with `scope="all"`
-34. `doxabase.export_trig` when you need a named-graph project review bundle
-35. `doxabase.record_graph_revision` when the bundle/change rationale should be
+34. `doxabase.export_preflight` before unattended or shareable RDF/snapshot
+    exports, so scanner-clean and block decisions are explicit before choosing
+    paths
+35. `doxabase.export_trig` when you need a named-graph project review bundle
+36. `doxabase.record_graph_revision` when the bundle/change rationale should be
     preserved in `history`
-36. `doxabase.describe_graph_revision` when reviewing a history record
+37. `doxabase.describe_graph_revision` when reviewing a history record
 
 Use `doxabase.load_example_fixtures` only in a fresh scratch or example capsule,
 after confirming you are not attached to a real project capsule.

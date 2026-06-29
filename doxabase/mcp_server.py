@@ -29,6 +29,7 @@ from doxabase.mcp_tools import (
     draft_staged_revision_rebase_tool,
     export_graph_tool,
     export_handoff_bundle_tool,
+    export_preflight_tool,
     export_profile_insight_review_bundle_tool,
     export_staged_revision_tool,
     export_staged_revisions_tool,
@@ -77,7 +78,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -120,6 +121,25 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         """Scan graph terms for suspicious credential-like values."""
 
         return scan_sensitive_literals_tool(db, graphs=graphs, limit=limit)
+
+    @server.tool(name="doxabase.export_preflight")
+    def export_preflight(
+        export_kind: str = "handoff_bundle",
+        graphs: list[str] | None = None,
+        revision_iris: list[str] | None = None,
+        snapshot_graph_roles: list[str] | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Dry-run export privacy scope and conservative shareability decision."""
+
+        return export_preflight_tool(
+            db,
+            export_kind=export_kind,
+            graphs=graphs,
+            revision_iris=revision_iris,
+            snapshot_graph_roles=snapshot_graph_roles,
+            limit=limit,
+        )
 
     @server.tool(name="doxabase.project_brief")
     def project_brief(

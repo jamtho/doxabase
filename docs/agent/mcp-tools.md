@@ -27,10 +27,11 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 Scans selected graph roles for suspicious credential-like subject URI, predicate
 URI, object URI, or literal terms and returns only redacted snippets. Each match
 includes `term_position` and `term_kind` so agents can tell whether the hit came
-from a subject IRI, predicate IRI, or object value. Use it before sharing
-`export_graph` or `export_trig` artifacts when storage, evidence, source paths,
-identifiers, or descriptions may contain secrets. This is a conservative audit
-helper, not a proof that the graph is secret-free. Export helpers report
+from a subject IRI, predicate IRI, or object value. Use it for detailed
+graph-only inspection when storage, evidence, source paths, identifiers, or
+descriptions may contain secrets; use `export_preflight` for the export-level
+decision. This is a conservative audit helper, not a proof that the graph is
+secret-free. Export helpers report
 `sensitive_literal_count` and `privacy_warnings` when this scan finds matches,
 but exports remain faithful RDF and do not redact automatically. The scan result
 itself uses `match_count`, `returned_match_count`, and `omitted_match_count`;
@@ -44,6 +45,21 @@ paths, object-store URIs, endpoint URLs, and relative paths are preserved in
 exports and do not by themselves trigger `privacy_warnings`. Keep user-specific
 paths or endpoint details that should not travel outside the project out of the
 graph, or replace them with collaborator-safe references before export.
+
+`doxabase.export_preflight`
+
+Dry-runs the privacy/export scope for `graph`, `trig`, `revision_snapshots`, or
+`handoff_bundle` exports without checking paths or writing artifacts. Use it
+before unattended or shareable exports when you need a single decision object
+rather than remembering separate scan and `fail_on_sensitive` steps. The result
+selects the same graph roles and snapshot rows as the corresponding export
+helper, returns redacted match locators with stable non-secret `match_id` values,
+and reports `decision="block"` when `fail_on_sensitive=true` would block the
+write. When no credential-like terms match, the decision is
+`clean_by_scanner_only`; this still sets `shareability_review_required=true`
+because scanner-clean is not proof that paths, endpoints, project facts, or
+history payloads are appropriate to share. Follow the suggested export action
+with `fail_on_sensitive=true` after that separate review.
 
 `doxabase.project_brief`
 
@@ -1850,6 +1866,9 @@ result includes per-graph triple counts plus privacy warning counts from
 not redacted. Pass `fail_on_sensitive=true` when the export should raise before
 creating or overwriting an artifact if the selected graph roles contain
 sensitive-looking subject URI, predicate URI, object URI, or literal terms.
+Use `doxabase.export_preflight(export_kind="graph", graphs=[...])` first when an
+agent needs a read-only decision, redacted match IDs, and the exact blocking
+export action before choosing a path.
 
 `doxabase.replace_graph_triples`
 
@@ -1908,6 +1927,9 @@ paths, records redacted privacy warnings, and lists the recommended
 evidence statuses. The result contains nested `trig` and `revision_snapshots`
 export records, the manifest payload, optional manifest write metadata, plus
 combined `sensitive_literal_count` and `privacy_warnings`.
+Use `doxabase.export_preflight(export_kind="handoff_bundle")` before choosing
+paths when you need to review both the RDF graph roles and stored snapshot rows
+without creating artifacts.
 
 `doxabase.export_revision_snapshots`
 

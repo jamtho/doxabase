@@ -173,10 +173,10 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         {
             "priority": 20,
             "task_type": "privacy_export_review",
-            "source": "scan_sensitive_literals",
+            "source": "export_preflight",
             "reason": "...",
             "suggested_next_action": {...},
-            "suggested_next_call": "scan_sensitive_literals(...)",
+            "suggested_next_call": "export_preflight(...)",
             "queue_types": [],
             "omitted_queue_counts": {},
             "suggested_limit": null,
@@ -339,9 +339,10 @@ when the limit allows, then fills remaining slots by priority.
 `health_tasks` is outside the bounded `recommended_next_tasks` slice. It reports
 stable follow-ups such as `expand_project_brief` for omitted queues,
 `expand_profile_candidate_limit` for profile drafts hidden by
-`profile_candidate_limit`, `privacy_export_review` when a redacted project scan
-finds potential sensitive literals, and `seed_recovery_review` when immutable
-seed graphs are missing current staging vocabulary. `next_best_expansion` is
+`profile_candidate_limit`, `privacy_export_review` when a redacted project
+export preflight finds potential sensitive literals, and `seed_recovery_review`
+when immutable seed graphs are missing current staging vocabulary.
+`next_best_expansion` is
 either `null` or a copy of the highest-priority expansion health task, preferring
 `expand_project_brief` over `expand_profile_candidate_limit` when both are
 needed. Check it before repeating the same visible task types in an unattended
@@ -4006,6 +4007,67 @@ placeholder paths and include `path_is_placeholder=True`; substitute the real
 handoff artifact path before executing them. Revision list/detail/lineage
 responses promote these actions to their top-level `suggested_next_actions`, and
 list/lineage `next_action` uses queue `complete_handoff_import`.
+
+`db.export_preflight(export_kind="handoff_bundle", ...)` returns
+`ExportPreflightRecord`:
+
+```python
+preflight.export_kind
+preflight.decision
+preflight.scanner_clean
+preflight.shareability_review_required
+preflight.would_block_sensitive_export
+preflight.graphs
+preflight.graph_counts
+preflight.revision_iris
+preflight.snapshot_graph_roles
+preflight.snapshot_count
+preflight.snapshot_quad_count
+preflight.sensitive_literal_count
+preflight.graph_sensitive_literal_count
+preflight.snapshot_sensitive_literal_count
+preflight.returned_match_count
+preflight.omitted_match_count
+preflight.limit
+preflight.matches
+preflight.privacy_warnings
+preflight.warnings
+preflight.scanner_note
+preflight.suggested_next_actions
+preflight.suggested_next_calls
+```
+
+`export_kind` is one of `graph`, `trig`, `revision_snapshots`, or
+`handoff_bundle`. The helper does not check output paths or write artifacts; it
+selects the same graph roles and snapshot rows that the matching export helper
+would inspect for privacy warnings. `decision="block"` means
+`fail_on_sensitive=True` would block that export. `decision="clean_by_scanner_only"`
+means no selected graph/snapshot terms matched the conservative credential-like
+patterns, but `shareability_review_required` remains true because scanner-clean
+does not prove the artifact is appropriate to share.
+
+Each `preflight.matches[]` item is an `ExportPreflightMatch`:
+
+```python
+match.export_part
+match.match_id
+match.graph
+match.subject
+match.predicate
+match.object_kind
+match.term_position
+match.term_kind
+match.match_kind
+match.redacted_snippet
+match.revision_iri
+```
+
+`match_id` is stable over redacted locator fields and does not hash the raw
+sensitive-looking value. `export_part` is `graphs` or `revision_snapshots`, so
+agents can tell whether a match came from current RDF graph content or stored
+SQLite-side snapshot rows. Clean preflights include a suggested export action
+with `fail_on_sensitive=True`; blocked preflights suggest the redacted graph scan
+and/or the same preflight scope for snapshot review.
 
 `db.export_graph(...)` and `db.export_trig(...)` return `GraphExportRecord`:
 

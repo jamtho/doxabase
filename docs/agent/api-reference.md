@@ -63,6 +63,7 @@ db.export_graph("/tmp/map.ttl", graphs="map")
 db.export_trig("/tmp/project-review-bundle.trig")
 db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
 db.export_trig("/tmp/shareable-project.trig", fail_on_sensitive=True)
+db.export_preflight(export_kind="handoff_bundle")
 db.scan_sensitive_literals(graphs=["map", "evidence"])
 db.export_revision_snapshots("/tmp/revision-snapshots.json", fail_on_sensitive=True)
 db.export_handoff_bundle(
@@ -85,6 +86,14 @@ found. The scanner is conservative and not a complete secret detector, but it
 catches common private-key headers, bearer tokens, AWS access key IDs,
 `sk_` live/test style keys, key/password/secret assignments or query parameters,
 and explicit fake-secret test markers.
+`export_preflight()` is a read-only companion for `export_graph()`,
+`export_trig()`, `export_revision_snapshots()`, and `export_handoff_bundle()`.
+It selects the same graph roles and snapshot rows, returns redacted match
+locators with stable non-secret `match_id` values, and reports `decision="block"`
+when `fail_on_sensitive=True` would block the corresponding write. A clean
+preflight reports `decision="clean_by_scanner_only"` and still sets
+`shareability_review_required=True`; agents must separately decide whether paths,
+endpoints, history payloads, or project facts are appropriate to share.
 Non-secret path-shaped values such as local paths, object-store URIs, endpoint
 URLs, and relative paths remain ordinary graph content: they are preserved in
 faithful RDF exports and do not by themselves trigger `privacy_warnings`.

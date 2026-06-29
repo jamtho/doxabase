@@ -30,6 +30,7 @@ from doxabase.mcp_tools import (
     draft_staged_revision_rebase_tool,
     export_graph_tool,
     export_handoff_bundle_tool,
+    export_preflight_tool,
     export_profile_insight_review_bundle_tool,
     export_revision_snapshots_tool,
     export_staged_revision_tool,
@@ -119,6 +120,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.get_doc" in tool_names
     assert "doxabase.graph_overview" in tool_names
     assert "doxabase.scan_sensitive_literals" in tool_names
+    assert "doxabase.export_preflight" in tool_names
     assert "doxabase.project_brief" in tool_names
     assert "doxabase.list_entities" in tool_names
     assert "doxabase.describe_dataset" in tool_names
@@ -1270,6 +1272,49 @@ def test_scan_sensitive_literals_tool_returns_redacted_payload(tmp_path: Path) -
     assert all("redacted_snippet" in match for match in result["matches"])
     assert all("term_position" in match for match in result["matches"])
     assert all("term_kind" in match for match in result["matches"])
+
+
+def test_export_preflight_tool_returns_conservative_redacted_decision(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_PREFLIGHT_MCP"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/orders",
+    )
+    record_map_dataset_tool(
+        db,
+        iri="https://example.test/project#Orders",
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+    )
+
+    result = export_preflight_tool(
+        db,
+        export_kind="graph",
+        graphs=["map"],
+        limit=1,
+    )
+
+    assert result["export_kind"] == "graph"
+    assert result["decision"] == "block"
+    assert result["scanner_clean"] is False
+    assert result["shareability_review_required"] is True
+    assert result["would_block_sensitive_export"] is True
+    assert result["graphs"] == ["map"]
+    assert result["graph_sensitive_literal_count"] >= 1
+    assert result["sensitive_literal_count"] >= 1
+    assert result["returned_match_count"] == 1
+    assert result["omitted_match_count"] == (
+        result["sensitive_literal_count"] - result["returned_match_count"]
+    )
+    assert result["matches"][0]["match_id"].startswith("redacted-sha256:")
+    assert result["suggested_next_actions"][0]["tool_name"] == "scan_sensitive_literals"
+    assert fake_secret not in json.dumps(result)
 
 
 def test_mcp_export_tools_block_sensitive_predicate_iris(

@@ -2635,6 +2635,12 @@ few useful gaps:
   planted sensitive-looking values. The main remaining affordance gap is a
   first-class export preflight decision helper that distinguishes `block`,
   scanner-clean-only, and broader shareability-review states.
+- The follow-up preflight loop added `export_preflight` for graph, TriG,
+  revision-snapshot, and handoff-bundle exports. Use it when an agent needs a
+  read-only export decision before choosing paths: `decision="block"` means a
+  blocking export would fail, while `decision="clean_by_scanner_only"` still
+  requires separate shareability review for paths, endpoints, history payloads,
+  and project facts.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -471,6 +471,48 @@ class SensitiveLiteralScan:
 
 
 @dataclass(frozen=True)
+class ExportPreflightMatch:
+    export_part: str
+    match_id: str
+    graph: str
+    subject: str
+    predicate: str
+    object_kind: str
+    term_position: str
+    term_kind: str
+    match_kind: str
+    redacted_snippet: str
+    revision_iri: str | None = None
+
+
+@dataclass(frozen=True)
+class ExportPreflightRecord:
+    export_kind: str
+    decision: str
+    scanner_clean: bool
+    shareability_review_required: bool
+    would_block_sensitive_export: bool
+    graphs: list[str]
+    graph_counts: dict[str, int]
+    revision_iris: list[str]
+    snapshot_graph_roles: list[str]
+    snapshot_count: int
+    snapshot_quad_count: int
+    sensitive_literal_count: int
+    graph_sensitive_literal_count: int
+    snapshot_sensitive_literal_count: int
+    returned_match_count: int
+    omitted_match_count: int
+    limit: int
+    matches: list[ExportPreflightMatch]
+    privacy_warnings: list[str]
+    warnings: list[str]
+    scanner_note: str
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class GraphExportRecord:
     path: str
     format: str
@@ -3872,25 +3914,31 @@ class DoxaBase:
         scan = self.scan_sensitive_literals(graphs="project", limit=1)
         if scan.match_count == 0:
             return None
-        arguments = {"graphs": "project", "limit": 20}
+        arguments = {
+            "export_kind": "handoff_bundle",
+            "graphs": ["project"],
+            "limit": 20,
+        }
         action = SuggestedNextAction(
             action_label="Review export privacy",
-            tool_name="scan_sensitive_literals",
-            mcp_tool_name="doxabase.scan_sensitive_literals",
+            tool_name="export_preflight",
+            mcp_tool_name="doxabase.export_preflight",
             arguments=arguments,
             reason=(
-                "Run the redacted sensitive graph-term scan before sharing RDF "
-                "exports; use fail_on_sensitive=True for blocking exports."
+                "Run a redacted export preflight before sharing RDF or handoff "
+                "exports; follow its blocking export action when the scanner is "
+                "clean."
             ),
-            call=self._suggested_call_string("scan_sensitive_literals", arguments),
+            call=self._suggested_call_string("export_preflight", arguments),
         )
         return ProjectBriefHealthTask(
             priority=20,
             task_type="privacy_export_review",
-            source="scan_sensitive_literals",
+            source="export_preflight",
             reason=(
                 "Project graph roles contain potential sensitive graph terms; "
-                "project_brief reports only the count and a redacted scan route."
+                "project_brief reports only the count and a redacted export "
+                "preflight route."
             ),
             suggested_next_action=action,
             suggested_next_call=action.call,
@@ -40073,6 +40121,140 @@ class DoxaBase:
                 ) + self._insert_graph(graph_name, context)
         return imported
 
+    def export_preflight(
+        self,
+        *,
+        export_kind: TypingLiteral[
+            "graph",
+            "trig",
+            "revision_snapshots",
+            "handoff_bundle",
+        ] = "handoff_bundle",
+        graphs: Iterable[str] | str | None = None,
+        revision_iris: Iterable[str] | str | None = None,
+        snapshot_graph_roles: Iterable[str] | str | None = None,
+        limit: int = 20,
+    ) -> ExportPreflightRecord:
+        if limit < 1:
+            raise DoxaBaseError("limit must be at least 1")
+        if export_kind not in {
+            "graph",
+            "trig",
+            "revision_snapshots",
+            "handoff_bundle",
+        }:
+            raise DoxaBaseError(
+                "export_kind must be one of: graph, trig, "
+                "revision_snapshots, handoff_bundle"
+            )
+        if export_kind == "revision_snapshots" and graphs is not None:
+            raise DoxaBaseError(
+                "graphs applies to graph, trig, and handoff_bundle preflights; "
+                "use snapshot_graph_roles for revision_snapshots."
+            )
+
+        graph_names: list[str] = []
+        if export_kind == "graph":
+            graph_names = self._graph_names_for_export(
+                graphs if graphs is not None else "map",
+            )
+        elif export_kind in {"trig", "handoff_bundle"}:
+            graph_names = self._graph_names_for_export(
+                graphs,
+                default_preset="project",
+            )
+
+        expanded_revisions: list[str] = []
+        snapshot_entries: list[dict[str, Any]] = []
+        if export_kind in {"revision_snapshots", "handoff_bundle"}:
+            revisions = [
+                self._required_iri("revision_iris", value)
+                for value in self._string_values("revision_iris", revision_iris)
+            ]
+            expanded_revisions = self._snapshot_export_revision_iris(revisions)
+            snapshot_roles = self._snapshot_bundle_graph_roles(snapshot_graph_roles)
+            snapshot_entries = self._graph_snapshot_bundle_entries(
+                revision_iris=expanded_revisions or None,
+                graph_roles=snapshot_roles or None,
+            )
+
+        graph_scan: SensitiveLiteralScan | None = None
+        graph_matches: list[ExportPreflightMatch] = []
+        graph_sensitive_count = 0
+        graph_privacy_warnings: list[str] = []
+        if graph_names:
+            graph_scan = self.scan_sensitive_literals(graph_names, limit=limit)
+            graph_matches = self._export_preflight_graph_matches(graph_scan.matches)
+            graph_sensitive_count, graph_privacy_warnings = (
+                self._export_privacy_warnings(graph_names)
+            )
+
+        snapshot_match_limit = max(0, limit - len(graph_matches))
+        snapshot_sensitive_count, snapshot_matches = (
+            self._revision_snapshot_sensitive_matches(
+                snapshot_entries,
+                limit=snapshot_match_limit,
+            )
+        )
+        _snapshot_warning_count, snapshot_privacy_warnings = (
+            self._revision_snapshot_export_privacy_warnings(snapshot_entries)
+        )
+
+        matches = [*graph_matches, *snapshot_matches]
+        sensitive_literal_count = graph_sensitive_count + snapshot_sensitive_count
+        privacy_warnings = [
+            *graph_privacy_warnings,
+            *snapshot_privacy_warnings,
+        ]
+        scanner_note = (
+            "Scanner-clean means no selected export content matched DoxaBase's "
+            "credential-like graph-term patterns; it is not proof that an artifact "
+            "is shareable or free of user-specific paths, endpoint details, or "
+            "confidential project facts."
+        )
+        warnings = [*privacy_warnings, scanner_note]
+        snapshot_revision_iris = list(
+            dict.fromkeys(entry["revision_iri"] for entry in snapshot_entries)
+        )
+        snapshot_graph_role_values = list(
+            dict.fromkeys(entry["graph_role"] for entry in snapshot_entries)
+        )
+        record = ExportPreflightRecord(
+            export_kind=export_kind,
+            decision=(
+                "block"
+                if sensitive_literal_count
+                else "clean_by_scanner_only"
+            ),
+            scanner_clean=sensitive_literal_count == 0,
+            shareability_review_required=True,
+            would_block_sensitive_export=sensitive_literal_count > 0,
+            graphs=graph_names,
+            graph_counts=self._graph_counts(graph_names),
+            revision_iris=snapshot_revision_iris,
+            snapshot_graph_roles=snapshot_graph_role_values,
+            snapshot_count=len(snapshot_entries),
+            snapshot_quad_count=sum(len(entry["quads"]) for entry in snapshot_entries),
+            sensitive_literal_count=sensitive_literal_count,
+            graph_sensitive_literal_count=graph_sensitive_count,
+            snapshot_sensitive_literal_count=snapshot_sensitive_count,
+            returned_match_count=len(matches),
+            omitted_match_count=max(0, sensitive_literal_count - len(matches)),
+            limit=limit,
+            matches=matches,
+            privacy_warnings=privacy_warnings,
+            warnings=warnings,
+            scanner_note=scanner_note,
+            suggested_next_actions=[],
+            suggested_next_calls=[],
+        )
+        actions = self._export_preflight_suggested_actions(record)
+        return replace(
+            record,
+            suggested_next_actions=actions,
+            suggested_next_calls=[action.call for action in actions],
+        )
+
     def export_revision_snapshots(
         self,
         path: str | Path,
@@ -40343,6 +40525,256 @@ class DoxaBase:
                 "Export path already exists: "
                 f"{existing[0]}. Use overwrite=True to replace it."
             )
+
+    def _export_preflight_graph_matches(
+        self,
+        matches: list[SensitiveLiteralMatch],
+    ) -> list[ExportPreflightMatch]:
+        return [
+            ExportPreflightMatch(
+                export_part="graphs",
+                match_id=self._export_preflight_match_id(
+                    export_part="graphs",
+                    graph=match.graph,
+                    subject=match.subject,
+                    predicate=match.predicate,
+                    object_kind=match.object_kind,
+                    term_position=match.term_position,
+                    term_kind=match.term_kind,
+                    match_kind=match.match_kind,
+                    redacted_snippet=match.redacted_snippet,
+                    revision_iri=None,
+                ),
+                graph=match.graph,
+                subject=match.subject,
+                predicate=match.predicate,
+                object_kind=match.object_kind,
+                term_position=match.term_position,
+                term_kind=match.term_kind,
+                match_kind=match.match_kind,
+                redacted_snippet=match.redacted_snippet,
+            )
+            for match in matches
+        ]
+
+    def _revision_snapshot_sensitive_matches(
+        self,
+        entries: list[dict[str, Any]],
+        *,
+        limit: int,
+    ) -> tuple[int, list[ExportPreflightMatch]]:
+        if limit < 0:
+            raise DoxaBaseError("limit must be non-negative")
+        match_count = 0
+        matches: list[ExportPreflightMatch] = []
+        for entry in entries:
+            graph_role = str(entry["graph_role"])
+            revision_iri = str(entry["revision_iri"])
+            for quad in entry["quads"]:
+                subject = self._redact_sensitive_context_value(str(quad["subject"]))
+                predicate = self._redact_sensitive_context_value(str(quad["predicate"]))
+                object_kind = str(quad.get("object_kind") or "")
+                for term_position, term_kind, term_value in (
+                    ("subject", "uri", quad.get("subject")),
+                    ("predicate", "uri", quad.get("predicate")),
+                    ("object", quad.get("object_kind"), quad.get("object")),
+                ):
+                    if term_kind not in {"literal", "uri"} or term_value is None:
+                        continue
+                    match_kind, redacted_snippet = self._sensitive_literal_match(
+                        str(term_value)
+                    )
+                    if match_kind is None or redacted_snippet is None:
+                        continue
+                    match_count += 1
+                    if len(matches) >= limit:
+                        continue
+                    matches.append(
+                        ExportPreflightMatch(
+                            export_part="revision_snapshots",
+                            match_id=self._export_preflight_match_id(
+                                export_part="revision_snapshots",
+                                graph=graph_role,
+                                subject=subject,
+                                predicate=predicate,
+                                object_kind=object_kind,
+                                term_position=term_position,
+                                term_kind=str(term_kind),
+                                match_kind=match_kind,
+                                redacted_snippet=redacted_snippet,
+                                revision_iri=revision_iri,
+                            ),
+                            graph=graph_role,
+                            subject=subject,
+                            predicate=predicate,
+                            object_kind=object_kind,
+                            term_position=term_position,
+                            term_kind=str(term_kind),
+                            match_kind=match_kind,
+                            redacted_snippet=redacted_snippet,
+                            revision_iri=revision_iri,
+                        )
+                    )
+        return match_count, matches
+
+    @staticmethod
+    def _export_preflight_match_id(
+        *,
+        export_part: str,
+        graph: str,
+        subject: str,
+        predicate: str,
+        object_kind: str,
+        term_position: str,
+        term_kind: str,
+        match_kind: str,
+        redacted_snippet: str,
+        revision_iri: str | None,
+    ) -> str:
+        digest = hashlib.sha256()
+        for value in (
+            export_part,
+            graph,
+            subject,
+            predicate,
+            object_kind,
+            term_position,
+            term_kind,
+            match_kind,
+            redacted_snippet,
+            revision_iri or "",
+        ):
+            digest.update(value.encode("utf-8"))
+            digest.update(b"\x1f")
+        return f"redacted-sha256:{digest.hexdigest()}"
+
+    def _export_preflight_suggested_actions(
+        self,
+        record: ExportPreflightRecord,
+    ) -> list[SuggestedNextAction]:
+        if record.decision == "block":
+            actions: list[SuggestedNextAction] = []
+            if record.graph_sensitive_literal_count and record.graphs:
+                arguments: dict[str, Any] = {
+                    "graphs": record.graphs,
+                    "limit": max(record.limit, 20),
+                }
+                actions.append(
+                    SuggestedNextAction(
+                        action_label="Inspect graph privacy matches",
+                        tool_name="scan_sensitive_literals",
+                        mcp_tool_name="doxabase.scan_sensitive_literals",
+                        arguments=arguments,
+                        reason=(
+                            "Review redacted graph-term matches before changing "
+                            "scope or removing sensitive-looking graph content."
+                        ),
+                        call=self._suggested_call_string(
+                            "scan_sensitive_literals",
+                            arguments,
+                        ),
+                    )
+                )
+            if record.snapshot_sensitive_literal_count:
+                arguments = {
+                    "export_kind": record.export_kind,
+                    "revision_iris": record.revision_iris,
+                    "snapshot_graph_roles": record.snapshot_graph_roles,
+                    "limit": record.limit,
+                }
+                if record.export_kind != "revision_snapshots":
+                    arguments["graphs"] = record.graphs
+                actions.append(
+                    SuggestedNextAction(
+                        action_label="Review snapshot privacy matches",
+                        tool_name="export_preflight",
+                        mcp_tool_name="doxabase.export_preflight",
+                        arguments=arguments,
+                        reason=(
+                            "Stored revision snapshots can contain historical "
+                            "terms outside current graph content; use the "
+                            "preflight matches when narrowing or cleaning the "
+                            "handoff scope."
+                        ),
+                        call=self._suggested_call_string(
+                            "export_preflight",
+                            arguments,
+                        ),
+                    )
+                )
+            return actions
+
+        if record.export_kind == "graph":
+            arguments = {
+                "path": "<review-artifact.ttl>",
+                "graphs": record.graphs,
+                "fail_on_sensitive": True,
+            }
+            tool_name = "export_graph"
+            action_label = "Export graph artifact"
+            reason = (
+                "The selected graph terms scanned clean; keep "
+                "fail_on_sensitive=True so the write still blocks if content "
+                "changes before export."
+            )
+        elif record.export_kind == "trig":
+            arguments = {
+                "path": "<project-review-bundle.trig>",
+                "graphs": record.graphs,
+                "fail_on_sensitive": True,
+            }
+            tool_name = "export_trig"
+            action_label = "Export TriG bundle"
+            reason = (
+                "The selected named graphs scanned clean; keep "
+                "fail_on_sensitive=True so the write still blocks if content "
+                "changes before export."
+            )
+        elif record.export_kind == "revision_snapshots":
+            arguments = {
+                "path": "<revision-snapshots.json>",
+                "fail_on_sensitive": True,
+            }
+            if record.revision_iris:
+                arguments["revision_iris"] = record.revision_iris
+            if record.snapshot_graph_roles:
+                arguments["graph_roles"] = record.snapshot_graph_roles
+            tool_name = "export_revision_snapshots"
+            action_label = "Export revision snapshots"
+            reason = (
+                "The selected snapshot rows scanned clean; keep "
+                "fail_on_sensitive=True so the write still blocks if snapshot "
+                "content changes before export."
+            )
+        else:
+            arguments = {
+                "trig_path": "<project-handoff.trig>",
+                "revision_snapshot_path": "<revision-snapshots.json>",
+                "graphs": record.graphs,
+                "fail_on_sensitive": True,
+            }
+            if record.revision_iris:
+                arguments["revision_iris"] = record.revision_iris
+            if record.snapshot_graph_roles:
+                arguments["snapshot_graph_roles"] = record.snapshot_graph_roles
+            tool_name = "export_handoff_bundle"
+            action_label = "Export handoff bundle"
+            reason = (
+                "The selected RDF graphs and snapshot rows scanned clean; keep "
+                "fail_on_sensitive=True so the paired write still blocks if "
+                "content changes before export."
+            )
+
+        return [
+            SuggestedNextAction(
+                action_label=action_label,
+                tool_name=tool_name,
+                mcp_tool_name=f"doxabase.{tool_name}",
+                arguments=arguments,
+                reason=reason,
+                call=self._suggested_call_string(tool_name, arguments),
+            )
+        ]
 
     def _revision_snapshot_export_privacy_warnings(
         self,

@@ -72,16 +72,16 @@ Do not put secrets in DoxaBase:
 Use `rc:credentialReference` or `rc:endpointProfile` to point at local runtime
 configuration instead. The graph can say "use profile X"; the user's machine or
 agent runtime decides how profile X resolves.
-Before sharing exports, run `doxabase.scan_sensitive_literals` over the graph
-roles you intend to export. `export_graph` and `export_trig` also return
-`sensitive_literal_count` and `privacy_warnings` when their selected graphs
-contain suspicious credential-like values. Treat those warnings as a
-stop-and-review signal: exports remain faithful RDF and are not redacted
-automatically. For unattended or shareable exports, pass
-`fail_on_sensitive=true` so DoxaBase raises before writing when the selected
-graph roles contain potential sensitive subject URI, predicate URI, object URI,
-or literal terms.
-This scan does not decide whether non-secret paths are appropriate to share:
+Before sharing exports, run `doxabase.export_preflight` for the export kind you
+intend to create. It covers RDF graph roles and, for handoff bundles, stored
+revision snapshot rows before any path is chosen or artifact is written. Treat
+`decision="block"` as a stop-and-review signal: exports remain faithful RDF/JSON
+and are not redacted automatically. When the preflight is scanner-clean, still
+pass `fail_on_sensitive=true` to the final export so DoxaBase raises before
+writing if selected graph roles or snapshot rows changed. Use
+`doxabase.scan_sensitive_literals` when you need the detailed redacted graph-only
+scan.
+This preflight does not decide whether non-secret paths are appropriate to share:
 local paths, object-store URIs, endpoint URLs, and relative paths are preserved
 unless you keep them out of the graph or replace them with collaborator-safe
 references before export.
