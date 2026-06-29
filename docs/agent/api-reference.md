@@ -1273,8 +1273,10 @@ For RDF handoffs imported without companion snapshot JSON,
 `bundle_summary.snapshot_evidence` is the structured import gate: `complete`
 false means at least one included row lacks exact stored snapshot rows, and row
 `suggested_next_actions` point at `import_revision_snapshots` just like the
-Markdown `Snapshot Evidence` panel. This does not change `next_action_queue`,
-which remains focused on review/apply routing. The same condition is repeated in
+Markdown `Snapshot Evidence` table. When `complete` is true, grouped Markdown
+still includes a compact positive `Snapshot Evidence` confirmation for human
+reviewers. This does not change `next_action_queue`, which remains focused on
+review/apply routing. The same incomplete condition is repeated in
 `bundle_summary.warnings`, so grouped Markdown shows the handoff preflight before
 `Review Queues`.
 `bundle_summary.warnings` calls out sequencing hazards, including grouped

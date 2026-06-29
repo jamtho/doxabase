@@ -2259,6 +2259,11 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert snapshot_evidence["rows"][0]["revision_iri"] == staged["revision_iri"]
     assert snapshot_evidence["rows"][0]["completeness"] == "complete"
     assert snapshot_evidence["rows"][0]["suggested_next_actions"] == []
+    exported = expected_path.read_text(encoding="utf-8")
+    assert "## Snapshot Evidence" in exported
+    assert "Snapshot evidence complete for 1/1 revision row(s)." in exported
+    assert "Status counts: history_plus_snapshot_rows: 1" in exported
+    assert "Exact rows available for graph role(s): map" in exported
     assert export["bundle_summary"]["recommended_review_iris"] == [
         staged["revision_iri"]
     ]

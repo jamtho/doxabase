@@ -1262,8 +1262,9 @@ few useful gaps:
 - A grouped snapshot-evidence trial found JSON list/lineage helpers made mixed
   RDF-only and exact snapshot recovery clear, while grouped Markdown hid the
   status split in scattered drift notes. Grouped staged-review Markdown now adds
-  a `Snapshot Evidence` panel whenever included rows are not all fully recovered
-  with exact snapshot rows. A batch-restage follow-up found scripts still had to
+  a `Snapshot Evidence` panel: a compact complete-state confirmation when every
+  included row has exact snapshot rows, and a detailed import-action table when
+  rows are incomplete. A batch-restage follow-up found scripts still had to
   cross-check that panel before trusting dry-run rows; batch items now carry
   source/current `snapshot_evidence` plus completeness labels directly.
 - A resource-lineage recovery trial found snapshot exports seeded only by an
@@ -1590,9 +1591,9 @@ few useful gaps:
   mechanics mostly held up. RDF-only imports route to companion snapshot JSON
   when exact triples are unavailable, and full RDF+snapshot imports recover
   applied diffs and resource lineage. Grouped Markdown's `Snapshot Evidence`
-  panel is warning-oriented and can be absent when evidence is complete; use
+  panel now gives positive complete-state confirmation for human reviewers; use
   `describe_revision_snapshot_evidence` or JSON `snapshot_evidence` fields for
-  positive script checks. Truncated column-seeded `deep_lore` slices can still
+  row-local script checks. Truncated column-seeded `deep_lore` slices can still
   answer subtle promotion questions through structured resources and route
   counts; they now expose `suggested_next_actions` that narrow to linked
   `pattern_brief` slices before offering a higher-`max_triples` raw RDF retry.
@@ -2272,6 +2273,11 @@ few useful gaps:
   candidate summary. When pending query repairs matter, include
   `describe_query_context` output or default project TriG plus revision snapshot
   JSON with the Markdown bundle.
+- A review-artifact frontier trial found grouped staged Markdown gave strong
+  warnings when snapshot evidence was incomplete, but gave no positive
+  confirmation when all included rows had exact snapshot rows. Grouped Markdown
+  now emits a compact `Snapshot Evidence` confirmation for complete bundles
+  while keeping the detailed import-action table for incomplete handoffs.
 - A context-slice frontier trial showed `resource_brief` high-degree incoming
   references can hide business-critical columns behind generic references when
   capped. Incoming-reference caps now rank resources with direct claims,

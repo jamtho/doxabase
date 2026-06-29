@@ -35923,7 +35923,7 @@ class DoxaBase:
         self,
         snapshot_evidence: StagedGraphRevisionSnapshotEvidenceSummary,
     ) -> list[str]:
-        if not snapshot_evidence.rows or snapshot_evidence.complete:
+        if not snapshot_evidence.rows:
             return []
 
         status_order = [
@@ -35937,6 +35937,26 @@ class DoxaBase:
             for status in status_order
             if status in snapshot_evidence.status_counts
         )
+        if snapshot_evidence.complete:
+            exact_graph_roles = sorted(
+                {
+                    graph_role
+                    for row in snapshot_evidence.rows
+                    for graph_role in row.exact_snapshot_graph_roles
+                }
+            )
+            return [
+                (
+                    "- Snapshot evidence complete for "
+                    f"{snapshot_evidence.total_revision_count}/"
+                    f"{snapshot_evidence.total_revision_count} revision row(s)."
+                ),
+                f"- Status counts: {count_text}",
+                (
+                    "- Exact rows available for graph role(s): "
+                    f"{self._markdown_graph_role_list(exact_graph_roles)}"
+                ),
+            ]
         lines = [
             f"- Status counts: {count_text}",
             (

@@ -4844,19 +4844,19 @@ apply checks, staged descriptions, and export summaries as
 Grouped Markdown still keeps handled stale rows in the summary table for
 provenance, but their recommendation points to the refreshed successor or
 Review Queues instead of treating the stale source as an active restage target.
-When any grouped row lacks full exact snapshot rows, grouped Markdown also
-includes a `Snapshot Evidence` section. It summarizes snapshot-evidence status
-counts and lists each row's status, completeness (`complete`, `partial`,
-`partial-extra-rows`, `history-only`, `snapshot-only`, or `missing`), RDF
-snapshot graph roles, stored snapshot row roles, exact roles, missing/orphan
-roles, and suggested next calls.
+Grouped Markdown also includes a `Snapshot Evidence` section. When every row is
+complete, it gives compact positive complete-row, status-count, and exact-role
+confirmation. When any grouped row lacks full exact snapshot rows, it summarizes
+snapshot-evidence status counts and lists each row's status, completeness
+(`complete`, `partial`, `partial-extra-rows`, `history-only`, `snapshot-only`,
+or `missing`), RDF snapshot graph roles, stored snapshot row roles, exact roles,
+missing/orphan roles, and suggested next calls.
 This is a review-artifact shortcut over each row's `snapshot_evidence` /
-`describe_revision_snapshot_evidence()` payload. The section is warning-oriented:
-when every included row has complete exact snapshot rows, it may be absent. Use
+`describe_revision_snapshot_evidence()` payload. Use
 `describe_revision_snapshot_evidence()` or the JSON `snapshot_evidence` fields
-for positive machine-readable confirmation. Incomplete evidence is also repeated
-in `Bundle Warnings` before `Review Queues`; those queues still describe the
-post-preflight apply/restage/repair route.
+for positive machine-readable confirmation. Incomplete evidence is also
+repeated in `Bundle Warnings` before `Review Queues`; those queues still
+describe the post-preflight apply/restage/repair route.
 `validation_failed_revision_iris` lists rows whose patch counts
 replay but whose current preview validation does not conform.
 `staged_validation_failed_revision_iris` lists rows whose stored staged-time

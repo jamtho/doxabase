@@ -836,17 +836,18 @@ Treat `next_action` as the compact route for the row, not as permission to run a
 mutating tool immediately. For review-first automation, follow
 `suggested_next_actions` / `suggested_next_calls` in order; ready and stale rows
 usually put inspect/export calls before the apply or restage mutation.
-When grouped Markdown is generated from an imported capsule and included rows
-do not all have exact snapshot rows, it includes a `Snapshot Evidence` panel with
-per-status counts and per-row `history_only_count_digest`,
+Grouped Markdown includes a `Snapshot Evidence` panel for included rows. When
+every included row has complete
+exact snapshot rows, the panel gives a compact positive confirmation with
+complete-row and status counts. When rows are incomplete, it includes per-status
+counts and per-row `history_only_count_digest`,
 `history_plus_snapshot_rows`, `snapshot_rows_without_history`, or
 `history_missing` status. The `Completeness` column marks partial rows when only
 some graph roles have exact snapshot rows. Use that panel to decide whether a
 companion revision snapshot JSON bundle is still needed before relying on exact
-stale drift or applied-diff triples. The panel is warning-oriented and may be
-absent when every included row has complete exact snapshot rows; use
-`bundle_summary.snapshot_evidence`, `describe_revision_snapshot_evidence()`, or
-row-level JSON `snapshot_evidence` when a script needs positive confirmation.
+stale drift or applied-diff triples. Use `bundle_summary.snapshot_evidence`,
+`describe_revision_snapshot_evidence()`, or row-level JSON `snapshot_evidence`
+when a script needs row-local positive confirmation.
 Grouped export JSON keeps `next_action_queue` focused on review/apply routing;
 the snapshot import gate is `bundle_summary.snapshot_evidence.complete` plus the
 row-level `suggested_next_actions` there. When snapshot evidence is incomplete,
