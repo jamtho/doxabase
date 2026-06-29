@@ -7208,6 +7208,32 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert "profile_map_updates (direct_action)" in exported
     assert result["candidates"][0]["profile_route_keys"][0] in exported
 
+    apply_staged_revision_tool(
+        db,
+        iri=staged["staged_revision"]["revision_iri"],
+    )
+    post_apply = export_profile_insight_review_bundle_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        path=str(tmp_path / "orders-profile-post-apply-review.md"),
+    )
+    assert post_apply["candidate_revision_iris"] == [
+        staged["staged_revision"]["revision_iri"]
+    ]
+    assert post_apply["export"]["bundle_summary"][
+        "recommended_applied_inspection_iris"
+    ] == [staged["staged_revision"]["revision_iri"]]
+    current_only = export_profile_insight_review_bundle_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        path=str(tmp_path / "orders-profile-current-only-review.md"),
+        include_applied_staged_sources=False,
+    )
+    assert current_only["candidate_revision_iris"] == []
+    assert current_only["export"] is None
+
 
 def test_stage_profile_map_updates_tool_marks_rerun_precondition(
     tmp_path: Path,

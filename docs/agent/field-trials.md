@@ -2355,6 +2355,12 @@ few useful gaps:
   Grouped exports now include `bundle_summary.review_sequence` and Markdown
   `Review Sequence`, ordering queued rows through inspect-redirect, repair,
   restage, review/apply, and recheck phases before the lower-level queue buckets.
+- A profile post-apply handoff trial found implicit profile insight exports
+  recovered current related staged work but missed the already-applied
+  profile-map source row unless callers passed `revision_iris` explicitly.
+  Profile insight review exports now scan already-applied staged sources by the
+  same profile evidence/observation/pattern/anchor routes, with an opt-out flag
+  for current-staged-only bundles.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -128,10 +128,13 @@ matter.
 
 When a profile run leads to several staged lanes, use
 `export_profile_insight_review_bundle(dataset_iri, evidence_iri, path)` after
-staging the related work. It scans current staged revisions and exports a
-grouped Markdown review bundle for revisions connected to the profile run by
-profile evidence, supporting profile observations, related support patterns, or
-profile-derived anchors.
+staging the related work. It scans current staged revisions and already-applied
+staged source rows, then exports a grouped Markdown review bundle for revisions
+connected to the profile run by profile evidence, supporting profile
+observations, related support patterns, or profile-derived anchors. Leave the
+applied-source scan on for post-apply handoffs where the
+profile map-update row has already been applied but still needs to travel with
+remaining caveat, metric, type, or query-repair review work.
 If `project_brief` shows `staged_frontier_review` or a profile task with
 `pending_staged_profile_update_iris`, run `plan_staged_revision_recovery` or
 review the staged profile-map update before calling `stage_profile_map_updates`

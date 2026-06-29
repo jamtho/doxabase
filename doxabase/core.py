@@ -30687,6 +30687,8 @@ class DoxaBase:
         revision_iris: Iterable[str] | str | None = None,
         include_current_staged_work: bool = True,
         current_staged_work_limit: int = 100,
+        include_applied_staged_sources: bool = True,
+        applied_staged_source_limit: int = 100,
         title: str | None = None,
         executive_summary: str | None = None,
         format: TypingLiteral["markdown"] = "markdown",
@@ -30698,6 +30700,8 @@ class DoxaBase:
             )
         if current_staged_work_limit < 1:
             raise DoxaBaseError("current_staged_work_limit must be at least 1")
+        if applied_staged_source_limit < 1:
+            raise DoxaBaseError("applied_staged_source_limit must be at least 1")
         profile = self.describe_profile_run(
             dataset_iri=dataset_iri,
             evidence_iri=evidence_iri,
@@ -30768,6 +30772,41 @@ class DoxaBase:
                 candidates.append(candidate)
                 seen_revision_iris.add(candidate.revision_iri)
 
+        if include_applied_staged_sources:
+            applied_source_iris = self._profile_insight_applied_source_candidate_iris(
+                evidence_iri=evidence_value,
+                profile_observation_iris=profile_observation_set,
+                related_pattern_iris=related_pattern_set,
+                anchor_seed_iris=anchor_seed_iris,
+            )
+            if len(applied_source_iris) > applied_staged_source_limit:
+                warnings.append(
+                    "Only the first "
+                    f"{applied_staged_source_limit} of {len(applied_source_iris)} "
+                    "matched already-applied staged sources were scanned; rerun with a "
+                    "higher applied_staged_source_limit if older profile-related "
+                    "applied sources may have been omitted."
+                )
+            for applied_source_iri in applied_source_iris[
+                :applied_staged_source_limit
+            ]:
+                if applied_source_iri in seen_revision_iris:
+                    continue
+                description = self.describe_staged_revision(applied_source_iri)
+                candidate = self._profile_insight_review_candidate(
+                    description,
+                    evidence_iri=evidence_value,
+                    profile_observation_iris=profile_observation_set,
+                    related_pattern_iris=related_pattern_set,
+                    anchor_seed_iris=anchor_seed_iris,
+                    profile_route_sources=profile_route_sources,
+                    explicit=False,
+                )
+                if not candidate.relation_reasons:
+                    continue
+                candidates.append(candidate)
+                seen_revision_iris.add(candidate.revision_iri)
+
         candidate_revision_iris = [candidate.revision_iri for candidate in candidates]
         export: StagedGraphRevisionsExportRecord | None = None
         if candidate_revision_iris:
@@ -30805,12 +30844,64 @@ class DoxaBase:
             export=export,
             warnings=warnings,
             review_note=(
-                "Export groups current staged revisions connected to the profile "
-                "run by evidence, profile observations, supporting patterns, or "
-                "profile-derived anchors. Follow remaining draft advisory lanes "
-                "separately if expected metric or type review revisions are "
-                "not staged yet."
+                "Export groups current staged revisions and already-applied "
+                "staged sources connected to the profile run by evidence, profile "
+                "observations, supporting patterns, or profile-derived anchors. "
+                "Follow remaining draft advisory lanes separately if expected "
+                "metric or type review revisions are not staged yet."
             ),
+        )
+
+    def _profile_insight_applied_source_candidate_iris(
+        self,
+        *,
+        evidence_iri: str,
+        profile_observation_iris: set[str],
+        related_pattern_iris: set[str],
+        anchor_seed_iris: set[str],
+    ) -> list[str]:
+        history_graphs = self._expand_graphs(["history"])
+        candidate_iris = set(self._subjects(history_graphs, "rc:evidence", evidence_iri))
+        for observation_iri in profile_observation_iris:
+            candidate_iris.update(
+                self._subjects(
+                    history_graphs,
+                    "rc:revisionSupportingObservation",
+                    observation_iri,
+                )
+            )
+        for pattern_iri in related_pattern_iris:
+            candidate_iris.update(
+                self._subjects(
+                    history_graphs,
+                    "rc:revisionSupportingPattern",
+                    pattern_iri,
+                )
+            )
+        for anchor_iri in anchor_seed_iris:
+            candidate_iris.update(
+                self._subjects(history_graphs, "rc:revisionAnchor", anchor_iri)
+            )
+
+        applied_sources = [
+            revision_iri
+            for revision_iri in candidate_iris
+            if self._objects(history_graphs, revision_iri, "rc:hasGraphPatch")
+            and self._first_subject(
+                history_graphs,
+                "rc:appliesStagedRevision",
+                revision_iri,
+            )
+            is not None
+        ]
+        return sorted(
+            applied_sources,
+            key=lambda iri: (
+                self._first_object(history_graphs, iri, "rc:createdAt") or "",
+                self._first_object(history_graphs, iri, "rc:summary") or "",
+                iri,
+            ),
+            reverse=True,
         )
 
     def _profile_insight_anchor_seed_iris(

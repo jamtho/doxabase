@@ -23072,6 +23072,106 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert "WorkflowFlipRate" in exported
 
 
+def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/profile-postapply#Payments"
+    evidence = "https://example.test/profile-postapply#PaymentsProfileEvidence"
+    caveat = "https://example.test/profile-postapply#PaymentsProfileCaveat"
+
+    db.record_map_dataset(
+        dataset,
+        label="Payments",
+        is_table=True,
+        row_count_snapshot=8,
+    )
+    profile_bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Payments were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run for post-apply recovery.",
+        evidence_sources=["test://payments-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=10,
+        sample_scope="All rows in the Payments table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=10,
+        update_map_snapshot=False,
+    )
+    staged_map = db.stage_profile_map_updates(
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[0],
+    )
+    applied_source_iri = staged_map.staged_revision.revision_iri
+
+    db.apply_staged_revision(applied_source_iri)
+    caveat_draft = db.stage_systematisation(
+        summary="Review payments profile caveat",
+        intent="Keep a post-apply profile caveat reviewable beside the applied map update.",
+        rationale=(
+            "The applied row-count update and the caveat both come from the same "
+            "profile evidence."
+        ),
+        anchors=[dataset, caveat],
+        supporting_observations=(
+            profile_bundle.handoff_entrypoints.profile_observation_iris
+        ),
+        evidence=[evidence],
+        framings=[
+            {
+                "label": "Map profile caveat",
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <{caveat}> a rc:KnownCaveat ;
+                        rdfs:label "Payments profile caveat" ;
+                        rc:caveatDescription "Payment profile row count needs settlement-lag review." .
+
+                    <{dataset}> rc:hasKnownCaveat <{caveat}> .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    caveat_revision_iri = caveat_draft.staged_revisions[0].revision_iri
+
+    result = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "profile-postapply-review.md",
+    )
+
+    assert result.candidate_revision_iris == [
+        caveat_revision_iri,
+        applied_source_iri,
+    ]
+    applied_candidate = next(
+        candidate
+        for candidate in result.candidates
+        if candidate.revision_iri == applied_source_iri
+    )
+    assert applied_candidate.explicit is False
+    assert "shared_profile_evidence" in applied_candidate.relation_reasons
+    assert "profile_derived_anchor" in applied_candidate.relation_reasons
+    assert result.export is not None
+    assert result.export.revision_iris == result.candidate_revision_iris
+    assert result.export.bundle_summary.recommended_applied_inspection_iris == [
+        applied_source_iri
+    ]
+
+    current_only = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "profile-current-only-review.md",
+        include_applied_staged_sources=False,
+    )
+
+    assert current_only.candidate_revision_iris == [caveat_revision_iri]
+
+
 def test_profile_map_update_support_omits_type_review_patterns(
     tmp_path: Path,
 ) -> None:

@@ -1852,7 +1852,13 @@ found; otherwise it is `None` and `warnings` explains that no bundle was
 written. When the nested staged Markdown export contains credential-like patch
 literals, `result.export.sensitive_literal_count` and
 `result.export.privacy_warnings` carry the same warning fields as direct grouped
-staged exports.
+staged exports. Default discovery includes current staged work and
+already-applied staged source rows matched through the same profile
+evidence/observation/pattern/anchor routes; set
+`include_applied_staged_sources=false` only when a caller intentionally wants
+current staged rows without applied profile-map sources. Raise
+`applied_staged_source_limit` when a profile run has more applied source matches
+than the default scan returns.
 
 Each `result.candidates[]` row explains why one staged revision was included:
 
@@ -1876,6 +1882,10 @@ candidate.explicit
 does not make an unrelated pattern related; patterns are discovered through
 supporting profile observations, profile-derived targets/map implications, or
 advisory patterns from `draft_profile_map_updates`.
+When an already-applied staged source is found by the default applied-source
+scan, `candidate.explicit` is still false; inspect the nested
+`export.bundle_summary.recommended_applied_inspection_iris` or per-row
+`next_action` to follow the applied event.
 `profile_route_keys` names matched draft `route_group_key` values; each
 `profile_route_groups[]` row has `route_group_key`, `review_lane`,
 `route_step_keys`, `matched_by`, and `match_strength`. Strength values are

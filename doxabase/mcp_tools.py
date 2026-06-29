@@ -1639,6 +1639,8 @@ def export_profile_insight_review_bundle_tool(
     revision_iris: list[str] | None = None,
     include_current_staged_work: bool = True,
     current_staged_work_limit: int = 100,
+    include_applied_staged_sources: bool = True,
+    applied_staged_source_limit: int = 100,
     title: str | None = None,
     executive_summary: str | None = None,
     format: str = "markdown",
@@ -1652,6 +1654,8 @@ def export_profile_insight_review_bundle_tool(
         revision_iris=revision_iris,
         include_current_staged_work=include_current_staged_work,
         current_staged_work_limit=current_staged_work_limit,
+        include_applied_staged_sources=include_applied_staged_sources,
+        applied_staged_source_limit=applied_staged_source_limit,
         title=title,
         executive_summary=executive_summary,
         format=format,  # type: ignore[arg-type]

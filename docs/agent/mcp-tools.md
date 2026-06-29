@@ -546,14 +546,17 @@ applied first. That rerun is what turns related type advisories into map-present
 
 ### doxabase.export_profile_insight_review_bundle
 
-Exports one grouped Markdown review bundle for current staged revisions connected
-to a profile run. Pass `dataset_iri`, `evidence_iri`, and `path`. The helper
-discovers staged revisions by shared profile evidence, supporting profile
-observations, related support patterns, and profile-derived anchors such as the
-dataset, metric IRIs, columns, and observed types from
-`draft_profile_map_updates`. Use it after staging accepted profile map updates
-and any metric vocabulary, type-review, or caveat/systematisation alternatives
-you want reviewed together.
+Exports one grouped Markdown review bundle for staged revisions connected to a
+profile run. Pass `dataset_iri`, `evidence_iri`, and `path`. The helper
+discovers current staged revisions, plus already-applied staged source rows, by
+shared profile evidence, supporting profile observations, related support
+patterns, and profile-derived anchors such as the dataset, metric IRIs, columns,
+and observed types from `draft_profile_map_updates`. Use it after staging
+accepted profile map updates and any metric vocabulary, type-review, or
+caveat/systematisation alternatives you want reviewed together. Set
+`include_applied_staged_sources=false` to restrict discovery to current staged
+work, or raise `applied_staged_source_limit` when a profile run has more applied
+source matches than the default scan returns.
 
 The returned payload includes `candidates[]` with `relation_reasons`, matched
 support/evidence/anchor fields, `profile_route_keys`,
