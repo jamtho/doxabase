@@ -2310,6 +2310,13 @@ few useful gaps:
   repairs are now filtered to staged rows that change query-planning metadata
   such as storage links, path templates, storage fields, layout fields, or
   partition metadata.
+- A follow-up project-brief frontier trial found location-blocked query contexts
+  with no lifted repair group could still expose a review-gated
+  `draft_query_plan` action as the first top-level `query_context_review` task.
+  `project_brief` now routes those blocked task rows through
+  `describe_query_context`; the dataset query summary can still keep the draft
+  action for agents that need plan-specific scan and runtime fields after the
+  context review.
 - A privacy/export frontier trial found `export_revision_snapshots()` preserved
   raw SQLite-side snapshot quads but did not surface the privacy warning/blocking
   affordances available on RDF exports. Snapshot JSON exports now report

@@ -2146,7 +2146,10 @@ rationale before any mutation call. `suggested_repair_action_group_count` is the
 number of groups returned.
 `project_brief` uses `query_repair_review` only when this count is non-zero.
 `query_context_review` means the query context still needs review, but no lifted
-repair template currently exists.
+repair template currently exists. Its top-level task action points to
+`describe_query_context`; the bounded dataset query summary may still keep a
+review-gated `draft_query_plan` action for agents that need plan-specific scan,
+runtime, and blocker fields after the context review.
 Do not concatenate this lane into `suggested_next_actions` or call
 `repair_group.actions[]` unchanged.
 

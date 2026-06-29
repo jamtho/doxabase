@@ -308,6 +308,60 @@ def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
     assert query_tasks[0].profile_evidence_iri is None
 
 
+def test_project_brief_routes_blocked_context_tasks_to_context_review(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    dataset = f"{base}LocationBlockedEvents"
+    storage = db.record_map_storage_access(
+        f"{base}LocationBlockedEventsStorage",
+        label="Location-blocked local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        f"{base}LocationBlockedEventsLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Location-blocked events",
+        is_table=True,
+        path_templates=["events/location-blocked/*.parquet"],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+    assert context.readiness == "insufficient_metadata"
+    assert context.suggested_repair_action_group_count == 0
+    assert context.suggested_next_actions[0].tool_name == "draft_query_plan"
+
+    brief = db.project_brief(limit=5)
+
+    assert brief.queue_counts["query_context_review"] == 1
+    query_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "query_context_review"
+    )
+    assert query_task.source == "describe_query_context"
+    assert "insufficient_metadata" in query_task.reason
+    assert query_task.suggested_next_action is not None
+    assert query_task.suggested_next_action.tool_name == "describe_query_context"
+    assert query_task.suggested_next_action.arguments == {"iri": dataset}
+    assert query_task.suggested_next_call == (
+        "describe_query_context(iri='https://example.test/project#"
+        "LocationBlockedEvents')"
+    )
+    assert brief.datasets[0].query.suggested_next_actions[0].tool_name == (
+        "draft_query_plan"
+    )
+
+
 def test_project_brief_reserves_recommendation_slots_by_queue(
     tmp_path: Path,
 ) -> None:

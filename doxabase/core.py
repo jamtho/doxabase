@@ -3707,10 +3707,6 @@ class DoxaBase:
                 )
             )
         else:
-            first_query_action = self._project_brief_query_task_action(
-                dataset.dataset.iri,
-                dataset.query.suggested_next_actions,
-            )
             if dataset.query.repair_action_group_count:
                 repair_action = self._project_brief_describe_query_context_action(
                     dataset.dataset.iri
@@ -3746,6 +3742,9 @@ class DoxaBase:
                 "ready_for_query_planning",
                 "ready",
             }:
+                review_action = self._project_brief_describe_query_context_action(
+                    dataset.dataset.iri
+                )
                 tasks.append(
                     ProjectBriefRecommendedTask(
                         priority=20,
@@ -3756,12 +3755,8 @@ class DoxaBase:
                             "Dataset query context is not ready for planning: "
                             f"{dataset.query.readiness}."
                         ),
-                        suggested_next_action=first_query_action,
-                        suggested_next_call=(
-                            first_query_action.call
-                            if first_query_action is not None
-                            else None
-                        ),
+                        suggested_next_action=review_action,
+                        suggested_next_call=review_action.call,
                     )
                 )
 
@@ -3819,19 +3814,6 @@ class DoxaBase:
                     )
                 )
         return tasks
-
-    def _project_brief_query_task_action(
-        self,
-        dataset_iri: str,
-        actions: list[SuggestedNextAction],
-    ) -> SuggestedNextAction:
-        for action in actions:
-            if action.tool_name == "draft_query_plan":
-                return action
-        for action in actions:
-            if action.tool_name != "describe_profile_run":
-                return action
-        return self._project_brief_describe_query_context_action(dataset_iri)
 
     def _project_brief_describe_context_slice_action(
         self,

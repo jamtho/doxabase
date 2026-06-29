@@ -406,6 +406,49 @@ def test_project_brief_tool_routes_query_repair_tasks_to_context(
     )
 
 
+def test_project_brief_tool_routes_blocked_context_tasks_to_context_review(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#LocationBlockedEvents"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#LocationBlockedEventsStorage",
+        label="Location-blocked local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#LocationBlockedEventsLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Location-blocked events",
+        is_table=True,
+        path_templates=["events/location-blocked/*.parquet"],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = project_brief_tool(db, limit=5)
+
+    context_action = result["datasets"][0]["query"]["suggested_next_actions"][0]
+    assert context_action["tool_name"] == "draft_query_plan"
+    context_task = result["recommended_next_tasks"][0]
+    assert context_task["task_type"] == "query_context_review"
+    assert context_task["source"] == "describe_query_context"
+    assert context_task["suggested_next_action"]["tool_name"] == (
+        "describe_query_context"
+    )
+    assert context_task["suggested_next_action"]["arguments"] == {"iri": dataset}
+    assert context_task["suggested_next_call"] == (
+        "describe_query_context("
+        "iri='https://example.test/project#LocationBlockedEvents')"
+    )
+
+
 def test_project_brief_tool_marks_pending_staged_query_repairs(
     tmp_path: Path,
 ) -> None:

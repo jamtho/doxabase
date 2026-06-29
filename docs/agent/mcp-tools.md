@@ -57,8 +57,9 @@ Tasks labelled `query_repair_review` point back to `describe_query_context`,
 not directly to `draft_query_plan`, so agents can inspect reviewed repair
 templates before drafting or executing any route. Tasks labelled
 `query_context_review` can also point at query blockers, but they mean the
-context currently has no lifted repair template; inspect the review gate or
-draft action instead of assuming a metadata repair is available.
+context currently has no lifted repair template; the task action points to
+`describe_query_context` even when the dataset summary still lists a
+review-gated `draft_query_plan` action for deeper inspection.
 Tasks labelled `profile_review` are scoped by `profile_evidence_iri`; keep that
 evidence IRI with the work item even when the first suggested action is a shared
 dataset-level blocker review such as `describe_query_context`.

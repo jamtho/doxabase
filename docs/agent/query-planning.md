@@ -179,8 +179,10 @@ Start with `describe_query_context(dataset_iri)`:
    and ordered repair templates. In `project_brief`, `query_repair_review`
    means this lane exists, while `query_context_review` can mean the dataset is
    blocked by layout, verification, runtime, or binding review but has no
-   repair template to follow yet. Read `pending_action_count`,
-   `skippable_action_count`, `action_status_counts`, and
+   repair template to follow yet. Follow that task's `describe_query_context`
+   action before using any review-gated `draft_query_plan` action preserved in
+   the dataset summary. Read `pending_action_count`, `skippable_action_count`,
+   `action_status_counts`, and
    `pending_action_options` before routing a group. `choice_mode="choose_one"`
    means the actions are alternatives; use the selected action's own
    `required_extra_arguments` rather than the group-level union in
