@@ -1235,6 +1235,7 @@ class StagedGraphRevisionsExportRecord:
     path: str
     format: str
     revision_iris: list[str]
+    revision_count: int
     bytes_written: int
     revision_summaries: list[StagedGraphRevisionExportSummary]
     bundle_summary: StagedGraphRevisionBundleSummary
@@ -11028,6 +11029,28 @@ class DoxaBase:
                 resources.get(dataset_iri, ()),
             )
 
+        queryable_owner_iris: set[str] = {
+            dataset.iri
+            for dataset in dataset_context_list
+            if self.expand_iri("rc:Table") in dataset.types
+            and dataset_reached_from_seed(dataset.iri)
+        }
+        metadata_seed_type_iris = {
+            self.expand_iri("rc:StorageAccess"),
+            self.expand_iri("rc:PhysicalLayout"),
+            self.expand_iri("rc:PartitionScheme"),
+            self.expand_iri("rc:CompositePartitionScheme"),
+        }
+        metadata_seed_has_single_queryable_owner = (
+            profile == "resource_brief"
+            and any(
+                set(self._types_from_graphs(lookup_graphs, seed_iri))
+                & metadata_seed_type_iris
+                for seed_iri in seed_iris
+            )
+            and len(queryable_owner_iris) == 1
+        )
+
         seen_dataset_iris: set[str] = set()
         for dataset in dataset_context_list:
             if not dataset_reached_from_seed(dataset.iri):
@@ -11053,7 +11076,11 @@ class DoxaBase:
             issue_codes = sorted(
                 {*operational_issue_codes, *repair_issue_codes}
             )
-            if not issue_codes:
+            owner_route_without_issues = (
+                metadata_seed_has_single_queryable_owner
+                and dataset.iri in queryable_owner_iris
+            )
+            if not issue_codes and not owner_route_without_issues:
                 continue
             seen_dataset_iris.add(dataset.iri)
             arguments = {"iri": dataset.iri}
@@ -11072,10 +11099,16 @@ class DoxaBase:
                     f"{', '.join(warning_issue_codes)}"
                 )
             if not issue_reason_parts:
-                issue_reason_parts.append(
-                    "operational query-planning warning(s): "
-                    f"{', '.join(operational_issue_codes)}"
-                )
+                if owner_route_without_issues:
+                    issue_reason_parts.append(
+                        "a single queryable owner table reached from storage, "
+                        "layout, or partition metadata"
+                    )
+                else:
+                    issue_reason_parts.append(
+                        "operational query-planning warning(s): "
+                        f"{', '.join(operational_issue_codes)}"
+                    )
             actions.append(
                 SuggestedNextAction(
                     action_label="Inspect query-planning context",
@@ -35792,6 +35825,7 @@ class DoxaBase:
             path=str(path),
             format=format,
             revision_iris=[description.iri for description in descriptions],
+            revision_count=len(descriptions),
             bytes_written=bytes_written,
             revision_summaries=revision_summaries,
             bundle_summary=bundle_summary,

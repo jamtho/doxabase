@@ -4049,6 +4049,7 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert export["revision_iris"] == [
         revision["revision_iri"] for revision in result["staged_revisions"]
     ]
+    assert export["revision_count"] == 2
     assert export["bundle_summary"]["shared_context_graphs"] == ["ontology"]
     assert export["bundle_summary"][
         "fallback_revision_iris_with_shared_semantic_context"

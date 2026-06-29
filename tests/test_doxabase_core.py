@@ -21162,6 +21162,58 @@ def test_resource_brief_context_slice_routes_storage_seed_to_query_context(
     )
 
 
+def test_resource_brief_storage_seed_suggests_clean_owner_query_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        label="Orders object storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=str(tmp_path / "orders.parquet"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context_slice = db.describe_context_slice(
+        storage.iri,
+        profile="resource_brief",
+    )
+
+    dataset_resource = next(
+        resource for resource in context_slice.resources if resource.iri == dataset
+    )
+    assert any(
+        route.route == "incoming_reference"
+        for route in dataset_resource.routes
+    )
+    query_actions = [
+        action
+        for action in context_slice.suggested_next_actions
+        if action.tool_name == "describe_query_context"
+    ]
+    assert len(query_actions) == 1
+    assert query_actions[0].arguments == {"iri": dataset}
+    assert "single queryable owner table" in query_actions[0].reason
+    query_context = db.describe_query_context(**query_actions[0].arguments)
+    assert query_context.readiness == "ready_for_query_planning"
+    assert query_context.suggested_repair_action_groups == []
+
+
 def test_resource_brief_query_context_action_separates_repairs_from_warnings(
     tmp_path: Path,
 ) -> None:

@@ -25,7 +25,9 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
   stays seed-centered rather than crawling recursively. When an evidence seed is
   referenced by an observation, resource brief also includes that observation's
   observed asset and can suggest `describe_query_context` for an observed table
-  with query-planning warnings or repair groups.
+  with query-planning warnings or repair groups. Storage access, physical-layout,
+  and partition-scheme seeds also suggest `describe_query_context` when they
+  reach exactly one queryable owner table, even if that owner is already ready.
 
 When lexical search finds a likely pattern, seed that pattern directly with
 `profile="pattern_brief"` before trying a broad dataset slice. Pattern seeds
@@ -147,8 +149,9 @@ asking what changed around a dataset's physical/query metadata.
 When the seed itself is storage access, physical layout, or partition scheme
 metadata, `deep_lore` may only include the seed directly because it is a
 lore/history profile. Follow the `Retry with resource brief` suggested action
-to recover owner-table `incoming_reference` routes and any
-`describe_query_context` repair follow-up.
+to recover owner-table `incoming_reference` routes and the owner's
+`describe_query_context` handoff. If exactly one queryable owner table is found,
+the query-context action is present even when the owner has no repair groups.
 
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference

@@ -1036,9 +1036,11 @@ paged `describe_resource` action when you need the exhaustive inbound list.
 `suggested_next_actions` can include `describe_query_context` for seed tables or
 seed-reached owner tables whose query context has repair groups or whose nested
 `dataset_contexts[].operational_warnings` contain query-planning errors or
-warnings. This includes mapped column, storage access, physical-layout, and
-partition-scheme seeds that expand to an owning table through direct
-incoming/reference routes.
+warnings. Storage access, physical-layout, and partition-scheme
+`resource_brief` seeds also get a query-context action when they expand to
+exactly one queryable owner table, even if that owner has no repair groups. This
+includes mapped column, storage access, physical-layout, and partition-scheme
+seeds that expand to an owning table through direct incoming/reference routes.
 If `profile="deep_lore"` starts directly from storage access, physical layout,
 or partition scheme metadata and reports that profile-specific expansion did
 not apply, follow the `Retry with resource brief` action. That rerun is the
@@ -5320,6 +5322,7 @@ available, for example `True (0 result(s))`.
 export.path
 export.format
 export.revision_iris
+export.revision_count
 export.bytes_written
 export.revision_summaries
 export.bundle_summary
@@ -5333,7 +5336,7 @@ export.recovery_complete
 
 `export.revision_iris` is normalized to first-seen unique revision IRIs; grouped
 exports do not preserve duplicate input rows or inflate queue counts for repeated
-IRIs.
+IRIs. `export.revision_count` is the length of that normalized review set.
 
 Each item in `revision_summaries` is a
 `StagedGraphRevisionExportSummary`:
