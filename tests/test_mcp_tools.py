@@ -425,6 +425,7 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert "health_tasks" in result
     assert isinstance(result["health_tasks"], list)
     for task in result["health_tasks"]:
+        assert "exhaustive_suggested_limit" in task
         assert "suggested_profile_candidate_limit" in task
         assert "profile_candidate_omitted_count" in task
     assert isinstance(result["recommended_next_tasks"], list)

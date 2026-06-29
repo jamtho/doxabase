@@ -73,6 +73,10 @@ bounded `staged_review.items` slice, so a pending IRI may be hidden from the
 returned staged rows when the brief is limited; use the IRI with
 `plan_staged_revision_recovery` or rerun `project_brief` with a larger limit for
 more display context.
+For `expand_project_brief`, `suggested_limit` is a bounded next step and may be
+iterative on a crowded project. When an unattended loop needs one rerun that
+shows every task payload currently represented by `queue_counts`, use
+`exhaustive_suggested_limit`.
 Tasks labelled `query_repair_review` point back to `describe_query_context`,
 not directly to `draft_query_plan`, so agents can inspect reviewed repair
 templates before drafting or executing any route. Tasks labelled

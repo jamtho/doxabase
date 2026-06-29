@@ -417,6 +417,7 @@ class ProjectBriefHealthTask:
     queue_types: list[str] = field(default_factory=list)
     omitted_queue_counts: dict[str, int] = field(default_factory=dict)
     suggested_limit: int | None = None
+    exhaustive_suggested_limit: int | None = None
     suggested_profile_candidate_limit: int | None = None
     profile_candidate_omitted_count: int | None = None
     sensitive_literal_count: int | None = None
@@ -3458,6 +3459,7 @@ class DoxaBase:
             active_queue_type_count=len(queue_counts),
             omitted_queue_counts=omitted_queue_counts,
             limit_crowded_queue_types=limit_crowded_queue_types,
+            total_queue_count=sum(queue_counts.values()),
         )
 
         return ProjectBrief(
@@ -3675,6 +3677,7 @@ class DoxaBase:
         active_queue_type_count: int,
         omitted_queue_counts: dict[str, int],
         limit_crowded_queue_types: list[str],
+        total_queue_count: int,
     ) -> list[ProjectBriefHealthTask]:
         tasks: list[ProjectBriefHealthTask] = []
         expand_task = self._project_brief_expand_health_task(
@@ -3683,6 +3686,7 @@ class DoxaBase:
             active_queue_type_count=active_queue_type_count,
             omitted_queue_counts=omitted_queue_counts,
             limit_crowded_queue_types=limit_crowded_queue_types,
+            total_queue_count=total_queue_count,
         )
         if expand_task is not None:
             tasks.append(expand_task)
@@ -3764,6 +3768,7 @@ class DoxaBase:
         active_queue_type_count: int,
         omitted_queue_counts: dict[str, int],
         limit_crowded_queue_types: list[str],
+        total_queue_count: int,
     ) -> ProjectBriefHealthTask | None:
         if not omitted_queue_counts and not limit_crowded_queue_types:
             return None
@@ -3773,6 +3778,7 @@ class DoxaBase:
                 suggested_limit,
                 min(limit + sum(omitted_queue_counts.values()), limit * 2),
             )
+        exhaustive_suggested_limit = max(suggested_limit, total_queue_count)
         arguments = {
             "limit": suggested_limit,
             "profile_candidate_limit": profile_candidate_limit,
@@ -3785,7 +3791,9 @@ class DoxaBase:
             reason=(
                 "Some active queues were omitted from the bounded recommended "
                 "task slice; rerun project_brief with a larger limit before "
-                "repeating the same visible tasks."
+                "repeating the same visible tasks. The suggested limit may be "
+                "iterative; use exhaustive_suggested_limit when you need one "
+                "rerun that exposes every currently counted task payload."
             ),
             call=self._suggested_call_string("project_brief", arguments),
         )
@@ -3807,6 +3815,7 @@ class DoxaBase:
             queue_types=queue_types,
             omitted_queue_counts=dict(omitted_queue_counts),
             suggested_limit=suggested_limit,
+            exhaustive_suggested_limit=exhaustive_suggested_limit,
         )
 
     def _project_brief_privacy_health_task(

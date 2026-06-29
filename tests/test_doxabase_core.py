@@ -795,6 +795,11 @@ def test_project_brief_reports_limit_crowded_queue_types(
     assert "non_tabular_asset_review" in expand_task.queue_types
     assert "profile_review" in expand_task.queue_types
     assert "staged_review" not in expand_task.queue_types
+    assert expand_task.suggested_limit is not None
+    assert expand_task.exhaustive_suggested_limit == sum(brief.queue_counts.values())
+    assert expand_task.exhaustive_suggested_limit >= expand_task.suggested_limit
+    assert expand_task.suggested_next_action is not None
+    assert "exhaustive_suggested_limit" in expand_task.suggested_next_action.reason
     privacy_task = next(
         task for task in brief.health_tasks if task.task_type == "privacy_export_review"
     )

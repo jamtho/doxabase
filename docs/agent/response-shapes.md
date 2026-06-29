@@ -146,6 +146,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "queue_types": ["query_repair_review"],
             "omitted_queue_counts": {"query_repair_review": 1},
             "suggested_limit": 21,
+            "exhaustive_suggested_limit": 21,
             "suggested_profile_candidate_limit": null,
             "profile_candidate_omitted_count": null,
             "sensitive_literal_count": null,
@@ -161,6 +162,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "queue_types": ["profile_review"],
             "omitted_queue_counts": {},
             "suggested_limit": 20,
+            "exhaustive_suggested_limit": null,
             "suggested_profile_candidate_limit": 3,
             "profile_candidate_omitted_count": 1,
             "sensitive_literal_count": null,
@@ -176,6 +178,7 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "queue_types": [],
             "omitted_queue_counts": {},
             "suggested_limit": null,
+            "exhaustive_suggested_limit": null,
             "suggested_profile_candidate_limit": null,
             "profile_candidate_omitted_count": null,
             "sensitive_literal_count": 1,
@@ -323,6 +326,9 @@ stable follow-ups such as `expand_project_brief` for omitted queues,
 finds potential sensitive literals, and `seed_recovery_review` when immutable
 seed graphs are missing current staging vocabulary. Check it before repeating
 the same visible task types in an unattended loop.
+For `expand_project_brief`, `suggested_limit` is the next bounded rerun and may
+still be iterative on large or skewed queues. `exhaustive_suggested_limit` is the
+one-shot bound for every task payload currently counted in `queue_counts`.
 When `limit_crowded_queue_types` is non-empty, the current `limit` was too low
 to return a task from every active queue type. Rerun with a larger limit or
 inspect `queue_counts`/`omitted_queue_counts` before choosing the next loop
