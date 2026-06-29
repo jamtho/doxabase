@@ -194,6 +194,13 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "suggested_next_call": "project_brief(...)",
         ...
     },
+    "full_frontier_expansion": {
+        "priority": 9,
+        "task_type": "expand_full_project_brief",
+        "suggested_next_action": {...},
+        "suggested_next_call": "project_brief(...)",
+        ...
+    },
     "datasets": [
         {
             "dataset": {"iri": "https://...", "label": "...", "description": ...},
@@ -294,7 +301,13 @@ Ready physical query handoffs use `query_plan_handoff`, a low-priority queue
 that appears when a table's query context is `ready_for_query_planning`. It
 points to `draft_query_plan` when the query context exposes that action, keeping
 ready handoffs visible in `recommended_next_tasks` rather than only inside
-`datasets[].query.suggested_next_actions`.
+`datasets[].query.suggested_next_actions`. Its
+`query_plan_handoff_summary` copies the selected candidate index, handoff kind,
+URI or database relation identifier, execution-attempt blockers, required
+bindings, and unselected ready/direct-clean candidate indexes from the matching
+`draft_query_plan` call. Read that summary before following the first draft
+action blindly, especially when database relation candidates include both archive
+and current tables.
 When a query repair task already has staged work anchored to the same dataset,
 `pending_staged_repair_iris` names those staged revision IRIs and the task is
 lowered behind `staged_review` so unattended agents review/apply the pending
@@ -346,7 +359,12 @@ when immutable seed graphs are missing current staging vocabulary.
 either `null` or a copy of the highest-priority expansion health task, preferring
 `expand_project_brief` over `expand_profile_candidate_limit` when both are
 needed. Check it before repeating the same visible task types in an unattended
-loop, then read `health_tasks` for the full health queue.
+loop, then read `health_tasks` for the full health queue. When both normal task
+limits and `profile_candidate_limit` hide work, `full_frontier_expansion`
+synthesizes a one-shot `project_brief` rerun that expands both bounds enough to
+show all currently counted task payloads and hidden profile draft candidates.
+Use it when avoiding iterative frontier reruns matters more than preserving the
+smallest bounded display.
 For `expand_project_brief`, `suggested_limit` is the next bounded rerun and may
 still be iterative on large or skewed queues. `exhaustive_suggested_limit` is the
 one-shot bound for every task payload currently counted in `queue_counts`.

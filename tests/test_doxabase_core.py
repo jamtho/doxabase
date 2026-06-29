@@ -319,6 +319,76 @@ def test_project_brief_reports_profile_candidates_hidden_by_limit(
     assert brief.next_best_expansion == health_task
 
 
+def test_project_brief_full_frontier_expansion_combines_limits(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=10,
+    )
+    for index in range(4):
+        db.record_dataset_profile(
+            dataset,
+            summary=f"Orders profile pass {index}.",
+            evidence_summary=f"Synthetic profile output {index}.",
+            evidence_sources=[f"test://orders-profile/{index}"],
+            evidence_iri=f"https://example.test/project#OrdersProfileEvidence{index}",
+            sample_size=12 + index,
+            sample_scope="All rows in the local Orders table.",
+            sample_method="DuckDB full-table aggregate profile.",
+            row_count=12 + index,
+            update_map_snapshot=False,
+        )
+    for index in range(5):
+        db.stage_graph_revision(
+            summary=f"Stage unrelated review item {index}",
+            rationale="Create staged review pressure.",
+            additions=[
+                {
+                    "graph": "map",
+                    "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:FrontierCaveat{index} a rc:KnownCaveat .
+                    """,
+                }
+            ],
+        )
+
+    brief = db.project_brief(limit=2, profile_candidate_limit=1)
+
+    assert brief.next_best_expansion is not None
+    assert brief.next_best_expansion.task_type == "expand_project_brief"
+    assert brief.next_best_expansion.suggested_next_action is not None
+    assert brief.next_best_expansion.suggested_next_action.arguments == {
+        "limit": 4,
+        "profile_candidate_limit": 1,
+    }
+    full_expansion = brief.full_frontier_expansion
+    assert full_expansion is not None
+    assert full_expansion.task_type == "expand_full_project_brief"
+    assert full_expansion.suggested_limit == 11
+    assert full_expansion.exhaustive_suggested_limit == 11
+    assert full_expansion.suggested_profile_candidate_limit == 4
+    assert full_expansion.profile_candidate_omitted_count == 3
+    assert full_expansion.suggested_next_action is not None
+    assert full_expansion.suggested_next_action.arguments == {
+        "limit": 11,
+        "profile_candidate_limit": 4,
+    }
+
+    rerun = db.project_brief(**full_expansion.suggested_next_action.arguments)
+
+    assert rerun.omitted_queue_counts == {}
+    assert rerun.profile_queue_counts["profile_candidate_omitted"] == 0
+    assert rerun.full_frontier_expansion is None
+
+
 def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
     tmp_path: Path,
 ) -> None:
@@ -496,6 +566,74 @@ def test_project_brief_routes_ready_query_handoffs_to_draft_plan(
         "draft_query_plan(iri='https://example.test/project#Orders', "
         "candidate_index=0)"
     )
+    assert task.query_plan_handoff_summary is not None
+    assert task.query_plan_handoff_summary.handoff_kind == "execution_attempt_ready"
+    assert task.query_plan_handoff_summary.selected_candidate_index == 0
+    assert task.query_plan_handoff_summary.scan_function == "read_parquet"
+    assert task.query_plan_handoff_summary.ready_for_execution_attempt is True
+    assert (
+        task.query_plan_handoff_summary.primary_execution_attempt_blocking_reason_code
+        is None
+    )
+
+
+def test_project_brief_query_handoff_summary_surfaces_relation_choice(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#warehouse_orders_storage",
+        label="Warehouse orders database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=[
+            "archive.orders_2025",
+            "mart.orders",
+        ],
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:analytics-warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    brief = db.project_brief(limit=5)
+
+    task = brief.recommended_next_tasks[0]
+    assert task.task_type == "query_plan_handoff"
+    assert task.suggested_next_action is not None
+    assert task.suggested_next_action.arguments == {
+        "iri": dataset,
+        "candidate_index": 0,
+    }
+    assert task.query_plan_handoff_summary is not None
+    summary = task.query_plan_handoff_summary
+    assert summary.handoff_kind == "database_relation_handoff"
+    assert summary.selected_candidate_index == 0
+    assert summary.relation_identifier == "archive.orders_2025"
+    assert summary.connection_reference == "warehouse-prod"
+    assert summary.primary_execution_attempt_blocking_reason_code == (
+        "scan_function_not_inferred"
+    )
+    assert summary.execution_attempt_blocking_reason_codes == [
+        "scan_function_not_inferred",
+        "runtime_resolution_required",
+    ]
+    assert summary.unselected_ready_candidate_indexes == [1]
+    assert summary.unselected_direct_clean_candidate_indexes == [1]
 
 
 def test_project_brief_reserves_recommendation_slots_by_queue(

@@ -89,6 +89,7 @@ DoxaBase.import_turtle(source, graph="map", replace=False)
 DoxaBase.import_trig(source, replace=False)
 DoxaBase.export_graph(path, graphs="map", format="turtle", overwrite=False)
 DoxaBase.export_trig(path, graphs=None, overwrite=False)
+DoxaBase.export_preflight(export_kind="handoff_bundle", ...)
 DoxaBase.replace_graph_triples(graph, removals=None, additions=None, ...)
 DoxaBase.graph_overview(limit=100)
 DoxaBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
@@ -209,6 +210,7 @@ Current MCP tools:
 - `doxabase.record_map_relationship`
 - `doxabase.import_trig`
 - `doxabase.export_graph`
+- `doxabase.export_preflight`
 - `doxabase.replace_graph_triples`
 - `doxabase.export_trig`
 - `doxabase.record_graph_revision`

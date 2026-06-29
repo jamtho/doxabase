@@ -2616,8 +2616,8 @@ few useful gaps:
 - A project-brief frontier trial confirmed `next_best_expansion` prevents a
   low-limit brief from hiding query/profile/non-tabular work, but mixed
   `limit` and `profile_candidate_limit` constraints can still require several
-  reruns. A future combined expansion affordance could collapse those steps
-  without changing queue semantics.
+  reruns. The later `full_frontier_expansion` affordance collapses those steps
+  when an unattended agent wants one deliberate full-frontier rerun.
 - A query-handoff trial found ready query plans were discoverable inside
   `datasets[].query.suggested_next_actions` but absent from
   `recommended_next_tasks`, so queue-following agents could miss ready physical
@@ -2641,6 +2641,29 @@ few useful gaps:
   blocking export would fail, while `decision="clean_by_scanner_only"` still
   requires separate shareability review for paths, endpoints, history payloads,
   and project facts.
+- A profile-to-map promotion trial confirmed awkward profile evidence can move
+  through normal map recommendations, metric/type advisory lanes, pattern
+  support, systematisation alternatives, and grouped staged exports without a
+  new code helper. The main agent friction is advisory follow-through: after
+  `record_pattern`, copy the returned `pattern_iri` into later
+  `stage_map_assertion_change(... supporting_patterns=[...])` calls when the
+  staged assertion should carry pattern support.
+- A staged recovery and handoff trial confirmed count drift, same-count digest
+  drift, blank-node drift details, restage/apply flow, and cross-capsule
+  RDF-plus-snapshot handoff all work. RDF-only import leaves exact applied diffs
+  unavailable by design; import the companion `export_revision_snapshots` JSON
+  before expecting exact changed triples.
+- A project-brief frontier reproduction showed following only
+  `next_best_expansion` can require several reruns when both `limit` and
+  `profile_candidate_limit` hide work. `project_brief.full_frontier_expansion`
+  now provides a deliberate one-call rerun that expands both bounds enough to
+  expose all currently counted task payloads and hidden profile draft candidates.
+- A storage/query-planning trial with local files, partitioned CSV, and multiple
+  database relations confirmed ready handoffs are discoverable, but also showed
+  agents can follow candidate 0 too literally when it is an archive relation.
+  `query_plan_handoff` tasks now carry `query_plan_handoff_summary` so the brief
+  itself surfaces selected relation/URI, handoff kind, execution blockers,
+  required bindings, and unselected ready/direct-clean candidate indexes.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

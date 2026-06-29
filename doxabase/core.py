@@ -404,6 +404,7 @@ class ProjectBriefRecommendedTask:
     profile_evidence_iri: str | None = None
     pending_staged_repair_iris: list[str] = field(default_factory=list)
     pending_staged_profile_update_iris: list[str] = field(default_factory=list)
+    query_plan_handoff_summary: DraftQueryPlanHandoffSummary | None = None
 
 
 @dataclass(frozen=True)
@@ -440,6 +441,7 @@ class ProjectBrief:
     limit_crowded_queue_types: list[str]
     health_tasks: list[ProjectBriefHealthTask]
     next_best_expansion: ProjectBriefHealthTask | None
+    full_frontier_expansion: ProjectBriefHealthTask | None
     datasets: list[ProjectBriefDatasetSummary]
     staged_review: ProjectBriefStagedReviewSummary
     recommended_next_tasks: list[ProjectBriefRecommendedTask]
@@ -3536,6 +3538,17 @@ class DoxaBase:
         next_best_expansion = self._project_brief_next_best_expansion(
             health_tasks
         )
+        full_frontier_expansion = self._project_brief_full_frontier_expansion(
+            limit=limit,
+            profile_candidate_limit=profile_candidate_limit,
+            total_queue_count=sum(queue_counts.values()),
+            profile_candidate_omitted_count=profile_queue_counts.get(
+                "profile_candidate_omitted",
+                0,
+            ),
+            suggested_profile_candidate_limit=suggested_profile_candidate_limit,
+            health_tasks=health_tasks,
+        )
 
         return ProjectBrief(
             key_counts=overview.key_counts,
@@ -3556,6 +3569,7 @@ class DoxaBase:
             limit_crowded_queue_types=limit_crowded_queue_types,
             health_tasks=health_tasks,
             next_best_expansion=next_best_expansion,
+            full_frontier_expansion=full_frontier_expansion,
             datasets=datasets,
             staged_review=staged_review,
             recommended_next_tasks=selected_tasks,
@@ -3804,6 +3818,87 @@ class DoxaBase:
                 if task.task_type == task_type:
                     return task
         return None
+
+    def _project_brief_full_frontier_expansion(
+        self,
+        *,
+        limit: int,
+        profile_candidate_limit: int,
+        total_queue_count: int,
+        profile_candidate_omitted_count: int,
+        suggested_profile_candidate_limit: int | None,
+        health_tasks: list[ProjectBriefHealthTask],
+    ) -> ProjectBriefHealthTask | None:
+        expansion_tasks = [
+            task
+            for task in health_tasks
+            if task.task_type in {
+                "expand_project_brief",
+                "expand_profile_candidate_limit",
+            }
+        ]
+        if not expansion_tasks:
+            return None
+
+        full_limit = max(limit, total_queue_count)
+        full_profile_candidate_limit = profile_candidate_limit
+        if (
+            suggested_profile_candidate_limit is not None
+            and profile_candidate_omitted_count > 0
+        ):
+            full_profile_candidate_limit = suggested_profile_candidate_limit
+            full_limit = max(
+                full_limit,
+                total_queue_count + profile_candidate_omitted_count,
+            )
+        if (
+            full_limit == limit
+            and full_profile_candidate_limit == profile_candidate_limit
+        ):
+            return None
+
+        arguments = {
+            "limit": full_limit,
+            "profile_candidate_limit": full_profile_candidate_limit,
+        }
+        action = SuggestedNextAction(
+            action_label="Expand full project brief frontier",
+            tool_name="project_brief",
+            mcp_tool_name="doxabase.project_brief",
+            arguments=arguments,
+            reason=(
+                "Expose all currently counted recommended-task payloads and any "
+                "profile drafts hidden by profile_candidate_limit in one rerun."
+            ),
+            call=self._suggested_call_string("project_brief", arguments),
+        )
+        queue_types: list[str] = []
+        omitted_queue_counts: dict[str, int] = {}
+        for task in expansion_tasks:
+            queue_types.extend(task.queue_types)
+            omitted_queue_counts.update(task.omitted_queue_counts)
+        return ProjectBriefHealthTask(
+            priority=9,
+            task_type="expand_full_project_brief",
+            source="project_brief",
+            reason=(
+                "The current bounded brief does not expose the full project "
+                "frontier; this synthesized action expands both task and profile "
+                "candidate limits together."
+            ),
+            suggested_next_action=action,
+            suggested_next_call=action.call,
+            queue_types=list(dict.fromkeys(queue_types)),
+            omitted_queue_counts=omitted_queue_counts,
+            suggested_limit=full_limit,
+            exhaustive_suggested_limit=full_limit,
+            suggested_profile_candidate_limit=full_profile_candidate_limit,
+            profile_candidate_omitted_count=(
+                profile_candidate_omitted_count
+                if profile_candidate_omitted_count > 0
+                else None
+            ),
+        )
 
     def _project_brief_profile_candidate_limit_health_task(
         self,
@@ -4125,6 +4220,9 @@ class DoxaBase:
                 handoff_action = self._project_brief_query_plan_handoff_action(
                     dataset
                 )
+                handoff_summary = self._project_brief_query_plan_handoff_summary(
+                    handoff_action
+                )
                 tasks.append(
                     ProjectBriefRecommendedTask(
                         priority=60,
@@ -4138,6 +4236,7 @@ class DoxaBase:
                         ),
                         suggested_next_action=handoff_action,
                         suggested_next_call=handoff_action.call,
+                        query_plan_handoff_summary=handoff_summary,
                     )
                 )
 
@@ -4276,6 +4375,17 @@ class DoxaBase:
             ),
             call=self._suggested_call_string("draft_query_plan", arguments),
         )
+
+    def _project_brief_query_plan_handoff_summary(
+        self,
+        action: SuggestedNextAction,
+    ) -> DraftQueryPlanHandoffSummary | None:
+        if action.tool_name != "draft_query_plan":
+            return None
+        try:
+            return self.draft_query_plan(**action.arguments).handoff_summary
+        except DoxaBaseError:
+            return None
 
     @staticmethod
     def _project_brief_select_recommended_tasks(

@@ -93,6 +93,9 @@ after the RDF import. Keep the source capsule or explicit before/after exports
 when a downstream agent will only receive an RDF bundle. For controlled
 replacements, record the exact removed/added assertions in the rationale or
 preserve before/after exports when no snapshot bundle is available.
+This companion snapshot step also matters for same-count digest drift involving
+blank nodes: RDF import can preserve enough history metadata to detect drift, but
+the exact old/new triples used for review come from the snapshot JSON rows.
 When both project/history RDF and exact snapshot rows are needed, prefer
 `export_handoff_bundle()` so the TriG and snapshot JSON artifacts are written
 with combined path and privacy preflight. Pass `manifest_path` when the receiver

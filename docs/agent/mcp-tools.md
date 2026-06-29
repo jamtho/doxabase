@@ -73,6 +73,10 @@ non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
 Check `next_best_expansion` before repeating visible recommended tasks; if it is
 non-null, follow or evaluate that rerun before trusting a tight brief's frontier.
+When the loop should avoid iterative reruns, prefer `full_frontier_expansion`
+when it is non-null; it expands both `limit` and `profile_candidate_limit` enough
+to expose the currently counted task frontier and hidden profile draft
+candidates together.
 Then read `health_tasks`, which is not limited by `recommended_next_tasks` and
 can also route agents to widen the brief, increase `profile_candidate_limit`, run
 redacted privacy/export review, or handle stale immutable seed graphs.
@@ -109,7 +113,12 @@ Tasks labelled `query_plan_handoff` are low-priority ready-query lanes. They
 appear when `describe_query_context` reports `ready_for_query_planning` and point
 to the query context's `draft_query_plan` action when one is available, so ready
 physical query handoffs are visible in `recommended_next_tasks` instead of only
-inside `datasets[].query.suggested_next_actions`.
+inside `datasets[].query.suggested_next_actions`. Read
+`query_plan_handoff_summary` on those tasks before following the first draft
+action; it surfaces the selected relation or URI, handoff kind, execution
+blockers, required bindings, and unselected ready/direct-clean candidate indexes.
+This is especially important for database-backed datasets where candidate 0 may
+be an archive relation while candidate 1 is the current table.
 Tasks labelled `profile_review` are scoped by `profile_evidence_iri`; keep that
 evidence IRI with the work item even when the first suggested action is a shared
 dataset-level blocker review such as `describe_query_context`. Pending staged

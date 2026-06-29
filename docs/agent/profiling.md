@@ -215,6 +215,12 @@ recommendation indexes. Metric advisories may suggest `stage_pattern_promotion`
 for vocabulary or pattern-supported modelling. Type advisories may suggest
 context slices, `record_pattern`, related column shells, or focused
 `stage_map_assertion_change` calls.
+When a type advisory or modelling note first routes through `record_pattern`,
+carry the returned `pattern_iri` into the later assertion stage, for example
+`stage_map_assertion_change(..., supporting_patterns=[pattern_iri])`, when the
+candidate map assertion should preserve that pattern support. The review bundle
+can then show the staged assertion as directly supported by the advisory pattern
+instead of leaving the reviewer to reconnect the two rows manually.
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.
