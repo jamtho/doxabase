@@ -1140,6 +1140,13 @@ def search_tool(
         "limit": result.limit,
         "offset": result.offset,
         "count": len(result.matches),
+        "scope_hint": (
+            to_dict(result.scope_hint) if result.scope_hint is not None else None
+        ),
+        "suggested_next_actions": [
+            to_dict(action) for action in result.suggested_next_actions
+        ],
+        "suggested_next_calls": list(result.suggested_next_calls),
     }
 
 

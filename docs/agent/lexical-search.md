@@ -91,6 +91,14 @@ Use `graph` to narrow the search:
 Logical graph expansion applies where it already exists: `ontology` includes
 `base_ontology + ontology`.
 
+Unscoped search can be seed-heavy for generic project words such as "storage",
+"row count", or "query", because immutable base ontology and shape text are also
+indexed. When `doxabase.search(query=..., graph=None)` returns a page dominated
+by seed graphs, the result carries `scope_hint.status =
+"seed_heavy_unscoped_results"` plus scoped retry actions. Follow those actions,
+usually starting with `graph="map"`, before deciding project facts are absent.
+Scoped searches such as `graph="map"` omit the hint.
+
 ## Examples
 
 Python:

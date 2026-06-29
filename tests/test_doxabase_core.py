@@ -20743,6 +20743,47 @@ def test_search_finds_fixture_literals_with_resource_context(tmp_path: Path) -> 
     assert "MMSI" in match.snippet
 
 
+def test_unscoped_seed_heavy_search_suggests_project_graph_retries(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.record_map_storage_access(
+        "https://example.test/project#OnlyStorageAccess",
+        label="Only project storage access",
+        description="Project storage access fact that should be easy to find.",
+        storage_protocol="rc:S3CompatibleStorage",
+        location_kind="prefix",
+        storage_root="s3://example-project",
+    )
+
+    unscoped = db.search("storage", limit=5)
+
+    assert unscoped.scope_hint is not None
+    assert unscoped.scope_hint.status == "seed_heavy_unscoped_results"
+    assert unscoped.scope_hint.seed_match_count > unscoped.scope_hint.project_match_count
+    assert unscoped.scope_hint.seed_graphs == ["base_ontology", "base_shapes"]
+    assert unscoped.scope_hint.suggested_graphs == [
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+    ]
+    assert [
+        action.arguments for action in unscoped.scope_hint.suggested_next_actions
+    ] == [
+        {"query": "storage", "graph": "map", "limit": 5, "offset": 0},
+        {"query": "storage", "graph": "observations", "limit": 5, "offset": 0},
+        {"query": "storage", "graph": "patterns", "limit": 5, "offset": 0},
+        {"query": "storage", "graph": "evidence", "limit": 5, "offset": 0},
+    ]
+    assert unscoped.suggested_next_calls == unscoped.scope_hint.suggested_next_calls
+
+    scoped = db.search("storage", graph="map", limit=5)
+    assert scoped.scope_hint is None
+    assert scoped.suggested_next_actions == []
+    assert {match.graph for match in scoped.matches} == {"map"}
+
+
 def test_search_falls_back_to_same_dataset_co_mentions(
     tmp_path: Path,
 ) -> None:

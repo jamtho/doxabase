@@ -8184,6 +8184,55 @@ def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
     )
 
 
+def test_search_tool_suggests_scoped_retries_for_seed_heavy_unscoped_results(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#OnlyStorageAccess",
+        label="Only project storage access",
+        description="Project storage access fact that should be easy to find.",
+        storage_protocol="rc:S3CompatibleStorage",
+        location_kind="prefix",
+        storage_root="s3://example-project",
+    )
+
+    result = search_tool(db, query="storage", limit=5)
+
+    assert result["graph"] is None
+    assert result["scope_hint"]["status"] == "seed_heavy_unscoped_results"
+    assert result["scope_hint"]["seed_match_count"] > result["scope_hint"][
+        "project_match_count"
+    ]
+    assert result["scope_hint"]["suggested_graphs"] == [
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+    ]
+    assert result["suggested_next_actions"] == result["scope_hint"][
+        "suggested_next_actions"
+    ]
+    first_action = result["suggested_next_actions"][0]
+    assert first_action["tool_name"] == "search"
+    assert first_action["mcp_tool_name"] == "doxabase.search"
+    assert first_action["arguments"] == {
+        "query": "storage",
+        "graph": "map",
+        "limit": 5,
+        "offset": 0,
+    }
+    assert result["suggested_next_calls"] == result["scope_hint"][
+        "suggested_next_calls"
+    ]
+
+    scoped = search_tool(db, query="storage", graph="map", limit=5)
+    assert scoped["scope_hint"] is None
+    assert scoped["suggested_next_actions"] == []
+    assert {match["graph"] for match in scoped["matches"]} == {"map"}
+
+
 def test_fixture_loading_replace_keeps_all_fixtures(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
 

@@ -304,7 +304,10 @@ Lexically searches literal RDF claims and URI-valued graph terms, returning
 matched resources with graph, IRI, label, types, predicate, matched text, and
 snippet. Use it to rediscover caveats, observations, evidence, labels, path
 templates, source notes, column names, and exact project vocabulary tokens such
-as custom profile metric kinds.
+as custom profile metric kinds. When an unscoped search page is dominated by
+immutable seed graph hits, the response includes `scope_hint` and scoped retry
+`suggested_next_actions`; follow those before concluding project map,
+observation, pattern, or evidence facts are absent.
 
 `doxabase.describe_dataset`
 

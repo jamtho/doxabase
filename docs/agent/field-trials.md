@@ -2583,6 +2583,12 @@ few useful gaps:
   sibling layout remains, and exposes a reviewed
   `remove_stale_physical_layout_link` staging action that removes the stale
   `rc:hasPhysicalLayout` assertion.
+- A cold-start search trial found unscoped lexical searches for generic terms
+  such as "storage" and "row count" can return mostly immutable seed graph hits,
+  hiding current project facts. `search(graph=None)` now adds
+  `scope_hint.status="seed_heavy_unscoped_results"` plus scoped retry actions
+  when the returned page is seed-heavy; follow `graph="map"` and the other
+  project graph retries before treating a project fact as absent.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

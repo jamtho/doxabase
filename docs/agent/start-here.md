@@ -45,7 +45,10 @@ When arriving cold, use this route before reading every reference doc.
 5. Call `doxabase.graph_overview` to see graph roles, counts, classes, and
    predicates.
 6. Call `doxabase.search` for remembered terms, dataset names, caveats, source
-   notes, columns, or question-shaped keywords.
+   notes, columns, or question-shaped keywords. Prefer a graph scope such as
+   `graph="map"` when you know you want current project facts. If an unscoped
+   search returns `scope_hint.status="seed_heavy_unscoped_results"`, follow the
+   scoped retry actions before deciding the project fact is absent.
 7. Call `doxabase.list_entities` for likely entry points, usually
    `type="rc:Dataset"` or `type="rc:Table"` in `graph="map"`.
 8. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.

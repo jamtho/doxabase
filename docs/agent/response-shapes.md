@@ -358,6 +358,9 @@ result.graph
 result.matches
 result.limit
 result.offset
+result.scope_hint
+result.suggested_next_actions
+result.suggested_next_calls
 ```
 
 Each `SearchMatch` has:
@@ -378,6 +381,14 @@ Search text can come from a literal object or a URI-valued graph term. URI
 matches are useful for exact project vocabulary tokens such as custom profile
 metric kinds; add labels or descriptions in the ontology when agents need
 natural-language discovery.
+
+When `graph=None` and the returned page is dominated by immutable seed graphs,
+`scope_hint` is populated with `status="seed_heavy_unscoped_results"`,
+seed/project match counts, seed graph names, `suggested_graphs`, and scoped
+`search` retry actions. Use `suggested_next_actions` or
+`suggested_next_calls` to retry `graph="map"`, `graph="observations"`,
+`graph="patterns"`, or `graph="evidence"` before concluding project facts are
+absent. Scoped searches do not carry this hint.
 
 ## Assertion Support
 

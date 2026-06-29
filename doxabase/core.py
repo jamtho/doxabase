@@ -279,6 +279,11 @@ EXPORT_PRESETS: dict[str, tuple[str, ...]] = {
     ),
     "all_with_seeds": tuple(graph[0] for graph in DEFAULT_GRAPHS),
 }
+SEED_GRAPH_NAMES = {
+    name for name, _description, _mutable, system_seed, _source_path in DEFAULT_GRAPHS
+    if system_seed
+}
+SEARCH_SCOPE_HINT_GRAPHS = ("map", "observations", "patterns", "evidence")
 
 
 class DoxaBaseError(Exception):
@@ -3158,12 +3163,27 @@ class SearchMatch:
 
 
 @dataclass(frozen=True)
+class SearchScopeHint:
+    status: str
+    message: str
+    seed_match_count: int
+    project_match_count: int
+    seed_graphs: list[str]
+    suggested_graphs: list[str]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class SearchResults:
     query: str
     graph: str | None
     matches: list[SearchMatch]
     limit: int
     offset: int
+    scope_hint: SearchScopeHint | None = None
+    suggested_next_actions: list[SuggestedNextAction] = field(default_factory=list)
+    suggested_next_calls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -10915,12 +10935,89 @@ class DoxaBase:
             )
             for row in rows
         ]
+        scope_hint = self._search_scope_hint(
+            query=query,
+            graph=graph,
+            matches=matches,
+            limit=limit,
+        )
+        suggested_next_actions = (
+            scope_hint.suggested_next_actions if scope_hint is not None else []
+        )
         return SearchResults(
             query=query,
             graph=graph,
             matches=matches,
             limit=limit,
             offset=offset,
+            scope_hint=scope_hint,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+        )
+
+    def _search_scope_hint(
+        self,
+        *,
+        query: str,
+        graph: str | None,
+        matches: list[SearchMatch],
+        limit: int,
+    ) -> SearchScopeHint | None:
+        if graph is not None or not matches:
+            return None
+        seed_graphs = sorted(
+            {match.graph for match in matches if match.graph in SEED_GRAPH_NAMES}
+        )
+        if not seed_graphs:
+            return None
+        seed_match_count = sum(1 for match in matches if match.graph in SEED_GRAPH_NAMES)
+        project_match_count = len(matches) - seed_match_count
+        if seed_match_count <= project_match_count:
+            return None
+        actions = [
+            self._search_scoped_retry_action(query=query, graph=retry_graph, limit=limit)
+            for retry_graph in SEARCH_SCOPE_HINT_GRAPHS
+        ]
+        return SearchScopeHint(
+            status="seed_heavy_unscoped_results",
+            message=(
+                "Unscoped search results are dominated by immutable seed graphs. "
+                "If project context was intended, retry with a project graph scope."
+            ),
+            seed_match_count=seed_match_count,
+            project_match_count=project_match_count,
+            seed_graphs=seed_graphs,
+            suggested_graphs=list(SEARCH_SCOPE_HINT_GRAPHS),
+            suggested_next_actions=actions,
+            suggested_next_calls=[action.call for action in actions],
+        )
+
+    def _search_scoped_retry_action(
+        self,
+        *,
+        query: str,
+        graph: str,
+        limit: int,
+    ) -> SuggestedNextAction:
+        arguments = {
+            "query": query,
+            "graph": graph,
+            "limit": limit,
+            "offset": 0,
+        }
+        return SuggestedNextAction(
+            action_label=f"Retry search in {graph}",
+            tool_name="search",
+            mcp_tool_name="doxabase.search",
+            arguments=arguments,
+            reason=(
+                "Unscoped search results are seed-heavy; retrying a project graph "
+                "scope can surface current map facts, observations, patterns, or "
+                "evidence without seed ontology noise."
+            ),
+            call=self._suggested_call_string("search", arguments),
         )
 
     def _co_mentioned_search_rows(
