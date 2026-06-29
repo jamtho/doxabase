@@ -117,7 +117,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         graphs: list[str] | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        """Scan graph literals for suspicious credential-like values."""
+        """Scan graph terms for suspicious credential-like values."""
 
         return scan_sensitive_literals_tool(db, graphs=graphs, limit=limit)
 

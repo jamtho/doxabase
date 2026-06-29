@@ -24,13 +24,18 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 
 `doxabase.scan_sensitive_literals`
 
-Scans selected graph roles for suspicious credential-like literals or URI
-values and returns only redacted snippets. Use it before sharing `export_graph`
-or `export_trig` artifacts when storage, evidence, source paths, or descriptions
-may contain secrets. This is a conservative audit helper, not a proof that the
-graph is secret-free. Export helpers report `sensitive_literal_count` and
-`privacy_warnings` when this scan finds matches, but exports remain faithful RDF
-and do not redact automatically.
+Scans selected graph roles for suspicious credential-like subject URI, object
+URI, or literal terms and returns only redacted snippets. Each match includes
+`term_position` and `term_kind` so agents can tell whether the hit came from a
+subject IRI or an object value. Use it before sharing `export_graph` or
+`export_trig` artifacts when storage, evidence, source paths, identifiers, or
+descriptions may contain secrets. This is a conservative audit helper, not a
+proof that the graph is secret-free. Export helpers report
+`sensitive_literal_count` and `privacy_warnings` when this scan finds matches,
+but exports remain faithful RDF and do not redact automatically.
+If a returned context field such as `subject` or `predicate` itself contains a
+sensitive-looking value, that context field is also replaced with a redacted
+marker.
 The scan is not a general path/shareability hygiene check: non-secret local
 paths, object-store URIs, endpoint URLs, and relative paths are preserved in
 exports and do not by themselves trigger `privacy_warnings`. Keep user-specific
@@ -1761,7 +1766,8 @@ the `map` graph in Turtle. Use it for quick single-graph review artifacts. The
 result includes per-graph triple counts plus privacy warning counts from
 `scan_sensitive_literals`. Warnings do not block export and the written RDF is
 not redacted. Pass `fail_on_sensitive=true` when the export should raise before
-creating or overwriting an artifact if the selected graph roles scan dirty.
+creating or overwriting an artifact if the selected graph roles contain
+sensitive-looking subject URI, object URI, or literal terms.
 
 `doxabase.replace_graph_triples`
 
@@ -1794,11 +1800,11 @@ unchanged when selected, with privacy warnings rather than redaction.
 All-with-seeds bundles may require special import handling because normal
 capsules protect `base_ontology` and `base_shapes`.
 `sensitive_literal_count` and `privacy_warnings` apply to the selected export
-graphs; workflow exports include evidence, so source paths and evidence source
-strings can trigger privacy warnings. Pass `fail_on_sensitive=true` for
-unattended or shareable exports; the tool scans first and raises before
-creating or overwriting the artifact when potential sensitive literals are
-found.
+graphs; workflow exports include evidence, so source paths, subject IRIs, and
+evidence source strings can trigger privacy warnings. Pass
+`fail_on_sensitive=true` for unattended or shareable exports; the tool scans
+first and raises before creating or overwriting the artifact when potential
+sensitive graph terms are found.
 If a copied or older capsule fails staging because immutable `base_ontology`
 is missing current staging vocabulary, `seed_base_graphs()` will not refresh a
 non-empty seed graph. Export the mutable project graphs with the default project
@@ -1835,9 +1841,9 @@ those ancestor IRIs explicitly when the receiving agent needs exact full-chain
 lineage recovery. The bundle may include historical triples that are no longer
 current graph facts. Snapshot JSON is a faithful handoff artifact, not a
 redacted shareable view. The export result includes `sensitive_literal_count`
-and `privacy_warnings` from scanning the stored snapshot quad objects; pass
-`fail_on_sensitive=true` when unattended or shareable snapshot exports should
-raise before creating or overwriting the JSON artifact.
+and `privacy_warnings` from scanning stored snapshot quad subjects and object
+terms; pass `fail_on_sensitive=true` when unattended or shareable snapshot
+exports should raise before creating or overwriting the JSON artifact.
 
 `doxabase.load_example_fixtures`
 

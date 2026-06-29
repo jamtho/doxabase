@@ -1210,6 +1210,8 @@ def test_scan_sensitive_literals_tool_returns_redacted_payload(tmp_path: Path) -
     assert result["warnings"]
     assert fake_secret not in str(result["matches"])
     assert all("redacted_snippet" in match for match in result["matches"])
+    assert all("term_position" in match for match in result["matches"])
+    assert all("term_kind" in match for match in result["matches"])
 
 
 def test_export_tools_can_block_sensitive_literals_before_writing(

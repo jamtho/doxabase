@@ -74,12 +74,13 @@ db.export_handoff_bundle(
 ```
 
 `export_graph()` writes one flattened RDF graph, usually Turtle.
-`scan_sensitive_literals()` returns redacted credential-like literal matches for
-selected graph roles. `export_graph()` and `export_trig()` include
+`scan_sensitive_literals()` returns redacted credential-like matches for selected
+graph roles, including subject URI, object URI, and literal terms. Matches carry
+`term_position` and `term_kind`. `export_graph()` and `export_trig()` include
 `sensitive_literal_count` and `privacy_warnings`; exports are not redacted
 automatically. For unattended or shareable exports, pass
 `fail_on_sensitive=True` to scan selected graph roles first and raise before
-creating or overwriting the artifact when potential sensitive literals are
+creating or overwriting the artifact when potential sensitive graph terms are
 found.
 Non-secret path-shaped values such as local paths, object-store URIs, endpoint
 URLs, and relative paths remain ordinary graph content: they are preserved in
@@ -113,10 +114,11 @@ receiver import sequence.
 `export_revision_snapshots()` writes a faithful JSON handoff bundle for stored
 revision snapshot rows. Its result includes `sensitive_literal_count` and
 `privacy_warnings`; pass `fail_on_sensitive=True` to raise before creating or
-overwriting the JSON artifact when stored snapshot quads scan dirty. Pass
-`revision_iris=[applied_iri]` to preserve the applied after-snapshot plus the
-staged source before-snapshot needed by one applied staged revision diff, or omit
-the filter to export all stored snapshot rows in the capsule.
+overwriting the JSON artifact when stored snapshot quad subjects or object terms
+scan dirty. Pass `revision_iris=[applied_iri]` to preserve the applied
+after-snapshot plus the staged source before-snapshot needed by one applied
+staged revision diff, or omit the filter to export all stored snapshot rows in
+the capsule.
 
 ## Replace Graph Triples
 

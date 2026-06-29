@@ -98,8 +98,9 @@ When both project/history RDF and exact snapshot rows are needed, prefer
 with combined path and privacy preflight. Pass `manifest_path` when the receiver
 will need a durable pairing file and expected import sequence. Snapshot JSON is
 faithful and may preserve historical sensitive-looking values; review its
-`sensitive_literal_count` and `privacy_warnings`, or pass
-`fail_on_sensitive=True`, before sharing the artifact.
+`sensitive_literal_count` and `privacy_warnings`, including matches in stored
+quad subjects as well as object terms, or pass `fail_on_sensitive=True`, before
+sharing the artifact.
 Choose the export artifact by the receiving task:
 
 - `export_trig(graphs="workflow")` / `graphs="review_bundle"` is for review

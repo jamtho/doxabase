@@ -412,6 +412,8 @@ class SensitiveLiteralMatch:
     subject: str
     predicate: str
     object_kind: str
+    term_position: str
+    term_kind: str
     match_kind: str
     redacted_snippet: str
 
@@ -3636,7 +3638,7 @@ class DoxaBase:
             mcp_tool_name="doxabase.scan_sensitive_literals",
             arguments=arguments,
             reason=(
-                "Run the redacted sensitive-literal scan before sharing RDF "
+                "Run the redacted sensitive graph-term scan before sharing RDF "
                 "exports; use fail_on_sensitive=True for blocking exports."
             ),
             call=self._suggested_call_string("scan_sensitive_literals", arguments),
@@ -3646,7 +3648,7 @@ class DoxaBase:
             task_type="privacy_export_review",
             source="scan_sensitive_literals",
             reason=(
-                "Project graph roles contain potential sensitive literals; "
+                "Project graph roles contain potential sensitive graph terms; "
                 "project_brief reports only the count and a redacted scan route."
             ),
             suggested_next_action=action,
@@ -30695,7 +30697,9 @@ class DoxaBase:
         for revision_iri, next_action in rows:
             if next_action is None:
                 continue
-            queues.setdefault(next_action.queue, []).append(revision_iri)
+            queue = queues.setdefault(next_action.queue, [])
+            if revision_iri not in queue:
+                queue.append(revision_iri)
         return queues
 
     @staticmethod
@@ -37639,32 +37643,38 @@ class DoxaBase:
             graph_role = str(entry["graph_role"])
             revision_iri = str(entry["revision_iri"])
             for quad in entry["quads"]:
-                if quad.get("object_kind") not in {"literal", "uri"}:
-                    continue
-                object_value = quad.get("object")
-                if object_value is None:
-                    continue
-                match_kind, redacted_snippet = self._sensitive_literal_match(
-                    str(object_value)
-                )
-                if match_kind is None or redacted_snippet is None:
-                    continue
-                match_count += 1
-                if len(examples) < limit:
-                    examples.append(
-                        (
-                            f"{graph_role} {self._compact_iri(str(quad['predicate']))} "
-                            f"{redacted_snippet} in snapshot for {revision_iri}"
-                        )
+                for term_position, term_kind, term_value in (
+                    ("subject", "uri", quad.get("subject")),
+                    ("object", quad.get("object_kind"), quad.get("object")),
+                ):
+                    if term_kind not in {"literal", "uri"} or term_value is None:
+                        continue
+                    match_kind, redacted_snippet = self._sensitive_literal_match(
+                        str(term_value)
                     )
-                else:
-                    omitted += 1
+                    if match_kind is None or redacted_snippet is None:
+                        continue
+                    predicate = self._redact_sensitive_context_value(
+                        str(quad["predicate"])
+                    )
+                    predicate_label = self._compact_iri(predicate) or predicate
+                    match_count += 1
+                    if len(examples) < limit:
+                        examples.append(
+                            (
+                                f"{graph_role} {term_position} "
+                                f"{predicate_label} "
+                                f"{redacted_snippet} in snapshot for {revision_iri}"
+                            )
+                        )
+                    else:
+                        omitted += 1
 
         if match_count == 0:
             return 0, []
         warning = (
             f"Revision snapshot export includes {match_count} potential sensitive "
-            "literal match(es). Snapshot JSON faithfully preserves stored graph "
+            "term match(es). Snapshot JSON faithfully preserves stored graph "
             "content; run scan_sensitive_literals on project graph roles before "
             "sharing. Redacted examples: "
             + "; ".join(examples)
@@ -37965,7 +37975,7 @@ class DoxaBase:
         omitted = 0
         for row in rows:
             match_kind, redacted_snippet = self._sensitive_literal_match(
-                str(row["object"])
+                str(row["term_value"])
             )
             if match_kind is None or redacted_snippet is None:
                 continue
@@ -37973,9 +37983,15 @@ class DoxaBase:
                 matches.append(
                     SensitiveLiteralMatch(
                         graph=str(row["graph"]),
-                        subject=str(row["subject"]),
-                        predicate=str(row["predicate"]),
+                        subject=self._redact_sensitive_context_value(
+                            str(row["subject"])
+                        ),
+                        predicate=self._redact_sensitive_context_value(
+                            str(row["predicate"])
+                        ),
                         object_kind=str(row["object_kind"]),
+                        term_position=str(row["term_position"]),
+                        term_kind=str(row["term_kind"]),
                         match_kind=match_kind,
                         redacted_snippet=redacted_snippet,
                     )
@@ -38003,13 +38019,32 @@ class DoxaBase:
         return list(
             self._conn.execute(
                 f"""
-                SELECT graph, subject, predicate, object, object_kind
+                SELECT
+                    graph,
+                    subject,
+                    predicate,
+                    object_kind,
+                    'subject' AS term_position,
+                    subject_kind AS term_kind,
+                    subject AS term_value
+                FROM quads
+                WHERE graph IN ({placeholders})
+                  AND subject_kind = 'uri'
+                UNION ALL
+                SELECT
+                    graph,
+                    subject,
+                    predicate,
+                    object_kind,
+                    'object' AS term_position,
+                    object_kind AS term_kind,
+                    object AS term_value
                 FROM quads
                 WHERE graph IN ({placeholders})
                   AND object_kind IN ('literal', 'uri')
-                ORDER BY graph, subject, predicate, object
+                ORDER BY graph, subject, predicate, term_position, term_value
                 """,
-                graph_names,
+                [*graph_names, *graph_names],
             )
         )
 
@@ -38028,6 +38063,12 @@ class DoxaBase:
                 match_kind,
             )
         return None, None
+
+    def _redact_sensitive_context_value(self, value: str) -> str:
+        match_kind, redacted_snippet = self._sensitive_literal_match(value)
+        if match_kind is None or redacted_snippet is None:
+            return value
+        return redacted_snippet
 
     @staticmethod
     def _redacted_sensitive_snippet(
@@ -38048,9 +38089,9 @@ class DoxaBase:
         if match_count == 0:
             return []
         warning = (
-            "Potential sensitive literals detected. Review redacted scan results "
+            "Potential sensitive graph terms detected. Review redacted scan results "
             "before sharing exports; DoxaBase preserves caller-authored graph "
-            "literals and does not redact RDF automatically."
+            "terms and does not redact RDF automatically."
         )
         if omitted_match_count:
             warning += f" {omitted_match_count} additional match(es) omitted by limit."
@@ -38065,13 +38106,14 @@ class DoxaBase:
             return 0, []
         example_text = "; ".join(
             (
-                f"{match.graph} {self._compact_iri(match.predicate)} "
+                f"{match.graph} {match.term_position} "
+                f"{self._compact_iri(match.predicate) or match.predicate} "
                 f"{match.redacted_snippet}"
             )
             for match in scan.matches[:3]
         )
         warning = (
-            f"Export includes {scan.match_count} potential sensitive literal "
+            f"Export includes {scan.match_count} potential sensitive graph term "
             "match(es). Run scan_sensitive_literals on these graph roles before "
             "sharing. Redacted examples: "
             f"{example_text}"
@@ -38090,12 +38132,12 @@ class DoxaBase:
         if not fail_on_sensitive or sensitive_literal_count == 0:
             return
         warning_text = " ".join(privacy_warnings) if privacy_warnings else (
-            "Potential sensitive literals detected."
+            "Potential sensitive graph terms detected."
         )
         raise DoxaBaseError(
             "Export blocked because fail_on_sensitive=True and the selected "
             f"graph roles contain {sensitive_literal_count} potential sensitive "
-            f"literal match(es). {warning_text}"
+            f"graph term match(es). {warning_text}"
         )
 
     @staticmethod

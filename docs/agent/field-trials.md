@@ -2334,6 +2334,13 @@ few useful gaps:
   needed a durable pairing artifact, so `manifest_path` can now persist
   artifact paths and the expected `import_trig` / `import_revision_snapshots`
   sequence.
+- A later privacy/export trial found the redacted scanner only checked literal
+  or URI objects, so a credential-like identifier embedded in an RDF subject IRI
+  could pass `scan_sensitive_literals`, `export_revision_snapshots`, and
+  `export_handoff_bundle(fail_on_sensitive=True)`. The scan now covers subject
+  URI terms as well as object URI/literal terms, and match payloads include
+  `term_position` / `term_kind` so agents can review whether the hit came from
+  an identifier or an object value.
 - A query/storage frontier trial found database-backed routes could have storage
   and relation metadata modeled correctly but no structured repair lane for
   `missing_physical_layout`. Once storage is linked, that issue now exposes a
@@ -2394,8 +2401,8 @@ few useful gaps:
   the reviewed removal of the misplaced dataset or partition template. Rerun
   `describe_query_context` after each applied query metadata repair.
 - A privacy/export query-planning trial confirmed DoxaBase's scanner blocks fake
-  secret-shaped literals in RDF exports with `fail_on_sensitive=true` and warns
-  in Markdown review bundles. Markdown staged/profile review exports now also
+  secret-shaped RDF terms in exports with `fail_on_sensitive=true` and warns in
+  Markdown review bundles. Markdown staged/profile review exports now also
   accept `fail_on_sensitive=true` to raise before writing generated review bundles
   with secret-shaped literals. Query-planning surfaces intentionally echo
   non-secret handles and paths such as endpoint profile names,
