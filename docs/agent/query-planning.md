@@ -12,6 +12,15 @@ and `draft_query_plan` returns
 scan. Use `describe_context_slice` or `describe_resource` for those assets
 unless a separate queryable table route has been modeled.
 
+Query-planning helpers preserve reviewed non-secret handles faithfully:
+source paths, result-source paths, endpoint profile names, credential-reference
+handles, storage roots, URI templates, relation identifiers, and database
+connection references can appear in `describe_dataset`, `describe_query_context`,
+`draft_query_plan`, `describe_profile_run`, context slices, and exports. Treat
+them as collaborator-visible planning metadata, not credentials. Do not paste raw
+payloads into reports unless those handles and paths are safe for that audience;
+summarize or redact surprising local/runtime references.
+
 Before fixture query-planning trials against the active MCP capsule, sanity-check
 `graph_overview.key_counts`. If AIS or Polymarket tables exist but
 `storage_accesses == 0`, treat that capsule as stale or intentionally reduced
@@ -420,12 +429,12 @@ on the storage access before using a database handoff. The issue carries
 `stage_map_assertion_change` templates; follow `repair_hint.actions` order. In
 the common move case, add the reviewed relation identifier to the storage
 access, then remove the misplaced source template only if review confirms it was
-relation metadata rather than a real file/object path. If
-`candidate_relation_identifier.already_on_storage_access` is true, the storage
-access already has the same relation-like value; the remove action is first and
-the add action is marked `action_status="already_satisfied"` with
+relation metadata rather than a real file/object path. If the storage access
+already carries relation template(s), the remove action is first and the add
+action is marked `action_status="already_satisfied"` with
 `skip_when_already_satisfied=true`, so automation should skip that duplicate
-add. Each add-template repair declares
+add and inspect `candidate_relation_identifier.storage_access_relation_templates`
+against the query target candidates. Each add-template repair declares
 `required_extra_arguments=["object", "rationale"]` and
 `placeholder_fields=["object"]`; replace `object` with the reviewed relation
 identifier and add a reviewed rationale before calling
@@ -434,7 +443,10 @@ review, not the relation identifier. Root-only database storage without such a
 template carries `database_relation_template_missing` even when
 `location_kind == "object"`;
 its `details.repair_hint` gives the reviewed add-template action for the
-storage access.
+storage access. After applying each query-planning metadata repair, rerun
+`describe_query_context` for the dataset before applying the next repair or
+drafting a plan; apply responses route staged frontier recovery, not the full
+query-context repair checklist.
 
 If `runtime_resolution_required=False` for bare database storage, read the note
 before treating it as reachable. The boolean only says there is no recorded

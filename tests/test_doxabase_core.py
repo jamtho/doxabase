@@ -16265,67 +16265,80 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                 "predicate": "rc:pathTemplate",
                 "required_template_source": "storage_access",
             },
-            "candidate_relation_identifier": {
-                "value": partition_template,
-                "requires_review": True,
-                "already_on_storage_access": False,
-                "review_note": (
-                    "Dataset and partition path templates are not database "
-                    "relation identifiers by default; replace this value with "
-                    "the reviewed schema/table/relation before staging the add."
-                ),
+                "candidate_relation_identifier": {
+                    "value": partition_template,
+                    "requires_review": True,
+                    "already_on_storage_access": False,
+                    "storage_access_relation_templates": [
+                        "mart.events",
+                        "mart.events_archive",
+                    ],
+                    "review_note": (
+                        "Dataset and partition path templates are not database "
+                        "relation identifiers by default; replace this value with "
+                        "the reviewed schema/table/relation before staging the add."
+                    ),
+                },
+                "actions": [
+                    {
+                        "action_type": "remove_misplaced_source_template",
+                        "tool_name": "stage_map_assertion_change",
+                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "required_extra_arguments": ["rationale"],
+                        "rationale_template": (
+                            "Reviewed source template as misplaced database "
+                            "relation metadata."
+                        ),
+                        "arguments": {
+                            "subject": partition.iri,
+                            "predicate": "rc:pathTemplate",
+                            "object": partition_template,
+                            "object_kind": "literal",
+                            "change_kind": "remove",
+                            "graph": "map",
+                        },
+                        "condition": (
+                            "Only after review confirms the source template was "
+                            "misplaced relation metadata rather than a real "
+                            "file/object path."
+                        ),
+                    },
+                    {
+                        "action_type": "add_reviewed_relation_template",
+                        "tool_name": "stage_map_assertion_change",
+                        "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                        "required_extra_arguments": ["object", "rationale"],
+                        "rationale_template": (
+                            "Reviewed database relation identifier for "
+                            f"{storage.iri}."
+                        ),
+                        "arguments_template": {
+                            "subject": storage.iri,
+                            "predicate": "rc:pathTemplate",
+                            "object": "<reviewed_database_relation_identifier>",
+                            "object_kind": "literal",
+                            "change_kind": "add",
+                            "graph": "map",
+                        },
+                        "placeholder_fields": ["object"],
+                        "reviewed_value_fields": ["object"],
+                        "action_status": "already_satisfied",
+                        "skip_when_already_satisfied": True,
+                        "existing_storage_access_relation_templates": [
+                            "mart.events",
+                            "mart.events_archive",
+                        ],
+                        "condition": (
+                            "The storage access already carries database relation "
+                            "template(s). Inspect query target candidates; if one is "
+                            "the reviewed relation, run remove_misplaced_source_template "
+                            "instead of adding another relation template. If none is "
+                            "correct, stage a separate reviewed add."
+                        ),
+                    },
+                ],
             },
-            "actions": [
-                {
-                    "action_type": "add_reviewed_relation_template",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "required_extra_arguments": ["object", "rationale"],
-                    "rationale_template": (
-                        "Reviewed database relation identifier for "
-                        f"{storage.iri}."
-                    ),
-                    "arguments_template": {
-                        "subject": storage.iri,
-                        "predicate": "rc:pathTemplate",
-                        "object": "<reviewed_database_relation_identifier>",
-                        "object_kind": "literal",
-                        "change_kind": "add",
-                        "graph": "map",
-                    },
-                    "placeholder_fields": ["object"],
-                    "reviewed_value_fields": ["object"],
-                    "condition": (
-                        "Replace the placeholder object with the reviewed "
-                        "database relation identifier before staging."
-                    ),
-                },
-                {
-                    "action_type": "remove_misplaced_source_template",
-                    "tool_name": "stage_map_assertion_change",
-                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
-                    "required_extra_arguments": ["rationale"],
-                    "rationale_template": (
-                        "Reviewed source template as misplaced database "
-                        "relation metadata."
-                    ),
-                    "arguments": {
-                        "subject": partition.iri,
-                        "predicate": "rc:pathTemplate",
-                        "object": partition_template,
-                        "object_kind": "literal",
-                        "change_kind": "remove",
-                        "graph": "map",
-                    },
-                    "condition": (
-                        "Only after review confirms the source template was "
-                        "misplaced relation metadata rather than a real "
-                        "file/object path."
-                    ),
-                },
-            ],
-        },
-    }
+        }
     assert context.suggested_repair_action_group_count == 1
     repair_group = context.suggested_repair_action_groups[0]
     assert repair_group.issue_index == context.issues.index(issue)
@@ -16338,16 +16351,22 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
     assert repair_group.repair_context["source"]["subject_iri"] == partition.iri
     assert repair_group.repair_context["target"]["storage_access_iri"] == storage.iri
     assert [action["action_type"] for action in repair_group.actions] == [
-        "add_reviewed_relation_template",
         "remove_misplaced_source_template",
+        "add_reviewed_relation_template",
     ]
-    assert repair_group.actions[0]["required_extra_arguments"] == [
+    assert repair_group.action_status_counts == {
+        "pending_review": 1,
+        "already_satisfied": 1,
+    }
+    assert repair_group.actions[0]["required_extra_arguments"] == ["rationale"]
+    assert repair_group.actions[1]["required_extra_arguments"] == [
         "object",
         "rationale",
     ]
-    assert repair_group.actions[0]["placeholder_fields"] == ["object"]
-    assert repair_group.actions[0]["reviewed_value_fields"] == ["object"]
-    assert repair_group.actions[1]["required_extra_arguments"] == ["rationale"]
+    assert repair_group.actions[1]["action_status"] == "already_satisfied"
+    assert repair_group.actions[1]["placeholder_fields"] == ["object"]
+    assert repair_group.actions[1]["reviewed_value_fields"] == ["object"]
+    assert repair_group.pending_required_extra_arguments == ["rationale"]
     partition_target_index, partition_target = next(
         (index, target)
         for index, target in enumerate(context.query_target_candidates)
@@ -16505,9 +16524,17 @@ def test_explicit_clean_candidate_can_ignore_sibling_database_template_mismatch(
     assert all(
         [action["action_type"] for action in group.actions]
         == [
-            "add_reviewed_relation_template",
             "remove_misplaced_source_template",
+            "add_reviewed_relation_template",
         ]
+        for group in context.suggested_repair_action_groups
+    )
+    assert all(
+        group.action_status_counts
+        == {
+            "pending_review": 1,
+            "already_satisfied": 1,
+        }
         for group in context.suggested_repair_action_groups
     )
     local_partition_index, local_partition = next(
@@ -16852,7 +16879,15 @@ def test_database_relation_repair_hint_templates_stage_and_apply(
         if issue.code == "database_relation_template_source_mismatch"
     )
     assert issue.details is not None
-    remove_action = issue.details["repair_hint"]["actions"][1]
+    repair_hint = issue.details["repair_hint"]
+    assert repair_hint["candidate_relation_identifier"][
+        "storage_access_relation_templates"
+    ] == ["mart.events"]
+    assert repair_hint["actions"][1]["action_status"] == "already_satisfied"
+    assert repair_hint["actions"][1][
+        "existing_storage_access_relation_templates"
+    ] == ["mart.events"]
+    remove_action = repair_hint["actions"][0]
     assert remove_action["required_extra_arguments"] == ["rationale"]
     remove_arguments = dict(remove_action["arguments"])
     remove_arguments["rationale"] = (

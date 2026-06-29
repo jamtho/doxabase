@@ -16234,24 +16234,53 @@ class DoxaBase:
                 "file/object path."
             ),
         }
-        target_already_has_template = template in storage_access.path_templates
-        if target_already_has_template:
-            add_action = {
-                **add_action,
-                "action_status": "already_satisfied",
-                "skip_when_already_satisfied": True,
-                "condition": (
+        storage_access_relation_templates = list(storage_access.path_templates)
+        target_already_has_template = template in storage_access_relation_templates
+        target_has_relation_template = bool(storage_access_relation_templates)
+        if target_has_relation_template:
+            if target_already_has_template:
+                add_condition = (
                     "The storage access already carries this relation-like "
                     "template. Review the remaining misplaced source template "
                     "and run remove_misplaced_source_template instead of "
                     "adding a duplicate relation template."
+                )
+            else:
+                add_condition = (
+                    "The storage access already carries database relation "
+                    "template(s). Inspect query target candidates; if one is "
+                    "the reviewed relation, run remove_misplaced_source_template "
+                    "instead of adding another relation template. If none is "
+                    "correct, stage a separate reviewed add."
+                )
+            add_action = {
+                **add_action,
+                "action_status": "already_satisfied",
+                "skip_when_already_satisfied": True,
+                "existing_storage_access_relation_templates": (
+                    storage_access_relation_templates
                 ),
+                "condition": add_condition,
             }
         actions = (
             [remove_action, add_action]
-            if target_already_has_template
+            if target_has_relation_template
             else [add_action, remove_action]
         )
+        candidate_relation_identifier: dict[str, Any] = {
+            "value": template,
+            "requires_review": True,
+            "already_on_storage_access": target_already_has_template,
+            "review_note": (
+                "Dataset and partition path templates are not database "
+                "relation identifiers by default; replace this value with "
+                "the reviewed schema/table/relation before staging the add."
+            ),
+        }
+        if storage_access_relation_templates:
+            candidate_relation_identifier[
+                "storage_access_relation_templates"
+            ] = storage_access_relation_templates
         return {
             "action_type": "move_database_relation_template_to_storage_access",
             "requires_review": True,
@@ -16266,16 +16295,7 @@ class DoxaBase:
                 "predicate": "rc:pathTemplate",
                 "required_template_source": "storage_access",
             },
-            "candidate_relation_identifier": {
-                "value": template,
-                "requires_review": True,
-                "already_on_storage_access": target_already_has_template,
-                "review_note": (
-                    "Dataset and partition path templates are not database "
-                    "relation identifiers by default; replace this value with "
-                    "the reviewed schema/table/relation before staging the add."
-                ),
-            },
+            "candidate_relation_identifier": candidate_relation_identifier,
             "actions": actions,
         }
 

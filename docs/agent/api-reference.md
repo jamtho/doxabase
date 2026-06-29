@@ -340,10 +340,12 @@ ordered, review-gated repair templates; follow `repair_hint.actions` order.
 In the common database template-source move, add the reviewed relation
 identifier to the storage access, then remove the misplaced source template
 only if it was relation metadata rather than a real file/object path. If
-`candidate_relation_identifier.already_on_storage_access` is true, the storage
-access already has the same relation-like value; the remove action is first,
+`candidate_relation_identifier.storage_access_relation_templates` is present,
+the storage access already has relation template(s); the remove action is first,
 and the add action is marked `action_status="already_satisfied"` with
-`skip_when_already_satisfied=true`. Protocol/location hints offer reviewed
+`skip_when_already_satisfied=true`. `already_on_storage_access` remains the
+exact-value flag for whether the misplaced source template itself is already on
+the storage access. Protocol/location hints offer reviewed
 protocol/root/bucket/prefix edits
 and exact path-template add/remove repairs when a template caused the mismatch.
 Their templated actions name `placeholder_fields` and `reviewed_value_fields`

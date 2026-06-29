@@ -635,8 +635,8 @@ storage-access-owned templates become `relation_identifier` values. Dataset or
 partition path templates paired with database storage are review-only
 `database_relation_template_source_mismatch` candidates with no relation
 identifier; record the schema/table/relation on the storage access before using
-that route as a database handoff. If the storage access already has the same
-relation-like template, the repair action list puts
+that route as a database handoff. If the storage access already has one or more
+relation templates, the repair action list puts
 `remove_misplaced_source_template` first and marks the add action
 `already_satisfied` with `skip_when_already_satisfied=true` so automation can
 skip the duplicate add.
@@ -644,9 +644,10 @@ Read `issues[].details.repair_hint.actions` and follow the returned order. In
 the common move case, stage an add of the reviewed relation identifier onto the
 storage access, then stage removal of the misplaced source template only if
 review confirms it was relation metadata rather than a real file/object path.
-When `candidate_relation_identifier.already_on_storage_access` is true, the
-storage access already has that relation-like value; skip the already-satisfied
-add action and review the ordered remove action instead. Repair actions declare
+When `candidate_relation_identifier.storage_access_relation_templates` is
+present, inspect those storage-owned relation templates against the target
+candidates; skip the already-satisfied add action when one is the reviewed
+relation and review the ordered remove action instead. Repair actions declare
 `required_extra_arguments=["object", "rationale"]` and
 `placeholder_fields=["object"]` for the add-template step; replace `object` with
 the reviewed relation identifier and add a reviewed rationale before calling

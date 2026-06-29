@@ -2372,6 +2372,35 @@ few useful gaps:
   message. `describe_staged_revision()` now identifies applied events and points
   callers to inspect the event or retry with its staged source IRI, matching
   grouped export guidance.
+- A query/storage context-slice trial found dataset briefs routed seed tables to
+  `describe_query_context` only when `dataset_contexts[].operational_warnings`
+  already carried a physical metadata warning. Query-only repair groups such as
+  `database_relation_template_source_mismatch` could be invisible from the
+  slice. Seed-table context slices now inspect query-context repair groups too,
+  so `suggested_next_actions` points to `describe_query_context` before agents
+  draft or run queries.
+- A project-brief query-repair entrypoint trial found no additional product gap
+  after that fix: `project_brief.recommended_next_tasks` routed the synthetic
+  database relation mismatch to `describe_query_context`, and dataset context
+  slices did the same. The lower-level `project_brief.datasets[].query` summary
+  can still preserve review-gated `draft_query_plan` actions after the context
+  route; use the top-level task queue for autonomous ordering.
+- A database relation repair staging trial showed the add-then-remove workflow
+  reaches a clean database handoff, but after applying the reviewed storage
+  relation the remaining mismatch still suggested another placeholder add.
+  Relation-mismatch repair hints now expose existing storage-access relation
+  templates and mark the add action `already_satisfied` whenever the storage
+  access already carries relation template(s), so the remaining ordered action is
+  the reviewed removal of the misplaced dataset or partition template. Rerun
+  `describe_query_context` after each applied query metadata repair.
+- A privacy/export query-planning trial confirmed DoxaBase's scanner blocks fake
+  secret-shaped literals in RDF exports with `fail_on_sensitive=true` and warns
+  in Markdown review bundles, while query-planning surfaces intentionally echo
+  non-secret handles and paths such as endpoint profile names,
+  credential-reference handles, source/result paths, URI templates, relation
+  identifiers, and connection references. Treat raw helper payloads as
+  collaborator-visible planning metadata; summarize or redact unexpected
+  local/runtime references in reports.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

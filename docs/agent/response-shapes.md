@@ -2327,10 +2327,12 @@ inventory and carry `database_relation_template_source_mismatch` instead of a
 `relation_identifier`. The mismatch issue's `details.repair_hint` names the
 source template, storage-access target, candidate relation value for review,
 and ordered `stage_map_assertion_change` templates for adding the reviewed
-relation identifier and optionally removing the misplaced source template. Each
-add-template action declares `required_extra_arguments=["object", "rationale"]`
-and `placeholder_fields=["object"]`; replace `object` with the reviewed
-relation identifier and add a reviewed rationale before calling
+relation identifier and optionally removing the misplaced source template. If
+the storage access already has relation template(s), the remove action is
+ordered first and the add action is marked already satisfied. Each add-template
+action declares `required_extra_arguments=["object", "rationale"]` and
+`placeholder_fields=["object"]`; replace `object` with the reviewed relation
+identifier and add a reviewed rationale before calling
 `stage_map_assertion_change`.
 These cards do not resolve credentials, endpoint profiles, or executable SQL.
 `review_reasons` may include
@@ -2458,10 +2460,12 @@ protocol IRI, the allowed relation-template source list, and `repair_hint`.
 The repair hint names the source template, target storage access, reviewed
 relation placeholder, and ordered action templates; callers still supply a
 `rationale` for each staged add/remove. If the storage access already carries
-the same relation-like template, `candidate_relation_identifier` includes
-`already_on_storage_access=True`, the remove action is ordered first, and the
-add action is marked `action_status="already_satisfied"` so agents do not stage
-a duplicate relation template. Automation can also read
+relation template(s), `candidate_relation_identifier` includes
+`storage_access_relation_templates`, the remove action is ordered first, and
+the add action is marked `action_status="already_satisfied"` so agents do not
+stage a duplicate relation template. `already_on_storage_access` remains the
+exact-value flag for whether the misplaced source template itself is already
+on the storage access. Automation can also read
 `skip_when_already_satisfied=True` on that add action.
 `database_relation_template_missing` includes the affected storage access IRI,
 storage protocol IRI, storage root, location kind, allowed relation-template
@@ -2486,6 +2490,7 @@ repair_hint.candidate_relation_identifier
 repair_hint.candidate_relation_identifier.value
 repair_hint.candidate_relation_identifier.requires_review
 repair_hint.candidate_relation_identifier.already_on_storage_access
+repair_hint.candidate_relation_identifier.storage_access_relation_templates
 repair_hint.candidate_relation_identifier.review_note
 repair_hint.actions[].action_type
 repair_hint.actions[].action_status
