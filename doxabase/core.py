@@ -8397,7 +8397,11 @@ class DoxaBase:
             ),
             applied_revision_iri=lineage_applied_revision_iri,
             staged_revision_iri=lineage_staged_revision_iri,
-            applied_source_revision_iri=lineage_staged_revision_iri,
+            applied_source_revision_iri=(
+                lineage_staged_revision_iri
+                if lineage_applied_revision_iri is not None
+                else None
+            ),
             current_staged_revision_iri=current_staged_revision_iri,
             current_revision_iri=current_staged_revision_iri,
             latest_revision_iri=graph_lineage.latest_revision_iri,

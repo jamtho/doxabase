@@ -11938,6 +11938,8 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
         original.revision_iri,
     )
     assert stale_lineage.selected_role == "restaged_source"
+    assert stale_lineage.applied_revision_iri is None
+    assert stale_lineage.applied_source_revision_iri is None
     assert stale_lineage.current_staged_revision_iri == restaged.revision_iri
     assert stale_lineage.current_revision_iri == restaged.revision_iri
     assert stale_lineage.latest_revision_iri == restaged.revision_iri
@@ -11951,6 +11953,16 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
         original.revision_iri,
         restaged.revision_iri,
     ]
+    current_resource_lineage = db.describe_resource_revision_lineage(
+        orders,
+        restaged.revision_iri,
+    )
+    assert current_resource_lineage.selected_role == "current_staged_revision"
+    assert current_resource_lineage.applied_revision_iri is None
+    assert current_resource_lineage.applied_source_revision_iri is None
+    current_graph_lineage = db.describe_revision_lineage(restaged.revision_iri)
+    assert current_graph_lineage.applied_revision_iri is None
+    assert current_graph_lineage.applied_source_revision_iri is None
 
     applied = db.apply_staged_revision(
         restaged.revision_iri,

@@ -2937,6 +2937,12 @@ few useful gaps:
   and confirmed that scanner-clean context slices only cover selected triples.
   Mixed `project_brief` frontiers routed to `full_frontier_expansion` and the
   defined-metric context-only draft no longer created `profile_review`.
+- A resource/version browsing trial confirmed the new resource-lineage
+  `applied_source_revision_iri` alias helps cold agents name the staged source
+  that actually applied, but only when an applied event exists. Resource lineage
+  now matches graph lineage and returns `None` for unapplied stale or
+  still-current staged rows; use `current_staged_revision_iri` for those live
+  staged targets.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

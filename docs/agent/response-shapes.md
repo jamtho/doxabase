@@ -4004,7 +4004,9 @@ see the applied event after a successor has been applied. When the selected row
 is an old stale source whose restaged successor has already been applied,
 `applied_revision_iri` and `applied_diff` follow that applied successor while
 `staged_revision_iri` and its alias `applied_source_revision_iri` name the
-staged source that was actually applied.
+staged source that was actually applied. For still-current or stale unapplied
+staged rows, `applied_source_revision_iri` is `None`; use
+`current_staged_revision_iri` for the live staged target instead.
 `next_action_queue_item` names the selected row and exposes the resolved applied
 or current target without requiring a separate resource list join.
 `restage_chain_iris` preserves the original source route. `applied_diff_status`
