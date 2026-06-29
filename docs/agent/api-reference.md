@@ -81,7 +81,10 @@ terms. Matches carry `term_position` and `term_kind`. `export_graph()` and
 exports are not redacted automatically. For unattended or shareable exports, pass
 `fail_on_sensitive=True` to scan selected graph roles first and raise before
 creating or overwriting the artifact when potential sensitive graph terms are
-found.
+found. The scanner is conservative and not a complete secret detector, but it
+catches common private-key headers, bearer tokens, AWS access key IDs,
+`sk_` live/test style keys, key/password/secret assignments or query parameters,
+and explicit fake-secret test markers.
 Non-secret path-shaped values such as local paths, object-store URIs, endpoint
 URLs, and relative paths remain ordinary graph content: they are preserved in
 faithful RDF exports and do not by themselves trigger `privacy_warnings`.

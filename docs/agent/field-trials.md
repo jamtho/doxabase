@@ -2508,6 +2508,19 @@ few useful gaps:
   suggestions, so storage access, layout, partition, and column seeds can route
   to repair groups such as `missing_physical_layout` without changing the slice
   into a dataset brief.
+- A privacy/export staged Markdown trial confirmed bearer-style warnings,
+  line labels, `fail_on_sensitive=True`, and source-span linked support worked
+  after the export-support changes, but found bare `sk_` live/test style keys
+  were not matched by the shared scanner. Sensitive graph-term and Markdown
+  scans now include that key family; treat the scanner as a conservative
+  guardrail, not a complete replacement for human export review.
+- A profile-insight frontier trial confirmed awkward project metric and value
+  type workflows can record profile bundles, stage map updates, stage metric
+  vocabulary promotions, detect pending duplicate metric promotions, and export
+  related profile insight review bundles. Remaining presentation friction:
+  profile route bridge Markdown can repeat the same review lane several times
+  when one project metric appears across multiple profile observations; consider
+  grouping repeated lane labels while preserving full route keys in JSON.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

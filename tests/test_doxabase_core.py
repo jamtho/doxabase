@@ -2006,6 +2006,93 @@ def test_staged_markdown_exports_warn_about_sensitive_patch_literals(
     assert not blocked_grouped_path.exists()
 
 
+@pytest.mark.parametrize(
+    "key_mode",
+    [
+        "live",
+        "test",
+    ],
+)
+def test_staged_markdown_exports_block_sk_style_secret_keys(
+    tmp_path: Path,
+    key_mode: str,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    synthetic_key = "sk_" + key_mode + "_" + "abcdefghijklmnopqrstuvwx"
+    staged = db.stage_graph_revision(
+        summary="Stage credential caveat",
+        rationale="The export should block secret-key-shaped patch content.",
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:SecretKeyCaveat a rc:KnownCaveat ;
+                        rdfs:label "Secret key caveat" ;
+                        rc:caveatDescription "{synthetic_key}" .
+                """,
+            }
+        ],
+    )
+    history_scan = db.scan_sensitive_literals(graphs="history", limit=10)
+
+    assert "sk_secret_key" in {match.match_kind for match in history_scan.matches}
+    assert synthetic_key not in str(history_scan.matches)
+
+    single_path = tmp_path / "single-sk.md"
+    single_export = db.export_staged_revision(staged.revision_iri, single_path)
+    single_text = single_path.read_text(encoding="utf-8")
+
+    assert single_export.sensitive_literal_count == 1
+    assert single_export.privacy_warnings
+    assert synthetic_key not in " ".join(single_export.privacy_warnings)
+    assert synthetic_key in single_text
+    assert "## Privacy Warning" in single_text
+    secret_line = _line_number_containing(single_text, synthetic_key)
+    assert f"line {secret_line} " in " ".join(single_export.privacy_warnings)
+
+    grouped_path = tmp_path / "grouped-sk.md"
+    grouped_export = db.export_staged_revisions(
+        [staged.revision_iri],
+        grouped_path,
+    )
+    grouped_text = grouped_path.read_text(encoding="utf-8")
+
+    assert grouped_export.sensitive_literal_count == 1
+    assert grouped_export.privacy_warnings
+    assert synthetic_key not in " ".join(grouped_export.privacy_warnings)
+    assert synthetic_key in grouped_text
+    grouped_secret_line = _line_number_containing(grouped_text, synthetic_key)
+    assert f"line {grouped_secret_line} " in " ".join(
+        grouped_export.privacy_warnings
+    )
+
+    blocked_single_path = tmp_path / "blocked-single-sk.md"
+    with pytest.raises(DoxaBaseError) as single_excinfo:
+        db.export_staged_revision(
+            staged.revision_iri,
+            blocked_single_path,
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(single_excinfo.value)
+    assert synthetic_key not in str(single_excinfo.value)
+    assert not blocked_single_path.exists()
+
+    blocked_grouped_path = tmp_path / "blocked-grouped-sk.md"
+    with pytest.raises(DoxaBaseError) as grouped_excinfo:
+        db.export_staged_revisions(
+            [staged.revision_iri],
+            blocked_grouped_path,
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(grouped_excinfo.value)
+    assert synthetic_key not in str(grouped_excinfo.value)
+    assert not blocked_grouped_path.exists()
+
+
 def test_stage_graph_revision_exposes_seed_expanded_count_basis(
     tmp_path: Path,
 ) -> None:

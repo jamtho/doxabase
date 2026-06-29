@@ -75,6 +75,10 @@ SENSITIVE_LITERAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(r"\bA(?:KIA|SIA)[0-9A-Z]{16}\b"),
     ),
     (
+        "sk_secret_key",
+        re.compile(r"\bsk_(?:live|test)_[A-Za-z0-9]{12,}\b"),
+    ),
+    (
         "secret_parameter",
         re.compile(
             r"(?i)([?&]|\b)(access_token|api[_-]?key|password|passwd|pwd|secret|token|private[_-]?key)="
