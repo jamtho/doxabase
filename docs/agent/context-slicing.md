@@ -126,6 +126,10 @@ resources, restage/application links, and alternatives when those links are
 recorded in `history`. This is the compact route for reading an applied
 revision event, stale staged source, or restaged successor without first finding
 the dataset or pattern that led to it.
+When a selected map resource such as a dataset, storage access, physical layout,
+or partition scheme is named by `rc:revisionAnchor`, `deep_lore` also includes
+the staged or applied revision through `revision_anchor_match`; use this when
+asking what changed around a dataset's physical/query metadata.
 
 Every selected resource includes one or more `routes` explaining why it entered
 the slice. Read those routes before reading raw triples. They are the difference

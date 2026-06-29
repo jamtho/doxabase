@@ -19654,6 +19654,87 @@ def test_deep_lore_context_slice_reports_absent_lore_layer(
     ]
 
 
+def test_deep_lore_context_slice_finds_revision_anchor_matches(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        label="Orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="directory",
+        storage_root=str(tmp_path / "warehouse"),
+        path_templates=["orders/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    partition = db.record_map_partition_scheme(
+        "https://example.test/project#orders_daily_partition",
+        path_template="orders/dt={date}/*.parquet",
+        granularity="rc:Daily",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    staged = db.stage_graph_revision(
+        summary="Link orders physical query metadata",
+        rationale=(
+            "Reviewed storage, physical layout, and partition metadata for "
+            "Orders query planning."
+        ),
+        revision_anchors=[dataset, storage.iri, layout.iri, partition.iri],
+        additions=[
+            {
+                "graph": "map",
+                "content": f"""
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    <{dataset}> rc:hasStorageAccess <{storage.iri}> ;
+                        rc:hasPhysicalLayout <{layout.iri}> ;
+                        rc:partitionedBy <{partition.iri}> .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+    applied = db.apply_staged_revision(staged.revision_iri)
+
+    context_slice = db.describe_context_slice([dataset], profile="deep_lore")
+
+    assert not any("found no claims" in warning for warning in context_slice.warnings)
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert staged.revision_iri in resources
+    assert applied.applied_revision_iri in resources
+    assert storage.iri in resources
+    assert layout.iri in resources
+    assert partition.iri in resources
+    routes = {
+        iri: {route.route for route in resource.routes}
+        for iri, resource in resources.items()
+    }
+    assert "revision_anchor_match" in routes[staged.revision_iri]
+    assert "revision_anchor_match" in routes[applied.applied_revision_iri]
+    assert "applied_revision" in routes[applied.applied_revision_iri]
+    assert "applies_staged_revision" in routes[staged.revision_iri]
+    assert context_slice.route_counts["revision_anchor_match"] >= 2
+    assert context_slice.route_counts["storage_access"] == 1
+    assert context_slice.route_counts["physical_layout"] == 1
+    assert context_slice.route_counts["partition_scheme"] == 1
+    route_legend = {row.route: row for row in context_slice.route_legend}
+    assert route_legend["revision_anchor_match"].meaning == (
+        "A revision reached because a selected resource is one of its anchors."
+    )
+
+
 def test_deep_lore_context_slice_expands_revision_seeds(
     tmp_path: Path,
 ) -> None:

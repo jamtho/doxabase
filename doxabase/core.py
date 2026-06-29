@@ -9419,7 +9419,12 @@ class DoxaBase:
                 )
 
         if profile == "deep_lore":
-            self._add_revision_context_for_slice(resources, all_graphs, add_resource)
+            self._add_revision_context_for_slice(
+                resources,
+                all_graphs,
+                add_resource,
+                add_revision,
+            )
 
         resource_iris = self._context_slice_resource_order(resources, all_lookup_graphs)
         triples, candidate_triple_count = self._context_slice_triples(
@@ -10143,6 +10148,7 @@ class DoxaBase:
         resources: dict[str, list[ContextSliceRoute]],
         all_graphs: list[str],
         add_resource: Any,
+        add_revision: Any,
     ) -> None:
         history_graphs = ["history"]
         support_predicates = (
@@ -10176,6 +10182,18 @@ class DoxaBase:
                             source_iri=revision_iri,
                             depth=4,
                         )
+            for revision_iri in self._subjects(
+                history_graphs,
+                "rc:revisionAnchor",
+                resource_iri,
+            ):
+                add_revision(
+                    revision_iri,
+                    resource_iri,
+                    3,
+                    route="revision_anchor_match",
+                    route_label="revision anchored to selected resource",
+                )
 
     def _context_slice_graphs(self, *, profile: str | None = None) -> list[str]:
         graphs = [
@@ -10327,6 +10345,7 @@ class DoxaBase:
             "restaged_by_revision": 14,
             "alternative_revision": 14,
             "revision_anchor": 14,
+            "revision_anchor_match": 14,
             "profile_metric_kind": 15,
             "profile_metric_target": 15,
             "seed_profile_metric_kind": 15,
@@ -10512,6 +10531,9 @@ class DoxaBase:
             ),
             "alternative_revision": "A revision recorded as an alternative to a selected revision.",
             "revision_anchor": "A resource named as an anchor for a selected revision.",
+            "revision_anchor_match": (
+                "A revision reached because a selected resource is one of its anchors."
+            ),
             "evidence": "Evidence linked to a selected observation, claim, pattern, or revision.",
             "source_span": "A source span attached to selected evidence.",
             "owning_dataset": "The dataset that owns a selected column.",

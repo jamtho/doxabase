@@ -2438,6 +2438,13 @@ few useful gaps:
   tables like table seeds for `describe_query_context` suggestions, so column
   handoffs surface owner-table repair groups such as
   `database_relation_template_source_mismatch`.
+- An applied query-repair history trial found dataset `deep_lore` slices could
+  show current storage/layout/partition map resources but miss the staged and
+  applied revisions that changed them when those revisions were anchor-only.
+  Deep-lore slices now reverse-follow `rc:revisionAnchor` from selected
+  resources through `revision_anchor_match`, so dataset/storage/layout/partition
+  handoffs can show staged or applied query-metadata repairs even without
+  supporting claim, observation, or pattern links.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

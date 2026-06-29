@@ -841,6 +841,11 @@ warnings. This includes mapped column seeds that expand to an owning table.
 Non-table dataset seeds stay on context-slice/resource routes even when they
 carry storage or layout metadata. Use that route to inspect readiness, target
 candidates, and repair hints before drafting a query.
+For `profile="deep_lore"`, selected resources can also pull in revision history
+through `revision_anchor_match` when they are named by `rc:revisionAnchor`.
+This lets dataset, storage, layout, and partition slices show staged or applied
+query-metadata repairs even when the revision has no supporting claim,
+observation, or pattern.
 When `truncated=true`,
 the remaining actions first offer narrower
 `describe_context_slice(..., profile="pattern_brief")` calls for linked pattern

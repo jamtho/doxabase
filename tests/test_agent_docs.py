@@ -75,6 +75,16 @@ def test_context_slicing_docs_explain_column_owner_query_routing() -> None:
     assert "owner table" in content
 
 
+def test_context_slicing_docs_explain_revision_anchor_matches() -> None:
+    doc = get_agent_doc("context_slicing", max_chars=50_000)
+    content = str(doc["content"])
+
+    assert "revision_anchor_match" in content
+    assert "rc:revisionAnchor" in content
+    assert "storage access" in content
+    assert "physical/query metadata" in content
+
+
 def test_high_value_sections_are_addressable_for_cold_start() -> None:
     mcp_doc = get_agent_doc(
         "mcp_tools",
