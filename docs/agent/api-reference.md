@@ -297,6 +297,12 @@ revision = db.record_graph_revision(
 context = db.describe_resource(claim.claim_iri, graph="observations")
 ```
 
+For unattended project-frontier loops, prefer
+`brief.frontier_first_action` / `brief.frontier_first_call` over manually
+choosing between `full_frontier_expansion`, `next_best_expansion`, and
+`recommended_next_tasks[0]`. `brief.frontier_first_source` records which surface
+supplied the selected first hop.
+
 `describe_dataset()` returns bounded context for one dataset/table: row
 semantics, entity/snapshot keys, columns, physical/value types, path templates,
 dataset/layout verification status and notes, physical layouts, storage access
@@ -448,6 +454,11 @@ bounded `describe_profile_run` action before query-plan drafting. Its
 query-source paths, structured execution status/engine/query hash from
 `record_query_result()` evidence metadata, old summary-parsing fallback values,
 and short profile summaries.
+If physical metadata blockers remain, the same context can also include a
+`draft_query_evidence_storage_overlay` skeleton action. Treat the skeleton as a
+review checklist: replace placeholder values named in `placeholder_fields` /
+`reviewed_value_fields` and supply `required_extra_arguments` before calling the
+helper.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
 when candidate order selected a different route than intended. These indexes
@@ -1617,6 +1628,10 @@ For read-only planning over mixed source/current handoffs, prefer
 `plan_staged_revision_recovery()`: its `lanes[]` preserve per-source provenance,
 while `resolved_target_groups[]` collapses stale sources, refreshed successors,
 and applied-event aliases into a deduped target-family worklist.
+For scripts that intend to mutate, use `mutation_frontier_items` as the complete
+worklist. It includes existing apply/restage/repair targets and same-slot repair
+helper actions that create a successor; `mutation_frontier_iris` is the
+compatibility list for existing resolved target IRIs only.
 Guarded same-slot conflicts whose apply check already suggests
 `stage_map_assertion_change` replacement are skipped with
 `not_restageable_reason="same_slot_replacement"`; use `next_action_after` rather

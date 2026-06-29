@@ -108,6 +108,10 @@ In unattended loops, run `full_frontier_expansion` when it is non-null before
 repeating visible recommended tasks; it expands both `limit` and
 `profile_candidate_limit` enough to expose the currently counted task frontier
 and hidden profile draft candidates together.
+For scripts, prefer `frontier_first_action` / `frontier_first_call` as the
+canonical first hop. That field chooses `full_frontier_expansion` first, then
+`next_best_expansion`, then the first returned recommended task, and
+`frontier_first_source` records which surface supplied it.
 Then read `health_tasks`, which is not limited by `recommended_next_tasks` and
 can also route agents to widen the brief, increase `profile_candidate_limit`, run
 redacted privacy/export review, or handle stale immutable seed graphs.
@@ -745,6 +749,12 @@ When `profile_summary.evidence_iris` is non-empty but there are no
 `source_profile_evidence` with the evidence summary, query-source paths, result
 sources, parsed execution status/engine/query hash when available, and short
 profile summaries.
+If that singleton evidence coexists with missing storage, path, layout, format,
+protocol, location, or layout-verification blockers, the context can also add a
+`draft_query_evidence_storage_overlay` skeleton action. Treat its placeholder
+arguments as a review checklist, not inferred truth: replace the fields listed
+in `placeholder_fields` / `reviewed_value_fields` and supply
+`required_extra_arguments` before calling the helper.
 Use `dataset_profile_row_counts`, `dataset_profile_row_count_bases`,
 `row_count_snapshot_matches`, and `row_count_snapshot_basis` on
 `describe_profile_run` results to preserve that normalized row-count context
@@ -1006,6 +1016,9 @@ query/profile evidence into storage access and physical layout map metadata.
 Use it after `record_query_result` or `describe_profile_run` shows that an
 external query scanned a real source, but `describe_query_context` is still
 blocked by missing storage, path, or layout metadata.
+`describe_query_context` may suggest this helper directly for singleton
+query/profile evidence with physical blockers; those suggested arguments contain
+review placeholders and must be replaced before use.
 
 The helper does not infer storage values from query text, result artifacts, or
 logs. The caller supplies reviewed values such as `storage_protocol`,
@@ -1750,6 +1763,11 @@ For repair lanes whose concrete mutation is a helper call rather than an
 existing revision target, `helper_mutation_frontier_actions` and
 `helper_mutation_frontier_calls` expose the deduped preferred repair helper
 mutations when `include_drafts=True`.
+Use `mutation_frontier_items` as the complete unattended mutation worklist. It
+combines existing apply/restage/repair targets with same-slot helper actions
+that create a successor and therefore cannot appear in `mutation_frontier_iris`.
+Keep `mutation_frontier_iris` for compatibility or when a script only accepts
+existing revision targets.
 `repair_first_revision_iris` and lanes with `lane="repair_or_replace"` should be
 inspected or drafted before any restage.
 If `sequential_apply_recheck_candidate_iris` is non-empty, apply at most one

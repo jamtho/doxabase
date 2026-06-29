@@ -156,6 +156,11 @@ Start with `describe_query_context(dataset_iri)`:
    row; the action's `source_profile_evidence` preview carries query-source
    paths, result sources, structured execution status, engine, query hash when
    available, and the short profile summary.
+   When physical storage/path/layout blockers remain, the same context may add a
+   `draft_query_evidence_storage_overlay` skeleton action. Replace every
+   placeholder named in its `placeholder_fields` / `reviewed_value_fields` and
+   supply `required_extra_arguments` after reviewing the actual source; the
+   helper does not infer storage values from query artifacts.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
    For non-database storage with `location_kind="object"`, prefer the exact
@@ -418,6 +423,10 @@ does not parse query artifacts to guess storage. It returns validation-previewed
 `stage_graph_revision` arguments that add storage access and physical layout
 metadata with the query/profile observation as support. Stage, check, apply,
 and rerun `describe_query_context` before drafting the next plan.
+When `describe_query_context.suggested_next_actions` proposes this overlay from
+singleton evidence, use the action as a template only: replace placeholder
+storage protocol, root, location kind, path template, file format, and layout
+note values with reviewed non-secret values before calling.
 If the dataset already has a different layout verification status or note, the
 drafted stage arguments may include removal patches for those old dataset-level
 values. Keep them with the addition patch; otherwise the reviewed overlay can

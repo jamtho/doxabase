@@ -201,6 +201,9 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
         "suggested_next_call": "project_brief(...)",
         ...
     },
+    "frontier_first_action": {...},
+    "frontier_first_call": "project_brief(...)",
+    "frontier_first_source": "full_frontier_expansion",
     "datasets": [
         {
             "dataset": {"iri": "https://...", "label": "...", "description": ...},
@@ -366,6 +369,11 @@ synthesizes a one-shot `project_brief` rerun that expands both bounds enough to
 show all currently counted task payloads and hidden profile draft candidates.
 Use it when avoiding iterative frontier reruns matters more than preserving the
 smallest bounded display.
+`frontier_first_action` is the canonical first hop for unattended frontier
+loops. It prefers `full_frontier_expansion`, then `next_best_expansion`, then
+the first returned `recommended_next_tasks[]` action. `frontier_first_call` is
+the display call for that action, and `frontier_first_source` records which
+queue or expansion supplied it.
 For `expand_project_brief`, `suggested_limit` is the next bounded rerun and may
 still be iterative on large or skewed queues. `exhaustive_suggested_limit` is the
 one-shot bound for every task payload currently counted in `queue_counts`.
@@ -2505,6 +2513,14 @@ action.source_profile_evidence["query_source_paths"]
 action.source_profile_evidence["query_source_spans"]
 action.source_profile_evidence["handoff_note"]
 ```
+
+If the singleton evidence exists while physical metadata blockers remain,
+`suggested_next_actions` can also include
+`draft_query_evidence_storage_overlay`. That action is a skeleton, not an
+inference: replace the reviewed-value placeholders named in
+`placeholder_fields` / `reviewed_value_fields`, supply every
+`required_extra_arguments` field, and read `template_note` before calling the
+helper.
 
 `readiness` is one of `ready_for_query_planning`, `needs_review`,
 `insufficient_metadata`, `blocked_by_contradiction`, or
@@ -5062,6 +5078,7 @@ plan.next_action_queue_item_counts
 plan.resolved_target_groups
 plan.resolved_target_group_counts
 plan.mutation_frontier_iris
+plan.mutation_frontier_items
 plan.helper_mutation_frontier_actions
 plan.helper_mutation_frontier_calls
 plan.requires_recheck_after_each_apply
@@ -5200,6 +5217,11 @@ same as the mutation or inspection target. Repair lanes may include
 `repair_draft`; when the suggested repair creates a new successor,
 `resolved_target_iri` can be `None`, so drive the reviewed repair from
 `repair_draft.preferred_action.arguments` or `lane.next_action.arguments`.
+`mutation_frontier_items` is the preferred complete mutation worklist for
+automation. Items with `item_kind="revision_target"` point at existing
+apply/restage/repair targets and preserve collapsed `source_revision_iris` and
+`row_iris`; items with `item_kind="helper_action"` carry same-slot repair helper
+actions that create a successor and therefore have no existing target IRI.
 `mutation_frontier_iris` is the compact deduped set of resolved targets in
 apply/restage/repair queues; it intentionally excludes informational rows,
 already-applied inspection targets, and repair helper calls that do not resolve

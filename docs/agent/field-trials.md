@@ -2886,6 +2886,13 @@ few useful gaps:
   `rc:CandidateLayout`; `draft_query_evidence_storage_overlay` now carries
   replacement removals for old dataset layout verification status/note values
   so reviewed query overlays stage cleanly.
+- A follow-up four-way frontier trial found the right next workflow step could
+  still be split across separate advanced surfaces. `project_brief` now exposes
+  `frontier_first_action` as the canonical first hop, query contexts with
+  singleton query/profile evidence plus physical blockers can suggest a reviewed
+  `draft_query_evidence_storage_overlay` skeleton, and staged recovery plans
+  expose `mutation_frontier_items` so same-slot helper actions and existing
+  revision targets share one unattended mutation worklist.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

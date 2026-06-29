@@ -248,14 +248,19 @@ context, and alternative-set metadata. Use `mutation_frontier_iris` as the
 compact deduped set of resolved
 apply/restage/repair targets; it excludes informational handled-stale rows,
 already-applied inspection targets, and repair helper calls that do not resolve
-to an existing IRI. Treat `would_restage_revision_iris` as the post-review
+to an existing IRI. Prefer `mutation_frontier_items` for unattended mutation
+loops: it combines existing revision targets with helper actions for repair
+lanes that create a successor and therefore have no current target IRI. Treat
+`would_restage_revision_iris` as the post-review
 mechanical restage list, and treat `repair_first_revision_iris` /
 `repair_or_replace` lanes as repair or replacement work before any same-payload
 restage. If `requires_recheck_after_each_apply` is true, apply at most one ready
 row, then rerun the planner.
 For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
 can be empty because the concrete mutation is a helper call rather than an
-existing revision target. When `include_drafts=True`, use
+existing revision target. In current responses this appears as a
+`mutation_frontier_items[]` entry with `item_kind="helper_action"`. When
+`include_drafts=True`, use
 `helper_mutation_frontier_actions` / `helper_mutation_frontier_calls` as the
 top-level deduped list of preferred repair helper mutations. If that list is
 empty, fall back to `lane.next_action.arguments` or

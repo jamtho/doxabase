@@ -381,12 +381,17 @@ def test_project_brief_full_frontier_expansion_combines_limits(
         "limit": 11,
         "profile_candidate_limit": 4,
     }
+    assert brief.frontier_first_source == "full_frontier_expansion"
+    assert brief.frontier_first_action == full_expansion.suggested_next_action
+    assert brief.frontier_first_call == full_expansion.suggested_next_call
 
     rerun = db.project_brief(**full_expansion.suggested_next_action.arguments)
 
     assert rerun.omitted_queue_counts == {}
     assert rerun.profile_queue_counts["profile_candidate_omitted"] == 0
     assert rerun.full_frontier_expansion is None
+    assert rerun.frontier_first_action is not None
+    assert rerun.frontier_first_source is not None
 
 
 def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
@@ -7541,6 +7546,24 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert plan.helper_mutation_frontier_calls == [
         plan.helper_mutation_frontier_actions[0].call
     ]
+    assert [
+        item.item_kind for item in plan.mutation_frontier_items
+    ] == [
+        "revision_target",
+        "revision_target",
+        "revision_target",
+        "helper_action",
+    ]
+    assert [
+        item.target_iri
+        for item in plan.mutation_frontier_items
+        if item.item_kind == "revision_target"
+    ] == plan.mutation_frontier_iris
+    helper_item = plan.mutation_frontier_items[-1]
+    assert helper_item.queue == "repair_or_replace"
+    assert helper_item.target_iri is None
+    assert helper_item.source_revision_iris == [repair_source.revision_iri]
+    assert helper_item.action == plan.helper_mutation_frontier_actions[0]
     assert any(
         "helper_mutation_frontier_actions" in warning
         and "not represented by mutation_frontier_iris" in warning
@@ -17601,6 +17624,28 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
 
     assert before_context.readiness == "insufficient_metadata"
     assert before_context.query_target_candidates == []
+    assert [
+        action.tool_name for action in before_context.suggested_next_actions
+    ] == [
+        "describe_profile_run",
+        "draft_query_evidence_storage_overlay",
+    ]
+    overlay_action = before_context.suggested_next_actions[1]
+    assert overlay_action.arguments["dataset_iri"] == dataset
+    assert overlay_action.arguments["evidence_iri"] == result.evidence_iri
+    assert overlay_action.arguments["storage_protocol"] == (
+        "REVIEWED_STORAGE_PROTOCOL"
+    )
+    assert getattr(overlay_action, "required_extra_arguments") == [
+        "storage_protocol",
+        "storage_root",
+        "location_kind",
+        "file_format",
+    ]
+    assert "path_templates" in getattr(overlay_action, "placeholder_fields")
+    assert getattr(overlay_action, "source_profile_evidence")[
+        "query_hash"
+    ] == "sha256:orders-status"
 
     draft = db.draft_query_evidence_storage_overlay(
         dataset,

@@ -443,6 +443,9 @@ class ProjectBrief:
     health_tasks: list[ProjectBriefHealthTask]
     next_best_expansion: ProjectBriefHealthTask | None
     full_frontier_expansion: ProjectBriefHealthTask | None
+    frontier_first_action: SuggestedNextAction | None
+    frontier_first_call: str | None
+    frontier_first_source: str | None
     datasets: list[ProjectBriefDatasetSummary]
     staged_review: ProjectBriefStagedReviewSummary
     recommended_next_tasks: list[ProjectBriefRecommendedTask]
@@ -1445,6 +1448,19 @@ class StagedRevisionResolvedTargetGroup:
 
 
 @dataclass(frozen=True)
+class StagedRevisionMutationFrontierItem:
+    item_kind: str
+    queue: str
+    target_iri: str | None
+    target_record_kind: str | None
+    source_revision_iris: list[str]
+    row_iris: list[str]
+    action: SuggestedNextAction | RevisionNextAction | None
+    call: str | None
+    reason: str
+
+
+@dataclass(frozen=True)
 class StagedRevisionRecoveryPlan:
     result_kind: str
     helper: str
@@ -1469,6 +1485,7 @@ class StagedRevisionRecoveryPlan:
     resolved_target_groups: list[StagedRevisionResolvedTargetGroup]
     resolved_target_group_counts: dict[str, int]
     mutation_frontier_iris: list[str]
+    mutation_frontier_items: list[StagedRevisionMutationFrontierItem]
     helper_mutation_frontier_actions: list[SuggestedNextAction]
     helper_mutation_frontier_calls: list[str]
     requires_recheck_after_each_apply: bool
@@ -3175,6 +3192,14 @@ class ProfileEvidenceSuggestedNextAction(SuggestedNextAction):
 
 
 @dataclass(frozen=True)
+class QueryEvidenceOverlaySuggestedNextAction(ProfileEvidenceSuggestedNextAction):
+    required_extra_arguments: list[str]
+    placeholder_fields: list[str]
+    reviewed_value_fields: list[str]
+    template_note: str
+
+
+@dataclass(frozen=True)
 class ProfileQueryContextSuggestedNextAction(SuggestedNextAction):
     source_query_context: dict[str, Any]
 
@@ -3824,6 +3849,13 @@ class DoxaBase:
             suggested_profile_candidate_limit=suggested_profile_candidate_limit,
             health_tasks=health_tasks,
         )
+        frontier_first_source, frontier_first_action = (
+            self._project_brief_frontier_first_action(
+                full_frontier_expansion=full_frontier_expansion,
+                next_best_expansion=next_best_expansion,
+                recommended_tasks=selected_tasks,
+            )
+        )
 
         return ProjectBrief(
             key_counts=overview.key_counts,
@@ -3845,6 +3877,13 @@ class DoxaBase:
             health_tasks=health_tasks,
             next_best_expansion=next_best_expansion,
             full_frontier_expansion=full_frontier_expansion,
+            frontier_first_action=frontier_first_action,
+            frontier_first_call=(
+                frontier_first_action.call
+                if frontier_first_action is not None
+                else None
+            ),
+            frontier_first_source=frontier_first_source,
             datasets=datasets,
             staged_review=staged_review,
             recommended_next_tasks=selected_tasks,
@@ -4177,6 +4216,34 @@ class DoxaBase:
                 else None
             ),
         )
+
+    @staticmethod
+    def _project_brief_frontier_first_action(
+        *,
+        full_frontier_expansion: ProjectBriefHealthTask | None,
+        next_best_expansion: ProjectBriefHealthTask | None,
+        recommended_tasks: list[ProjectBriefRecommendedTask],
+    ) -> tuple[str | None, SuggestedNextAction | None]:
+        if (
+            full_frontier_expansion is not None
+            and full_frontier_expansion.suggested_next_action is not None
+        ):
+            return (
+                "full_frontier_expansion",
+                full_frontier_expansion.suggested_next_action,
+            )
+        if (
+            next_best_expansion is not None
+            and next_best_expansion.suggested_next_action is not None
+        ):
+            return "next_best_expansion", next_best_expansion.suggested_next_action
+        for task in recommended_tasks:
+            if task.suggested_next_action is not None:
+                return (
+                    f"recommended_next_tasks:{task.task_type}",
+                    task.suggested_next_action,
+                )
+        return None, None
 
     def _project_brief_profile_candidate_limit_health_task(
         self,
@@ -16415,6 +16482,7 @@ class DoxaBase:
                 self._query_context_singleton_profile_evidence_actions(
                     dataset,
                     profile_summary,
+                    issues=issues,
                 )
             )
         if (
@@ -16581,6 +16649,8 @@ class DoxaBase:
         self,
         dataset: DatasetDescription,
         profile_summary: ProfileSummary,
+        *,
+        issues: list[QueryPlanningIssue],
     ) -> list[SuggestedNextAction]:
         evidence_iris = [
             evidence_iri
@@ -16606,6 +16676,10 @@ class DoxaBase:
                 if omitted_count
                 else ""
             )
+            source_profile_evidence = self._query_context_source_profile_evidence(
+                evidence_iri,
+                profiles_by_evidence.get(evidence_iri, []),
+            )
             actions.append(
                 ProfileEvidenceSuggestedNextAction(
                     action_label="Inspect singleton profile evidence",
@@ -16624,15 +16698,93 @@ class DoxaBase:
                         "describe_profile_run",
                         arguments,
                     ),
-                    source_profile_evidence=(
-                        self._query_context_source_profile_evidence(
-                            evidence_iri,
-                            profiles_by_evidence.get(evidence_iri, []),
-                        )
-                    ),
+                    source_profile_evidence=source_profile_evidence,
                 )
             )
+            if self._query_context_should_suggest_evidence_storage_overlay(
+                issues
+            ):
+                actions.append(
+                    self._query_context_evidence_storage_overlay_action(
+                        dataset_iri=dataset.iri,
+                        evidence_iri=evidence_iri,
+                        source_profile_evidence=source_profile_evidence,
+                    )
+                )
         return actions
+
+    @staticmethod
+    def _query_context_should_suggest_evidence_storage_overlay(
+        issues: Iterable[QueryPlanningIssue],
+    ) -> bool:
+        overlay_issue_codes = {
+            "missing_storage_access",
+            "missing_path_template",
+            "missing_physical_layout",
+            "missing_file_format",
+            "missing_storage_protocol",
+            "missing_storage_location",
+            "layout_needs_verification",
+        }
+        return any(issue.code in overlay_issue_codes for issue in issues)
+
+    def _query_context_evidence_storage_overlay_action(
+        self,
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+        source_profile_evidence: dict[str, Any],
+    ) -> QueryEvidenceOverlaySuggestedNextAction:
+        arguments = {
+            "dataset_iri": dataset_iri,
+            "evidence_iri": evidence_iri,
+            "storage_protocol": "REVIEWED_STORAGE_PROTOCOL",
+            "storage_root": "REVIEWED_STORAGE_ROOT_OR_URI",
+            "location_kind": "REVIEWED_LOCATION_KIND",
+            "path_templates": ["REVIEWED_PATH_TEMPLATE"],
+            "file_format": "REVIEWED_FILE_FORMAT",
+            "layout_verification_note": "REVIEWED_LAYOUT_VERIFICATION_NOTE",
+        }
+        required = [
+            "storage_protocol",
+            "storage_root",
+            "location_kind",
+            "file_format",
+        ]
+        placeholders = [
+            "storage_protocol",
+            "storage_root",
+            "location_kind",
+            "path_templates",
+            "file_format",
+            "layout_verification_note",
+        ]
+        return QueryEvidenceOverlaySuggestedNextAction(
+            action_label="Draft query evidence storage overlay",
+            tool_name="draft_query_evidence_storage_overlay",
+            mcp_tool_name="doxabase.draft_query_evidence_storage_overlay",
+            arguments=arguments,
+            reason=(
+                "This query context has singleton query/profile evidence and "
+                "physical metadata blockers. Review the evidence, replace the "
+                "storage/path/layout placeholders with confirmed non-secret "
+                "values, then draft a storage overlay instead of hand-authoring "
+                "RDF."
+            ),
+            call=self._suggested_call_string(
+                "draft_query_evidence_storage_overlay",
+                arguments,
+            ),
+            source_profile_evidence=source_profile_evidence,
+            required_extra_arguments=required,
+            placeholder_fields=placeholders,
+            reviewed_value_fields=placeholders,
+            template_note=(
+                "Placeholders are not inferred from query artifacts. Replace "
+                "them with reviewed storage, path, and layout values before "
+                "calling the helper."
+            ),
+        )
 
     def _query_context_profiles_by_evidence(
         self,
@@ -30519,6 +30671,15 @@ class DoxaBase:
             lanes,
             requested_revision_iris=requested_revision_iris,
         )
+        mutation_frontier_items = (
+            self._staged_recovery_mutation_frontier_items(
+                resolved_target_groups,
+                lanes=lanes,
+                helper_mutation_frontier_actions=(
+                    helper_mutation_frontier_actions
+                ),
+            )
+        )
         requires_recheck_after_each_apply = bool(
             batch.bundle_summary.sequential_apply_recheck_candidate_iris
         )
@@ -30592,6 +30753,7 @@ class DoxaBase:
                 )
             ),
             mutation_frontier_iris=mutation_frontier_iris,
+            mutation_frontier_items=mutation_frontier_items,
             helper_mutation_frontier_actions=helper_mutation_frontier_actions,
             helper_mutation_frontier_calls=[
                 action.call
@@ -30957,6 +31119,7 @@ class DoxaBase:
             resolved_target_groups=[],
             resolved_target_group_counts={},
             mutation_frontier_iris=[],
+            mutation_frontier_items=[],
             helper_mutation_frontier_actions=[],
             helper_mutation_frontier_calls=[],
             requires_recheck_after_each_apply=False,
@@ -31155,6 +31318,86 @@ class DoxaBase:
         for group in groups:
             counts[group.queue] = counts.get(group.queue, 0) + 1
         return counts
+
+    @staticmethod
+    def _staged_recovery_mutation_frontier_items(
+        groups: Iterable[StagedRevisionResolvedTargetGroup],
+        *,
+        lanes: Iterable[StagedRevisionRecoveryLane],
+        helper_mutation_frontier_actions: Iterable[SuggestedNextAction],
+    ) -> list[StagedRevisionMutationFrontierItem]:
+        mutation_queues = {
+            "apply_after_review",
+            "restage_after_review",
+            "repair_or_replace",
+        }
+        action_by_target: dict[tuple[str, str], RevisionNextAction] = {}
+        for lane in lanes:
+            item = lane.next_action_queue_item
+            queue = item.queue if item is not None else lane.lane
+            target_iri = (
+                item.resolved_target_iri
+                if item is not None
+                else lane.resolved_target_iri
+            )
+            if (
+                queue not in mutation_queues
+                or target_iri is None
+                or lane.next_action is None
+            ):
+                continue
+            action_by_target.setdefault((queue, target_iri), lane.next_action)
+
+        items: list[StagedRevisionMutationFrontierItem] = []
+        for group in groups:
+            if (
+                group.queue not in mutation_queues
+                or group.resolved_target_iri is None
+            ):
+                continue
+            action = action_by_target.get(
+                (group.queue, group.resolved_target_iri)
+            )
+            items.append(
+                StagedRevisionMutationFrontierItem(
+                    item_kind="revision_target",
+                    queue=group.queue,
+                    target_iri=group.resolved_target_iri,
+                    target_record_kind=group.resolved_target_record_kind,
+                    source_revision_iris=list(group.source_revision_iris),
+                    row_iris=list(group.row_iris),
+                    action=action,
+                    call=action.call if action is not None else None,
+                    reason=(
+                        "Resolved staged-revision mutation target. Review the "
+                        "row and action, then mutate this target before "
+                        "replanning if required."
+                    ),
+                )
+            )
+
+        for action in helper_mutation_frontier_actions:
+            restages_revision = action.arguments.get("restages_revision")
+            source_revision_iris = (
+                [restages_revision] if isinstance(restages_revision, str) else []
+            )
+            items.append(
+                StagedRevisionMutationFrontierItem(
+                    item_kind="helper_action",
+                    queue="repair_or_replace",
+                    target_iri=None,
+                    target_record_kind=None,
+                    source_revision_iris=source_revision_iris,
+                    row_iris=[],
+                    action=action,
+                    call=action.call,
+                    reason=(
+                        "Repair helper mutation for a staged recovery lane "
+                        "that does not have a concrete successor IRI yet."
+                    ),
+                )
+            )
+        return items
 
     def _staged_recovery_lane_from_batch_item(
         self,

@@ -437,6 +437,13 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert isinstance(result["health_tasks"], list)
     assert "next_best_expansion" in result
     assert "full_frontier_expansion" in result
+    assert "frontier_first_action" in result
+    assert "frontier_first_call" in result
+    assert "frontier_first_source" in result
+    if result["frontier_first_action"] is not None:
+        assert result["frontier_first_call"] == result["frontier_first_action"][
+            "call"
+        ]
     if result["next_best_expansion"] is not None:
         assert result["next_best_expansion"]["task_type"] in {
             "expand_project_brief",
@@ -1259,6 +1266,25 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     before_context = describe_query_context_tool(db, iri=dataset)
     assert before_context["readiness"] == "insufficient_metadata"
     assert before_context["query_target_candidates"] == []
+    assert [
+        action["tool_name"] for action in before_context["suggested_next_actions"]
+    ] == [
+        "describe_profile_run",
+        "draft_query_evidence_storage_overlay",
+    ]
+    overlay_action = before_context["suggested_next_actions"][1]
+    assert overlay_action["arguments"]["dataset_iri"] == dataset
+    assert overlay_action["arguments"]["evidence_iri"] == result["evidence_iri"]
+    assert overlay_action["required_extra_arguments"] == [
+        "storage_protocol",
+        "storage_root",
+        "location_kind",
+        "file_format",
+    ]
+    assert "path_templates" in overlay_action["placeholder_fields"]
+    assert overlay_action["source_profile_evidence"]["query_hash"] == (
+        "sha256:mcp-orders-status"
+    )
 
     draft = draft_query_evidence_storage_overlay_tool(
         db,
@@ -2113,6 +2139,22 @@ def test_plan_staged_revision_recovery_tool_returns_json_like_payload(
     assert lane["next_action_queue_item"]["resolved_target_iri"] == (
         staged["revision_iri"]
     )
+    assert result["mutation_frontier_items"] == [
+        {
+            "item_kind": "revision_target",
+            "queue": "apply_after_review",
+            "target_iri": staged["revision_iri"],
+            "target_record_kind": "staged_patch",
+            "source_revision_iris": [staged["revision_iri"]],
+            "row_iris": [staged["revision_iri"]],
+            "action": lane["next_action"],
+            "call": lane["next_action"]["call"],
+            "reason": (
+                "Resolved staged-revision mutation target. Review the row and "
+                "action, then mutate this target before replanning if required."
+            ),
+        }
+    ]
     assert result["bundle_summary"]["next_action_queue"] == {
         "apply_after_review": [staged["revision_iri"]]
     }
