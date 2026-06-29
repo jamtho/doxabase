@@ -9327,7 +9327,7 @@ class DoxaBase:
                     ),
                 )
 
-        metric_kind_seed_limit = 25
+        profile_seed_limit = 25
         for seed in seeds:
             seed_is_subject = self._subject_exists(seed, all_graphs)
             metric_kind_metric_iris = self._subjects(
@@ -9338,6 +9338,11 @@ class DoxaBase:
             observed_column_profile_observation_iris = self._subjects(
                 all_graphs,
                 "rc:observedColumn",
+                seed,
+            )
+            observed_value_type_profile_observation_iris = self._subjects(
+                all_graphs,
+                "rc:observedValueType",
                 seed,
             )
             seed_is_resource_brief_target = (
@@ -9353,6 +9358,7 @@ class DoxaBase:
                 not seed_is_subject
                 and not metric_kind_metric_iris
                 and not seed_is_observed_column_only
+                and not observed_value_type_profile_observation_iris
                 and not seed_is_resource_brief_target
             ):
                 raise DoxaBaseError(f"Seed resource '{seed}' was not found")
@@ -9451,6 +9457,42 @@ class DoxaBase:
                         expand_observed_dataset=True,
                     )
             elif (
+                profile in {"dataset_brief", "deep_lore"}
+                and observed_value_type_profile_observation_iris
+            ):
+                add_resource(
+                    seed,
+                    "seed_observed_value_type",
+                    "seed observed value type",
+                    depth=0,
+                )
+                selected_observation_iris = (
+                    observed_value_type_profile_observation_iris[:profile_seed_limit]
+                )
+                omitted_observation_count = len(
+                    observed_value_type_profile_observation_iris
+                ) - len(selected_observation_iris)
+                if omitted_observation_count > 0:
+                    warnings.append(
+                        "Observed-value-type seed "
+                        f"'{seed}' matched "
+                        f"{len(observed_value_type_profile_observation_iris)} "
+                        "profile observation(s); included "
+                        f"{len(selected_observation_iris)} and omitted "
+                        f"{omitted_observation_count}. Use a dataset, profile "
+                        "observation, or observed column seed for a narrower "
+                        "complete handoff."
+                    )
+                for observation_iri in selected_observation_iris:
+                    add_observation(
+                        observation_iri,
+                        seed,
+                        1,
+                        route="seed_profile_observation",
+                        route_label="seed profile observation",
+                        expand_observed_dataset=True,
+                    )
+            elif (
                 profile == "deep_lore"
                 and self.expand_iri("rc:GraphRevision") in seed_types
             ):
@@ -9462,7 +9504,7 @@ class DoxaBase:
                     "seed profile metric kind",
                     depth=0,
                 )
-                selected_metric_iris = metric_kind_metric_iris[:metric_kind_seed_limit]
+                selected_metric_iris = metric_kind_metric_iris[:profile_seed_limit]
                 omitted_metric_count = len(metric_kind_metric_iris) - len(
                     selected_metric_iris
                 )
@@ -9484,6 +9526,9 @@ class DoxaBase:
                         profile=profile,
                         seed_types=seed_types,
                         metric_kind_metric_iris=metric_kind_metric_iris,
+                        observed_value_type_profile_observation_iris=(
+                            observed_value_type_profile_observation_iris
+                        ),
                     )
                 )
                 resource_brief_seed_types = {
@@ -9921,6 +9966,7 @@ class DoxaBase:
         profile: str,
         seed_types: set[str],
         metric_kind_metric_iris: list[str],
+        observed_value_type_profile_observation_iris: list[str],
     ) -> str:
         base = (
             f"Seed '{seed}' was included directly; profile-specific expansion "
@@ -9969,6 +10015,11 @@ class DoxaBase:
         if metric_kind_metric_iris:
             return (
                 f"{base} Seed is used as an rc:profileMetricKind; rerun with "
+                f"{dataset_profiles}."
+            )
+        if observed_value_type_profile_observation_iris:
+            return (
+                f"{base} Seed is used as an rc:observedValueType; rerun with "
                 f"{dataset_profiles}."
             )
         return base
@@ -10448,6 +10499,7 @@ class DoxaBase:
             "seed_dataset": 1,
             "seed_column": 2,
             "seed_observed_column": 2,
+            "seed_observed_value_type": 2,
             "seed_revision": 2,
             "linked_pattern": 2,
             "resource_type": 3,
@@ -10592,6 +10644,9 @@ class DoxaBase:
             "seed_column": "A seed resource expanded as a mapped column.",
             "seed_observed_column": (
                 "A seed IRI found only as an observed column in profile observations."
+            ),
+            "seed_observed_value_type": (
+                "A seed IRI found as an observed value type in profile observations."
             ),
             "seed_revision": "A seed resource expanded as revision-history metadata.",
             "resource_type": "A direct rdf:type resource attached to a resource-brief seed.",

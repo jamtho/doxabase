@@ -84,22 +84,27 @@ Dataset and deep-lore slices also understand profile seeds. A seed
 frequencies, profile metric nodes, and the observed dataset when available. A
 seed `rc:ObservedProfileMetric`, or a metric-kind IRI that is only used as an
 `rc:profileMetricKind` object, expands back to the parent profile observation
-and dataset context. This is a profile handoff route, not proof that the metric
-is durable ontology; define labelled project metric kinds in `ontology` when
-the vocabulary should be shared. Metric-kind seed expansion is capped and emits
-a warning when many observed metrics match; use a dataset, profile observation,
-or observed metric node seed for a narrower complete handoff.
+and dataset context. A value-type IRI used only as an
+`rc:observedValueType` object likewise expands through matching profile
+observations, even before that value type has durable ontology triples. These
+are profile handoff routes, not proof that the metric or value type is durable
+ontology; define labelled project metric kinds or value types in `ontology`
+when the vocabulary should be shared. Metric-kind and observed-value-type seed
+expansion is capped and emits a warning when many profile rows match; use a
+dataset, profile observation, observed column, or observed metric node seed for
+a narrower complete handoff.
 When a project metric kind is only mentioned as a profile metric kind, its
 resource row may be `referenced_only` without a warning. Treat that as slice
 surface context, not vocabulary status. For profile metric vocabulary review,
 use `draft_profile_map_updates.metric_advisories[].advisory_status` and
 `definition_found`.
 The `seed_profile_observations` field preserves structured profile summaries
-selected by profile-observation, observed-profile-metric, or metric-kind seeds
-even when those rows are older than the bounded dataset profile lists.
-For metric-kind seeds, use `seed_profile_observations` to identify the exact
-matching profile rows; `route_counts` and `dataset_contexts` describe broader
-handoff context and repeated inclusion routes, not exact metric match counts.
+selected by profile-observation, observed-profile-metric, metric-kind, or
+observed-value-type seeds even when those rows are older than the bounded
+dataset profile lists. For metric-kind or observed-value-type seeds, use
+`seed_profile_observations` to identify the exact matching profile rows;
+`route_counts` and `dataset_contexts` describe broader handoff context and
+repeated inclusion routes, not exact metric/value-type match counts.
 
 Dataset and deep-lore slices also understand ordinary `rc:Observation` seeds.
 They expand through observed assets/columns, claims, evidence, value

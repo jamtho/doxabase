@@ -20164,6 +20164,59 @@ def test_describe_context_slice_expands_unmapped_observed_column_after_workflow_
     assert "Seed resource" not in " ".join(context_slice.warnings)
 
 
+def test_describe_context_slice_expands_observed_value_type_seed(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#orders__status"
+    status_value_type = "https://example.test/project#OrderStatus"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled for status code types.",
+        evidence_summary="Orders profile run.",
+        evidence_sources=["test://orders-profile"],
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked like a project status-code value type.",
+                "physical_type": "rc:Varchar",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+
+    context_slice = db.describe_context_slice(
+        [status_value_type],
+        profile="dataset_brief",
+        max_triples=300,
+    )
+
+    profile_observation_iri = bundle.column_profiles[0].observation.observation_iri
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert status_value_type in resources
+    assert resources[status_value_type].referenced_only is True
+    assert any(
+        route.route == "seed_observed_value_type"
+        for route in resources[status_value_type].routes
+    )
+    assert profile_observation_iri in resources
+    assert dataset in resources
+    assert context_slice.dataset_contexts[0].iri == dataset
+    assert [
+        profile.iri for profile in context_slice.seed_profile_observations
+    ] == [profile_observation_iri]
+    assert context_slice.route_counts["seed_observed_value_type"] == 1
+    assert context_slice.route_counts["seed_profile_observation"] == 1
+    assert "Seed resource" not in " ".join(context_slice.warnings)
+    assert "profile-specific expansion did not apply" not in " ".join(
+        context_slice.warnings
+    )
+
+
 def test_describe_context_slice_expands_profile_metric_kind_seed(
     tmp_path: Path,
 ) -> None:

@@ -2566,6 +2566,11 @@ few useful gaps:
   already advertised `staged_frontier_review`. Project brief now orders returned
   staged-review rows ahead of fresh query/profile mutation tasks; omitted fresh
   queues remain visible through `omitted_queue_counts` and `health_tasks`.
+- A cold-start context-slice trial found an undefined observed value type from a
+  profile run errored as a missing seed. Dataset/deep-lore slices now accept
+  IRIs referenced only through `rc:observedValueType`, expand through matching
+  profile observations, and preserve the exact rows in
+  `seed_profile_observations`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -885,8 +885,9 @@ non-dataset map resources that need route-explained one-hop context. Dataset/dee
 slices include bounded profile observations, observed value-frequency nodes,
 scalar profile metric nodes, and profile metric kinds returned through the
 dataset context. They can also start from a profile observation, observed
-profile metric node, or metric-kind IRI used by profile metrics. Deep-lore
-slices can also start from an
+profile metric node, metric-kind IRI used by profile metrics, or value-type IRI
+used as `rc:observedValueType` in profile observations. Deep-lore slices can
+also start from an
 `rc:GraphRevision` seed and expand support, evidence, anchors, application,
 restage, and alternative links. `seed_profile_observations` preserves structured
 profile summaries selected by those profile/metric seeds even when the same row
