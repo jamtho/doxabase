@@ -42815,6 +42815,21 @@ class DoxaBase:
                 "export. Fresh DoxaBase capsules already contain the standard seed "
                 "ontology and shapes.",
             )
+        history_revision_iris = self._context_slice_history_revision_iris(
+            export_triples
+        )
+        if "history" in graph_names:
+            warnings.insert(
+                len(privacy_warnings),
+                (
+                    "This context-slice export includes history graph triples, "
+                    "but it is not a recovery-complete revision handoff because "
+                    "context slices do not include SQLite-side revision snapshot "
+                    "rows. Use export_handoff_bundle when a receiving capsule "
+                    "needs exact applied diffs, stale-drift checks, or staged "
+                    "revision recovery."
+                ),
+            )
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
             sensitive_literal_count=sensitive_literal_count,
@@ -42837,6 +42852,8 @@ class DoxaBase:
             include_seed_graphs=include_seed_graphs,
             fail_on_sensitive=fail_on_sensitive,
             write=write,
+            includes_history="history" in graph_names,
+            revision_iris=history_revision_iris,
         )
         return ContextSliceExportRecord(
             path=path_value,
@@ -42876,38 +42893,90 @@ class DoxaBase:
         include_seed_graphs: bool,
         fail_on_sensitive: bool,
         write: bool,
+        includes_history: bool,
+        revision_iris: list[str],
     ) -> list[SuggestedNextAction]:
-        if write:
-            return []
+        actions: list[SuggestedNextAction] = []
         seed_values = self._string_values("seed_iris", seed_iris, required=True)
-        digest_source = "\n".join(seed_values)
-        digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:12]
-        label_source = self._local_name(seed_values[0]) if seed_values else None
-        label = re.sub(r"[^A-Za-z0-9]+", "-", label_source or "context-slice")
-        label = label.strip("-").lower() or "context-slice"
-        arguments = {
-            "path": f"/tmp/context-slice-{label[:40]}-{digest}.trig",
-            "seed_iris": seed_values,
-            "profile": profile,
-            "max_triples": max_triples,
-            "include_seed_graphs": include_seed_graphs,
-            "fail_on_sensitive": True,
-        }
-        if fail_on_sensitive:
-            arguments["fail_on_sensitive"] = fail_on_sensitive
-        return [
-            SuggestedNextAction(
-                action_label="Export context slice",
-                tool_name="export_context_slice",
-                mcp_tool_name="doxabase.export_context_slice",
-                arguments=arguments,
-                reason=(
-                    "Write an importable TriG bundle for only the selected "
-                    "context-slice triples after reviewing the preflight scan."
-                ),
-                call=self._suggested_call_string("export_context_slice", arguments),
+        if not write:
+            digest_source = "\n".join(seed_values)
+            digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:12]
+            label_source = self._local_name(seed_values[0]) if seed_values else None
+            label = re.sub(r"[^A-Za-z0-9]+", "-", label_source or "context-slice")
+            label = label.strip("-").lower() or "context-slice"
+            arguments = {
+                "path": f"/tmp/context-slice-{label[:40]}-{digest}.trig",
+                "seed_iris": seed_values,
+                "profile": profile,
+                "max_triples": max_triples,
+                "include_seed_graphs": include_seed_graphs,
+                "fail_on_sensitive": True,
+            }
+            if fail_on_sensitive:
+                arguments["fail_on_sensitive"] = fail_on_sensitive
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Export context slice",
+                    tool_name="export_context_slice",
+                    mcp_tool_name="doxabase.export_context_slice",
+                    arguments=arguments,
+                    reason=(
+                        "Write an importable TriG bundle for only the selected "
+                        "context-slice triples after reviewing the preflight scan."
+                    ),
+                    call=self._suggested_call_string(
+                        "export_context_slice",
+                        arguments,
+                    ),
+                )
             )
-        ]
+        if includes_history:
+            handoff_arguments: dict[str, Any] = {
+                "trig_path": "<project-handoff.trig>",
+                "revision_snapshot_path": "<revision-snapshots.json>",
+                "graphs": ["project"],
+                "fail_on_sensitive": True,
+            }
+            if revision_iris:
+                handoff_arguments["revision_iris"] = revision_iris
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Export recovery handoff bundle",
+                    tool_name="export_handoff_bundle",
+                    mcp_tool_name="doxabase.export_handoff_bundle",
+                    arguments=handoff_arguments,
+                    reason=(
+                        "History-bearing context slices are importable review "
+                        "context but do not carry revision snapshot rows; use a "
+                        "handoff bundle for exact revision recovery in another "
+                        "capsule."
+                    ),
+                    call=self._suggested_call_string(
+                        "export_handoff_bundle",
+                        handoff_arguments,
+                    ),
+                )
+            )
+        return actions
+
+    def _context_slice_history_revision_iris(
+        self,
+        triples: Iterable[ResourceTriple],
+    ) -> list[str]:
+        graph_revision_type = self.expand_iri("rc:GraphRevision")
+        revision_iris: list[str] = []
+        for triple in triples:
+            if triple.graph != "history":
+                continue
+            if (
+                graph_revision_type in triple.subject_types
+                or (
+                    triple.predicate == str(RDF.type)
+                    and triple.object == graph_revision_type
+                )
+            ):
+                revision_iris.append(triple.subject)
+        return list(dict.fromkeys(revision_iris))
 
     def _context_slice_sensitive_matches(
         self,

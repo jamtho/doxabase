@@ -2469,6 +2469,79 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     assert round_trip.search("Sensitive payroll", graph="map").matches == []
 
 
+def test_context_slice_export_warns_history_is_not_recovery_handoff(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    staged = db.stage_graph_revision(
+        summary="Stage Orders caveat",
+        rationale="Create history-backed staged work for context-slice export.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:OrdersCaveat a rc:KnownCaveat ;
+                        rdfs:label "Orders caveat" ;
+                        rc:caveatDescription "Synthetic caveat for export routing." .
+                """,
+            }
+        ],
+        revision_anchors=[dataset],
+        included_graphs=["map"],
+    )
+
+    preflight = db.preflight_context_slice_export(
+        staged.revision_iri,
+        profile="deep_lore",
+        max_triples=400,
+    )
+
+    assert "history" in preflight.graphs
+    assert preflight.recovery_complete is False
+    assert any(
+        "not a recovery-complete revision handoff" in warning
+        for warning in preflight.warnings
+    )
+    assert [
+        action.tool_name for action in preflight.suggested_next_actions
+    ] == [
+        "export_context_slice",
+        "export_handoff_bundle",
+    ]
+    handoff_action = preflight.suggested_next_actions[1]
+    assert handoff_action.arguments["revision_iris"] == [staged.revision_iri]
+    assert handoff_action.arguments["graphs"] == ["project"]
+    assert handoff_action.arguments["fail_on_sensitive"] is True
+
+    export_path = tmp_path / "revision-context.trig"
+    export = db.export_context_slice(
+        export_path,
+        staged.revision_iri,
+        profile="deep_lore",
+        max_triples=400,
+        fail_on_sensitive=True,
+    )
+
+    assert export.path == str(export_path)
+    assert "history" in export.graphs
+    assert any(
+        "not a recovery-complete revision handoff" in warning
+        for warning in export.warnings
+    )
+    assert [
+        action.tool_name for action in export.suggested_next_actions
+    ] == ["export_handoff_bundle"]
+    assert export.suggested_next_actions[0].arguments["revision_iris"] == [
+        staged.revision_iri
+    ]
+
+
 def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

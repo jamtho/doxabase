@@ -6798,6 +6798,76 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert export_path.exists()
 
 
+def test_context_slice_export_tool_warns_history_not_recovery_handoff(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    record_map_dataset_tool(db, dataset, label="Orders", is_table=True)
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Stage Orders MCP caveat",
+        rationale="Create history-backed staged work for context-slice export.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:OrdersMcpCaveat a rc:KnownCaveat ;
+                        rdfs:label "Orders MCP caveat" ;
+                        rc:caveatDescription "Synthetic caveat for MCP export routing." .
+                """,
+            }
+        ],
+        revision_anchors=[dataset],
+        included_graphs=["map"],
+    )
+
+    preflight = preflight_context_slice_export_tool(
+        db,
+        seed_iris=[staged["revision_iri"]],
+        profile="deep_lore",
+        max_triples=400,
+    )
+
+    assert "history" in preflight["graphs"]
+    assert any(
+        "not a recovery-complete revision handoff" in warning
+        for warning in preflight["warnings"]
+    )
+    assert [
+        action["tool_name"] for action in preflight["suggested_next_actions"]
+    ] == [
+        "export_context_slice",
+        "export_handoff_bundle",
+    ]
+    handoff_action = preflight["suggested_next_actions"][1]
+    assert handoff_action["mcp_tool_name"] == "doxabase.export_handoff_bundle"
+    assert handoff_action["arguments"]["revision_iris"] == [staged["revision_iri"]]
+
+    export_path = tmp_path / "revision-context.trig"
+    export = export_context_slice_tool(
+        db,
+        path=str(export_path),
+        seed_iris=[staged["revision_iri"]],
+        profile="deep_lore",
+        max_triples=400,
+        fail_on_sensitive=True,
+    )
+
+    assert export["path"] == str(export_path)
+    assert "history" in export["graphs"]
+    assert [
+        action["tool_name"] for action in export["suggested_next_actions"]
+    ] == ["export_handoff_bundle"]
+    assert export["suggested_next_actions"][0]["arguments"]["revision_iris"] == [
+        staged["revision_iri"]
+    ]
+
+
 def test_describe_context_slice_tool_preserves_profile_routes(
     tmp_path: Path,
 ) -> None:

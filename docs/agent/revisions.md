@@ -148,6 +148,11 @@ Choose the export artifact by the receiving task:
   but not revision history. Importing snapshot JSON after a workflow-only RDF
   bundle leaves `snapshot_rows_without_history` until project/history RDF is
   imported.
+- `export_context_slice()` is for resource-scoped review context. A slice may
+  include selected `history`/`rc:GraphRevision` triples, but it still omits
+  SQLite-side revision snapshot rows. If the warning or suggested action points
+  to `export_handoff_bundle`, use that paired export for recovery rather than
+  treating the context slice as an exact staged/applied revision handoff.
 - Default project TriG preserves ontology, shapes, history metadata, graph
   counts, digests, support links, and staged/applied pairing. It is enough for
   lineage triage, but exact changed triples remain unavailable as

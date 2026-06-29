@@ -1076,7 +1076,10 @@ export triples for credential-like graph terms, and returns the same
 `sensitive_literal_count`, `privacy_warnings`, `warnings`, and suggested-action
 style used by broader export preflights. `scanner-clean` is still not a
 shareability proof; local paths, endpoints, and confidential project facts need
-human review.
+human review. If the selected slice includes `history` graph triples, the
+preflight warning and suggested actions also point to
+`export_handoff_bundle`; context slices can import revision review context but
+do not carry the revision snapshot rows needed for exact recovery.
 
 `doxabase.export_context_slice`
 
@@ -1086,7 +1089,9 @@ Writes the selected context-slice triples as TriG. Pass
 require `import_trig(..., allow_immutable=True)`: fresh DoxaBase capsules
 already contain the standard base ontology and shape seed graphs. Prefer this
 helper over `describe_context_slice(include_trig=true)` when the artifact must
-round-trip into a fresh capsule or avoid unrelated graph siblings.
+round-trip into a fresh capsule or avoid unrelated graph siblings. A written
+slice with `history` graph triples still has `recovery_complete=false` and
+returns an `export_handoff_bundle` action for recovery-complete handoff needs.
 
 `doxabase.describe_pattern`
 

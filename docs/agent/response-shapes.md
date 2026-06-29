@@ -978,9 +978,12 @@ export.recovery_complete
 
 `preflight_context_slice_export()` does not write a file, so `path` is `None`
 and `bytes_written` is `0`; it includes a suggested `export_context_slice`
-action. `export_context_slice()` writes TriG and returns no further export
-action. The helper scans only the selected context-slice export triples and
-omits `base_ontology`/`base_shapes` triples by default so the bundle can be
+action. `export_context_slice()` writes TriG and usually returns no further
+export action. If the selected triples include `history`, both helpers warn that
+the slice is not a recovery-complete revision handoff and include an
+`export_handoff_bundle` action, optionally narrowed to the revision IRIs visible
+in the slice. The helper scans only the selected context-slice export triples
+and omits `base_ontology`/`base_shapes` triples by default so the bundle can be
 imported into a fresh capsule without immutable-seed privileges. Set
 `include_seed_graphs=True` only for deliberate seed-graph review bundles.
 

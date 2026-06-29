@@ -229,6 +229,13 @@ is an inspection surface; it may include base ontology or base shape triples
 selected for route context and should not be assumed to be a recovery or
 shareable handoff bundle.
 
+If a context-slice export includes the `history` graph, treat it as importable
+review context, not a recovery-complete revision handoff. It can carry
+`rc:GraphRevision` metadata, but it does not include SQLite-side revision
+snapshot rows. The export warning and suggested actions point to
+`export_handoff_bundle` when another capsule needs exact applied diffs,
+stale-drift checks, or staged-revision recovery.
+
 When `truncated=true`, read `warnings` before assuming the returned payload is
 small. Raw RDF is capped by `max_triples`, but structured contexts still return
 their full selected summaries; wide datasets or very broad seed sets emit a

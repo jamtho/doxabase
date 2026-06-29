@@ -2871,6 +2871,12 @@ few useful gaps:
   profile-review artifacts, but agents need a compact route matrix to choose
   the right preflight/write helper under pressure. Use the `mcp_tools`
   privacy/export matrix before writing handoff artifacts.
+- A review-bundle portability trial confirmed full project/history TriG plus
+  revision snapshot JSON is enough for exact recovery, while workflow TriG,
+  Markdown review bundles, and context-slice TriG remain review artifacts. A
+  context slice can include selected `history`/`rc:GraphRevision` triples and
+  still lack SQLite-side snapshot rows, so history-bearing context-slice exports
+  now warn and point to `export_handoff_bundle` for recovery-complete handoffs.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
