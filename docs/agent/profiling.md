@@ -185,7 +185,10 @@ After a metric promotion has been applied, a rerun may still show
 `project_metric_defined` actions for context inspection. Those routes are not
 open metric vocabulary work; `export_profile_insight_review_bundle` suppresses
 them from `open_profile_review_lanes` while preserving the applied promotion as
-the direct-action route in the bridge.
+the direct-action route in the bridge. `project_brief` follows the same
+closed-lane cue: if a draft only has `project_metric_defined` metric context and
+no map updates, scalar conflicts, open metric vocabulary, or type findings, it
+does not create a `profile_review` task.
 The bridge `Row` column uses the same row number as the grouped review bundle's
 `Revision N` sections and repeats the candidate summary, so a Markdown-only
 reviewer can map route lanes back to the detailed revision section directly.

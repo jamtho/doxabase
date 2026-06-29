@@ -519,7 +519,10 @@ When a metric reruns as `project_metric_defined` after a promotion, do not
 stage duplicate vocabulary; use the observed-metric context action for the
 dataset handoff and `describe_context_slice(..., profile="deep_lore")` from the
 metric, promotion pattern, or revision when you need to rediscover the
-supporting promotion trail.
+supporting promotion trail. `project_brief` preserves the defined metric in
+profile draft summaries and `profile_queue_counts`, but does not create a
+`profile_review` task when `project_metric_defined` is the only remaining
+profile finding for that draft.
 That skeleton seeds its `rdfs:comment` from metric-specific supporting pattern
 text, rationale, or summary when available; otherwise it uses a generic
 review-first comment. It is still a draft vocabulary definition; sharpen units,

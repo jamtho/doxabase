@@ -4615,12 +4615,7 @@ class DoxaBase:
                 )
 
         for draft in dataset.profile.drafts:
-            if (
-                draft.recommendation_count
-                or draft.scalar_conflict_group_count
-                or draft.metric_advisory_count
-                or draft.type_advisory_count
-            ):
+            if self._project_brief_profile_draft_requires_review(draft):
                 pending_staged_profile_update_iris = (
                     self._project_brief_pending_staged_profile_update_iris(
                         dataset.dataset.iri,
@@ -4630,7 +4625,7 @@ class DoxaBase:
                 )
                 open_profile_advisory_count = (
                     draft.scalar_conflict_group_count
-                    + draft.metric_advisory_count
+                    + self._project_brief_metric_advisory_review_count(draft)
                     + draft.type_advisory_count
                 )
                 if pending_staged_profile_update_iris:
@@ -4686,6 +4681,27 @@ class DoxaBase:
                     )
                 )
         return tasks
+
+    @staticmethod
+    def _project_brief_profile_draft_requires_review(
+        draft: ProjectBriefProfileDraftSummary,
+    ) -> bool:
+        return bool(
+            draft.recommendation_count
+            or draft.scalar_conflict_group_count
+            or DoxaBase._project_brief_metric_advisory_review_count(draft)
+            or draft.type_advisory_count
+        )
+
+    @staticmethod
+    def _project_brief_metric_advisory_review_count(
+        draft: ProjectBriefProfileDraftSummary,
+    ) -> int:
+        context_only_count = draft.metric_advisory_status_counts.get(
+            "project_metric_defined",
+            0,
+        )
+        return max(0, draft.metric_advisory_count - context_only_count)
 
     def _project_brief_describe_context_slice_action(
         self,

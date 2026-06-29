@@ -29051,6 +29051,69 @@ def test_draft_profile_map_updates_reports_defined_project_metric_advisory(
     }
 
 
+def test_project_brief_suppresses_defined_metric_context_only_profile_review(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    db.replace_graph_triples(
+        "ontology",
+        additions=f"""
+            @prefix metric: <https://example.test/project#> .
+            @prefix rc: <https://richcanopy.org/ns/rc#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+            <{project_metric}> a rc:ProfileMetricKind ;
+                rdfs:label "Completeness score" ;
+                rdfs:comment "Share of records with complete required fields." .
+        """,
+        allow_count_change=True,
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with a project metric.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        row_count=100,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+
+    brief = db.project_brief(limit=5, profile_candidate_limit=1)
+    profile_draft = brief.datasets[0].profile.drafts[0]
+
+    assert profile_draft.metric_advisory_count == 1
+    assert profile_draft.metric_advisory_status_counts == {
+        "project_metric_defined": 1,
+    }
+    assert [action.tool_name for action in profile_draft.suggested_next_actions] == [
+        "describe_context_slice",
+        "describe_resource",
+    ]
+    assert brief.profile_queue_counts["profile_metric_advisories"] == 1
+    assert "profile_review" not in brief.queue_counts
+    assert all(
+        task.task_type != "profile_review"
+        for task in brief.recommended_next_tasks
+    )
+
+
 def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     tmp_path: Path,
 ) -> None:

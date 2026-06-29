@@ -2918,11 +2918,13 @@ few useful gaps:
   not an automatic drop list; target framing selection still requires semantic
   judgement.
 - The same follow-up wave found profile-to-map review/apply mechanics can close
-  scalar, query, metric, and type lanes cleanly, but `project_brief` can still
+  scalar, query, metric, and type lanes cleanly, but `project_brief` could
   surface a context-only `project_metric_defined` advisory as `profile_review`
-  after `export_profile_insight_review_bundle` reports `open_lane_count=0`.
-  Prefer a future fix that suppresses or demotes closed metric-defined context
-  handoffs so the frontier does not look actionable after closure.
+  after `export_profile_insight_review_bundle` reported `open_lane_count=0`.
+  Project brief now treats all-`project_metric_defined` metric advisories as
+  context handoffs: they stay visible in profile draft summaries and raw queue
+  counts, but do not create `profile_review` tasks without map updates, scalar
+  conflicts, open metric vocabulary, or type findings.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -339,6 +339,10 @@ populate `pending_staged_profile_update_iris`. Like query pending detection, thi
 can name current staged rows outside the returned staged-review slice. Pending profile-map updates only
 demote pure map-update reruns; if scalar conflict, metric vocabulary, or type
 advisory lanes remain open, the profile task stays at normal priority.
+Metric advisories whose only status is `project_metric_defined` are context
+handoffs, not open vocabulary review lanes: they remain visible in profile draft
+summaries and `profile_queue_counts`, but do not create a `profile_review`
+task by themselves.
 For `profile_review` tasks, `profile_evidence_iri` names the profile evidence
 that scoped the task. Use it even when `suggested_next_action` is a shared
 blocker action such as `describe_query_context`, because multiple profile
@@ -1793,7 +1797,8 @@ Defined metrics point at
 ambiguous metrics point at both the existing definition and nearby metric
 lookup even when no promotion skeleton is available. Use
 `metric_advisory_count` and `metric_advisory_status_counts` for queue routing
-before reading full advisory rows.
+before reading full advisory rows, but treat an all-`project_metric_defined`
+metric advisory set as inspection context rather than outstanding review work.
 Duplicate fields are populated for every recommendation and advisory. Count `1`
 means the row is unique in this draft; higher counts mean repeated profile
 observations produced the same review row. Agents can accept one representative
