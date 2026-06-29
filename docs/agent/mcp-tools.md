@@ -16,6 +16,19 @@ to continue a truncated document, or `section` to jump to a heading/anchor.
 Start with `doc_id="start_here"` when arriving cold or resuming after
 compaction.
 
+## Storage Access Primer
+
+For query planning and executable-catalog work, keep storage protocol separate
+from root shape. `storage_protocol` values include `local_path`, S3-style
+object storage, and database-backed storage such as `rc:DatabaseStorage`;
+`location_kind` is one of `"object"`, `"directory"`, `"prefix"`, or
+`"connection"`, never `"local_path"`. Local filesystem roots usually use
+`rc:LocalFilesystemStorage`; database relation identifiers belong on storage
+access records, and `path_templates` may live on the dataset, partition scheme,
+or storage access. Always keep `storage_root` explicit enough for
+`describe_query_context` to distinguish a real object from a directory/prefix
+or database connection.
+
 ## Capsule Inspection
 
 `doxabase.graph_overview`
@@ -635,7 +648,10 @@ credential-like or secret-looking literals.
 The returned payload includes `candidates[]` with `relation_reasons`, matched
 support/evidence/anchor fields, `profile_route_keys`,
 `profile_route_groups`, `candidate_revision_iris`, and the nested
-`export_staged_revisions` record when a bundle was written. It also includes
+`export_staged_revisions` record when a bundle was written. When no candidate
+revision is found, `candidate_count` is `0`, `export` is `None`, and no
+Markdown file is written; use `warnings` and `open_profile_review_lanes` as the
+handoff signal. It also includes
 `open_profile_review_lanes`: live draft route groups that still lack a
 `direct_action` candidate in the exported bundle. Treat support-only matches as
 context, not completion; for example, a staged profile-map update can support a

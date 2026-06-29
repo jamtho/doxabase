@@ -706,6 +706,11 @@ triple.object_lang
 Use this helper when a specific resource needs a local RDF neighborhood rather
 than a route-explained context slice. The `claim` field is populated for claim
 resources and has the normal claim-description shape.
+If all count fields are zero for a remembered proposal IRI, do not conclude the
+resource is absent until you check staged patch payloads. Use
+`list_resource_revisions(resource_iri=..., include_patch_mentions=True)` for an
+exact IRI or `search_staged_patch_payloads(...)` for remembered labels, local
+names, or proposal prose.
 Use `outgoing_offset` and `incoming_offset` to page high-degree resources when
 the returned count is lower than the total count. Set
 `include_blank_node_closure=True` for SHACL shapes and other RDF structures
@@ -2111,6 +2116,9 @@ review, and query-context repair lanes visible after one related staged row has
 been exported. `matched_candidate_revision_iris` can name support-only staged
 rows that should travel with the lane, but it does not mean the lane is
 satisfied unless the lane is absent from `open_profile_review_lanes`.
+When `candidate_count` is `0`, `export` is `None` and no Markdown artifact was
+written; inspect `warnings` and `open_profile_review_lanes` rather than
+assuming the `path` argument was created.
 Markdown export includes a `Profile Route Bridge` table in the review summary
 when candidates match draft routes, and renders lane names with their strength.
 When open lanes exist, the summary also includes an `Open Profile Review Lanes`

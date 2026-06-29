@@ -10450,7 +10450,13 @@ class DoxaBase:
                 and not observed_value_type_profile_observation_iris
                 and not seed_is_resource_brief_target
             ):
-                raise DoxaBaseError(f"Seed resource '{seed}' was not found")
+                raise DoxaBaseError(
+                    f"Seed resource '{seed}' was not found in visible RDF "
+                    "triples. If this IRI may exist only inside staged patch "
+                    "payloads, call list_resource_revisions(resource_iri=..., "
+                    "include_patch_mentions=True) or search_staged_patch_payloads "
+                    "before concluding it is absent."
+                )
             add_resource(seed, "seed", "seed resource", depth=0)
             seed_types = self._types_from_graphs(all_graphs, seed)
             if profile == "resource_brief":

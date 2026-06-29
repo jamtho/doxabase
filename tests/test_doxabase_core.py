@@ -21964,6 +21964,14 @@ def test_search_staged_patch_payloads_routes_staged_only_terms(
         "include_current_apply_check": True,
     }
 
+    with pytest.raises(DoxaBaseError) as exc_info:
+        db.describe_context_slice(term, profile="resource_brief")
+    missing_seed_message = str(exc_info.value)
+    assert "staged patch payloads" in missing_seed_message
+    assert "list_resource_revisions" in missing_seed_message
+    assert "include_patch_mentions=True" in missing_seed_message
+    assert "search_staged_patch_payloads" in missing_seed_message
+
     db.apply_staged_revision(staged.revision_iri)
 
     assert db.search_staged_patch_payloads("cohort completeness").matches == []

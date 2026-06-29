@@ -81,6 +81,12 @@ until the staged revision is applied, so `resource_brief` and
 constraints directly. For staged ontology/shape proposals, use
 `describe_staged_revision()` and grouped staged exports to read the patch
 payload, validation diagnostics, and review context.
+If a seed IRI is not found, or `describe_resource()` returns an all-empty card
+for a remembered proposal IRI, check staged patch payloads before treating the
+resource as absent. Use
+`list_resource_revisions(resource_iri=..., include_patch_mentions=True)` when
+you know the exact IRI, or `search_staged_patch_payloads(...)` when you only
+remember a label, local name, or proposal prose.
 
 Dataset and deep-lore slices also understand profile seeds. A seed
 `rc:ProfileObservation` expands to its observed asset/column, evidence, value

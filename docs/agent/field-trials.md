@@ -2739,6 +2739,14 @@ few useful gaps:
   restage. Planner warnings now call out that helper repair mutations live in
   `helper_mutation_frontier_actions`, not `mutation_frontier_iris`, so
   unattended scripts do not treat the IRI frontier as complete.
+- Non-tabular and staged-only discovery trials confirmed the important
+  boundaries stayed intact: APIs and other non-table assets did not get forced
+  into row-count map updates or query plans, and staged-only resources stayed
+  out of live context slices. The follow-up guidance is failure-path routing:
+  zero-candidate profile insight exports write no Markdown artifact, and empty
+  live-resource/context lookups for remembered proposal IRIs should route to
+  `list_resource_revisions(include_patch_mentions=True)` or
+  `search_staged_patch_payloads` before declaring the resource absent.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

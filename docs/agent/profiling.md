@@ -143,6 +143,9 @@ observations, related support patterns, or profile-derived anchors. Leave the
 applied-source scan on for post-apply handoffs where the
 profile map-update row has already been applied but still needs to travel with
 remaining caveat, metric, type, or query-repair review work.
+If `candidate_count` is `0`, no Markdown artifact is written and the returned
+`export` field is `None`; inspect `warnings` and
+`open_profile_review_lanes` before assuming the review lane is resolved.
 If `project_brief` shows `staged_frontier_review` or a profile task with
 `pending_staged_profile_update_iris`, run `plan_staged_revision_recovery` or
 review the staged profile-map update before calling `stage_profile_map_updates`
