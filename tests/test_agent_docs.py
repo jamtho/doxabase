@@ -65,6 +65,16 @@ def test_storage_access_docs_distinguish_protocol_from_location_kind() -> None:
         assert "storage_root" in content
 
 
+def test_context_slicing_docs_explain_column_owner_query_routing() -> None:
+    doc = get_agent_doc("context_slicing", max_chars=50_000)
+    content = str(doc["content"])
+
+    assert "mapped column seeds" in content
+    assert "owning dataset" in content
+    assert "describe_query_context" in content
+    assert "owner table" in content
+
+
 def test_high_value_sections_are_addressable_for_cold_start() -> None:
     mcp_doc = get_agent_doc(
         "mcp_tools",

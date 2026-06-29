@@ -112,11 +112,13 @@ Dataset and deep-lore slices also understand mapped column seeds. A seed
 `rc:Column` expands to its owning dataset plus claims, patterns, observations,
 and reconsiderations that directly target or observe that column. This is the
 preferred route when an agent starts from a column IRI and needs column-specific
-lore without first rediscovering the owning dataset by hand. If a column was
-recorded only in a profile observation with `update_map_column=false`, its IRI
-is an observed object rather than a mapped `rc:Column` subject; dataset/deep
-slices still accept that IRI and expand through the matching profile
-observation(s) with a `seed_observed_column` route.
+lore without first rediscovering the owning dataset by hand. If that owner table
+has query-planning warnings or repair groups, `suggested_next_actions` includes
+a `describe_query_context` action for the owner just as it would for a table
+seed. If a column was recorded only in a profile observation with
+`update_map_column=false`, its IRI is an observed object rather than a mapped
+`rc:Column` subject; dataset/deep slices still accept that IRI and expand
+through the matching profile observation(s) with a `seed_observed_column` route.
 
 Deep-lore slices also understand revision seeds. A seed `rc:GraphRevision`
 expands to supporting observations, claims, patterns, revision evidence, anchor
@@ -172,12 +174,12 @@ Useful fields:
   to retry, for example rerunning an `rc:Pattern` seed with `pattern_brief` or
   `deep_lore`.
 - `suggested_next_actions` and `suggested_next_calls`: structured follow-up
-  routes. When a seed table carries operational query-planning warnings or
-  query-context repair groups, a `describe_query_context` action points to
-  readiness, target candidates, and repair hints even if raw triples were not
-  truncated. When raw triples are truncated, pattern narrowing actions come
-  before the same-seed higher-`max_triples` retry because structured context is
-  often enough.
+  routes. When a seed table or seed-reached owner table carries operational
+  query-planning warnings or query-context repair groups, a
+  `describe_query_context` action points to readiness, target candidates, and
+  repair hints even if raw triples were not truncated. When raw triples are
+  truncated, pattern narrowing actions come before the same-seed higher
+  `max_triples` retry because structured context is often enough.
 - `triples`: selected RDF triples, preserving graph roles.
 - `trig`: optional TriG text when `include_trig=true`.
 - `resource_count`, `candidate_triple_count`, `returned_triple_count`, and

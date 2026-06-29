@@ -9548,9 +9548,20 @@ class DoxaBase:
             )
 
         seed_iris_set = set(seed_iris)
+
+        def dataset_reached_from_seed(dataset_iri: str) -> bool:
+            if dataset_iri in seed_iris_set:
+                return True
+            return any(
+                route.source_iri in seed_iris_set
+                for route in resources.get(dataset_iri, ())
+            )
+
         seen_dataset_iris: set[str] = set()
         for dataset in dataset_context_list:
-            if dataset.iri not in seed_iris_set or dataset.iri in seen_dataset_iris:
+            if not dataset_reached_from_seed(dataset.iri):
+                continue
+            if dataset.iri in seen_dataset_iris:
                 continue
             if self.expand_iri("rc:Table") not in dataset.types:
                 continue

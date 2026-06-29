@@ -834,11 +834,13 @@ Incoming reference caps are usefulness-ranked before selection, so resources
 with direct claims, caveats, patterns, profile observations, staged revisions,
 or dataset/column roles are preferred over plain generic references. Use the
 paged `describe_resource` action when you need the exhaustive inbound list.
-`suggested_next_actions` can include `describe_query_context` for seed tables
-whose nested `dataset_contexts[].operational_warnings` contain query-planning
-errors or warnings. Non-table dataset seeds stay on context-slice/resource
-routes even when they carry storage or layout metadata. Use that route to
-inspect readiness, target candidates, and repair hints before drafting a query.
+`suggested_next_actions` can include `describe_query_context` for seed tables or
+seed-reached owner tables whose query context has repair groups or whose nested
+`dataset_contexts[].operational_warnings` contain query-planning errors or
+warnings. This includes mapped column seeds that expand to an owning table.
+Non-table dataset seeds stay on context-slice/resource routes even when they
+carry storage or layout metadata. Use that route to inspect readiness, target
+candidates, and repair hints before drafting a query.
 When `truncated=true`,
 the remaining actions first offer narrower
 `describe_context_slice(..., profile="pattern_brief")` calls for linked pattern

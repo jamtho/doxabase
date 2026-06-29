@@ -2432,6 +2432,12 @@ few useful gaps:
   database storage: for `rc:DatabaseStorage`, path templates are reviewed
   storage-owned relation identifiers such as `schema.table`, while
   `storage_root` is the connection reference.
+- A column-seeded context-slice trial found mapped column seeds expanded to the
+  owning table but skipped query-repair routing because the owner table was not
+  itself a literal seed. Dataset/deep-lore slices now treat seed-reached owner
+  tables like table seeds for `describe_query_context` suggestions, so column
+  handoffs surface owner-table repair groups such as
+  `database_relation_template_source_mismatch`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -20628,6 +20628,68 @@ def test_context_slice_suggests_query_context_for_seed_operational_warnings(
     assert query_context.issues[0].code == "missing_storage_access"
 
 
+def test_context_slice_column_seed_suggests_query_context_for_owner_repairs(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    column = "https://example.test/project#events__event_type"
+    dataset_template = "events/current/*.parquet"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_database_storage",
+        label="Events database connection",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="analytics-prod",
+        endpoint_profile="warehouse-prod",
+        credential_reference="profile:warehouse-readonly",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#events_table_layout",
+        file_format="rc:PostgreSQLTable",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        path_templates=[dataset_template],
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_column(
+        column,
+        table_iri=dataset,
+        column_name="event_type",
+        physical_type="rc:Varchar",
+    )
+
+    for profile in ("dataset_brief", "deep_lore"):
+        context_slice = db.describe_context_slice(column, profile=profile)
+
+        assert context_slice.dataset_contexts[0].iri == dataset
+        assert context_slice.route_counts["seed_column"] == 1
+        assert context_slice.route_counts["related_dataset"] == 1
+        query_actions = [
+            action
+            for action in context_slice.suggested_next_actions
+            if action.tool_name == "describe_query_context"
+        ]
+        assert len(query_actions) == 1
+        action = query_actions[0]
+        assert action.action_label == "Inspect query-planning context"
+        assert action.arguments == {"iri": dataset}
+        assert "database_relation_template_source_mismatch" in action.reason
+        assert "repair hints" in action.reason
+
+        query_context = db.describe_query_context(**action.arguments)
+        assert query_context.suggested_repair_action_groups[0].issue_code == (
+            "database_relation_template_source_mismatch"
+        )
+
+
 def test_context_slice_column_seed_expands_claim_reconsideration_lore(
     tmp_path: Path,
 ) -> None:
@@ -20746,15 +20808,18 @@ def test_context_slice_truncation_suggests_pattern_narrowing(
     assert [
         action.action_label for action in context_slice.suggested_next_actions
     ] == [
+        "Inspect query-planning context",
         "Narrow to pattern context",
         "Return full raw RDF for slice",
     ]
-    assert context_slice.suggested_next_actions[0].arguments == {
+    assert context_slice.suggested_next_actions[0].arguments == {"iri": dataset}
+    assert "missing_storage_access" in context_slice.suggested_next_actions[0].reason
+    assert context_slice.suggested_next_actions[1].arguments == {
         "seed_iris": [pattern.pattern_iri],
         "profile": "pattern_brief",
         "max_triples": 5,
     }
-    assert context_slice.suggested_next_actions[1].arguments == {
+    assert context_slice.suggested_next_actions[2].arguments == {
         "seed_iris": [column],
         "profile": "deep_lore",
         "max_triples": context_slice.candidate_triple_count,
