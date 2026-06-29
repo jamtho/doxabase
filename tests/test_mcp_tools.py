@@ -5829,6 +5829,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
             "actions": [
                 {
                     "action_type": "add_reviewed_relation_template",
+                    "action_label": "Add reviewed relation template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
                     "source_subject_iri": dataset,
@@ -5857,6 +5858,7 @@ def test_draft_query_plan_tool_serializes_database_template_source_mismatch(
                 },
                 {
                     "action_type": "remove_misplaced_source_template",
+                    "action_label": "Remove misplaced source template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
                     "source_subject_iri": dataset,
@@ -6377,6 +6379,9 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
         "predicate": "rc:pathTemplate",
         "required_template_source": "storage_access",
     }
+    assert repair_hint["actions"][0]["action_label"] == (
+        "Add reviewed relation template"
+    )
     assert repair_hint["actions"][0]["arguments_template"] == {
         "subject": storage["iri"],
         "predicate": "rc:pathTemplate",
@@ -6391,6 +6396,10 @@ def test_describe_query_context_tool_demotes_root_only_database_target(
     ]
     assert repair_hint["actions"][0]["placeholder_fields"] == ["object"]
     assert repair_hint["actions"][0]["reviewed_value_fields"] == ["object"]
+    repair_group = context["suggested_repair_action_groups"][0]
+    assert repair_group["pending_action_options"][0]["action_label"] == (
+        "Add reviewed relation template"
+    )
     target = context["query_target_candidates"][0]
     assert target["template_source"] == "storage_access_location"
     assert target["composition"] == "database_connection_as_candidate"
@@ -6906,6 +6915,47 @@ def test_context_slice_export_tools_return_json_like_payload(
     assert export["recovery_complete"] is False
     assert export["suggested_next_actions"] == []
     assert export_path.exists()
+
+
+def test_context_slice_export_tools_redact_sensitive_seed_descriptions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_CONTEXT_SLICE_TOOL_SEED"
+    dataset = "https://example.test/project#SensitiveToolSeed"
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Sensitive tool seed",
+        description=f"Synthetic fixture {fake_secret}.",
+        is_table=True,
+    )
+
+    preflight = preflight_context_slice_export_tool(
+        db,
+        seed_iris=[dataset],
+        profile="dataset_brief",
+        max_triples=100,
+        limit=5,
+    )
+
+    assert preflight["sensitive_literal_count"] >= 1
+    assert preflight["seeds"][0]["description"] == (
+        "[REDACTED:fake_secret_marker]"
+    )
+    assert preflight["matches"][0]["redacted_snippet"] == (
+        "[REDACTED:fake_secret_marker]"
+    )
+    assert fake_secret not in json.dumps(preflight)
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        export_context_slice_tool(
+            db,
+            path=str(tmp_path / "sensitive-tool-seed-context.trig"),
+            seed_iris=[dataset],
+            profile="dataset_brief",
+            max_triples=100,
+            fail_on_sensitive=True,
+        )
 
 
 def test_context_slice_export_tool_warns_history_not_recovery_handoff(

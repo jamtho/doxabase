@@ -2893,6 +2893,21 @@ few useful gaps:
   `draft_query_evidence_storage_overlay` skeleton, and staged recovery plans
   expose `mutation_frontier_items` so same-slot helper actions and existing
   revision targets share one unattended mutation worklist.
+- A broader privacy/query/non-tabular/systematisation wave confirmed the revised
+  goal reaches less-polished project areas. Privacy/export preflights and write
+  gates blocked correctly, but context-slice export `seeds[]` and
+  `project_brief` resource descriptions could echo planted fake-secret display
+  text; those response summaries now redact scanner-matching labels and
+  descriptions while faithful RDF exports still require `fail_on_sensitive` to
+  block. The same wave found database relation template repair options were
+  executable but label-light; `add_reviewed_relation_template` now carries an
+  `action_label` through pending action options.
+- The same wave found no immediate non-tabular or ontology/SHACL correctness
+  fix. Non-tabular assets stayed visible outside query-planning lanes, but tight
+  context-slice exports could make graph-role loss easy to miss. Systematisation
+  preserved awkward shape-backed alternatives, but a future helper action could
+  generate the rerun that moves shared ontology/shapes patches into selected
+  framing patches.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

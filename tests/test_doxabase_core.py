@@ -1175,10 +1175,11 @@ def test_project_brief_surfaces_sanitized_privacy_health_task(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_TOKEN_PROJECT_BRIEF"
     db.record_map_dataset(
         "https://example.test/project#CredentialNotes",
         label="Credential notes",
-        description="Synthetic fixture FAKE_SECRET_TOKEN_PROJECT_BRIEF.",
+        description=f"Synthetic fixture {fake_secret}.",
     )
 
     brief = db.project_brief(limit=5)
@@ -1195,7 +1196,11 @@ def test_project_brief_surfaces_sanitized_privacy_health_task(
         "graphs": ["project"],
         "limit": 20,
     }
+    assert brief.datasets[0].dataset.description == (
+        "[REDACTED:fake_secret_marker]"
+    )
     assert "FAKE_SECRET" not in json.dumps(to_dict(privacy_task))
+    assert fake_secret not in json.dumps(to_dict(brief))
 
 
 def test_project_brief_privacy_health_uses_handoff_preflight_scope(
@@ -2472,6 +2477,44 @@ def test_context_slice_export_is_importable_and_resource_scoped(
     assert imported == {"map": export.triples}
     assert round_trip.search("Shareable orders", graph="map").matches
     assert round_trip.search("Sensitive payroll", graph="map").matches == []
+
+
+def test_context_slice_export_redacts_sensitive_seed_descriptions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_CONTEXT_SLICE_SEED"
+    dataset = "https://example.test/project#SensitiveSeedSummary"
+    db.record_map_dataset(
+        dataset,
+        label="Sensitive seed summary",
+        description=f"Synthetic fixture {fake_secret}.",
+        is_table=True,
+    )
+
+    preflight = db.preflight_context_slice_export(
+        [dataset],
+        profile="dataset_brief",
+        max_triples=100,
+        limit=5,
+    )
+
+    assert preflight.sensitive_literal_count >= 1
+    assert preflight.seeds[0].description == (
+        "[REDACTED:fake_secret_marker]"
+    )
+    assert preflight.matches[0].redacted_snippet == (
+        "[REDACTED:fake_secret_marker]"
+    )
+    assert fake_secret not in json.dumps(to_dict(preflight))
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        db.export_context_slice(
+            tmp_path / "sensitive-seed-context.trig",
+            [dataset],
+            profile="dataset_brief",
+            max_triples=100,
+            fail_on_sensitive=True,
+        )
 
 
 def test_context_slice_export_warns_history_is_not_recovery_handoff(
@@ -18640,6 +18683,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                 "actions": [
                     {
                         "action_type": "remove_misplaced_source_template",
+                        "action_label": "Remove misplaced source template",
                         "tool_name": "stage_map_assertion_change",
                         "mcp_tool_name": "doxabase.stage_map_assertion_change",
                         "source_subject_iri": partition.iri,
@@ -18667,6 +18711,7 @@ def test_database_storage_does_not_treat_partition_template_as_relation(
                     },
                     {
                         "action_type": "add_reviewed_relation_template",
+                        "action_label": "Add reviewed relation template",
                         "tool_name": "stage_map_assertion_change",
                         "mcp_tool_name": "doxabase.stage_map_assertion_change",
                         "source_subject_iri": partition.iri,
@@ -19585,6 +19630,12 @@ def test_database_root_only_storage_requires_relation_template(
     assert [action["action_type"] for action in repair_group.actions] == [
         "add_reviewed_relation_template"
     ]
+    assert repair_group.actions[0]["action_label"] == (
+        "Add reviewed relation template"
+    )
+    assert repair_group.pending_action_options[0]["action_label"] == (
+        "Add reviewed relation template"
+    )
     assert {
         action.tool_name for action in context.suggested_next_actions
     } == {"draft_query_plan"}
@@ -19600,6 +19651,7 @@ def test_database_root_only_storage_requires_relation_template(
     }
     assert repair_hint["candidate_relation_identifier"]["requires_review"] is True
     add_action = repair_hint["actions"][0]
+    assert add_action["action_label"] == "Add reviewed relation template"
     assert add_action["tool_name"] == "stage_map_assertion_change"
     assert add_action["mcp_tool_name"] == "doxabase.stage_map_assertion_change"
     assert add_action["required_extra_arguments"] == ["object", "rationale"]

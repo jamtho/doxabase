@@ -55,6 +55,11 @@ do not look for export-only `sensitive_literal_count` on
 If a returned context field such as `subject` or `predicate` itself contains a
 sensitive-looking value, that context field is also replaced with a redacted
 marker.
+Privacy-adjacent orientation payloads also redact scanner-matching display text
+in `ResourceSummary` cards, including `project_brief` resource descriptions and
+context-slice export `seeds[]` labels/descriptions. This protects response
+summaries; RDF exports remain faithful and should still use `fail_on_sensitive`
+when shareable output must block.
 The scan is not a general path/shareability hygiene check: non-secret local
 paths, object-store URIs, endpoint URLs, and relative paths are preserved in
 exports and do not by themselves trigger `privacy_warnings`. Keep user-specific
@@ -102,6 +107,9 @@ tasks. Use it when arriving cold or when a loop may be over-polishing one
 workflow while missing another active queue. If `limit_crowded_queue_types` is
 non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 `omitted_queue_counts` before choosing the next task.
+Dataset/task resource summary display text is redacted when it matches the
+sensitive-term scanner, but the brief remains an orientation payload, not a
+shareability proof.
 Check `next_best_expansion` before repeating visible recommended tasks; if it is
 non-null, follow or evaluate that rerun before trusting a tight brief's frontier.
 In unattended loops, run `full_frontier_expansion` when it is non-null before
@@ -1097,6 +1105,10 @@ human review. If the selected slice includes `history` graph triples, the
 preflight warning and suggested actions also point to
 `export_handoff_bundle`; context slices can import revision review context but
 do not carry the revision snapshot rows needed for exact recovery.
+Returned `seeds[]` are response summaries: label/description display text is
+redacted when it matches the sensitive-term scanner. The selected export triples
+are not redacted; use `fail_on_sensitive=true` to block writes when they contain
+credential-like terms.
 
 `doxabase.export_context_slice`
 

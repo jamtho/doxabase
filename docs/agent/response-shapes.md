@@ -288,6 +288,10 @@ its suggested actions into `describe_query_context`,
 `draft_profile_map_updates`, `plan_staged_revision_recovery`,
 `list_graph_revisions`, or the relevant focused inspection helper before making
 durable graph changes.
+`ResourceSummary` display fields returned by `project_brief`, such as dataset
+and task resource labels/descriptions, are redacted when they match the
+sensitive-term scanner. This protects orientation payloads; it does not redact
+underlying graph content or export artifacts.
 `dataset_query_readiness_counts`, `profile_queue_counts`, and `queue_counts`
 are computed across scanned table/dataset entities. For staged work,
 `queue_counts["staged_frontier_review"]` appears when current staged work
@@ -993,6 +997,10 @@ in the slice. The helper scans only the selected context-slice export triples
 and omits `base_ontology`/`base_shapes` triples by default so the bundle can be
 imported into a fresh capsule without immutable-seed privileges. Set
 `include_seed_graphs=True` only for deliberate seed-graph review bundles.
+`export.seeds[]` are response summaries copied from the selected context; their
+label/description display fields are redacted when they match the sensitive-term
+scanner. The exported RDF triples are faithful and are not redacted; pass
+`fail_on_sensitive=True` when writes must block on scanner matches.
 
 `route_counts` is keyed by route id. `route_legend` is a list of rows, not a
 dict; callers can build a dict keyed by `route` if that is more convenient.

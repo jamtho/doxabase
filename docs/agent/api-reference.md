@@ -110,6 +110,11 @@ its preflight scans only selected context-slice triples; scanner-clean still
 requires separate shareability review. Use
 `export_handoff_bundle()` or project TriG plus `export_revision_snapshots()` for
 recovery handoffs.
+Read-only orientation payloads that sit near privacy workflows, including
+`project_brief()` resource descriptions and context-slice export `seeds[]`
+labels/descriptions, redact scanner-matching display text. This does not redact
+RDF exports; use `fail_on_sensitive=True` when selected graph content must block
+before writing.
 Export records carry `artifact_kind`, `importable`, `recommended_import_tool`,
 and `recovery_complete` so scripts do not have to infer artifact class from the
 helper name or file extension. Markdown staged/profile review bundles are

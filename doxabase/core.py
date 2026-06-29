@@ -3762,10 +3762,12 @@ class DoxaBase:
                 profile_candidate_limit=profile_candidate_limit,
             )
             dataset_summary = ProjectBriefDatasetSummary(
-                dataset=ResourceSummary(
-                    iri=description.iri,
-                    label=description.label,
-                    description=description.description,
+                dataset=self._privacy_redacted_resource_summary(
+                    ResourceSummary(
+                        iri=description.iri,
+                        label=description.label,
+                        description=description.description,
+                    )
                 ),
                 is_table=is_table,
                 query=query_summary,
@@ -20000,6 +20002,7 @@ class DoxaBase:
     ) -> dict[str, Any]:
         add_action = {
             "action_type": "add_reviewed_relation_template",
+            "action_label": "Add reviewed relation template",
             "tool_name": "stage_map_assertion_change",
             "mcp_tool_name": "doxabase.stage_map_assertion_change",
             "source_subject_iri": source_resource.iri,
@@ -20028,6 +20031,7 @@ class DoxaBase:
         }
         remove_action = {
             "action_type": "remove_misplaced_source_template",
+            "action_label": "Remove misplaced source template",
             "tool_name": "stage_map_assertion_change",
             "mcp_tool_name": "doxabase.stage_map_assertion_change",
             "source_subject_iri": source_resource.iri,
@@ -20151,6 +20155,7 @@ class DoxaBase:
             "actions": [
                 {
                     "action_type": "add_reviewed_relation_template",
+                    "action_label": "Add reviewed relation template",
                     "tool_name": "stage_map_assertion_change",
                     "mcp_tool_name": "doxabase.stage_map_assertion_change",
                     "required_extra_arguments": ["object", "rationale"],
@@ -43357,7 +43362,10 @@ class DoxaBase:
             path=path_value,
             format="trig",
             profile=context.profile,
-            seeds=context.seeds,
+            seeds=[
+                self._privacy_redacted_resource_summary(seed)
+                for seed in context.seeds
+            ],
             graphs=graph_names,
             graph_counts=graph_counts,
             triples=len(export_triples),
@@ -44681,6 +44689,29 @@ class DoxaBase:
         if match_kind is None or redacted_snippet is None:
             return value
         return redacted_snippet
+
+    def _privacy_redacted_resource_summary(
+        self,
+        summary: ResourceSummary,
+    ) -> ResourceSummary:
+        return ResourceSummary(
+            iri=summary.iri,
+            label=self._redact_sensitive_optional_text(summary.label),
+            description=self._redact_sensitive_optional_text(summary.description),
+            column_name=self._redact_sensitive_optional_text(summary.column_name),
+            owning_dataset_iri=summary.owning_dataset_iri,
+            owning_dataset_label=self._redact_sensitive_optional_text(
+                summary.owning_dataset_label
+            ),
+        )
+
+    def _redact_sensitive_optional_text(
+        self,
+        value: str | None,
+    ) -> str | None:
+        if value is None:
+            return None
+        return self._redact_sensitive_context_value(value)
 
     @staticmethod
     def _redacted_sensitive_snippet(
