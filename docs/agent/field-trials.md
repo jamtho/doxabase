@@ -499,7 +499,13 @@ few useful gaps:
   A post-apply history trial showed the documented two-hop recipe worked but
   repeated detail calls for basic source context. Applied graph-revision
   descriptions now include compact `applied_source` cards while leaving patch
-  content and full diagnostics on `describe_staged_revision`.
+  content and full diagnostics on `describe_staged_revision`. A later
+  apply-one-and-repair-sibling trial showed fresh agents can complete the
+  recovery workflow, but the apply result itself needs to make stale sibling
+  readiness hard to miss. Read `apply_staged_revision().warnings` and
+  `post_apply_recheck_revision_iris`, then rerun
+  `plan_staged_revision_recovery(current_staged_work_only=True)` before the
+  next mutation.
 - A post-rebuild trial wave found several places where structurally correct
   payloads were still easy for agents to misread. Query target metadata warnings
   for one dataset-level complete template, or for one storage-owned path

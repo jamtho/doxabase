@@ -306,6 +306,8 @@ members of the original bundle. The post-apply recheck list is only the
 affected-sibling subset for the mutation that just happened; it is not the
 remaining bundle queue. Applying one ready successor can make siblings stale or
 no-op, so never treat a pre-apply grouped bundle as a durable apply queue.
+`apply_staged_revision().warnings` repeats this directly on the apply result
+when affected sibling rows need rechecking.
 
 Guarded same-slot conflicts that already suggest a
 `stage_map_assertion_change` replacement are skipped by batch restage with

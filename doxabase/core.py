@@ -1050,6 +1050,7 @@ class AppliedStagedRevisionRecord:
     post_apply_recheck_revisions: list[PostApplyRecheckRevision]
     post_apply_recheck_revision_iris: list[str]
     post_apply_recheck_is_partial_queue: bool
+    warnings: list[str]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     patches_applied: int
@@ -31550,6 +31551,10 @@ class DoxaBase:
             staged_revision_iri=staged.iri,
             changed_graphs=changed_graphs,
         )
+        post_apply_recheck_revision_iris = [
+            item.iri for item in post_apply_recheck_revisions
+        ]
+        warnings = self._post_apply_warnings(post_apply_recheck_revision_iris)
         suggested_next_actions = self._post_apply_suggested_next_actions(
             post_apply_recheck_revisions
         )
@@ -31560,10 +31565,9 @@ class DoxaBase:
             triples=revision_record.triples + extra_triples,
             changed_graphs=changed_graphs,
             post_apply_recheck_revisions=post_apply_recheck_revisions,
-            post_apply_recheck_revision_iris=[
-                item.iri for item in post_apply_recheck_revisions
-            ],
+            post_apply_recheck_revision_iris=post_apply_recheck_revision_iris,
             post_apply_recheck_is_partial_queue=True,
+            warnings=warnings,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions if action.call
@@ -31576,6 +31580,25 @@ class DoxaBase:
             validation_result_count=check.validation_result_count or 0,
             validation_results=check.validation_results,
         )
+
+    @staticmethod
+    def _post_apply_warnings(
+        post_apply_recheck_revision_iris: list[str],
+    ) -> list[str]:
+        if not post_apply_recheck_revision_iris:
+            return []
+        recheck_list = ", ".join(post_apply_recheck_revision_iris)
+        return [
+            (
+                "Applying this staged revision may have made sibling staged "
+                "readiness stale. Recheck affected staged revisions before the "
+                "next mutation: "
+                f"{recheck_list}. post_apply_recheck_revision_iris is the "
+                "affected-sibling subset, not the full remaining staged queue; "
+                "rerun plan_staged_revision_recovery(current_staged_work_only=True) "
+                "before applying another row."
+            )
+        ]
 
     def _post_apply_suggested_next_actions(
         self,

@@ -3511,6 +3511,16 @@ def test_apply_staged_revision_tool_returns_json_like_payload(tmp_path: Path) ->
     assert result["changed_graphs"] == ["map"]
     assert result["post_apply_recheck_revision_iris"] == [sibling["revision_iri"]]
     assert result["post_apply_recheck_is_partial_queue"] is True
+    assert result["warnings"] == [
+        (
+            "Applying this staged revision may have made sibling staged readiness "
+            "stale. Recheck affected staged revisions before the next mutation: "
+            f"{sibling['revision_iri']}. post_apply_recheck_revision_iris is the "
+            "affected-sibling subset, not the full remaining staged queue; rerun "
+            "plan_staged_revision_recovery(current_staged_work_only=True) before "
+            "applying another row."
+        )
+    ]
     assert result["suggested_next_actions"][0]["tool_name"] == (
         "plan_staged_revision_recovery"
     )

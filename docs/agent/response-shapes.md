@@ -4076,6 +4076,7 @@ applied.changed_graphs
 applied.post_apply_recheck_revisions
 applied.post_apply_recheck_revision_iris
 applied.post_apply_recheck_is_partial_queue
+applied.warnings
 applied.suggested_next_actions
 applied.suggested_next_calls
 applied.patches_applied
@@ -4091,7 +4092,8 @@ applied.validation_results
 revisions that share a changed graph or validation dependency with the applied
 revision. `post_apply_recheck_is_partial_queue` is true because that list is an
 affected-sibling subset, not the complete remaining staged frontier. The
-top-level `suggested_next_actions` starts with
+top-level `warnings` repeats that sibling readiness may now be stale when the
+recheck list is non-empty. The top-level `suggested_next_actions` starts with
 `plan_staged_revision_recovery(current_staged_work_only=True)` and then includes
 affected-sibling row actions.
 `post_apply_recheck_revisions` carries the same queue as compact rows:

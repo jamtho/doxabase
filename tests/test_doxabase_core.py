@@ -10192,6 +10192,16 @@ def test_grouped_export_summarizes_stale_alternative_recovery(
 
     result = db.apply_staged_revision(first_restaged.revision_iri)
     assert result.post_apply_recheck_revision_iris == [second_restaged.revision_iri]
+    assert result.warnings == [
+        (
+            "Applying this staged revision may have made sibling staged readiness "
+            "stale. Recheck affected staged revisions before the next mutation: "
+            f"{second_restaged.revision_iri}. post_apply_recheck_revision_iris "
+            "is the affected-sibling subset, not the full remaining staged queue; "
+            "rerun plan_staged_revision_recovery(current_staged_work_only=True) "
+            "before applying another row."
+        )
+    ]
     assert len(result.post_apply_recheck_revisions) == 1
     recheck = result.post_apply_recheck_revisions[0]
     assert recheck.iri == second_restaged.revision_iri
