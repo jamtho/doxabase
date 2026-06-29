@@ -11967,6 +11967,9 @@ def test_resource_revision_lineage_tracks_current_restage_successor(
     assert applied_source_lineage.latest_role == "applied_event"
     assert applied_source_lineage.applied_revision_iri == applied.applied_revision_iri
     assert applied_source_lineage.staged_revision_iri == restaged.revision_iri
+    assert applied_source_lineage.applied_source_revision_iri == (
+        restaged.revision_iri
+    )
     assert applied_source_lineage.restage_chain_iris == [
         original.revision_iri,
         restaged.revision_iri,
@@ -12104,6 +12107,7 @@ def test_list_resource_revisions_recovers_imported_applied_source_anchors(
     assert lineage.paired_role == "applied_source"
     assert lineage.applied_revision_iri == applied_iri
     assert lineage.staged_revision_iri == source_iri
+    assert lineage.applied_source_revision_iri == source_iri
     assert lineage.applied_diff_status == "unavailable"
     assert lineage.applied_diff is not None
     assert lineage.applied_diff.graph_diffs[0].exact_changed_triples_available is False

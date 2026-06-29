@@ -1928,6 +1928,7 @@ class ResourceRevisionLineageDescription:
     paired_role: str | None
     applied_revision_iri: str | None
     staged_revision_iri: str | None
+    applied_source_revision_iri: str | None
     current_staged_revision_iri: str | None
     current_revision_iri: str | None
     latest_revision_iri: str | None
@@ -8396,6 +8397,7 @@ class DoxaBase:
             ),
             applied_revision_iri=lineage_applied_revision_iri,
             staged_revision_iri=lineage_staged_revision_iri,
+            applied_source_revision_iri=lineage_staged_revision_iri,
             current_staged_revision_iri=current_staged_revision_iri,
             current_revision_iri=current_staged_revision_iri,
             latest_revision_iri=graph_lineage.latest_revision_iri,

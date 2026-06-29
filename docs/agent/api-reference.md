@@ -1307,8 +1307,9 @@ returned-row count, and `omitted_match_risk` is a coarse absence-risk signal.
 `describe_resource_revision_lineage(resource_iri, revision_iri)` takes one of
 those rows and returns a compact resource-centric lineage card with the selected
 row, `selected_revision_iri`, visible paired staged/applied row,
-`paired_revision_iri`, related revision IRIs, selected next action, patch scan
-status, and optional resource-filtered applied diff summary.
+`paired_revision_iri`, `applied_source_revision_iri` for the staged row that
+actually applied, related revision IRIs, selected next action, patch scan status,
+and optional resource-filtered applied diff summary.
 `current_revision_iri` mirrors `current_staged_revision_iri` when the lineage row
 or restage successor is still current staged work, matching batch-restage naming.
 `latest_revision_iri` / `latest_role` mirror graph lineage's latest family

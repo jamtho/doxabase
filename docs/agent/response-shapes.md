@@ -3974,6 +3974,7 @@ lineage.paired_revision_iri
 lineage.paired_role
 lineage.applied_revision_iri
 lineage.staged_revision_iri
+lineage.applied_source_revision_iri
 lineage.current_staged_revision_iri
 lineage.current_revision_iri
 lineage.latest_revision_iri
@@ -4002,7 +4003,8 @@ mirror graph lineage's latest family pointer, so a resource-first handoff can
 see the applied event after a successor has been applied. When the selected row
 is an old stale source whose restaged successor has already been applied,
 `applied_revision_iri` and `applied_diff` follow that applied successor while
-`staged_revision_iri` names the staged source that was actually applied.
+`staged_revision_iri` and its alias `applied_source_revision_iri` name the
+staged source that was actually applied.
 `next_action_queue_item` names the selected row and exposes the resolved applied
 or current target without requiring a separate resource list join.
 `restage_chain_iris` preserves the original source route. `applied_diff_status`

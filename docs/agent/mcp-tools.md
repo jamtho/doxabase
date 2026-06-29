@@ -383,8 +383,9 @@ an applied event is linked, the response can include a resource-filtered applied
 diff summary with exact added/removed triples for that resource. If the selected
 row is an old stale source whose restaged successor has already been applied,
 `applied_revision_iri` and the diff summary follow that applied successor while
-`restage_chain_iris` preserves the original source route; graph lineage also
-names the applied staged source explicitly as `applied_source_revision_iri`.
+`restage_chain_iris` preserves the original source route; resource lineage now
+also names the applied staged source explicitly as
+`applied_source_revision_iri`, matching graph lineage.
 This is not full
 graph-version browsing; call `describe_staged_revision` when patch content is
 needed. `next_action_queue_item` is the same row-vs-target card for the selected

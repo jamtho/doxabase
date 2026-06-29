@@ -3342,6 +3342,7 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert lineage["latest_role"] == "applied_event"
     assert lineage["restage_chain_iris"] == [staged["revision_iri"]]
     assert lineage["alternative_revision_iris"] == []
+    assert lineage["applied_source_revision_iri"] == staged["revision_iri"]
     assert lineage["next_action_queue_item"]["row_iri"] == (
         applied["applied_revision_iri"]
     )
