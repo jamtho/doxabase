@@ -20187,6 +20187,48 @@ def test_resource_brief_context_slice_routes_storage_seed_to_query_context(
     )
 
 
+def test_resource_brief_query_context_action_separates_repairs_from_warnings(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    layout = db.record_map_physical_layout(
+        "https://example.test/project#orders_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:CandidateLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:CandidateLayout",
+    )
+
+    context_slice = db.describe_context_slice(
+        layout.iri,
+        profile="resource_brief",
+    )
+
+    query_actions = [
+        action
+        for action in context_slice.suggested_next_actions
+        if action.tool_name == "describe_query_context"
+    ]
+    assert len(query_actions) == 1
+    reason = query_actions[0].reason
+    assert "query-planning repair group(s): missing_storage_access" in reason
+    assert (
+        "operational query-planning warning(s): "
+        "layout_needs_verification, missing_path_template"
+    ) in reason
+    assert "repair group(s): layout_needs_verification" not in reason
+    query_context = db.describe_query_context(**query_actions[0].arguments)
+    assert [group.issue_code for group in query_context.suggested_repair_action_groups] == [
+        "missing_storage_access"
+    ]
+
+
 def test_deep_lore_storage_seed_suggests_resource_brief_retry(
     tmp_path: Path,
 ) -> None:

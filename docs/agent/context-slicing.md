@@ -194,7 +194,8 @@ Useful fields:
   routes. When a seed table or seed-reached owner table carries operational
   query-planning warnings or query-context repair groups, a
   `describe_query_context` action points to readiness, target candidates, and
-  repair hints even if raw triples were not truncated. When raw triples are
+  repair hints even if raw triples were not truncated. The action reason names
+  actual repair groups separately from warning-only codes. When raw triples are
   truncated, pattern narrowing actions come before the same-seed higher
   `max_triples` retry because structured context is often enough.
 - `triples`: selected RDF triples, preserving graph roles.

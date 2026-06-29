@@ -9949,11 +9949,25 @@ class DoxaBase:
                 continue
             seen_dataset_iris.add(dataset.iri)
             arguments = {"iri": dataset.iri}
-            issue_reason = (
-                "query-planning repair group(s)"
-                if repair_issue_codes
-                else "operational query-planning warning(s)"
+            warning_issue_codes = sorted(
+                set(operational_issue_codes) - set(repair_issue_codes)
             )
+            issue_reason_parts: list[str] = []
+            if repair_issue_codes:
+                issue_reason_parts.append(
+                    "query-planning repair group(s): "
+                    f"{', '.join(repair_issue_codes)}"
+                )
+            if warning_issue_codes:
+                issue_reason_parts.append(
+                    "operational query-planning warning(s): "
+                    f"{', '.join(warning_issue_codes)}"
+                )
+            if not issue_reason_parts:
+                issue_reason_parts.append(
+                    "operational query-planning warning(s): "
+                    f"{', '.join(operational_issue_codes)}"
+                )
             actions.append(
                 SuggestedNextAction(
                     action_label="Inspect query-planning context",
@@ -9961,8 +9975,8 @@ class DoxaBase:
                     mcp_tool_name="doxabase.describe_query_context",
                     arguments=arguments,
                     reason=(
-                        f"The seed dataset has {issue_reason}: "
-                        f"{', '.join(issue_codes)}. "
+                        "The seed dataset has "
+                        f"{' and '.join(issue_reason_parts)}. "
                         "describe_query_context exposes readiness, target "
                         "candidates, and repair hints before drafting or "
                         "running queries."
