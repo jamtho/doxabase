@@ -2355,6 +2355,13 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert "Snapshot evidence complete for 1/1 revision row(s)." in exported
     assert "Status counts: history_plus_snapshot_rows: 1" in exported
     assert "Exact rows available for graph role(s): map" in exported
+    assert "## Review Sequence" in exported
+    assert "| Phase | Row | Candidate | Queue | Resolved target | Tool | Why |" in (
+        exported
+    )
+    assert "| Review/apply ready | 1 | Stage messages table | apply_after_review |" in (
+        exported
+    )
     assert export["bundle_summary"]["recommended_review_iris"] == [
         staged["revision_iri"]
     ]
@@ -2386,6 +2393,21 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export_queue_item["resolved_target_record_kind"] == "staged_patch"
     assert export_queue_item["row_is_target"] is True
     assert export_queue_item["alternative_semantic_review_required"] is False
+    review_sequence = export["bundle_summary"]["review_sequence"]
+    assert [item["phase"] for item in review_sequence] == ["review_apply"]
+    review_sequence_item = review_sequence[0]
+    assert review_sequence_item["phase_label"] == "Review/apply ready"
+    assert review_sequence_item["row_index"] == 1
+    assert review_sequence_item["row_iri"] == staged["revision_iri"]
+    assert review_sequence_item["summary"] == "Stage messages table"
+    assert review_sequence_item["queue"] == "apply_after_review"
+    assert review_sequence_item["resolved_target_iri"] == staged["revision_iri"]
+    assert review_sequence_item["resolved_target_record_kind"] == "staged_patch"
+    assert review_sequence_item["tool_name"] == "apply_staged_revision"
+    assert (
+        review_sequence_item["mcp_tool_name"] == "doxabase.apply_staged_revision"
+    )
+    assert "Review semantic context" in review_sequence_item["reason"]
     assert export["revision_summaries"][0]["revision_iri"] == staged["revision_iri"]
     assert export["revision_summaries"][0]["alternative_to"] is None
     assert export["revision_summaries"][0]["current_alternative_to"] is None

@@ -1636,7 +1636,10 @@ and `recommended_applied_inspection_iris`. Prefer
 direct apply/restage/repair/inspection routing without joining the older fields
 manually. `bundle_summary.next_action_queue_items` adds the resolved target IRI,
 row-vs-target flag, semantic alternative gate fields, and symmetric
-alternative-set fields for each queued row;
+alternative-set fields for each queued row. `bundle_summary.review_sequence`
+orders those queue items into inspect-redirect, repair, restage, review/apply,
+and recheck phases so unattended agents can follow one cross-lane worklist
+before opening lower-level queue buckets;
 `bundle_summary.snapshot_evidence` separately summarizes whether the included
 rows have complete stored snapshot rows. Grouped Markdown includes a compact
 positive `Snapshot Evidence` confirmation when `complete=true`; `complete=false`
@@ -1672,6 +1675,10 @@ mirrors the top-level recommended-review sets and derived next-action buckets
 there; the older `post_apply_recheck_revision_iris` field is labeled as
 sequential apply recheck candidates because it is a pre-apply grouped-review
 hazard list.
+Grouped Markdown also includes a `Review Sequence` table above `Review Queues`;
+prefer it for first-pass human or autonomous routing because it gives row
+numbers, summaries, queue names, resolved targets, tools, and the phase reason
+in one ordered list.
 Bundles with restaged revisions include a `Restage Context` section near the
 top. When a stored alternative target has a restaged successor, grouped
 Markdown includes `Alternative Context` with the current comparison target.

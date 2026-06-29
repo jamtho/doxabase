@@ -2350,6 +2350,11 @@ few useful gaps:
   `resolved_target_groups[]` and `resolved_target_group_counts`: keep `lanes[]`
   for source provenance, but use resolved-target groups for the deduped
   target-family worklist before mutation decisions.
+- A grouped review-sequence frontier trial found mixed staged bundles had enough
+  queue and resolved-target data, but no single ordered cross-lane worklist.
+  Grouped exports now include `bundle_summary.review_sequence` and Markdown
+  `Review Sequence`, ordering queued rows through inspect-redirect, repair,
+  restage, review/apply, and recheck phases before the lower-level queue buckets.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

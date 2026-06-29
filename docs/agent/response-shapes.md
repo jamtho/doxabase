@@ -4810,6 +4810,7 @@ bundle.recommended_mutation_review_iris
 bundle.recommended_apply_or_restage_review_iris
 bundle.recommended_repair_review_iris
 bundle.recommended_applied_inspection_iris
+bundle.review_sequence
 bundle.next_action_queue
 bundle.next_action_queue_items
 bundle.next_action_queue_item_counts
@@ -4819,6 +4820,29 @@ bundle.requires_recheck_after_each_apply
 bundle.semantic_risk_queue_counts
 bundle.semantic_review_required_queue_counts
 ```
+
+`bundle.review_sequence[]` is the ordered cross-lane route for queued grouped
+work:
+
+```python
+bundle.review_sequence[].phase
+bundle.review_sequence[].phase_label
+bundle.review_sequence[].row_index
+bundle.review_sequence[].row_iri
+bundle.review_sequence[].summary
+bundle.review_sequence[].queue
+bundle.review_sequence[].resolved_target_iri
+bundle.review_sequence[].resolved_target_record_kind
+bundle.review_sequence[].tool_name
+bundle.review_sequence[].mcp_tool_name
+bundle.review_sequence[].action_label
+bundle.review_sequence[].reason
+```
+
+Use it before raw queue buckets when a grouped bundle mixes applied redirects,
+validation repair, stale restage, ready apply review, and apply-one-then-recheck
+work. Rows can appear again in the `recheck_after_apply` phase when
+`requires_recheck_after_each_apply` is true.
 
 `bundle.snapshot_evidence` is a
 `StagedGraphRevisionSnapshotEvidenceSummary` for the same rows included in the

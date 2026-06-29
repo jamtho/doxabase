@@ -821,6 +821,12 @@ resolved targets only; it omits informational redirects and already-applied
 inspection work. If `bundle_summary.requires_recheck_after_each_apply` is true,
 apply one frontier target at most, then rerun the export or recovery planner
 before acting on siblings.
+For mixed grouped bundles, prefer `bundle_summary.review_sequence` as the
+first-pass route. It orders queued rows into inspect-redirect, repair, restage,
+review/apply, and recheck phases while preserving row number, summary, queue,
+resolved target, selected tool, and the reason for the phase. Rows can appear
+again in the recheck phase when the bundle requires apply-one-then-recheck
+behavior.
 Grouped Markdown also includes a `Resolved Targets` table derived from those
 queue items, so Markdown-only reviewers can see each row's queue, action,
 resolved target IRI, target kind, and whether the row itself is the target
@@ -945,10 +951,11 @@ union `apply_staged_revision().post_apply_recheck_revision_iris` with unapplied
 members of the original bundle before the next check/export/restage pass. The
 post-apply recheck list is the affected-sibling subset, not a complete
 remaining-work queue.
-Grouped Markdown also includes a `Review Queues` section that mirrors the
-top-level recommended-review sets, derived next-action buckets, and the
-compatibility apply/restage, repair, applied-inspection, and post-apply recheck
-buckets from `bundle_summary`.
+Grouped Markdown also includes a `Review Sequence` section above `Review Queues`
+when queued work exists. Use it as the ordered route; `Review Queues` remains
+the lower-level mirror of top-level recommended-review sets, derived next-action
+buckets, and the compatibility apply/restage, repair, applied-inspection, and
+post-apply recheck buckets from `bundle_summary`.
 When a requested stale source already has a restage chain, batch restage maps it
 to `current_restaged_by` so the review bundle opens the latest known successor;
 if that successor is already applied, row-local `next_action` opens the applied

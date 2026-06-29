@@ -160,7 +160,9 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 - Several stale staged patches: use `restage_staged_revisions(dry_run=True)`
   first to classify the batch without creating successors, then run the real
   batch restage for rows you still want to refresh.
-- Grouped staged review: use `bundle_summary.next_action_queue` for coarse
+- Grouped staged review: use `bundle_summary.review_sequence` or Markdown
+  `Review Sequence` first when the bundle mixes inspection, repair, restage,
+  apply, and recheck work. Use `bundle_summary.next_action_queue` for coarse
   buckets, but use `bundle_summary.next_action_queue_items[].resolved_target_iri`
   or the Markdown `Resolved Targets` table for the actual row-vs-target route.
   Also read each row's staged-time validation fields; current drift can hide why

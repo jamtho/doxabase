@@ -1281,6 +1281,11 @@ When the concrete follow-up target can differ from the queued row, use
 point at an applied event. The bundle also exposes
 `next_action_queue_item_counts` and `semantic_review_required_queue_counts`, so
 queue-only scripts can notice semantic review gates inside `apply_after_review`.
+For a single cross-lane worklist, read `bundle_summary.review_sequence` first:
+it orders the queue items into inspect-redirect, repair, restage, review/apply,
+and recheck phases with row numbers, summaries, resolved targets, tools, and a
+short reason. Grouped Markdown mirrors this as `Review Sequence` above the
+lower-level `Review Queues` section.
 For RDF handoffs imported without companion snapshot JSON,
 `bundle_summary.snapshot_evidence` is the structured import gate: `complete`
 false means at least one included row lacks exact stored snapshot rows, and row
@@ -1300,6 +1305,9 @@ affected revision IRIs for pre-apply grouped-review hazards.
 Grouped Markdown exports include a `Review Queues` section mirroring the
 recommended-review sets, derived next-action buckets, apply/restage, repair,
 applied-inspection, and sequential apply recheck candidate buckets.
+They also include a `Review Sequence` table above those buckets when queued work
+exists, giving reviewers an ordered route through inspection, repair, restage,
+apply review, and post-apply recheck phases.
 Relative export paths are resolved from the repository root and returned as
 normalized absolute paths.
 

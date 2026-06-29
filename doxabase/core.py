@@ -974,6 +974,22 @@ class StagedGraphRevisionSnapshotEvidenceSummary:
 
 
 @dataclass(frozen=True)
+class StagedGraphRevisionReviewSequenceItem:
+    phase: str
+    phase_label: str
+    row_index: int
+    row_iri: str
+    summary: str | None
+    queue: str
+    resolved_target_iri: str | None
+    resolved_target_record_kind: str | None
+    tool_name: str | None
+    mcp_tool_name: str | None
+    action_label: str
+    reason: str
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionBundleSummary:
     total_revisions: int
     apply_status_counts: dict[str, int]
@@ -992,6 +1008,7 @@ class StagedGraphRevisionBundleSummary:
     recommended_apply_or_restage_review_iris: list[str]
     recommended_repair_review_iris: list[str]
     recommended_applied_inspection_iris: list[str]
+    review_sequence: list[StagedGraphRevisionReviewSequenceItem]
     next_action_queue: dict[str, list[str]]
     next_action_queue_items: list[RevisionNextActionQueueItem]
     next_action_queue_item_counts: dict[str, int]
@@ -31650,6 +31667,11 @@ class DoxaBase:
         mutation_frontier_iris = self._revision_mutation_frontier_iris(
             next_action_queue_items
         )
+        review_sequence = self._staged_revisions_review_sequence(
+            summaries=summaries,
+            next_action_queue_items=next_action_queue_items,
+            post_apply_recheck_revision_iris=post_apply_recheck,
+        )
         return StagedGraphRevisionBundleSummary(
             total_revisions=len(summaries),
             apply_status_counts=apply_status_counts,
@@ -31682,6 +31704,7 @@ class DoxaBase:
             ),
             recommended_repair_review_iris=recommended_repair_review,
             recommended_applied_inspection_iris=recommended_applied_inspection,
+            review_sequence=review_sequence,
             next_action_queue=self._revision_next_action_queue(
                 (summary.revision_iri, summary.next_action) for summary in summaries
             ),
@@ -31701,6 +31724,155 @@ class DoxaBase:
                 )
             ),
         )
+
+    def _staged_revisions_review_sequence(
+        self,
+        *,
+        summaries: list[StagedGraphRevisionExportSummary],
+        next_action_queue_items: list[RevisionNextActionQueueItem],
+        post_apply_recheck_revision_iris: list[str],
+    ) -> list[StagedGraphRevisionReviewSequenceItem]:
+        summary_by_iri = {summary.revision_iri: summary for summary in summaries}
+        row_index_by_iri = {
+            summary.revision_iri: index
+            for index, summary in enumerate(summaries, start=1)
+        }
+        post_apply_recheck = set(post_apply_recheck_revision_iris)
+        phase_order = {
+            "inspect_redirects": 0,
+            "repair_blockers": 1,
+            "restage_stale": 2,
+            "review_apply": 3,
+            "recheck_after_apply": 4,
+            "review_other": 5,
+        }
+        sequence: list[StagedGraphRevisionReviewSequenceItem] = []
+
+        for item in next_action_queue_items:
+            summary = summary_by_iri.get(item.row_iri)
+            row_index = row_index_by_iri.get(item.row_iri, 0)
+            phase, phase_label = self._staged_revisions_review_sequence_phase(
+                item,
+                summary,
+            )
+            sequence.append(
+                StagedGraphRevisionReviewSequenceItem(
+                    phase=phase,
+                    phase_label=phase_label,
+                    row_index=row_index,
+                    row_iri=item.row_iri,
+                    summary=summary.summary if summary is not None else None,
+                    queue=item.queue,
+                    resolved_target_iri=item.resolved_target_iri,
+                    resolved_target_record_kind=item.resolved_target_record_kind,
+                    tool_name=item.tool_name,
+                    mcp_tool_name=item.mcp_tool_name,
+                    action_label=item.action_label,
+                    reason=self._staged_revisions_review_sequence_reason(
+                        item,
+                        summary,
+                        post_apply_recheck=post_apply_recheck,
+                    ),
+                )
+            )
+
+        for revision_iri in post_apply_recheck_revision_iris:
+            summary = summary_by_iri.get(revision_iri)
+            if summary is None:
+                continue
+            sequence.append(
+                StagedGraphRevisionReviewSequenceItem(
+                    phase="recheck_after_apply",
+                    phase_label="Recheck after apply",
+                    row_index=row_index_by_iri.get(revision_iri, 0),
+                    row_iri=revision_iri,
+                    summary=summary.summary,
+                    queue="sequential_apply_recheck_candidate",
+                    resolved_target_iri=revision_iri,
+                    resolved_target_record_kind=(
+                        self._graph_revision_record_kind_for_iri(revision_iri)
+                    ),
+                    tool_name="export_staged_revisions",
+                    mcp_tool_name="doxabase.export_staged_revisions",
+                    action_label="Recheck remaining bundle",
+                    reason=(
+                        "After applying one ready row in this changed-graph or "
+                        "validation-dependency set, rerun apply checks or "
+                        "export before acting on siblings."
+                    ),
+                )
+            )
+
+        return sorted(
+            sequence,
+            key=lambda item: (phase_order.get(item.phase, 99), item.row_index),
+        )
+
+    @staticmethod
+    def _staged_revisions_review_sequence_phase(
+        item: RevisionNextActionQueueItem,
+        summary: StagedGraphRevisionExportSummary | None,
+    ) -> tuple[str, str]:
+        state = summary.stale_resolution_state if summary is not None else None
+        if item.queue in {"inspect_already_applied", "informational"} or state in {
+            "already_applied",
+            "restaged_successor_already_applied",
+            "noop",
+            "restaged_successor_noop",
+        }:
+            return "inspect_redirects", "Inspect redirects"
+        if (
+            item.queue == "repair_or_replace"
+            or item.application_status == "validation_failed"
+            or item.staged_validation_status == "failed"
+        ):
+            return "repair_blockers", "Repair blockers"
+        if item.queue == "restage_after_review" or state in {
+            "stale_unresolved",
+            "restaged_successor_stale_unresolved",
+        }:
+            return "restage_stale", "Restage stale"
+        if item.queue == "apply_after_review":
+            return "review_apply", "Review/apply ready"
+        return "review_other", "Review remaining"
+
+    @staticmethod
+    def _staged_revisions_review_sequence_reason(
+        item: RevisionNextActionQueueItem,
+        summary: StagedGraphRevisionExportSummary | None,
+        *,
+        post_apply_recheck: set[str],
+    ) -> str:
+        if item.queue in {"inspect_already_applied", "informational"}:
+            reason = (
+                "Resolve applied, no-op, or informational redirects before "
+                "mutating current staged rows."
+            )
+        elif (
+            item.queue == "repair_or_replace"
+            or item.application_status == "validation_failed"
+            or item.staged_validation_status == "failed"
+        ):
+            reason = (
+                "Repair validation or replacement blockers before restage/apply "
+                "work."
+            )
+        elif item.queue == "restage_after_review":
+            reason = (
+                "Refresh stale or conflicting rows against the current graph "
+                "before applying."
+            )
+        elif item.queue == "apply_after_review":
+            reason = "Review semantic context, then apply if the row is still preferred."
+        else:
+            reason = item.source or item.action_label
+
+        if summary is not None and summary.revision_iri in post_apply_recheck:
+            reason += (
+                " Apply at most one row in this changed-graph set before "
+                "rechecking the remaining candidates."
+            )
+        return reason
 
     def _parallel_applied_restage_successor_events(
         self,
@@ -35639,6 +35811,12 @@ class DoxaBase:
         if snapshot_evidence:
             lines.extend(["", "## Snapshot Evidence", ""])
             lines.extend(snapshot_evidence)
+        review_sequence = self._staged_revisions_review_sequence_markdown(
+            bundle_summary
+        )
+        if review_sequence:
+            lines.extend(["", "## Review Sequence", ""])
+            lines.extend(review_sequence)
         review_queues = self._staged_revisions_review_queues_markdown(bundle_summary)
         if review_queues:
             lines.extend(["", "## Review Queues", ""])
@@ -36296,6 +36474,53 @@ class DoxaBase:
                 for label, iris in queues
             ),
         ]
+
+    def _staged_revisions_review_sequence_markdown(
+        self,
+        bundle_summary: StagedGraphRevisionBundleSummary,
+    ) -> list[str]:
+        if not bundle_summary.review_sequence:
+            return []
+        lines = [
+            (
+                "| Phase | Row | Candidate | Queue | Resolved target | Tool | Why |"
+            ),
+            "|---|---:|---|---|---|---|---|",
+        ]
+        for item in bundle_summary.review_sequence:
+            target = self._staged_revisions_review_sequence_target_cell(item)
+            tool = item.mcp_tool_name or item.tool_name or "(none)"
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        self._markdown_table_cell(item.phase_label),
+                        str(item.row_index),
+                        self._markdown_table_cell(item.summary or item.row_iri),
+                        self._markdown_table_cell(item.queue),
+                        self._markdown_table_cell(target),
+                        self._markdown_table_cell(tool),
+                        self._markdown_table_cell(item.reason),
+                    ]
+                )
+                + " |"
+            )
+        return lines
+
+    @staticmethod
+    def _staged_revisions_review_sequence_target_cell(
+        item: StagedGraphRevisionReviewSequenceItem,
+    ) -> str:
+        if item.resolved_target_iri is None:
+            return "(none)"
+        if item.resolved_target_iri == item.row_iri:
+            return "(same row)"
+        record_kind = (
+            f" ({item.resolved_target_record_kind})"
+            if item.resolved_target_record_kind is not None
+            else ""
+        )
+        return f"`{item.resolved_target_iri}`{record_kind}"
 
     def _markdown_iri_list(self, iris: list[str]) -> str:
         if not iris:
