@@ -1758,9 +1758,13 @@ It composes the same faithful `export_trig` and `export_revision_snapshots`
 payloads, but preflights both output paths and combined privacy warnings before
 creating either file. Pass `fail_on_sensitive=true` for unattended or shareable
 handoffs; pass `revision_iris` or `snapshot_graph_roles` only when the snapshot
-JSON should be narrower than the default all-stored-snapshot export. The result
-contains nested `trig` and `revision_snapshots` export records plus combined
-`sensitive_literal_count` and `privacy_warnings`.
+JSON should be narrower than the default all-stored-snapshot export. Pass
+`manifest_path` to also write a small JSON manifest that pairs the two artifact
+paths, records redacted privacy warnings, and lists the recommended
+`import_trig` then `import_revision_snapshots` sequence with expected snapshot
+evidence statuses. The result contains nested `trig` and `revision_snapshots`
+export records, the manifest payload, optional manifest write metadata, plus
+combined `sensitive_literal_count` and `privacy_warnings`.
 
 `doxabase.export_revision_snapshots`
 

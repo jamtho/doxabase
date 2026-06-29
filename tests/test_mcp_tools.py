@@ -1,3 +1,4 @@
+import json
 import inspect
 from pathlib import Path
 
@@ -1206,20 +1207,27 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     )
     trig_path = tmp_path / "project-handoff.trig"
     snapshot_path = tmp_path / "revision-snapshots.json"
+    manifest_path = tmp_path / "handoff-manifest.json"
 
     result = export_handoff_bundle_tool(
         source,
         trig_path=str(trig_path),
         revision_snapshot_path=str(snapshot_path),
+        manifest_path=str(manifest_path),
         revision_iris=[staged["revision_iri"]],
     )
 
     assert result["paths"] == {
         "trig": str(trig_path),
         "revision_snapshots": str(snapshot_path),
+        "manifest": str(manifest_path),
     }
     assert result["trig"]["path"] == str(trig_path)
     assert result["revision_snapshots"]["path"] == str(snapshot_path)
+    assert result["manifest_path"] == str(manifest_path)
+    assert result["manifest_bytes_written"] == len(
+        manifest_path.read_text(encoding="utf-8").encode("utf-8")
+    )
     assert result["graph_roles"] == [
         "ontology",
         "map",
@@ -1235,6 +1243,19 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert result["privacy_warnings"] == []
     assert trig_path.exists()
     assert snapshot_path.exists()
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest == result["manifest"]
+    assert manifest["format"] == "doxabase.handoff_bundle.v1"
+    assert manifest["artifacts"]["trig"]["path"] == str(trig_path)
+    assert manifest["artifacts"]["revision_snapshots"]["path"] == str(snapshot_path)
+    assert [
+        step["tool_name"] for step in manifest["recommended_import_sequence"]
+    ] == ["import_trig", "import_revision_snapshots"]
+    assert [
+        step["expected_snapshot_evidence_status"]
+        for step in manifest["recommended_import_sequence"]
+    ] == ["history_only_count_digest", "history_plus_snapshot_rows"]
 
     import_trig_tool(receiver, path=str(trig_path))
     before_snapshots = describe_revision_snapshot_evidence_tool(

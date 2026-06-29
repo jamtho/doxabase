@@ -68,6 +68,7 @@ db.export_revision_snapshots("/tmp/revision-snapshots.json", fail_on_sensitive=T
 db.export_handoff_bundle(
     "/tmp/project-handoff.trig",
     "/tmp/revision-snapshots.json",
+    manifest_path="/tmp/handoff-manifest.json",
     fail_on_sensitive=True,
 )
 ```
@@ -105,7 +106,9 @@ triple reconstruction must survive import.
 Use `export_handoff_bundle()` when a receiver needs both project/history RDF and
 exact revision snapshots. It writes the project TriG artifact and companion
 snapshot JSON together, preflighting both output paths and combined privacy
-warnings before creating either file.
+warnings before creating either file. Pass `manifest_path` to persist a small
+JSON manifest with artifact paths, redacted privacy warnings, and the expected
+receiver import sequence.
 
 `export_revision_snapshots()` writes a faithful JSON handoff bundle for stored
 revision snapshot rows. Its result includes `sensitive_literal_count` and

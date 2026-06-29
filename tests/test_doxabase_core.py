@@ -1145,6 +1145,19 @@ def test_export_handoff_bundle_blocks_sensitive_literals_before_writing(
     assert not (tmp_path / "project.trig").exists()
     assert existing_snapshot_path.read_text(encoding="utf-8") == "keep me\n"
 
+    existing_manifest_path = tmp_path / "existing-handoff-manifest.json"
+    existing_manifest_path.write_text("keep me\n", encoding="utf-8")
+    with pytest.raises(DoxaBaseError):
+        db.export_handoff_bundle(
+            tmp_path / "manifest-project.trig",
+            tmp_path / "manifest-revision-snapshots.json",
+            manifest_path=existing_manifest_path,
+            revision_iris=[staged.revision_iri],
+        )
+    assert not (tmp_path / "manifest-project.trig").exists()
+    assert not (tmp_path / "manifest-revision-snapshots.json").exists()
+    assert existing_manifest_path.read_text(encoding="utf-8") == "keep me\n"
+
 
 def test_replace_graph_triples_can_create_same_count_digest_drift(
     tmp_path: Path,

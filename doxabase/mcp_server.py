@@ -1330,6 +1330,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
     def export_handoff_bundle(
         trig_path: str,
         revision_snapshot_path: str,
+        manifest_path: str | None = None,
         graphs: list[str] | None = None,
         revision_iris: list[str] | None = None,
         snapshot_graph_roles: list[str] | None = None,
@@ -1342,6 +1343,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             db,
             trig_path=trig_path,
             revision_snapshot_path=revision_snapshot_path,
+            manifest_path=manifest_path,
             graphs=graphs,
             revision_iris=revision_iris,
             snapshot_graph_roles=snapshot_graph_roles,

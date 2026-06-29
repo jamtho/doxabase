@@ -484,9 +484,12 @@ class HandoffBundleExportRecord:
     trig: GraphExportRecord
     revision_snapshots: RevisionSnapshotBundleExportRecord
     paths: dict[str, str]
+    manifest: dict[str, Any]
     graph_roles: list[str]
     snapshot_graph_roles: list[str]
     revision_iris: list[str]
+    manifest_path: str | None = None
+    manifest_bytes_written: int | None = None
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
 
@@ -36654,6 +36657,7 @@ class DoxaBase:
         trig_path: str | Path,
         revision_snapshot_path: str | Path,
         *,
+        manifest_path: str | Path | None = None,
         graphs: Iterable[str] | str | None = None,
         revision_iris: Iterable[str] | str | None = None,
         snapshot_graph_roles: Iterable[str] | str | None = None,
@@ -36664,6 +36668,7 @@ class DoxaBase:
         self._preflight_handoff_bundle_export_paths(
             trig_path,
             revision_snapshot_path,
+            manifest_path,
             overwrite=overwrite,
         )
         graph_names = self._graph_names_for_export(
@@ -36743,33 +36748,122 @@ class DoxaBase:
             sensitive_literal_count=snapshot_sensitive_count,
             privacy_warnings=snapshot_privacy_warnings,
         )
+        manifest = self._handoff_bundle_manifest(
+            trig=trig_record,
+            revision_snapshots=snapshot_record,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
+        )
+        manifest_bytes_written = None
+        if manifest_path is not None:
+            manifest_data = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+            manifest_bytes_written = self._write_export(
+                manifest_path,
+                manifest_data,
+                overwrite=overwrite,
+            )
         return HandoffBundleExportRecord(
             trig=trig_record,
             revision_snapshots=snapshot_record,
             paths={
                 "trig": str(trig_path),
                 "revision_snapshots": str(revision_snapshot_path),
+                **(
+                    {"manifest": str(manifest_path)}
+                    if manifest_path is not None
+                    else {}
+                ),
             },
+            manifest=manifest,
             graph_roles=graph_names,
             snapshot_graph_roles=snapshot_graph_role_values,
             revision_iris=snapshot_revision_iris,
+            manifest_path=str(manifest_path) if manifest_path is not None else None,
+            manifest_bytes_written=manifest_bytes_written,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
         )
 
     @staticmethod
+    def _handoff_bundle_manifest(
+        *,
+        trig: GraphExportRecord,
+        revision_snapshots: RevisionSnapshotBundleExportRecord,
+        sensitive_literal_count: int,
+        privacy_warnings: list[str],
+    ) -> dict[str, Any]:
+        return {
+            "format": "doxabase.handoff_bundle.v1",
+            "created_at": _now(),
+            "artifacts": {
+                "trig": {
+                    "path": trig.path,
+                    "format": trig.format,
+                    "graph_roles": trig.graphs,
+                    "graph_counts": trig.graph_counts,
+                    "triples": trig.triples,
+                    "bytes_written": trig.bytes_written,
+                    "sensitive_literal_count": trig.sensitive_literal_count,
+                    "privacy_warnings": trig.privacy_warnings,
+                },
+                "revision_snapshots": {
+                    "path": revision_snapshots.path,
+                    "format": revision_snapshots.format,
+                    "revision_iris": revision_snapshots.revision_iris,
+                    "graph_roles": revision_snapshots.graph_roles,
+                    "snapshot_count": revision_snapshots.snapshot_count,
+                    "quad_count": revision_snapshots.quad_count,
+                    "bytes_written": revision_snapshots.bytes_written,
+                    "sensitive_literal_count": (
+                        revision_snapshots.sensitive_literal_count
+                    ),
+                    "privacy_warnings": revision_snapshots.privacy_warnings,
+                },
+            },
+            "recommended_import_sequence": [
+                {
+                    "step": 1,
+                    "tool_name": "import_trig",
+                    "mcp_tool_name": "doxabase.import_trig",
+                    "path": trig.path,
+                    "expected_snapshot_evidence_status": (
+                        "history_only_count_digest"
+                    ),
+                },
+                {
+                    "step": 2,
+                    "tool_name": "import_revision_snapshots",
+                    "mcp_tool_name": "doxabase.import_revision_snapshots",
+                    "path": revision_snapshots.path,
+                    "expected_snapshot_evidence_status": (
+                        "history_plus_snapshot_rows"
+                    ),
+                },
+            ],
+            "json_first_status": "snapshot_rows_without_history",
+            "final_snapshot_evidence_status": "history_plus_snapshot_rows",
+            "revision_iris": revision_snapshots.revision_iris,
+            "snapshot_graph_roles": revision_snapshots.graph_roles,
+            "sensitive_literal_count": sensitive_literal_count,
+            "privacy_warnings": privacy_warnings,
+        }
+
+    @staticmethod
     def _preflight_handoff_bundle_export_paths(
         trig_path: str | Path,
         revision_snapshot_path: str | Path,
+        manifest_path: str | Path | None = None,
         *,
         overwrite: bool,
     ) -> None:
         paths = [Path(trig_path), Path(revision_snapshot_path)]
+        if manifest_path is not None:
+            paths.append(Path(manifest_path))
         resolved_paths = [path.resolve(strict=False) for path in paths]
         if len(set(resolved_paths)) != len(resolved_paths):
             raise DoxaBaseError(
-                "export_handoff_bundle requires distinct trig_path and "
-                "revision_snapshot_path outputs."
+                "export_handoff_bundle requires distinct trig_path, "
+                "revision_snapshot_path, and manifest_path outputs."
             )
         if overwrite:
             return

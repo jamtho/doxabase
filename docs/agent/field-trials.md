@@ -2330,7 +2330,10 @@ few useful gaps:
   `fail_on_sensitive=True` blocks before creating or overwriting the artifact.
   A follow-up export-handoff loop added `export_handoff_bundle()` so project
   TriG plus revision snapshot JSON can be written with combined path and privacy
-  preflight before either file is created.
+  preflight before either file is created. The retest found cold receivers still
+  needed a durable pairing artifact, so `manifest_path` can now persist
+  artifact paths and the expected `import_trig` / `import_revision_snapshots`
+  sequence.
 - A query/storage frontier trial found database-backed routes could have storage
   and relation metadata modeled correctly but no structured repair lane for
   `missing_physical_layout`. Once storage is linked, that issue now exposes a

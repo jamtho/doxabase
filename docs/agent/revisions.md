@@ -95,8 +95,9 @@ replacements, record the exact removed/added assertions in the rationale or
 preserve before/after exports when no snapshot bundle is available.
 When both project/history RDF and exact snapshot rows are needed, prefer
 `export_handoff_bundle()` so the TriG and snapshot JSON artifacts are written
-with combined path and privacy preflight. Snapshot JSON is faithful and may
-preserve historical sensitive-looking values; review its
+with combined path and privacy preflight. Pass `manifest_path` when the receiver
+will need a durable pairing file and expected import sequence. Snapshot JSON is
+faithful and may preserve historical sensitive-looking values; review its
 `sensitive_literal_count` and `privacy_warnings`, or pass
 `fail_on_sensitive=True`, before sharing the artifact.
 Choose the export artifact by the receiving task:

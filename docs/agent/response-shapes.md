@@ -3829,9 +3829,12 @@ when potential sensitive literals are found.
 handoff.trig
 handoff.revision_snapshots
 handoff.paths
+handoff.manifest
 handoff.graph_roles
 handoff.snapshot_graph_roles
 handoff.revision_iris
+handoff.manifest_path
+handoff.manifest_bytes_written
 handoff.sensitive_literal_count
 handoff.privacy_warnings
 ```
@@ -3841,7 +3844,13 @@ The nested `trig` and `revision_snapshots` fields have the same shapes as
 the project/history RDF handoff and snapshot JSON companion as a pair. It checks
 both output paths and combined privacy warnings before either artifact is
 created, so `fail_on_sensitive=True` or an existing path cannot leave a normal
-partial two-file handoff.
+partial two-file handoff. The `manifest` field is always returned; when
+`manifest_path` is supplied, the same payload is written as
+`doxabase.handoff_bundle.v1` JSON. The manifest pairs artifact paths, records
+graph roles, revision IRIs, snapshot graph roles, redacted privacy warnings, and
+the recommended receiver sequence: `import_trig` should yield
+`history_only_count_digest`, then `import_revision_snapshots` should yield
+`history_plus_snapshot_rows`.
 
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:

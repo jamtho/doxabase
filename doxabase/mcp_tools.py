@@ -1181,6 +1181,7 @@ def export_handoff_bundle_tool(
     db: DoxaBase,
     trig_path: str,
     revision_snapshot_path: str,
+    manifest_path: str | None = None,
     graphs: list[str] | None = None,
     revision_iris: list[str] | None = None,
     snapshot_graph_roles: list[str] | None = None,
@@ -1189,9 +1190,13 @@ def export_handoff_bundle_tool(
 ) -> dict[str, Any]:
     resolved_trig_path = _resolve_path(trig_path)
     resolved_snapshot_path = _resolve_path(revision_snapshot_path)
+    resolved_manifest_path = (
+        _resolve_path(manifest_path) if manifest_path is not None else None
+    )
     result = db.export_handoff_bundle(
         trig_path=resolved_trig_path,
         revision_snapshot_path=resolved_snapshot_path,
+        manifest_path=resolved_manifest_path,
         graphs=graphs,
         revision_iris=revision_iris,
         snapshot_graph_roles=snapshot_graph_roles,
