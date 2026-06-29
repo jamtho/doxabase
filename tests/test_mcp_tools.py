@@ -28,6 +28,7 @@ from doxabase.mcp_tools import (
     draft_query_plan_tool,
     draft_staged_revision_rebase_tool,
     export_graph_tool,
+    export_handoff_bundle_tool,
     export_profile_insight_review_bundle_tool,
     export_revision_snapshots_tool,
     export_staged_revision_tool,
@@ -36,6 +37,7 @@ from doxabase.mcp_tools import (
     get_doc_tool,
     graph_overview_tool,
     import_revision_snapshots_tool,
+    import_trig_tool,
     list_docs_tool,
     list_entities_tool,
     list_graph_revisions_tool,
@@ -131,6 +133,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
     assert "doxabase.export_graph" in tool_names
+    assert "doxabase.export_handoff_bundle" in tool_names
     assert "doxabase.export_profile_insight_review_bundle" in tool_names
     assert "doxabase.export_revision_snapshots" in tool_names
     assert "doxabase.import_revision_snapshots" in tool_names
@@ -1180,6 +1183,73 @@ def test_export_revision_snapshots_tool_reports_sensitive_literals(
     assert "fail_on_sensitive=True" in str(excinfo.value)
     assert fake_secret not in str(excinfo.value)
     assert not blocked_path.exists()
+
+
+def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    staged = stage_graph_revision_tool(
+        source,
+        summary="Stage handoff table",
+        rationale="Create a project/history RDF and snapshot handoff pair.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:HandoffOrders a rc:Dataset, rc:Table .
+                """,
+            }
+        ],
+    )
+    trig_path = tmp_path / "project-handoff.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+
+    result = export_handoff_bundle_tool(
+        source,
+        trig_path=str(trig_path),
+        revision_snapshot_path=str(snapshot_path),
+        revision_iris=[staged["revision_iri"]],
+    )
+
+    assert result["paths"] == {
+        "trig": str(trig_path),
+        "revision_snapshots": str(snapshot_path),
+    }
+    assert result["trig"]["path"] == str(trig_path)
+    assert result["revision_snapshots"]["path"] == str(snapshot_path)
+    assert result["graph_roles"] == [
+        "ontology",
+        "map",
+        "observations",
+        "patterns",
+        "evidence",
+        "shapes",
+        "history",
+    ]
+    assert result["revision_iris"] == [staged["revision_iri"]]
+    assert result["snapshot_graph_roles"] == ["map"]
+    assert result["sensitive_literal_count"] == 0
+    assert result["privacy_warnings"] == []
+    assert trig_path.exists()
+    assert snapshot_path.exists()
+
+    import_trig_tool(receiver, path=str(trig_path))
+    before_snapshots = describe_revision_snapshot_evidence_tool(
+        receiver,
+        iri=staged["revision_iri"],
+    )
+    assert before_snapshots["status"] == "history_only_count_digest"
+
+    import_revision_snapshots_tool(receiver, path=str(snapshot_path))
+    after_snapshots = describe_revision_snapshot_evidence_tool(
+        receiver,
+        iri=staged["revision_iri"],
+    )
+    assert after_snapshots["status"] == "history_plus_snapshot_rows"
+    assert after_snapshots["exact_snapshot_graph_roles"] == ["map"]
 
 
 def test_replace_graph_triples_tool_returns_json_like_payload(tmp_path: Path) -> None:

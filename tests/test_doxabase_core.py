@@ -1081,6 +1081,60 @@ def test_export_revision_snapshots_reports_sensitive_literals(
     assert existing_path.read_text(encoding="utf-8") == "keep me\n"
 
 
+def test_export_handoff_bundle_blocks_sensitive_literals_before_writing(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_HANDOFF"
+    db.record_map_storage_access(
+        "https://example.test/project#orders_storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=f"/tmp/{fake_secret}/orders",
+    )
+    staged = db.stage_graph_revision(
+        summary="Stage handoff probe",
+        rationale="Create a revision snapshot over the sensitive map graph.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:OrdersHandoffProbe a rc:Dataset .
+                """,
+            }
+        ],
+    )
+
+    trig_path = tmp_path / "blocked-project.trig"
+    snapshot_path = tmp_path / "blocked-revision-snapshots.json"
+    with pytest.raises(DoxaBaseError) as excinfo:
+        db.export_handoff_bundle(
+            trig_path,
+            snapshot_path,
+            revision_iris=[staged.revision_iri],
+            fail_on_sensitive=True,
+        )
+
+    message = str(excinfo.value)
+    assert "fail_on_sensitive=True" in message
+    assert fake_secret not in message
+    assert not trig_path.exists()
+    assert not snapshot_path.exists()
+
+    existing_snapshot_path = tmp_path / "existing-revision-snapshots.json"
+    existing_snapshot_path.write_text("keep me\n", encoding="utf-8")
+    with pytest.raises(DoxaBaseError):
+        db.export_handoff_bundle(
+            tmp_path / "project.trig",
+            existing_snapshot_path,
+            revision_iris=[staged.revision_iri],
+        )
+    assert not (tmp_path / "project.trig").exists()
+    assert existing_snapshot_path.read_text(encoding="utf-8") == "keep me\n"
+
+
 def test_replace_graph_triples_can_create_same_count_digest_drift(
     tmp_path: Path,
 ) -> None:

@@ -65,6 +65,11 @@ db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
 db.export_trig("/tmp/shareable-project.trig", fail_on_sensitive=True)
 db.scan_sensitive_literals(graphs=["map", "evidence"])
 db.export_revision_snapshots("/tmp/revision-snapshots.json", fail_on_sensitive=True)
+db.export_handoff_bundle(
+    "/tmp/project-handoff.trig",
+    "/tmp/revision-snapshots.json",
+    fail_on_sensitive=True,
+)
 ```
 
 `export_graph()` writes one flattened RDF graph, usually Turtle.
@@ -97,6 +102,10 @@ classes, or predicates are part of the handoff. RDF exports do not include
 SQLite-side snapshot rows; pair them with `export_revision_snapshots()` when
 exact applied-diff or stale-drift
 triple reconstruction must survive import.
+Use `export_handoff_bundle()` when a receiver needs both project/history RDF and
+exact revision snapshots. It writes the project TriG artifact and companion
+snapshot JSON together, preflighting both output paths and combined privacy
+warnings before creating either file.
 
 `export_revision_snapshots()` writes a faithful JSON handoff bundle for stored
 revision snapshot rows. Its result includes `sensitive_literal_count` and

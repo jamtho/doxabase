@@ -1749,6 +1749,19 @@ is missing current staging vocabulary, `seed_base_graphs()` will not refresh a
 non-empty seed graph. Export the mutable project graphs with the default project
 export, create a fresh seeded capsule, and import that project bundle there.
 
+`doxabase.export_handoff_bundle`
+
+Writes a project/history TriG artifact plus a companion revision snapshot JSON
+artifact as one handoff operation. Use it when a receiving capsule needs exact
+applied-diff, stale-drift, or revision-lineage reconstruction after RDF import.
+It composes the same faithful `export_trig` and `export_revision_snapshots`
+payloads, but preflights both output paths and combined privacy warnings before
+creating either file. Pass `fail_on_sensitive=true` for unattended or shareable
+handoffs; pass `revision_iris` or `snapshot_graph_roles` only when the snapshot
+JSON should be narrower than the default all-stored-snapshot export. The result
+contains nested `trig` and `revision_snapshots` export records plus combined
+`sensitive_literal_count` and `privacy_warnings`.
+
 `doxabase.export_revision_snapshots`
 
 Exports stored SQLite-side revision snapshot rows as JSON. This is separate

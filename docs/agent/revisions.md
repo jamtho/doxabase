@@ -93,8 +93,11 @@ after the RDF import. Keep the source capsule or explicit before/after exports
 when a downstream agent will only receive an RDF bundle. For controlled
 replacements, record the exact removed/added assertions in the rationale or
 preserve before/after exports when no snapshot bundle is available.
-Snapshot JSON is faithful and may preserve historical sensitive-looking values;
-review its `sensitive_literal_count` and `privacy_warnings`, or pass
+When both project/history RDF and exact snapshot rows are needed, prefer
+`export_handoff_bundle()` so the TriG and snapshot JSON artifacts are written
+with combined path and privacy preflight. Snapshot JSON is faithful and may
+preserve historical sensitive-looking values; review its
+`sensitive_literal_count` and `privacy_warnings`, or pass
 `fail_on_sensitive=True`, before sharing the artifact.
 Choose the export artifact by the receiving task:
 

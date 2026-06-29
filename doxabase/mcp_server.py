@@ -28,6 +28,7 @@ from doxabase.mcp_tools import (
     draft_query_plan_tool,
     draft_staged_revision_rebase_tool,
     export_graph_tool,
+    export_handoff_bundle_tool,
     export_profile_insight_review_bundle_tool,
     export_staged_revision_tool,
     export_staged_revisions_tool,
@@ -1321,6 +1322,29 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             path=path,
             revision_iris=revision_iris,
             graph_roles=graph_roles,
+            overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
+        )
+
+    @server.tool(name="doxabase.export_handoff_bundle")
+    def export_handoff_bundle(
+        trig_path: str,
+        revision_snapshot_path: str,
+        graphs: list[str] | None = None,
+        revision_iris: list[str] | None = None,
+        snapshot_graph_roles: list[str] | None = None,
+        overwrite: bool = False,
+        fail_on_sensitive: bool = False,
+    ) -> dict[str, Any]:
+        """Export project TriG plus revision snapshot JSON as one handoff."""
+
+        return export_handoff_bundle_tool(
+            db,
+            trig_path=trig_path,
+            revision_snapshot_path=revision_snapshot_path,
+            graphs=graphs,
+            revision_iris=revision_iris,
+            snapshot_graph_roles=snapshot_graph_roles,
             overwrite=overwrite,
             fail_on_sensitive=fail_on_sensitive,
         )

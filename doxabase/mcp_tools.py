@@ -1177,6 +1177,30 @@ def export_revision_snapshots_tool(
     return to_dict(result)
 
 
+def export_handoff_bundle_tool(
+    db: DoxaBase,
+    trig_path: str,
+    revision_snapshot_path: str,
+    graphs: list[str] | None = None,
+    revision_iris: list[str] | None = None,
+    snapshot_graph_roles: list[str] | None = None,
+    overwrite: bool = False,
+    fail_on_sensitive: bool = False,
+) -> dict[str, Any]:
+    resolved_trig_path = _resolve_path(trig_path)
+    resolved_snapshot_path = _resolve_path(revision_snapshot_path)
+    result = db.export_handoff_bundle(
+        trig_path=resolved_trig_path,
+        revision_snapshot_path=resolved_snapshot_path,
+        graphs=graphs,
+        revision_iris=revision_iris,
+        snapshot_graph_roles=snapshot_graph_roles,
+        overwrite=overwrite,
+        fail_on_sensitive=fail_on_sensitive,
+    )
+    return to_dict(result)
+
+
 def import_revision_snapshots_tool(
     db: DoxaBase,
     path: str,

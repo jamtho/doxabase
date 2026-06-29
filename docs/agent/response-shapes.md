@@ -3809,6 +3809,27 @@ from a conservative scan of stored snapshot quad objects, and
 `fail_on_sensitive=True` blocks before creating or overwriting the JSON file
 when potential sensitive literals are found.
 
+`db.export_handoff_bundle(trig_path, revision_snapshot_path, ...)` returns
+`HandoffBundleExportRecord`:
+
+```python
+handoff.trig
+handoff.revision_snapshots
+handoff.paths
+handoff.graph_roles
+handoff.snapshot_graph_roles
+handoff.revision_iris
+handoff.sensitive_literal_count
+handoff.privacy_warnings
+```
+
+The nested `trig` and `revision_snapshots` fields have the same shapes as
+`GraphExportRecord` and `RevisionSnapshotBundleExportRecord`. The helper writes
+the project/history RDF handoff and snapshot JSON companion as a pair. It checks
+both output paths and combined privacy warnings before either artifact is
+created, so `fail_on_sensitive=True` or an existing path cannot leave a normal
+partial two-file handoff.
+
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:
 

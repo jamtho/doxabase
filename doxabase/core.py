@@ -480,6 +480,18 @@ class RevisionSnapshotBundleExportRecord:
 
 
 @dataclass(frozen=True)
+class HandoffBundleExportRecord:
+    trig: GraphExportRecord
+    revision_snapshots: RevisionSnapshotBundleExportRecord
+    paths: dict[str, str]
+    graph_roles: list[str]
+    snapshot_graph_roles: list[str]
+    revision_iris: list[str]
+    sensitive_literal_count: int = 0
+    privacy_warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class RevisionSnapshotBundleImportRecord:
     path: str
     format: str
@@ -36636,6 +36648,137 @@ class DoxaBase:
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
         )
+
+    def export_handoff_bundle(
+        self,
+        trig_path: str | Path,
+        revision_snapshot_path: str | Path,
+        *,
+        graphs: Iterable[str] | str | None = None,
+        revision_iris: Iterable[str] | str | None = None,
+        snapshot_graph_roles: Iterable[str] | str | None = None,
+        overwrite: bool = False,
+        graph_iri_prefix: str = RCG_PREFIX,
+        fail_on_sensitive: bool = False,
+    ) -> HandoffBundleExportRecord:
+        self._preflight_handoff_bundle_export_paths(
+            trig_path,
+            revision_snapshot_path,
+            overwrite=overwrite,
+        )
+        graph_names = self._graph_names_for_export(
+            graphs,
+            default_preset="project",
+        )
+        revisions = [
+            self._required_iri("revision_iris", value)
+            for value in self._string_values("revision_iris", revision_iris)
+        ]
+        expanded_revisions = self._snapshot_export_revision_iris(revisions)
+        snapshot_roles = self._snapshot_bundle_graph_roles(snapshot_graph_roles)
+        snapshot_entries = self._graph_snapshot_bundle_entries(
+            revision_iris=expanded_revisions or None,
+            graph_roles=snapshot_roles or None,
+        )
+        snapshot_revision_iris = list(
+            dict.fromkeys(entry["revision_iri"] for entry in snapshot_entries)
+        )
+        snapshot_graph_role_values = list(
+            dict.fromkeys(entry["graph_role"] for entry in snapshot_entries)
+        )
+        snapshot_quad_count = sum(len(entry["quads"]) for entry in snapshot_entries)
+        trig_sensitive_count, trig_privacy_warnings = self._export_privacy_warnings(
+            graph_names
+        )
+        snapshot_sensitive_count, snapshot_privacy_warnings = (
+            self._revision_snapshot_export_privacy_warnings(snapshot_entries)
+        )
+        sensitive_literal_count = trig_sensitive_count + snapshot_sensitive_count
+        privacy_warnings = [
+            *trig_privacy_warnings,
+            *snapshot_privacy_warnings,
+        ]
+        self._raise_if_sensitive_export_blocked(
+            fail_on_sensitive=fail_on_sensitive,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
+        )
+
+        dataset = self.to_dataset(graph_names, graph_iri_prefix=graph_iri_prefix)
+        trig_data = dataset.serialize(format="trig")
+        snapshot_payload = {
+            "format": "doxabase.revision_snapshot_bundle.v1",
+            "created_at": _now(),
+            "snapshots": snapshot_entries,
+        }
+        snapshot_data = json.dumps(snapshot_payload, indent=2, sort_keys=True) + "\n"
+        trig_bytes_written = self._write_export(
+            trig_path,
+            trig_data,
+            overwrite=overwrite,
+        )
+        snapshot_bytes_written = self._write_export(
+            revision_snapshot_path,
+            snapshot_data,
+            overwrite=overwrite,
+        )
+        trig_record = GraphExportRecord(
+            path=str(trig_path),
+            format="trig",
+            graphs=graph_names,
+            graph_counts=self._graph_counts(graph_names),
+            triples=len(dataset),
+            bytes_written=trig_bytes_written,
+            sensitive_literal_count=trig_sensitive_count,
+            privacy_warnings=trig_privacy_warnings,
+        )
+        snapshot_record = RevisionSnapshotBundleExportRecord(
+            path=str(revision_snapshot_path),
+            format=snapshot_payload["format"],
+            revision_iris=snapshot_revision_iris,
+            graph_roles=snapshot_graph_role_values,
+            snapshot_count=len(snapshot_entries),
+            quad_count=snapshot_quad_count,
+            bytes_written=snapshot_bytes_written,
+            sensitive_literal_count=snapshot_sensitive_count,
+            privacy_warnings=snapshot_privacy_warnings,
+        )
+        return HandoffBundleExportRecord(
+            trig=trig_record,
+            revision_snapshots=snapshot_record,
+            paths={
+                "trig": str(trig_path),
+                "revision_snapshots": str(revision_snapshot_path),
+            },
+            graph_roles=graph_names,
+            snapshot_graph_roles=snapshot_graph_role_values,
+            revision_iris=snapshot_revision_iris,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
+        )
+
+    @staticmethod
+    def _preflight_handoff_bundle_export_paths(
+        trig_path: str | Path,
+        revision_snapshot_path: str | Path,
+        *,
+        overwrite: bool,
+    ) -> None:
+        paths = [Path(trig_path), Path(revision_snapshot_path)]
+        resolved_paths = [path.resolve(strict=False) for path in paths]
+        if len(set(resolved_paths)) != len(resolved_paths):
+            raise DoxaBaseError(
+                "export_handoff_bundle requires distinct trig_path and "
+                "revision_snapshot_path outputs."
+            )
+        if overwrite:
+            return
+        existing = [str(path) for path in paths if path.exists()]
+        if existing:
+            raise DoxaBaseError(
+                "Export path already exists: "
+                f"{existing[0]}. Use overwrite=True to replace it."
+            )
 
     def _revision_snapshot_export_privacy_warnings(
         self,
