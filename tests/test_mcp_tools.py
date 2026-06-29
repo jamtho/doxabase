@@ -68,6 +68,7 @@ from doxabase.mcp_tools import (
     restage_staged_revision_tool,
     restage_staged_revisions_tool,
     scan_sensitive_literals_tool,
+    search_staged_patch_payloads_tool,
     search_tool,
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
@@ -161,6 +162,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.record_map_partition_scheme" in tool_names
     assert "doxabase.record_map_relationship" in tool_names
     assert "doxabase.search" in tool_names
+    assert "doxabase.search_staged_patch_payloads" in tool_names
     assert "doxabase.export_graph" in tool_names
     assert "doxabase.export_handoff_bundle" in tool_names
     assert "doxabase.export_profile_insight_review_bundle" in tool_names
@@ -8567,6 +8569,50 @@ def test_search_tool_returns_json_like_payload(tmp_path: Path) -> None:
         "Parquet schemas are inferred" in match["text"]
         for match in result["matches"]
     )
+
+
+def test_search_staged_patch_payloads_tool_returns_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    term = "https://example.test/project#CohortCompletenessLens"
+    staged = stage_graph_revision_tool(
+        db,
+        summary="Define cohort completeness lens",
+        rationale="The term should remain reviewable before it becomes ontology.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": f"""
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <{term}> a rdfs:Class ;
+                        rdfs:label "Cohort completeness lens" ;
+                        rdfs:comment "A staged-only modelling lens." .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    result = search_staged_patch_payloads_tool(
+        db,
+        query="cohort completeness",
+    )
+
+    assert result["query"] == "cohort completeness"
+    assert result["current_staged_work_only"] is True
+    assert result["count"] == 1
+    match = result["matches"][0]
+    assert match["revision_iri"] == staged["revision_iri"]
+    assert match["revision_summary"] == "Define cohort completeness lens"
+    assert match["target_graph"] == "ontology"
+    assert match["patch_subject_iris"] == [term]
+    assert "literal" in match["matched_term_roles"]
+    assert match["suggested_next_actions"][0]["tool_name"] == (
+        "describe_staged_revision"
+    )
+    assert result["suggested_next_actions"][0] == match["suggested_next_actions"][0]
 
 
 def test_search_tool_suggests_scoped_retries_for_seed_heavy_unscoped_results(

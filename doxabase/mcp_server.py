@@ -67,6 +67,7 @@ from doxabase.mcp_tools import (
     restage_staged_revision_tool,
     restage_staged_revisions_tool,
     scan_sensitive_literals_tool,
+    search_staged_patch_payloads_tool,
     search_tool,
     stage_graph_revision_tool,
     stage_map_assertion_change_tool,
@@ -79,7 +80,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -470,6 +471,25 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             include_patch_mentions=include_patch_mentions,
             include_apply_checks=include_apply_checks,
             drift_detail=drift_detail,
+            current_staged_work_only=current_staged_work_only,
+            limit=limit,
+            offset=offset,
+        )
+
+    @server.tool(name="doxabase.search_staged_patch_payloads")
+    def search_staged_patch_payloads(
+        query: str,
+        graph: str | None = "history",
+        current_staged_work_only: bool = True,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Search current staged patch Turtle payloads and route to owners."""
+
+        return search_staged_patch_payloads_tool(
+            db,
+            query=query,
+            graph=graph,
             current_staged_work_only=current_staged_work_only,
             limit=limit,
             offset=offset,

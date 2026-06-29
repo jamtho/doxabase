@@ -277,6 +277,25 @@ def list_resource_revisions_tool(
     )
 
 
+def search_staged_patch_payloads_tool(
+    db: DoxaBase,
+    query: str,
+    graph: str | None = "history",
+    current_staged_work_only: bool = True,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    return to_dict(
+        db.search_staged_patch_payloads(
+            query=query,
+            graph=graph,
+            current_staged_work_only=current_staged_work_only,
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+
 def describe_resource_revision_lineage_tool(
     db: DoxaBase,
     resource_iri: str,

@@ -3358,6 +3358,47 @@ class SearchResults:
 
 
 @dataclass(frozen=True)
+class StagedPatchPayloadSearchMatch:
+    revision_iri: str
+    revision_summary: str | None
+    revision_application_status: str | None
+    revision_is_current_staged_work: bool | None
+    patch_iri: str
+    graph: str
+    target_graph: str | None
+    operation: str | None
+    operation_label: str | None
+    patch_role: str | None
+    patch_role_label: str | None
+    sequence_index: int | None
+    triple_count: int | None
+    text: str
+    snippet: str
+    matched_term_roles: list[str]
+    patch_subject_iris: list[str]
+    parsed_resource_iris: list[str]
+    parsed_resource_count: int
+    parse_error: str | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
+class StagedPatchPayloadSearchResults:
+    query: str
+    graph: str | None
+    current_staged_work_only: bool
+    matches: list[StagedPatchPayloadSearchMatch]
+    count: int
+    returned_count: int
+    total_count: int
+    limit: int
+    offset: int
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class ValidationResult:
     conforms: bool
     report_text: str
@@ -12012,6 +12053,293 @@ class DoxaBase:
                 action.call for action in suggested_next_actions
             ],
         )
+
+    def search_staged_patch_payloads(
+        self,
+        query: str,
+        *,
+        graph: str | None = "history",
+        current_staged_work_only: bool = True,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> StagedPatchPayloadSearchResults:
+        if not query.strip():
+            raise DoxaBaseError("Search query must not be empty")
+        if limit < 1:
+            raise DoxaBaseError("Search limit must be at least 1")
+        if offset < 0:
+            raise DoxaBaseError("Search offset must be non-negative")
+
+        search_tokens = _search_tokens(query)
+        fts_query = _fts_query_from_tokens(search_tokens)
+        graphs = self._expand_graphs([graph] if graph else None)
+        graph_filter, graph_params = self._graph_filter(graphs)
+        patch_content_predicate = self.expand_iri("rc:patchContent")
+        rows = self._conn.execute(
+            f"""
+            SELECT
+                graph,
+                subject,
+                predicate,
+                text,
+                snippet(literal_search, 4, '[', ']', ' ... ', 18) AS snippet
+            FROM literal_search
+            WHERE literal_search MATCH ?
+              AND predicate = ?
+              {graph_filter}
+            ORDER BY bm25(literal_search), graph, subject
+            """,
+            [fts_query, patch_content_predicate, *graph_params],
+        ).fetchall()
+        revision_items = self.list_graph_revisions(
+            graph=graph,
+            include_apply_checks=True,
+            current_staged_work_only=False,
+            limit=1_000_000,
+        )
+        revision_by_iri = {item.iri: item for item in revision_items.revisions}
+        staged_cache: dict[str, StagedGraphRevisionDescription | None] = {}
+        matches: list[StagedPatchPayloadSearchMatch] = []
+        for row in rows:
+            patch_iri = row["subject"]
+            revision_iri = self._first_subject(
+                graphs,
+                "rc:hasGraphPatch",
+                patch_iri,
+            )
+            if revision_iri is None:
+                continue
+            revision_item = revision_by_iri.get(revision_iri)
+            if (
+                current_staged_work_only
+                and revision_item is not None
+                and not revision_item.is_current_staged_work
+            ):
+                continue
+            staged = self._cached_staged_revision(
+                revision_iri,
+                graph=graph,
+                cache=staged_cache,
+            )
+            if staged is None:
+                continue
+            patch = next(
+                (candidate for candidate in staged.patches if candidate.iri == patch_iri),
+                None,
+            )
+            if patch is None:
+                continue
+            matches.append(
+                self._staged_patch_payload_search_match(
+                    row=row,
+                    staged=staged,
+                    patch=patch,
+                    revision_item=revision_item,
+                    search_tokens=search_tokens,
+                )
+            )
+
+        sliced = matches[offset : offset + limit]
+        suggested_next_actions: list[SuggestedNextAction] = []
+        seen_action_keys: set[tuple[str, str]] = set()
+        for match in sliced:
+            for action in match.suggested_next_actions:
+                action_key = (
+                    action.tool_name,
+                    json.dumps(to_jsonable(action.arguments), sort_keys=True),
+                )
+                if action_key in seen_action_keys:
+                    continue
+                seen_action_keys.add(action_key)
+                suggested_next_actions.append(action)
+        return StagedPatchPayloadSearchResults(
+            query=query,
+            graph=graph,
+            current_staged_work_only=current_staged_work_only,
+            matches=sliced,
+            count=len(matches),
+            returned_count=len(sliced),
+            total_count=len(matches),
+            limit=limit,
+            offset=offset,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions
+            ],
+        )
+
+    def _staged_patch_payload_search_match(
+        self,
+        *,
+        row: sqlite3.Row,
+        staged: StagedGraphRevisionDescription,
+        patch: StagedGraphPatchDescription,
+        revision_item: GraphRevisionListItem | None,
+        search_tokens: list[str],
+    ) -> StagedPatchPayloadSearchMatch:
+        (
+            matched_roles,
+            patch_subject_iris,
+            parsed_resource_iris,
+            parse_error,
+        ) = self._staged_patch_payload_parsed_terms(
+            patch,
+            search_tokens=search_tokens,
+        )
+        actions = [
+            SuggestedNextAction(
+                action_label="Inspect owning staged revision",
+                tool_name="describe_staged_revision",
+                mcp_tool_name="doxabase.describe_staged_revision",
+                arguments={
+                    "iri": staged.iri,
+                    "include_current_apply_check": True,
+                },
+                reason=(
+                    "Inspect the staged revision that owns this matching "
+                    "patch payload before treating the hit as live graph fact."
+                ),
+                call=self._suggested_call_string(
+                    "describe_staged_revision",
+                    {
+                        "iri": staged.iri,
+                        "include_current_apply_check": True,
+                    },
+                ),
+            ),
+            SuggestedNextAction(
+                action_label="Review staged payload bundle",
+                tool_name="export_staged_revisions",
+                mcp_tool_name="doxabase.export_staged_revisions",
+                arguments={
+                    "revision_iris": [staged.iri],
+                    "path": self._staged_patch_payload_search_export_path(
+                        staged.iri
+                    ),
+                },
+                reason=(
+                    "Export the owning staged revision as a review artifact "
+                    "with full Turtle payload and current apply routing."
+                ),
+                call=self._suggested_call_string(
+                    "export_staged_revisions",
+                    {
+                        "revision_iris": [staged.iri],
+                        "path": self._staged_patch_payload_search_export_path(
+                            staged.iri
+                        ),
+                    },
+                ),
+            ),
+        ]
+        if patch_subject_iris:
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Find staged work for first proposed resource",
+                    tool_name="list_resource_revisions",
+                    mcp_tool_name="doxabase.list_resource_revisions",
+                    arguments={
+                        "resource_iri": patch_subject_iris[0],
+                        "current_staged_work_only": True,
+                        "include_patch_mentions": True,
+                    },
+                    reason=(
+                        "Use resource-centric patch mention discovery for the "
+                        "first proposed subject in this staged payload."
+                    ),
+                    call=self._suggested_call_string(
+                        "list_resource_revisions",
+                        {
+                            "resource_iri": patch_subject_iris[0],
+                            "current_staged_work_only": True,
+                            "include_patch_mentions": True,
+                        },
+                    ),
+                )
+            )
+        return StagedPatchPayloadSearchMatch(
+            revision_iri=staged.iri,
+            revision_summary=staged.summary,
+            revision_application_status=(
+                revision_item.application_status
+                if revision_item is not None
+                else None
+            ),
+            revision_is_current_staged_work=(
+                revision_item.is_current_staged_work
+                if revision_item is not None
+                else None
+            ),
+            patch_iri=patch.iri,
+            graph=row["graph"],
+            target_graph=patch.target_graph,
+            operation=patch.operation,
+            operation_label=patch.operation_label,
+            patch_role=patch.patch_role,
+            patch_role_label=patch.patch_role_label,
+            sequence_index=patch.sequence_index,
+            triple_count=patch.triple_count,
+            text=row["text"],
+            snippet=row["snippet"],
+            matched_term_roles=matched_roles,
+            patch_subject_iris=patch_subject_iris,
+            parsed_resource_iris=parsed_resource_iris,
+            parsed_resource_count=len(parsed_resource_iris),
+            parse_error=parse_error,
+            suggested_next_actions=actions,
+            suggested_next_calls=[action.call for action in actions],
+        )
+
+    def _staged_patch_payload_parsed_terms(
+        self,
+        patch: StagedGraphPatchDescription,
+        *,
+        search_tokens: list[str],
+    ) -> tuple[list[str], list[str], list[str], str | None]:
+        try:
+            graph = self._parse_staged_patch_description(patch)
+        except DoxaBaseError as exc:
+            return [], [], [], str(exc)
+
+        matched_roles: set[str] = set()
+        subject_iris: set[str] = set()
+        resource_iris: set[str] = set()
+
+        def matches_token(value: str) -> bool:
+            lowered = value.lower()
+            return any(token in lowered for token in search_tokens)
+
+        for subject, predicate, object_node in graph:
+            if isinstance(subject, URIRef):
+                subject_text = str(subject)
+                subject_iris.add(subject_text)
+                resource_iris.add(subject_text)
+                if matches_token(subject_text):
+                    matched_roles.add("subject")
+            predicate_text = str(predicate)
+            resource_iris.add(predicate_text)
+            if matches_token(predicate_text):
+                matched_roles.add("predicate")
+            if isinstance(object_node, URIRef):
+                object_text = str(object_node)
+                resource_iris.add(object_text)
+                if matches_token(object_text):
+                    matched_roles.add("object")
+            elif isinstance(object_node, Literal) and matches_token(str(object_node)):
+                matched_roles.add("literal")
+
+        role_order = ["subject", "predicate", "object", "literal"]
+        return (
+            [role for role in role_order if role in matched_roles],
+            sorted(subject_iris),
+            sorted(resource_iris),
+            None,
+        )
+
+    def _staged_patch_payload_search_export_path(self, revision_iri: str) -> str:
+        local = self._local_name(revision_iri) or "revision"
+        safe = re.sub(r"[^A-Za-z0-9_.-]+", "-", local).strip("-") or "revision"
+        return f"/tmp/staged-payload-search-{safe}.md"
 
     def _search_scope_hint(
         self,

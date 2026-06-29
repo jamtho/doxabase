@@ -1284,6 +1284,12 @@ observations/claims/patterns/evidence, optional `revision_anchors`, validation
 result, export path, and graph-count snapshots. It does not compute diffs or
 apply graph edits.
 
+`doxabase.search_staged_patch_payloads`
+
+Search current staged `rc:patchContent` Turtle and route hits to owning
+revision/patch actions. Use for staged-only labels before treating history hits
+as live facts.
+
 `doxabase.stage_graph_revision`
 
 Records a staged graph revision in `history` without applying it. Pass

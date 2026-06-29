@@ -3687,6 +3687,58 @@ It filters before pagination and matches exact expanded RDF terms in staged
 patch payloads. Use `describe_staged_revision()` when the patch payload itself
 is needed.
 
+`db.search_staged_patch_payloads(query, current_staged_work_only=True)` returns
+`StagedPatchPayloadSearchResults`:
+
+```python
+results.query
+results.graph
+results.current_staged_work_only
+results.matches
+results.count
+results.returned_count
+results.total_count
+results.limit
+results.offset
+results.suggested_next_actions
+results.suggested_next_calls
+```
+
+Each `results.matches[]` item is a `StagedPatchPayloadSearchMatch`:
+
+```python
+match.revision_iri
+match.revision_summary
+match.revision_application_status
+match.revision_is_current_staged_work
+match.patch_iri
+match.graph
+match.target_graph
+match.operation
+match.operation_label
+match.patch_role
+match.patch_role_label
+match.sequence_index
+match.triple_count
+match.text
+match.snippet
+match.matched_term_roles
+match.patch_subject_iris
+match.parsed_resource_iris
+match.parsed_resource_count
+match.parse_error
+match.suggested_next_actions
+match.suggested_next_calls
+```
+
+This helper searches stored `rc:patchContent` literals and returns staged
+proposal context, not live project facts. `patch_subject_iris` lists URI
+subjects parsed from the matching patch; `parsed_resource_iris` also includes
+predicate and URI object terms. `matched_term_roles` can contain `subject`,
+`predicate`, `object`, and `literal`. Follow the suggested
+`describe_staged_revision` or `export_staged_revisions` action before deciding
+whether to apply, restage, or ignore the proposal.
+
 `db.describe_resource_revision_lineage(resource_iri, revision_iri,
 include_applied_diff=True, include_triples=False, max_triples=100)` returns
 `ResourceRevisionLineageDescription`:

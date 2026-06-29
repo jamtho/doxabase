@@ -133,6 +133,13 @@ For automation over grouped/list queues, prefer
 `next_action_queue_items[].resolved_target_iri` and row-local `next_action`
 arguments over raw `next_action_queue` values, because handled stale rows may
 route to a refreshed successor or applied event.
+If you remember staged-only prose, a proposed ontology label, or a distinctive
+IRI local name but not the revision IRI, call
+`doxabase.search_staged_patch_payloads(...)` before concluding the term is
+absent. It searches stored `rc:patchContent` literals and returns the owning
+staged revision, patch metadata, parsed resource IRIs, and review actions. Use
+`list_resource_revisions(include_patch_mentions=True)` instead when you already
+know the exact resource IRI and want exact staged/applied lineage.
 
 Use `doxabase.export_staged_revision` to write a Markdown review bundle for one
 proposal. The export includes a live `Current Apply Check` section generated at

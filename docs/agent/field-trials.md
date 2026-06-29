@@ -2703,8 +2703,12 @@ few useful gaps:
   runtime gap, but did surface review-handoff scan friction: grouped staged
   exports now expose `decision_headline`, `changed_graph_counts`, and
   `choose_one_groups`, and the Markdown starts with an `At A Glance` rollup.
-  Remaining larger follow-ups are staged-payload lexical discovery, a tracked
-  local CSV query smoke example, and refreshing README/ARCHITECTURE status lists.
+  A follow-up staged-discovery fix added
+  `search_staged_patch_payloads`, so remembered staged-only labels and comments
+  route to owning revisions instead of appearing only as generic
+  `rc:patchContent` history hits. Remaining larger follow-ups are a tracked
+  local CSV query smoke example and refreshing README/ARCHITECTURE status
+  lists.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

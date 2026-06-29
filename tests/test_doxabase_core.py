@@ -21907,6 +21907,67 @@ def test_search_finds_uri_object_terms_for_profile_metric_kinds(
     assert match.iri in described_metric_iris
 
 
+def test_search_staged_patch_payloads_routes_staged_only_terms(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    term = "https://example.test/project#CohortCompletenessLens"
+    staged = db.stage_graph_revision(
+        summary="Define cohort completeness lens",
+        rationale="The term should remain reviewable before it becomes ontology.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": f"""
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    <{term}> a rdfs:Class ;
+                        rdfs:label "Cohort completeness lens" ;
+                        rdfs:comment "A staged-only modelling lens." .
+                """,
+            }
+        ],
+        validation_scope="all",
+    )
+
+    assert db.search("cohort completeness", graph="ontology").matches == []
+
+    results = db.search_staged_patch_payloads("cohort completeness")
+
+    assert results.count == 1
+    assert results.returned_count == 1
+    match = results.matches[0]
+    assert match.revision_iri == staged.revision_iri
+    assert match.revision_summary == "Define cohort completeness lens"
+    assert match.revision_application_status == "ready"
+    assert match.revision_is_current_staged_work is True
+    assert match.patch_iri == staged.patches[0].patch_iri
+    assert match.target_graph == "ontology"
+    assert match.patch_subject_iris == [term]
+    assert term in match.parsed_resource_iris
+    assert "literal" in match.matched_term_roles
+    assert match.parse_error is None
+    assert [action.tool_name for action in match.suggested_next_actions] == [
+        "describe_staged_revision",
+        "export_staged_revisions",
+        "list_resource_revisions",
+    ]
+    assert results.suggested_next_actions[0].arguments == {
+        "iri": staged.revision_iri,
+        "include_current_apply_check": True,
+    }
+
+    db.apply_staged_revision(staged.revision_iri)
+
+    assert db.search_staged_patch_payloads("cohort completeness").matches == []
+    historical = db.search_staged_patch_payloads(
+        "cohort completeness",
+        current_staged_work_only=False,
+    )
+    assert historical.count == 1
+    assert historical.matches[0].revision_is_current_staged_work is False
+
+
 def test_scratch_capsule_observation_write_recovers_search_index(
     tmp_path: Path,
 ) -> None:

@@ -51,6 +51,10 @@ When arriving cold, use this route before reading every reference doc.
    `graph="map"` when you know you want current project facts. If an unscoped
    search returns `scope_hint.status="seed_heavy_unscoped_results"`, follow the
    scoped retry actions before deciding the project fact is absent.
+   If the remembered term may exist only inside a staged proposal, use
+   `doxabase.search_staged_patch_payloads` to route `rc:patchContent` hits to
+   their owning staged revisions before treating them as live facts or absent
+   facts.
 7. Call `doxabase.list_entities` for likely entry points, usually
    `type="rc:Dataset"` or `type="rc:Table"` in `graph="map"`.
 8. Call `doxabase.describe_dataset` for a bounded view of one table or dataset.
@@ -176,6 +180,9 @@ Do not write ordinary user or project facts to immutable package seed graphs:
 - Unknown staged/applied/history record: use `list_graph_revisions`, then
   inspect a specific result with `describe_graph_revision` or
   `describe_staged_revision`.
+- Remembered staged-only term or proposal prose: use
+  `search_staged_patch_payloads`, then inspect the owning staged revision before
+  treating the hit as live graph fact.
 - Meaningful graph change or exported review bundle: use `record_graph_revision`
   so later agents know what changed and why.
 
