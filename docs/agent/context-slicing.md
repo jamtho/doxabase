@@ -133,6 +133,9 @@ resource can legitimately contribute to multiple route totals when it was useful
 for more than one reason.
 There is no `route_explained` profile; route explanations are returned through
 `routes`, `route_legend`, and `route_counts` on every valid profile.
+There is also no `route_summaries` field; start with `reading_order`,
+`route_counts`, and `route_legend`, then read each resource's `primary_route` and
+`routes`.
 
 Useful fields:
 
@@ -140,7 +143,8 @@ Useful fields:
   summaries that produced the slice.
 - `reading_order`: a short static protocol for reading a slice: seeds,
   warnings, structured contexts including `seed_profile_observations`, routes,
-  resources, then raw RDF when needed.
+  resources, then raw RDF when needed. It also reminds callers that
+  `route_counts` and `route_legend` are the route-summary surface.
 - `resources`: selected resources with labels, descriptions, types, graphs,
   `surface_role`, and route reasons. `primary_route` is the highest-priority
   route object, not a scalar route id; read `primary_route.route` in Python or

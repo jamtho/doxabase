@@ -766,6 +766,9 @@ and `result["seeds"]` in MCP payloads.
 
 `route_counts` is keyed by route id. `route_legend` is a list of rows, not a
 dict; callers can build a dict keyed by `route` if that is more convenient.
+There is no separate `route_summaries` field; use `reading_order`,
+`route_counts`, and `route_legend` as the first route summary, then inspect
+`resources[].primary_route` and `resources[].routes`.
 Each `route_legend[]` item has:
 
 ```python

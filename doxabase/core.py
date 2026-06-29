@@ -10258,6 +10258,10 @@ class DoxaBase:
                 "seed_profile_observations for compact structured context."
             ),
             "Scan route_counts and route_legend to understand why resources were included.",
+            (
+                "Use reading_order, route_counts, and route_legend as the route "
+                "summary surface; there is no separate route_summaries field."
+            ),
             "Read resources in order, using primary_route before secondary routes.",
             "Inspect triples or trig only when exact RDF statements or graph roles matter.",
         ]

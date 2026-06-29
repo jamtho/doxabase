@@ -522,6 +522,14 @@ few useful gaps:
   `recommended_apply_or_restage_review_iris` and
   `recommended_repair_review_iris`. Grouped Markdown now mirrors those buckets
   in `Review Queues` for human reviewers.
+- A cold-start MCP trial confirmed that live MCP mutation tools operate on the
+  configured server capsule, not a caller-selected scratch path. For disposable
+  scratch trials, use Python MCP helper functions against
+  `DoxaBase.create(path, overwrite=True)`, or start a fresh MCP server with an
+  explicit `--capsule /tmp/...` before calling mutable tools. The same trial
+  found that `describe_context_slice` route summaries are already present as
+  `reading_order`, `route_counts`, and `route_legend`; do not look for a separate
+  `route_summaries` field.
 - A second post-rebuild staged-revision wave confirmed that the recovery
   mechanics work, including same-count digest drift, stale alternatives,
   dry-run batch restage, successor routing, and post-apply sibling staleness.

@@ -703,6 +703,8 @@ Use `resources[].routes`, `route_counts`, `dataset_contexts`, and
 `pattern_contexts` as the reading path before raw `triples`. The response also
 includes `reading_order` and a filtered `route_legend` so cold agents can follow
 the intended reading protocol without rediscovering route meanings.
+There is no `route_summaries` field; `reading_order`, `route_counts`, and
+`route_legend` are the compact route-summary surface.
 `resources[].primary_route` is the first full route object from
 `resources[].routes`; use `resources[].primary_route.route` for the route id.
 `resources[].surface_role` is a compact first-pass cue for whether a resource is

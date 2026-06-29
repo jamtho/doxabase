@@ -5555,6 +5555,7 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     assert result["route_counts"]["dataset_column"] >= 1
     assert result["route_counts"]["linked_pattern"] >= 1
     assert result["reading_order"][0].startswith("Start with seeds")
+    assert any("route_summaries" in step for step in result["reading_order"])
     assert any(
         route["route"] == "seed"
         and route["count"] == 1

@@ -863,6 +863,9 @@ you need importable TriG text, and raise
 `max_triples` when `truncated` is true and the slice still looks relevant.
 Truncation only affects raw `triples` and `trig`; resources and structured
 contexts still describe the full selected slice.
+There is no `route_summaries` field; use `reading_order`, `route_counts`, and
+`route_legend` as the first route summary before inspecting each resource's
+`primary_route` and `routes`.
 
 `doxabase.describe_pattern`
 

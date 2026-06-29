@@ -87,6 +87,11 @@ only after exact discovery; search for the exact name such as
 `doxabase.describe_context_slice`, or `doxabase.graph_overview` before assuming
 it is missing. `doxabase.search` searches RDF literals in the capsule, not these
 agent docs; use `list_docs`/`get_doc` or local files for doc search.
+MCP tools operate on the configured server capsule. For disposable scratch
+trials, use Python MCP helper functions against
+`DoxaBase.create(path, overwrite=True)`, or start a fresh MCP server with
+`--capsule /tmp/...` before calling mutable tools such as
+`load_example_fixtures`, staging helpers, or apply helpers.
 
 If you are scripting directly against the Python API, read `response_shapes`
 before assuming returned field names. Large docs expose section headings through
