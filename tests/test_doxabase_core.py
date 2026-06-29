@@ -577,6 +577,96 @@ def test_project_brief_routes_ready_query_handoffs_to_draft_plan(
     )
 
 
+def test_project_brief_ready_query_handoff_uses_full_query_actions(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    dataset = f"{base}CustomerChurn"
+    status_column = f"{base}CustomerChurnStatus"
+    storage = db.record_map_storage_access(
+        f"{base}CustomerChurnLocalStorage",
+        label="Customer churn local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        location_kind="object",
+        storage_root=str(tmp_path / "customer-churn.parquet"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    layout = db.record_map_physical_layout(
+        f"{base}CustomerChurnParquetLayout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Customer churn",
+        is_table=True,
+        row_count_snapshot=1000,
+        storage_accesses=[storage.iri],
+        physical_layouts=[layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+    )
+    for index, row_count in enumerate((1000, 900, 800)):
+        db.record_profile_bundle(
+            dataset,
+            dataset_summary=f"Customer churn profile pass {index}.",
+            evidence_summary="Customer churn profile evidence.",
+            evidence_sources=[f"test://customer-churn-profile/{index}"],
+            shared_evidence_iri=f"{base}CustomerChurnProfileEvidence{index}",
+            row_count=row_count,
+            update_map_snapshot=False,
+            column_defaults={"update_map_column": False},
+            column_profiles=[
+                {
+                    "column_iri": status_column,
+                    "column_name": "status",
+                    "summary": f"Status was profiled in pass {index}.",
+                }
+            ],
+        )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.readiness == "ready_for_query_planning"
+    assert [
+        action.tool_name for action in context.suggested_next_actions[:4]
+    ] == [
+        "describe_profile_run",
+        "describe_profile_run",
+        "describe_profile_run",
+        "draft_query_plan",
+    ]
+
+    brief = db.project_brief(limit=20, profile_candidate_limit=3)
+
+    assert [
+        action.tool_name for action in brief.datasets[0].query.suggested_next_actions
+    ] == [
+        "describe_profile_run",
+        "describe_profile_run",
+        "describe_profile_run",
+    ]
+    handoff_task = next(
+        task
+        for task in brief.recommended_next_tasks
+        if task.task_type == "query_plan_handoff"
+    )
+    assert handoff_task.source == "draft_query_plan"
+    assert handoff_task.suggested_next_action is not None
+    assert handoff_task.suggested_next_action.tool_name == "draft_query_plan"
+    assert handoff_task.suggested_next_action.arguments == {
+        "iri": dataset,
+        "candidate_index": 0,
+    }
+    assert handoff_task.query_plan_handoff_summary is not None
+    assert handoff_task.query_plan_handoff_summary.ready_for_execution_attempt is True
+
+
 def test_project_brief_query_handoff_summary_surfaces_relation_choice(
     tmp_path: Path,
 ) -> None:

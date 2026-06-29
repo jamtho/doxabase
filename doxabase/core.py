@@ -4585,9 +4585,19 @@ class DoxaBase:
         for action in dataset.query.suggested_next_actions:
             if action.tool_name == "draft_query_plan":
                 return action
-        if dataset.query.suggested_next_actions:
-            return dataset.query.suggested_next_actions[0]
+
+        query_context = self.describe_query_context(dataset.dataset.iri)
+        for action in query_context.suggested_next_actions:
+            if action.tool_name == "draft_query_plan":
+                return action
+
         arguments = {"iri": dataset.dataset.iri}
+        candidate_indexes = (
+            dataset.query.ready_candidate_indexes
+            or dataset.query.direct_clean_candidate_indexes
+        )
+        if candidate_indexes:
+            arguments["candidate_index"] = candidate_indexes[0]
         return SuggestedNextAction(
             action_label="Draft query plan handoff",
             tool_name="draft_query_plan",

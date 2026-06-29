@@ -127,9 +127,11 @@ context currently has no lifted repair template; the task action points to
 review-gated `draft_query_plan` action for deeper inspection.
 Tasks labelled `query_plan_handoff` are low-priority ready-query lanes. They
 appear when `describe_query_context` reports `ready_for_query_planning` and point
-to the query context's `draft_query_plan` action when one is available, so ready
-physical query handoffs are visible in `recommended_next_tasks` instead of only
-inside `datasets[].query.suggested_next_actions`. Read
+to the query context's `draft_query_plan` action when one is available, even when
+profile-run inspection actions push that draft call beyond the bounded
+`datasets[].query.suggested_next_actions` preview. Ready physical query handoffs
+are visible in `recommended_next_tasks` instead of only inside the dataset query
+summary. Read
 `query_plan_handoff_summary` on those tasks before following the first draft
 action; it surfaces the selected relation or URI, handoff kind, execution
 blockers, required bindings, and unselected ready/direct-clean candidate indexes.
