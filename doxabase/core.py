@@ -13679,13 +13679,25 @@ class DoxaBase:
         partitions_by_iri = {
             partition.iri: partition for partition in dataset.partition_schemes
         }
+        layouts_by_iri = {layout.iri: layout for layout in dataset.physical_layouts}
         repair_partitions = [
             partitions_by_iri[iri] for iri in blocker_iris if iri in partitions_by_iri
         ]
-        if not repair_partitions:
+        repair_layouts = [
+            layouts_by_iri[iri] for iri in blocker_iris if iri in layouts_by_iri
+        ]
+        if not repair_partitions and not repair_layouts:
             return issues
 
         repair_partition_iris = {partition.iri for partition in repair_partitions}
+        repair_layout_iris = {
+            layout.iri
+            for layout in repair_layouts
+            if self._physical_layout_has_verified_matching_sibling(
+                layout,
+                dataset.physical_layouts,
+            )
+        }
         updated: list[QueryPlanningIssue] = []
         for issue in issues:
             resource_iri = issue.resource.iri if issue.resource is not None else None
@@ -13712,8 +13724,65 @@ class DoxaBase:
                     )
                 )
                 continue
+            if (
+                issue.code == "layout_needs_verification"
+                and resource_iri in repair_layout_iris
+            ):
+                layout = layouts_by_iri[resource_iri]
+                details = copy.deepcopy(issue.details) if issue.details else {}
+                details["repair_hint"] = self._query_physical_layout_context_blocker_repair_hint(
+                    dataset,
+                    layout,
+                    decision=decision,
+                    selected_candidate=selected_candidate,
+                )
+                updated.append(
+                    QueryPlanningIssue(
+                        code=issue.code,
+                        severity=issue.severity,
+                        message=issue.message,
+                        domain=issue.domain,
+                        resource=issue.resource,
+                        details=details,
+                    )
+                )
+                continue
             updated.append(issue)
         return updated
+
+    def _physical_layout_has_verified_matching_sibling(
+        self,
+        layout: PhysicalLayoutDescription,
+        physical_layouts: list[PhysicalLayoutDescription],
+    ) -> bool:
+        layout_signature = self._physical_layout_signature(layout)
+        return any(
+            sibling.iri != layout.iri
+            and self._layout_status_is_verified(sibling.layout_verification_status)
+            and self._physical_layout_signature(sibling) == layout_signature
+            for sibling in physical_layouts
+        )
+
+    @staticmethod
+    def _physical_layout_signature(
+        layout: PhysicalLayoutDescription,
+    ) -> tuple[str | None, str | None]:
+        return (
+            layout.file_format.iri if layout.file_format is not None else None,
+            (
+                layout.compression_codec.iri
+                if layout.compression_codec is not None
+                else None
+            ),
+        )
+
+    def _layout_status_is_verified(self, status: ResourceSummary | None) -> bool:
+        if status is None:
+            return False
+        return status.iri in {
+            self.expand_iri("rc:VerifiedByListingLayout"),
+            self.expand_iri("rc:VerifiedByQueryLayout"),
+        }
 
     @staticmethod
     def _query_context_blocker_resource_iris(
@@ -13795,6 +13864,85 @@ class DoxaBase:
                         "stale blocker for the selected direct-clean candidate, "
                         "not merely an unverified alternate route that should "
                         "remain linked."
+                    ),
+                }
+            ],
+        }
+
+    def _query_physical_layout_context_blocker_repair_hint(
+        self,
+        dataset: DatasetDescription,
+        layout: PhysicalLayoutDescription,
+        *,
+        decision: QueryTargetDecision,
+        selected_candidate: QueryTargetCandidate,
+    ) -> dict[str, Any]:
+        storage_access_iri = (
+            selected_candidate.storage_access.iri
+            if selected_candidate.storage_access is not None
+            else None
+        )
+        return {
+            "action_type": "remove_stale_physical_layout_link",
+            "requires_review": True,
+            "target_dataset_iri": dataset.iri,
+            "physical_layout": {
+                "iri": layout.iri,
+                "label": layout.label,
+                "file_format_iri": (
+                    layout.file_format.iri if layout.file_format is not None else None
+                ),
+                "compression_codec_iri": (
+                    layout.compression_codec.iri
+                    if layout.compression_codec is not None
+                    else None
+                ),
+                "layout_verification_status_iri": (
+                    layout.layout_verification_status.iri
+                    if layout.layout_verification_status is not None
+                    else None
+                ),
+            },
+            "selected_candidate": {
+                "candidate_index": decision.candidate_index,
+                "candidate_path": selected_candidate.candidate_path,
+                "candidate_path_status": selected_candidate.candidate_path_status,
+                "template_source": selected_candidate.template_source,
+                "source_resource_iri": selected_candidate.source_resource.iri,
+                "storage_access_iri": storage_access_iri,
+            },
+            "actions": [
+                {
+                    "action_type": "remove_stale_physical_layout_link",
+                    "tool_name": "stage_map_assertion_change",
+                    "mcp_tool_name": "doxabase.stage_map_assertion_change",
+                    "action_label": "Stage stale physical-layout removal",
+                    "reason": (
+                        "Use after review confirms the selected direct-clean "
+                        "query target and verified sibling layout supersede "
+                        "this unverified physical layout for the dataset."
+                    ),
+                    "required_extra_arguments": ["rationale"],
+                    "rationale_template": (
+                        "Reviewed stale physical-layout link for "
+                        f"{dataset.iri}; selected query target "
+                        f"{selected_candidate.candidate_path!r} and a verified "
+                        "sibling layout should be the planning route."
+                    ),
+                    "arguments": {
+                        "subject": dataset.iri,
+                        "predicate": "rc:hasPhysicalLayout",
+                        "object": layout.iri,
+                        "object_kind": "iri",
+                        "change_kind": "remove",
+                        "graph": "map",
+                        "validation_scope": "all",
+                    },
+                    "condition": (
+                        "Only after review confirms this physical layout is a "
+                        "stale blocker for the selected direct-clean candidate, "
+                        "not an alternate valid layout that should remain linked "
+                        "or be verified instead."
                     ),
                 }
             ],
@@ -17638,6 +17786,14 @@ class DoxaBase:
         if storage_access is not None:
             related_iris.add(storage_access.iri)
         related_iris.update(layout.iri for layout in dataset.physical_layouts)
+        repairable_layout_iris = {
+            layout.iri
+            for layout in dataset.physical_layouts
+            if self._physical_layout_has_verified_matching_sibling(
+                layout,
+                dataset.physical_layouts,
+            )
+        }
 
         review_reasons: list[QueryPlanningIssue] = []
         seen: set[tuple[str, str | None]] = set()
@@ -17646,6 +17802,13 @@ class DoxaBase:
             if self._is_candidate_metadata_issue(issue):
                 continue
             resource_iri = issue.resource.iri if issue.resource is not None else None
+            if (
+                issue.code == "layout_needs_verification"
+                and resource_iri in repairable_layout_iris
+            ):
+                if issue.severity in {"error", "warning"}:
+                    excluded_blockers.append(issue)
+                continue
             if resource_iri is not None and resource_iri not in related_iris:
                 if issue.severity in {"error", "warning"}:
                     excluded_blockers.append(issue)
@@ -18774,14 +18937,7 @@ class DoxaBase:
             list[PhysicalLayoutDescription],
         ] = {}
         for layout in physical_layouts:
-            signature = (
-                layout.file_format.iri if layout.file_format is not None else None,
-                (
-                    layout.compression_codec.iri
-                    if layout.compression_codec is not None
-                    else None
-                ),
-            )
+            signature = DoxaBase._physical_layout_signature(layout)
             signatures.setdefault(signature, []).append(layout)
         return signatures
 

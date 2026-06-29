@@ -2506,6 +2506,12 @@ issue can carry `details.repair_hint.action_type =
 `stage_map_assertion_change` template that removes
 `<dataset> rc:partitionedBy <partition scheme>`, with `rationale` required
 before calling the tool.
+The same direct-clean context-blocked pattern applies to a stale physical layout
+link when the dataset also has a verified sibling layout with the same file
+format/compression signature. The blocking `layout_needs_verification` issue can
+carry `details.repair_hint.action_type =
+"remove_stale_physical_layout_link"`; its reviewed `stage_map_assertion_change`
+action removes `<dataset> rc:hasPhysicalLayout <layout>`.
 `database_relation_template_source_mismatch` includes the
 template, template source, source resource IRI, storage access IRI, storage
 protocol IRI, the allowed relation-template source list, and `repair_hint`.

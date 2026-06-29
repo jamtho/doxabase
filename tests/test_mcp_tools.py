@@ -4842,6 +4842,67 @@ def test_describe_query_context_tool_suggests_stale_partition_link_repair(
     }
 
 
+def test_describe_query_context_tool_suggests_stale_physical_layout_link_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#events_local_storage",
+        label="Events local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        path_templates=["events/current/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    verified_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    stale_layout = record_map_physical_layout_tool(
+        db,
+        iri="https://example.test/project#events_old_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:CandidateLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        physical_layouts=[verified_layout["iri"], stale_layout["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    result = describe_query_context_tool(db, iri=dataset)
+
+    assert result["query_target_decision"]["status"] == "context_blocked"
+    assert result["query_target_decision"]["selected_candidate_direct_clean"] is True
+    assert result["suggested_repair_action_group_count"] == 1
+    repair_group = result["suggested_repair_action_groups"][0]
+    assert repair_group["issue_code"] == "layout_needs_verification"
+    assert repair_group["issue_resource"]["iri"] == stale_layout["iri"]
+    assert repair_group["repair_action_type"] == "remove_stale_physical_layout_link"
+    assert repair_group["choice_mode"] == "review_all_applicable"
+    assert repair_group["action_status_counts"] == {"pending_review": 1}
+    assert repair_group["pending_required_extra_arguments"] == ["rationale"]
+    action = repair_group["actions"][0]
+    assert action["tool_name"] == "stage_map_assertion_change"
+    assert action["arguments"] == {
+        "subject": dataset,
+        "predicate": "rc:hasPhysicalLayout",
+        "object": stale_layout["iri"],
+        "object_kind": "iri",
+        "change_kind": "remove",
+        "graph": "map",
+        "validation_scope": "all",
+    }
+
+
 def test_describe_query_context_tool_lifts_missing_physical_layout_repair(
     tmp_path: Path,
 ) -> None:

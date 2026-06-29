@@ -91,6 +91,10 @@ of these reviewed map moves:
    `suggested_repair_action_groups` row with
    `repair_action_type="remove_stale_partition_scheme_link"` when a
    direct-clean selected candidate is blocked by the stale partition scheme.
+   The same lane can expose
+   `repair_action_type="remove_stale_physical_layout_link"` for a stale
+   `rc:hasPhysicalLayout` link when a verified sibling layout with the same
+   file-format/compression signature remains linked to the dataset.
 
 After those moves, the wildcard index candidate should draft as
 `handoff_kind="runtime_resolution_required"` with
@@ -210,8 +214,11 @@ Start with `describe_query_context(dataset_iri)`:
    include an already-satisfied action that should be skipped after the pending
    cleanup is reviewed. Context-blocked direct-clean routes can also expose a
    `remove_stale_partition_scheme_link` template for a stale
-   `rc:partitionedBy` assertion. When storage is already linked but no physical
-   layout is present, `missing_physical_layout` exposes a reviewed
+   `rc:partitionedBy` assertion, or
+   `remove_stale_physical_layout_link` for a stale `rc:hasPhysicalLayout`
+   assertion when a verified matching physical layout remains linked. When
+   storage is already linked but no physical layout is present,
+   `missing_physical_layout` exposes a reviewed
    `record_map_physical_layout` template; for database storage, choose a
    database table layout such as `rc:PostgreSQLTable`, `rc:SQLiteTable`, or
    `rc:MySQLTable` after review. These are reviewed templates, not call-ready

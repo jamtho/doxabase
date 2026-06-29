@@ -2576,6 +2576,13 @@ few useful gaps:
   rows are dicts, and `stage_profile_map_updates.status_counts` covers the full
   draft even for one-option scalar conflict calls. The agent docs now make both
   shapes explicit.
+- A physical-layout repair trial found a dataset with one verified layout and
+  one stale candidate layout could leave the otherwise direct-clean query route
+  blocked without a repair group. `describe_query_context` now treats stale
+  same-signature physical-layout links as context blockers when a verified
+  sibling layout remains, and exposes a reviewed
+  `remove_stale_physical_layout_link` staging action that removes the stale
+  `rc:hasPhysicalLayout` assertion.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -14913,6 +14913,97 @@ def test_query_context_suggests_stale_partition_link_repair(
     assert plan.review_gate.binding_values_required is False
 
 
+def test_query_context_suggests_stale_physical_layout_link_repair(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        path_templates=["events/current/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    verified_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    stale_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_old_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:CandidateLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[verified_layout.iri, stale_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.query_target_decision.status == "context_blocked"
+    assert context.query_target_decision.selected_candidate_direct_clean is True
+    assert context.suggested_repair_action_group_count == 1
+    repair_group = context.suggested_repair_action_groups[0]
+    assert repair_group.issue_code == "layout_needs_verification"
+    assert repair_group.issue_resource is not None
+    assert repair_group.issue_resource.iri == stale_layout.iri
+    assert repair_group.repair_action_type == "remove_stale_physical_layout_link"
+    assert repair_group.choice_mode == "review_all_applicable"
+    assert repair_group.action_status_counts == {"pending_review": 1}
+    assert repair_group.pending_required_extra_arguments == ["rationale"]
+    assert len(repair_group.pending_action_options) == 1
+    stale_layout_option = repair_group.pending_action_options[0]
+    _assert_repair_action_option(
+        stale_layout_option,
+        action_index=0,
+        action_type="remove_stale_physical_layout_link",
+        tool_name="stage_map_assertion_change",
+        mcp_tool_name="doxabase.stage_map_assertion_change",
+        action_label="Stage stale physical-layout removal",
+        required_extra_arguments=["rationale"],
+        placeholder_fields=[],
+        reviewed_value_fields=[],
+    )
+    assert "verified sibling layout" in stale_layout_option["reason"]
+    assert "stale blocker" in stale_layout_option["condition"]
+    action = repair_group.actions[0]
+    assert action["tool_name"] == "stage_map_assertion_change"
+    assert action["arguments"] == {
+        "subject": dataset,
+        "predicate": "rc:hasPhysicalLayout",
+        "object": stale_layout.iri,
+        "object_kind": "iri",
+        "change_kind": "remove",
+        "graph": "map",
+        "validation_scope": "all",
+    }
+    staged = db.stage_map_assertion_change(
+        **action["arguments"],
+        rationale=(
+            "Reviewed Events local storage as the intended route; the older "
+            "candidate physical-layout link is stale."
+        ),
+    )
+    db.apply_staged_revision(staged.staged_revision.revision_iri)
+
+    repaired_context = db.describe_query_context(dataset)
+    assert repaired_context.suggested_repair_action_group_count == 0
+    assert repaired_context.query_target_decision.status == "ready"
+    plan = db.draft_query_plan(dataset)
+    assert plan.scan.uri_template == "/warehouse/events/current/*.parquet"
+    assert plan.scan.function == "read_parquet"
+    assert plan.scan.physical_layout is not None
+    assert plan.scan.physical_layout.iri == verified_layout.iri
+    assert plan.review_gate.binding_values_required is False
+
+
 def test_query_target_candidates_surface_global_blockers(
     tmp_path: Path,
 ) -> None:
