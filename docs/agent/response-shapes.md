@@ -1903,6 +1903,9 @@ scan, `candidate.explicit` is still false; inspect the nested
 `direct_action`, `strong_support`, or `related_support`: direct means the staged
 row appears to implement that draft lane, while strong/related support means it
 shares profile observations, support patterns, or anchors with the lane. The
+route keys can also come from profile route source metadata persisted on a staged
+profile-map revision, or from generated query-planning repair review notes for
+already-applied query repairs whose live blocker is gone.
 Markdown export includes a `Profile Route Bridge` table in the review summary
 when candidates match draft routes, and renders lane names with their strength.
 

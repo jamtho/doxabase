@@ -120,7 +120,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1176
+    assert graphs["base_ontology"].triple_count == 1180
     assert graphs["base_ontology"].mutable is False
     assert graphs["base_shapes"].triple_count == 1204
     assert graphs["base_shapes"].mutable is False
@@ -23587,6 +23587,10 @@ def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
         row_count=10,
         update_map_snapshot=False,
     )
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    profile_map_route_key = draft.suggested_next_action_groups[
+        "profile_map_updates"
+    ][0].source_profile_map_update["route_group_key"]
     staged_map = db.stage_profile_map_updates(
         dataset,
         evidence,
@@ -23645,6 +23649,13 @@ def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
     assert applied_candidate.explicit is False
     assert "shared_profile_evidence" in applied_candidate.relation_reasons
     assert "profile_derived_anchor" in applied_candidate.relation_reasons
+    assert profile_map_route_key in applied_candidate.profile_route_keys
+    route_groups_by_lane = {
+        group["review_lane"]: group for group in applied_candidate.profile_route_groups
+    }
+    assert route_groups_by_lane["profile_map_updates"]["match_strength"] == (
+        "direct_action"
+    )
     assert result.export is not None
     assert result.export.revision_iris == result.candidate_revision_iris
     assert result.export.bundle_summary.recommended_applied_inspection_iris == [
@@ -23659,6 +23670,95 @@ def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
     )
 
     assert current_only.candidate_revision_iris == [caveat_revision_iri]
+
+
+def test_export_profile_insight_review_bundle_recovers_applied_query_repair_route(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/profile-query-postapply#Messages"
+    evidence = "https://example.test/profile-query-postapply#MessagesProfileEvidence"
+    storage_iri = "https://example.test/profile-query-postapply#MessagesStorage"
+    layout_iri = "https://example.test/profile-query-postapply#MessagesLayout"
+
+    db.record_map_dataset(
+        dataset,
+        label="Messages",
+        is_table=True,
+        path_templates=["messages/*.parquet"],
+    )
+    db.record_map_physical_layout(
+        layout_iri,
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByListingLayout",
+        datasets=[dataset],
+    )
+    storage = db.record_map_storage_access(
+        storage_iri,
+        label="Messages storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root=str(tmp_path / "warehouse"),
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Messages were profiled with a full-table scan.",
+        evidence_summary="Synthetic profile run for applied query-repair recovery.",
+        evidence_sources=["test://messages-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=10,
+        sample_scope="All rows in the Messages table.",
+        sample_method="DuckDB full-table aggregate profile.",
+        row_count=10,
+        update_map_snapshot=False,
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    query_route_key = draft.suggested_next_action_groups["query_context_review"][
+        0
+    ].source_query_context["route_group_key"]
+    assert query_route_key.startswith("query_context_review:")
+    context = db.describe_query_context(dataset)
+    missing_storage = next(
+        issue for issue in context.issues if issue.code == "missing_storage_access"
+    )
+    link_action = next(
+        action
+        for action in missing_storage.details["repair_hint"]["actions"]
+        if action["action_type"] == "stage_existing_storage_access_link"
+    )
+    arguments = dict(link_action["arguments_template"])
+    arguments["object"] = storage.iri
+    arguments["rationale"] = "Reviewed the Messages storage access for this profile."
+    query_repair = db.stage_map_assertion_change(**arguments)
+
+    db.apply_staged_revision(query_repair.revision_iri)
+
+    post_apply_draft = db.draft_profile_map_updates(dataset, evidence)
+    assert "query_context_review" not in post_apply_draft.suggested_next_action_groups
+
+    result = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "profile-query-postapply-review.md",
+        include_current_staged_work=False,
+        include_applied_staged_sources=True,
+    )
+
+    assert result.candidate_revision_iris == [query_repair.revision_iri]
+    candidate = result.candidates[0]
+    assert candidate.explicit is False
+    assert "profile_derived_anchor" in candidate.relation_reasons
+    route_groups_by_lane = {
+        group["review_lane"]: group for group in candidate.profile_route_groups
+    }
+    assert route_groups_by_lane["query_context_review"]["match_strength"] == (
+        "direct_action"
+    )
+    exported = (tmp_path / "profile-query-postapply-review.md").read_text(
+        encoding="utf-8"
+    )
+    assert "query_context_review (direct_action)" in exported
 
 
 def test_profile_map_update_support_omits_type_review_patterns(

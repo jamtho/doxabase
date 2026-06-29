@@ -2102,6 +2102,15 @@ few useful gaps:
   lanes look implemented; profile route groups now include `match_strength`
   (`direct_action`, `strong_support`, or `related_support`) and Markdown renders
   the strength beside each lane.
+- A post-apply route trial found `export_profile_insight_review_bundle()` could
+  rediscover already-applied profile-map and query-repair staged sources, but
+  their original direct route lane disappeared once the live draft no longer
+  emitted that action. New `stage_profile_map_updates` revisions persist their
+  profile route source in history, and profile exports merge stored sources with
+  live draft sources. Generated query-planning repair review notes such as
+  `missing_storage_access query planning guidance` also synthesize a
+  `query_context_review` direct-action route when the repair has already been
+  applied.
 - A follow-up project-brief pass found a remaining bridge gap for
   `query_context_review`: the draft action had route keys, but no route anchor,
   so a staged dataset-anchored storage/query repair could enter a profile

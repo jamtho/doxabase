@@ -7519,7 +7519,8 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert "Profile insight review: Orders" in exported
     assert "### Profile Route Bridge" in exported
     assert "profile_map_updates (direct_action)" in exported
-    assert result["candidates"][0]["profile_route_keys"][0] in exported
+    profile_map_route_key = result["candidates"][0]["profile_route_keys"][0]
+    assert profile_map_route_key in exported
 
     apply_staged_revision_tool(
         db,
@@ -7537,6 +7538,14 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     assert post_apply["export"]["bundle_summary"][
         "recommended_applied_inspection_iris"
     ] == [staged["staged_revision"]["revision_iri"]]
+    applied_candidate = post_apply["candidates"][0]
+    assert profile_map_route_key in applied_candidate["profile_route_keys"]
+    route_groups_by_lane = {
+        group["review_lane"]: group for group in applied_candidate["profile_route_groups"]
+    }
+    assert route_groups_by_lane["profile_map_updates"]["match_strength"] == (
+        "direct_action"
+    )
     current_only = export_profile_insight_review_bundle_tool(
         db,
         dataset_iri=table,

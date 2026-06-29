@@ -150,6 +150,13 @@ first suggested action is the same dataset-level `describe_query_context` call.
 The returned candidates and Markdown `Profile Route Bridge` table preserve
 matched profile route keys, so reviewers can see which draft duplicate/advisory
 group led to each staged row without reverse-joining action indexes by hand.
+New `stage_profile_map_updates` revisions persist their profile route source in
+history, so post-apply exports can still show the original
+`profile_map_updates` direct-action lane after the live draft no longer proposes
+that map update. Generated query-planning repair rows with review notes such as
+`missing_storage_access query planning guidance` are also recovered as
+`query_context_review` direct-action rows when the repair has already been
+applied and the blocker no longer appears in the live draft.
 Read each route group's `match_strength`: `direct_action` marks the lane a
 staged row appears to implement, while `strong_support` and `related_support`
 mean the row is included because it shares profile observations, support

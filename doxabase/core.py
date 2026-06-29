@@ -150,6 +150,7 @@ PROFILE_SCALAR_MAP_UPDATE_KINDS = frozenset(
         "column_nullable",
     }
 )
+PROFILE_ROUTE_SOURCE_SCHEMA = "doxabase.profile_route_source.v1"
 PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER = (
     "metric-vocabulary promotion skeleton from draft_profile_map_updates"
 )
@@ -11800,6 +11801,10 @@ class DoxaBase:
             evidence_iri=evidence_iri,
             graph=graph,
         )
+        supporting_pattern_values = self._string_values(
+            "supporting_patterns",
+            supporting_patterns,
+        )
         recommendations = draft.recommendations
         out_of_range = [
             index for index in accepted_indexes if index >= len(recommendations)
@@ -11923,7 +11928,10 @@ class DoxaBase:
                 created_by=created_by,
                 supporting_observations=list(dict.fromkeys(support_observations)),
                 supporting_claims=self._merge_iri_values(supporting_claims, []),
-                supporting_patterns=self._merge_iri_values(supporting_patterns, []),
+                supporting_patterns=self._merge_iri_values(
+                    supporting_pattern_values,
+                    [],
+                ),
                 evidence=[draft.evidence_iri],
                 revision_anchors=self._merge_iri_values(
                     revision_anchors,
@@ -11949,6 +11957,20 @@ class DoxaBase:
                 ),
                 validation_scope=validation_scope,
             )
+            route_sources = self._profile_map_update_staging_route_sources(
+                draft,
+                staged_indexes=staged_indexes,
+                supporting_patterns=supporting_pattern_values,
+            )
+            extra_triples = self._record_profile_insight_route_sources(
+                staged_revision.revision_iri,
+                route_sources,
+            )
+            if extra_triples:
+                staged_revision = replace(
+                    staged_revision,
+                    triples=staged_revision.triples + extra_triples,
+                )
 
         suggested_next_actions = self._profile_update_staging_actions(
             staged_revision,
@@ -12123,88 +12145,19 @@ class DoxaBase:
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         if default_stageable_representative_indexes:
-            selected_recommendations = [
-                recommendations[index]
-                for index in default_stageable_representative_indexes
-                if 0 <= index < len(recommendations)
-            ]
-            duplicate_group_keys: list[str] = []
-            duplicate_recommendation_indexes: list[int] = []
-            duplicate_profile_observation_iris: list[str] = []
-            route_anchor_iris: list[str] = [dataset_iri]
-            for recommendation in selected_recommendations:
-                if recommendation.duplicate_group_key:
-                    self._append_unique(
-                        duplicate_group_keys,
-                        recommendation.duplicate_group_key,
-                    )
-                for duplicate_index in (
-                    recommendation.duplicate_recommendation_indexes
-                    or [recommendation.recommendation_index]
-                ):
-                    self._append_unique(
-                        duplicate_recommendation_indexes,
-                        duplicate_index,
-                    )
-                for observation_iri in (
-                    recommendation.duplicate_profile_observation_iris
-                    or [recommendation.profile_observation_iri]
-                ):
-                    self._append_unique(
-                        duplicate_profile_observation_iris,
-                        observation_iri,
-                    )
-                self._append_unique(route_anchor_iris, recommendation.resource.iri)
-            route_group_key = self._profile_route_group_key(
-                "profile_map_updates",
-                duplicate_group_keys or route_anchor_iris,
+            action = self._profile_map_update_stage_action(
+                dataset_iri=dataset_iri,
+                evidence_iri=evidence_iri,
+                recommendation_indexes=default_stageable_representative_indexes,
+                supporting_patterns=supporting_patterns,
             )
-            arguments = {
-                "dataset_iri": dataset_iri,
-                "evidence_iri": evidence_iri,
-                "accepted_recommendation_indexes": (
-                    default_stageable_representative_indexes
-                ),
-            }
-            if supporting_patterns:
-                arguments["supporting_patterns"] = supporting_patterns
-            action = SuggestedNextAction(
-                action_label="Review and stage profile map updates",
-                tool_name="stage_profile_map_updates",
-                mcp_tool_name="doxabase.stage_profile_map_updates",
-                arguments=arguments,
-                reason=(
-                    "Review recommendation rows, sample scope, default "
-                    "staging guardrails, evidence, and metric/type advisory "
-                    "lanes; "
-                    "then pass accepted default-stageable indexes to "
-                    "stage_profile_map_updates. Sampled row-count updates "
-                    "require an explicit override; same-evidence scalar "
-                    "conflicts require choosing one value explicitly."
-                ),
-                call=self._suggested_call_string(
-                    "stage_profile_map_updates",
-                    arguments,
-                ),
-            )
-            source_profile_map_update = self._with_profile_route_step_key(
-                {
-                    "review_lane": "profile_map_updates",
-                    "route_group_key": route_group_key,
-                    "recommendation_indexes": (
-                        default_stageable_representative_indexes
-                    ),
-                    "duplicate_group_keys": duplicate_group_keys,
-                    "duplicate_recommendation_indexes": (
-                        duplicate_recommendation_indexes
-                    ),
-                    "duplicate_profile_observation_iris": (
-                        duplicate_profile_observation_iris
-                    ),
-                    "route_anchor_iris": route_anchor_iris,
-                    "route_pattern_iris": supporting_patterns,
-                },
-                action,
+            source_profile_map_update = self._profile_map_update_route_source(
+                dataset_iri=dataset_iri,
+                evidence_iri=evidence_iri,
+                recommendations=recommendations,
+                recommendation_indexes=default_stageable_representative_indexes,
+                supporting_patterns=supporting_patterns,
+                action=action,
             )
             actions.append(
                 ProfileMapUpdateSuggestedNextAction(
@@ -12219,6 +12172,144 @@ class DoxaBase:
             )
 
         return actions
+
+    def _profile_map_update_stage_action(
+        self,
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+        recommendation_indexes: list[int],
+        supporting_patterns: list[str],
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {
+            "dataset_iri": dataset_iri,
+            "evidence_iri": evidence_iri,
+            "accepted_recommendation_indexes": list(recommendation_indexes),
+        }
+        if supporting_patterns:
+            arguments["supporting_patterns"] = list(supporting_patterns)
+        return SuggestedNextAction(
+            action_label="Review and stage profile map updates",
+            tool_name="stage_profile_map_updates",
+            mcp_tool_name="doxabase.stage_profile_map_updates",
+            arguments=arguments,
+            reason=(
+                "Review recommendation rows, sample scope, default staging "
+                "guardrails, evidence, and metric/type advisory lanes; then "
+                "pass accepted default-stageable indexes to "
+                "stage_profile_map_updates. Sampled row-count updates require "
+                "an explicit override; same-evidence scalar conflicts require "
+                "choosing one value explicitly."
+            ),
+            call=self._suggested_call_string(
+                "stage_profile_map_updates",
+                arguments,
+            ),
+        )
+
+    def _profile_map_update_route_source(
+        self,
+        *,
+        dataset_iri: str,
+        evidence_iri: str,
+        recommendations: list[ProfileMapUpdateRecommendation],
+        recommendation_indexes: list[int],
+        supporting_patterns: list[str],
+        action: SuggestedNextAction,
+    ) -> dict[str, Any]:
+        selected_recommendations = [
+            recommendations[index]
+            for index in recommendation_indexes
+            if 0 <= index < len(recommendations)
+        ]
+        duplicate_group_keys: list[str] = []
+        duplicate_recommendation_indexes: list[int] = []
+        duplicate_profile_observation_iris: list[str] = []
+        route_anchor_iris: list[str] = [dataset_iri]
+        for recommendation in selected_recommendations:
+            if recommendation.duplicate_group_key:
+                self._append_unique(
+                    duplicate_group_keys,
+                    recommendation.duplicate_group_key,
+                )
+            for duplicate_index in (
+                recommendation.duplicate_recommendation_indexes
+                or [recommendation.recommendation_index]
+            ):
+                self._append_unique(
+                    duplicate_recommendation_indexes,
+                    duplicate_index,
+                )
+            for observation_iri in (
+                recommendation.duplicate_profile_observation_iris
+                or [recommendation.profile_observation_iri]
+            ):
+                self._append_unique(
+                    duplicate_profile_observation_iris,
+                    observation_iri,
+                )
+            self._append_unique(route_anchor_iris, recommendation.resource.iri)
+        route_group_key = self._profile_route_group_key(
+            "profile_map_updates",
+            duplicate_group_keys or route_anchor_iris,
+        )
+        return self._with_profile_route_step_key(
+            {
+                "review_lane": "profile_map_updates",
+                "route_group_key": route_group_key,
+                "evidence_iri": evidence_iri,
+                "profile_evidence_iri": evidence_iri,
+                "recommendation_indexes": list(recommendation_indexes),
+                "duplicate_group_keys": duplicate_group_keys,
+                "duplicate_recommendation_indexes": duplicate_recommendation_indexes,
+                "duplicate_profile_observation_iris": (
+                    duplicate_profile_observation_iris
+                ),
+                "route_anchor_iris": route_anchor_iris,
+                "route_pattern_iris": list(supporting_patterns),
+            },
+            action,
+        )
+
+    def _profile_map_update_staging_route_sources(
+        self,
+        draft: ProfileMapUpdateDraft,
+        *,
+        staged_indexes: list[int],
+        supporting_patterns: list[str],
+    ) -> list[dict[str, Any]]:
+        if not staged_indexes:
+            return []
+        staged_index_set = set(staged_indexes)
+        for action in draft.suggested_next_action_groups.get(
+            "profile_map_updates",
+            [],
+        ):
+            source = getattr(action, "source_profile_map_update", None)
+            if not isinstance(source, MappingABC):
+                continue
+            source_indexes = source.get("recommendation_indexes")
+            if not isinstance(source_indexes, list):
+                continue
+            if set(source_indexes) == staged_index_set:
+                return [dict(source)]
+
+        action = self._profile_map_update_stage_action(
+            dataset_iri=draft.dataset.iri,
+            evidence_iri=draft.evidence_iri,
+            recommendation_indexes=staged_indexes,
+            supporting_patterns=supporting_patterns,
+        )
+        return [
+            self._profile_map_update_route_source(
+                dataset_iri=draft.dataset.iri,
+                evidence_iri=draft.evidence_iri,
+                recommendations=draft.recommendations,
+                recommendation_indexes=staged_indexes,
+                supporting_patterns=supporting_patterns,
+                action=action,
+            )
+        ]
 
     def _profile_map_update_supporting_pattern_iris(
         self,
@@ -25849,6 +25940,12 @@ class DoxaBase:
             validation_scope=validation_scope or source.validation_scope or "all",
             _ordered_patch_specs=ordered_patch_specs,
         )
+        extra_triples = self._record_profile_insight_route_sources(
+            staged.revision_iri,
+            self._stored_profile_insight_route_sources(source.iri),
+        )
+        if extra_triples:
+            staged = replace(staged, triples=staged.triples + extra_triples)
         staged_description = self.describe_staged_revision(staged.revision_iri)
         return replace(
             staged,
@@ -31255,7 +31352,6 @@ class DoxaBase:
         draft: ProfileMapUpdateDraft,
     ) -> list[dict[str, Any]]:
         sources: list[dict[str, Any]] = []
-        seen_step_keys: set[str] = set()
         for actions in draft.suggested_next_action_groups.values():
             for action in actions:
                 source: dict[str, Any] | None = None
@@ -31274,11 +31370,87 @@ class DoxaBase:
                 route_step_key = source.get("route_step_key")
                 if not isinstance(route_step_key, str):
                     continue
-                if route_step_key in seen_step_keys:
-                    continue
-                seen_step_keys.add(route_step_key)
                 sources.append(source)
-        return sources
+        return DoxaBase._dedupe_profile_route_sources(sources)
+
+    @staticmethod
+    def _dedupe_profile_route_sources(
+        sources: Iterable[MappingABC[str, Any]],
+    ) -> list[dict[str, Any]]:
+        deduped: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for source in sources:
+            route_group_key = source.get("route_group_key")
+            route_step_key = source.get("route_step_key")
+            if not isinstance(route_group_key, str) or not isinstance(
+                route_step_key,
+                str,
+            ):
+                continue
+            dedupe_key = route_step_key
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            deduped.append(dict(source))
+        return deduped
+
+    @staticmethod
+    def _merge_profile_route_sources(
+        *source_groups: Iterable[MappingABC[str, Any]],
+    ) -> list[dict[str, Any]]:
+        merged: list[MappingABC[str, Any]] = []
+        for group in source_groups:
+            merged.extend(group)
+        return DoxaBase._dedupe_profile_route_sources(merged)
+
+    def _record_profile_insight_route_sources(
+        self,
+        revision_iri: str,
+        sources: Iterable[MappingABC[str, Any]],
+    ) -> int:
+        route_sources = self._dedupe_profile_route_sources(sources)
+        if not route_sources:
+            return 0
+        graph = Graph()
+        self._bind_prefixes(graph)
+        subject = URIRef(revision_iri)
+        predicate = URIRef(self.expand_iri("rc:profileInsightRouteSource"))
+        for source in route_sources:
+            payload = dict(source)
+            payload["schema"] = PROFILE_ROUTE_SOURCE_SCHEMA
+            graph.add(
+                (
+                    subject,
+                    predicate,
+                    Literal(json.dumps(payload, sort_keys=True, default=str)),
+                )
+            )
+        return self._insert_graph("history", graph)
+
+    def _stored_profile_insight_route_sources(
+        self,
+        revision_iri: str,
+    ) -> list[dict[str, Any]]:
+        history_graphs = self._expand_graphs(["history"])
+        values = self._objects(
+            history_graphs,
+            revision_iri,
+            "rc:profileInsightRouteSource",
+        )
+        sources: list[dict[str, Any]] = []
+        for value in values:
+            try:
+                payload = json.loads(value)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, MappingABC):
+                continue
+            if payload.get("schema") != PROFILE_ROUTE_SOURCE_SCHEMA:
+                continue
+            source = dict(payload)
+            source.pop("schema", None)
+            sources.append(source)
+        return self._dedupe_profile_route_sources(sources)
 
     def _profile_insight_review_candidate(
         self,
@@ -31316,14 +31488,25 @@ class DoxaBase:
             relation_reasons.append("supporting_related_pattern")
         if matched_anchors:
             relation_reasons.append("profile_derived_anchor")
+        direct_review_lane = self._profile_insight_candidate_direct_review_lane(
+            description
+        )
+        candidate_route_sources = self._merge_profile_route_sources(
+            profile_route_sources,
+            self._stored_profile_insight_route_sources(description.iri),
+            self._profile_insight_generated_route_sources(
+                description,
+                evidence_iri=evidence_iri,
+                matched_revision_anchor_iris=matched_anchors,
+                direct_review_lane=direct_review_lane,
+            ),
+        )
         profile_route_groups = self._profile_insight_candidate_route_groups(
             matched_profile_observation_iris=matched_observations,
             matched_supporting_pattern_iris=matched_patterns,
             matched_revision_anchor_iris=matched_anchors,
-            profile_route_sources=profile_route_sources,
-            direct_review_lane=(
-                self._profile_insight_candidate_direct_review_lane(description)
-            ),
+            profile_route_sources=candidate_route_sources,
+            direct_review_lane=direct_review_lane,
         )
         return ProfileInsightReviewCandidate(
             revision_iri=description.iri,
@@ -31428,7 +31611,67 @@ class DoxaBase:
             return "metric_vocabulary_review"
         if "Generated from a profile type-finding advisory" in review_note:
             return "profile_type_review"
+        if "query planning guidance" in review_note:
+            return "query_context_review"
         return None
+
+    def _profile_insight_generated_route_sources(
+        self,
+        description: StagedGraphRevisionDescription,
+        *,
+        evidence_iri: str,
+        matched_revision_anchor_iris: list[str],
+        direct_review_lane: str | None,
+    ) -> list[dict[str, Any]]:
+        if direct_review_lane != "query_context_review":
+            return []
+        review_note = description.review_note or ""
+        issue_code = self._query_planning_issue_code_from_review_note(review_note)
+        route_anchor_iris = matched_revision_anchor_iris or [
+            item.iri for item in description.revision_anchors
+        ]
+        route_group_key = self._profile_route_group_key(
+            "query_context_review",
+            {
+                "revision_iri": description.iri,
+                "issue_code": issue_code,
+                "route_anchor_iris": route_anchor_iris,
+            },
+        )
+        route_step_key = self._profile_route_key(
+            "profile-route-step",
+            {
+                "route_group_key": route_group_key,
+                "tool_name": "stage_map_assertion_change",
+                "revision_iri": description.iri,
+                "issue_code": issue_code,
+            },
+        )
+        source: dict[str, Any] = {
+            "review_lane": "query_context_review",
+            "route_group_key": route_group_key,
+            "route_step_key": route_step_key,
+            "evidence_iri": evidence_iri,
+            "profile_evidence_iri": evidence_iri,
+            "route_anchor_iris": route_anchor_iris,
+            "generated_from_review_note": True,
+        }
+        if issue_code is not None:
+            source["issue_codes"] = [issue_code]
+            source["blocking_issue_codes"] = [issue_code]
+        return [source]
+
+    @staticmethod
+    def _query_planning_issue_code_from_review_note(
+        review_note: str,
+    ) -> str | None:
+        match = re.search(
+            r"Generated from ([A-Za-z0-9_:-]+) query planning guidance",
+            review_note,
+        )
+        if match is None:
+            return None
+        return match.group(1)
 
     @staticmethod
     def _profile_insight_route_match_strength(

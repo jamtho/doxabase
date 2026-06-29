@@ -1202,6 +1202,11 @@ rc:reviewRecommendation a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "A provisional recommendation or disposition for a staged revision, such as preferred for now, keep as alternative, or reject this framing." .
 
+rc:profileInsightRouteSource a rdf:Property ;
+    rdfs:domain rc:GraphRevision ;
+    rdfs:range xsd:string ;
+    rdfs:comment "JSON profile-route source metadata captured when a staged revision is created from profile insight review flow, so post-apply review bundles can preserve the original route bridge." .
+
 rc:alternativeTo a rdf:Property ;
     rdfs:domain rc:GraphRevision ;
     rdfs:range rc:GraphRevision ;

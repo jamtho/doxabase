@@ -577,9 +577,14 @@ Markdown review summary includes a `Profile Route Bridge` table when candidates
 match draft route groups. Route groups include `match_strength`: use
 `direct_action` for the lane a staged row appears to implement, and treat
 `strong_support` / `related_support` as related context rather than lane
-satisfaction. Same evidence alone does not make an unrelated pattern a related
-pattern; support should connect through profile observations, targets, map
-implications, or explicit `revision_iris`.
+satisfaction. New profile-map staged revisions persist their route source in
+history, so already-applied sources can still show their original
+`profile_map_updates` direct-action lane after the live draft is resolved.
+Generated query-planning repair rows can similarly recover a
+`query_context_review` direct-action lane from their review note when the blocker
+has already been fixed. Same evidence alone does not make an unrelated pattern a
+related pattern; support should connect through profile observations, targets,
+map implications, or explicit `revision_iris`.
 
 ### doxabase.describe_query_context
 
