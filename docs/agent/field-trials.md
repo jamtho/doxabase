@@ -2594,6 +2594,11 @@ few useful gaps:
   bundle. `bundle_summary.external_recommended_review_iris` now exposes those
   omitted current review targets structurally while `mutation_frontier_iris`
   remains limited to included rows.
+- A follow-up physical-layout trial confirmed same-signature stale layout links
+  now repair cleanly, while distinct-signature ambiguity still needs explicit
+  review. Do not treat verified Parquet plus candidate CSV as automatic stale
+  cleanup; select the intended layout for drafting, then verify or remove the
+  non-selected layout through a reviewed graph change.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

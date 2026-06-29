@@ -95,6 +95,10 @@ of these reviewed map moves:
    `repair_action_type="remove_stale_physical_layout_link"` for a stale
    `rc:hasPhysicalLayout` link when a verified sibling layout with the same
    file-format/compression signature remains linked to the dataset.
+   Distinct-signature linked layouts, for example verified Parquet plus
+   candidate CSV, are intentionally treated as ambiguity rather than automatic
+   stale-link cleanup. Review the layout-selection actions, then verify or remove
+   the non-selected layout through an explicit reviewed graph change.
 
 After those moves, the wildcard index candidate should draft as
 `handoff_kind="runtime_resolution_required"` with

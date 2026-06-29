@@ -15020,6 +15020,70 @@ def test_query_context_suggests_stale_physical_layout_link_repair(
     assert plan.review_gate.binding_values_required is False
 
 
+def test_distinct_physical_layout_signatures_require_explicit_review(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Events"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#events_local_storage",
+        label="Events local storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/warehouse",
+        path_templates=["events/current/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+    )
+    parquet_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_parquet_layout",
+        file_format="rc:Parquet",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    csv_layout = db.record_map_physical_layout(
+        "https://example.test/project#events_csv_layout",
+        file_format="rc:CSV",
+        layout_verification_status="rc:CandidateLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Events",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        physical_layouts=[parquet_layout.iri, csv_layout.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    context = db.describe_query_context(dataset)
+
+    assert context.query_target_decision.status == "candidate_needs_review"
+    assert context.query_target_decision.selected_candidate_direct_clean is False
+    assert context.suggested_repair_action_group_count == 0
+    assert [issue.code for issue in context.issues] == [
+        "ambiguous_physical_layout",
+        "layout_needs_verification",
+    ]
+    assert context.issues[1].resource is not None
+    assert context.issues[1].resource.iri == csv_layout.iri
+    layout_selection_actions = [
+        action for action in context.suggested_next_actions
+        if action.arguments.get("physical_layout_iri") is not None
+    ]
+    assert {
+        action.arguments["physical_layout_iri"] for action in layout_selection_actions
+    } == {parquet_layout.iri, csv_layout.iri}
+
+    selected_layout_plan = db.draft_query_plan(
+        dataset,
+        physical_layout_iri=parquet_layout.iri,
+    )
+    assert selected_layout_plan.handoff_kind == "metadata_review_required"
+    assert selected_layout_plan.scan.function == "read_parquet"
+    assert selected_layout_plan.scan.physical_layout is not None
+    assert selected_layout_plan.scan.physical_layout.iri == parquet_layout.iri
+    assert selected_layout_plan.review_gate.blocking_reason_codes == [
+        "layout_needs_verification"
+    ]
+
+
 def test_query_target_candidates_surface_global_blockers(
     tmp_path: Path,
 ) -> None:
