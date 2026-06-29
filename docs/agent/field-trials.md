@@ -2848,9 +2848,11 @@ few useful gaps:
   `profile_route_sources`, matching `stage_pattern_promotion` and
   `stage_systematisation`; profile insight bundles reserve `direct_action` for
   persisted route sources and leave live draft overlap as support-only context.
-  When staging from `advisory_followthrough_plan`, pass the selected source block
-  to the staging helper and check `profile_route_source_count` before treating an
-  advisory lane as closed.
+  A follow-up profile/systematisation trial showed generated mutating advisory
+  actions should be executable directly, so their arguments now include the
+  selected `profile_route_sources`. Use plan item source blocks when staging
+  caller-authored alternatives, and check `profile_route_source_count` before
+  treating an advisory lane as closed.
 - A query-evidence overlay trial found that `record_query_result` made source
   paths, result artifacts, execution status, and query hashes visible, but an
   agent still had to hand-author RDF before that evidence could repair missing

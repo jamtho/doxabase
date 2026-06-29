@@ -26335,10 +26335,10 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
         if action.tool_name == "stage_pattern_promotion"
     )
     metric_route_key = promotion_action.source_profile_advisory["route_group_key"]
-    metric_promotion = db.stage_pattern_promotion(
-        **promotion_action.arguments,
-        profile_route_sources=[promotion_action.source_profile_advisory],
-    )
+    assert promotion_action.arguments["profile_route_sources"] == [
+        promotion_action.source_profile_advisory
+    ]
+    metric_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
     assert metric_promotion.profile_route_source_count == 1
     storage_access = "https://example.test/profile-review#SupportEventsStorage"
     query_repair_draft = db.stage_systematisation(
@@ -27404,14 +27404,24 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert "rc:ProfileMetricKind" not in framing_content
     assert status_value_type in framing_content
     assert "reviewed order lifecycle domain" in framing_content
-
-    staged_promotion = db.stage_pattern_promotion(
-        **promotion_args,
-        profile_route_sources=value_type_plan.source_profile_advisories,
+    value_type_route_source = promotion_args["profile_route_sources"][0]
+    assert value_type_route_source["route_group_key"] == (
+        value_type_plan.route_group_key
+    )
+    assert value_type_route_source["route_step_key"] in (
+        value_type_plan.route_step_keys
+    )
+    assert value_type_route_source["advisory_indexes"] == (
+        value_type_plan.type_advisory_indexes
+    )
+    assert set(value_type_route_source["route_pattern_iris"]) == set(
+        value_type_plan.route_pattern_iris
     )
 
+    staged_promotion = db.stage_pattern_promotion(**promotion_args)
+
     assert staged_promotion.profile_route_source_count == len(
-        value_type_plan.source_profile_advisories
+        promotion_args["profile_route_sources"]
     )
     assert len(staged_promotion.staged_revisions) == 1
     staged = db.describe_staged_revision(
@@ -27531,7 +27541,7 @@ def test_profile_type_assertion_route_source_closes_only_selected_advisory(
 
     status_arguments = dict(status_action.arguments)
     status_arguments["supporting_patterns"] = [broad_pattern.pattern_iri]
-    status_arguments["profile_route_sources"] = [
+    assert status_arguments["profile_route_sources"] == [
         status_action.source_profile_advisory
     ]
     staged_status = db.stage_map_assertion_change(**status_arguments)
@@ -28994,14 +29004,25 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert metric_plan.source_profile_advisories[0]["route_group_key"].startswith(
         "metric_vocabulary_review:"
     )
-
-    staged_promotion = db.stage_pattern_promotion(
-        **promotion_args,
-        profile_route_sources=metric_plan.source_profile_advisories,
+    metric_route_source = promotion_args["profile_route_sources"][0]
+    assert metric_route_source["route_group_key"] == metric_plan.route_group_key
+    assert metric_route_source["route_step_key"] in (
+        metric_plan.route_step_keys
+    )
+    assert metric_route_source["advisory_indexes"] == (
+        metric_plan.metric_advisory_indexes
+    )
+    assert metric_route_source["duplicate_advisory_indexes"] == (
+        metric_plan.duplicate_advisory_indexes
+    )
+    assert set(metric_route_source["route_pattern_iris"]) == set(
+        metric_plan.route_pattern_iris
     )
 
+    staged_promotion = db.stage_pattern_promotion(**promotion_args)
+
     assert staged_promotion.profile_route_source_count == len(
-        metric_plan.source_profile_advisories
+        promotion_args["profile_route_sources"]
     )
     assert len(staged_promotion.staged_revisions) == 1
     staged = db.describe_staged_revision(
@@ -29762,10 +29783,10 @@ def test_applied_metric_promotion_closes_profile_review_lane(
     assert promotion_action.source_profile_advisory["advisory_statuses"] == [
         "project_metric_undefined",
     ]
-    staged_promotion = db.stage_pattern_promotion(
-        **promotion_action.arguments,
-        profile_route_sources=[promotion_action.source_profile_advisory],
-    )
+    assert promotion_action.arguments["profile_route_sources"] == [
+        promotion_action.source_profile_advisory
+    ]
+    staged_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
     staged_iri = staged_promotion.staged_revisions[0].revision_iri
     assert db.apply_staged_revision(staged_iri).patches_applied == 1
 

@@ -591,15 +591,15 @@ metric/type lanes. Its `semantic_move` values group existing advisory actions
 as `define_metric`, `define_value_type`, `assert_map_type`, or
 `caveat_fallback`; each item echoes route keys, advisory indexes, status counts,
 primary call, `primary_action_kind`, whether the primary call writes graph state,
-route anchors/patterns, and `source_profile_advisories` blocks for later
-`profile_route_sources` handoff. Match both `semantic_move` and
+route anchors/patterns, and `source_profile_advisories` blocks for
+caller-authored alternatives. Match both `semantic_move` and
 `primary_action_kind` when scripting a mutation; `semantic_move` alone can match
 context-inspection rows and staging rows for the same metric/type lane.
-For a direct advisory closure, pass the selected source block to the staging
-helper that performs the action. `stage_map_assertion_change`,
-`stage_pattern_promotion`, and `stage_systematisation` accept
-`profile_route_sources`. Profile insight review bundles treat persisted route
-sources as `direct_action`; live draft overlap remains support-only context.
+Generated mutating advisory actions for `stage_map_assertion_change`,
+`stage_pattern_promotion`, and `stage_systematisation` already include
+`profile_route_sources` in their arguments; preserve that argument when calling
+them. Profile insight review bundles treat persisted route sources as
+`direct_action`; live draft overlap remains support-only context.
 If a top-level `stage_profile_map_updates` action is present, review the draft
 and use that action as a starting point. Its accepted indexes default to the
 representative indexes whose rows have `default_stageable=True`. Sampled
@@ -1450,8 +1450,8 @@ patterns, evidence, caveat scopes, and assertion anchors on the staged revision,
 and returns the assertion-support snapshot, staged revision record, and a compact
 `judgement_panel`. The JSON also carries top-level `revision_iri` as an alias
 of `staged_revision.revision_iri` for parity with generic staged-revision tools.
-When the assertion stages a selected profile advisory route, pass
-`profile_route_sources=[action.source_profile_advisory]`; the response's
+When the assertion stages a selected profile advisory route, preserve the
+action's `arguments.profile_route_sources`; the response's
 `profile_route_source_count` reports how many usable route sources were stored.
 Profile insight review bundles use those persisted sources for exact
 `direct_action` closure. Without them, the staged assertion can still appear as

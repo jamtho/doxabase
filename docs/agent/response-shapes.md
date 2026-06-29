@@ -800,13 +800,12 @@ should read `change.staged_revision.validation_conforms` and
 `change.staged_revision.validation_result_count`, not top-level fields on the
 wrapper record. The wrapper's `revision_iri` is the staged revision IRI to pass
 to generic staged-revision helpers. When a map assertion stages a selected
-profile advisory route, pass the action source block with
-`profile_route_sources=[action.source_profile_advisory]`; the returned
-`profile_route_source_count` should be greater than `0` before a profile insight
-review bundle can mark that advisory lane as `direct_action`. Shared live draft
-support may still surface the staged row as related or strong support, but it
-does not close the lane. The `judgement_panel` is the compact reviewer view to
-check first:
+profile advisory route, preserve the action's
+`arguments.profile_route_sources`; the returned `profile_route_source_count`
+should be greater than `0` before a profile insight review bundle can mark that
+advisory lane as `direct_action`. Shared live draft support may still surface
+the staged row as related or strong support, but it does not close the lane. The
+`judgement_panel` is the compact reviewer view to check first:
 
 ```python
 panel.headline
@@ -1946,8 +1945,9 @@ and `Stage physical type assertion` can repeat across advisory groups.
 `advisory_followthrough_plan[]` is a compact derived summary over those grouped
 metric/type actions. It groups route-compatible advisory actions by
 `semantic_move`, currently `define_metric`, `define_value_type`,
-`assert_map_type`, or `caveat_fallback`, and carries the same route source
-blocks needed for later `profile_route_sources` handoff:
+`assert_map_type`, or `caveat_fallback`, and carries the route source blocks
+needed for caller-authored alternatives. Generated mutating advisory actions
+already include `profile_route_sources` in their arguments:
 
 ```python
 item.semantic_move

@@ -7513,9 +7513,12 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         action["tool_name"]
         for action in result["suggested_next_action_groups"]["profile_type_review"]
     ] == ["describe_context_slice", "record_pattern", "stage_map_assertion_change"]
-    type_action_source = result["suggested_next_action_groups"][
-        "profile_type_review"
-    ][0]["source_profile_advisory"]
+    type_action = result["suggested_next_action_groups"]["profile_type_review"][2]
+    type_action_source = type_action["source_profile_advisory"]
+    assert type_action["tool_name"] == "stage_map_assertion_change"
+    assert type_action[
+        "arguments"
+    ]["profile_route_sources"] == [type_action_source]
     assert type_action_source["advisory_kind"] == "profile_type_review"
     assert type_action_source["index_field"] == "type_advisory_index"
     assert type_action_source["advisory_indexes"] == [0]
@@ -7956,6 +7959,9 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     assert promotion_args["patterns"] == [pattern["pattern_iri"]]
     assert promotion_args["evidence"] == [shared_evidence]
     assert promotion_args["anchors"] == [project_metric]
+    assert promotion_args["profile_route_sources"] == [
+        promotion_action["source_profile_advisory"]
+    ]
     framing_content = promotion_args["framings"][0]["content"]
     assert "rc:ProfileMetricKind" in framing_content
     assert "reusable completeness score" in framing_content
@@ -8092,6 +8098,12 @@ def test_draft_profile_map_updates_tool_serializes_mixed_support_cue(
     assert grouped_type_action["source_profile_advisory"]["mixed_support"][
         "pattern_iris"
     ] == [pattern["pattern_iri"]]
+    assert grouped_metric_action["arguments"]["profile_route_sources"] == [
+        grouped_metric_action["source_profile_advisory"]
+    ]
+    assert grouped_type_action["arguments"]["profile_route_sources"] == [
+        grouped_type_action["source_profile_advisory"]
+    ]
     assert "Mixed support" in grouped_metric_action["reason"]
     assert "Mixed support" in grouped_type_action["arguments"]["review_note"]
 

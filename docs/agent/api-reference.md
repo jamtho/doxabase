@@ -652,9 +652,11 @@ semantic move: `define_metric`, `define_value_type`, `assert_map_type`, or
 `caveat_fallback`. Use its primary call, `primary_action_kind`, graph-write
 flag, advisory indexes, status counts, route keys, route anchors/patterns, and
 `source_profile_advisories` when a script needs the next review move without
-rejoining every advisory row. Match `semantic_move` plus `primary_action_kind`
-when selecting a mutation; the same semantic move can include inspect-only and
-staging rows.
+rejoining every advisory row. Generated mutating advisory actions already include
+`profile_route_sources` in their arguments; use `source_profile_advisories` when
+staging a caller-authored alternative. Match `semantic_move` plus
+`primary_action_kind` when selecting a mutation; the same semantic move can
+include inspect-only and staging rows.
 Recommendation rows carry `recommendation_index`, the source profile
 observation IRI, evidence IRI, `sample_size`, `sample_scope`, `sample_method`,
 and
@@ -1152,9 +1154,9 @@ the revision as support-only context. The returned
 provided input with count `0` emits a warning and usually means the source block
 was shaped incorrectly.
 
-`stage_map_assertion_change()` also accepts `profile_route_sources`. Use
-`profile_route_sources=[action.source_profile_advisory]` when a profile
-type-review assertion is meant to close the selected advisory route. The returned
+`stage_map_assertion_change()` also accepts `profile_route_sources`. Preserve the
+generated action's `arguments.profile_route_sources` when a profile type-review
+assertion is meant to close the selected advisory route. The returned
 `profile_route_source_count` reports how many usable source blocks were stored.
 Profile insight review bundles reserve `direct_action` for persisted route
 sources; shared live draft support is not enough to close a lane.

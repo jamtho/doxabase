@@ -13378,6 +13378,12 @@ class DoxaBase:
                 type_advisories=type_advisories,
             )
         )
+        metric_advisories = self._profile_metric_advisories_with_source_actions(
+            metric_advisories
+        )
+        type_advisories = self._profile_type_advisories_with_source_actions(
+            type_advisories
+        )
         suggested_next_actions = (
             self._profile_map_update_draft_actions_from_groups(
                 suggested_next_action_groups
@@ -15122,6 +15128,26 @@ class DoxaBase:
             advisory_kind="metric_vocabulary_review",
             index_field="metric_advisory_index",
         )
+
+    @staticmethod
+    def _profile_metric_advisories_with_source_actions(
+        metric_advisories: list[ProfileMetricVocabularyAdvisory],
+    ) -> list[ProfileMetricVocabularyAdvisory]:
+        updated: list[ProfileMetricVocabularyAdvisory] = []
+        for advisory in metric_advisories:
+            actions = DoxaBase._profile_advisory_row_suggested_actions(
+                advisory,
+                advisory_kind="metric_vocabulary_review",
+                index_field="metric_advisory_index",
+            )
+            updated.append(
+                replace(
+                    advisory,
+                    suggested_next_actions=actions,
+                    suggested_next_calls=[action.call for action in actions],
+                )
+            )
+        return updated
 
     def _profile_update_accepted_indexes(
         self,
@@ -22843,6 +22869,26 @@ class DoxaBase:
             index_field="type_advisory_index",
         )
 
+    @staticmethod
+    def _profile_type_advisories_with_source_actions(
+        type_advisories: list[ProfileTypeFindingAdvisory],
+    ) -> list[ProfileTypeFindingAdvisory]:
+        updated: list[ProfileTypeFindingAdvisory] = []
+        for advisory in type_advisories:
+            actions = DoxaBase._profile_advisory_row_suggested_actions(
+                advisory,
+                advisory_kind="profile_type_review",
+                index_field="type_advisory_index",
+            )
+            updated.append(
+                replace(
+                    advisory,
+                    suggested_next_actions=actions,
+                    suggested_next_calls=[action.call for action in actions],
+                )
+            )
+        return updated
+
     def _profile_type_advisory_actions(
         self,
         *,
@@ -23761,6 +23807,106 @@ class DoxaBase:
         ]
 
     @staticmethod
+    def _profile_advisory_row_suggested_actions(
+        advisory: ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory,
+        *,
+        advisory_kind: str,
+        index_field: str,
+    ) -> list[ProfileAdvisorySuggestedNextAction]:
+        actions: list[ProfileAdvisorySuggestedNextAction] = []
+        for action in advisory.suggested_next_actions:
+            source = DoxaBase._profile_advisory_source_for_advisory(
+                advisory,
+                advisory_kind=advisory_kind,
+                index_field=index_field,
+            )
+            actions.append(
+                DoxaBase._profile_advisory_suggested_action(
+                    action,
+                    source_profile_advisory=(
+                        DoxaBase._profile_advisory_source_with_route_keys(
+                            source,
+                            action,
+                        )
+                    ),
+                )
+            )
+        return actions
+
+    @staticmethod
+    def _profile_advisory_source_for_advisory(
+        advisory: ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory,
+        *,
+        advisory_kind: str,
+        index_field: str,
+    ) -> dict[str, Any]:
+        advisory_index = getattr(advisory, index_field)
+        duplicate_advisory_indexes = (
+            advisory.duplicate_advisory_indexes or [advisory_index]
+        )
+        duplicate_profile_observation_iris = (
+            advisory.duplicate_profile_observation_iris
+            or [advisory.profile_observation_iri]
+        )
+        source: dict[str, Any] = {
+            "review_lane": advisory_kind,
+            "advisory_kind": advisory_kind,
+            "index_field": index_field,
+            "advisory_indexes": [advisory_index],
+            "duplicate_group_keys": [],
+            "duplicate_advisory_indexes": list(duplicate_advisory_indexes),
+            "duplicate_profile_observation_iris": list(
+                duplicate_profile_observation_iris
+            ),
+            "route_anchor_iris": list(
+                dict.fromkeys(
+                    resource.iri
+                    for resource in DoxaBase._profile_advisory_route_resources(
+                        advisory
+                    )
+                )
+            ),
+            "route_pattern_iris": list(
+                dict.fromkeys(
+                    pattern.iri
+                    for pattern in DoxaBase._profile_advisory_route_patterns(
+                        advisory
+                    )
+                )
+            ),
+            "advisory_statuses": [advisory.advisory_status],
+        }
+        if advisory.duplicate_group_key:
+            source["duplicate_group_keys"] = [advisory.duplicate_group_key]
+        if isinstance(advisory, ProfileMetricVocabularyAdvisory):
+            source["observed_metric_iris"] = [advisory.observed_metric_iri]
+            if advisory.pending_staged_promotion_iris:
+                source["pending_staged_promotion_iris"] = list(
+                    advisory.pending_staged_promotion_iris
+                )
+                source["pending_staged_promotion_count"] = len(
+                    advisory.pending_staged_promotion_iris
+                )
+        if advisory.mixed_support_patterns:
+            other_lane = (
+                "profile_type_review"
+                if advisory_kind == "metric_vocabulary_review"
+                else "metric_vocabulary_review"
+            )
+            source["mixed_support"] = {
+                "pattern_iris": list(
+                    dict.fromkeys(
+                        pattern.iri
+                        for pattern in advisory.mixed_support_patterns
+                    )
+                ),
+                "pattern_count": advisory.mixed_support_pattern_count,
+                "other_review_lanes": [other_lane],
+                "note": advisory.mixed_support_note,
+            }
+        return source
+
+    @staticmethod
     def _profile_advisory_route_resources(
         advisory: ProfileMetricVocabularyAdvisory | ProfileTypeFindingAdvisory,
     ) -> list[ResourceSummary]:
@@ -23824,15 +23970,40 @@ class DoxaBase:
         *,
         source_profile_advisory: dict[str, Any],
     ) -> ProfileAdvisorySuggestedNextAction:
+        arguments = copy.deepcopy(action.arguments)
+        if action.tool_name in {
+            "stage_pattern_promotion",
+            "stage_map_assertion_change",
+            "stage_systematisation",
+        }:
+            arguments.setdefault(
+                "profile_route_sources",
+                [copy.deepcopy(source_profile_advisory)],
+            )
+        call = DoxaBase._suggested_call_string_for_arguments(
+            action.tool_name,
+            arguments,
+        )
         return ProfileAdvisorySuggestedNextAction(
             action_label=action.action_label,
             tool_name=action.tool_name,
             mcp_tool_name=action.mcp_tool_name,
-            arguments=action.arguments,
+            arguments=arguments,
             reason=action.reason,
-            call=action.call,
+            call=call,
             source_profile_advisory=source_profile_advisory,
         )
+
+    @staticmethod
+    def _suggested_call_string_for_arguments(
+        tool_name: str,
+        arguments: Mapping[str, Any],
+    ) -> str:
+        arg_text = ", ".join(
+            f"{key}={value!r}"
+            for key, value in arguments.items()
+        )
+        return f"{tool_name}({arg_text})"
 
     def _profile_metric_advisory_actions(
         self,
