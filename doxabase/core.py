@@ -27743,6 +27743,11 @@ class DoxaBase:
             if warning is not None:
                 warnings.append(warning)
 
+        lanes = self._staged_recovery_order_lanes(
+            lanes,
+            selected_revision_iris=selected_revision_iris,
+        )
+
         if batch.bundle_summary.sequential_apply_recheck_candidate_iris:
             warnings.append(
                 "Plan includes staged revisions that share changed graphs; "
@@ -28654,6 +28659,24 @@ class DoxaBase:
                     mutation_actions.append(action)
         return self._dedupe_suggested_next_actions(
             [*handoff_preflight_actions, *review_first_actions, *mutation_actions]
+        )
+
+    @staticmethod
+    def _staged_recovery_order_lanes(
+        lanes: list[StagedRevisionRecoveryLane],
+        *,
+        selected_revision_iris: list[str],
+    ) -> list[StagedRevisionRecoveryLane]:
+        first_index_by_iri = {
+            revision_iri: index
+            for index, revision_iri in enumerate(selected_revision_iris)
+        }
+        return sorted(
+            lanes,
+            key=lambda lane: first_index_by_iri.get(
+                lane.source_revision_iri,
+                len(first_index_by_iri),
+            ),
         )
 
     def _staged_recovery_batch_restage_dry_run_action(

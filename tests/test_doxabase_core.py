@@ -6929,6 +6929,22 @@ def test_plan_staged_revision_recovery_keeps_valid_rows_with_patchless_history(
     tmp_path: Path,
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    applied_source = db.stage_graph_revision(
+        summary="Stage already applied mixed-order row",
+        rationale="This staged source will become an applied event for ordering.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:AlreadyAppliedMixedOrder a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    applied_event = db.apply_staged_revision(applied_source.revision_iri)
     ready = db.stage_graph_revision(
         summary="Stage ready table",
         rationale="This staged source has a complete patch payload.",
@@ -6996,22 +7012,51 @@ def test_plan_staged_revision_recovery_keeps_valid_rows_with_patchless_history(
     all_staged_plan = db.plan_staged_revision_recovery(
         current_staged_work_only=False
     )
-    assert all_staged_plan.returned_count == 2
+    assert all_staged_plan.returned_count == 3
     assert set(all_staged_plan.processed_revision_iris) == {
+        applied_source.revision_iri,
         ready.revision_iri,
         patchless_iri,
     }
     assert all_staged_plan.next_action_queue_item_counts == {
         "apply_after_review": 1,
+        "inspect_already_applied": 1,
         "informational": 1,
     }
     all_lanes_by_source = {
         lane.source_revision_iri: lane for lane in all_staged_plan.lanes
     }
+    assert (
+        all_lanes_by_source[applied_source.revision_iri].lane
+        == "inspect_already_applied"
+    )
     assert all_lanes_by_source[patchless_iri].lane == "informational"
     assert all_lanes_by_source[patchless_iri].not_restageable_reason == (
         "missing_patch_payload"
     )
+
+    mixed_order_plan = db.plan_staged_revision_recovery(
+        [
+            patchless_iri,
+            applied_event.applied_revision_iri,
+            ready.revision_iri,
+        ]
+    )
+    assert mixed_order_plan.processed_revision_iris == [
+        patchless_iri,
+        applied_event.applied_revision_iri,
+        ready.revision_iri,
+    ]
+    assert [lane.source_revision_iri for lane in mixed_order_plan.lanes] == [
+        patchless_iri,
+        applied_event.applied_revision_iri,
+        ready.revision_iri,
+    ]
+    assert [lane.lane for lane in mixed_order_plan.lanes] == [
+        "informational",
+        "inspect_already_applied",
+        "apply_after_review",
+    ]
 
 
 def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
