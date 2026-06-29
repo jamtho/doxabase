@@ -949,6 +949,24 @@ rc:EvidenceShape a sh:NodeShape ;
         sh:class rc:SourceSpan ;
         sh:message "sourceSpan values should be named SourceSpan resources." ;
     ] ;
+    sh:property [
+        sh:path rc:queryExecutionStatus ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "queryExecutionStatus must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:queryEngine ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "queryEngine must be a single string if declared." ;
+    ] ;
+    sh:property [
+        sh:path rc:queryHash ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:message "queryHash must be a single string if declared." ;
+    ] ;
     sh:message "Evidence must identify a source using dcterms:source or rc:sourceSpan." .
 
 rc:SourceSpanShape a sh:NodeShape ;

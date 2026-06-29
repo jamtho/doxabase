@@ -493,6 +493,7 @@ class ExportPreflightRecord:
     decision: str
     scanner_clean: bool
     shareability_review_required: bool
+    shareability_review_status: str
     would_block_sensitive_export: bool
     graphs: list[str]
     graph_counts: dict[str, int]
@@ -2839,6 +2840,9 @@ class EvidenceDescription:
     summary: str | None
     sources: list[str]
     source_spans: list[SourceSpanDescription]
+    query_execution_status: str | None
+    query_engine: str | None
+    query_hash: str | None
 
 
 @dataclass(frozen=True)
@@ -16054,7 +16058,7 @@ class DoxaBase:
     ) -> dict[str, Any]:
         evidence = self._profile_evidence_description(evidence_iri, profiles)
         evidence_summary = evidence.summary if evidence is not None else None
-        metadata = self._query_result_metadata_from_evidence_summary(evidence_summary)
+        metadata = self._query_result_metadata_from_evidence(evidence)
         result_sources = evidence.sources if evidence is not None else []
         source_spans = evidence.source_spans if evidence is not None else []
         query_source_kind = self.expand_iri("rc:QuerySource")
@@ -16112,6 +16116,23 @@ class DoxaBase:
                 if evidence.iri == evidence_iri:
                     return evidence
         return None
+
+    @classmethod
+    def _query_result_metadata_from_evidence(
+        cls,
+        evidence: EvidenceDescription | None,
+    ) -> dict[str, str | None]:
+        metadata = cls._query_result_metadata_from_evidence_summary(
+            evidence.summary if evidence is not None else None
+        )
+        if evidence is None:
+            return metadata
+        return {
+            "execution_status": evidence.query_execution_status
+            or metadata["execution_status"],
+            "engine": evidence.query_engine or metadata["engine"],
+            "query_hash": evidence.query_hash or metadata["query_hash"],
+        }
 
     @staticmethod
     def _query_result_metadata_from_evidence_summary(
@@ -23756,6 +23777,12 @@ class DoxaBase:
             evidence_iri=evidence_iri,
         )
         assert observation.evidence_iri is not None
+        metadata_triples = self._insert_query_result_metadata(
+            evidence_iri=observation.evidence_iri,
+            execution_status=status_value,
+            engine=engine_value,
+            query_hash=query_hash_value,
+        )
         source_span_triples = 0
         source_span_value: str | None = None
         if query_source_path_value is not None:
@@ -23782,7 +23809,11 @@ class DoxaBase:
             query_hash=query_hash_value,
             result_sources=result_source_values,
             observation_triples=observation.observation_triples,
-            evidence_triples=observation.evidence_triples + source_span_triples,
+            evidence_triples=(
+                observation.evidence_triples
+                + metadata_triples
+                + source_span_triples
+            ),
             source_span_triples=source_span_triples,
         )
 
@@ -23813,6 +23844,38 @@ class DoxaBase:
         if failure_summary is not None:
             parts.append(f"Failure summary: {failure_summary}")
         return " ".join(parts)
+
+    def _insert_query_result_metadata(
+        self,
+        *,
+        evidence_iri: str,
+        execution_status: str,
+        engine: str | None,
+        query_hash: str | None,
+    ) -> int:
+        evidence_graph = Graph()
+        self._bind_prefixes(evidence_graph)
+        evidence_subject = URIRef(evidence_iri)
+        evidence_graph.add(
+            (
+                evidence_subject,
+                URIRef(self.expand_iri("rc:queryExecutionStatus")),
+                Literal(execution_status),
+            )
+        )
+        self._add_optional_literal(
+            evidence_graph,
+            evidence_subject,
+            "rc:queryEngine",
+            engine,
+        )
+        self._add_optional_literal(
+            evidence_graph,
+            evidence_subject,
+            "rc:queryHash",
+            query_hash,
+        )
+        return self._insert_graph("evidence", evidence_graph)
 
     def _preflight_source_span_reuse(
         self,
@@ -41446,6 +41509,7 @@ class DoxaBase:
             ),
             scanner_clean=sensitive_literal_count == 0,
             shareability_review_required=True,
+            shareability_review_status="required_not_completed",
             would_block_sensitive_export=sensitive_literal_count > 0,
             graphs=graph_names,
             graph_counts=self._graph_counts(graph_names),
@@ -46208,6 +46272,13 @@ class DoxaBase:
                     self._objects(graphs, evidence_iri, "rc:sourceSpan")
                 )
             ],
+            query_execution_status=self._first_object(
+                graphs,
+                evidence_iri,
+                "rc:queryExecutionStatus",
+            ),
+            query_engine=self._first_object(graphs, evidence_iri, "rc:queryEngine"),
+            query_hash=self._first_object(graphs, evidence_iri, "rc:queryHash"),
         )
 
     def _describe_source_span(

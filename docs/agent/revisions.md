@@ -108,7 +108,8 @@ For a staged cross-capsule handoff, run `export_preflight` first, export the
 handoff bundle, import the project TriG into the receiving capsule, inspect
 snapshot evidence, import the companion revision-snapshot JSON, and then
 describe or check the staged revisions. Treat `clean_by_scanner_only` as a
-scanner result, not general shareability approval.
+scanner result, not general shareability approval; the matching
+`shareability_review_status` remains `required_not_completed`.
 Choose the export artifact by the receiving task:
 
 - `export_trig(graphs="workflow")` / `graphs="review_bundle"` is for review

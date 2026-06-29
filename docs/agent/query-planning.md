@@ -147,8 +147,8 @@ Start with `describe_query_context(dataset_iri)`:
    `describe_profile_run` action before drafting. This commonly means a
    profile-like `record_query_result` observation has one evidence-linked profile
    row; the action's `source_profile_evidence` preview carries query-source
-   paths, result sources, execution status, engine, query hash when available,
-   and the short profile summary.
+   paths, result sources, structured execution status, engine, query hash when
+   available, and the short profile summary.
 4. `query_target_candidates` explain the physical path, relation, template
    source, storage access, verification status, and review reasons.
    For non-database storage with `location_kind="object"`, prefer the exact
@@ -397,7 +397,9 @@ payloads such as grouped counts or JSON output; fill profile-shaped fields such
 as `row_count` only when `summary`, `sample_scope`, and `sample_method` make
 their meaning unambiguous. For local smoke tests, a Python CSV fallback is fine
 when DuckDB is unavailable as long as `engine` and `sample_method` say what
-actually ran.
+actually ran. `record_query_result` stores execution status, engine, and query
+hash as structured evidence metadata, so custom evidence summaries still remain
+machine-readable in later query-context handoffs.
 
 When a known-good storage route is blocked only by stale or malformed sibling
 metadata, keep `describe_query_context()` as the inventory and call

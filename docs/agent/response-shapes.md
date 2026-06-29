@@ -1087,6 +1087,9 @@ or cancelled attempts stay ordinary observations and reject profile count
 fields. For filtered or grouped aggregate result payloads, prefer
 `result_sources` plus clear `summary`/`sample_scope`/`sample_method` text unless
 the count-like value is intentionally profile evidence.
+The linked evidence stores `query_execution_status`, `query_engine`, and
+`query_hash` as structured metadata when those values are supplied, so later
+query-context handoffs do not depend on parsing evidence summary prose.
 
 For direct profile type findings, call it with `observation_type="profile"`,
 `observed_column`, and `observed_physical_type` / `observed_value_type`. These
@@ -4148,6 +4151,7 @@ preflight.export_kind
 preflight.decision
 preflight.scanner_clean
 preflight.shareability_review_required
+preflight.shareability_review_status
 preflight.would_block_sensitive_export
 preflight.graphs
 preflight.graph_counts
@@ -4177,6 +4181,8 @@ would inspect for privacy warnings. `decision="block"` means
 means no selected graph/snapshot terms matched the conservative credential-like
 patterns, but `shareability_review_required` remains true because scanner-clean
 does not prove the artifact is appropriate to share.
+`shareability_review_status="required_not_completed"` is the machine-readable
+gate for that separate non-scanner review.
 
 Each `preflight.matches[]` item is an `ExportPreflightMatch`:
 

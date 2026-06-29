@@ -122,9 +122,9 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     overview = db.graph_overview()
 
     graphs = {graph.name: graph for graph in overview.named_graphs}
-    assert graphs["base_ontology"].triple_count == 1180
+    assert graphs["base_ontology"].triple_count == 1192
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1204
+    assert graphs["base_shapes"].triple_count == 1219
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -1864,6 +1864,7 @@ def test_export_preflight_blocks_sensitive_handoff_scope(
     assert preflight.decision == "block"
     assert preflight.scanner_clean is False
     assert preflight.shareability_review_required is True
+    assert preflight.shareability_review_status == "required_not_completed"
     assert preflight.would_block_sensitive_export is True
     assert preflight.graphs == [
         "ontology",
@@ -1907,6 +1908,7 @@ def test_export_preflight_returns_scanner_clean_export_action(
     assert preflight.decision == "clean_by_scanner_only"
     assert preflight.scanner_clean is True
     assert preflight.shareability_review_required is True
+    assert preflight.shareability_review_status == "required_not_completed"
     assert preflight.would_block_sensitive_export is False
     assert preflight.sensitive_literal_count == 0
     assert preflight.matches == []
@@ -22360,10 +22362,16 @@ def test_record_query_result_writes_query_source_evidence(
         and triple.object == result.source_span_iri
         for triple in evidence.outgoing
     )
+    outgoing = {(triple.predicate, triple.object) for triple in evidence.outgoing}
+    assert (RC + "queryExecutionStatus", "succeeded") in outgoing
+    assert (RC + "queryEngine", "python-csv") in outgoing
+    assert (RC + "queryHash", "sha256:abc123") in outgoing
     source_span = db.describe_resource(result.source_span_iri, graph="evidence")
-    outgoing = {(triple.predicate, triple.object) for triple in source_span.outgoing}
-    assert (RC + "sourcePath", "queries/orders_paid_count.sql") in outgoing
-    assert (RC + "sourceKind", RC + "QuerySource") in outgoing
+    span_outgoing = {
+        (triple.predicate, triple.object) for triple in source_span.outgoing
+    }
+    assert (RC + "sourcePath", "queries/orders_paid_count.sql") in span_outgoing
+    assert (RC + "sourceKind", RC + "QuerySource") in span_outgoing
 
     matches = db.search("paid-count", graph="observations")
     assert result.observation_iri in {match.iri for match in matches.matches}

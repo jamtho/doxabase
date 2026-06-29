@@ -65,21 +65,35 @@ Implemented:
 - TriG import/export for graph roles.
 - `graph_overview()`, `list_entities()`, and `validate_graph()`.
 - `search()` for lexical retrieval over literal RDF claims.
+- `search_staged_patch_payloads()` for routing remembered staged-only terms in
+  patch payloads back to their owning staged revisions.
+- `project_brief()` for read-only frontier summaries, health tasks, and
+  recommended next workflow tasks.
 - `describe_resource()` for type-aware retrieval workflows over RDF resources.
 - `describe_pattern()` for compact handoff context around pattern syntheses.
 - `list_graph_revisions()` for discovering staged, applied, and history records.
 - `describe_graph_revision()` for compact history review over revision records.
+- `describe_revision_lineage()`, `list_resource_revisions()`, and
+  `describe_resource_revision_lineage()` for staged/applied/history routing.
+- Revision snapshot evidence and graph-snapshot inspection helpers for
+  cross-capsule staged-review handoffs.
 - `describe_dataset()` for bounded table schema, row semantics, relationship,
   caveat, provenance, and linked-pattern context.
 - `describe_profile_run()` for profile observations on one dataset linked to one
   shared profile-run evidence resource.
+- `draft_profile_map_updates()`, `stage_profile_map_updates()`, and
+  `export_profile_insight_review_bundle()` for reviewable profile-to-map
+  promotion workflows.
 - `describe_query_context()` for compact non-secret query-planning context,
   physical-metadata readiness, info/warning/error issues, and separate
   analytical caveat warnings.
+- `draft_query_plan()` for non-executed query handoff planning over reviewed
+  storage/layout/path context.
 - `describe_context_slice()` for route-explained dataset, pattern, and deep-lore
   graph slices.
 - `record_observation()` for first-class observation and evidence resources.
 - `record_claim_observation()` for common observation, claim, evidence, and source-span capture.
+- `record_query_result()` for preserving external query results or failures.
 - `record_pattern()` for syntheses that connect related findings to map targets.
 - `record_dataset_profile()` for bundling a profile observation, including
   optional observed value-frequency pairs and scalar metrics, with an optional
@@ -94,6 +108,8 @@ Implemented:
   access, physical layouts, partition schemes, and relationships.
 - `record_graph_revision()` for history metadata about graph changes and review
   bundles.
+- `describe_assertion_support()` and `draft_map_assertion_change()` for
+  read-only assertion review before staging a single map assertion change.
 - `stage_graph_revision()` for reviewable additions/removals with stance,
   preview counts, validation, and structured SHACL diagnostics, without
   applying the patch.
@@ -111,10 +127,14 @@ Implemented:
   applied staged revision events, with exact triple arrays opt-in.
 - `draft_staged_revision_rebase()` for read-only repair planning when a staged
   revision routes to repair/replace rather than mechanical restage.
+- `plan_staged_revision_recovery()` and `restage_staged_revisions()` for
+  mixed staged-frontier recovery and batch restage classification.
 - `restage_staged_revision()` for refreshing a stale staged proposal against
   current graph state while preserving a link to the older proposal.
 - Row-level staged graph snapshot storage for exact count/digest drift reporting
   in apply checks and staged-review Markdown.
+- Privacy/export hygiene preflight and scanning for graph, TriG, revision
+  snapshot, staged-review, and handoff exports.
 - Agent-authored observation and pattern RDF vocabulary for structured claims,
   source spans, confidence, and status.
 - Stricter SHACL validation for observation/pattern/evidence/claim resources.
@@ -126,9 +146,11 @@ Implemented:
 
 Not implemented yet:
 
-- Full staged revision semantic conflict resolution, rebase, and graph version
-  storage beyond the staged snapshot rows used for drift reporting.
-- Query generation or execution helpers.
+- Full staged revision semantic merge/rebase and durable graph version browsing
+  beyond the current recovery planning, restage, lineage, and snapshot-evidence
+  workflows.
+- Query execution or full SQL generation. Current query helpers produce
+  non-executed planning handoffs and record external results/failures.
 - Full SPARQL endpoint.
 
 ## Layout
@@ -223,10 +245,14 @@ Useful first tool calls for an agent:
 3. `doxabase.get_doc` with `doc_id="graph_roles"` when graph placement rules matter
 4. `doxabase.project_brief` for a read-only summary of datasets and active
    review queues
+   (`health_tasks`, `next_best_expansion`, and `full_frontier_expansion` are the
+   key fields when a bounded first pass hides work)
 5. `doxabase.plan_staged_revision_recovery` when `project_brief` reports
    `staged_frontier_review`
 6. `doxabase.graph_overview`
 7. `doxabase.search` for remembered terms, caveats, observations, or evidence
+   and `doxabase.search_staged_patch_payloads` when the term may live only in a
+   staged patch proposal
 8. `doxabase.list_entities` with `type="rc:Table"` and `graph="map"`
 9. `doxabase.describe_dataset` with a table IRI from `list_entities`
 10. `doxabase.describe_profile_run` when a profile-summary candidate evidence
@@ -316,5 +342,6 @@ The next useful implementation steps are:
 
 1. Add fuller staged semantic conflict/rebase/version workflows.
 2. Add deeper profiling helpers and field-tested metric recipes.
-3. Consider query-planning helpers that consume storage access metadata.
+3. Deepen storage-metadata-assisted query planning and execution handoff
+   helpers.
 4. Consider semantic or hybrid search later, after the lexical RDF search surface has settled.

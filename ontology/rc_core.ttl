@@ -1048,6 +1048,21 @@ rc:sourceKind a rdf:Property ;
     rdfs:range rc:SourceKind ;
     rdfs:comment "The kind of source being cited." .
 
+rc:queryExecutionStatus a rdf:Property ;
+    rdfs:domain rc:Evidence ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Execution status for evidence produced by an external query attempt." .
+
+rc:queryEngine a rdf:Property ;
+    rdfs:domain rc:Evidence ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Runtime or tool that produced evidence from an external query attempt." .
+
+rc:queryHash a rdf:Property ;
+    rdfs:domain rc:Evidence ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Hash or fingerprint of the external query text when available." .
+
 rc:summary a rdf:Property ;
     rdfs:range xsd:string ;
     rdfs:comment "A concise human-readable summary." .

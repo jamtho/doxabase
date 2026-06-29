@@ -57,9 +57,10 @@ helper, returns redacted match locators with stable non-secret `match_id` values
 and reports `decision="block"` when `fail_on_sensitive=true` would block the
 write. When no credential-like terms match, the decision is
 `clean_by_scanner_only`; this still sets `shareability_review_required=true`
-because scanner-clean is not proof that paths, endpoints, project facts, or
-history payloads are appropriate to share. Follow the suggested export action
-with `fail_on_sensitive=true` after that separate review.
+and `shareability_review_status="required_not_completed"` because scanner-clean
+is not proof that paths, endpoints, project facts, or history payloads are
+appropriate to share. Follow the suggested export action with
+`fail_on_sensitive=true` after that separate review.
 
 `doxabase.project_brief`
 

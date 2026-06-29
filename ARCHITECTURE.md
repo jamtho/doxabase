@@ -68,8 +68,9 @@ Mutable:
 - `patterns`: syntheses that connect observations to map facts.
 - `evidence`: support for observations or map assertions.
 - `shapes`: project/client SHACL shapes.
-- `history`: revision metadata, graph-count snapshots, consolidation rationale,
-  and future staged diffs.
+- `history`: revision metadata, staged patch payloads, applied-revision links,
+  graph-count/digest snapshots, review-bundle metadata, and consolidation
+  rationale.
 
 Logical includes:
 
@@ -80,42 +81,28 @@ Ordinary imports reject writes to immutable seed graphs unless internal seeding 
 
 ## Core API Surface
 
-Implemented:
+The exact API is maintained in code and in `docs/agent/api-reference.md` /
+`docs/agent/mcp-tools.md`. Current implemented families include:
 
-```python
-DoxaBase(path)
-DoxaBase.create(path, overwrite=False, seed=True)
-DoxaBase.import_turtle(source, graph="map", replace=False)
-DoxaBase.import_trig(source, replace=False)
-DoxaBase.export_graph(path, graphs="map", format="turtle", overwrite=False)
-DoxaBase.export_trig(path, graphs=None, overwrite=False)
-DoxaBase.export_preflight(export_kind="handoff_bundle", ...)
-DoxaBase.replace_graph_triples(graph, removals=None, additions=None, ...)
-DoxaBase.graph_overview(limit=100)
-DoxaBase.list_entities(type=None, graph="map", text=None, limit=100, offset=0)
-DoxaBase.search(query, graph=None, limit=20, offset=0)
-DoxaBase.describe_dataset(iri, graph="map")
-DoxaBase.describe_profile_run(dataset_iri, evidence_iri, graph="map", limit=None)
-DoxaBase.describe_query_context(iri, graph="map")
-DoxaBase.describe_context_slice(seed_iris, profile="dataset_brief", ...)
-DoxaBase.record_observation(summary, ..., value_frequencies=None, profile_metrics=None)
-DoxaBase.record_dataset_profile(dataset_iri, summary, ..., value_frequencies=None, profile_metrics=None)
-DoxaBase.record_column_profile(column_iri, column_name, summary, ..., value_frequencies=None, profile_metrics=None)
-DoxaBase.record_graph_revision(summary, rationale, changed_graphs, included_graphs=None, ...)
-DoxaBase.stage_graph_revision(summary, rationale, additions=None, removals=None, ...)
-DoxaBase.stage_systematisation(summary, intent, framings, anchors=None, shared_additions=None, ...)
-DoxaBase.stage_pattern_promotion(patterns, framings, summary=None, ...)
-DoxaBase.check_staged_revision_apply(iri, ...)
-DoxaBase.draft_staged_revision_rebase(iri, ...)
-DoxaBase.restage_staged_revision(iri, ...)
-DoxaBase.apply_staged_revision(iri, ...)
-DoxaBase.list_graph_revisions(...)
-DoxaBase.describe_staged_revision(iri)
-DoxaBase.export_staged_revision(iri, path)
-DoxaBase.validate_graph(scope="map", limit_results=100)
-DoxaBase.to_graph(graphs=None)
-DoxaBase.to_dataset(graphs=None)
-```
+- capsule lifecycle, graph import/export, export preflight, sensitive-literal
+  scanning, controlled graph replacement, and RDFLib graph/dataset conversion;
+- graph overview, lexical search, staged-payload search, entity listing,
+  resource description, pattern description, dataset description, context
+  slicing, and project briefs;
+- profile-run retrieval, profile-to-map draft/stage helpers, and profile review
+  bundle export;
+- storage-aware query context, non-executed query-plan drafting, and external
+  query-result/failure capture;
+- observation, claim, reconsideration, evidence, source-span, profile, pattern,
+  map, storage, layout, partition, relationship, and graph-revision recording;
+- assertion-support review plus draft/staged single-assertion map changes;
+- staged graph revision staging, systematisation alternatives,
+  pattern-promotion staging, apply checks, recovery planning, read-only rebase
+  drafting, single and batch restage, grouped exports, and apply;
+- revision listing, graph lineage, resource-centric revision discovery, applied
+  diff inspection, revision snapshot import/export, and snapshot evidence or
+  graph-snapshot inspection;
+- fixture loading and explicit SHACL validation.
 
 `import_trig()` maps fixture graph IRIs such as:
 
@@ -180,52 +167,12 @@ uv run python -m doxabase.mcp_server --capsule .doxabase.sqlite
 
 Default transport is stdio.
 
-Current MCP tools:
-
-- `doxabase.list_docs`
-- `doxabase.get_doc`
-- `doxabase.graph_overview`
-- `doxabase.search`
-- `doxabase.list_entities`
-- `doxabase.describe_resource`
-- `doxabase.describe_pattern`
-- `doxabase.describe_graph_revision`
-- `doxabase.list_graph_revisions`
-- `doxabase.describe_staged_revision`
-- `doxabase.describe_dataset`
-- `doxabase.describe_profile_run`
-- `doxabase.describe_query_context`
-- `doxabase.describe_context_slice`
-- `doxabase.record_observation`
-- `doxabase.record_claim_observation`
-- `doxabase.record_pattern`
-- `doxabase.record_dataset_profile`
-- `doxabase.record_column_profile`
-- `doxabase.record_map_dataset`
-- `doxabase.record_map_column`
-- `doxabase.record_map_caveat`
-- `doxabase.record_map_storage_access`
-- `doxabase.record_map_physical_layout`
-- `doxabase.record_map_partition_scheme`
-- `doxabase.record_map_relationship`
-- `doxabase.import_trig`
-- `doxabase.export_graph`
-- `doxabase.export_preflight`
-- `doxabase.replace_graph_triples`
-- `doxabase.export_trig`
-- `doxabase.record_graph_revision`
-- `doxabase.stage_graph_revision`
-- `doxabase.stage_systematisation`
-- `doxabase.stage_pattern_promotion`
-- `doxabase.check_staged_revision_apply`
-- `doxabase.draft_staged_revision_rebase`
-- `doxabase.restage_staged_revision`
-- `doxabase.describe_applied_revision_diff`
-- `doxabase.apply_staged_revision`
-- `doxabase.export_staged_revision`
-- `doxabase.export_staged_revisions`
-- `doxabase.load_example_fixtures`
-- `doxabase.validate_graph`
+The MCP surface mirrors the Python workflow families through
+`doxabase/mcp_tools.py` and thin registrations in `doxabase/mcp_server.py`.
+For the maintained list and response-shape notes, call `doxabase.list_docs`
+and read `doc_id="mcp_tools"` / `doc_id="response_shapes"`, or run
+`codex mcp list` in a configured Codex environment. Avoid treating this
+architecture note as the authoritative MCP inventory.
 
 Tool functions delegate to `doxabase/mcp_tools.py`. Keep business logic there or in `DoxaBase`, not inside nested MCP decorators, so behavior remains testable without a running MCP client.
 
@@ -305,8 +252,8 @@ uv run python tools/validate_rdf.py
 
 Expected state at the time of writing:
 
-- `rc_core.ttl`: 1176 triples.
-- `rc_shapes.ttl`: 1204 triples.
+- `rc_core.ttl`: 1192 triples.
+- `rc_shapes.ttl`: 1219 triples.
 - `ais.trig`: 325 quads.
 - `polymarket.trig`: 480 quads.
 - All fixtures conform to base SHACL shapes.
@@ -316,16 +263,15 @@ Expected state at the time of writing:
 - Storage currently stores term strings directly rather than using interned term IDs.
 - Blank node IDs are imported as-is; this is sufficient for current fixtures but not a robust merge strategy.
 - Staged revisions can be applied with conservative graph-state conflict checks
-  and stale proposals can be restaged against current graph state. New staged
-  snapshots can explain exact count/digest drift triples, but rebase, rich
-  semantic conflict resolution, and durable graph version browsing beyond those
-  staged snapshots are not implemented yet.
+  and stale proposals can be planned, restaged, grouped, exported, and routed
+  through lineage and snapshot-evidence helpers. Rich semantic merge/rebase and
+  durable graph version browsing beyond staged/applied snapshots are not
+  implemented yet.
 - Context slices are route-explained first passes, not a complete staged review
   or proof-of-closure mechanism.
 - Search is lexical-only; there is no embedding or hybrid semantic retrieval yet.
-- The MCP interface exposes inspection, context slicing, staged revision
-  apply/review, applied staged-revision snapshot diffs, helper-backed graph
-  writing, validation, and revision metadata.
+- The MCP interface exposes the current workflow families through thin wrappers;
+  keep `docs/agent/mcp-tools.md` and tests as the maintained inventory.
 - The AIS fixture is representative rather than executable-catalog complete: the real broadcast/index schemas and storage layout are richer than the current graph.
 - RDFLib emits deprecation warnings for some Dataset/TriG internals during tests.
 
@@ -335,7 +281,8 @@ Recommended next implementation steps:
 
 1. Add fuller staged semantic conflict/rebase/version workflows.
 2. Add deeper profiling helpers and field-tested metric recipes.
-3. Add query-planning helpers that consume storage access metadata.
+3. Deepen query-planning helpers that consume storage access metadata and
+   produce better execution handoffs.
 4. Consider semantic or hybrid search later, once the literal RDF search surface has enough real usage.
 
 Promotion helpers should be drafting aids, not form workflows. The acceptance

@@ -1169,6 +1169,7 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
         query_source_path="queries/orders_paid_aggregate.sql",
         query_hash="sha256:abc123",
         result_sources=[str(result_path)],
+        evidence_summary="Reviewed Python CSV aggregate over scratch Orders.",
         sample_size=1,
         sample_scope="All rows in the scratch Orders CSV.",
         sample_method="External read-only aggregate query.",
@@ -1205,6 +1206,12 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
 
     profile_run = describe_profile_run_tool(db, **profile_action["arguments"])
     assert profile_run["returned_profile_count"] == 1
+    assert profile_run["evidence"]["summary"] == (
+        "Reviewed Python CSV aggregate over scratch Orders."
+    )
+    assert profile_run["evidence"]["query_execution_status"] == "succeeded"
+    assert profile_run["evidence"]["query_engine"] == "python-csv"
+    assert profile_run["evidence"]["query_hash"] == "sha256:abc123"
     assert profile_run["evidence"]["sources"] == [str(result_path)]
     assert profile_run["evidence"]["source_spans"][0]["source_path"] == (
         "queries/orders_paid_aggregate.sql"
@@ -1311,6 +1318,7 @@ def test_export_preflight_tool_returns_conservative_redacted_decision(
     assert result["decision"] == "block"
     assert result["scanner_clean"] is False
     assert result["shareability_review_required"] is True
+    assert result["shareability_review_status"] == "required_not_completed"
     assert result["would_block_sensitive_export"] is True
     assert result["graphs"] == ["map"]
     assert result["graph_sensitive_literal_count"] >= 1

@@ -92,8 +92,10 @@ It selects the same graph roles and snapshot rows, returns redacted match
 locators with stable non-secret `match_id` values, and reports `decision="block"`
 when `fail_on_sensitive=True` would block the corresponding write. A clean
 preflight reports `decision="clean_by_scanner_only"` and still sets
-`shareability_review_required=True`; agents must separately decide whether paths,
-endpoints, history payloads, or project facts are appropriate to share.
+`shareability_review_required=True` plus
+`shareability_review_status="required_not_completed"`; agents must separately
+decide whether paths, endpoints, history payloads, or project facts are
+appropriate to share.
 Non-secret path-shaped values such as local paths, object-store URIs, endpoint
 URLs, and relative paths remain ordinary graph content: they are preserved in
 faithful RDF exports and do not by themselves trigger `privacy_warnings`.
@@ -406,8 +408,9 @@ When profile evidence exists but all returned evidence is singleton evidence, so
 `profile_run_candidates` is empty, `suggested_next_actions` still includes a
 bounded `describe_profile_run` action before query-plan drafting. Its
 `source_profile_evidence` preview carries the evidence summary, result sources,
-query-source paths, parsed execution status/engine/query hash when the standard
-`record_query_result()` evidence summary is present, and short profile summaries.
+query-source paths, structured execution status/engine/query hash from
+`record_query_result()` evidence metadata, old summary-parsing fallback values,
+and short profile summaries.
 `unselected_ready_candidate_indexes` names peer direct-ready candidates before a
 draft is requested; inspect those cards and pass an explicit `candidate_index`
 when candidate order selected a different route than intended. These indexes

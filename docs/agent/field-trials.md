@@ -2709,6 +2709,23 @@ few useful gaps:
   `rc:patchContent` history hits. Remaining larger follow-ups are a tracked
   local CSV query smoke example and refreshing README/ARCHITECTURE status
   lists.
+- A follow-up local CSV smoke trial completed end-to-end with exact local object
+  storage, verified CSV layout, `draft_query_plan` reaching
+  `execution_attempt_ready`, Python CSV fallback execution, `record_query_result`,
+  and SHACL validation. The runtime gap was not query planning itself:
+  custom `evidence_summary` text could hide execution status, engine, and query
+  hash from later `describe_query_context` handoffs. Query-result evidence now
+  stores those fields structurally.
+- A privacy/export trial confirmed scanner warnings and `fail_on_sensitive=True`
+  block paths behave consistently without leaking synthetic canaries. The
+  remaining risk is over-reading scanner-clean exports as shareable; export
+  preflight now carries `shareability_review_status="required_not_completed"`
+  alongside `clean_by_scanner_only`.
+- A cross-session staged recovery trial confirmed TriG-only handoffs correctly
+  route to `complete_handoff_import` with `history_only_count_digest`, then to
+  `restage_after_review` with `history_plus_snapshot_rows` after importing
+  revision snapshot JSON. Snapshot evidence made real source-side drift
+  distinguishable from handoff damage; no implementation change was needed.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
