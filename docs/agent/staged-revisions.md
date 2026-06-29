@@ -204,7 +204,11 @@ batch classification and optional rebase drafts to return one lane per source
 revision. Read `lanes[].lane`, `current_revision_iri`, `next_action`, and
 `next_action_queue_item.resolved_target_iri` before mutating. Queue values are
 row IRIs, while resolved targets may point at refreshed successors or applied
-events. Use `mutation_frontier_iris` as the compact deduped set of resolved
+events. When explicit inputs include both stale sources and their successors,
+`resolved_target_groups[]` collapses aliases by resolved target while preserving
+`source_revision_iris`, `requested_revision_iris`, current/restage/applied
+context, and alternative-set metadata. Use `mutation_frontier_iris` as the
+compact deduped set of resolved
 apply/restage/repair targets; it excludes informational handled-stale rows,
 already-applied inspection targets, and repair helper calls that do not resolve
 to an existing IRI. Treat `would_restage_revision_iris` as the post-review

@@ -1138,6 +1138,31 @@ class StagedRevisionRecoveryLane:
 
 
 @dataclass(frozen=True)
+class StagedRevisionResolvedTargetGroup:
+    group_key: str
+    queue: str
+    action_type: str | None
+    action_label: str | None
+    resolved_target_iri: str | None
+    resolved_target_record_kind: str | None
+    lane_count: int
+    row_iris: list[str]
+    source_revision_iris: list[str]
+    requested_revision_iris: list[str]
+    current_revision_iris: list[str]
+    latest_revision_iris: list[str]
+    restage_chain_iris: list[str]
+    applied_event_iris: list[str]
+    row_is_target_all: bool
+    row_is_target_any: bool
+    alternative_set_iris: list[str]
+    alternative_set_source_iri: str | None
+    alternative_set_roles: list[str]
+    alternative_gate_statuses: list[str]
+    alternative_semantic_review_required: bool
+
+
+@dataclass(frozen=True)
 class StagedRevisionRecoveryPlan:
     result_kind: str
     helper: str
@@ -1159,6 +1184,8 @@ class StagedRevisionRecoveryPlan:
     next_action_queue: dict[str, list[str]]
     next_action_queue_items: list[RevisionNextActionQueueItem]
     next_action_queue_item_counts: dict[str, int]
+    resolved_target_groups: list[StagedRevisionResolvedTargetGroup]
+    resolved_target_group_counts: dict[str, int]
     mutation_frontier_iris: list[str]
     requires_recheck_after_each_apply: bool
     semantic_review_required_queue_counts: dict[str, int]
@@ -26262,6 +26289,10 @@ class DoxaBase:
             for lane in lanes
         ]
         mutation_frontier_iris = self._revision_mutation_frontier_iris(queue_items)
+        resolved_target_groups = self._staged_recovery_resolved_target_groups(
+            lanes,
+            requested_revision_iris=requested_revision_iris,
+        )
         requires_recheck_after_each_apply = bool(
             batch.bundle_summary.sequential_apply_recheck_candidate_iris
         )
@@ -26293,6 +26324,12 @@ class DoxaBase:
             next_action_queue_items=queue_items,
             next_action_queue_item_counts=(
                 self._revision_next_action_queue_item_counts(queue_items)
+            ),
+            resolved_target_groups=resolved_target_groups,
+            resolved_target_group_counts=(
+                self._staged_recovery_resolved_target_group_counts(
+                    resolved_target_groups
+                )
             ),
             mutation_frontier_iris=mutation_frontier_iris,
             requires_recheck_after_each_apply=requires_recheck_after_each_apply,
@@ -26374,6 +26411,8 @@ class DoxaBase:
             next_action_queue={},
             next_action_queue_items=[],
             next_action_queue_item_counts={},
+            resolved_target_groups=[],
+            resolved_target_group_counts={},
             mutation_frontier_iris=[],
             requires_recheck_after_each_apply=False,
             semantic_review_required_queue_counts={},
@@ -26399,6 +26438,178 @@ class DoxaBase:
                 "No graph state was changed."
             ),
         )
+
+    def _staged_recovery_resolved_target_groups(
+        self,
+        lanes: list[StagedRevisionRecoveryLane],
+        *,
+        requested_revision_iris: list[str] | None,
+    ) -> list[StagedRevisionResolvedTargetGroup]:
+        requested = set(requested_revision_iris or [])
+        groups: dict[tuple[str, str], dict[str, Any]] = {}
+        group_order: list[tuple[str, str]] = []
+
+        def add_unique(values: list[str], value: str | None) -> None:
+            if value is not None:
+                self._append_unique(values, value)
+
+        for lane in lanes:
+            item = lane.next_action_queue_item
+            queue = item.queue if item is not None else lane.lane
+            action_type = (
+                item.action_type
+                if item is not None
+                else lane.action_type
+            )
+            action_label = (
+                item.action_label
+                if item is not None
+                else lane.action_label
+            )
+            resolved_target_iri = (
+                item.resolved_target_iri
+                if item is not None
+                else lane.resolved_target_iri
+            )
+            resolved_target_record_kind = (
+                item.resolved_target_record_kind
+                if item is not None
+                else lane.resolved_target_record_kind
+            )
+            row_is_target = (
+                item.row_is_target if item is not None else lane.row_is_target
+            )
+            group_key = (
+                resolved_target_iri
+                or lane.row_iri
+                or lane.current_revision_iri
+                or lane.source_revision_iri
+            )
+            key = (queue, group_key)
+            if key not in groups:
+                groups[key] = {
+                    "group_key": group_key,
+                    "queue": queue,
+                    "action_type": action_type,
+                    "action_label": action_label,
+                    "resolved_target_iri": resolved_target_iri,
+                    "resolved_target_record_kind": resolved_target_record_kind,
+                    "lane_count": 0,
+                    "row_iris": [],
+                    "source_revision_iris": [],
+                    "requested_revision_iris": [],
+                    "current_revision_iris": [],
+                    "latest_revision_iris": [],
+                    "restage_chain_iris": [],
+                    "applied_event_iris": [],
+                    "row_is_target_all": True,
+                    "row_is_target_any": False,
+                    "alternative_set_iris": [],
+                    "alternative_set_source_iri": None,
+                    "alternative_set_roles": [],
+                    "alternative_gate_statuses": [],
+                    "alternative_semantic_review_required": False,
+                }
+                group_order.append(key)
+            group = groups[key]
+            group["lane_count"] += 1
+            add_unique(group["row_iris"], lane.row_iri)
+            add_unique(group["source_revision_iris"], lane.source_revision_iri)
+            if requested_revision_iris is None or lane.source_revision_iri in requested:
+                add_unique(
+                    group["requested_revision_iris"],
+                    lane.source_revision_iri,
+                )
+            add_unique(group["current_revision_iris"], lane.current_revision_iri)
+            add_unique(
+                group["latest_revision_iris"],
+                resolved_target_iri or lane.current_revision_iri,
+            )
+            for restage_iri in (
+                lane.restaged_from,
+                lane.source_revision_iri,
+                lane.restaged_revision_iri,
+                lane.current_restaged_by,
+                lane.current_revision_iri,
+            ):
+                add_unique(group["restage_chain_iris"], restage_iri)
+            if resolved_target_record_kind == "applied_event":
+                add_unique(group["applied_event_iris"], resolved_target_iri)
+            if item is not None:
+                add_unique(
+                    group["applied_event_iris"],
+                    item.alternative_applied_revision_iri,
+                )
+                for alternative_iri in item.alternative_set_iris:
+                    add_unique(group["alternative_set_iris"], alternative_iri)
+                if group["alternative_set_source_iri"] is None:
+                    group["alternative_set_source_iri"] = (
+                        item.alternative_set_source_iri
+                    )
+                add_unique(
+                    group["alternative_set_roles"],
+                    item.alternative_set_role,
+                )
+                group["alternative_semantic_review_required"] = (
+                    group["alternative_semantic_review_required"]
+                    or item.alternative_semantic_review_required
+                )
+            if lane.alternative_gate is not None:
+                add_unique(
+                    group["alternative_gate_statuses"],
+                    lane.alternative_gate.status,
+                )
+                add_unique(
+                    group["applied_event_iris"],
+                    lane.alternative_gate.applied_revision_iri,
+                )
+                group["alternative_semantic_review_required"] = (
+                    group["alternative_semantic_review_required"]
+                    or lane.alternative_gate.semantic_review_required
+                )
+            group["row_is_target_all"] = (
+                group["row_is_target_all"] and row_is_target
+            )
+            group["row_is_target_any"] = group["row_is_target_any"] or row_is_target
+
+        return [
+            StagedRevisionResolvedTargetGroup(
+                group_key=group["group_key"],
+                queue=group["queue"],
+                action_type=group["action_type"],
+                action_label=group["action_label"],
+                resolved_target_iri=group["resolved_target_iri"],
+                resolved_target_record_kind=group["resolved_target_record_kind"],
+                lane_count=group["lane_count"],
+                row_iris=group["row_iris"],
+                source_revision_iris=group["source_revision_iris"],
+                requested_revision_iris=group["requested_revision_iris"],
+                current_revision_iris=group["current_revision_iris"],
+                latest_revision_iris=group["latest_revision_iris"],
+                restage_chain_iris=group["restage_chain_iris"],
+                applied_event_iris=group["applied_event_iris"],
+                row_is_target_all=group["row_is_target_all"],
+                row_is_target_any=group["row_is_target_any"],
+                alternative_set_iris=group["alternative_set_iris"],
+                alternative_set_source_iri=group["alternative_set_source_iri"],
+                alternative_set_roles=group["alternative_set_roles"],
+                alternative_gate_statuses=group["alternative_gate_statuses"],
+                alternative_semantic_review_required=group[
+                    "alternative_semantic_review_required"
+                ],
+            )
+            for key in group_order
+            for group in [groups[key]]
+        ]
+
+    @staticmethod
+    def _staged_recovery_resolved_target_group_counts(
+        groups: Iterable[StagedRevisionResolvedTargetGroup],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for group in groups:
+            counts[group.queue] = counts.get(group.queue, 0) + 1
+        return counts
 
     def _staged_recovery_lane_from_batch_item(
         self,

@@ -2325,6 +2325,12 @@ few useful gaps:
   nudged agents toward individual restage calls. Plans with restageable stale rows
   now start `suggested_next_actions` with a batch
   `restage_staged_revisions(..., dry_run=True)` action over that worklist.
+- A staged version-frontier trial found explicit recovery handoffs can include a
+  stale source and the source's current successor, inflating per-source lane and
+  queue counts even though there is one current target. Recovery plans now expose
+  `resolved_target_groups[]` and `resolved_target_group_counts`: keep `lanes[]`
+  for source provenance, but use resolved-target groups for the deduped
+  target-family worklist before mutation decisions.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

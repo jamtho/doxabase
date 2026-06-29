@@ -1432,6 +1432,15 @@ always action targets. Use `next_action_queue_item.resolved_target_iri` and
 `next_action.arguments["iri"]` when present; handled stale rows can route to a
 refreshed successor or applied event, while repair actions can create a new
 successor and therefore have no existing resolved target.
+When explicit `revision_iris` include stale sources and current successors,
+`lanes[]` intentionally preserves one row per requested source. Use
+`resolved_target_groups[]` for the collapsed target-family worklist:
+`source_revision_iris` / `requested_revision_iris` show which lanes collapsed
+into the same `resolved_target_iri`, while `row_iris`, `current_revision_iris`,
+`restage_chain_iris`, `applied_event_iris`, and alternative-set fields preserve
+the browsing context. `resolved_target_group_counts` is the deduped queue count
+by resolved target; compare it with `next_action_queue_item_counts` when the
+source-lane count looks inflated.
 
 `would_restage_revision_iris` is the post-review mechanical-restage list, not an
 apply queue. `repair_or_replace_source_revision_iris` is the broad source-row

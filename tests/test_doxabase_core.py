@@ -5821,6 +5821,7 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         stale.revision_iri,
         handled_successor.revision_iri,
     ]
+    assert plan.resolved_target_group_counts == plan.next_action_queue_item_counts
     assert plan.requires_recheck_after_each_apply is True
     assert set(plan.sequential_apply_recheck_candidate_iris) == {
         ready.revision_iri,
@@ -5840,6 +5841,52 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
         and action.arguments == {"iri": stale.revision_iri}
         for action in plan.suggested_next_actions
     )
+
+    alias_plan = db.plan_staged_revision_recovery(
+        [
+            handled_source.revision_iri,
+            handled_successor.revision_iri,
+            applied_source.revision_iri,
+        ]
+    )
+    assert alias_plan.next_action_queue_item_counts == {
+        "apply_after_review": 2,
+        "inspect_already_applied": 1,
+    }
+    assert alias_plan.resolved_target_group_counts == {
+        "apply_after_review": 1,
+        "inspect_already_applied": 1,
+    }
+    groups_by_target = {
+        group.resolved_target_iri: group
+        for group in alias_plan.resolved_target_groups
+    }
+    handled_group = groups_by_target[handled_successor.revision_iri]
+    assert handled_group.queue == "apply_after_review"
+    assert handled_group.lane_count == 2
+    assert handled_group.row_iris == [handled_successor.revision_iri]
+    assert handled_group.source_revision_iris == [
+        handled_source.revision_iri,
+        handled_successor.revision_iri,
+    ]
+    assert handled_group.requested_revision_iris == [
+        handled_source.revision_iri,
+        handled_successor.revision_iri,
+    ]
+    assert handled_group.current_revision_iris == [handled_successor.revision_iri]
+    assert handled_group.latest_revision_iris == [handled_successor.revision_iri]
+    assert set(handled_group.restage_chain_iris) == {
+        handled_source.revision_iri,
+        handled_successor.revision_iri,
+    }
+    assert handled_group.row_is_target_all is True
+    assert handled_group.row_is_target_any is True
+    applied_group = groups_by_target[applied_event.applied_revision_iri]
+    assert applied_group.queue == "inspect_already_applied"
+    assert applied_group.lane_count == 1
+    assert applied_group.applied_event_iris == [applied_event.applied_revision_iri]
+    assert applied_group.row_is_target_all is False
+    assert applied_group.row_is_target_any is False
 
     dry_run = db.restage_staged_revisions(
         plan.would_restage_revision_iris,

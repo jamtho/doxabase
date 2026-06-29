@@ -1450,6 +1450,10 @@ compact values. Inspect `status_before` and `decision_before` when deciding
 whether a row needs apply, repair, or replacement; use
 `routing_decision_before` / `routing_decision_after` for the effective route
 when `decision_*` is a broad stale-conflict explanation.
+For read-only planning over mixed source/current handoffs, prefer
+`plan_staged_revision_recovery()`: its `lanes[]` preserve per-source provenance,
+while `resolved_target_groups[]` collapses stale sources, refreshed successors,
+and applied-event aliases into a deduped target-family worklist.
 Guarded same-slot conflicts whose apply check already suggests
 `stage_map_assertion_change` replacement are skipped with
 `not_restageable_reason="same_slot_replacement"`; use `next_action_after` rather

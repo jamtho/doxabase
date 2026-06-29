@@ -4343,6 +4343,8 @@ plan.lane_counts
 plan.next_action_queue
 plan.next_action_queue_items
 plan.next_action_queue_item_counts
+plan.resolved_target_groups
+plan.resolved_target_group_counts
 plan.mutation_frontier_iris
 plan.requires_recheck_after_each_apply
 plan.semantic_review_required_queue_counts
@@ -4431,6 +4433,40 @@ example `would_restage`, `skipped_already_handled`, or
 `current_revision_iri` and `row_iri` set to a refreshed successor. An
 already-applied source can have `resolved_target_iri` set to the applied event
 and `row_is_target=False`.
+
+`plan.resolved_target_groups[]` is the target-family view over those source
+lanes. It collapses rows that point at the same queue and resolved target while
+keeping source provenance:
+
+```python
+group.group_key
+group.queue
+group.action_type
+group.action_label
+group.resolved_target_iri
+group.resolved_target_record_kind
+group.lane_count
+group.row_iris
+group.source_revision_iris
+group.requested_revision_iris
+group.current_revision_iris
+group.latest_revision_iris
+group.restage_chain_iris
+group.applied_event_iris
+group.row_is_target_all
+group.row_is_target_any
+group.alternative_set_iris
+group.alternative_set_source_iri
+group.alternative_set_roles
+group.alternative_gate_statuses
+group.alternative_semantic_review_required
+```
+
+Use `resolved_target_groups` when explicit `revision_iris` mix stale sources,
+current successors, and applied events: `lanes[]` remains one row per source,
+while groups show the true target-family worklist. `resolved_target_group_counts`
+counts those groups by queue and can be lower than `next_action_queue_item_counts`
+when aliases collapse to one current target.
 
 Use `next_action_queue_item.resolved_target_iri` or
 `next_action.arguments["iri"]` for the concrete target when present. Raw
