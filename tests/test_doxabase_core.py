@@ -2809,6 +2809,106 @@ def test_describe_assertion_support_explains_map_assertion_lore(
     assert nullable_support.matching_triples[0].object_datatype == str(XSD.boolean)
 
 
+def test_describe_assertion_support_suggests_dataset_context_for_relationships(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/orders#"
+    orders = f"{base}Orders"
+    customers = f"{base}Customers"
+    customer_id = f"{base}orders__customer_id"
+    customer_pk = f"{base}customers__id"
+    relationship = f"{base}orders_customer_fk"
+    caveat = f"{base}orders_customer_fk_caveat"
+
+    db.record_map_dataset(
+        orders,
+        label="Orders",
+        is_table=True,
+        path_templates=["warehouse/orders/*.parquet"],
+        layout_verification_status="rc:VerifiedByListingLayout",
+        layout_verification_note="Orders layout matched the warehouse listing.",
+    )
+    db.record_map_dataset(customers, label="Customers", is_table=True)
+    db.record_map_column(
+        customer_id,
+        table_iri=orders,
+        column_name="customer_id",
+        physical_type="rc:Varchar",
+    )
+    db.record_map_column(
+        customer_pk,
+        table_iri=customers,
+        column_name="id",
+        physical_type="rc:Varchar",
+    )
+    db.record_map_caveat(
+        caveat,
+        label="Orders customer identifier caveat",
+        description="Some historical orders use migrated customer identifiers.",
+        severity="rc:Moderate",
+        targets=[orders],
+    )
+    db.record_map_relationship(
+        relationship,
+        relationship_type="foreign_key",
+        label="orders customer fk",
+        from_column=customer_id,
+        to_column=customer_pk,
+        declared=False,
+    )
+
+    relationship_support = db.describe_assertion_support(
+        relationship,
+        "rc:foreignKeyFrom",
+        customer_id,
+    )
+
+    assert relationship_support.assertion_present is True
+    assert relationship_support.owner_dataset is None
+    assert any(
+        triple.subject == orders
+        and triple.predicate == RC + "pathTemplate"
+        and triple.object == "warehouse/orders/*.parquet"
+        for triple in relationship_support.nearby_context_triples
+    )
+    assert any(
+        link.scope == "owner_dataset"
+        and link.via_resource.iri == orders
+        and link.matched_resource.iri == customer_id
+        for link in relationship_support.nearby_caveat_links
+    )
+    assert relationship_support.suggested_next_actions[0].arguments["seed_iris"][
+        :3
+    ] == [
+        orders,
+        relationship,
+        customer_id,
+    ]
+    assert any(
+        action.tool_name == "describe_dataset"
+        and action.arguments["iri"] == orders
+        for action in relationship_support.suggested_next_actions
+    )
+
+    guessed_dataset_relationship = db.describe_assertion_support(
+        orders,
+        "rc:hasRelationship",
+        relationship,
+    )
+
+    assert guessed_dataset_relationship.assertion_present is False
+    assert guessed_dataset_relationship.owner_dataset is None
+    assert any(
+        action.tool_name == "describe_dataset"
+        and action.arguments["iri"] == orders
+        for action in guessed_dataset_relationship.suggested_next_actions
+    )
+    assert "Dataset-context suggested actions" in (
+        guessed_dataset_relationship.support_scope_note
+    )
+
+
 def test_stage_map_assertion_change_packages_support_context(
     tmp_path: Path,
 ) -> None:

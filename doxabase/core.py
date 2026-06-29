@@ -4654,9 +4654,11 @@ class DoxaBase:
             if subject_summary.owning_dataset_iri is not None
             else None
         )
-        nearby_context_iris = target_iris.copy()
-        if owner_dataset is not None:
-            nearby_context_iris.append(owner_dataset.iri)
+        dataset_context_iris = self._assertion_dataset_context_iris(
+            lookup_graphs,
+            target_resources,
+        )
+        nearby_context_iris = [*target_iris, *dataset_context_iris]
         nearby_context_triples = self._assertion_nearby_context_triples(
             nearby_context_iris,
             lookup_graphs,
@@ -4697,6 +4699,11 @@ class DoxaBase:
                 "owner_dataset and the owner-seeded suggested actions for broader "
                 "dataset lore."
             )
+        elif dataset_context_iris:
+            support_scope_note += (
+                " Dataset-context suggested actions are seeded from dataset/table "
+                "targets and owning datasets discovered around the assertion."
+            )
         absence_note = self._assertion_absence_note(
             matching_triples,
             same_subject_predicate_triples,
@@ -4722,9 +4729,7 @@ class DoxaBase:
             predicate_iri,
             requested_object,
             graph=graph,
-            owner_dataset_iri=(
-                owner_dataset.iri if owner_dataset is not None else None
-            ),
+            dataset_context_iris=dataset_context_iris,
         )
 
         return AssertionSupportDescription(
@@ -35352,6 +35357,26 @@ class DoxaBase:
                 target_iris.append(triple.object)
         return list(dict.fromkeys(target_iris))
 
+    def _assertion_dataset_context_iris(
+        self,
+        lookup_graphs: list[str],
+        target_resources: Iterable[ResourceSummary],
+    ) -> list[str]:
+        dataset_types = {
+            self.expand_iri("rc:Dataset"),
+            self.expand_iri("rc:Table"),
+        }
+        dataset_iris: list[str] = []
+        for resource in target_resources:
+            if (
+                set(self._types_from_graphs(lookup_graphs, resource.iri))
+                & dataset_types
+            ):
+                dataset_iris.append(resource.iri)
+            if resource.owning_dataset_iri is not None:
+                dataset_iris.append(resource.owning_dataset_iri)
+        return list(dict.fromkeys(dataset_iris))
+
     def _assertion_nearby_caveat_links(
         self,
         target_iris: Iterable[str],
@@ -35738,17 +35763,18 @@ class DoxaBase:
         requested_object: AssertionValue | None,
         *,
         graph: str | None,
-        owner_dataset_iri: str | None,
+        dataset_context_iris: Iterable[str],
     ) -> list[SuggestedNextAction]:
         seeds = []
-        if owner_dataset_iri is not None:
-            seeds.append(owner_dataset_iri)
+        dataset_seeds = list(dict.fromkeys(dataset_context_iris))
+        seeds.extend(dataset_seeds)
         seeds.append(subject_iri)
         if requested_object is not None and requested_object.value_kind in {
             "iri",
             "blank_node",
         }:
             seeds.append(requested_object.value)
+        seeds = list(dict.fromkeys(seeds))
         actions: list[SuggestedNextAction] = []
 
         def add_action(
@@ -35780,16 +35806,16 @@ class DoxaBase:
                 "resources before making map changes."
             ),
         )
-        if owner_dataset_iri is not None:
+        for dataset_iri in dataset_seeds:
             add_action(
                 "describe_dataset",
                 {
-                    "iri": owner_dataset_iri,
+                    "iri": dataset_iri,
                     "graph": None,
                 },
                 (
-                    "Inspect the owning dataset because column assertions often "
-                    "depend on table-level caveats and layout facts."
+                    "Inspect the dataset context because assertion targets often "
+                    "depend on table-level caveats, relationships, and layout facts."
                 ),
             )
         add_action(

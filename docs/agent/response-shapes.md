@@ -473,8 +473,10 @@ may be absent because the map already records a different, more careful value.
 `support_scope_note` explains which resources were searched for lore and which
 nearby resources only contributed caveat context. For column subjects,
 `owner_dataset` gives the owning dataset summary when the map has one; use the
-owner-seeded suggested actions for broader dataset lore. The first suggested
-context slice action is owner-seeded when the assertion subject is a column.
+owner-seeded suggested actions for broader dataset lore. Suggested context
+slice and `describe_dataset` actions are dataset-seeded when the assertion
+subject is a dataset/table or when gathered target resources include columns
+with owning datasets, such as relationship assertions over foreign-key columns.
 `absence_note` is present when an exact requested object is absent. It
 distinguishes wrong-object cases, where the requested predicate is present with
 different current values, from wrong-predicate cases, where the requested
