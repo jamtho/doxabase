@@ -2790,6 +2790,11 @@ few useful gaps:
   end to end. The remaining gap was consistency: plan primary calls often use
   `stage_pattern_promotion`, so that helper now forwards `profile_route_sources`
   just like `stage_systematisation`.
+- A recovery/export trial confirmed project TriG plus revision-snapshot JSON
+  is enough for unattended recovery, while workflow/review TriG alone is only
+  review context. `export_preflight` and `export_trig` now warn when a TriG
+  export omits history and snapshot rows so agents do not mistake review bundles
+  for recovery bundles.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

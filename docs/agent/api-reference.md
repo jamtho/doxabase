@@ -86,6 +86,10 @@ found. The scanner is conservative and not a complete secret detector, but it
 catches common private-key headers, bearer tokens, AWS access key IDs,
 `sk_` live/test style keys, key/password/secret assignments or query parameters,
 and explicit fake-secret test markers.
+TriG workflow/review exports also include a non-privacy `warnings` entry saying
+they are review context only and omit history plus revision snapshot rows. Use
+`export_handoff_bundle()` or project TriG plus `export_revision_snapshots()` for
+recovery handoffs.
 `export_preflight()` is a read-only companion for `export_graph()`,
 `export_trig()`, `export_revision_snapshots()`, and `export_handoff_bundle()`.
 It selects the same graph roles and snapshot rows, returns redacted match
@@ -118,6 +122,8 @@ classes, or predicates are part of the handoff. RDF exports do not include
 SQLite-side snapshot rows; pair them with `export_revision_snapshots()` when
 exact applied-diff or stale-drift
 triple reconstruction must survive import.
+The workflow/review export record repeats this as a `warnings` entry so callers
+do not mistake review context for a recovery bundle.
 Use `export_handoff_bundle()` when a receiver needs both project/history RDF and
 exact revision snapshots. It writes the project TriG artifact and companion
 snapshot JSON together, preflighting both output paths and combined privacy

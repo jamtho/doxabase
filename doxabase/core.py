@@ -525,6 +525,7 @@ class GraphExportRecord:
     bytes_written: int
     sensitive_literal_count: int = 0
     privacy_warnings: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -41907,7 +41908,11 @@ class DoxaBase:
             "is shareable or free of user-specific paths, endpoint details, or "
             "confidential project facts."
         )
-        warnings = [*privacy_warnings, scanner_note]
+        export_scope_warnings = self._export_scope_warnings(
+            export_kind=export_kind,
+            graph_names=graph_names,
+        )
+        warnings = [*privacy_warnings, *export_scope_warnings, scanner_note]
         snapshot_revision_iris = list(
             dict.fromkeys(entry["revision_iri"] for entry in snapshot_entries)
         )
@@ -41999,6 +42004,22 @@ class DoxaBase:
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
         )
+
+    @staticmethod
+    def _export_scope_warnings(
+        *,
+        export_kind: str,
+        graph_names: list[str],
+    ) -> list[str]:
+        if export_kind != "trig":
+            return []
+        if graph_names != list(EXPORT_PRESETS["workflow"]):
+            return []
+        return [
+            "This is review context only: it omits history and revision snapshot "
+            "rows. Use export_handoff_bundle or project TriG plus "
+            "export_revision_snapshots for recovery."
+        ]
 
     def export_handoff_bundle(
         self,
@@ -42731,6 +42752,7 @@ class DoxaBase:
             bytes_written=bytes_written,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+            warnings=privacy_warnings,
         )
 
     def export_trig(
@@ -42745,6 +42767,10 @@ class DoxaBase:
         graph_names = self._graph_names_for_export(graphs, default_preset="project")
         sensitive_literal_count, privacy_warnings = self._export_privacy_warnings(
             graph_names
+        )
+        export_scope_warnings = self._export_scope_warnings(
+            export_kind="trig",
+            graph_names=graph_names,
         )
         self._raise_if_sensitive_export_blocked(
             fail_on_sensitive=fail_on_sensitive,
@@ -42763,6 +42789,7 @@ class DoxaBase:
             bytes_written=bytes_written,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+            warnings=[*privacy_warnings, *export_scope_warnings],
         )
 
     def clear_graph(self, graph: str, *, allow_immutable: bool = False) -> None:

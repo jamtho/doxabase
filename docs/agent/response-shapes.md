@@ -4279,6 +4279,7 @@ export.triples
 export.bytes_written
 export.sensitive_literal_count
 export.privacy_warnings
+export.warnings
 ```
 
 `sensitive_literal_count` and `privacy_warnings` come from a conservative
@@ -4295,6 +4296,10 @@ These fields are not a
 path/shareability hygiene signal: non-secret local paths, object-store URIs,
 endpoint URLs, and relative paths remain in faithful exports unless the caller
 keeps them out of the graph or replaces them before export.
+For TriG workflow/review exports, `warnings` also says that the artifact is
+review context only and omits history plus revision snapshot rows. Use
+`export_handoff_bundle()` or project TriG plus `export_revision_snapshots()` for
+recovery handoffs.
 
 `db.export_revision_snapshots(path, revision_iris=None, graph_roles=None, fail_on_sensitive=False)`
 returns `RevisionSnapshotBundleExportRecord`:

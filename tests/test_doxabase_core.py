@@ -1913,7 +1913,10 @@ def test_export_preflight_returns_scanner_clean_export_action(
     assert preflight.sensitive_literal_count == 0
     assert preflight.matches == []
     assert preflight.privacy_warnings == []
-    assert preflight.warnings == [preflight.scanner_note]
+    assert len(preflight.warnings) == 2
+    assert "review context only" in preflight.warnings[0]
+    assert "export_handoff_bundle" in preflight.warnings[0]
+    assert preflight.warnings[1] == preflight.scanner_note
     assert [action.tool_name for action in preflight.suggested_next_actions] == [
         "export_trig"
     ]
@@ -1926,6 +1929,14 @@ def test_export_preflight_returns_scanner_clean_export_action(
     ]
     assert action.arguments["fail_on_sensitive"] is True
     assert not (tmp_path / "<project-review-bundle.trig>").exists()
+
+    workflow_export = db.export_trig(tmp_path / "workflow.trig", graphs="workflow")
+    assert "review context only" in workflow_export.warnings[0]
+
+    project_preflight = db.export_preflight(export_kind="trig", graphs="project")
+    assert project_preflight.warnings == [project_preflight.scanner_note]
+    handoff_preflight = db.export_preflight(export_kind="handoff_bundle")
+    assert handoff_preflight.warnings == [handoff_preflight.scanner_note]
 
 
 def test_replace_graph_triples_can_create_same_count_digest_drift(
@@ -2125,6 +2136,7 @@ def test_export_trig_preserves_graph_roles_for_round_trip(tmp_path: Path) -> Non
         graph: db.triple_count(graph) for graph in result.graphs
     }
     assert result.triples == sum(db.triple_count(graph) for graph in result.graphs)
+    assert result.warnings == []
 
     dataset = Dataset()
     dataset.parse(export_path, format="trig")
