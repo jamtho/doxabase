@@ -228,6 +228,11 @@ For same-slot repair lanes before a successor exists, `mutation_frontier_iris`
 can be empty because the concrete mutation is a helper call rather than an
 existing revision target. Use `lane.next_action.arguments` or
 `lane.repair_draft.preferred_action.arguments` for that reviewed repair.
+When explicit `revision_iris` include an `rc:StagedRevision` history row with
+no staged patch payload, the planner keeps valid patch rows in the same request
+and returns an `informational` lane with `missing_patch_payload`. Inspect it with
+`describe_graph_revision` and import the complete staged handoff if patch
+payloads are expected.
 When RDF/history handoffs have incomplete snapshot evidence, top-level
 `suggested_next_actions` starts with `import_revision_snapshots` or `import_trig`
 preflight before apply/restage actions. After those preflight actions, when

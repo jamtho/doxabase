@@ -6747,6 +6747,75 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     )
 
 
+def test_plan_staged_revision_recovery_keeps_valid_rows_with_patchless_history(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    ready = db.stage_graph_revision(
+        summary="Stage ready table",
+        rationale="This staged source has a complete patch payload.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:ReadyMixedHandoff a rc:Dataset .
+                """,
+            }
+        ],
+    )
+    patchless_iri = "https://example.test/project#PatchlessStagedMetadata"
+    db.record_graph_revision(
+        summary="Patchless staged metadata",
+        rationale="This mimics an RDF-only handoff row without staged patch triples.",
+        changed_graphs=["map"],
+        revision_type="rc:StagedRevision",
+        revision_iri=patchless_iri,
+    )
+    counts_before = _mutable_graph_counts(db)
+
+    plan = db.plan_staged_revision_recovery([ready.revision_iri, patchless_iri])
+
+    assert _mutable_graph_counts(db) == counts_before
+    assert plan.returned_count == 2
+    assert plan.processed_revision_iris == [ready.revision_iri, patchless_iri]
+    assert plan.next_action_queue_item_counts == {
+        "apply_after_review": 1,
+        "informational": 1,
+    }
+    lanes_by_source = {lane.source_revision_iri: lane for lane in plan.lanes}
+    assert lanes_by_source[ready.revision_iri].lane == "apply_after_review"
+    patchless_lane = lanes_by_source[patchless_iri]
+    assert patchless_lane.lane == "informational"
+    assert patchless_lane.batch_action == "skipped_missing_patch_payload"
+    assert patchless_lane.not_restageable_reason == "missing_patch_payload"
+    assert patchless_lane.next_action is not None
+    assert patchless_lane.next_action.tool_name == "describe_graph_revision"
+    assert patchless_lane.next_action_queue_item is not None
+    assert patchless_lane.next_action_queue_item.record_kind == "history_record"
+    assert patchless_lane.next_action_queue_item.resolved_target_iri == patchless_iri
+    assert plan.current_revision_by_source[patchless_iri] == patchless_iri
+    assert plan.not_restageable_revision_iris_by_reason[
+        "missing_patch_payload"
+    ] == [patchless_iri]
+    assert patchless_iri in plan.review_revision_iris
+    assert patchless_iri in plan.recommended_review_iris
+    assert any(
+        action.tool_name == "describe_graph_revision"
+        and action.arguments["iri"] == patchless_iri
+        for action in plan.suggested_next_actions
+    )
+    assert any("without patch payload" in warning for warning in plan.warnings)
+
+    patchless_only = db.plan_staged_revision_recovery([patchless_iri])
+    assert patchless_only.returned_count == 1
+    assert patchless_only.lanes[0].lane == "informational"
+    assert patchless_only.lanes[0].not_restageable_reason == "missing_patch_payload"
+    assert patchless_only.next_action_queue_item_counts == {"informational": 1}
+
+
 def test_stale_row_semantics_with_multiple_current_values_does_not_draft_repair(
     tmp_path: Path,
 ) -> None:

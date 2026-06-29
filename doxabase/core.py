@@ -27581,11 +27581,25 @@ class DoxaBase:
                 total_count=total_count,
             )
 
-        batch = self.restage_staged_revisions(
-            selected_revision_iris,
-            dry_run=True,
-            validation_scope=validation_scope,
-        )
+        patchless_staged_history_iris: list[str] = []
+        restage_revision_iris = selected_revision_iris
+        if selection_mode == "explicit_revision_iris":
+            restage_revision_iris, patchless_staged_history_iris = (
+                self._staged_recovery_split_patchless_staged_history(
+                    selected_revision_iris
+                )
+            )
+
+        if restage_revision_iris:
+            batch = self.restage_staged_revisions(
+                restage_revision_iris,
+                dry_run=True,
+                validation_scope=validation_scope,
+            )
+        else:
+            batch = self._empty_staged_recovery_batch(
+                selected_revision_iris,
+            )
         summary_by_iri = {
             summary.revision_iri: summary for summary in batch.revision_summaries
         }
@@ -27601,6 +27615,32 @@ class DoxaBase:
             lanes.append(lane)
             if warning is not None:
                 warnings.append(warning)
+
+        history_graphs = self._expand_graphs(["history"])
+        patchless_batch_items = [
+            self._patchless_staged_history_recovery_item(
+                revision_iri,
+                history_graphs=history_graphs,
+            )
+            for revision_iri in patchless_staged_history_iris
+        ]
+        for item in patchless_batch_items:
+            lane, warning = self._staged_recovery_lane_from_batch_item(
+                item,
+                summary_by_iri=summary_by_iri,
+                include_drafts=False,
+                validation_scope=validation_scope,
+            )
+            lanes.append(lane)
+            if warning is not None:
+                warnings.append(warning)
+            warnings.append(
+                "Explicit recovery input includes staged revision history "
+                f"metadata without patch payload: {item.source_revision_iri}. "
+                "It cannot be applied or restaged until a project/history RDF "
+                "bundle with patch entries is imported; valid staged patch rows "
+                "in the same request were still planned."
+            )
 
         if batch.bundle_summary.sequential_apply_recheck_candidate_iris:
             warnings.append(
@@ -27658,13 +27698,38 @@ class DoxaBase:
             lanes,
             would_restage_revision_iris=batch.would_restage_revision_iris,
         )
+        processed_revision_iris = list(dict.fromkeys(selected_revision_iris))
+        current_revision_by_source = {
+            **batch.current_revision_by_source,
+            **{
+                revision_iri: revision_iri
+                for revision_iri in patchless_staged_history_iris
+            },
+        }
+        review_revision_iris = list(
+            dict.fromkeys(
+                [
+                    *batch.review_revision_iris,
+                    *patchless_staged_history_iris,
+                ]
+            )
+        )
+        not_restageable_revision_iris_by_reason = {
+            key: list(values)
+            for key, values in batch.not_restageable_revision_iris_by_reason.items()
+        }
+        if patchless_staged_history_iris:
+            not_restageable_revision_iris_by_reason.setdefault(
+                "missing_patch_payload",
+                [],
+            ).extend(patchless_staged_history_iris)
         return StagedRevisionRecoveryPlan(
             result_kind="staged_revision_recovery_plan",
             helper="plan_staged_revision_recovery",
             mode="read_only_plan",
             selection_mode=selection_mode,
             requested_revision_iris=requested_revision_iris,
-            processed_revision_iris=batch.processed_revision_iris,
+            processed_revision_iris=processed_revision_iris,
             current_staged_work_only=current_staged_work_only,
             include_drafts=include_drafts,
             validation_scope=validation_scope,
@@ -27672,7 +27737,7 @@ class DoxaBase:
             limit=limit,
             offset=offset,
             count=total_count,
-            returned_count=len(batch.processed_revision_iris),
+            returned_count=len(processed_revision_iris),
             total_count=total_count,
             lanes=lanes,
             lane_counts=lane_counts,
@@ -27702,11 +27767,18 @@ class DoxaBase:
                 if lane.lane == "repair_or_replace"
             ],
             not_restageable_revision_iris_by_reason=(
-                batch.not_restageable_revision_iris_by_reason
+                not_restageable_revision_iris_by_reason
             ),
-            current_revision_by_source=batch.current_revision_by_source,
-            review_revision_iris=batch.review_revision_iris,
-            recommended_review_iris=batch.bundle_summary.recommended_review_iris,
+            current_revision_by_source=current_revision_by_source,
+            review_revision_iris=review_revision_iris,
+            recommended_review_iris=list(
+                dict.fromkeys(
+                    [
+                        *batch.bundle_summary.recommended_review_iris,
+                        *patchless_staged_history_iris,
+                    ]
+                )
+            ),
             recommended_mutation_review_iris=(
                 batch.bundle_summary.recommended_mutation_review_iris
             ),
@@ -27732,6 +27804,168 @@ class DoxaBase:
             note=(
                 "Read-only staged revision recovery plan. It did not stage, "
                 "restage, apply, export, or otherwise mutate graph state."
+            ),
+        )
+
+    def _staged_recovery_split_patchless_staged_history(
+        self,
+        revision_iris: Iterable[str],
+    ) -> tuple[list[str], list[str]]:
+        history_graphs = self._expand_graphs(["history"])
+        restage_revision_iris: list[str] = []
+        patchless_staged_history_iris: list[str] = []
+        staged_revision_type = self.expand_iri("rc:StagedRevision")
+        graph_revision_type = self.expand_iri("rc:GraphRevision")
+        for revision_iri in revision_iris:
+            revision_value = self.expand_iri(revision_iri)
+            is_graph_revision = (
+                self._subject_exists(revision_value, history_graphs)
+                and graph_revision_type
+                in self._types_from_graphs(history_graphs, revision_value)
+            )
+            revision_type = self._first_object(
+                history_graphs,
+                revision_value,
+                "rc:revisionType",
+            )
+            has_patch_payload = bool(
+                self._objects(history_graphs, revision_value, "rc:hasGraphPatch")
+            )
+            applies_staged_revision = self._first_object(
+                history_graphs,
+                revision_value,
+                "rc:appliesStagedRevision",
+            )
+            if (
+                is_graph_revision
+                and revision_type == staged_revision_type
+                and not has_patch_payload
+                and applies_staged_revision is None
+            ):
+                patchless_staged_history_iris.append(revision_value)
+            else:
+                restage_revision_iris.append(revision_iri)
+        return restage_revision_iris, patchless_staged_history_iris
+
+    def _empty_staged_recovery_batch(
+        self,
+        requested_revision_iris: list[str],
+    ) -> StagedGraphRevisionBatchRestageRecord:
+        snapshot_evidence = self._staged_revisions_snapshot_evidence_summary([])
+        return StagedGraphRevisionBatchRestageRecord(
+            requested_revision_iris=requested_revision_iris,
+            processed_revision_iris=[],
+            dry_run=True,
+            would_restage_revision_iris=[],
+            repair_first_revision_iris=[],
+            restaged_revision_iris=[],
+            skipped_revision_iris=[],
+            already_handled_revision_iris=[],
+            not_restageable_revision_iris=[],
+            not_restageable_revision_iris_by_reason={},
+            restaged_revision_by_source={},
+            current_revision_by_source={},
+            review_revision_iris=[],
+            items=[],
+            revision_summaries=[],
+            bundle_summary=self._staged_revisions_bundle_summary(
+                [],
+                descriptions=[],
+                snapshot_evidence=snapshot_evidence,
+            ),
+            export_record=None,
+        )
+
+    def _patchless_staged_history_recovery_item(
+        self,
+        revision_iri: str,
+        *,
+        history_graphs: list[str],
+    ) -> StagedGraphRevisionBatchRestageItem:
+        revision = self.describe_graph_revision(revision_iri)
+        snapshot_evidence = self._revision_snapshot_evidence_status(
+            revision.iri,
+            history_graphs,
+        )
+        snapshot_completeness = self._snapshot_evidence_completeness_label(
+            snapshot_evidence
+        )
+        staged_validation_status = self._staged_validation_status(
+            conforms=revision.validation_conforms,
+            result_count=revision.validation_result_count,
+        )
+        arguments = {"iri": revision.iri, "graph": "history"}
+        next_action = RevisionNextAction(
+            action_type="inspect_missing_patch_payload",
+            queue="informational",
+            action_label="Inspect patchless staged metadata",
+            tool_name="describe_graph_revision",
+            mcp_tool_name="doxabase.describe_graph_revision",
+            arguments=arguments,
+            reason=(
+                "This explicit recovery input is staged revision history metadata "
+                "without rc:hasGraphPatch entries, so it cannot be applied or "
+                "restaged as a staged patch. Inspect the graph revision and import "
+                "the complete staged handoff if patch payloads are expected."
+            ),
+            call=self._suggested_call_string("describe_graph_revision", arguments),
+            source="plan_staged_revision_recovery",
+        )
+        suggested_action = SuggestedNextAction(
+            action_label=next_action.action_label,
+            tool_name=next_action.tool_name or "describe_graph_revision",
+            mcp_tool_name=next_action.mcp_tool_name
+            or "doxabase.describe_graph_revision",
+            arguments=arguments,
+            reason=next_action.reason,
+            call=next_action.call or "",
+        )
+        queue_item = self._revision_next_action_queue_item(
+            row_iri=revision.iri,
+            next_action=next_action,
+            record_kind="history_record",
+            application_status="not_available",
+            application_decision="missing_patch_payload",
+            staged_validation_status=staged_validation_status,
+        )
+        return StagedGraphRevisionBatchRestageItem(
+            source_revision_iri=revision.iri,
+            summary=revision.summary,
+            status_before="not_available",
+            decision_before="missing_patch_payload",
+            routing_decision_before="inspect_missing_patch_payload",
+            stale_resolution_state_before=None,
+            blocking_reasons_before=["missing_patch_payload"],
+            source_staged_validation_status=staged_validation_status,
+            source_validation_result_count=revision.validation_result_count,
+            source_snapshot_evidence=snapshot_evidence,
+            source_snapshot_evidence_completeness=snapshot_completeness,
+            status_after="not_available",
+            decision_after="missing_patch_payload",
+            routing_decision_after="inspect_missing_patch_payload",
+            stale_resolution_state_after=None,
+            blocking_reasons_after=["missing_patch_payload"],
+            current_staged_validation_status=staged_validation_status,
+            current_validation_result_count=revision.validation_result_count,
+            current_snapshot_evidence=snapshot_evidence,
+            current_snapshot_evidence_completeness=snapshot_completeness,
+            triples_to_add_after=0,
+            triples_to_remove_after=0,
+            action="skipped_missing_patch_payload",
+            not_restageable_reason="missing_patch_payload",
+            restaged_from=None,
+            restaged_revision_iri=None,
+            current_restaged_by=None,
+            current_revision_iri=revision.iri,
+            next_action_after=next_action,
+            next_action_queue_item_after=queue_item,
+            suggested_next_actions_after=[suggested_action],
+            repair_first_warning=None,
+            note=(
+                "Skipped because this explicit recovery input is an "
+                "rc:StagedRevision history record without staged patch entries. "
+                "It is useful as metadata, but cannot be applied or mechanically "
+                "restaged until patch payloads are imported."
             ),
         )
 
