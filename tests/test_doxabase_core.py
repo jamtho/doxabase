@@ -21458,6 +21458,63 @@ def test_record_query_result_writes_query_source_evidence(
     assert result.observation_iri in {match.iri for match in matches.matches}
 
 
+def test_record_query_result_rejects_conflicting_source_span_reuse_without_mutation(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    source_span = "https://example.test/evidence#orders-paid-count-query-span"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+
+    first = db.record_query_result(
+        summary="Orders paid-count query returned two rows.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path="queries/orders_paid_count.sql",
+        query_source_section="paid-count aggregate",
+        start_line=3,
+        end_line=5,
+        result_sources=["/tmp/orders-paid-count.json"],
+        source_span_iri=source_span,
+    )
+    assert first.source_span_iri == source_span
+    before_counts = _mutable_graph_counts(db)
+
+    with pytest.raises(DoxaBaseError, match="source_span_iri.*conflicting"):
+        db.record_query_result(
+            summary="Orders paid-count rerun used a different query file.",
+            observed_asset=dataset,
+            execution_status="succeeded",
+            engine="python-csv",
+            query_source_path="queries/orders_paid_count_v2.sql",
+            query_source_section="paid-count aggregate",
+            start_line=3,
+            end_line=5,
+            result_sources=["/tmp/orders-paid-count-v2.json"],
+            source_span_iri=source_span,
+        )
+
+    assert _mutable_graph_counts(db) == before_counts
+    assert db.validate_graph(scope="all").conforms
+
+    reused = db.record_query_result(
+        summary="Orders paid-count query reran from the same source range.",
+        observed_asset=dataset,
+        execution_status="succeeded",
+        engine="python-csv",
+        query_source_path="queries/orders_paid_count.sql",
+        query_source_section="paid-count aggregate",
+        start_line=3,
+        end_line=5,
+        result_sources=["/tmp/orders-paid-count-repeat.json"],
+        source_span_iri=source_span,
+    )
+
+    assert reused.source_span_iri == source_span
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_record_query_result_aggregate_payloads_stay_observations_without_profile_fields(
     tmp_path: Path,
 ) -> None:

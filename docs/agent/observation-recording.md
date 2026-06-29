@@ -450,6 +450,9 @@ result or failure as observation/evidence, links `query_source_path` as an
 profile-like result fields become profile observations; failed, blocked,
 cancelled, or partial attempts stay ordinary observations and should not carry
 profile counts.
+Only reuse an explicit `source_span_iri` when the source path, section, line
+range, and source kind match the existing span; use a new span IRI for a
+different source location.
 
 ## Identifiers
 

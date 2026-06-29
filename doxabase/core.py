@@ -22228,6 +22228,15 @@ class DoxaBase:
             raise DoxaBaseError(
                 "profile result fields require execution_status='succeeded'"
             )
+        if query_source_path_value is not None:
+            self._preflight_source_span_reuse(
+                source_span_iri=source_span_iri,
+                source_path=query_source_path_value,
+                source_section=query_source_section_value,
+                start_line=start_line,
+                end_line=end_line,
+                source_kind="rc:QuerySource",
+            )
         observation_type: TypingLiteral["observation", "profile"] = (
             "profile" if profile_payload_present else "observation"
         )
@@ -22318,6 +22327,50 @@ class DoxaBase:
             parts.append(f"Failure summary: {failure_summary}")
         return " ".join(parts)
 
+    def _preflight_source_span_reuse(
+        self,
+        *,
+        source_span_iri: str | None,
+        source_path: str,
+        source_section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        source_kind: str | None = None,
+    ) -> None:
+        if source_span_iri is None:
+            return
+        source_span_value = source_span_iri.strip()
+        if not source_span_value:
+            return
+
+        def reject_conflicting(
+            predicate: str,
+            expected: str,
+        ) -> None:
+            existing_values = set(
+                self._objects(["evidence"], source_span_value, predicate)
+            )
+            if existing_values and existing_values != {expected}:
+                raise DoxaBaseError(
+                    "source_span_iri reuses an existing source span with "
+                    f"conflicting {predicate}"
+                )
+
+        reject_conflicting("rc:sourcePath", source_path)
+        if source_section is not None:
+            reject_conflicting("rc:sourceSection", source_section)
+        if start_line is not None:
+            reject_conflicting("rc:startLine", str(start_line))
+        if end_line is not None:
+            reject_conflicting("rc:endLine", str(end_line))
+        source_kind_value = (
+            source_kind.strip()
+            if source_kind and source_kind.strip()
+            else None
+        )
+        if source_kind_value is not None:
+            reject_conflicting("rc:sourceKind", self.expand_iri(source_kind_value))
+
     def _insert_evidence_source_span(
         self,
         *,
@@ -22329,6 +22382,14 @@ class DoxaBase:
         source_kind: str | None = None,
         source_span_iri: str | None = None,
     ) -> tuple[str, int]:
+        self._preflight_source_span_reuse(
+            source_span_iri=source_span_iri,
+            source_path=source_path,
+            source_section=source_section,
+            start_line=start_line,
+            end_line=end_line,
+            source_kind=source_kind,
+        )
         source_span_subject = URIRef(
             source_span_iri or self._mint_iri("source-span")
         )
@@ -22479,6 +22540,15 @@ class DoxaBase:
         for name, value in {"start_line": start_line, "end_line": end_line}.items():
             if value is not None and value < 1:
                 raise DoxaBaseError(f"{name} must be a positive one-based line number")
+        if source_path_value is not None:
+            self._preflight_source_span_reuse(
+                source_span_iri=source_span_iri,
+                source_path=source_path_value,
+                source_section=source_section_value,
+                start_line=start_line,
+                end_line=end_line,
+                source_kind=source_kind_value,
+            )
 
         observation_subject = URIRef(observation_iri or self._mint_iri("observation"))
         claim_subject = URIRef(claim_iri or self._mint_iri("claim"))
@@ -22822,6 +22892,15 @@ class DoxaBase:
         for name, value in {"start_line": start_line, "end_line": end_line}.items():
             if value is not None and value < 1:
                 raise DoxaBaseError(f"{name} must be a positive one-based line number")
+        if source_path_value is not None:
+            self._preflight_source_span_reuse(
+                source_span_iri=source_span_iri,
+                source_path=source_path_value,
+                source_section=source_section_value,
+                start_line=start_line,
+                end_line=end_line,
+                source_kind=source_kind_value,
+            )
 
         pattern_subject = URIRef(pattern_iri or self._mint_iri("pattern"))
         evidence_subject = (
@@ -24001,6 +24080,15 @@ class DoxaBase:
         for name, value in {"start_line": start_line, "end_line": end_line}.items():
             if value is not None and value < 1:
                 raise DoxaBaseError(f"{name} must be a positive one-based line number")
+        if source_path_value is not None:
+            self._preflight_source_span_reuse(
+                source_span_iri=source_span_iri,
+                source_path=source_path_value,
+                source_section=source_section_value,
+                start_line=start_line,
+                end_line=end_line,
+                source_kind=source_kind_value,
+            )
 
         reconsideration_subject = URIRef(
             reconsideration_iri or self._mint_iri("claim-reconsideration")
