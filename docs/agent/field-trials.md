@@ -2814,6 +2814,13 @@ few useful gaps:
   Followthrough items now expose `primary_action_kind` and
   `primary_action_writes_graph`; scripts should match both the semantic move
   and intended action kind before staging or recording changes.
+- A staged conflict/version trial confirmed the full recovery and version
+  browsing path works across stale sources, mechanical restage successors,
+  same-slot repair, one-row apply, post-apply replan, lineage, applied diffs,
+  and graph snapshots. The remaining risk was doc hopping, so
+  `staged-revisions.md` now has a compact cookbook: plan, complete imports,
+  dry-run, restage only `would_restage_revision_iris`, check/apply one row,
+  rerun the planner, and handle repair lanes through explicit helper actions.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

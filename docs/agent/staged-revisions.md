@@ -269,6 +269,45 @@ recovery, dry-run batch restage when the plan points at stale mechanical rows,
 restage only `would_restage_revision_iris`, apply at most one ready row, then
 rerun the planner before the next mutation. Keep `repair_or_replace` and
 informational rows out of bulk apply/restage lanes.
+Compact cookbook for a mixed stale queue:
+
+1. `plan = plan_staged_revision_recovery(current_staged_work_only=True,
+   include_drafts=True, drift_detail="exact")`.
+2. If `plan.suggested_next_actions` starts with `import_trig` or
+   `import_revision_snapshots`, complete the handoff import first and rerun the
+   plan.
+3. Review `plan.lanes[]`. Treat `would_restage_revision_iris` as the only
+   mechanical restage worklist; do not feed `repair_or_replace`,
+   `skipped_not_restageable`, informational, or already-applied rows into a bulk
+   restage.
+4. Run `restage_staged_revisions(revision_iris=plan.would_restage_revision_iris,
+   dry_run=True)` and compare its classifications with the plan.
+5. If the dry run still matches your review, run the real batch over the same
+   worklist. Treat `restaged_revision_iris` as created successors, not as an
+   apply queue.
+6. For each candidate successor, call `check_staged_revision_apply()` and apply
+   at most one `ready` row after review.
+7. After any apply, rerun
+   `plan_staged_revision_recovery(current_staged_work_only=True)` before the
+   next mutation. `post_apply_recheck_revision_iris` is only an affected-sibling
+   subset, not the whole remaining frontier.
+8. For `repair_or_replace` / same-slot lanes, follow
+   `helper_mutation_frontier_actions` or the lane repair draft, usually a
+   reviewed `stage_map_assertion_change(..., restages_revision=...)`, then
+   check the new successor before applying.
+
+Version browsing cookbook:
+
+- Start from an old staged source with `describe_revision_lineage(iri,
+  include_apply_checks=True, drift_detail="exact")`; follow
+  `current_restaged_by`, `restaged_by`, or `applied_by` before mutating.
+- Start from an applied event with `describe_graph_revision()` and
+  `describe_applied_revision_diff(include_triples=False)`; use
+  `describe_revision_graph_snapshot()` only when you need exact before/after
+  triples.
+- Start from current staged work with
+  `list_graph_revisions(current_staged_work_only=True,
+  include_apply_checks=True)` and route from each row's current apply check.
 Use `repair_or_replace_source_revision_iris` as the broad top-level repair
 worklist. It includes every lane currently routing to `repair_or_replace`,
 including same-slot replacement cases that may not be listed in
