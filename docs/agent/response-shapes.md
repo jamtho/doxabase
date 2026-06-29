@@ -2213,6 +2213,10 @@ review, and query-context repair lanes visible after one related staged row has
 been exported. `matched_candidate_revision_iris` can name support-only staged
 rows that should travel with the lane, but it does not mean the lane is
 satisfied unless the lane is absent from `open_profile_review_lanes`.
+Metric advisory route sources carry `advisory_statuses`; when a rerun reports
+only `project_metric_defined`, those inspection-only metric routes are not
+reported as open review lanes. Use the metric context actions for handoff
+inspection, not as evidence that more vocabulary promotion is still required.
 When `candidate_count` is `0`, `export` is `None` and no Markdown artifact was
 written; inspect `warnings` and `open_profile_review_lanes` rather than
 assuming the `path` argument was created.

@@ -103,3 +103,29 @@ def test_local_csv_query_smoke_example_runs() -> None:
     assert "Evidence status: succeeded" in output
     assert "Evidence engine: python-csv" in output
     assert "Validation conforms: True" in output
+
+
+def test_ais_query_overlay_smoke_example_runs() -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "examples" / "ais-query-overlay-smoke.py")],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    output = result.stdout
+
+    assert "# DoxaBase AIS Query Overlay Smoke" in output
+    assert "Baseline readiness: needs_review" in output
+    assert "Overlay repair: remove_stale_partition_scheme_link (1 pending)" in output
+    assert "Staged repair check: ready / review_then_apply" in output
+    assert "Applied repair: 1 patch, 1 triple removed" in output
+    assert "Repaired readiness: ready_for_query_planning" in output
+    assert "Draft handoff: runtime_resolution_required" in output
+    assert "Ready for execution: False" in output
+    assert "Scan function: read_parquet" in output
+    assert "URI template: s3://ais-noaa/index/*/*.parquet" in output
+    assert "Required bindings: []" in output
+    assert "Execution blockers: ['runtime_resolution_required']" in output
+    assert "Validation conforms: True" in output

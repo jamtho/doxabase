@@ -29392,6 +29392,98 @@ def test_draft_profile_map_updates_promotes_ambiguous_metric_with_pattern(
     assert project_metric in {item.iri for item in staged.revision_anchors}
 
 
+def test_applied_metric_promotion_closes_profile_review_lane(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+    project_metric = "https://example.test/project#CompletenessScore"
+    db.record_map_dataset(
+        dataset,
+        label="Orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    bundle = db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders profile with an undefined project metric.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        row_count=100,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        column_defaults={"update_map_column": False},
+    )
+    pattern = db.record_pattern(
+        summary="Orders completeness score is reusable metric vocabulary.",
+        pattern_text=(
+            "CompletenessScore is the share of records with complete required "
+            "fields and should be typed as reusable profile metric vocabulary."
+        ),
+        rationale="The pattern and profile run share one evidence resource.",
+        pattern_targets=[project_metric],
+        supporting_observations=(
+            bundle.handoff_entrypoints.profile_observation_iris
+        ),
+        evidence_iri=evidence,
+        map_implications=[project_metric],
+    )
+
+    draft = db.draft_profile_map_updates(dataset, evidence)
+    promotion_action = next(
+        action
+        for action in draft.suggested_next_action_groups["metric_vocabulary_review"]
+        if action.tool_name == "stage_pattern_promotion"
+    )
+    assert promotion_action.source_profile_advisory["advisory_statuses"] == [
+        "project_metric_undefined",
+    ]
+    staged_promotion = db.stage_pattern_promotion(
+        **promotion_action.arguments,
+        profile_route_sources=[promotion_action.source_profile_advisory],
+    )
+    staged_iri = staged_promotion.staged_revisions[0].revision_iri
+    assert db.apply_staged_revision(staged_iri).patches_applied == 1
+
+    rerun = db.draft_profile_map_updates(dataset, evidence)
+    assert rerun.metric_advisory_status_counts == {
+        "project_metric_defined": 1,
+    }
+    defined_action = rerun.suggested_next_action_groups[
+        "metric_vocabulary_review"
+    ][0]
+    assert defined_action.source_profile_advisory["advisory_statuses"] == [
+        "project_metric_defined",
+    ]
+
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "orders-profile-metric-review.md",
+    )
+
+    assert review.candidate_revision_iris == [staged_iri]
+    assert review.open_profile_review_lanes == []
+    candidate = review.candidates[0]
+    assert any(
+        group["review_lane"] == "metric_vocabulary_review"
+        and group["match_strength"] == "direct_action"
+        for group in candidate.profile_route_groups
+    )
+    exported = (tmp_path / "orders-profile-metric-review.md").read_text(
+        encoding="utf-8"
+    )
+    assert "### Open Profile Review Lanes" not in exported
+
+
 def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     tmp_path: Path,
 ) -> None:

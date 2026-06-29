@@ -23161,6 +23161,7 @@ class DoxaBase:
                         "duplicate_profile_observation_iris": [],
                         "route_anchor_iris": [],
                         "route_pattern_iris": [],
+                        "advisory_statuses": [],
                     }
                 source = source_by_key[key]
                 DoxaBase._append_unique(source["advisory_indexes"], advisory_index)
@@ -23217,6 +23218,12 @@ class DoxaBase:
                     DoxaBase._append_unique(
                         source["duplicate_profile_observation_iris"],
                         observation_iri,
+                    )
+                advisory_status = getattr(advisory, "advisory_status", None)
+                if isinstance(advisory_status, str):
+                    DoxaBase._append_unique(
+                        source["advisory_statuses"],
+                        advisory_status,
                     )
                 observed_metric_iri = getattr(advisory, "observed_metric_iri", None)
                 if observed_metric_iri:
@@ -35671,6 +35678,8 @@ class DoxaBase:
                 str,
             ):
                 continue
+            if not DoxaBase._profile_route_source_requires_open_lane(source):
+                continue
             if route_group_key in direct_satisfied_route_keys:
                 continue
             lane = by_lane.get(review_lane)
@@ -35715,6 +35724,20 @@ class DoxaBase:
                 )
             )
         return open_lanes
+
+    @staticmethod
+    def _profile_route_source_requires_open_lane(
+        source: MappingABC[str, Any],
+    ) -> bool:
+        review_lane = source.get("review_lane")
+        if review_lane != "metric_vocabulary_review":
+            return True
+        advisory_statuses = set(
+            DoxaBase._string_values_from_any(source.get("advisory_statuses"))
+        )
+        if advisory_statuses and advisory_statuses <= {"project_metric_defined"}:
+            return False
+        return True
 
     @staticmethod
     def _profile_insight_review_title(dataset: ResourceSummary) -> str:

@@ -1671,6 +1671,16 @@ few useful gaps:
   payload if restaged. Apply checks now expose `effective_delta_summary`, which
   separates replayable deltas from blocked conflicted-patch deltas and flags
   truly already-effective stale sources.
+- An AIS query-planning pressure test found the documented DailyIndex overlay
+  was useful but not executable as a workflow check. The maintained
+  `examples/ais-query-overlay-smoke.py` scratch example now loads the reduced
+  AIS fixture, records reviewed index storage/layout metadata, follows the
+  stale partition-link repair, and confirms the non-executed DuckDB handoff.
+- A profile-promotion field trial found agents could complete metric
+  vocabulary promotion, apply it, and still see `metric_vocabulary_review` as
+  open because rerun `project_metric_defined` inspection actions created a fresh
+  route key. Profile advisory route sources now carry `advisory_statuses`, and
+  defined-metric inspection routes do not count as open review lanes.
 - A profile/systematisation follow-up trial found grouped metric/type review
   lanes were mechanically correct but made agents cross-reference repeated
   action labels back to advisory rows. Grouped profile advisory actions now

@@ -164,6 +164,8 @@ Not implemented yet:
 - `examples/manifest-prototype-rc/` - representative AIS and Polymarket fixtures converted from Manifest vocabulary to `rc:`.
 - `examples/local-csv-query-smoke.py` - scratch local CSV query-planning and
   result-capture smoke workflow.
+- `examples/ais-query-overlay-smoke.py` - scratch AIS DailyIndex overlay and
+  stale-link repair workflow for the documented query-planning pressure test.
 - `examples/profile-frontier-workflow.py` - scratch workflow for profile-derived map updates and staged-frontier review.
 - `examples/adversarial-field-trial.py` - tiny scratch-capsule trial for checking the docs and staging workflow.
 - `tests/` - parser, validation, capsule, and MCP helper tests.
@@ -202,6 +204,9 @@ the graph. Use `examples/profile-frontier-workflow.py` after that to exercise
 profile-derived map updates and staged-frontier recovery. Use
 `examples/local-csv-query-smoke.py` when you want a no-network local
 query-planning and result-capture smoke test. Use
+`examples/ais-query-overlay-smoke.py` when you want to exercise the reduced AIS
+fixture's path from reviewed metadata overlay through stale partition-link
+repair to a non-executed DuckDB handoff. Use
 `examples/adversarial-field-trial.py` when you want a more demanding
 staged-revision and systematisation exercise.
 

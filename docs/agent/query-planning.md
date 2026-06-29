@@ -107,6 +107,13 @@ After those moves, the wildcard index candidate should draft as
 `ready_for_execution_attempt=False` until endpoint profile and credentials are
 resolved outside DoxaBase.
 
+Run `uv run python examples/ais-query-overlay-smoke.py` for the maintained
+scratch version of this pressure test. It loads the reduced AIS fixture, records
+the reviewed DailyIndex overlay, follows the stale partition-link repair group,
+applies the staged removal, and confirms that `draft_query_plan` selects
+`s3://ais-noaa/index/*/*.parquet` with only runtime resolution still blocking
+execution.
+
 ## Field Precedence
 
 Start with `describe_query_context(dataset_iri)`:

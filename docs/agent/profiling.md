@@ -181,6 +181,11 @@ a `direct_action` candidate in the bundle. A staged profile-map update may be
 included as `strong_support` or `related_support` for metric/type lanes, but
 those lanes remain open until their own direct promotion or assertion revision
 is staged.
+After a metric promotion has been applied, a rerun may still show
+`project_metric_defined` actions for context inspection. Those routes are not
+open metric vocabulary work; `export_profile_insight_review_bundle` suppresses
+them from `open_profile_review_lanes` while preserving the applied promotion as
+the direct-action route in the bridge.
 The bridge `Row` column uses the same row number as the grouped review bundle's
 `Revision N` sections and repeats the candidate summary, so a Markdown-only
 reviewer can map route lanes back to the detailed revision section directly.
