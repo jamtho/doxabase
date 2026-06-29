@@ -420,28 +420,25 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
     assert brief.queue_counts["query_repair_review"] >= 3
     assert brief.queue_counts["staged_frontier_review"] == 1
     assert brief.queue_counts["staged_review"] == 1
-    assert brief.returned_queue_counts["query_repair_review"] == 1
     assert brief.returned_queue_counts["staged_frontier_review"] == 1
-    assert brief.omitted_queue_counts["query_repair_review"] >= 2
-    assert brief.omitted_queue_counts["staged_review"] == 1
+    assert brief.returned_queue_counts["staged_review"] == 1
+    assert "query_repair_review" not in brief.returned_queue_counts
+    assert brief.omitted_queue_counts["query_repair_review"] >= 3
     assert [
         task.task_type for task in brief.recommended_next_tasks
-    ] == ["staged_frontier_review", "query_repair_review"]
-    repair_task = brief.recommended_next_tasks[1]
-    assert repair_task.suggested_next_action is not None
-    assert repair_task.suggested_next_action.tool_name == "describe_query_context"
-    assert repair_task.suggested_next_action.arguments == {
-        "iri": "https://example.test/project#Alpha"
-    }
-    assert repair_task.suggested_next_call == (
-        "describe_query_context(iri='https://example.test/project#Alpha')"
+    ] == ["staged_frontier_review", "staged_review"]
+    staged_task = brief.recommended_next_tasks[1]
+    assert staged_task.priority == 8
+    assert staged_task.suggested_next_action is not None
+    assert staged_task.suggested_next_action.tool_name == (
+        "describe_staged_revision"
     )
     assert brief.active_queue_type_count == 3
     assert brief.returned_queue_type_count == 2
-    assert brief.limit_crowded_queue_types == ["staged_review"]
+    assert brief.limit_crowded_queue_types == ["query_repair_review"]
     health_task = brief.health_tasks[0]
     assert health_task.task_type == "expand_project_brief"
-    assert health_task.queue_types == ["query_repair_review", "staged_review"]
+    assert health_task.queue_types == ["query_repair_review"]
     assert health_task.omitted_queue_counts == brief.omitted_queue_counts
     assert health_task.suggested_limit is not None
     assert health_task.suggested_limit > brief.limit
@@ -719,20 +716,24 @@ def test_project_brief_reports_limit_crowded_queue_types(
     assert brief.returned_queue_type_count == 3
     assert brief.queue_counts["staged_frontier_review"] == 1
     assert brief.queue_counts["staged_review"] == 1
-    assert brief.omitted_queue_counts["staged_review"] == 1
-    assert brief.limit_crowded_queue_types == ["profile_review", "staged_review"]
+    assert "staged_review" not in brief.omitted_queue_counts
+    assert brief.limit_crowded_queue_types == [
+        "non_tabular_asset_review",
+        "profile_review",
+    ]
     assert [
         task.task_type for task in brief.recommended_next_tasks
     ] == [
         "staged_frontier_review",
+        "staged_review",
         "query_repair_review",
-        "non_tabular_asset_review",
     ]
     expand_task = next(
         task for task in brief.health_tasks if task.task_type == "expand_project_brief"
     )
+    assert "non_tabular_asset_review" in expand_task.queue_types
     assert "profile_review" in expand_task.queue_types
-    assert "staged_review" in expand_task.queue_types
+    assert "staged_review" not in expand_task.queue_types
     privacy_task = next(
         task for task in brief.health_tasks if task.task_type == "privacy_export_review"
     )

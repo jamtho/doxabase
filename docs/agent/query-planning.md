@@ -230,6 +230,10 @@ Start with `describe_query_context(dataset_iri)`:
    query resource such as a storage access, physical layout, partition scheme, or
    column, and changes query-planning metadata such as storage links, path
    templates, storage fields, physical-layout fields, or partition metadata.
+   When any current staged work exists, project brief also orders
+   returned `staged_review` rows ahead of fresh query-repair staging tasks; use
+   `health_tasks` / `omitted_queue_counts` to widen the brief if a fresh repair
+   queue is omitted by a low limit.
    Exact matching actions in `describe_query_context.suggested_repair_action_groups`
    are marked `already_pending`; unrelated same-dataset caveat/profile work
    remains only in the staged-review lanes.

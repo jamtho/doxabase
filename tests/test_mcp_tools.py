@@ -571,8 +571,8 @@ def test_project_brief_tool_does_not_gate_query_repair_on_unrelated_staged_work(
 
     assert [
         task["task_type"] for task in result["recommended_next_tasks"]
-    ] == ["staged_frontier_review", "query_repair_review", "staged_review"]
-    repair_task = result["recommended_next_tasks"][1]
+    ] == ["staged_frontier_review", "staged_review", "query_repair_review"]
+    repair_task = result["recommended_next_tasks"][2]
     assert repair_task["priority"] == 10
     assert repair_task["pending_staged_repair_iris"] == []
     assert "Pending staged repair(s)" not in repair_task["reason"]
@@ -733,8 +733,8 @@ def test_project_brief_tool_keeps_profile_advisories_visible_with_pending_map_up
     assert draft["metric_advisory_count"] == 1
     assert [
         task["task_type"] for task in result["recommended_next_tasks"]
-    ] == ["staged_frontier_review", "profile_review", "staged_review"]
-    profile_task = result["recommended_next_tasks"][1]
+    ] == ["staged_frontier_review", "staged_review", "profile_review"]
+    profile_task = result["recommended_next_tasks"][2]
     assert profile_task["pending_staged_profile_update_iris"] == [
         staged["staged_revision"]["revision_iri"]
     ]
@@ -825,11 +825,11 @@ def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
         task["task_type"] for task in result["recommended_next_tasks"]
     ] == [
         "staged_frontier_review",
+        "staged_review",
         "query_repair_review",
         "profile_review",
-        "staged_review",
     ]
-    profile_task = result["recommended_next_tasks"][2]
+    profile_task = result["recommended_next_tasks"][3]
     assert profile_task["profile_evidence_iri"] == evidence
     assert profile_task["pending_staged_profile_update_iris"] == []
     assert "Pending staged profile update(s)" not in profile_task["reason"]

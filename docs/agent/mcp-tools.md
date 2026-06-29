@@ -60,7 +60,9 @@ limited by `recommended_next_tasks` and can route agents to widen the brief,
 run redacted privacy/export review, or handle stale immutable seed graphs.
 When current staged work exists, a `staged_frontier_review` task points to
 `plan_staged_revision_recovery`; follow that first before staging duplicate
-profile or query repair work.
+profile or query repair work. `staged_review` rows are also ordered ahead of
+fresh query/profile mutation tasks so a low-limit brief does not hide the
+specific current staged item behind new staging work.
 Pending query/profile fields are computed from current staged work beyond the
 bounded `staged_review.items` slice, so a pending IRI may be hidden from the
 returned staged rows when the brief is limited; use the IRI with

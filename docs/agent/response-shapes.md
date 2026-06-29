@@ -254,6 +254,9 @@ work. `queue_counts["staged_review"]` uses `staged_review.count`, while
 `staged_review.items` and `returned_queue_counts` stay bounded by `limit`.
 `staged_review.items[].revision_anchor_iris` lists graph revision anchors for
 the returned staged row, and `evidence_iris` lists its direct revision evidence.
+When current staged work exists, `staged_review` tasks are ordered ahead of
+fresh mutation-capable `query_repair_review` and `profile_review` tasks; omitted
+fresh queues are reported through `omitted_queue_counts` and `health_tasks`.
 When a query repair task already has staged work anchored to the same dataset,
 `pending_staged_repair_iris` names those staged revision IRIs and the task is
 lowered behind `staged_review` so unattended agents review/apply the pending

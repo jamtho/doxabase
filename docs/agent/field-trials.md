@@ -2561,6 +2561,11 @@ few useful gaps:
   outside the bundle. Grouped staged exports now put `Bundle Warnings` before
   the decision matrix so missing imports, omitted targets, and sequencing
   hazards are visible first.
+- A query-planning project-brief trial found that unrelated fresh repair tasks
+  could appear before the visible `staged_review` item even though the brief
+  already advertised `staged_frontier_review`. Project brief now orders returned
+  staged-review rows ahead of fresh query/profile mutation tasks; omitted fresh
+  queues remain visible through `omitted_queue_counts` and `health_tasks`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

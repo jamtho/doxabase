@@ -4199,7 +4199,7 @@ class DoxaBase:
                 continue
             tasks.append(
                 ProjectBriefRecommendedTask(
-                    priority=40,
+                    priority=8,
                     task_type="staged_review",
                     source="list_graph_revisions",
                     resource=ResourceSummary(
