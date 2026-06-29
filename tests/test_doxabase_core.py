@@ -20152,6 +20152,57 @@ def test_resource_brief_context_slice_expands_evidence_handoff(
     )
 
 
+def test_resource_brief_evidence_seed_routes_observed_asset_to_query_context(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#WarehouseOrders"
+    storage = db.record_map_storage_access(
+        "https://example.test/project#warehouse_orders_storage",
+        label="Warehouse orders database",
+        storage_protocol="rc:DatabaseStorage",
+        location_kind="connection",
+        storage_root="warehouse-prod",
+        path_templates=["public.orders"],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        dataset,
+        label="Warehouse orders",
+        is_table=True,
+        storage_accesses=[storage.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    observation = db.record_observation(
+        summary="Warehouse orders were checked from source docs.",
+        observed_asset=dataset,
+        evidence_summary="Synthetic warehouse source note.",
+        evidence_sources=["test://warehouse-orders-source"],
+    )
+
+    context_slice = db.describe_context_slice(
+        observation.evidence_iri,
+        profile="resource_brief",
+    )
+
+    resources = {resource.iri: resource for resource in context_slice.resources}
+    assert observation.observation_iri in resources
+    assert dataset in resources
+    assert any(
+        route.route == "observed_asset"
+        and route.source_iri == observation.observation_iri
+        for route in resources[dataset].routes
+    )
+    query_actions = [
+        action
+        for action in context_slice.suggested_next_actions
+        if action.tool_name == "describe_query_context"
+    ]
+    assert len(query_actions) == 1
+    assert query_actions[0].arguments == {"iri": dataset}
+    assert "missing_physical_layout" in query_actions[0].reason
+
+
 def test_describe_context_slice_includes_profile_observations_and_metrics(
     tmp_path: Path,
 ) -> None:

@@ -9309,6 +9309,25 @@ class DoxaBase:
                     source_iri=seed_iri,
                     depth=1,
                 )
+                resource_types = set(
+                    self._types_from_graphs(resource_brief_graphs, resource_iri)
+                )
+                if resource_types & {
+                    self.expand_iri("rc:Observation"),
+                    self.expand_iri("rc:ProfileObservation"),
+                }:
+                    for observed_asset_iri in self._objects(
+                        resource_brief_graphs,
+                        resource_iri,
+                        "rc:observedAsset",
+                    ):
+                        add_resource(
+                            observed_asset_iri,
+                            "observed_asset",
+                            "observed asset",
+                            source_iri=resource_iri,
+                            depth=2,
+                        )
             if incoming_total > len(incoming_refs):
                 warnings.append(
                     "resource_brief omitted "
@@ -9842,6 +9861,28 @@ class DoxaBase:
             )
 
         seed_iris_set = set(seed_iris)
+
+        def resource_reached_from_seed(
+            resource_iri: str,
+            routes: Iterable[ContextSliceRoute],
+        ) -> bool:
+            if resource_iri in seed_iris_set:
+                return True
+            route_list = list(routes)
+            if any(route.source_iri in seed_iris_set for route in route_list):
+                return True
+            if profile != "resource_brief":
+                return False
+            return any(
+                route.route == "observed_asset"
+                and route.source_iri is not None
+                and any(
+                    observation_route.source_iri in seed_iris_set
+                    for observation_route in resources.get(route.source_iri, ())
+                )
+                for route in route_list
+            )
+
         if profile == "resource_brief":
             dataset_type_iris = {
                 self.expand_iri("rc:Dataset"),
@@ -9850,9 +9891,7 @@ class DoxaBase:
             for resource_iri, routes in resources.items():
                 if resource_iri in dataset_context_by_iri:
                     continue
-                if resource_iri not in seed_iris_set and not any(
-                    route.source_iri in seed_iris_set for route in routes
-                ):
+                if not resource_reached_from_seed(resource_iri, routes):
                     continue
                 if not (
                     set(self._types_from_graphs(lookup_graphs, resource_iri))
@@ -9868,11 +9907,9 @@ class DoxaBase:
             dataset_context_list = list(dataset_context_by_iri.values())
 
         def dataset_reached_from_seed(dataset_iri: str) -> bool:
-            if dataset_iri in seed_iris_set:
-                return True
-            return any(
-                route.source_iri in seed_iris_set
-                for route in resources.get(dataset_iri, ())
+            return resource_reached_from_seed(
+                dataset_iri,
+                resources.get(dataset_iri, ()),
             )
 
         seen_dataset_iris: set[str] = set()

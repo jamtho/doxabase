@@ -22,7 +22,10 @@ The slicer is intentionally profile-based rather than a generic graph crawl:
   references, direct incoming URI subjects, URI owners of incoming blank-node
   references, named owners reached from blank-node seeds, and subjects that use
   the seed as an RDF predicate. It includes project and base shape graphs, but
-  stays seed-centered rather than crawling recursively.
+  stays seed-centered rather than crawling recursively. When an evidence seed is
+  referenced by an observation, resource brief also includes that observation's
+  observed asset and can suggest `describe_query_context` for an observed table
+  with query-planning warnings or repair groups.
 
 When lexical search finds a likely pattern, seed that pattern directly with
 `profile="pattern_brief"` before trying a broad dataset slice. Pattern seeds
