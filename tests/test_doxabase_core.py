@@ -1635,6 +1635,24 @@ def test_staged_markdown_exports_warn_about_sensitive_patch_literals(
     )[0]
     assert fake_secret not in grouped_warning_prefix
 
+    blocked_single_path = tmp_path / "blocked-single.md"
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        db.export_staged_revision(
+            staged.revision_iri,
+            blocked_single_path,
+            fail_on_sensitive=True,
+        )
+    assert not blocked_single_path.exists()
+
+    blocked_grouped_path = tmp_path / "blocked-grouped.md"
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        db.export_staged_revisions(
+            [staged.revision_iri],
+            blocked_grouped_path,
+            fail_on_sensitive=True,
+        )
+    assert not blocked_grouped_path.exists()
+
 
 def test_stage_graph_revision_exposes_seed_expanded_count_basis(
     tmp_path: Path,
@@ -23153,6 +23171,16 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert "Workflow flip denominator caveat" in exported
     assert secret_text in exported
     assert "WorkflowFlipRate" in exported
+
+    blocked_profile_path = tmp_path / "blocked-profile-insight-review.md"
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        db.export_profile_insight_review_bundle(
+            dataset,
+            evidence,
+            blocked_profile_path,
+            fail_on_sensitive=True,
+        )
+    assert not blocked_profile_path.exists()
 
 
 def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(

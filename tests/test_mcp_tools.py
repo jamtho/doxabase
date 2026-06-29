@@ -1482,6 +1482,26 @@ def test_staged_markdown_export_tools_return_privacy_warnings(
         grouped["privacy_warnings"]
     )
 
+    blocked_single_path = tmp_path / "blocked-single.md"
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        export_staged_revision_tool(
+            db,
+            iri=staged["revision_iri"],
+            path=str(blocked_single_path),
+            fail_on_sensitive=True,
+        )
+    assert not blocked_single_path.exists()
+
+    blocked_grouped_path = tmp_path / "blocked-grouped.md"
+    with pytest.raises(DoxaBaseError, match="fail_on_sensitive=True"):
+        export_staged_revisions_tool(
+            db,
+            revision_iris=[staged["revision_iri"]],
+            path=str(blocked_grouped_path),
+            fail_on_sensitive=True,
+        )
+    assert not blocked_grouped_path.exists()
+
 
 def test_draft_staged_revision_rebase_tool_returns_json_like_payload(
     tmp_path: Path,

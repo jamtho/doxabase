@@ -2395,7 +2395,9 @@ few useful gaps:
   `describe_query_context` after each applied query metadata repair.
 - A privacy/export query-planning trial confirmed DoxaBase's scanner blocks fake
   secret-shaped literals in RDF exports with `fail_on_sensitive=true` and warns
-  in Markdown review bundles, while query-planning surfaces intentionally echo
+  in Markdown review bundles. Markdown staged/profile review exports now also
+  accept `fail_on_sensitive=true` to raise before writing generated review bundles
+  with secret-shaped literals. Query-planning surfaces intentionally echo
   non-secret handles and paths such as endpoint profile names,
   credential-reference handles, source/result paths, URI templates, relation
   identifiers, and connection references. Treat raw helper payloads as

@@ -140,7 +140,10 @@ artifact itself. If the generated Markdown contains credential-like or
 secret-looking staged patch literals, the export record returns
 `sensitive_literal_count` and `privacy_warnings`, and the artifact starts with a
 `Privacy Warning`; warning line examples refer to the final written Markdown
-artifact. Patch content is preserved and not redacted. For simple
+artifact. Patch content is preserved and not redacted. Pass
+`fail_on_sensitive=true` for unattended or shareable Markdown review exports
+that should raise before writing when the generated bundle contains
+credential-like or secret-looking literals. For simple
 single-assertion `map` changes that still replay
 cleanly, the export may include a `Semantic Review Warning` before the apply
 check, and also includes a `Judgement Panel` section so human and agent

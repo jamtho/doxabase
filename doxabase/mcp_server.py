@@ -1662,6 +1662,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         path: str,
         format: str = "markdown",
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> dict[str, Any]:
         """Export a staged revision review bundle."""
 
@@ -1671,6 +1672,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             path=path,
             format=format,
             overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
         )
 
     @server.tool(name="doxabase.apply_staged_revision")
@@ -1702,6 +1704,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         executive_summary: str | None = None,
         format: str = "markdown",
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> dict[str, Any]:
         """Export multiple staged revisions into one comparison review bundle."""
 
@@ -1713,6 +1716,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             executive_summary=executive_summary,
             format=format,
             overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
         )
 
     @server.tool(name="doxabase.export_profile_insight_review_bundle")
@@ -1729,6 +1733,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
         executive_summary: str | None = None,
         format: str = "markdown",
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> dict[str, Any]:
         """Export staged revisions connected to one profile evidence run."""
 
@@ -1746,6 +1751,7 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             executive_summary=executive_summary,
             format=format,
             overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
         )
 
     @server.tool(name="doxabase.load_example_fixtures")

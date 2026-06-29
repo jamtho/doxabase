@@ -30734,6 +30734,7 @@ class DoxaBase:
         *,
         format: TypingLiteral["markdown"] = "markdown",
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> StagedGraphRevisionExportRecord:
         if format != "markdown":
             raise DoxaBaseError("Only markdown staged revision exports are supported")
@@ -30751,6 +30752,11 @@ class DoxaBase:
                 data,
                 final_privacy_warning_line_numbers=True,
             )
+        )
+        self._raise_if_markdown_sensitive_export_blocked(
+            fail_on_sensitive=fail_on_sensitive,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
         )
         data = self._markdown_with_privacy_warning(data, privacy_warnings)
         bytes_written = self._write_export(path, data, overwrite=overwrite)
@@ -30778,6 +30784,7 @@ class DoxaBase:
         executive_summary: str | None = None,
         format: TypingLiteral["markdown"] = "markdown",
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> ProfileInsightReviewBundleRecord:
         if format != "markdown":
             raise DoxaBaseError(
@@ -30908,6 +30915,7 @@ class DoxaBase:
                 ),
                 format=format,
                 overwrite=overwrite,
+                fail_on_sensitive=fail_on_sensitive,
             )
         else:
             warnings.append(
@@ -31370,6 +31378,7 @@ class DoxaBase:
         executive_summary: str | None = None,
         format: TypingLiteral["markdown"] = "markdown",
         overwrite: bool = False,
+        fail_on_sensitive: bool = False,
     ) -> StagedGraphRevisionsExportRecord:
         if format != "markdown":
             raise DoxaBaseError("Only markdown staged revision exports are supported")
@@ -31414,6 +31423,11 @@ class DoxaBase:
                 data,
                 final_privacy_warning_line_numbers=True,
             )
+        )
+        self._raise_if_markdown_sensitive_export_blocked(
+            fail_on_sensitive=fail_on_sensitive,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
         )
         data = self._markdown_with_privacy_warning(data, privacy_warnings)
         bytes_written = self._write_export(path, data, overwrite=overwrite)
@@ -37745,6 +37759,24 @@ class DoxaBase:
             "Export blocked because fail_on_sensitive=True and the selected "
             f"graph roles contain {sensitive_literal_count} potential sensitive "
             f"literal match(es). {warning_text}"
+        )
+
+    @staticmethod
+    def _raise_if_markdown_sensitive_export_blocked(
+        *,
+        fail_on_sensitive: bool,
+        sensitive_literal_count: int,
+        privacy_warnings: list[str],
+    ) -> None:
+        if not fail_on_sensitive or sensitive_literal_count == 0:
+            return
+        warning_text = " ".join(privacy_warnings) if privacy_warnings else (
+            "Potential sensitive literals detected."
+        )
+        raise DoxaBaseError(
+            "Markdown export blocked because fail_on_sensitive=True and the "
+            f"generated review bundle contains {sensitive_literal_count} "
+            f"potential sensitive literal match(es). {warning_text}"
         )
 
     def _markdown_export_privacy_warnings(

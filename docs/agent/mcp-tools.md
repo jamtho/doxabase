@@ -557,6 +557,9 @@ caveat/systematisation alternatives you want reviewed together. Set
 `include_applied_staged_sources=false` to restrict discovery to current staged
 work, or raise `applied_staged_source_limit` when a profile run has more applied
 source matches than the default scan returns.
+Pass `fail_on_sensitive=true` when unattended or shareable profile review
+exports should raise before writing if the generated Markdown contains
+credential-like or secret-looking literals.
 
 The returned payload includes `candidates[]` with `relation_reasons`, matched
 support/evidence/anchor fields, `profile_route_keys`,
@@ -1619,7 +1622,10 @@ include a top `Restaged by` line when a refreshed successor already exists.
 Exports include a `Linked Support` section when supporting observations, claims,
 patterns, or evidence are recorded on the staged revision.
 When a Markdown privacy warning reports line examples, those line numbers refer
-to the final written artifact, after the warning block has been inserted.
+to the final written artifact, after the warning block has been inserted. Pass
+`fail_on_sensitive=true` when unattended or shareable Markdown review exports
+should raise before writing if the generated bundle contains credential-like or
+secret-looking literals.
 Suggested export actions use revision-derived `/tmp` filenames with a short hash
 to reduce collisions across concurrent runs; callers may override the path. This
 is for human/agent review.

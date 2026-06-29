@@ -695,6 +695,9 @@ when the bundle should ignore already-applied profile-map sources. Returned
 candidates expose `profile_route_keys` and `profile_route_groups`, and the
 Markdown review summary includes a `Profile Route Bridge` table when candidates
 match draft route groups. It does not stage missing advisory-lane work for you.
+Pass `fail_on_sensitive=True` when unattended or shareable profile review
+exports should raise before writing if the generated Markdown contains
+credential-like or secret-looking literals.
 
 `describe_context_slice()` returns a bounded, route-explained graph slice around
 seed IRIs. Profiles are intentionally explicit: `dataset_brief` starts from
@@ -1239,7 +1242,9 @@ Restaged exports include a top metadata `Restage headline` before the current
 apply check. Stale original exports include a top metadata `Restaged by` line
 when a refreshed successor already exists. Suggested export actions use
 revision-derived `/tmp` filenames with a short hash to reduce collisions; callers
-may override them with run-specific paths.
+may override them with run-specific paths. Pass `fail_on_sensitive=True` when
+unattended or shareable Markdown review exports should raise before writing if
+the generated bundle contains credential-like or secret-looking literals.
 `export_staged_revisions()` writes one Markdown review bundle for several staged
 revisions in caller-chosen order; its summary table includes each staged
 revision's current apply status, decision, current validation state, and

@@ -1599,6 +1599,7 @@ def export_staged_revision_tool(
     path: str,
     format: str = "markdown",
     overwrite: bool = False,
+    fail_on_sensitive: bool = False,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
     result = db.export_staged_revision(
@@ -1606,6 +1607,7 @@ def export_staged_revision_tool(
         path=resolved_path,
         format=format,  # type: ignore[arg-type]
         overwrite=overwrite,
+        fail_on_sensitive=fail_on_sensitive,
     )
     return to_dict(result)
 
@@ -1618,6 +1620,7 @@ def export_staged_revisions_tool(
     executive_summary: str | None = None,
     format: str = "markdown",
     overwrite: bool = False,
+    fail_on_sensitive: bool = False,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
     result = db.export_staged_revisions(
@@ -1627,6 +1630,7 @@ def export_staged_revisions_tool(
         executive_summary=executive_summary,
         format=format,  # type: ignore[arg-type]
         overwrite=overwrite,
+        fail_on_sensitive=fail_on_sensitive,
     )
     return to_dict(result)
 
@@ -1645,6 +1649,7 @@ def export_profile_insight_review_bundle_tool(
     executive_summary: str | None = None,
     format: str = "markdown",
     overwrite: bool = False,
+    fail_on_sensitive: bool = False,
 ) -> dict[str, Any]:
     resolved_path = _resolve_path(path)
     result = db.export_profile_insight_review_bundle(
@@ -1660,6 +1665,7 @@ def export_profile_insight_review_bundle_tool(
         executive_summary=executive_summary,
         format=format,  # type: ignore[arg-type]
         overwrite=overwrite,
+        fail_on_sensitive=fail_on_sensitive,
     )
     return to_dict(result)
 
