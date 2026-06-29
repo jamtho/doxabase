@@ -73,6 +73,10 @@ bounded `staged_review.items` slice, so a pending IRI may be hidden from the
 returned staged rows when the brief is limited; use the IRI with
 `plan_staged_revision_recovery` or rerun `project_brief` with a larger limit for
 more display context.
+When a low-limit brief can show only one task for a queue type,
+`recommended_next_tasks` prefers pending-staged query/profile rows as the
+representative so duplicate-staging warnings are not hidden behind fresher
+same-type work.
 For `expand_project_brief`, `suggested_limit` is a bounded next step and may be
 iterative on a crowded project. When an unattended loop needs one rerun that
 shows every task payload currently represented by `queue_counts`, use

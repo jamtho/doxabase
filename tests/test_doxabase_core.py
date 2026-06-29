@@ -15,6 +15,7 @@ from doxabase import (
     to_dict,
     to_jsonable,
 )
+from doxabase.core import ProjectBriefRecommendedTask
 
 ROOT = Path(__file__).resolve().parents[1]
 AIS_FIXTURE = ROOT / "examples" / "manifest-prototype-rc" / "ais.trig"
@@ -509,6 +510,65 @@ def test_project_brief_reserves_recommendation_slots_by_queue(
         "limit": health_task.suggested_limit,
         "profile_candidate_limit": brief.profile_candidate_limit,
     }
+
+
+def test_project_brief_selects_pending_staged_representative_per_queue() -> None:
+    def task(
+        task_type: str,
+        priority: int,
+        label: str,
+        *,
+        pending_repair: bool = False,
+        pending_profile: bool = False,
+    ) -> ProjectBriefRecommendedTask:
+        return ProjectBriefRecommendedTask(
+            priority=priority,
+            task_type=task_type,
+            source=label,
+            resource=None,
+            reason=label,
+            suggested_next_action=None,
+            suggested_next_call=None,
+            pending_staged_repair_iris=(
+                [f"https://example.test/project#{label}Repair"]
+                if pending_repair
+                else []
+            ),
+            pending_staged_profile_update_iris=(
+                [f"https://example.test/project#{label}Profile"]
+                if pending_profile
+                else []
+            ),
+        )
+
+    selected = DoxaBase._project_brief_select_recommended_tasks(
+        [
+            task("query_repair_review", 10, "fresh_query"),
+            task(
+                "query_repair_review",
+                45,
+                "pending_query",
+                pending_repair=True,
+            ),
+            task("query_context_review", 20, "blocked_context"),
+            task("profile_review", 30, "fresh_profile"),
+            task(
+                "profile_review",
+                55,
+                "pending_profile",
+                pending_profile=True,
+            ),
+        ],
+        limit=3,
+    )
+
+    assert [task.source for task in selected] == [
+        "pending_query",
+        "blocked_context",
+        "pending_profile",
+    ]
+    assert selected[0].pending_staged_repair_iris
+    assert selected[2].pending_staged_profile_update_iris
 
 
 def test_project_brief_counts_staged_review_rows_hidden_by_limit(

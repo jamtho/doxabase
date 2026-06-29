@@ -291,6 +291,9 @@ Unrelated same-dataset caveats or profile-map updates remain visible through
 staged-review queues without marking the query repair pending. Pending detection
 uses current staged work beyond the bounded `staged_review.items` slice, so the
 IRI may not appear in returned staged rows when `staged_review.omitted_count > 0`.
+When `recommended_next_tasks` can show only one row for a queue type, a task with
+pending staged repair/profile IRIs is preferred as that queue's representative
+so duplicate-staging warnings stay visible.
 When a profile
 task already has a staged profile-map-update revision anchored to the same
 dataset and evidence,

@@ -4152,8 +4152,22 @@ class DoxaBase:
         for index, task in enumerate(tasks):
             if task.task_type in seen_task_types:
                 continue
-            selected.append(task)
-            selected_indexes.add(index)
+            representative_index = min(
+                (
+                    candidate_index
+                    for candidate_index, candidate in enumerate(tasks)
+                    if candidate.task_type == task.task_type
+                    and candidate_index not in selected_indexes
+                ),
+                key=lambda candidate_index: (
+                    DoxaBase._project_brief_representative_rank(
+                        tasks[candidate_index]
+                    ),
+                    candidate_index,
+                ),
+            )
+            selected.append(tasks[representative_index])
+            selected_indexes.add(representative_index)
             seen_task_types.add(task.task_type)
             if len(selected) >= limit:
                 return selected
@@ -4164,6 +4178,14 @@ class DoxaBase:
             if len(selected) >= limit:
                 break
         return selected
+
+    @staticmethod
+    def _project_brief_representative_rank(
+        task: ProjectBriefRecommendedTask,
+    ) -> int:
+        if task.pending_staged_repair_iris or task.pending_staged_profile_update_iris:
+            return 0
+        return 1
 
     @staticmethod
     def _project_brief_task_type_counts(
