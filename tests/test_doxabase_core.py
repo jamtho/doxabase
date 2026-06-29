@@ -21650,6 +21650,84 @@ def test_record_claim_reconsideration_links_claim_lifecycle(
     ]
 
 
+def test_record_claim_reconsideration_default_weakening_keeps_terminal_status(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    older = db.record_claim_observation(
+        summary="Initial merchant category hunch.",
+        claim_text="merchant_category can be treated as a closed domain.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=["https://example.test/project#merchant_category"],
+        evidence_sources=["trial setup"],
+    )
+    superseding = db.record_claim_observation(
+        summary="Merchant category hunch replaced.",
+        claim_text="merchant_category should use a source-maintained domain.",
+        claim_kind="rc:InterpretationClaim",
+        claim_targets=["https://example.test/project#merchant_category"],
+        evidence_sources=["domain review"],
+    )
+    weakening = db.record_claim_observation(
+        summary="Merchant category hunch softened.",
+        claim_text="merchant_category is useful but not closed.",
+        claim_kind="rc:CaveatClaim",
+        claim_targets=["https://example.test/project#merchant_category"],
+        evidence_sources=["quality review"],
+    )
+
+    supersession = db.record_claim_reconsideration(
+        newer_claim=superseding.claim_iri,
+        older_claim=older.claim_iri,
+        relation="supersedes",
+        rationale="The source-maintained domain replaces the closed-domain hunch.",
+    )
+    later_weakening = db.record_claim_reconsideration(
+        newer_claim=weakening.claim_iri,
+        older_claim=older.claim_iri,
+        relation="weakens",
+        rationale=(
+            "The quality review also weakens the old hunch, but should not "
+            "downgrade the terminal superseded status."
+        ),
+    )
+
+    assert supersession.older_claim_status == RC + "Superseded"
+    assert supersession.status_triples == 1
+    assert later_weakening.older_claim_status == RC + "Superseded"
+    assert later_weakening.status_triples == 0
+
+    older_context = db.describe_resource(older.claim_iri, graph="observations")
+    assert older_context.claim is not None
+    assert older_context.claim.lifecycle_summary is not None
+    assert "Current status: superseded." in older_context.claim.lifecycle_summary
+    assert "1 supersession" in older_context.claim.lifecycle_summary
+    assert "1 weakening" in older_context.claim.lifecycle_summary
+    older_statuses = [
+        triple.object
+        for triple in older_context.outgoing
+        if triple.predicate == RC + "observationStatus"
+    ]
+    assert older_statuses == [RC + "Superseded"]
+
+    explicit = db.record_claim_observation(
+        summary="Merchant category explicit weakening.",
+        claim_text="An explicit reviewer can still change the lifecycle status.",
+        claim_kind="rc:CaveatClaim",
+        claim_targets=["https://example.test/project#merchant_category"],
+        evidence_sources=["manual lifecycle override"],
+    )
+    explicit_weakening = db.record_claim_reconsideration(
+        newer_claim=explicit.claim_iri,
+        older_claim=older.claim_iri,
+        relation="weakens",
+        rationale="Manual override intentionally softens the older claim status.",
+        older_claim_status="rc:Weakened",
+    )
+    assert explicit_weakening.older_claim_status == RC + "Weakened"
+    assert explicit_weakening.status_triples == 1
+
+
 def test_describe_context_slice_warns_on_large_structured_context(
     tmp_path: Path,
 ) -> None:
@@ -25379,6 +25457,26 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert {item.iri for item in staged.supporting_observations} == {profile.iri}
     assert {item.iri for item in staged.evidence} == {evidence}
     assert status_value_type in {item.iri for item in staged.revision_anchors}
+
+    review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "orders-profile-type-review.md",
+    )
+    candidate = next(
+        candidate
+        for candidate in review.candidates
+        if candidate.revision_iri == staged.iri
+    )
+    route_groups = {
+        group["review_lane"]: group for group in candidate.profile_route_groups
+    }
+    assert route_groups["profile_type_review"]["match_strength"] == (
+        "direct_action"
+    )
+    assert "profile_type_review" not in {
+        lane.review_lane for lane in review.open_profile_review_lanes
+    }
 
 
 def test_profile_advisories_flag_mixed_metric_and_type_promotion_support(

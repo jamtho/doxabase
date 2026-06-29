@@ -501,7 +501,10 @@ point it at a scratch JSON export of the retrieval output.
 After recording a reconsideration, inspect the older claim through
 `describe_resource` or as a supporting claim in `describe_pattern`. Claim
 descriptions include a `lifecycle_summary` plus incoming/outgoing
-reconsideration details.
+reconsideration details. Before promoting a related map fact, read the
+`lifecycle_summary` and incoming reconsideration rows together; the current
+status is a compact routing cue, not a replacement for the weakening,
+contradiction, supersession, or refinement trail.
 
 The writer adds graph triples only after validating basic inputs such as summary
 presence, observation type, ISO datetime syntax, and non-negative counts.

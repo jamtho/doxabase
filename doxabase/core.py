@@ -179,6 +179,9 @@ PROFILE_ROUTE_SOURCE_SCHEMA = "doxabase.profile_route_source.v1"
 PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER = (
     "metric-vocabulary promotion skeleton from draft_profile_map_updates"
 )
+PROFILE_VALUE_TYPE_PROMOTION_REVIEW_NOTE_MARKER = (
+    "value-type promotion skeleton from draft_profile_map_updates"
+)
 QUERY_REPAIR_PREDICATE_CURIES = frozenset(
     {
         "rc:hasStorageAccess",
@@ -20455,9 +20458,9 @@ class DoxaBase:
                     "graph": "ontology",
                     "content": content,
                     "review_note": (
-                        "Generated as a value-type promotion skeleton from "
-                        "draft_profile_map_updates; review wording before "
-                        "applying."
+                        "Generated as a "
+                        f"{PROFILE_VALUE_TYPE_PROMOTION_REVIEW_NOTE_MARKER}; "
+                        "review wording before applying."
                     ),
                     "review_recommendation": (
                         "Apply only after the value type's domain meaning, "
@@ -23954,11 +23957,12 @@ class DoxaBase:
         relation_iri, direct_predicate, default_status = (
             self._claim_reconsideration_relation(relation)
         )
-        status_value = (
+        explicit_status_value = (
             older_claim_status.strip()
             if older_claim_status and older_claim_status.strip()
-            else default_status
+            else None
         )
+        status_value = explicit_status_value or default_status
         self._ensure_claim_resource("newer_claim", newer_claim_iri)
         self._ensure_claim_resource("older_claim", older_claim_iri)
         if status_value is not None:
@@ -24180,14 +24184,23 @@ class DoxaBase:
             reconsideration_graph,
         )
         status_triples = 0
+        effective_status_value = status_value
         if status_value is not None:
+            effective_status_value = (
+                self._claim_reconsideration_effective_status(
+                    older_claim_iri=older_claim_iri,
+                    requested_status=status_value,
+                    explicit=explicit_status_value is not None,
+                )
+            )
+        if status_value is not None and effective_status_value == status_value:
             status_graph = Graph()
             self._bind_prefixes(status_graph)
             status_graph.add(
                 (
                     URIRef(older_claim_iri),
                     URIRef(self.expand_iri("rc:observationStatus")),
-                    URIRef(self.expand_iri(status_value)),
+                    URIRef(self.expand_iri(effective_status_value)),
                 )
             )
             status_triples = self._replace_subject_triples(
@@ -24205,7 +24218,9 @@ class DoxaBase:
             relation_label=self._label_for_resource(relation_iri),
             direct_predicate=self.expand_iri(direct_predicate),
             older_claim_status=(
-                self.expand_iri(status_value) if status_value is not None else None
+                self.expand_iri(effective_status_value)
+                if effective_status_value is not None
+                else None
             ),
             evidence_iri=str(evidence_subject) if evidence_subject is not None else None,
             source_span_iri=(
@@ -24215,6 +24230,31 @@ class DoxaBase:
             evidence_triples=evidence_triples,
             status_triples=status_triples,
         )
+
+    def _claim_reconsideration_effective_status(
+        self,
+        *,
+        older_claim_iri: str,
+        requested_status: str,
+        explicit: bool,
+    ) -> str:
+        if explicit:
+            return requested_status
+        requested_status_iri = self.expand_iri(requested_status)
+        if requested_status_iri != self.expand_iri("rc:Weakened"):
+            return requested_status
+        terminal_statuses = {
+            self.expand_iri("rc:Superseded"),
+            self.expand_iri("rc:Contradicted"),
+        }
+        for current_status in self._objects(
+            ["observations"],
+            older_claim_iri,
+            "rc:observationStatus",
+        ):
+            if current_status in terminal_statuses:
+                return current_status
+        return requested_status
 
     def record_map_dataset(
         self,
@@ -32571,6 +32611,8 @@ class DoxaBase:
             return "profile_map_updates"
         if PROFILE_METRIC_PROMOTION_REVIEW_NOTE_MARKER in review_note:
             return "metric_vocabulary_review"
+        if PROFILE_VALUE_TYPE_PROMOTION_REVIEW_NOTE_MARKER in review_note:
+            return "profile_type_review"
         if "Generated from a profile type-finding advisory" in review_note:
             return "profile_type_review"
         if "query planning guidance" in review_note:

@@ -607,7 +607,7 @@ Do not pass both on the same literal.
 
 ## Resource Context
 
-`db.describe_resource(iri, graph=None, limit=50)` returns a `ResourceContext`:
+`db.describe_resource(iri, graph=None, limit=100)` returns a `ResourceContext`:
 
 ```python
 resource.iri
