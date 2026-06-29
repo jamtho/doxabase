@@ -147,6 +147,19 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "sensitive_literal_count": null,
             "missing_seed_terms": [],
         },
+        {
+            "priority": 20,
+            "task_type": "privacy_export_review",
+            "source": "scan_sensitive_literals",
+            "reason": "...",
+            "suggested_next_action": {...},
+            "suggested_next_call": "scan_sensitive_literals(...)",
+            "queue_types": [],
+            "omitted_queue_counts": {},
+            "suggested_limit": null,
+            "sensitive_literal_count": 1,
+            "missing_seed_terms": [],
+        },
     ],
     "datasets": [
         {

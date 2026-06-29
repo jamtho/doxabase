@@ -472,6 +472,7 @@ def test_project_brief_reports_limit_crowded_queue_types(
     db.record_map_dataset(
         "https://example.test/project#RiskScores",
         label="Risk Scores",
+        description="Synthetic fixture FAKE_SECRET_TOKEN_HEALTH_TASK.",
         is_table=True,
     )
     db.record_map_dataset(
@@ -538,6 +539,16 @@ def test_project_brief_reports_limit_crowded_queue_types(
     )
     assert "profile_review" in expand_task.queue_types
     assert "staged_review" in expand_task.queue_types
+    privacy_task = next(
+        task for task in brief.health_tasks if task.task_type == "privacy_export_review"
+    )
+    assert [
+        task.task_type for task in brief.health_tasks
+    ] == ["expand_project_brief", "privacy_export_review"]
+    assert privacy_task.sensitive_literal_count == 1
+    assert privacy_task.suggested_next_action is not None
+    assert privacy_task.suggested_next_action.tool_name == "scan_sensitive_literals"
+    assert "FAKE_SECRET" not in json.dumps(to_jsonable(brief.health_tasks))
 
 
 def test_project_brief_surfaces_sanitized_privacy_health_task(
