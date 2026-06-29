@@ -2698,6 +2698,13 @@ few useful gaps:
   verified layout status after checking the path/header; and cross-capsule
   staged handoffs should spell out preflight, TriG import, snapshot-evidence
   check, snapshot JSON import, and staged-revision inspection.
+- A second broad wave checked staged-payload discovery, grouped review-bundle
+  readability, local CSV query smoke flow, and MCP/API parity. It found no MCP
+  runtime gap, but did surface review-handoff scan friction: grouped staged
+  exports now expose `decision_headline`, `changed_graph_counts`, and
+  `choose_one_groups`, and the Markdown starts with an `At A Glance` rollup.
+  Remaining larger follow-ups are staged-payload lexical discovery, a tracked
+  local CSV query smoke example, and refreshing README/ARCHITECTURE status lists.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

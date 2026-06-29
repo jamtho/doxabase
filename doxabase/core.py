@@ -1127,10 +1127,25 @@ class StagedGraphRevisionReviewSequenceItem:
 
 
 @dataclass(frozen=True)
+class StagedGraphRevisionChooseOneGroup:
+    group_index: int
+    row_indexes: list[int]
+    revision_iris: list[str]
+    summaries: list[str | None]
+    alternative_set_source_iri: str | None
+    source_row_index: int | None
+    source_summary: str | None
+    alternative_set_roles: list[str | None]
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionBundleSummary:
     total_revisions: int
+    decision_headline: str
     apply_status_counts: dict[str, int]
     stale_resolution_state_counts: dict[str, int]
+    changed_graph_counts: dict[str, int]
+    choose_one_groups: list[StagedGraphRevisionChooseOneGroup]
     unresolved_stale_revision_iris: list[str]
     stale_handled_by_restage_revision_iris: list[str]
     ready_restage_successor_revision_iris: list[str]
@@ -35243,6 +35258,15 @@ class DoxaBase:
             next_action_queue_items=next_action_queue_items,
             post_apply_recheck_revision_iris=post_apply_recheck,
         )
+        changed_graph_counts = self._staged_revisions_changed_graph_counts(
+            summaries
+        )
+        choose_one_groups = self._staged_revisions_choose_one_groups(summaries)
+        next_action_queue_item_counts = (
+            self._revision_next_action_queue_item_counts(
+                next_action_queue_items
+            )
+        )
         shared_context_patch_summaries = (
             self._staged_revisions_shared_semantic_context_patch_summaries(
                 descriptions
@@ -35275,8 +35299,18 @@ class DoxaBase:
         )
         return StagedGraphRevisionBundleSummary(
             total_revisions=len(summaries),
+            decision_headline=self._staged_revisions_decision_headline(
+                total_revisions=len(summaries),
+                next_action_queue_item_counts=next_action_queue_item_counts,
+                changed_graph_counts=changed_graph_counts,
+                choose_one_group_count=len(choose_one_groups),
+                snapshot_evidence=snapshot_evidence,
+                requires_recheck_after_each_apply=bool(post_apply_recheck),
+            ),
             apply_status_counts=apply_status_counts,
             stale_resolution_state_counts=state_counts,
+            changed_graph_counts=changed_graph_counts,
+            choose_one_groups=choose_one_groups,
             unresolved_stale_revision_iris=unresolved_stale,
             stale_handled_by_restage_revision_iris=handled_stale,
             ready_restage_successor_revision_iris=ready_successors,
@@ -35317,11 +35351,7 @@ class DoxaBase:
                 (summary.revision_iri, summary.next_action) for summary in summaries
             ),
             next_action_queue_items=next_action_queue_items,
-            next_action_queue_item_counts=(
-                self._revision_next_action_queue_item_counts(
-                    next_action_queue_items
-                )
-            ),
+            next_action_queue_item_counts=next_action_queue_item_counts,
             snapshot_evidence=snapshot_evidence,
             mutation_frontier_iris=mutation_frontier_iris,
             requires_recheck_after_each_apply=bool(post_apply_recheck),
@@ -35338,6 +35368,118 @@ class DoxaBase:
             ),
             shared_semantic_context_warnings=shared_semantic_context_warnings,
         )
+
+    @staticmethod
+    def _staged_revisions_changed_graph_counts(
+        summaries: Iterable[StagedGraphRevisionExportSummary],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for summary in summaries:
+            for graph in summary.changed_graphs:
+                counts[graph] = counts.get(graph, 0) + 1
+        return dict(sorted(counts.items()))
+
+    @staticmethod
+    def _staged_revisions_choose_one_groups(
+        summaries: list[StagedGraphRevisionExportSummary],
+    ) -> list[StagedGraphRevisionChooseOneGroup]:
+        memberships = DoxaBase._alternative_set_membership_by_iri(
+            (
+                (
+                    summary.revision_iri,
+                    summary.alternative_to,
+                    summary.current_alternative_to,
+                )
+                for summary in summaries
+            )
+        )
+        if not memberships:
+            return []
+
+        row_by_iri = {
+            summary.revision_iri: index
+            for index, summary in enumerate(summaries, start=1)
+        }
+        summary_by_iri = {summary.revision_iri: summary for summary in summaries}
+        grouped_keys: list[tuple[str, ...]] = []
+        seen: set[tuple[str, ...]] = set()
+        for summary in summaries:
+            membership = memberships.get(summary.revision_iri)
+            if membership is None:
+                continue
+            member_iris, _, _ = membership
+            key = tuple(member_iris)
+            if key in seen:
+                continue
+            seen.add(key)
+            grouped_keys.append(key)
+
+        groups: list[StagedGraphRevisionChooseOneGroup] = []
+        for group_index, member_iris in enumerate(grouped_keys, start=1):
+            source_iri = memberships[member_iris[0]][1]
+            source_summary = summary_by_iri.get(source_iri)
+            groups.append(
+                StagedGraphRevisionChooseOneGroup(
+                    group_index=group_index,
+                    row_indexes=[
+                        row_by_iri[iri] for iri in member_iris if iri in row_by_iri
+                    ],
+                    revision_iris=list(member_iris),
+                    summaries=[
+                        summary_by_iri[iri].summary
+                        if iri in summary_by_iri
+                        else None
+                        for iri in member_iris
+                    ],
+                    alternative_set_source_iri=source_iri,
+                    source_row_index=row_by_iri.get(source_iri),
+                    source_summary=(
+                        source_summary.summary
+                        if source_summary is not None
+                        else None
+                    ),
+                    alternative_set_roles=[
+                        memberships[iri][2] if iri in memberships else None
+                        for iri in member_iris
+                    ],
+                )
+            )
+        return groups
+
+    def _staged_revisions_decision_headline(
+        self,
+        *,
+        total_revisions: int,
+        next_action_queue_item_counts: dict[str, int],
+        changed_graph_counts: dict[str, int],
+        choose_one_group_count: int,
+        snapshot_evidence: StagedGraphRevisionSnapshotEvidenceSummary,
+        requires_recheck_after_each_apply: bool,
+    ) -> str:
+        parts = [f"Review {total_revisions} staged revision row(s)"]
+        if next_action_queue_item_counts:
+            parts.append(
+                "queues: "
+                + self._staged_revisions_count_summary(
+                    next_action_queue_item_counts
+                )
+            )
+        if changed_graph_counts:
+            parts.append(
+                "changed graphs: "
+                + self._staged_revisions_count_summary(changed_graph_counts)
+            )
+        if choose_one_group_count:
+            parts.append(f"{choose_one_group_count} choose-one group(s)")
+        if requires_recheck_after_each_apply:
+            parts.append("recheck siblings after each apply")
+        if snapshot_evidence.rows:
+            snapshot_state = "complete" if snapshot_evidence.complete else "incomplete"
+            parts.append(
+                f"snapshot evidence {snapshot_state} for "
+                f"{snapshot_evidence.total_revision_count} row(s)"
+            )
+        return "; ".join(parts) + "."
 
     def _staged_revisions_review_sequence(
         self,
@@ -39633,6 +39775,11 @@ class DoxaBase:
         )
         if executive_summary_text:
             lines.extend(["## Review Summary", "", executive_summary_text, ""])
+        at_a_glance = self._staged_revisions_at_a_glance_markdown(bundle_summary)
+        if at_a_glance:
+            lines.extend(["## At A Glance", ""])
+            lines.extend(at_a_glance)
+            lines.append("")
         if bundle_summary.warnings:
             lines.extend(["## Bundle Warnings", ""])
             lines.extend(f"- {warning}" for warning in bundle_summary.warnings)
@@ -39801,6 +39948,66 @@ class DoxaBase:
         )
         return "\n".join(lines).rstrip() + "\n"
 
+    def _staged_revisions_at_a_glance_markdown(
+        self,
+        bundle_summary: StagedGraphRevisionBundleSummary,
+    ) -> list[str]:
+        if bundle_summary.total_revisions == 0:
+            return []
+        lines = [
+            f"- Decision: {bundle_summary.decision_headline}",
+            f"- Rows: {bundle_summary.total_revisions}",
+            (
+                "- Apply status counts: "
+                + self._staged_revisions_count_summary(
+                    bundle_summary.apply_status_counts
+                )
+            ),
+            (
+                "- Review queue counts: "
+                + self._staged_revisions_count_summary(
+                    bundle_summary.next_action_queue_item_counts
+                )
+            ),
+            (
+                "- Changed graphs: "
+                + self._staged_revisions_count_summary(
+                    bundle_summary.changed_graph_counts
+                )
+            ),
+        ]
+        if bundle_summary.snapshot_evidence.rows:
+            snapshot_state = (
+                "complete"
+                if bundle_summary.snapshot_evidence.complete
+                else "incomplete"
+            )
+            lines.append(
+                "- Snapshot evidence: "
+                f"{snapshot_state} for "
+                f"{bundle_summary.snapshot_evidence.total_revision_count} row(s)"
+            )
+        if bundle_summary.choose_one_groups:
+            lines.append("- Choose-one groups:")
+            for group in bundle_summary.choose_one_groups:
+                rows = self._staged_revisions_row_list(group.row_indexes)
+                labels = ", ".join(
+                    label or iri
+                    for label, iri in zip(
+                        group.summaries,
+                        group.revision_iris,
+                        strict=True,
+                    )
+                )
+                lines.append(
+                    f"  - Rows {rows}: apply at most one ({labels})."
+                )
+        else:
+            lines.append("- Choose-one groups: none")
+        if bundle_summary.requires_recheck_after_each_apply:
+            lines.append("- Sequencing: recheck sibling rows after each apply.")
+        return lines
+
     def _staged_revisions_reviewer_decision_matrix_markdown(
         self,
         descriptions: list[StagedGraphRevisionDescription],
@@ -39895,6 +40102,12 @@ class DoxaBase:
         if len(values) <= 2:
             return " and ".join(values)
         return ", ".join(values[:-1]) + f", and {values[-1]}"
+
+    @staticmethod
+    def _staged_revisions_count_summary(counts: MappingABC[str, int]) -> str:
+        if not counts:
+            return "none"
+        return ", ".join(f"{key}: {counts[key]}" for key in sorted(counts))
 
     @staticmethod
     def _staged_revisions_human_action(

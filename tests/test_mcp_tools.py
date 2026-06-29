@@ -2660,6 +2660,12 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert export["revision_iris"] == [staged["revision_iri"]]
     assert len(export["revision_summaries"]) == 1
     assert export["bundle_summary"]["apply_status_counts"] == {"ready": 1}
+    assert export["bundle_summary"]["decision_headline"] == (
+        "Review 1 staged revision row(s); queues: apply_after_review: 1; "
+        "changed graphs: map: 1; snapshot evidence complete for 1 row(s)."
+    )
+    assert export["bundle_summary"]["changed_graph_counts"] == {"map": 1}
+    assert export["bundle_summary"]["choose_one_groups"] == []
     assert export["bundle_summary"]["stale_resolution_state_counts"] == {"ready": 1}
     assert export["bundle_summary"]["post_apply_recheck_revision_iris"] == []
     snapshot_evidence = export["bundle_summary"]["snapshot_evidence"]
@@ -2670,6 +2676,10 @@ def test_export_staged_revisions_tool_resolves_relative_paths(
     assert snapshot_evidence["rows"][0]["completeness"] == "complete"
     assert snapshot_evidence["rows"][0]["suggested_next_actions"] == []
     exported = expected_path.read_text(encoding="utf-8")
+    assert "## At A Glance" in exported
+    assert "- Rows: 1" in exported
+    assert "- Changed graphs: map: 1" in exported
+    assert "- Choose-one groups: none" in exported
     assert "## Snapshot Evidence" in exported
     assert "Snapshot evidence complete for 1/1 revision row(s)." in exported
     assert "Status counts: history_plus_snapshot_rows: 1" in exported
@@ -4007,6 +4017,33 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
     assert "## Review Summary" in exported
     assert "Pattern-first is preferred" in exported
     assert "Shared ontology or shapes context patches are present" in exported
+    assert export["bundle_summary"]["changed_graph_counts"] == {
+        "ontology": 2,
+        "patterns": 1,
+        "map": 1,
+    }
+    assert export["bundle_summary"]["choose_one_groups"] == [
+        {
+            "group_index": 1,
+            "row_indexes": [1, 2],
+            "revision_iris": revision_iris,
+            "summaries": [
+                "Explore identity-ladder modelling: Pattern first",
+                "Explore identity-ladder modelling: Map candidate",
+            ],
+            "alternative_set_source_iri": revision_iris[0],
+            "source_row_index": 1,
+            "source_summary": "Explore identity-ladder modelling: Pattern first",
+            "alternative_set_roles": ["source", "alternative"],
+        }
+    ]
+    assert "## At A Glance" in exported
+    assert "- Choose-one groups:" in exported
+    assert (
+        "  - Rows 1 and 2: apply at most one "
+        "(Explore identity-ladder modelling: Pattern first, "
+        "Explore identity-ladder modelling: Map candidate)."
+    ) in exported
     assert "## Reviewer Decision Matrix" in exported
     assert "Rows 1 and 2 are competing alternatives" in exported
     assert "Authored recommendation" in exported

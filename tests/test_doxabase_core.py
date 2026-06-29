@@ -12639,6 +12639,18 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
         item.alternative_set_role
         for item in export.bundle_summary.next_action_queue_items
     ] == ["source", "alternative"]
+    assert export.bundle_summary.changed_graph_counts == {
+        "ontology": 1,
+        "patterns": 1,
+    }
+    assert len(export.bundle_summary.choose_one_groups) == 1
+    choose_one = export.bundle_summary.choose_one_groups[0]
+    assert choose_one.row_indexes == [1, 2]
+    assert choose_one.revision_iris == revision_iris
+    assert choose_one.alternative_set_source_iri == revision_iris[0]
+    assert choose_one.source_row_index == 1
+    assert choose_one.alternative_set_roles == ["source", "alternative"]
+    assert "choose-one group" in export.bundle_summary.decision_headline
     assert [item.apply_status for item in export.revision_summaries] == [
         "ready",
         "ready",
@@ -12676,6 +12688,9 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert exported.startswith("# Identity ladder alternatives\n")
     assert "## Review Summary" in exported
     assert "Prefer the pattern-first framing for now" in exported
+    assert "## At A Glance" in exported
+    assert "- Changed graphs: ontology: 1, patterns: 1" in exported
+    assert "- Choose-one groups:" in exported
     assert "## Reviewer Decision Matrix" in exported
     assert (
         "Rows 1 and 2 are competing alternatives. Apply at most one before "

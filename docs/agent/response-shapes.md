@@ -5197,8 +5197,11 @@ that current successor instead of recommending another restage.
 
 ```python
 bundle.total_revisions
+bundle.decision_headline
 bundle.apply_status_counts
 bundle.stale_resolution_state_counts
+bundle.changed_graph_counts
+bundle.choose_one_groups
 bundle.unresolved_stale_revision_iris
 bundle.stale_handled_by_restage_revision_iris
 bundle.ready_restage_successor_revision_iris
@@ -5326,6 +5329,12 @@ semantic-review requirements. Semantic risk can coexist with validation or
 conflict blockers, so risk counts can appear under repair queues as well as
 `apply_after_review`. Grouped Markdown mirrors each queue item's semantic risk
 level and alternative gate status in the `Resolved Targets` table.
+`decision_headline` is the compact top-line review sentence used by grouped
+Markdown's `At A Glance` section. `changed_graph_counts` counts how many
+included staged rows touch each graph role. `choose_one_groups` lists competing
+alternative sets with row indexes, revision IRIs, labels, source row, and member
+roles so a reviewer or script can enforce "apply at most one" without parsing
+Markdown prose.
 `ready_restage_successor_alternative_to_applied_source_iris` lists ready
 refreshed successors whose `current_alternative_to` / `alternative_to` target is
 already applied. Treat these rows as semantic review targets, not automatic
