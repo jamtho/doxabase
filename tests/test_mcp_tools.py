@@ -1214,6 +1214,63 @@ def test_scan_sensitive_literals_tool_returns_redacted_payload(tmp_path: Path) -
     assert all("term_kind" in match for match in result["matches"])
 
 
+def test_mcp_export_tools_block_sensitive_predicate_iris(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_PREDICATE_MCP"
+    predicate_iri = f"https://example.test/project#{fake_secret}"
+    db.import_turtle(
+        f"""
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders a rc:Dataset ;
+            <{predicate_iri}> "predicate-only MCP privacy probe" .
+        """,
+        graph="map",
+    )
+    revision = db.record_graph_revision(
+        summary="Record predicate MCP privacy probe",
+        rationale=(
+            "Capture a map snapshot whose sensitive-looking term is only a "
+            "predicate IRI."
+        ),
+        changed_graphs=["map"],
+        included_graphs=["map"],
+    )
+
+    scan = scan_sensitive_literals_tool(db, graphs=["map"], limit=10)
+
+    assert scan["match_count"] >= 1
+    assert any(match["term_position"] == "predicate" for match in scan["matches"])
+    assert fake_secret not in str(scan["matches"])
+
+    graph_path = tmp_path / "blocked-predicate.ttl"
+    with pytest.raises(DoxaBaseError) as graph_excinfo:
+        export_graph_tool(
+            db,
+            path=str(graph_path),
+            graphs=["map"],
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(graph_excinfo.value)
+    assert fake_secret not in str(graph_excinfo.value)
+    assert not graph_path.exists()
+
+    snapshot_path = tmp_path / "blocked-predicate-snapshots.json"
+    with pytest.raises(DoxaBaseError) as snapshot_excinfo:
+        export_revision_snapshots_tool(
+            db,
+            path=str(snapshot_path),
+            revision_iris=[revision.revision_iri],
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(snapshot_excinfo.value)
+    assert fake_secret not in str(snapshot_excinfo.value)
+    assert not snapshot_path.exists()
+
+
 def test_export_tools_can_block_sensitive_literals_before_writing(
     tmp_path: Path,
 ) -> None:

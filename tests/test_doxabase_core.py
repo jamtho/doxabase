@@ -1134,6 +1134,87 @@ def test_privacy_exports_block_sensitive_subject_iris(tmp_path: Path) -> None:
     assert not blocked_handoff_snapshot_path.exists()
 
 
+def test_privacy_exports_block_sensitive_predicate_iris(tmp_path: Path) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_PREDICATE_IRI"
+    predicate_iri = f"https://example.test/project#{fake_secret}"
+    db.import_turtle(
+        f"""
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:Orders a rc:Dataset ;
+            <{predicate_iri}> "predicate-only privacy probe" .
+        """,
+        graph="map",
+    )
+    revision = db.record_graph_revision(
+        summary="Record predicate privacy probe",
+        rationale=(
+            "Capture a map snapshot whose sensitive-looking term is only a "
+            "predicate IRI."
+        ),
+        changed_graphs=["map"],
+        included_graphs=["map"],
+    )
+
+    scan = db.scan_sensitive_literals(graphs="map", limit=10)
+
+    assert scan.match_count >= 1
+    assert any(match.term_position == "predicate" for match in scan.matches)
+    assert any(match.term_kind == "uri" for match in scan.matches)
+    assert fake_secret not in str(scan.matches)
+
+    export_path = tmp_path / "predicate-map.ttl"
+    export = db.export_graph(export_path, graphs="map")
+    assert export.sensitive_literal_count == scan.match_count
+    assert fake_secret not in " ".join(export.privacy_warnings)
+    assert fake_secret in export_path.read_text(encoding="utf-8")
+
+    blocked_graph_path = tmp_path / "blocked-predicate-map.ttl"
+    with pytest.raises(DoxaBaseError) as graph_excinfo:
+        db.export_graph(blocked_graph_path, graphs="map", fail_on_sensitive=True)
+    assert "fail_on_sensitive=True" in str(graph_excinfo.value)
+    assert fake_secret not in str(graph_excinfo.value)
+    assert not blocked_graph_path.exists()
+
+    snapshot_path = tmp_path / "predicate-revision-snapshots.json"
+    snapshot_export = db.export_revision_snapshots(
+        snapshot_path,
+        revision_iris=[revision.revision_iri],
+    )
+    assert snapshot_export.sensitive_literal_count >= 1
+    assert fake_secret not in " ".join(snapshot_export.privacy_warnings)
+    assert fake_secret in snapshot_path.read_text(encoding="utf-8")
+
+    blocked_snapshot_path = tmp_path / "blocked-predicate-revision-snapshots.json"
+    with pytest.raises(DoxaBaseError) as snapshot_excinfo:
+        db.export_revision_snapshots(
+            blocked_snapshot_path,
+            revision_iris=[revision.revision_iri],
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(snapshot_excinfo.value)
+    assert fake_secret not in str(snapshot_excinfo.value)
+    assert not blocked_snapshot_path.exists()
+
+    blocked_trig_path = tmp_path / "blocked-predicate-project.trig"
+    blocked_handoff_snapshot_path = (
+        tmp_path / "blocked-predicate-handoff-revision-snapshots.json"
+    )
+    with pytest.raises(DoxaBaseError) as handoff_excinfo:
+        db.export_handoff_bundle(
+            blocked_trig_path,
+            blocked_handoff_snapshot_path,
+            revision_iris=[revision.revision_iri],
+            fail_on_sensitive=True,
+        )
+    assert "fail_on_sensitive=True" in str(handoff_excinfo.value)
+    assert fake_secret not in str(handoff_excinfo.value)
+    assert not blocked_trig_path.exists()
+    assert not blocked_handoff_snapshot_path.exists()
+
+
 def test_export_revision_snapshots_reports_sensitive_literals(
     tmp_path: Path,
 ) -> None:

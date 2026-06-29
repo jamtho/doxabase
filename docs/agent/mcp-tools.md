@@ -24,13 +24,13 @@ Returns named graph counts, top classes, top predicates, key entity counts, and 
 
 `doxabase.scan_sensitive_literals`
 
-Scans selected graph roles for suspicious credential-like subject URI, object
-URI, or literal terms and returns only redacted snippets. Each match includes
-`term_position` and `term_kind` so agents can tell whether the hit came from a
-subject IRI or an object value. Use it before sharing `export_graph` or
-`export_trig` artifacts when storage, evidence, source paths, identifiers, or
-descriptions may contain secrets. This is a conservative audit helper, not a
-proof that the graph is secret-free. Export helpers report
+Scans selected graph roles for suspicious credential-like subject URI, predicate
+URI, object URI, or literal terms and returns only redacted snippets. Each match
+includes `term_position` and `term_kind` so agents can tell whether the hit came
+from a subject IRI, predicate IRI, or object value. Use it before sharing
+`export_graph` or `export_trig` artifacts when storage, evidence, source paths,
+identifiers, or descriptions may contain secrets. This is a conservative audit
+helper, not a proof that the graph is secret-free. Export helpers report
 `sensitive_literal_count` and `privacy_warnings` when this scan finds matches,
 but exports remain faithful RDF and do not redact automatically.
 If a returned context field such as `subject` or `predicate` itself contains a
@@ -1783,7 +1783,7 @@ result includes per-graph triple counts plus privacy warning counts from
 `scan_sensitive_literals`. Warnings do not block export and the written RDF is
 not redacted. Pass `fail_on_sensitive=true` when the export should raise before
 creating or overwriting an artifact if the selected graph roles contain
-sensitive-looking subject URI, object URI, or literal terms.
+sensitive-looking subject URI, predicate URI, object URI, or literal terms.
 
 `doxabase.replace_graph_triples`
 
@@ -1857,9 +1857,9 @@ those ancestor IRIs explicitly when the receiving agent needs exact full-chain
 lineage recovery. The bundle may include historical triples that are no longer
 current graph facts. Snapshot JSON is a faithful handoff artifact, not a
 redacted shareable view. The export result includes `sensitive_literal_count`
-and `privacy_warnings` from scanning stored snapshot quad subjects and object
-terms; pass `fail_on_sensitive=true` when unattended or shareable snapshot
-exports should raise before creating or overwriting the JSON artifact.
+and `privacy_warnings` from scanning stored snapshot quad subjects, predicates,
+and object terms; pass `fail_on_sensitive=true` when unattended or shareable
+snapshot exports should raise before creating or overwriting the JSON artifact.
 
 `doxabase.load_example_fixtures`
 

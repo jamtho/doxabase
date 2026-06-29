@@ -2355,6 +2355,12 @@ few useful gaps:
   URI terms as well as object URI/literal terms, and match payloads include
   `term_position` / `term_kind` so agents can review whether the hit came from
   an identifier or an object value.
+- A predicate-only privacy/export trial found the same leak shape for
+  credential-like RDF predicate IRIs: graph scans, revision snapshot JSON, and
+  handoff exports could pass when the sentinel appeared only in the predicate.
+  Sensitive-term scans now include predicate URI terms in live graph roles and
+  stored snapshot quads, so `fail_on_sensitive=True` blocks before writing those
+  faithful artifacts.
 - A query/storage frontier trial found database-backed routes could have storage
   and relation metadata modeled correctly but no structured repair lane for
   `missing_physical_layout`. Once storage is linked, that issue now exposes a

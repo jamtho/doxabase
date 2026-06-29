@@ -3840,10 +3840,11 @@ export.privacy_warnings
 ```
 
 `sensitive_literal_count` and `privacy_warnings` come from a conservative
-credential-like scan over selected subject URI, object URI, and literal graph
-terms. They warn before sharing; they do not redact the exported RDF. Pass
-`fail_on_sensitive=True` to block before creating or overwriting an RDF export
-when the selected graph roles scan dirty. Call `scan_sensitive_literals(graphs=...)`
+credential-like scan over selected subject URI, predicate URI, object URI, and
+literal graph terms. They warn before sharing; they do not redact the exported
+RDF. Pass `fail_on_sensitive=True` to block before creating or overwriting an
+RDF export when the selected graph roles scan dirty. Call
+`scan_sensitive_literals(graphs=...)`
 for redacted match rows with `term_position` and `term_kind`; sensitive-looking
 context fields in those rows are redacted too. These fields are not a
 path/shareability hygiene signal: non-secret local paths, object-store URIs,
@@ -3872,9 +3873,9 @@ applied staged-revision event, export also includes that event's staged source
 revision snapshots so applied diff reconstruction has both sides. It may
 include historical triples that are no longer present in current graph roles.
 Snapshot exports are faithful JSON, not redacted output. The warning fields come
-from a conservative scan of stored snapshot quad subjects and object terms, and
-`fail_on_sensitive=True` blocks before creating or overwriting the JSON file
-when potential sensitive graph terms are found.
+from a conservative scan of stored snapshot quad subjects, predicates, and
+object terms, and `fail_on_sensitive=True` blocks before creating or overwriting
+the JSON file when potential sensitive graph terms are found.
 
 `db.export_handoff_bundle(trig_path, revision_snapshot_path, ...)` returns
 `HandoffBundleExportRecord`:

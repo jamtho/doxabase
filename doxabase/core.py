@@ -38165,6 +38165,7 @@ class DoxaBase:
             for quad in entry["quads"]:
                 for term_position, term_kind, term_value in (
                     ("subject", "uri", quad.get("subject")),
+                    ("predicate", "uri", quad.get("predicate")),
                     ("object", quad.get("object_kind"), quad.get("object")),
                 ):
                     if term_kind not in {"literal", "uri"} or term_value is None:
@@ -38556,6 +38557,17 @@ class DoxaBase:
                     subject,
                     predicate,
                     object_kind,
+                    'predicate' AS term_position,
+                    'uri' AS term_kind,
+                    predicate AS term_value
+                FROM quads
+                WHERE graph IN ({placeholders})
+                UNION ALL
+                SELECT
+                    graph,
+                    subject,
+                    predicate,
+                    object_kind,
                     'object' AS term_position,
                     object_kind AS term_kind,
                     object AS term_value
@@ -38564,7 +38576,7 @@ class DoxaBase:
                   AND object_kind IN ('literal', 'uri')
                 ORDER BY graph, subject, predicate, term_position, term_value
                 """,
-                [*graph_names, *graph_names],
+                [*graph_names, *graph_names, *graph_names],
             )
         )
 
