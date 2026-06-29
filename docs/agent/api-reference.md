@@ -696,7 +696,10 @@ scan for post-apply handoffs; set `include_applied_staged_sources=false` only
 when the bundle should ignore already-applied profile-map sources. Returned
 candidates expose `profile_route_keys` and `profile_route_groups`, and the
 Markdown review summary includes a `Profile Route Bridge` table when candidates
-match draft route groups. It does not stage missing advisory-lane work for you.
+match draft route groups. The bridge's `Row` column uses the same `Revision N`
+row number as the grouped bundle sections and repeats the candidate summary so
+Markdown-only reviewers can map lanes back to detailed rows. It does not stage
+missing advisory-lane work for you.
 Pass `fail_on_sensitive=True` when unattended or shareable profile review
 exports should raise before writing if the generated Markdown contains
 credential-like or secret-looking literals.

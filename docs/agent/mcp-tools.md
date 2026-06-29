@@ -574,8 +574,12 @@ support/evidence/anchor fields, `profile_route_keys`,
 `profile_route_groups`, `candidate_revision_iris`, and the nested
 `export_staged_revisions` record when a bundle was written. The grouped
 Markdown review summary includes a `Profile Route Bridge` table when candidates
-match draft route groups. Route groups include `match_strength`: use
-`direct_action` for the lane a staged row appears to implement, and treat
+match draft route groups. The bridge's `Row` column uses the same `Revision N`
+row number as the later grouped bundle sections, and `Candidate` repeats the
+row summary so Markdown-only reviewers can jump from a route lane to the
+matching candidate without reverse-joining IRIs. Route groups include
+`match_strength`:
+use `direct_action` for the lane a staged row appears to implement, and treat
 `strong_support` / `related_support` as related context rather than lane
 satisfaction. New profile-map staged revisions persist their route source in
 history, so already-applied sources can still show their original

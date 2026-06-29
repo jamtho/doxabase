@@ -23537,6 +23537,15 @@ def test_export_profile_insight_review_bundle_discovers_related_staged_revisions
     assert "## Privacy Warning" in exported
     assert "## Reviewer Decision Matrix" in exported
     assert "### Profile Route Bridge" in exported
+    assert (
+        "| Row | Candidate | Revision | Profile route keys | Review lanes | Matched by |"
+        in exported
+    )
+    for row_number, candidate in enumerate(result.candidates, start=1):
+        if not candidate.profile_route_groups:
+            continue
+        assert f"| {row_number} | {candidate.summary} |" in exported
+        assert f"## Revision {row_number}: {candidate.summary}" in exported
     assert profile_map_route_key in exported
     assert metric_route_key in exported
     assert query_route_key in exported
@@ -23631,10 +23640,11 @@ def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
     )
     caveat_revision_iri = caveat_draft.staged_revisions[0].revision_iri
 
+    export_path = tmp_path / "profile-postapply-review.md"
     result = db.export_profile_insight_review_bundle(
         dataset,
         evidence,
-        tmp_path / "profile-postapply-review.md",
+        export_path,
     )
 
     assert result.candidate_revision_iris == [
@@ -23661,6 +23671,20 @@ def test_export_profile_insight_review_bundle_recovers_applied_profile_sources(
     assert result.export.bundle_summary.recommended_applied_inspection_iris == [
         applied_source_iri
     ]
+    exported = export_path.read_text(encoding="utf-8")
+    applied_row_number = result.candidates.index(applied_candidate) + 1
+    assert (
+        "| Row | Candidate | Revision | Profile route keys | Review lanes | Matched by |"
+        in exported
+    )
+    assert (
+        f"| {applied_row_number} | {applied_candidate.summary} |"
+        in exported
+    )
+    assert (
+        f"## Revision {applied_row_number}: {applied_candidate.summary}"
+        in exported
+    )
 
     current_only = db.export_profile_insight_review_bundle(
         dataset,
@@ -23758,6 +23782,12 @@ def test_export_profile_insight_review_bundle_recovers_applied_query_repair_rout
     exported = (tmp_path / "profile-query-postapply-review.md").read_text(
         encoding="utf-8"
     )
+    assert (
+        "| Row | Candidate | Revision | Profile route keys | Review lanes | Matched by |"
+        in exported
+    )
+    assert f"| 1 | {candidate.summary} |" in exported
+    assert f"## Revision 1: {candidate.summary}" in exported
     assert "query_context_review (direct_action)" in exported
 
 

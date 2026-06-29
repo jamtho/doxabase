@@ -7518,6 +7518,12 @@ def test_export_profile_insight_review_bundle_tool_returns_json_like_payload(
     exported = export_path.read_text(encoding="utf-8")
     assert "Profile insight review: Orders" in exported
     assert "### Profile Route Bridge" in exported
+    assert (
+        "| Row | Candidate | Revision | Profile route keys | Review lanes | Matched by |"
+        in exported
+    )
+    assert f"| 1 | {result['candidates'][0]['summary']} |" in exported
+    assert f"## Revision 1: {result['candidates'][0]['summary']}" in exported
     assert "profile_map_updates (direct_action)" in exported
     profile_map_route_key = result["candidates"][0]["profile_route_keys"][0]
     assert profile_map_route_key in exported

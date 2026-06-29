@@ -2111,6 +2111,11 @@ few useful gaps:
   `missing_storage_access query planning guidance` also synthesize a
   `query_context_review` direct-action route when the repair has already been
   applied.
+- A Profile Route Bridge usability trial found Markdown-only reviewers could see
+  lane keys and revision IRIs, but still had to reverse-map them to the grouped
+  bundle rows. The bridge now carries the same row number and candidate summary
+  used by the later review matrix and revision sections; use that row number
+  when moving from a route lane to detailed patch review.
 - A follow-up project-brief pass found a remaining bridge gap for
   `query_context_review`: the draft action had route keys, but no route anchor,
   so a staged dataset-anchored storage/query repair could enter a profile

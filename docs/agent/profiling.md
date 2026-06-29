@@ -150,6 +150,9 @@ first suggested action is the same dataset-level `describe_query_context` call.
 The returned candidates and Markdown `Profile Route Bridge` table preserve
 matched profile route keys, so reviewers can see which draft duplicate/advisory
 group led to each staged row without reverse-joining action indexes by hand.
+The bridge `Row` column uses the same row number as the grouped review bundle's
+`Revision N` sections and repeats the candidate summary, so a Markdown-only
+reviewer can map route lanes back to the detailed revision section directly.
 New `stage_profile_map_updates` revisions persist their profile route source in
 history, so post-apply exports can still show the original
 `profile_map_updates` direct-action lane after the live draft no longer proposes

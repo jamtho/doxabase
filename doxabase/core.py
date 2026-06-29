@@ -31746,10 +31746,15 @@ class DoxaBase:
         if not rows:
             return ""
         lines = [
-            "| Revision | Profile route keys | Review lanes | Matched by |",
-            "|---|---|---|---|",
+            (
+                "| Row | Candidate | Revision | Profile route keys | Review lanes | "
+                "Matched by |"
+            ),
+            "|---|---|---|---|---|---|",
         ]
-        for candidate in rows:
+        for index, candidate in enumerate(candidates, start=1):
+            if not candidate.profile_route_groups:
+                continue
             route_keys = ", ".join(
                 f"`{key}`" for key in candidate.profile_route_keys
             )
@@ -31771,6 +31776,10 @@ class DoxaBase:
                 "| "
                 + " | ".join(
                     [
+                        str(index),
+                        self._markdown_table_cell(
+                            candidate.summary or candidate.revision_iri
+                        ),
                         self._markdown_table_cell(
                             f"`{candidate.revision_iri}`"
                         ),

@@ -1908,6 +1908,9 @@ profile-map revision, or from generated query-planning repair review notes for
 already-applied query repairs whose live blocker is gone.
 Markdown export includes a `Profile Route Bridge` table in the review summary
 when candidates match draft routes, and renders lane names with their strength.
+The bridge includes the grouped bundle row number and candidate summary beside
+the revision IRI so Markdown-only reviewers can move from a route lane to the
+matching `Revision N` section without consulting the JSON payload.
 
 Partition schemes under `dataset.partition_schemes[]` include both a compatibility
 shortcut and the full list:
