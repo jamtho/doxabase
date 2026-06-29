@@ -717,6 +717,47 @@ only `blank_node_omitted_count` is non-zero, increase `blank_node_limit`.
 
 ## Staged Map Assertion Changes
 
+`db.draft_map_assertion_change(subject, predicate, object, rationale, ...)`
+returns a read-only `DraftMapAssertionChangeRecord`:
+
+```python
+draft.result_kind
+draft.change_kind
+draft.graph
+draft.subject
+draft.predicate
+draft.object_value
+draft.object_kind
+draft.object_datatype
+draft.object_lang
+draft.assertion_present_before
+draft.current_values_before
+draft.additions
+draft.removals
+draft.changed_graphs
+draft.patches
+draft.impacts
+draft.validation_scope
+draft.validation_conforms
+draft.validation_result_count
+draft.validation_results
+draft.validation_report_text
+draft.assertion_support
+draft.judgement_panel
+draft.review_note
+draft.review_recommendation
+draft.stage_arguments
+draft.suggested_next_actions
+draft.suggested_next_calls
+```
+
+Use the draft form when you need the assertion-support snapshot, validation
+preview, impacts, and semantic-risk panel before deciding to write. It does not
+create a staged revision, so there is no `revision_iri` or `staged_revision`
+field. If the review still justifies a write, follow
+`draft.suggested_next_actions[0]` or pass `draft.stage_arguments` to
+`stage_map_assertion_change`.
+
 `db.stage_map_assertion_change(subject, predicate, object, rationale, ...)`
 returns a `StagedMapAssertionChangeRecord`:
 
@@ -3146,6 +3187,9 @@ claim.incoming_reconsiderations
 `claim.claim_kind` is a string IRI, not a `ResourceSummary` object. Use
 `claim.claim_kind_label` when you want display text and `claim.claim_targets`
 when you need the resource summaries the claim is about.
+`claim.proposed_assertions` contains resource summaries for assertion resources
+linked by IRI or CURIE. It is not an inline Turtle or dict-shaped assertion
+payload field.
 
 ## Staged Revisions
 

@@ -25,6 +25,7 @@ from doxabase.mcp_tools import (
     describe_resource_tool,
     describe_revision_snapshot_evidence_tool,
     describe_staged_revision_tool,
+    draft_map_assertion_change_tool,
     draft_profile_map_updates_tool,
     draft_query_plan_tool,
     draft_staged_revision_rebase_tool,
@@ -173,6 +174,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.stage_graph_revision" in tool_names
     assert "doxabase.restage_staged_revision" in tool_names
     assert "doxabase.restage_staged_revisions" in tool_names
+    assert "doxabase.draft_map_assertion_change" in tool_names
     assert "doxabase.stage_map_assertion_change" in tool_names
     assert "doxabase.stage_systematisation" in tool_names
     assert "doxabase.stage_pattern_promotion" in tool_names
@@ -3129,6 +3131,51 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
         f"describe_staged_revision(iri='{staged['revision_iri']}')",
     ]
     assert generic_lineage["warnings"] == []
+
+
+def test_draft_map_assertion_change_tool_returns_json_like_payload_without_write(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    load_example_fixtures_tool(db)
+    before_map_count = db.triple_count("map")
+    before_history_count = db.triple_count("history")
+
+    result = draft_map_assertion_change_tool(
+        db,
+        subject="https://richcanopy.org/example/manifest/polymarket#px_price",
+        predicate="rc:physicalType",
+        object="rc:Double",
+        rationale=(
+            "Preview a tempting but unsafe type change before deciding whether "
+            "to stage it."
+        ),
+        change_kind="replace",
+    )
+
+    assert result["result_kind"] == "draft_map_assertion_change"
+    assert result["change_kind"] == "replace"
+    assert result["assertion_present_before"] is False
+    assert result["changed_graphs"] == ["map"]
+    assert result["validation_conforms"] is True
+    assert result["validation_result_count"] == 0
+    assert result["assertion_support"]["related_route_summaries"]
+    assert result["judgement_panel"]["semantic_risk_level"] == "high"
+    assert any(
+        impact["impact_type"] == "changed_physical_type"
+        for impact in result["impacts"]
+    )
+    assert result["suggested_next_actions"][0]["tool_name"] == (
+        "stage_map_assertion_change"
+    )
+    assert result["suggested_next_actions"][0]["mcp_tool_name"] == (
+        "doxabase.stage_map_assertion_change"
+    )
+    assert result["stage_arguments"]["summary"] == (
+        "Replace map assertion: price physicalType DOUBLE"
+    )
+    assert db.triple_count("map") == before_map_count
+    assert db.triple_count("history") == before_history_count
 
 
 def test_stage_map_assertion_change_tool_returns_json_like_payload(

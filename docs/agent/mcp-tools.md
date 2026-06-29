@@ -1189,6 +1189,12 @@ Layout verification status accepts `rc:UnverifiedLayout`,
 `rc:GeneratedFromManifestLayout`, `rc:CandidateLayout`,
 `rc:VerifiedByListingLayout`, `rc:VerifiedByQueryLayout`, or
 `rc:ContradictedLayout`.
+For API endpoints, document collections, message streams, model artifacts, and
+other non-tabular assets, pass `is_table=False` plus project `extra_types` where
+useful. Use `describe_context_slice(profile="deep_lore")` or
+`describe_resource` for handoff context; `describe_query_context` should report
+`not_applicable_non_tabular_asset` unless a separate queryable table route is
+modeled.
 
 `doxabase.record_map_column`
 
@@ -1298,6 +1304,19 @@ rebased successor for a stale staged revision. The tool records
 removals intact. If the stale source already has `restaged_by` /
 `current_restaged_by`, inspect or target that current successor instead; the
 tool rejects parallel successors.
+
+`doxabase.draft_map_assertion_change`
+
+Builds the same single-assertion add/remove/replace preview as
+`stage_map_assertion_change` without writing a staged revision to `history`. Use
+it when you are asking "should this assertion change exist?" or when the likely
+answer depends on caveats, related observations, value-type context, impacts, or
+validation. The response includes addition/removal Turtle payloads, patch count
+previews, validation fields, impact entries, `assertion_support`,
+`judgement_panel`, and `stage_arguments`. If the panel still justifies the
+write, follow `suggested_next_actions[0]` to call
+`doxabase.stage_map_assertion_change`. The draft is read-only; history counts and
+staged-revision queues should not change.
 
 `doxabase.stage_map_assertion_change`
 

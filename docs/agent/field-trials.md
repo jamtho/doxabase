@@ -2664,6 +2664,22 @@ few useful gaps:
   `query_plan_handoff` tasks now carry `query_plan_handoff_summary` so the brief
   itself surfaces selected relation/URI, handoff kind, execution blockers,
   required bindings, and unselected ready/direct-clean candidate indexes.
+- A non-tabular/context-slice trial confirmed API endpoints, document
+  collections, and message streams do not need table-shaped fake columns. Model
+  them with `record_map_dataset(is_table=False, extra_types=[...])`, use
+  `describe_resource` or `describe_context_slice(profile="deep_lore")` for
+  handoff context, and treat `describe_query_context` status
+  `not_applicable_non_tabular_asset` as expected unless a separate queryable
+  table route has been modeled.
+- An ontology/systematisation trial confirmed the systematisation flow works for
+  awkward shared vocabulary proposals, but agents still trip on SHACL result
+  shape. Staged-revision diagnostics live in `validation_results[]`, and the
+  diagnostic text field is `messages[]`, not singular `message`.
+- An assertion-lineage trial showed `stage_map_assertion_change` gave the right
+  judgement panel but was too write-oriented for "should I change this?" review.
+  Use `draft_map_assertion_change` first when evaluating a single assertion:
+  it returns support, patch, validation, impact, semantic-risk, and stage-action
+  previews without writing `history`.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

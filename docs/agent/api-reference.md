@@ -1014,27 +1014,34 @@ you provide. If the stale source already has `restaged_by` /
 `current_restaged_by`, inspect or target that current successor instead; the
 helper rejects parallel successors.
 
-`stage_map_assertion_change()` stages a reviewable add/remove/replace for one
-`map` assertion. Pass `subject`, `predicate`, optional `object`, a `rationale`,
-and `change_kind` (`"add"`, `"remove"`, or `"replace"`). For typed or
-language-tagged literals, also pass `object_datatype` or `object_lang`; the
-helper will author the corresponding typed/language-tagged Turtle instead of a
-plain literal. It calls `describe_assertion_support()` before staging, generates
-the Turtle patches, links related observations/claims/patterns/evidence and
-revision anchors, and stores an assertion-support summary in the staged revision
-review note. The response includes top-level `revision_iri` as an alias of
-`staged_revision.revision_iri`. The returned `judgement_panel` is the compact reviewer view:
-headline,
-current/proposed values, semantic risk level/reasons, value-type context, reasons
-the current value may be intentional, caveat scopes, strongest related-lore
-routes, impact spotlight entries, and safety notes. For physical type changes,
-the panel includes current `rc:valueType` resources and any declared
-`rc:requiredPhysicalType`. `target_value` names the requested object for add,
-replace, and remove changes; `removed_value` is populated for remove changes so
-reviewers do not have to interpret legacy `proposed_value` as the value being
-removed. For exact removals, `removed_value` reflects the matched graph triple,
-including datatype or language-tag context. Use it for common assertion changes
-before reaching for generic `stage_graph_revision`.
+`draft_map_assertion_change()` previews the same reviewable add/remove/replace
+for one `map` assertion without writing a staged revision. Pass `subject`,
+`predicate`, optional `object`, a `rationale`, and `change_kind` (`"add"`,
+`"remove"`, or `"replace"`). It returns addition/removal Turtle payloads, patch
+count previews, validation fields, impact entries, assertion support, the compact
+`judgement_panel`, and `stage_arguments` for the write step. Use it when the
+question is whether a single assertion should change; follow
+`suggested_next_actions[0]` only after the draft support, impacts, and semantic
+risk justify staging.
+
+`stage_map_assertion_change()` stages that reviewable add/remove/replace. For
+typed or language-tagged literals, also pass `object_datatype` or `object_lang`;
+the helper will author the corresponding typed/language-tagged Turtle instead of
+a plain literal. It calls `describe_assertion_support()` before staging,
+generates the Turtle patches, links related observations/claims/patterns/evidence
+and revision anchors, and stores an assertion-support summary in the staged
+revision review note. The response includes top-level `revision_iri` as an alias
+of `staged_revision.revision_iri`. The returned `judgement_panel` is the compact
+reviewer view: headline, current/proposed values, semantic risk level/reasons,
+value-type context, reasons the current value may be intentional, caveat scopes,
+strongest related-lore routes, impact spotlight entries, and safety notes. For
+physical type changes, the panel includes current `rc:valueType` resources and
+any declared `rc:requiredPhysicalType`. `target_value` names the requested object
+for add, replace, and remove changes; `removed_value` is populated for remove
+changes so reviewers do not have to interpret legacy `proposed_value` as the
+value being removed. For exact removals, `removed_value` reflects the matched
+graph triple, including datatype or language-tag context. Use it for common
+assertion changes before reaching for generic `stage_graph_revision`.
 It also accepts `restages_revision` for the common case where a stale
 single-assertion candidate should be replaced by a caller-authored add, remove,
 or replace patch instead of mechanically replaying the old payload.

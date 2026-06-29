@@ -26,6 +26,7 @@ from doxabase.mcp_tools import (
     describe_staged_revision_tool,
     draft_profile_map_updates_tool,
     draft_query_plan_tool,
+    draft_map_assertion_change_tool,
     draft_staged_revision_rebase_tool,
     export_graph_tool,
     export_handoff_bundle_tool,
@@ -78,7 +79,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -1518,6 +1519,69 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             created_by=created_by,
             validation_scope=validation_scope,
             dry_run=dry_run,
+        )
+
+    @server.tool(name="doxabase.draft_map_assertion_change")
+    def draft_map_assertion_change(
+        subject: str,
+        predicate: str,
+        object: str | None,
+        rationale: str,
+        change_kind: str = "replace",
+        graph: str = "map",
+        object_kind: str = "auto",
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
+        summary: str | None = None,
+        stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: list[str] | None = None,
+        revision_iri: str | None = None,
+        created_at: str | None = None,
+        created_by: str | None = None,
+        supporting_observations: list[str] | None = None,
+        supporting_claims: list[str] | None = None,
+        supporting_patterns: list[str] | None = None,
+        revision_anchors: list[str] | None = None,
+        evidence: list[str] | None = None,
+        alternative_to: str | None = None,
+        restages_revision: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
+        validation_scope: str = "all",
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Preview a map assertion change with support, validation, and no write."""
+
+        return draft_map_assertion_change_tool(
+            db,
+            subject=subject,
+            predicate=predicate,
+            object=object,
+            rationale=rationale,
+            change_kind=change_kind,
+            graph=graph,
+            object_kind=object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
+            summary=summary,
+            stance=stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            revision_iri=revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            revision_anchors=revision_anchors,
+            evidence=evidence,
+            alternative_to=alternative_to,
+            restages_revision=restages_revision,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
+            validation_scope=validation_scope,
+            limit=limit,
         )
 
     @server.tool(name="doxabase.stage_map_assertion_change")

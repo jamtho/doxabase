@@ -3373,18 +3373,50 @@ def test_stage_map_assertion_change_packages_support_context(
         """
     )
     before_map_count = db.triple_count("map")
-
-    staged_change = db.stage_map_assertion_change(
-        subject="https://example.test/project#px_price",
-        predicate="rc:physicalType",
-        object="rc:Double",
-        change_kind="replace",
-        rationale=(
+    before_history_count = db.triple_count("history")
+    change_arguments = {
+        "subject": "https://example.test/project#px_price",
+        "predicate": "rc:physicalType",
+        "object": "rc:Double",
+        "change_kind": "replace",
+        "rationale": (
             "Testing a tempting but risky coercion so the review bundle should "
             "make the existing VARCHAR and attached lore visible."
         ),
-        review_note="This is deliberately staged for review, not applied.",
+        "review_note": "This is deliberately staged for review, not applied.",
+    }
+
+    draft_change = db.draft_map_assertion_change(**change_arguments)
+
+    assert draft_change.result_kind == "draft_map_assertion_change"
+    assert draft_change.change_kind == "replace"
+    assert draft_change.assertion_present_before is False
+    assert [triple.object for triple in draft_change.current_values_before] == [
+        RC + "Varchar"
+    ]
+    assert draft_change.changed_graphs == ["map"]
+    assert [patch.operation for patch in draft_change.patches] == [
+        RC + "AdditionPatch",
+        RC + "RemovalPatch",
+    ]
+    assert len(draft_change.additions) == 1
+    assert len(draft_change.removals) == 1
+    assert draft_change.validation_conforms is True
+    assert draft_change.validation_result_count == 0
+    assert any(
+        impact.impact_type == "changed_physical_type"
+        for impact in draft_change.impacts
     )
+    assert draft_change.judgement_panel.semantic_risk_level == "high"
+    assert draft_change.suggested_next_actions[0].tool_name == (
+        "stage_map_assertion_change"
+    )
+    assert draft_change.stage_arguments["rationale"].startswith(
+        "Testing a tempting but risky coercion"
+    )
+    assert db.triple_count("history") == before_history_count
+
+    staged_change = db.stage_map_assertion_change(**change_arguments)
 
     assert staged_change.change_kind == "replace"
     assert staged_change.assertion_present_before is False
@@ -3446,7 +3478,10 @@ def test_stage_map_assertion_change_packages_support_context(
         for note in panel.safety_notes
     )
     assert any("owning dataset" in note for note in panel.safety_notes)
+    assert staged_change.additions == draft_change.additions
+    assert staged_change.removals == draft_change.removals
     assert db.triple_count("map") == before_map_count
+    assert db.triple_count("history") > before_history_count
 
     description = db.describe_staged_revision(
         staged_change.staged_revision.revision_iri

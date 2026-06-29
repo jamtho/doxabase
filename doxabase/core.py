@@ -3190,6 +3190,65 @@ class StagedMapAssertionChangeRecord:
 
 
 @dataclass(frozen=True)
+class DraftMapAssertionChangeRecord:
+    result_kind: str
+    change_kind: str
+    graph: str
+    subject: str
+    predicate: str
+    object_value: str | None
+    object_kind: str
+    object_datatype: str | None
+    object_lang: str | None
+    assertion_present_before: bool
+    current_values_before: list[ResourceTriple]
+    additions: list[dict[str, str]]
+    removals: list[dict[str, str]]
+    changed_graphs: list[str]
+    patches: list[StagedGraphPatchDescription]
+    impacts: list[StagedRevisionImpact]
+    validation_scope: str
+    validation_conforms: bool
+    validation_result_count: int
+    validation_results: list[ValidationDiagnostic]
+    validation_report_text: str
+    assertion_support: AssertionSupportDescription
+    judgement_panel: MapAssertionJudgementPanel
+    review_note: str
+    review_recommendation: str | None
+    stage_arguments: dict[str, Any]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
+class _MapAssertionChangePrepared:
+    change_kind: str
+    graph: str
+    subject: str
+    predicate: str
+    object_value: str | None
+    object_kind: str
+    object_datatype: str | None
+    object_lang: str | None
+    rationale: str
+    additions: list[dict[str, str]]
+    removals: list[dict[str, str]]
+    summary: str
+    review_note: str
+    review_recommendation: str | None
+    assertion_support: AssertionSupportDescription
+    assertion_present_before: bool
+    current_values_before: list[ResourceTriple]
+    supporting_observations: list[str]
+    supporting_claims: list[str]
+    supporting_patterns: list[str]
+    revision_anchors: list[str]
+    evidence: list[str]
+    stage_arguments: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class ContextSliceRoute:
     route: str
     route_label: str
@@ -3290,6 +3349,14 @@ class ValidationResult:
     result_count: int
     scope: str
     results: list[ValidationDiagnostic]
+
+
+@dataclass(frozen=True)
+class _StagedGraphPatchPreview:
+    changed_graphs: list[str]
+    patch_records: list[StagedGraphPatchRecord]
+    patch_descriptions: list[StagedGraphPatchDescription]
+    validation: ValidationResult
 
 
 class DoxaBase:
@@ -5148,7 +5215,7 @@ class DoxaBase:
                 selected.append(pattern.iri)
         return list(dict.fromkeys(selected))
 
-    def stage_map_assertion_change(
+    def _prepare_map_assertion_change(
         self,
         subject: str,
         predicate: str,
@@ -5184,7 +5251,7 @@ class DoxaBase:
             "all",
         ] = "all",
         limit: int = 20,
-    ) -> StagedMapAssertionChangeRecord:
+    ) -> _MapAssertionChangePrepared:
         if graph != "map":
             raise DoxaBaseError("stage_map_assertion_change currently targets map only")
         kind = change_kind.strip().lower()
@@ -5195,6 +5262,17 @@ class DoxaBase:
             raise DoxaBaseError("rationale must not be empty")
         if kind in {"add", "replace"} and object is None:
             raise DoxaBaseError(f"change_kind '{kind}' requires an object")
+        self._ensure_revision_stance(self.expand_iri(stance))
+        new_revision_iri = (
+            self._required_iri("revision_iri", revision_iri)
+            if revision_iri is not None
+            else "urn:doxabase:draft-map-assertion-change"
+        )
+        if restages_revision is not None:
+            self._validated_restage_successor_source(
+                restages_revision,
+                new_revision_iri=new_revision_iri,
+            )
 
         support = self.describe_assertion_support(
             subject,
@@ -5292,78 +5370,436 @@ class DoxaBase:
             revision_anchors,
             self._assertion_revision_anchors(support),
         )
-        staged = self.stage_graph_revision(
-            summary=summary_value,
+        supporting_observation_values = self._merge_iri_values(
+            supporting_observations,
+            [item.iri for item in support.related_observations],
+        )
+        supporting_claim_values = self._merge_iri_values(
+            supporting_claims,
+            [item.iri for item in support.related_claims],
+        )
+        supporting_pattern_values = self._merge_iri_values(
+            supporting_patterns,
+            self._assertion_auto_supporting_pattern_iris(support),
+        )
+        evidence_values = self._merge_iri_values(
+            evidence,
+            [item.iri for item in support.related_evidence],
+        )
+        object_value = (
+            support.requested_object.value
+            if support.requested_object is not None
+            else None
+        )
+        resolved_object_kind = (
+            support.requested_object.value_kind
+            if support.requested_object is not None
+            else object_kind
+        )
+        resolved_object_datatype = (
+            support.requested_object.datatype
+            if support.requested_object is not None
+            else None
+        )
+        resolved_object_lang = (
+            support.requested_object.lang
+            if support.requested_object is not None
+            else None
+        )
+        stage_arguments = self._map_assertion_change_stage_arguments(
+            subject=subject_iri,
+            predicate=predicate_iri,
+            object_value=object_value,
             rationale=rationale_value,
-            additions=additions,
-            removals=removals,
+            change_kind=kind,
+            graph=graph,
+            object_kind=object_kind,
+            object_datatype=resolved_object_datatype,
+            object_lang=resolved_object_lang,
+            summary=summary_value,
             stance=stance,
             revision_type=revision_type,
             included_graphs=included_graphs,
             revision_iri=revision_iri,
             created_at=created_at,
             created_by=created_by,
-            supporting_observations=self._merge_iri_values(
-                supporting_observations,
-                [item.iri for item in support.related_observations],
-            ),
-            supporting_claims=self._merge_iri_values(
-                supporting_claims,
-                [item.iri for item in support.related_claims],
-            ),
-            supporting_patterns=self._merge_iri_values(
-                supporting_patterns,
-                self._assertion_auto_supporting_pattern_iris(support),
-            ),
+            supporting_observations=supporting_observation_values,
+            supporting_claims=supporting_claim_values,
+            supporting_patterns=supporting_pattern_values,
             revision_anchors=anchors,
-            evidence=self._merge_iri_values(
-                evidence,
-                [item.iri for item in support.related_evidence],
-            ),
+            evidence=evidence_values,
             alternative_to=alternative_to,
             restages_revision=restages_revision,
-            review_note=merged_review_note,
-            review_recommendation=recommendation,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
             validation_scope=validation_scope,
+            limit=limit,
         )
-        staged_description = self.describe_staged_revision(staged.revision_iri)
-        judgement_panel = self._map_assertion_change_judgement_panel(
-            support,
-            change_kind=kind,
-            recommendation=recommendation,
-            staged_description=staged_description,
-        )
-        return StagedMapAssertionChangeRecord(
-            revision_iri=staged.revision_iri,
+
+        return _MapAssertionChangePrepared(
             change_kind=kind,
             graph=graph,
             subject=subject_iri,
             predicate=predicate_iri,
-            object_value=support.requested_object.value
-            if support.requested_object is not None
-            else None,
-            object_kind=support.requested_object.value_kind
-            if support.requested_object is not None
-            else object_kind,
-            object_datatype=(
-                support.requested_object.datatype
-                if support.requested_object is not None
-                else None
-            ),
-            object_lang=(
-                support.requested_object.lang
-                if support.requested_object is not None
-                else None
-            ),
-            assertion_present_before=support.assertion_present,
-            current_values_before=support.same_subject_predicate_triples,
+            object_value=object_value,
+            object_kind=resolved_object_kind,
+            object_datatype=resolved_object_datatype,
+            object_lang=resolved_object_lang,
+            rationale=rationale_value,
             additions=additions,
             removals=removals,
-            assertion_support=support,
-            staged_revision=staged,
-            judgement_panel=judgement_panel,
+            summary=summary_value,
             review_note=merged_review_note,
             review_recommendation=recommendation,
+            assertion_support=support,
+            assertion_present_before=support.assertion_present,
+            current_values_before=support.same_subject_predicate_triples,
+            supporting_observations=supporting_observation_values,
+            supporting_claims=supporting_claim_values,
+            supporting_patterns=supporting_pattern_values,
+            revision_anchors=anchors,
+            evidence=evidence_values,
+            stage_arguments=stage_arguments,
+        )
+
+    def _map_assertion_change_stage_arguments(
+        self,
+        *,
+        subject: str,
+        predicate: str,
+        object_value: str | None,
+        rationale: str,
+        change_kind: str,
+        graph: str,
+        object_kind: str,
+        object_datatype: str | None,
+        object_lang: str | None,
+        summary: str,
+        stance: str,
+        revision_type: str,
+        included_graphs: Iterable[str] | str | None,
+        revision_iri: str | None,
+        created_at: datetime | str | None,
+        created_by: str | None,
+        supporting_observations: list[str],
+        supporting_claims: list[str],
+        supporting_patterns: list[str],
+        revision_anchors: list[str],
+        evidence: list[str],
+        alternative_to: str | None,
+        restages_revision: str | None,
+        review_note: str | None,
+        review_recommendation: str | None,
+        validation_scope: str,
+        limit: int,
+    ) -> dict[str, Any]:
+        arguments: dict[str, Any] = {
+            "subject": subject,
+            "predicate": predicate,
+            "object": object_value,
+            "rationale": rationale,
+            "change_kind": change_kind,
+            "graph": graph,
+            "object_kind": object_kind,
+            "summary": summary,
+            "validation_scope": validation_scope,
+        }
+        if object_datatype is not None:
+            arguments["object_datatype"] = object_datatype
+        if object_lang is not None:
+            arguments["object_lang"] = object_lang
+        if stance != "rc:CandidateRevision":
+            arguments["stance"] = stance
+        if revision_type != "rc:StagedRevision":
+            arguments["revision_type"] = revision_type
+        if included_graphs is not None:
+            arguments["included_graphs"] = self._string_values(
+                "included_graphs",
+                included_graphs,
+            )
+        if revision_iri is not None:
+            arguments["revision_iri"] = revision_iri
+        if created_at is not None:
+            arguments["created_at"] = (
+                created_at.isoformat() if isinstance(created_at, datetime) else created_at
+            )
+        if created_by is not None:
+            arguments["created_by"] = created_by
+        if supporting_observations:
+            arguments["supporting_observations"] = supporting_observations
+        if supporting_claims:
+            arguments["supporting_claims"] = supporting_claims
+        if supporting_patterns:
+            arguments["supporting_patterns"] = supporting_patterns
+        if revision_anchors:
+            arguments["revision_anchors"] = revision_anchors
+        if evidence:
+            arguments["evidence"] = evidence
+        if alternative_to is not None:
+            arguments["alternative_to"] = alternative_to
+        if restages_revision is not None:
+            arguments["restages_revision"] = restages_revision
+        if review_note is not None:
+            arguments["review_note"] = review_note
+        if review_recommendation is not None:
+            arguments["review_recommendation"] = review_recommendation
+        if limit != 20:
+            arguments["limit"] = limit
+        return arguments
+
+    def draft_map_assertion_change(
+        self,
+        subject: str,
+        predicate: str,
+        object: str | None,
+        rationale: str,
+        *,
+        change_kind: TypingLiteral["add", "remove", "replace"] = "replace",
+        graph: TypingLiteral["map"] = "map",
+        object_kind: TypingLiteral["auto", "iri", "uri", "literal"] = "auto",
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
+        summary: str | None = None,
+        stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: Iterable[str] | str | None = None,
+        revision_iri: str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        supporting_observations: Iterable[str] | str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        supporting_patterns: Iterable[str] | str | None = None,
+        revision_anchors: Iterable[str] | str | None = None,
+        evidence: Iterable[str] | str | None = None,
+        alternative_to: str | None = None,
+        restages_revision: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ] = "all",
+        limit: int = 20,
+    ) -> DraftMapAssertionChangeRecord:
+        prepared = self._prepare_map_assertion_change(
+            subject=subject,
+            predicate=predicate,
+            object=object,
+            rationale=rationale,
+            change_kind=change_kind,
+            graph=graph,
+            object_kind=object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
+            summary=summary,
+            stance=stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            revision_iri=revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            revision_anchors=revision_anchors,
+            evidence=evidence,
+            alternative_to=alternative_to,
+            restages_revision=restages_revision,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
+            validation_scope=validation_scope,
+            limit=limit,
+        )
+        parsed_patches = self._parse_staged_patch_specs(
+            additions=prepared.additions,
+            removals=prepared.removals,
+        )
+        preview = self._preview_staged_graph_patches(
+            parsed_patches,
+            validation_scope=validation_scope,
+            revision_has_support_metadata=bool(
+                prepared.supporting_observations
+                or prepared.supporting_claims
+                or prepared.supporting_patterns
+                or prepared.evidence
+            ),
+        )
+        impacts = self._staged_revision_impacts(
+            revision_iri="urn:doxabase:draft-map-assertion-change",
+            patches=preview.patch_descriptions,
+            lookup_graphs=self._lookup_graphs(self._expand_graphs(["all"])),
+        )
+        judgement_panel = self._map_assertion_change_judgement_panel(
+            prepared.assertion_support,
+            change_kind=prepared.change_kind,
+            recommendation=prepared.review_recommendation,
+            impacts=impacts,
+        )
+        suggested_next_actions = [
+            SuggestedNextAction(
+                action_label="Stage map assertion change",
+                tool_name="stage_map_assertion_change",
+                mcp_tool_name="doxabase.stage_map_assertion_change",
+                arguments=prepared.stage_arguments,
+                reason=(
+                    "Stage this reviewed map assertion change only after the draft "
+                    "support, impacts, validation preview, and judgement panel still "
+                    "justify the write."
+                ),
+                call=self._suggested_call_string(
+                    "stage_map_assertion_change",
+                    prepared.stage_arguments,
+                ),
+            )
+        ]
+        return DraftMapAssertionChangeRecord(
+            result_kind="draft_map_assertion_change",
+            change_kind=prepared.change_kind,
+            graph=prepared.graph,
+            subject=prepared.subject,
+            predicate=prepared.predicate,
+            object_value=prepared.object_value,
+            object_kind=prepared.object_kind,
+            object_datatype=prepared.object_datatype,
+            object_lang=prepared.object_lang,
+            assertion_present_before=prepared.assertion_present_before,
+            current_values_before=prepared.current_values_before,
+            additions=prepared.additions,
+            removals=prepared.removals,
+            changed_graphs=preview.changed_graphs,
+            patches=preview.patch_descriptions,
+            impacts=impacts,
+            validation_scope=preview.validation.scope,
+            validation_conforms=preview.validation.conforms,
+            validation_result_count=preview.validation.result_count,
+            validation_results=preview.validation.results,
+            validation_report_text=preview.validation.report_text,
+            assertion_support=prepared.assertion_support,
+            judgement_panel=judgement_panel,
+            review_note=prepared.review_note,
+            review_recommendation=prepared.review_recommendation,
+            stage_arguments=prepared.stage_arguments,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
+    def stage_map_assertion_change(
+        self,
+        subject: str,
+        predicate: str,
+        object: str | None,
+        rationale: str,
+        *,
+        change_kind: TypingLiteral["add", "remove", "replace"] = "replace",
+        graph: TypingLiteral["map"] = "map",
+        object_kind: TypingLiteral["auto", "iri", "uri", "literal"] = "auto",
+        object_datatype: str | None = None,
+        object_lang: str | None = None,
+        summary: str | None = None,
+        stance: str = "rc:CandidateRevision",
+        revision_type: str = "rc:StagedRevision",
+        included_graphs: Iterable[str] | str | None = None,
+        revision_iri: str | None = None,
+        created_at: datetime | str | None = None,
+        created_by: str | None = None,
+        supporting_observations: Iterable[str] | str | None = None,
+        supporting_claims: Iterable[str] | str | None = None,
+        supporting_patterns: Iterable[str] | str | None = None,
+        revision_anchors: Iterable[str] | str | None = None,
+        evidence: Iterable[str] | str | None = None,
+        alternative_to: str | None = None,
+        restages_revision: str | None = None,
+        review_note: str | None = None,
+        review_recommendation: str | None = None,
+        validation_scope: TypingLiteral[
+            "map",
+            "ontology",
+            "patterns",
+            "shapes",
+            "all",
+        ] = "all",
+        limit: int = 20,
+    ) -> StagedMapAssertionChangeRecord:
+        prepared = self._prepare_map_assertion_change(
+            subject=subject,
+            predicate=predicate,
+            object=object,
+            rationale=rationale,
+            change_kind=change_kind,
+            graph=graph,
+            object_kind=object_kind,
+            object_datatype=object_datatype,
+            object_lang=object_lang,
+            summary=summary,
+            stance=stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            revision_iri=revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=supporting_observations,
+            supporting_claims=supporting_claims,
+            supporting_patterns=supporting_patterns,
+            revision_anchors=revision_anchors,
+            evidence=evidence,
+            alternative_to=alternative_to,
+            restages_revision=restages_revision,
+            review_note=review_note,
+            review_recommendation=review_recommendation,
+            validation_scope=validation_scope,
+            limit=limit,
+        )
+        staged = self.stage_graph_revision(
+            summary=prepared.summary,
+            rationale=prepared.rationale,
+            additions=prepared.additions,
+            removals=prepared.removals,
+            stance=stance,
+            revision_type=revision_type,
+            included_graphs=included_graphs,
+            revision_iri=revision_iri,
+            created_at=created_at,
+            created_by=created_by,
+            supporting_observations=prepared.supporting_observations,
+            supporting_claims=prepared.supporting_claims,
+            supporting_patterns=prepared.supporting_patterns,
+            revision_anchors=prepared.revision_anchors,
+            evidence=prepared.evidence,
+            alternative_to=alternative_to,
+            restages_revision=restages_revision,
+            review_note=prepared.review_note,
+            review_recommendation=prepared.review_recommendation,
+            validation_scope=validation_scope,
+        )
+        staged_description = self.describe_staged_revision(staged.revision_iri)
+        judgement_panel = self._map_assertion_change_judgement_panel(
+            prepared.assertion_support,
+            change_kind=prepared.change_kind,
+            recommendation=prepared.review_recommendation,
+            impacts=staged_description.impacts,
+        )
+        return StagedMapAssertionChangeRecord(
+            revision_iri=staged.revision_iri,
+            change_kind=prepared.change_kind,
+            graph=prepared.graph,
+            subject=prepared.subject,
+            predicate=prepared.predicate,
+            object_value=prepared.object_value,
+            object_kind=prepared.object_kind,
+            object_datatype=prepared.object_datatype,
+            object_lang=prepared.object_lang,
+            assertion_present_before=prepared.assertion_present_before,
+            current_values_before=prepared.current_values_before,
+            additions=prepared.additions,
+            removals=prepared.removals,
+            assertion_support=prepared.assertion_support,
+            staged_revision=staged,
+            judgement_panel=judgement_panel,
+            review_note=prepared.review_note,
+            review_recommendation=prepared.review_recommendation,
         )
 
     def describe_graph_revision(
@@ -26514,86 +26950,20 @@ class DoxaBase:
         )
         evidence_values = self._string_values("evidence", evidence)
 
-        changed_graph_values = list(
-            dict.fromkeys(patch["target_graph"] for patch in parsed_patches)
-        )
-        for graph_name in changed_graph_values:
-            self._ensure_mutable(str(graph_name))
-
-        preview_graphs: dict[str, Graph] = {
-            graph_name: self.to_graph([graph_name])
-            for graph_name in changed_graph_values
-        }
-        patch_records: list[StagedGraphPatchRecord] = []
-        for sequence_index, patch in enumerate(parsed_patches, start=1):
-            target_graph = str(patch["target_graph"])
-            patch_graph = patch["graph"]
-            if not isinstance(patch_graph, Graph):
-                raise DoxaBaseError("Internal staged patch parse error")
-            preview = preview_graphs[target_graph]
-            before_count = len(preview)
-            if patch["operation"] == self.expand_iri("rc:AdditionPatch"):
-                for triple in patch_graph:
-                    preview.add(triple)
-            else:
-                for triple in patch_graph:
-                    preview.remove(triple)
-            after_count = len(preview)
-            patch_role = str(patch["patch_role"])
-            patch_records.append(
-                StagedGraphPatchRecord(
-                    patch_iri=str(patch["patch_iri"]),
-                    operation=str(patch["operation"]),
-                    target_graph=target_graph,
-                    count_basis=self._staged_patch_count_basis(target_graph),
-                    format=str(patch["format"]),
-                    patch_role=patch_role,
-                    sequence_index=sequence_index,
-                    triple_count=len(patch_graph),
-                    before_triple_count=before_count,
-                    after_triple_count=after_count,
-                )
-            )
-
-        validation = self._validate_graph_preview(
-            validation_scope,
-            preview_graphs=preview_graphs,
-        )
-        patch_descriptions = [
-            StagedGraphPatchDescription(
-                iri=patch_record.patch_iri,
-                operation=patch_record.operation,
-                operation_label=self._label_for_resource(patch_record.operation),
-                target_graph=patch_record.target_graph,
-                count_basis=patch_record.count_basis,
-                format=patch_record.format,
-                patch_role=patch_record.patch_role,
-                patch_role_label=self._label_for_resource(patch_record.patch_role),
-                sequence_index=patch_record.sequence_index,
-                triple_count=patch_record.triple_count,
-                before_triple_count=patch_record.before_triple_count,
-                after_triple_count=patch_record.after_triple_count,
-                content=str(patch["content"]),
-            )
-            for patch, patch_record in zip(
-                parsed_patches,
-                patch_records,
-                strict=True,
-            )
-        ]
-        validation = replace(
-            validation,
-            results=self._enrich_staged_validation_hints(
-                validation.results,
-                patches=patch_descriptions,
-                revision_has_support_metadata=bool(
-                    supporting_observation_values
-                    or supporting_claim_values
-                    or supporting_pattern_values
-                    or evidence_values
-                ),
+        preview = self._preview_staged_graph_patches(
+            parsed_patches,
+            validation_scope=validation_scope,
+            revision_has_support_metadata=bool(
+                supporting_observation_values
+                or supporting_claim_values
+                or supporting_pattern_values
+                or evidence_values
             ),
         )
+        changed_graph_values = preview.changed_graphs
+        patch_records = preview.patch_records
+        patch_descriptions = preview.patch_descriptions
+        validation = preview.validation
         revision_subject = (
             self._required_iri("revision_iri", revision_iri)
             if revision_iri is not None
@@ -35824,7 +36194,7 @@ class DoxaBase:
         *,
         change_kind: str,
         recommendation: str | None,
-        staged_description: StagedGraphRevisionDescription,
+        impacts: list[StagedRevisionImpact],
     ) -> MapAssertionJudgementPanel:
         current_values = [
             self._map_assertion_judgement_value_from_triple(triple)
@@ -35858,9 +36228,9 @@ class DoxaBase:
             self._map_assertion_judgement_route(support, summary)
             for summary in self._ranked_panel_route_summaries(support)[:5]
         ]
-        impacts = [
+        judgement_impacts = [
             self._map_assertion_judgement_impact(impact)
-            for impact in staged_description.impacts[:5]
+            for impact in impacts[:5]
         ]
         why_current_value_may_be_intentional = (
             self._map_assertion_current_value_rationale(
@@ -35872,13 +36242,13 @@ class DoxaBase:
             support,
             value_type_context=value_type_context,
             change_kind=change_kind,
-            impacts=staged_description.impacts,
+            impacts=impacts,
         )
         semantic_risk_level, semantic_risk_reasons = (
             self._map_assertion_semantic_risk(
                 support,
                 value_type_context=value_type_context,
-                impacts=staged_description.impacts,
+                impacts=impacts,
                 why_current_value_may_be_intentional=(
                     why_current_value_may_be_intentional
                 ),
@@ -35905,7 +36275,7 @@ class DoxaBase:
             why_current_value_may_be_intentional=why_current_value_may_be_intentional,
             caveats=caveats,
             strongest_routes=strongest_routes,
-            impacts=impacts,
+            impacts=judgement_impacts,
             safety_notes=safety_notes,
         )
 
@@ -37770,6 +38140,94 @@ class DoxaBase:
                 )
         return parsed
 
+    def _preview_staged_graph_patches(
+        self,
+        parsed_patches: list[dict[str, Any]],
+        *,
+        validation_scope: str,
+        revision_has_support_metadata: bool,
+    ) -> _StagedGraphPatchPreview:
+        changed_graphs = list(
+            dict.fromkeys(str(patch["target_graph"]) for patch in parsed_patches)
+        )
+        for graph_name in changed_graphs:
+            self._ensure_mutable(graph_name)
+
+        preview_graphs: dict[str, Graph] = {
+            graph_name: self.to_graph([graph_name])
+            for graph_name in changed_graphs
+        }
+        patch_records: list[StagedGraphPatchRecord] = []
+        for sequence_index, patch in enumerate(parsed_patches, start=1):
+            target_graph = str(patch["target_graph"])
+            patch_graph = patch["graph"]
+            if not isinstance(patch_graph, Graph):
+                raise DoxaBaseError("Internal staged patch parse error")
+            preview = preview_graphs[target_graph]
+            before_count = len(preview)
+            if patch["operation"] == self.expand_iri("rc:AdditionPatch"):
+                for triple in patch_graph:
+                    preview.add(triple)
+            else:
+                for triple in patch_graph:
+                    preview.remove(triple)
+            after_count = len(preview)
+            patch_records.append(
+                StagedGraphPatchRecord(
+                    patch_iri=str(patch["patch_iri"]),
+                    operation=str(patch["operation"]),
+                    target_graph=target_graph,
+                    count_basis=self._staged_patch_count_basis(target_graph),
+                    format=str(patch["format"]),
+                    patch_role=str(patch["patch_role"]),
+                    sequence_index=sequence_index,
+                    triple_count=len(patch_graph),
+                    before_triple_count=before_count,
+                    after_triple_count=after_count,
+                )
+            )
+
+        validation = self._validate_graph_preview(
+            validation_scope,
+            preview_graphs=preview_graphs,
+        )
+        patch_descriptions = [
+            StagedGraphPatchDescription(
+                iri=patch_record.patch_iri,
+                operation=patch_record.operation,
+                operation_label=self._label_for_resource(patch_record.operation),
+                target_graph=patch_record.target_graph,
+                count_basis=patch_record.count_basis,
+                format=patch_record.format,
+                patch_role=patch_record.patch_role,
+                patch_role_label=self._label_for_resource(patch_record.patch_role),
+                sequence_index=patch_record.sequence_index,
+                triple_count=patch_record.triple_count,
+                before_triple_count=patch_record.before_triple_count,
+                after_triple_count=patch_record.after_triple_count,
+                content=str(patch["content"]),
+            )
+            for patch, patch_record in zip(
+                parsed_patches,
+                patch_records,
+                strict=True,
+            )
+        ]
+        validation = replace(
+            validation,
+            results=self._enrich_staged_validation_hints(
+                validation.results,
+                patches=patch_descriptions,
+                revision_has_support_metadata=revision_has_support_metadata,
+            ),
+        )
+        return _StagedGraphPatchPreview(
+            changed_graphs=changed_graphs,
+            patch_records=patch_records,
+            patch_descriptions=patch_descriptions,
+            validation=validation,
+        )
+
     def _ensure_revision_stance(self, stance_iri: str) -> None:
         revision_stance_iri = self.expand_iri("rc:RevisionStance")
         ontology_graphs = self._expand_graphs(["ontology"])
@@ -38768,7 +39226,7 @@ class DoxaBase:
             support,
             change_kind=change_kind,
             recommendation=description.review_recommendation,
-            staged_description=description,
+            impacts=description.impacts,
         )
 
     def _staged_revision_patch_counts_match(

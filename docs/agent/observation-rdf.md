@@ -138,6 +138,10 @@ promote the claim.
 
 Use `record_claim_observation` for the middle ground: one structured claim with
 ordinary evidence and source-span support.
+If you pass `proposed_assertions`, treat them as links to candidate assertion
+resources: use IRIs or CURIEs, not inline Turtle, prose sentences, or dict-shaped
+assertion payloads. Put explanation in the claim text or promote a broader
+synthesis with `record_pattern`.
 
 When several observations or claims need to be synthesized together, use
 `record_pattern` or the `patterns` graph instead of forcing the synthesis into a
