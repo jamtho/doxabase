@@ -997,6 +997,11 @@ in the slice. The helper scans only the selected context-slice export triples
 and omits `base_ontology`/`base_shapes` triples by default so the bundle can be
 imported into a fresh capsule without immutable-seed privileges. Set
 `include_seed_graphs=True` only for deliberate seed-graph review bundles.
+When `export.truncated` is true, `export.graphs` and `export.graph_counts`
+describe only capped raw export triples. The warnings name selected surface
+roles and omitted graph/surface roles, and `suggested_next_actions[0]` reruns
+`preflight_context_slice_export` with `max_triples=export.candidate_triple_count`
+before the normal write action.
 `export.seeds[]` are response summaries copied from the selected context; their
 label/description display fields are redacted when they match the sensitive-term
 scanner. The exported RDF triples are faithful and are not redacted; pass
@@ -3482,11 +3487,14 @@ multi-framing draft with shared `ontology` or `shapes` patches also reports
 `shared_semantic_context_applies_to_all_framings`; its suggested rerun arguments
 name the shared graph roles and original `shared_additions` / `shared_removals`
 source indexes that should move into per-framing patches if a fallback
-alternative should avoid the provisional vocabulary or validation shape.
+alternative should avoid the provisional vocabulary or validation shape. The
+same object includes `target_framing_selection_required=true` because DoxaBase
+does not know which framings should keep shared shapes for diagnostic validation.
 `shared_patch_summaries` gives the parsed target graph, operation, role, count
 basis, format, and triple count; `fallback_revision_iris_with_shared_semantic_context`
-is the affected fallback subset to inspect before rerunning. Use the structured
-fields for automation; keep `warnings` for readable handoffs.
+is the later-framing subset to inspect before rerunning, not an automatic list of
+framings that should drop the shared context. Use the structured fields for
+automation; keep `warnings` for readable handoffs.
 
 Each item in `draft.staged_revisions` is a `StagedGraphRevisionRecord` with:
 

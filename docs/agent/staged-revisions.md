@@ -728,7 +728,8 @@ rerun arguments, `shared_patch_summaries`, and
 `fallback_revision_iris_with_shared_semantic_context` as a cue to move those
 patches into per-framing additions or removals when fallback alternatives should
 not carry the provisional vocabulary or validation shape. Fallback IRIs are an
-inspection subset, not a preference order; interpret them alongside
+inspection subset of later framings that currently carry shared context, not a
+preference order or automatic drop list; interpret them alongside
 `review_recommendation`, `alternative_to`, and `current_alternative_to`.
 Grouped exports reconstruct the same signal as
 `bundle_summary.shared_semantic_context_warnings` when the original draft

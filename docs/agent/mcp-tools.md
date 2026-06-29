@@ -1105,6 +1105,11 @@ human review. If the selected slice includes `history` graph triples, the
 preflight warning and suggested actions also point to
 `export_handoff_bundle`; context slices can import revision review context but
 do not carry the revision snapshot rows needed for exact recovery.
+If the selected slice is truncated, `graphs` and `graph_counts` describe only
+the capped raw triples selected for export, not every structured resource role.
+Read the truncation warning for selected surface roles and omitted graph roles;
+the first suggested action reruns `preflight_context_slice_export` with the full
+candidate triple cap before the normal write action.
 Returned `seeds[]` are response summaries: label/description display text is
 redacted when it matches the sensitive-term scanner. The selected export triples
 are not redacted; use `fail_on_sensitive=true` to block writes when they contain

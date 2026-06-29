@@ -4156,6 +4156,13 @@ def test_stage_systematisation_tool_returns_json_like_payload(tmp_path: Path) ->
                 "graph": "ontology",
             }
         ],
+        "target_framing_selection_required": True,
+        "target_framing_selection_note": (
+            "Choose which framings should receive the moved ontology/shapes "
+            "patches. fallback_revision_iris_with_shared_semantic_context is "
+            "an inspection subset of later framings currently carrying shared "
+            "context, not an automatic drop list."
+        ),
     }
     assert shared_warning["fallback_revision_iris_with_shared_semantic_context"] == [
         revision_iris[1]
@@ -4418,6 +4425,13 @@ def test_stage_systematisation_tool_warns_when_first_anchor_fails(
                 "graph": "shapes",
             }
         ],
+        "target_framing_selection_required": True,
+        "target_framing_selection_note": (
+            "Choose which framings should receive the moved ontology/shapes "
+            "patches. fallback_revision_iris_with_shared_semantic_context is "
+            "an inspection subset of later framings currently carrying shared "
+            "context, not an automatic drop list."
+        ),
     }
     assert shared_warning["fallback_revision_iris_with_shared_semantic_context"] == [
         revision_iris[1],
@@ -4587,6 +4601,13 @@ def test_stage_systematisation_tool_suppresses_anchor_warning_for_explicit_sibli
                 "graph": "shapes",
             }
         ],
+        "target_framing_selection_required": True,
+        "target_framing_selection_note": (
+            "Choose which framings should receive the moved ontology/shapes "
+            "patches. fallback_revision_iris_with_shared_semantic_context is "
+            "an inspection subset of later framings currently carrying shared "
+            "context, not an automatic drop list."
+        ),
     }
     assert shared_warning["fallback_revision_iris_with_shared_semantic_context"] == [
         revision_iris[1],
@@ -6696,6 +6717,35 @@ def test_describe_context_slice_tool_returns_json_like_payload(
     ]
     assert result["triples"][0]["subject"] == seed_iri
     assert result["trig"] is None
+    preflight = preflight_context_slice_export_tool(
+        db,
+        seed_iris=[seed_iri],
+        profile="dataset_brief",
+        max_triples=5,
+    )
+    assert preflight["truncated"] is True
+    role_loss_warning = next(
+        warning
+        for warning in preflight["warnings"]
+        if "Context-slice export is truncated" in warning
+    )
+    assert "graphs and graph_counts describe only capped raw triples" in (
+        role_loss_warning
+    )
+    assert "pattern_synthesis" in role_loss_warning
+    assert [
+        action["tool_name"] for action in preflight["suggested_next_actions"][:2]
+    ] == [
+        "preflight_context_slice_export",
+        "export_context_slice",
+    ]
+    assert preflight["suggested_next_actions"][0]["arguments"] == {
+        "seed_iris": [seed_iri],
+        "profile": "dataset_brief",
+        "max_triples": preflight["candidate_triple_count"],
+        "include_seed_graphs": False,
+        "limit": 20,
+    }
     resources_by_iri = {resource["iri"]: resource for resource in result["resources"]}
     assert resources_by_iri[seed_iri]["surface_role"] == "current_map_context"
     assert resources_by_iri[pattern["pattern_iri"]]["surface_role"] == (

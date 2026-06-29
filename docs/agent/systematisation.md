@@ -59,7 +59,10 @@ patches when a fallback should avoid that semantic context.
 Use `shared_patch_summaries` to see the parsed shared patch target, operation,
 count basis, format, and triple count, then map
 `fallback_revision_iris_with_shared_semantic_context` back to
-`framings[].revision_iri` before rerunning.
+`framings[].revision_iri` before rerunning. That fallback IRI list is an
+inspection subset of later framings that currently carry shared context, not an
+automatic list of framings that should drop it; choose which framings keep
+ontology/shapes patches by semantic review.
 Grouped review exports reconstruct the same shared-context signal from stored
 patch roles as `bundle_summary.shared_semantic_context_warnings`; carry the
 draft warning into `executive_summary` only when reviewers need additional

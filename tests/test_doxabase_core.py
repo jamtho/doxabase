@@ -13702,6 +13702,13 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
                 "graph": "shapes",
             },
         ],
+        "target_framing_selection_required": True,
+        "target_framing_selection_note": (
+            "Choose which framings should receive the moved ontology/shapes "
+            "patches. fallback_revision_iris_with_shared_semantic_context is "
+            "an inspection subset of later framings currently carrying shared "
+            "context, not an automatic drop list."
+        ),
     }
     assert (
         shared_warning.fallback_revision_iris_with_shared_semantic_context
@@ -14049,6 +14056,13 @@ def test_stage_systematisation_shared_context_validates_each_framing(
                 "graph": "ontology",
             }
         ],
+        "target_framing_selection_required": True,
+        "target_framing_selection_note": (
+            "Choose which framings should receive the moved ontology/shapes "
+            "patches. fallback_revision_iris_with_shared_semantic_context is "
+            "an inspection subset of later framings currently carrying shared "
+            "context, not an automatic drop list."
+        ),
     }
     assert shared_warning.fallback_revision_iris_with_shared_semantic_context == [
         draft.staged_revisions[1].revision_iri
@@ -23888,6 +23902,37 @@ def test_context_slice_truncation_suggests_pattern_narrowing(
     assert context_slice.suggested_next_calls == [
         action.call for action in context_slice.suggested_next_actions
     ]
+
+    preflight = db.preflight_context_slice_export(
+        [column],
+        profile="deep_lore",
+        max_triples=5,
+    )
+
+    assert preflight.truncated is True
+    role_loss_warning = next(
+        warning
+        for warning in preflight.warnings
+        if "Context-slice export is truncated" in warning
+    )
+    assert "graphs and graph_counts describe only capped raw triples" in (
+        role_loss_warning
+    )
+    assert "pattern_synthesis" in role_loss_warning
+    assert "Omitted graph roles:" in role_loss_warning
+    assert [
+        action.tool_name for action in preflight.suggested_next_actions[:2]
+    ] == [
+        "preflight_context_slice_export",
+        "export_context_slice",
+    ]
+    assert preflight.suggested_next_actions[0].arguments == {
+        "seed_iris": [column],
+        "profile": "deep_lore",
+        "max_triples": preflight.candidate_triple_count,
+        "include_seed_graphs": False,
+        "limit": 20,
+    }
 
 
 def test_context_slice_truncation_ranks_linked_patterns_before_filler(

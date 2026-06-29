@@ -11907,17 +11907,7 @@ class DoxaBase:
 
     @staticmethod
     def _context_slice_surface_role(graphs: Iterable[str]) -> str:
-        role_by_graph = {
-            "base_ontology": "vocabulary_context",
-            "base_shapes": "validation_shape_context",
-            "ontology": "vocabulary_context",
-            "shapes": "validation_shape_context",
-            "map": "current_map_context",
-            "observations": "observation_context",
-            "patterns": "pattern_synthesis",
-            "evidence": "evidence_support",
-            "history": "revision_history",
-        }
+        role_by_graph = DoxaBase._context_slice_surface_role_by_graph()
         roles = {
             role_by_graph[graph]
             for graph in graphs
@@ -11928,6 +11918,33 @@ class DoxaBase:
         if len(roles) == 1:
             return next(iter(roles))
         return "mixed_context"
+
+    @staticmethod
+    def _context_slice_surface_role_by_graph() -> dict[str, str]:
+        return {
+            "base_ontology": "vocabulary_context",
+            "base_shapes": "validation_shape_context",
+            "ontology": "vocabulary_context",
+            "shapes": "validation_shape_context",
+            "map": "current_map_context",
+            "observations": "observation_context",
+            "patterns": "pattern_synthesis",
+            "evidence": "evidence_support",
+            "history": "revision_history",
+        }
+
+    @staticmethod
+    def _context_slice_surface_roles_for_graphs(
+        graphs: Iterable[str],
+    ) -> list[str]:
+        role_by_graph = DoxaBase._context_slice_surface_role_by_graph()
+        return sorted(
+            {
+                role_by_graph[graph]
+                for graph in graphs
+                if graph in role_by_graph
+            }
+        )
 
     def _context_slice_resource_order(
         self,
@@ -32068,7 +32085,10 @@ class DoxaBase:
                 f"fallback framings. Shared graph roles: {shared_graph_summary}. "
                 "Move those patches into per-framing additions or removals "
                 "when only some alternatives should carry provisional "
-                "vocabulary or validation shapes."
+                "vocabulary or validation shapes. Choose the target framings "
+                "semantically; fallback_revision_iris_with_shared_semantic_context "
+                "lists later framings that currently received the shared context, "
+                "not the exact framings that should drop it."
             )
             warnings.append(warning_message)
             structured_warnings.append(
@@ -32086,6 +32106,14 @@ class DoxaBase:
                             shared_semantic_context_graphs
                         ),
                         "shared_patch_sources_to_move": shared_patch_sources_to_move,
+                        "target_framing_selection_required": True,
+                        "target_framing_selection_note": (
+                            "Choose which framings should receive the moved "
+                            "ontology/shapes patches. "
+                            "fallback_revision_iris_with_shared_semantic_context "
+                            "is an inspection subset of later framings currently "
+                            "carrying shared context, not an automatic drop list."
+                        ),
                     },
                     shared_patch_summaries=shared_patch_summaries,
                     fallback_revision_iris_with_shared_semantic_context=(
@@ -43308,7 +43336,17 @@ class DoxaBase:
             "the slice is shareable or free of user-specific paths, endpoint "
             "details, or confidential project facts."
         )
-        warnings = [*privacy_warnings, scanner_note]
+        truncation_warnings = self._context_slice_export_truncation_warnings(
+            context,
+            exported_graphs=graph_names,
+            include_seed_graphs=include_seed_graphs,
+        )
+        warnings = [
+            *privacy_warnings,
+            *context.warnings,
+            *truncation_warnings,
+            scanner_note,
+        ]
         if not include_seed_graphs and any(
             triple.graph in SEED_GRAPH_NAMES for triple in context.triples
         ):
@@ -43352,8 +43390,11 @@ class DoxaBase:
             seed_iris=seed_iris,
             profile=profile,
             max_triples=max_triples,
+            candidate_triple_count=context.candidate_triple_count,
+            truncated=context.truncated,
             include_seed_graphs=include_seed_graphs,
             fail_on_sensitive=fail_on_sensitive,
+            limit=limit,
             write=write,
             includes_history="history" in graph_names,
             revision_iris=history_revision_iris,
@@ -43390,20 +43431,98 @@ class DoxaBase:
             suggested_next_calls=[action.call for action in suggested_next_actions],
         )
 
+    def _context_slice_export_truncation_warnings(
+        self,
+        context: ContextSlice,
+        *,
+        exported_graphs: Iterable[str],
+        include_seed_graphs: bool,
+    ) -> list[str]:
+        if not context.truncated:
+            return []
+        exported_graph_set = set(exported_graphs)
+        selected_graphs = sorted(
+            {
+                graph
+                for resource in context.resources
+                for graph in resource.graphs
+                if include_seed_graphs or graph not in SEED_GRAPH_NAMES
+            }
+        )
+        omitted_graphs = [
+            graph for graph in selected_graphs if graph not in exported_graph_set
+        ]
+        selected_surface_roles = self._context_slice_surface_roles_for_graphs(
+            selected_graphs
+        )
+        exported_surface_roles = self._context_slice_surface_roles_for_graphs(
+            exported_graph_set
+        )
+        omitted_surface_roles = [
+            role
+            for role in selected_surface_roles
+            if role not in set(exported_surface_roles)
+        ]
+        return [
+            (
+                "Context-slice export is truncated: graphs and graph_counts "
+                "describe only capped raw triples, not every structured resource "
+                "selected by the slice. "
+                f"Selected surface roles: {', '.join(selected_surface_roles) or 'none'}. "
+                f"Exported graph roles: {', '.join(sorted(exported_graph_set)) or 'none'}. "
+                f"Omitted graph roles: {', '.join(omitted_graphs) or 'none'}. "
+                f"Omitted surface roles: {', '.join(omitted_surface_roles) or 'none'}. "
+                "Rerun this preflight with max_triples="
+                f"{context.candidate_triple_count} or narrow the seed/profile "
+                "before writing a handoff artifact."
+            )
+        ]
+
     def _context_slice_export_suggested_actions(
         self,
         *,
         seed_iris: Iterable[str] | str,
         profile: str,
         max_triples: int,
+        candidate_triple_count: int,
+        truncated: bool,
         include_seed_graphs: bool,
         fail_on_sensitive: bool,
+        limit: int,
         write: bool,
         includes_history: bool,
         revision_iris: list[str],
     ) -> list[SuggestedNextAction]:
         actions: list[SuggestedNextAction] = []
         seed_values = self._string_values("seed_iris", seed_iris, required=True)
+        if truncated:
+            full_triple_cap = max(candidate_triple_count, max_triples)
+            arguments = {
+                "seed_iris": seed_values,
+                "profile": profile,
+                "max_triples": full_triple_cap,
+                "include_seed_graphs": include_seed_graphs,
+                "limit": limit,
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Preflight full context slice",
+                    tool_name="preflight_context_slice_export",
+                    mcp_tool_name="doxabase.preflight_context_slice_export",
+                    arguments=arguments,
+                    reason=(
+                        "The current context-slice export is truncated, so "
+                        "graphs and graph_counts may omit structured lore "
+                        "roles selected by the slice. Rerun the preflight with "
+                        "the full candidate triple cap before writing a handoff "
+                        "artifact, or narrow the seed/profile first."
+                    ),
+                    call=self._suggested_call_string(
+                        "preflight_context_slice_export",
+                        arguments,
+                    ),
+                )
+            )
         if not write:
             digest_source = "\n".join(seed_values)
             digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:12]

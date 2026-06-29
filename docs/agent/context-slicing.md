@@ -243,6 +243,11 @@ warning and should usually be narrowed to a column, profile, metric, or pattern
 seed for a smaller handoff. Follow `suggested_next_actions` to narrow to linked
 patterns first; those pattern suggestions prefer route-relevant linked patterns
 over broad filler when the structured dataset context exposes that distinction.
+For context-slice export preflights, truncation also means `graphs` and
+`graph_counts` describe only capped raw triples. Read export `warnings` for
+selected surface roles and omitted graph roles, then follow the
+`Preflight full context slice` action before writing when a handoff must include
+all selected lore.
 Raise `max_triples` only when exact raw RDF triples are needed.
 Mapped column seeds narrow the route explanation and raw RDF neighborhood, but
 `dataset_contexts` still includes the owning dataset's full selected column

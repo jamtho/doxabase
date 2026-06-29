@@ -2908,6 +2908,21 @@ few useful gaps:
   preserved awkward shape-backed alternatives, but a future helper action could
   generate the rerun that moves shared ontology/shapes patches into selected
   framing patches.
+- A follow-up context-slice export trial reproduced the graph-role loss:
+  truncated preflights could return `graphs=["map"]` while structured slice
+  resources included pattern, observation, evidence, and vocabulary roles.
+  Context-slice exports now warn that `graphs`/`graph_counts` describe only
+  capped raw triples, name omitted roles, and put a full-cap preflight action
+  before the write action. A shared-context rerun trial clarified that
+  `fallback_revision_iris_with_shared_semantic_context` is an inspection subset,
+  not an automatic drop list; target framing selection still requires semantic
+  judgement.
+- The same follow-up wave found profile-to-map review/apply mechanics can close
+  scalar, query, metric, and type lanes cleanly, but `project_brief` can still
+  surface a context-only `project_metric_defined` advisory as `profile_review`
+  after `export_profile_insight_review_bundle` reports `open_lane_count=0`.
+  Prefer a future fix that suppresses or demotes closed metric-defined context
+  handoffs so the frontier does not look actionable after closure.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
