@@ -2171,6 +2171,105 @@ def test_export_trig_all_with_seeds_requires_explicit_seed_import(tmp_path: Path
     assert _mutable_graph_counts(round_trip) == before_counts
 
 
+def test_context_slice_export_is_importable_and_resource_scoped(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    shareable = "https://example.test/project#ShareableOrders"
+    shareable_storage = db.record_map_storage_access(
+        "https://example.test/project#shareable_orders_storage",
+        label="Shareable orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root="/tmp/shareable/orders.parquet",
+        location_kind="object",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_dataset(
+        shareable,
+        label="Shareable orders",
+        is_table=True,
+        storage_accesses=[shareable_storage.iri],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    db.record_map_column(
+        "https://example.test/project#ShareableOrders__order_id",
+        table_iri=shareable,
+        column_name="order_id",
+        physical_type="rc:Varchar",
+    )
+    fake_secret = "FAKE_SECRET_DO_NOT_USE_CONTEXT_SLICE_EXPORT"
+    sensitive = "https://example.test/project#SensitivePayroll"
+    sensitive_storage = db.record_map_storage_access(
+        "https://example.test/project#sensitive_payroll_storage",
+        label="Sensitive payroll storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root=f"/tmp/{fake_secret}/payroll.csv",
+        location_kind="object",
+    )
+    db.record_map_dataset(
+        sensitive,
+        label="Sensitive payroll",
+        is_table=True,
+        storage_accesses=[sensitive_storage.iri],
+    )
+
+    map_preflight = db.export_preflight(
+        export_kind="trig",
+        graphs=["map"],
+        limit=5,
+    )
+    assert map_preflight.sensitive_literal_count > 0
+
+    preflight = db.preflight_context_slice_export(
+        [shareable],
+        profile="dataset_brief",
+        max_triples=200,
+        limit=5,
+    )
+
+    assert preflight.path is None
+    assert preflight.graphs == ["map"]
+    assert preflight.graph_counts["map"] > 0
+    assert preflight.sensitive_literal_count == 0
+    assert preflight.matches == []
+    assert preflight.include_seed_graphs is False
+    assert any("Immutable seed graph triples were omitted" in warning for warning in preflight.warnings)
+    assert preflight.suggested_next_actions[0].tool_name == "export_context_slice"
+    assert preflight.suggested_next_actions[0].arguments["fail_on_sensitive"] is True
+    assert fake_secret not in json.dumps(to_dict(preflight))
+
+    export_path = tmp_path / "shareable-context-slice.trig"
+    export = db.export_context_slice(
+        export_path,
+        [shareable],
+        profile="dataset_brief",
+        max_triples=200,
+        fail_on_sensitive=True,
+    )
+    export_text = export_path.read_text(encoding="utf-8")
+
+    assert export.path == str(export_path)
+    assert export.bytes_written > 0
+    assert export.sensitive_literal_count == 0
+    assert export.suggested_next_actions == []
+    assert "ShareableOrders" in export_text
+    assert "SensitivePayroll" not in export_text
+    assert fake_secret not in export_text
+
+    dataset = Dataset()
+    dataset.parse(export_path, format="trig")
+    graph_iris = {str(context.identifier) for context in dataset.graphs() if len(context)}
+    assert graph_iris == {"https://richcanopy.org/graph/map"}
+
+    round_trip = DoxaBase.create(tmp_path / "round-trip-context.sqlite")
+    imported = round_trip.import_trig(export_path)
+    assert imported == {"map": export.triples}
+    assert round_trip.search("Shareable orders", graph="map").matches
+    assert round_trip.search("Sensitive payroll", graph="map").matches == []
+
+
 def test_record_graph_revision_writes_history_metadata(tmp_path: Path) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     db.import_trig(AIS_FIXTURE)

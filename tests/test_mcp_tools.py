@@ -29,6 +29,7 @@ from doxabase.mcp_tools import (
     draft_profile_map_updates_tool,
     draft_query_plan_tool,
     draft_staged_revision_rebase_tool,
+    export_context_slice_tool,
     export_graph_tool,
     export_handoff_bundle_tool,
     export_preflight_tool,
@@ -47,6 +48,7 @@ from doxabase.mcp_tools import (
     list_resource_revisions_tool,
     load_example_fixtures_tool,
     plan_staged_revision_recovery_tool,
+    preflight_context_slice_export_tool,
     project_brief_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
@@ -132,6 +134,8 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_query_context" in tool_names
     assert "doxabase.draft_query_plan" in tool_names
     assert "doxabase.describe_context_slice" in tool_names
+    assert "doxabase.preflight_context_slice_export" in tool_names
+    assert "doxabase.export_context_slice" in tool_names
     assert "doxabase.describe_resource" in tool_names
     assert "doxabase.describe_graph_revision" in tool_names
     assert "doxabase.describe_revision_snapshot_evidence" in tool_names
@@ -6543,6 +6547,75 @@ def test_describe_context_slice_tool_returns_json_like_payload(
         in warning
         for warning in claim_mismatch["warnings"]
     )
+
+
+def test_context_slice_export_tools_return_json_like_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    storage = record_map_storage_access_tool(
+        db,
+        iri="https://example.test/project#orders_storage",
+        label="Orders storage",
+        storage_protocol="rc:LocalFilesystemStorage",
+        access_mode="rc:ReadOnlyAccess",
+        storage_root="/tmp/shareable/orders.parquet",
+        location_kind="object",
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Orders",
+        is_table=True,
+        storage_accesses=[storage["iri"]],
+        layout_verification_status="rc:VerifiedByQueryLayout",
+    )
+
+    preflight = preflight_context_slice_export_tool(
+        db,
+        seed_iris=[dataset],
+        profile="dataset_brief",
+        max_triples=100,
+    )
+
+    assert preflight["path"] is None
+    assert preflight["format"] == "trig"
+    assert preflight["profile"] == "dataset_brief"
+    assert preflight["seeds"][0]["iri"] == dataset
+    assert preflight["graphs"] == ["map"]
+    assert preflight["graph_counts"]["map"] > 0
+    assert preflight["include_seed_graphs"] is False
+    assert preflight["bytes_written"] == 0
+    assert preflight["sensitive_literal_count"] == 0
+    assert preflight["matches"] == []
+    assert preflight["privacy_warnings"] == []
+    assert preflight["scanner_note"] in preflight["warnings"]
+    assert [
+        action["tool_name"] for action in preflight["suggested_next_actions"]
+    ] == ["export_context_slice"]
+    action = preflight["suggested_next_actions"][0]
+    assert action["mcp_tool_name"] == "doxabase.export_context_slice"
+    assert action["arguments"]["seed_iris"] == [dataset]
+    assert action["arguments"]["fail_on_sensitive"] is True
+    assert preflight["suggested_next_calls"] == [action["call"]]
+
+    export_path = tmp_path / "orders-context-slice.trig"
+    export = export_context_slice_tool(
+        db,
+        path=str(export_path),
+        seed_iris=[dataset],
+        profile="dataset_brief",
+        max_triples=100,
+        fail_on_sensitive=True,
+    )
+
+    assert export["path"] == str(export_path)
+    assert export["bytes_written"] > 0
+    assert export["sensitive_literal_count"] == 0
+    assert export["suggested_next_actions"] == []
+    assert export_path.exists()
 
 
 def test_describe_context_slice_tool_preserves_profile_routes(

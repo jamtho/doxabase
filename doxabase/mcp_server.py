@@ -28,6 +28,7 @@ from doxabase.mcp_tools import (
     draft_query_plan_tool,
     draft_map_assertion_change_tool,
     draft_staged_revision_rebase_tool,
+    export_context_slice_tool,
     export_graph_tool,
     export_handoff_bundle_tool,
     export_preflight_tool,
@@ -46,6 +47,7 @@ from doxabase.mcp_tools import (
     list_resource_revisions_tool,
     load_example_fixtures_tool,
     plan_staged_revision_recovery_tool,
+    preflight_context_slice_export_tool,
     project_brief_tool,
     record_claim_observation_tool,
     record_claim_reconsideration_tool,
@@ -80,7 +82,7 @@ from doxabase.mcp_tools import (
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
 Use project_brief, graph_overview, search, list_entities, describe_dataset, describe_profile_run, draft_profile_map_updates, describe_query_context, describe_context_slice, and describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
+Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context and query-result capture, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, staged graph revision recovery planning/apply checks/restage/batch-restage/apply/review, controlled graph replacement, import/export, fixture loading, and validation."""
 
 
 def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
@@ -295,6 +297,50 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             profile=profile,
             max_triples=max_triples,
             include_trig=include_trig,
+        )
+
+    @server.tool(name="doxabase.preflight_context_slice_export")
+    def preflight_context_slice_export(
+        seed_iris: list[str],
+        profile: str = "dataset_brief",
+        max_triples: int = 500,
+        include_seed_graphs: bool = False,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Dry-run an importable context-slice TriG export and scan selected triples."""
+
+        return preflight_context_slice_export_tool(
+            db,
+            seed_iris=seed_iris,
+            profile=profile,
+            max_triples=max_triples,
+            include_seed_graphs=include_seed_graphs,
+            limit=limit,
+        )
+
+    @server.tool(name="doxabase.export_context_slice")
+    def export_context_slice(
+        path: str,
+        seed_iris: list[str],
+        profile: str = "dataset_brief",
+        max_triples: int = 500,
+        include_seed_graphs: bool = False,
+        overwrite: bool = False,
+        fail_on_sensitive: bool = False,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Write an importable TriG bundle for selected context-slice triples."""
+
+        return export_context_slice_tool(
+            db,
+            path=path,
+            seed_iris=seed_iris,
+            profile=profile,
+            max_triples=max_triples,
+            include_seed_graphs=include_seed_graphs,
+            overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
+            limit=limit,
         )
 
     @server.tool(name="doxabase.describe_resource")

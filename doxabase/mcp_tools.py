@@ -518,6 +518,50 @@ def describe_context_slice_tool(
     )
 
 
+def preflight_context_slice_export_tool(
+    db: DoxaBase,
+    seed_iris: list[str],
+    profile: str = "dataset_brief",
+    max_triples: int = 500,
+    include_seed_graphs: bool = False,
+    limit: int = 20,
+) -> dict[str, Any]:
+    return to_dict(
+        db.preflight_context_slice_export(
+            seed_iris,
+            profile=profile,  # type: ignore[arg-type]
+            max_triples=max_triples,
+            include_seed_graphs=include_seed_graphs,
+            limit=limit,
+        )
+    )
+
+
+def export_context_slice_tool(
+    db: DoxaBase,
+    path: str,
+    seed_iris: list[str],
+    profile: str = "dataset_brief",
+    max_triples: int = 500,
+    include_seed_graphs: bool = False,
+    overwrite: bool = False,
+    fail_on_sensitive: bool = False,
+    limit: int = 20,
+) -> dict[str, Any]:
+    return to_dict(
+        db.export_context_slice(
+            path,
+            seed_iris,
+            profile=profile,  # type: ignore[arg-type]
+            max_triples=max_triples,
+            include_seed_graphs=include_seed_graphs,
+            overwrite=overwrite,
+            fail_on_sensitive=fail_on_sensitive,
+            limit=limit,
+        )
+    )
+
+
 def record_observation_tool(
     db: DoxaBase,
     summary: str,

@@ -529,6 +529,33 @@ class GraphExportRecord:
 
 
 @dataclass(frozen=True)
+class ContextSliceExportRecord:
+    path: str | None
+    format: str
+    profile: str
+    seeds: list[ResourceSummary]
+    graphs: list[str]
+    graph_counts: dict[str, int]
+    triples: int
+    candidate_triple_count: int
+    omitted_triple_count: int
+    max_triples: int
+    truncated: bool
+    include_seed_graphs: bool
+    bytes_written: int
+    sensitive_literal_count: int
+    returned_match_count: int
+    omitted_match_count: int
+    limit: int
+    matches: list[SensitiveLiteralMatch]
+    privacy_warnings: list[str]
+    warnings: list[str]
+    scanner_note: str
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+
+
+@dataclass(frozen=True)
 class GraphTripleReplacementRecord:
     graph: str
     format: str
@@ -41816,6 +41843,258 @@ class DoxaBase:
                     0,
                 ) + self._insert_graph(graph_name, context)
         return imported
+
+    def preflight_context_slice_export(
+        self,
+        seed_iris: Iterable[str] | str,
+        *,
+        profile: TypingLiteral[
+            "dataset_brief",
+            "pattern_brief",
+            "deep_lore",
+            "resource_brief",
+        ] = "dataset_brief",
+        max_triples: int = 500,
+        include_seed_graphs: bool = False,
+        limit: int = 20,
+    ) -> ContextSliceExportRecord:
+        return self._context_slice_export_record(
+            path=None,
+            seed_iris=seed_iris,
+            profile=profile,
+            max_triples=max_triples,
+            include_seed_graphs=include_seed_graphs,
+            limit=limit,
+            overwrite=False,
+            graph_iri_prefix=RCG_PREFIX,
+            fail_on_sensitive=False,
+            write=False,
+        )
+
+    def export_context_slice(
+        self,
+        path: str | Path,
+        seed_iris: Iterable[str] | str,
+        *,
+        profile: TypingLiteral[
+            "dataset_brief",
+            "pattern_brief",
+            "deep_lore",
+            "resource_brief",
+        ] = "dataset_brief",
+        max_triples: int = 500,
+        include_seed_graphs: bool = False,
+        overwrite: bool = False,
+        graph_iri_prefix: str = RCG_PREFIX,
+        fail_on_sensitive: bool = False,
+        limit: int = 20,
+    ) -> ContextSliceExportRecord:
+        return self._context_slice_export_record(
+            path=path,
+            seed_iris=seed_iris,
+            profile=profile,
+            max_triples=max_triples,
+            include_seed_graphs=include_seed_graphs,
+            limit=limit,
+            overwrite=overwrite,
+            graph_iri_prefix=graph_iri_prefix,
+            fail_on_sensitive=fail_on_sensitive,
+            write=True,
+        )
+
+    def _context_slice_export_record(
+        self,
+        *,
+        path: str | Path | None,
+        seed_iris: Iterable[str] | str,
+        profile: TypingLiteral[
+            "dataset_brief",
+            "pattern_brief",
+            "deep_lore",
+            "resource_brief",
+        ],
+        max_triples: int,
+        include_seed_graphs: bool,
+        limit: int,
+        overwrite: bool,
+        graph_iri_prefix: str,
+        fail_on_sensitive: bool,
+        write: bool,
+    ) -> ContextSliceExportRecord:
+        if limit < 1:
+            raise DoxaBaseError("limit must be at least 1")
+        context = self.describe_context_slice(
+            seed_iris,
+            profile=profile,
+            max_triples=max_triples,
+            include_trig=False,
+            graph_iri_prefix=graph_iri_prefix,
+        )
+        export_triples = [
+            triple
+            for triple in context.triples
+            if include_seed_graphs or triple.graph not in SEED_GRAPH_NAMES
+        ]
+        graph_counts: dict[str, int] = {}
+        for triple in export_triples:
+            graph_counts[triple.graph] = graph_counts.get(triple.graph, 0) + 1
+        graph_names = list(graph_counts)
+        sensitive_literal_count, matches, omitted_match_count = (
+            self._context_slice_sensitive_matches(export_triples, limit=limit)
+        )
+        privacy_warnings = self._sensitive_literal_warnings(
+            match_count=sensitive_literal_count,
+            omitted_match_count=omitted_match_count,
+        )
+        scanner_note = (
+            "Scanner-clean means no selected context-slice export triples matched "
+            "DoxaBase's credential-like graph-term patterns; it is not proof that "
+            "the slice is shareable or free of user-specific paths, endpoint "
+            "details, or confidential project facts."
+        )
+        warnings = [*privacy_warnings, scanner_note]
+        if not include_seed_graphs and any(
+            triple.graph in SEED_GRAPH_NAMES for triple in context.triples
+        ):
+            warnings.insert(
+                len(privacy_warnings),
+                "Immutable seed graph triples were omitted from this context-slice "
+                "export. Fresh DoxaBase capsules already contain the standard seed "
+                "ontology and shapes.",
+            )
+        self._raise_if_sensitive_export_blocked(
+            fail_on_sensitive=fail_on_sensitive,
+            sensitive_literal_count=sensitive_literal_count,
+            privacy_warnings=privacy_warnings,
+        )
+        bytes_written = 0
+        path_value = str(path) if path is not None else None
+        if write:
+            if path is None:
+                raise DoxaBaseError("path is required when writing context slice export")
+            data = self._context_slice_trig(
+                export_triples,
+                graph_iri_prefix=graph_iri_prefix,
+            )
+            bytes_written = self._write_export(path, data, overwrite=overwrite)
+        suggested_next_actions = self._context_slice_export_suggested_actions(
+            seed_iris=seed_iris,
+            profile=profile,
+            max_triples=max_triples,
+            include_seed_graphs=include_seed_graphs,
+            fail_on_sensitive=fail_on_sensitive,
+            write=write,
+        )
+        return ContextSliceExportRecord(
+            path=path_value,
+            format="trig",
+            profile=context.profile,
+            seeds=context.seeds,
+            graphs=graph_names,
+            graph_counts=graph_counts,
+            triples=len(export_triples),
+            candidate_triple_count=context.candidate_triple_count,
+            omitted_triple_count=max(
+                context.candidate_triple_count - len(export_triples),
+                0,
+            ),
+            max_triples=max_triples,
+            truncated=context.truncated,
+            include_seed_graphs=include_seed_graphs,
+            bytes_written=bytes_written,
+            sensitive_literal_count=sensitive_literal_count,
+            returned_match_count=len(matches),
+            omitted_match_count=omitted_match_count,
+            limit=limit,
+            matches=matches,
+            privacy_warnings=privacy_warnings,
+            warnings=warnings,
+            scanner_note=scanner_note,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[action.call for action in suggested_next_actions],
+        )
+
+    def _context_slice_export_suggested_actions(
+        self,
+        *,
+        seed_iris: Iterable[str] | str,
+        profile: str,
+        max_triples: int,
+        include_seed_graphs: bool,
+        fail_on_sensitive: bool,
+        write: bool,
+    ) -> list[SuggestedNextAction]:
+        if write:
+            return []
+        seed_values = self._string_values("seed_iris", seed_iris, required=True)
+        digest_source = "\n".join(seed_values)
+        digest = hashlib.sha256(digest_source.encode("utf-8")).hexdigest()[:12]
+        label_source = self._local_name(seed_values[0]) if seed_values else None
+        label = re.sub(r"[^A-Za-z0-9]+", "-", label_source or "context-slice")
+        label = label.strip("-").lower() or "context-slice"
+        arguments = {
+            "path": f"/tmp/context-slice-{label[:40]}-{digest}.trig",
+            "seed_iris": seed_values,
+            "profile": profile,
+            "max_triples": max_triples,
+            "include_seed_graphs": include_seed_graphs,
+            "fail_on_sensitive": True,
+        }
+        if fail_on_sensitive:
+            arguments["fail_on_sensitive"] = fail_on_sensitive
+        return [
+            SuggestedNextAction(
+                action_label="Export context slice",
+                tool_name="export_context_slice",
+                mcp_tool_name="doxabase.export_context_slice",
+                arguments=arguments,
+                reason=(
+                    "Write an importable TriG bundle for only the selected "
+                    "context-slice triples after reviewing the preflight scan."
+                ),
+                call=self._suggested_call_string("export_context_slice", arguments),
+            )
+        ]
+
+    def _context_slice_sensitive_matches(
+        self,
+        triples: Iterable[ResourceTriple],
+        *,
+        limit: int,
+    ) -> tuple[int, list[SensitiveLiteralMatch], int]:
+        matches: list[SensitiveLiteralMatch] = []
+        omitted = 0
+        for triple in triples:
+            term_values: list[tuple[str, str, str]] = []
+            if triple.subject_kind == "uri":
+                term_values.append(("subject", triple.subject_kind, triple.subject))
+            term_values.append(("predicate", "uri", triple.predicate))
+            if triple.object_kind in {"literal", "uri"}:
+                term_values.append(("object", triple.object_kind, triple.object))
+            for term_position, term_kind, value in term_values:
+                match_kind, redacted_snippet = self._sensitive_literal_match(value)
+                if match_kind is None or redacted_snippet is None:
+                    continue
+                if len(matches) < limit:
+                    matches.append(
+                        SensitiveLiteralMatch(
+                            graph=triple.graph,
+                            subject=self._redact_sensitive_context_value(
+                                triple.subject
+                            ),
+                            predicate=self._redact_sensitive_context_value(
+                                triple.predicate
+                            ),
+                            object_kind=triple.object_kind,
+                            term_position=term_position,
+                            term_kind=term_kind,
+                            match_kind=match_kind,
+                            redacted_snippet=redacted_snippet,
+                        )
+                    )
+                else:
+                    omitted += 1
+        return len(matches) + omitted, matches, omitted
 
     def export_preflight(
         self,

@@ -935,6 +935,43 @@ context.suggested_next_calls
 `seed_iris` is the input argument name. The returned field is `seeds` in Python
 and `result["seeds"]` in MCP payloads.
 
+`db.preflight_context_slice_export(...)` and `db.export_context_slice(...)`
+return a `ContextSliceExportRecord`:
+
+```python
+export.path
+export.format
+export.profile
+export.seeds
+export.graphs
+export.graph_counts
+export.triples
+export.candidate_triple_count
+export.omitted_triple_count
+export.max_triples
+export.truncated
+export.include_seed_graphs
+export.bytes_written
+export.sensitive_literal_count
+export.returned_match_count
+export.omitted_match_count
+export.limit
+export.matches
+export.privacy_warnings
+export.warnings
+export.scanner_note
+export.suggested_next_actions
+export.suggested_next_calls
+```
+
+`preflight_context_slice_export()` does not write a file, so `path` is `None`
+and `bytes_written` is `0`; it includes a suggested `export_context_slice`
+action. `export_context_slice()` writes TriG and returns no further export
+action. The helper scans only the selected context-slice export triples and
+omits `base_ontology`/`base_shapes` triples by default so the bundle can be
+imported into a fresh capsule without immutable-seed privileges. Set
+`include_seed_graphs=True` only for deliberate seed-graph review bundles.
+
 `route_counts` is keyed by route id. `route_legend` is a list of rows, not a
 dict; callers can build a dict keyed by `route` if that is more convenient.
 There is no separate `route_summaries` field; use `reading_order`,

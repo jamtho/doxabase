@@ -64,6 +64,16 @@ db.export_trig("/tmp/project-review-bundle.trig")
 db.export_trig("/tmp/workflow-review-bundle.trig", graphs="workflow")
 db.export_trig("/tmp/shareable-project.trig", fail_on_sensitive=True)
 db.export_preflight(export_kind="handoff_bundle")
+db.preflight_context_slice_export(
+    ["https://example.test/project#child_table"],
+    profile="dataset_brief",
+)
+db.export_context_slice(
+    "/tmp/child-table-context.trig",
+    ["https://example.test/project#child_table"],
+    profile="dataset_brief",
+    fail_on_sensitive=True,
+)
 db.scan_sensitive_literals(graphs=["map", "evidence"])
 db.export_revision_snapshots("/tmp/revision-snapshots.json", fail_on_sensitive=True)
 db.export_handoff_bundle(
@@ -88,6 +98,11 @@ catches common private-key headers, bearer tokens, AWS access key IDs,
 and explicit fake-secret test markers.
 TriG workflow/review exports also include a non-privacy `warnings` entry saying
 they are review context only and omit history plus revision snapshot rows. Use
+`export_context_slice()` when a handoff should include only the selected
+resource neighborhood instead of every resource in a graph role. It omits
+immutable seed graphs by default so fresh capsules can import the artifact, and
+its preflight scans only selected context-slice triples; scanner-clean still
+requires separate shareability review. Use
 `export_handoff_bundle()` or project TriG plus `export_revision_snapshots()` for
 recovery handoffs.
 `export_preflight()` is a read-only companion for `export_graph()`,

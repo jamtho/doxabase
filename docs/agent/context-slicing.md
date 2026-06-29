@@ -215,6 +215,17 @@ Useful fields:
   truncation scope is `triples_only`: resources, route counts, and structured
   contexts still describe the full selected slice.
 
+Use `preflight_context_slice_export()` and `export_context_slice()` when the
+handoff needs an importable, resource-scoped TriG artifact. These helpers reuse
+the selected `describe_context_slice` triples, scan only those selected triples
+for credential-like terms, and omit immutable seed graphs by default so a fresh
+DoxaBase capsule can import the bundle without `allow_immutable=True`. This is
+the safer route when the target resource shares a graph role with unrelated
+private or noisy resources. By contrast, `describe_context_slice(include_trig=True)`
+is an inspection surface; it may include base ontology or base shape triples
+selected for route context and should not be assumed to be a recovery or
+shareable handoff bundle.
+
 When `truncated=true`, read `warnings` before assuming the returned payload is
 small. Raw RDF is capped by `max_triples`, but structured contexts still return
 their full selected summaries; wide datasets or very broad seed sets emit a

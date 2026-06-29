@@ -292,6 +292,13 @@ few useful gaps:
   redaction or proof that the graph is secret-free. For unattended or shareable
   RDF exports, use `fail_on_sensitive=True` to block before creating or
   overwriting an artifact when selected graph roles scan dirty.
+- A resource-scoped handoff trial showed graph-level exports are too coarse
+  when one shareable dataset shares `map` with unrelated sensitive or noisy
+  siblings. Use `preflight_context_slice_export` and `export_context_slice`
+  for selected resource neighborhoods: they scan only selected triples and omit
+  immutable seed graphs by default so the resulting TriG can import into a
+  fresh capsule. Treat `describe_context_slice(include_trig=true)` as
+  inspection text, not an import/recovery bundle.
 - A human-review artifact trial showed grouped staged-revision Markdown was
   mechanically complete but too technical at the top. `export_staged_revisions`
   now opens with a `Reviewer Decision Matrix` that gives row numbers, plain

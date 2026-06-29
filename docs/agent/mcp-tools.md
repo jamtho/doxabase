@@ -1006,7 +1006,7 @@ defined. Pair metric-oriented slices with `draft_profile_map_updates` when that
 status matters.
 `reading_order` and `route_legend` provide the static reading protocol and
 meanings for the routes present in the response. Set `include_trig=true` when
-you need importable TriG text, and raise
+you need raw TriG text for inspection, and raise
 `max_triples` when `truncated` is true and the slice still looks relevant.
 Truncation only affects raw `triples` and `trig`; resources and structured
 contexts still describe the full selected slice.
@@ -1020,6 +1020,28 @@ This includes storage access, physical-layout, partition-scheme, and mapped
 column handoffs whose incoming/reference routes identify an owning table. It
 catches query-only metadata issues such as misplaced database relation templates
 that are not stored in `dataset_contexts[].operational_warnings`.
+
+`doxabase.preflight_context_slice_export`
+
+Dry-runs an importable context-slice TriG export without writing a file. Use it
+when a handoff should include only the selected resource neighborhood rather
+than every resource in a graph role. It reuses `describe_context_slice`
+selection, omits immutable seed graphs by default, scans only the selected
+export triples for credential-like graph terms, and returns the same
+`sensitive_literal_count`, `privacy_warnings`, `warnings`, and suggested-action
+style used by broader export preflights. `scanner-clean` is still not a
+shareability proof; local paths, endpoints, and confidential project facts need
+human review.
+
+`doxabase.export_context_slice`
+
+Writes the selected context-slice triples as TriG. Pass
+`fail_on_sensitive=true` for unattended/shareable exports. Keep
+`include_seed_graphs=false` unless you deliberately want a bundle that may
+require `import_trig(..., allow_immutable=True)`: fresh DoxaBase capsules
+already contain the standard base ontology and shape seed graphs. Prefer this
+helper over `describe_context_slice(include_trig=true)` when the artifact must
+round-trip into a fresh capsule or avoid unrelated graph siblings.
 
 `doxabase.describe_pattern`
 
