@@ -39,12 +39,14 @@ autonomously in a trial/improvement loop:
 3. After each useful trial, implement the sensible smallest justified fix. Small
    is preferred, but make a larger move when that is the practical way out of a
    pathological state.
-4. Update tests and agent docs with the behavior or lesson the trial revealed.
-5. Run focused checks first, then full `uv run pytest -q -n auto`,
+4. Use `docs/agent/project-strategy.md` when recent loops are dominated by one
+   local queue family or when choosing the next broad workflow trial axis.
+5. Update tests and agent docs with the behavior or lesson the trial revealed.
+6. Run focused checks first, then full `uv run pytest -q -n auto`,
    `uv run python tools/validate_rdf.py`, and `git diff --check`.
-6. Commit coherent verified changes on a `codex/...` branch when the work is
+7. Commit coherent verified changes on a `codex/...` branch when the work is
    ready, with a rationale-focused commit message.
-7. Preserve only trial artifacts that future agents can usefully learn from.
+8. Preserve only trial artifacts that future agents can usefully learn from.
    Raw scratch capsules and routine run logs should stay local; distilled trial
    lessons belong in tracked docs when they change how agents should work.
 

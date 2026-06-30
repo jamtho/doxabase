@@ -10,6 +10,7 @@ def test_list_agent_docs_contains_operational_docs() -> None:
     assert "overview" in doc_ids
     assert "graph_roles" in doc_ids
     assert "agent_workflow" in doc_ids
+    assert "project_strategy" in doc_ids
     assert "mcp_tools" in doc_ids
     assert "response_shapes" in doc_ids
     assert "observation_recording" in doc_ids
@@ -46,6 +47,19 @@ def test_start_here_names_exact_discovery_tools() -> None:
     assert "profiling" in content
     assert "systematisation" in content
     assert "Staged Handoff Recovery Cookbook" in content
+    assert "project_strategy" in content
+
+
+def test_project_strategy_names_broad_trial_priorities() -> None:
+    doc = get_agent_doc("project_strategy", max_chars=50_000)
+    content = str(doc["content"])
+
+    assert doc["id"] == "project_strategy"
+    assert "project_brief" in content
+    assert "staged_conflict_rebase_versions" in content
+    assert "profile_metrics_and_joint_writes" in content
+    assert "storage_aware_query_planning" in content
+    assert "Do not add these priorities to `project_brief.queue_counts`" in content
 
 
 def test_revision_docs_include_handoff_recovery_cookbook() -> None:

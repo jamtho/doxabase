@@ -145,8 +145,10 @@ expects one deliberately premature map candidate to fail validation.
 
 Interleave ordinary polish loops with broader expeditions. Local API-friction
 trials are good at improving response shapes, repair hints, and staged-review
-routing, but they can underexplore project-wide product questions. Every few
-loops, aim a wave at one or more of:
+routing, but they can underexplore project-wide product questions. Read
+`project_strategy` when choosing the next broad wave or when recent loops are
+clustered around one helper family. Every few loops, aim a wave at one or more
+of:
 
 - MCP transport and schema parity, especially when a Python helper gained a
   useful argument or safety gate that may not be exposed by the decorated server

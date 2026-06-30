@@ -43,6 +43,12 @@ DOCS: tuple[AgentDoc, ...] = (
         path=DOCS_DIR / "workflow.md",
     ),
     AgentDoc(
+        id="project_strategy",
+        title="Project Strategy",
+        description="Strategic build-priority frontier for autonomous repo-improvement loops.",
+        path=DOCS_DIR / "project-strategy.md",
+    ),
+    AgentDoc(
         id="ontology_primer",
         title="Ontology Primer",
         description="How to use rc: terms while keeping project-specific terms in project namespaces.",

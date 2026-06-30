@@ -43,6 +43,10 @@ When arriving cold, use this route before reading every reference doc.
    Treat `frontier_status.is_complete` as only the hidden-frontier audit: if
    `first_unattended_action` or `mutation_allowed_after` still points to safety
    review, do that before any mutation.
+   In autonomous repo-improvement loops, read
+   `doxabase.get_doc(doc_id="project_strategy")` after local safety/frontier
+   handling so the next trial wave is chosen from broader build priorities, not
+   only the currently visible capsule queue.
 4. If `project_brief.recommended_next_tasks[]` includes
    `staged_frontier_review`, call `doxabase.plan_staged_revision_recovery`
    before staging more profile or query repair work.
