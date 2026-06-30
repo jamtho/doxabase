@@ -137,6 +137,34 @@ def test_local_csv_query_smoke_example_runs() -> None:
     assert "Validation conforms: True" in output
 
 
+def test_missing_metadata_query_repair_smoke_example_runs() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "examples" / "missing-metadata-query-repair-smoke.py"),
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    output = result.stdout
+
+    assert "# DoxaBase Missing Metadata Query Repair Smoke" in output
+    assert "Baseline readiness: insufficient_metadata" in output
+    assert "Baseline repair group: missing_storage_access" in output
+    assert "Storage staged check: ready / review_then_apply" in output
+    assert "After storage readiness: needs_review" in output
+    assert "Next repair group: missing_physical_layout" in output
+    assert "Layout staged check: ready / review_then_apply" in output
+    assert "Final readiness: ready_for_query_planning" in output
+    assert "Draft handoff: execution_attempt_ready" in output
+    assert "Ready for execution: True" in output
+    assert "Scan function: read_csv_auto" in output
+    assert "Validation conforms: True" in output
+
+
 def test_ais_query_overlay_smoke_example_runs() -> None:
     result = subprocess.run(
         [sys.executable, str(ROOT / "examples" / "ais-query-overlay-smoke.py")],

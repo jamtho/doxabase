@@ -303,6 +303,10 @@ Start with `describe_query_context(dataset_iri)`:
    Exact matching actions in `describe_query_context.suggested_repair_action_groups`
    are marked `already_pending`; unrelated same-dataset caveat/profile work
    remains only in the staged-review lanes.
+   For a maintained no-network repair walkthrough, run
+   `examples/missing-metadata-query-repair-smoke.py`; it stages storage repair
+   first, reruns `describe_query_context`, then stages physical-layout repair
+   before drafting the final CSV handoff.
 7. Use `suggested_next_actions` when scripting the next step. If profile run
    candidates exist, profile evidence inspection actions come before query-plan
    drafting; when multiple candidate runs need review, several

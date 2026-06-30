@@ -3253,6 +3253,13 @@ few useful gaps:
   pending same dataset/evidence staged profile updates by default and requires
   `allow_pending_profile_updates=true` only after review confirms another staged
   update is intentional.
+- A follow-up storage/query trial showed the existing bundled fixtures were
+  either review-gated or already metadata-ready, so agents had to fault-inject
+  missing storage/layout to practice the intended repair flow. The maintained
+  `examples/missing-metadata-query-repair-smoke.py` now starts from a table with
+  columns but no physical metadata, stages `missing_storage_access` repair,
+  reruns context, stages `missing_physical_layout` repair, and drafts a ready
+  local CSV handoff.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
