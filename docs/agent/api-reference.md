@@ -859,9 +859,11 @@ ordinary observations and reject profile count fields. Use `query_source_path`
 for a non-secret query file or query artifact, which is stored as an
 `rc:SourceSpan` with `rc:QuerySource`, and `result_sources` for result files,
 logs, or output artifacts.
-After recording a profile-like result, rerun `describe_query_context()`; singleton
-query-result profile evidence now gets an explicit `describe_profile_run()`
-handoff even when it is not a multi-observation profile-run candidate.
+When `observed_asset` is supplied, the returned record includes
+`suggested_next_actions`: profile-like results start with
+`describe_profile_run(observed_asset, evidence_iri)`, and all observed-asset
+results include `describe_query_context(iri=observed_asset)`. Use those actions
+before drafting another query plan or promoting profile-derived facts.
 
 `record_dataset_profile()` records a profile observation for one dataset and can
 also update the map row-count snapshot and write an agent-authored profile

@@ -1141,6 +1141,25 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
         "https://richcanopy.org/doxabase/generated/source-span/"
     )
     assert result["source_span_triples"] > 0
+    assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
+        "describe_profile_run",
+        "describe_query_context",
+    ]
+    assert result["suggested_next_actions"][0]["arguments"] == {
+        "dataset_iri": "https://example.test/project#Orders",
+        "evidence_iri": result["evidence_iri"],
+    }
+    assert result["suggested_next_actions"][1]["arguments"] == {
+        "iri": "https://example.test/project#Orders"
+    }
+    assert result["suggested_next_calls"] == [
+        (
+            "describe_profile_run("
+            "dataset_iri='https://example.test/project#Orders', "
+            f"evidence_iri='{result['evidence_iri']}')"
+        ),
+        "describe_query_context(iri='https://example.test/project#Orders')",
+    ]
 
 
 def test_describe_query_context_tool_routes_singleton_query_result_evidence(

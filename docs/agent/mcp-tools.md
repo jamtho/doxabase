@@ -1168,10 +1168,11 @@ Use it after `draft_query_plan` and an external runtime attempt. Supply
 `query_source_path` when the query text has a durable non-secret location.
 Failed, blocked, cancelled, or partial attempts are ordinary observations; do
 not pass profile count fields unless `execution_status="succeeded"`.
-After recording a successful profile-like result, rerun
-`describe_query_context`. If the result is the only returned profile observation,
-the query context will route it through a singleton `describe_profile_run`
-suggested action before drafting another query plan.
+When `observed_asset` is supplied, the returned payload includes
+`suggested_next_actions`: profile-shaped results start with
+`describe_profile_run(observed_asset, evidence_iri)` and all observed-asset
+results include `describe_query_context(iri=observed_asset)`. Follow those
+actions before drafting another query plan or promoting profile-derived facts.
 
 `doxabase.record_dataset_profile`
 

@@ -2930,6 +2930,8 @@ class QueryResultRecord:
     observation_triples: int
     evidence_triples: int
     source_span_triples: int
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
 
 
 @dataclass(frozen=True)
@@ -25542,6 +25544,11 @@ class DoxaBase:
                 )
             )
 
+        suggested_next_actions = self._query_result_suggested_next_actions(
+            observed_asset=observed_asset,
+            observation_type=observation.observation_type,
+            evidence_iri=observation.evidence_iri,
+        )
         return QueryResultRecord(
             observation_iri=observation.observation_iri,
             observation_type=observation.observation_type,
@@ -25559,7 +25566,64 @@ class DoxaBase:
                 + source_span_triples
             ),
             source_span_triples=source_span_triples,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=[
+                action.call for action in suggested_next_actions if action.call
+            ],
         )
+
+    def _query_result_suggested_next_actions(
+        self,
+        *,
+        observed_asset: str | None,
+        observation_type: str,
+        evidence_iri: str,
+    ) -> list[SuggestedNextAction]:
+        if observed_asset is None:
+            return []
+        observed_asset_iri = self.expand_iri(observed_asset)
+        actions: list[SuggestedNextAction] = []
+        if observation_type == "profile":
+            profile_arguments = {
+                "dataset_iri": observed_asset_iri,
+                "evidence_iri": evidence_iri,
+            }
+            actions.append(
+                SuggestedNextAction(
+                    action_label="Inspect recorded profile result",
+                    tool_name="describe_profile_run",
+                    mcp_tool_name="doxabase.describe_profile_run",
+                    arguments=profile_arguments,
+                    reason=(
+                        "This query result wrote profile-shaped evidence. "
+                        "Inspect the profile run before promoting map facts or "
+                        "relying on the result in a new query plan."
+                    ),
+                    call=self._suggested_call_string(
+                        "describe_profile_run",
+                        profile_arguments,
+                    ),
+                )
+            )
+        context_arguments = {"iri": observed_asset_iri}
+        actions.append(
+            SuggestedNextAction(
+                action_label="Refresh query context",
+                tool_name="describe_query_context",
+                mcp_tool_name="doxabase.describe_query_context",
+                arguments=context_arguments,
+                reason=(
+                    "Refresh the dataset query context after recording this "
+                    "external result so storage, profile, and next-plan routing "
+                    "reflect the new evidence."
+                ),
+                call=self._suggested_call_string(
+                    "describe_query_context",
+                    context_arguments,
+                ),
+            )
+        )
+        return actions
 
     @staticmethod
     def _query_execution_status(status: str) -> str:

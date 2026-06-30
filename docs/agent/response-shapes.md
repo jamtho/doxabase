@@ -1184,6 +1184,8 @@ result.result_sources
 result.observation_triples
 result.evidence_triples
 result.source_span_triples
+result.suggested_next_actions
+result.suggested_next_calls
 ```
 
 The helper does not run queries. It records an externally executed result or
@@ -1197,6 +1199,11 @@ the count-like value is intentionally profile evidence.
 The linked evidence stores `query_execution_status`, `query_engine`, and
 `query_hash` as structured metadata when those values are supplied, so later
 query-context handoffs do not depend on parsing evidence summary prose.
+When `observed_asset` is supplied, the response now includes a
+`describe_query_context` next action for that asset. Profile-shaped query
+results also include a leading `describe_profile_run` action using the returned
+`evidence_iri`, so a plan-to-result loop can continue without reconstructing
+the follow-up call by hand.
 
 `db.draft_query_evidence_storage_overlay(...)` returns a
 `QueryEvidenceStorageOverlayDraft`:

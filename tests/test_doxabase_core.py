@@ -23423,6 +23423,22 @@ def test_record_query_result_writes_query_source_evidence(
     assert result.query_hash == "sha256:abc123"
     assert result.source_span_iri is not None
     assert result.evidence_triples > result.source_span_triples > 0
+    assert [action.tool_name for action in result.suggested_next_actions] == [
+        "describe_profile_run",
+        "describe_query_context",
+    ]
+    assert result.suggested_next_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": result.evidence_iri,
+    }
+    assert result.suggested_next_actions[1].arguments == {"iri": dataset}
+    assert result.suggested_next_calls == [
+        (
+            f"describe_profile_run(dataset_iri='{dataset}', "
+            f"evidence_iri='{result.evidence_iri}')"
+        ),
+        f"describe_query_context(iri='{dataset}')",
+    ]
     assert db.validate_graph(scope="all").conforms
 
     evidence = db.describe_resource(result.evidence_iri, graph="evidence")
@@ -23525,6 +23541,10 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
     )
 
     assert aggregate.observation_type == "observation"
+    assert [action.tool_name for action in aggregate.suggested_next_actions] == [
+        "describe_query_context"
+    ]
+    assert aggregate.suggested_next_actions[0].arguments == {"iri": dataset}
 
     sampled_aggregate = db.record_query_result(
         summary="Orders status aggregate also recorded source rows scanned.",
@@ -23542,6 +23562,12 @@ def test_record_query_result_aggregate_payloads_stay_observations_without_profil
     )
 
     assert sampled_aggregate.observation_type == "profile"
+    assert [
+        action.tool_name for action in sampled_aggregate.suggested_next_actions
+    ] == [
+        "describe_profile_run",
+        "describe_query_context",
+    ]
     assert db.validate_graph(scope="all").conforms
 
 
@@ -23561,6 +23587,7 @@ def test_record_query_result_records_failures_as_observations(
     assert result.observation_type == "observation"
     assert result.execution_status == "failed"
     assert result.source_span_iri is not None
+    assert result.suggested_next_actions == []
     assert db.validate_graph(scope="all").conforms
 
 

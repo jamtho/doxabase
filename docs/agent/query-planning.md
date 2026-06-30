@@ -456,6 +456,10 @@ when DuckDB is unavailable as long as `engine` and `sample_method` say what
 actually ran. `record_query_result` stores execution status, engine, and query
 hash as structured evidence metadata, so custom evidence summaries still remain
 machine-readable in later query-context handoffs.
+When `observed_asset` is supplied, follow the returned
+`suggested_next_actions`: profile-shaped results start with
+`describe_profile_run(dataset_iri=observed_asset, evidence_iri=...)`, and all
+observed-asset results include `describe_query_context(iri=observed_asset)`.
 
 If that evidence identifies a reviewed source but the map still lacks physical
 query-planning metadata, call `draft_query_evidence_storage_overlay` with the

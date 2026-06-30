@@ -3007,6 +3007,19 @@ few useful gaps:
   snapshot JSON imported before project/history RDF: explicit recovery planning
   now routes those `snapshot_rows_without_history` rows to
   `complete_handoff_import` with an `import_trig` action instead of raising.
+- A query-result follow-up trial confirmed the storage-metadata-to-execution
+  handoff can close through an external Python CSV fallback, `record_query_result`,
+  `describe_profile_run`, profile map update drafting, and project-brief queues.
+  The older post-write routing gap is now closed: `record_query_result` returns
+  follow-up actions for `describe_profile_run` when the result is profile-shaped
+  and `describe_query_context` whenever `observed_asset` is supplied.
+- A staged version/rebase frontier trial confirmed snapshot-first explicit
+  recovery now queues `complete_handoff_import`, and the same capsule can then
+  proceed through history import, exact drift detection, same-slot replacement
+  drafting, repair successor staging, apply, lineage, and exact applied diff.
+  The broader frontier remains first-class handoff-manifest import/recovery and
+  a durable rebase/version session object that groups source rows, selected
+  repair choices, successors, applied events, and snapshot evidence.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
