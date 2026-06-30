@@ -983,7 +983,10 @@ Use `bundle_summary.mutation_frontier_iris` when a script needs the active
 resolved targets only; it omits informational redirects and already-applied
 inspection work. If `bundle_summary.requires_recheck_after_each_apply` is true,
 apply one frontier target at most, then rerun the export or recovery planner
-before acting on siblings.
+before acting on siblings. Batch-restage responses mirror the same guard at
+top level as `requires_recheck_after_each_apply` and
+`sequential_apply_recheck_candidate_iris`, so unattended loops can check it
+before drilling into `bundle_summary`.
 When `recommended_review_iris` names current successors outside the requested
 export bundle, `external_recommended_review_iris` lists those omitted review
 targets while `mutation_frontier_iris` remains scoped to included rows. Export

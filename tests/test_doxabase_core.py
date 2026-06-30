@@ -9371,6 +9371,12 @@ def test_batch_restage_preserves_order_and_exports_review_bundle(
         restaged_second,
         ready.revision_iri,
     ]
+    assert batch.requires_recheck_after_each_apply is True
+    assert batch.sequential_apply_recheck_candidate_iris == [
+        already_restaged.revision_iri,
+        restaged_second,
+        ready.revision_iri,
+    ]
     assert len(batch.bundle_summary.warnings) == 1
     assert batch.bundle_summary.recommended_mutation_review_iris == [
         already_restaged.revision_iri,

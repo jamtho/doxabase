@@ -5829,6 +5829,8 @@ batch.review_revision_iris
 batch.items
 batch.revision_summaries
 batch.bundle_summary
+batch.requires_recheck_after_each_apply
+batch.sequential_apply_recheck_candidate_iris
 batch.export_record
 ```
 
@@ -5874,6 +5876,13 @@ queue item for that same current revision, including resolved target and target
 record kind. For automation after a mixed batch, route from
 `bundle_summary.next_action_queue` / `bundle_summary.next_action_queue_items` or
 top-level `current_revision_by_source` before following per-item next actions.
+If `requires_recheck_after_each_apply` is true, apply at most one ready
+successor from the batch, then rerun `plan_staged_revision_recovery()` or export
+a fresh grouped review before the next mutation.
+`sequential_apply_recheck_candidate_iris` lists the ready/no-op candidates that
+trigger that guard and mirrors
+`batch.bundle_summary.sequential_apply_recheck_candidate_iris` for scripts that
+should not have to drill into the nested bundle.
 Read `suggested_next_actions_after`
 when a script needs concrete follow-up calls without joining back through
 `list_graph_revisions`.

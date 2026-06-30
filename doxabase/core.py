@@ -1417,6 +1417,8 @@ class StagedGraphRevisionBatchRestageRecord:
     items: list[StagedGraphRevisionBatchRestageItem]
     revision_summaries: list[StagedGraphRevisionExportSummary]
     bundle_summary: StagedGraphRevisionBundleSummary
+    requires_recheck_after_each_apply: bool
+    sequential_apply_recheck_candidate_iris: list[str]
     export_record: StagedGraphRevisionsExportRecord | None
 
 
@@ -30736,6 +30738,12 @@ class DoxaBase:
             items=items,
             revision_summaries=revision_summaries,
             bundle_summary=bundle_summary,
+            requires_recheck_after_each_apply=(
+                bundle_summary.requires_recheck_after_each_apply
+            ),
+            sequential_apply_recheck_candidate_iris=(
+                bundle_summary.sequential_apply_recheck_candidate_iris
+            ),
             export_record=export_record,
         )
 
@@ -31168,6 +31176,8 @@ class DoxaBase:
                 descriptions=[],
                 snapshot_evidence=snapshot_evidence,
             ),
+            requires_recheck_after_each_apply=False,
+            sequential_apply_recheck_candidate_iris=[],
             export_record=None,
         )
 

@@ -2982,6 +2982,12 @@ few useful gaps:
   rollups; grouped staged exports now return modelling-choice summary rows for
   repair diagnostics, map candidates, vocabulary/shape candidates, and
   pattern-first alternatives.
+- A staged-recovery frontier trial successfully completed digest-drift and
+  count-drift recovery through batch restage, sequential apply/recheck, lineage,
+  and applied-diff inspection. The remaining unattended-loop risk was missing a
+  nested grouped-bundle sequencing hazard after a real batch restage; batch
+  restage responses now mirror `requires_recheck_after_each_apply` and
+  `sequential_apply_recheck_candidate_iris` at top level.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
