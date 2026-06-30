@@ -1440,7 +1440,9 @@ mapping should include `target_column`, `source_columns`, optional
 endpoints, columns, functions, and properties are resource-valued fields, so use
 IRIs or CURIEs rather than prose. Dataset relationship descriptions expose
 `relationship_kind` as the RDF class IRI and `relationship_type` as the helper
-token such as `foreign_key` or `aggregation`.
+token such as `foreign_key` or `aggregation`. Column fields must point to
+column resources; known data assets, datasets, and tables are rejected in those
+slots.
 
 `doxabase.record_graph_revision`
 

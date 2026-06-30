@@ -139,6 +139,13 @@ Treat those expedition reports as product signal even when they do not produce
 an immediate code patch. The goal is to stop the loop from polishing only the
 paths it already knows how to walk.
 
+A non-tabular relationship trial found that asset-level derivations and
+aggregations could be squeezed through column relationship fields by passing
+dataset IRIs as if they were columns. That is now guarded against, but the
+broader frontier remains: when a workflow needs first-class no-column asset
+relationships, treat that as a modelling/design task rather than a helper
+workaround.
+
 ## Safety
 
 Use a scratch capsule, for example:

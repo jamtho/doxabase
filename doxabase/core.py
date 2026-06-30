@@ -29050,6 +29050,15 @@ class DoxaBase:
             raise DoxaBaseError(
                 "aggregation relationships require at least one aggregated_columns entry"
             )
+        self._validate_relationship_column_resources(
+            from_column=from_column,
+            to_column=to_column,
+            identifying_columns=identifying_column_values,
+            source_columns=source_column_values,
+            derived_columns=derived_column_values,
+            group_by_columns=group_by_column_values,
+            aggregated_columns=aggregated_column_values,
+        )
 
         graph = Graph()
         self._bind_prefixes(graph)
@@ -29264,6 +29273,78 @@ class DoxaBase:
             resource_type=self.expand_iri(resource_type),
             graph="map",
             triples=triples,
+        )
+
+    def _validate_relationship_column_resources(
+        self,
+        *,
+        from_column: str | None,
+        to_column: str | None,
+        identifying_columns: Iterable[str],
+        source_columns: Iterable[str],
+        derived_columns: Iterable[str],
+        group_by_columns: Iterable[str],
+        aggregated_columns: Iterable[Mapping[str, Any]],
+    ) -> None:
+        fields: list[tuple[str, str]] = []
+        if from_column is not None:
+            fields.append(("from_column", from_column))
+        if to_column is not None:
+            fields.append(("to_column", to_column))
+        fields.extend(("identifying_columns", value) for value in identifying_columns)
+        fields.extend(("source_columns", value) for value in source_columns)
+        fields.extend(("derived_columns", value) for value in derived_columns)
+        fields.extend(("group_by_columns", value) for value in group_by_columns)
+        for index, aggregated_column in enumerate(aggregated_columns, start=1):
+            fields.append(
+                (
+                    f"aggregated_columns[{index}].target_column",
+                    str(aggregated_column["target_column"]),
+                )
+            )
+            fields.extend(
+                (
+                    f"aggregated_columns[{index}].source_columns",
+                    str(value),
+                )
+                for value in aggregated_column["source_columns"]
+            )
+            ordering = aggregated_column["within_group_ordering"]
+            if ordering is not None:
+                fields.append(
+                    (
+                        f"aggregated_columns[{index}].within_group_ordering",
+                        str(ordering),
+                    )
+                )
+
+        for field_name, value in fields:
+            self._validate_relationship_column_resource(field_name, value)
+
+    def _validate_relationship_column_resource(
+        self,
+        field_name: str,
+        value: str,
+    ) -> None:
+        column_iri = str(self._resource_ref(field_name, value))
+        data_asset_types = {
+            self.expand_iri("rc:DataAsset"),
+            self.expand_iri("rc:Dataset"),
+            self.expand_iri("rc:Table"),
+        }
+        matching_types = sorted(
+            set(self._types_from_graphs(self._expand_graphs(["all"]), column_iri))
+            & data_asset_types
+        )
+        if not matching_types:
+            return
+        type_labels = ", ".join(self._compact_iri(type_iri) for type_iri in matching_types)
+        raise DoxaBaseError(
+            f"{field_name} points to a data asset resource, not an rc:Column: "
+            f"{column_iri} ({type_labels}). Use source_dataset/target_dataset "
+            "for dataset endpoints, and use observations, patterns, or staged "
+            "systematisation for asset-level derivation or aggregation until a "
+            "dedicated asset-relationship helper exists."
         )
 
     def _normalise_aggregated_column_specs(

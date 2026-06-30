@@ -283,6 +283,14 @@ columns such as cleaned text, normalized subjects, or generated features. Use
 `aggregation` for grouped summaries, rollups, and index tables that compute
 target columns from source columns.
 
+Relationship column fields are for column resources. The helper rejects known
+data assets, datasets, or tables in `from_column`, `to_column`,
+`identifying_columns`, `source_columns`, `derived_columns`, `group_by_columns`,
+and aggregate mapping column fields. For no-column asset-level derivation or
+aggregation, use `source_dataset` / `target_dataset` plus observations,
+patterns, or staged systematisation until a dedicated asset-relationship helper
+exists.
+
 Aggregation relationships can carry `source_dataset`, `target_dataset`,
 `group_by_columns`, and `aggregated_columns`. Each `aggregated_columns` entry
 uses `target_column`, `source_columns`, optional `aggregation_function`, and

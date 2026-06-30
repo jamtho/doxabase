@@ -124,7 +124,7 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     graphs = {graph.name: graph for graph in overview.named_graphs}
     assert graphs["base_ontology"].triple_count == 1242
     assert graphs["base_ontology"].mutable is False
-    assert graphs["base_shapes"].triple_count == 1219
+    assert graphs["base_shapes"].triple_count == 1232
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
@@ -20901,6 +20901,78 @@ def test_map_helpers_do_not_duplicate_column_links(tmp_path: Path) -> None:
     description = db.describe_dataset(table)
     assert [item.iri for item in description.columns] == [column]
     assert db.triple_count("map") == 6
+
+
+def test_record_map_relationship_rejects_data_assets_in_column_slots(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    base = "https://example.test/project#"
+    raw_files = f"{base}raw_files"
+    clean_files = f"{base}clean_files"
+
+    db.record_map_dataset(raw_files, label="Raw files", is_table=True)
+    db.record_map_dataset(clean_files, label="Clean files", is_table=True)
+    before_map_count = db.triple_count("map")
+
+    with pytest.raises(
+        DoxaBaseError,
+        match="source_columns.*data asset resource.*rc:Column",
+    ):
+        db.record_map_relationship(
+            f"{base}clean_files_derivation",
+            relationship_type="derivation",
+            source_dataset=raw_files,
+            target_dataset=clean_files,
+            source_columns=[raw_files],
+            derived_columns=[clean_files],
+        )
+
+    with pytest.raises(
+        DoxaBaseError,
+        match=r"aggregated_columns\[1\]\.target_column.*data asset resource.*rc:Column",
+    ):
+        db.record_map_relationship(
+            f"{base}clean_files_rollup",
+            relationship_type="aggregation",
+            source_dataset=raw_files,
+            target_dataset=clean_files,
+            aggregated_columns=[
+                {
+                    "target_column": clean_files,
+                    "source_columns": [raw_files],
+                    "aggregation_function": "rc:Count",
+                }
+            ],
+        )
+
+    assert db.triple_count("map") == before_map_count
+
+
+def test_validation_rejects_data_assets_in_relationship_column_predicates(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    db.import_turtle(
+        """
+        @prefix ex: <https://example.test/project#> .
+        @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+        ex:raw_files a rc:Dataset .
+        ex:clean_files__filename a rc:Column .
+        ex:bad_asset_derivation a rc:Derivation ;
+            rc:sourceColumn ex:raw_files ;
+            rc:derivedColumn ex:clean_files__filename .
+        """,
+        graph="map",
+    )
+
+    validation = db.validate_graph(scope="all")
+
+    assert not validation.conforms
+    assert "Relationship column predicates must not point to data asset resources" in (
+        validation.report_text
+    )
 
 
 @pytest.mark.parametrize(

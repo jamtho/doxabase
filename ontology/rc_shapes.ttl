@@ -336,6 +336,22 @@ rc:AggregatedColumnShape a sh:NodeShape ;
         sh:message "withinGroupOrdering should be a named column resource." ;
     ] .
 
+rc:RelationshipColumnReferenceShape a sh:NodeShape ;
+    sh:targetObjectsOf
+        rc:foreignKeyFrom,
+        rc:foreignKeyTo,
+        rc:identifyingColumn,
+        rc:sourceColumn,
+        rc:derivedColumn,
+        rc:groupByColumn,
+        rc:targetColumn,
+        rc:aggregationSourceColumn,
+        rc:withinGroupOrdering ;
+    sh:not [
+        sh:class rc:DataAsset
+    ] ;
+    sh:message "Relationship column predicates must not point to data asset resources; use sourceDataset/targetDataset or observations/patterns for asset-level relationships." .
+
 rc:PhysicalLayoutShape a sh:NodeShape ;
     sh:targetClass rc:PhysicalLayout ;
     sh:property [
