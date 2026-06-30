@@ -2879,6 +2879,12 @@ few useful gaps:
   selected `profile_route_sources`. Use plan item source blocks when staging
   caller-authored alternatives, and check `profile_route_source_count` before
   treating an advisory lane as closed.
+- A profile metric/type fallback trial found generated advisory routes still
+  pushed awkward evidence toward inspection or direct pattern recording before
+  making a reviewable graph-change option obvious. Profile metric and type
+  lanes now generate pattern-only `stage_systematisation` fallback actions with
+  `profile_route_sources`; `caveat_fallback` plan items prefer that staged
+  review path over direct `record_pattern` writes.
 - A query-evidence overlay trial found that `record_query_result` made source
   paths, result artifacts, execution status, and query hashes visible, but an
   agent still had to hand-author RDF before that evidence could repair missing

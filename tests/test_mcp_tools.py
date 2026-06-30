@@ -8172,7 +8172,7 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
         for action in result["suggested_next_action_groups"][
             "metric_vocabulary_review"
         ]
-    ] == ["describe_context_slice", "list_entities"]
+    ] == ["describe_context_slice", "list_entities", "stage_systematisation"]
     metric_action_source = result["suggested_next_action_groups"][
         "metric_vocabulary_review"
     ][0]["source_profile_advisory"]
@@ -8190,8 +8190,13 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert [
         action["tool_name"]
         for action in result["suggested_next_action_groups"]["profile_type_review"]
-    ] == ["describe_context_slice", "record_pattern", "stage_map_assertion_change"]
-    type_action = result["suggested_next_action_groups"]["profile_type_review"][2]
+    ] == [
+        "describe_context_slice",
+        "record_pattern",
+        "stage_systematisation",
+        "stage_map_assertion_change",
+    ]
+    type_action = result["suggested_next_action_groups"]["profile_type_review"][3]
     type_action_source = type_action["source_profile_advisory"]
     assert type_action["tool_name"] == "stage_map_assertion_change"
     assert type_action[
@@ -8227,6 +8232,12 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     )
     assert plan_by_move["assert_map_type"]["primary_action_writes_graph"] is True
     assert plan_by_move["assert_map_type"]["type_advisory_indexes"] == [0]
+    assert plan_by_move["caveat_fallback"]["primary_tool_name"] == (
+        "stage_systematisation"
+    )
+    assert plan_by_move["caveat_fallback"]["primary_action_kind"] == (
+        "stage_reviewable_change"
+    )
     assert plan_by_move["caveat_fallback"]["source_profile_advisories"][0][
         "route_group_key"
     ].startswith("profile_type_review:")
@@ -8629,10 +8640,16 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     assert [action["tool_name"] for action in advisory["suggested_next_actions"]] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "stage_pattern_promotion",
     ]
-    promotion_action = advisory["suggested_next_actions"][3]
+    fallback_action = advisory["suggested_next_actions"][2]
+    assert fallback_action["arguments"]["profile_route_sources"] == [
+        fallback_action["source_profile_advisory"]
+    ]
+    assert fallback_action["arguments"]["framings"][0]["graph"] == "patterns"
+    promotion_action = advisory["suggested_next_actions"][4]
     promotion_args = promotion_action["arguments"]
     assert promotion_args["patterns"] == [pattern["pattern_iri"]]
     assert promotion_args["evidence"] == [shared_evidence]
@@ -8662,6 +8679,7 @@ def test_draft_profile_map_updates_tool_routes_metric_promotion_pattern(
     ] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "describe_staged_revision",
         "export_staged_revisions",
@@ -8909,8 +8927,14 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
     ] == [
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "stage_map_assertion_change",
     ]
+    fallback_action = result["type_advisory_suggested_next_actions"][2]
+    assert fallback_action["arguments"]["profile_route_sources"] == [
+        fallback_action["source_profile_advisory"]
+    ]
+    assert fallback_action["arguments"]["framings"][0]["graph"] == "patterns"
     assert result["type_advisory_suggested_next_calls"] == [
         action["call"] for action in result["type_advisory_suggested_next_actions"]
     ]

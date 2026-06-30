@@ -27032,9 +27032,17 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     ] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "stage_pattern_promotion",
     ]
+    metric_fallback_action = draft.suggested_next_action_groups[
+        "metric_vocabulary_review"
+    ][2]
+    assert metric_fallback_action.arguments["profile_route_sources"] == [
+        metric_fallback_action.source_profile_advisory
+    ]
+    assert metric_fallback_action.arguments["framings"][0]["graph"] == "patterns"
     metric_action_sources = [
         action.source_profile_advisory
         for action in draft.suggested_next_action_groups[
@@ -27173,9 +27181,15 @@ def test_draft_profile_map_updates_surfaces_review_candidates(
     assert [action.tool_name for action in metric_advisory.suggested_next_actions] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "stage_pattern_promotion",
     ]
+    metric_fallback_action = metric_advisory.suggested_next_actions[2]
+    assert metric_fallback_action.arguments["profile_route_sources"] == [
+        metric_fallback_action.source_profile_advisory
+    ]
+    assert metric_fallback_action.arguments["framings"][0]["graph"] == "patterns"
     assert [item.iri for item in metric_advisory.promotion_patterns] == [
         metric_pattern.pattern_iri
     ]
@@ -28086,6 +28100,7 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert [action.tool_name for action in advisory.suggested_next_actions] == [
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "stage_map_assertion_change",
         "stage_map_assertion_change",
     ]
@@ -28110,12 +28125,28 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert plan_by_move["assert_map_type"].advisory_status_counts == {
         "type_finding_conflicts_current_map": 1,
     }
-    assert plan_by_move["caveat_fallback"].primary_tool_name == "record_pattern"
+    assert plan_by_move["caveat_fallback"].primary_tool_name == (
+        "stage_systematisation"
+    )
     assert plan_by_move["caveat_fallback"].primary_action_kind == (
-        "direct_graph_write"
+        "stage_reviewable_change"
     )
     assert plan_by_move["caveat_fallback"].primary_action_writes_graph is True
     assert plan_by_move["caveat_fallback"].type_advisory_indexes == [0]
+    fallback_action = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "stage_systematisation"
+    ][0]
+    assert fallback_action.arguments["profile_route_sources"] == [
+        fallback_action.source_profile_advisory
+    ]
+    assert fallback_action.arguments["supporting_observations"] == [profile.iri]
+    assert fallback_action.arguments["evidence"] == [evidence]
+    assert fallback_action.arguments["framings"][0]["graph"] == "patterns"
+    assert "rc:supportingObservation" in (
+        fallback_action.arguments["framings"][0]["content"]
+    )
     staged_type_actions = [
         action
         for action in advisory.suggested_next_actions
@@ -28189,6 +28220,7 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert [action.tool_name for action in draft.suggested_next_actions] == [
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "stage_map_assertion_change",
         "stage_map_assertion_change",
     ]
@@ -28330,6 +28362,7 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert [action.tool_name for action in advisory.suggested_next_actions] == [
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "describe_pattern",
         "describe_pattern",
         "stage_pattern_promotion",
@@ -28449,7 +28482,7 @@ def test_profile_type_advisory_routes_value_type_promotion_skeleton(
     assert not set(open_lanes["profile_type_review"].route_step_keys) & set(
         value_type_plan.route_step_keys
     )
-    assert open_lanes["profile_type_review"].action_count == 4
+    assert open_lanes["profile_type_review"].action_count == 5
     assert review.closed_semantic_moves == ["define_value_type"]
     assert "assert_map_type" in review.remaining_semantic_moves
     assert review.semantic_move_closure_summary.startswith(
@@ -28910,11 +28943,13 @@ def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
         assert [action.tool_name for action in advisory.suggested_next_actions] == [
             "describe_context_slice",
             "record_pattern",
+            "stage_systematisation",
         ]
     assert [action.tool_name for action in draft.suggested_next_actions] == [
         "stage_profile_map_updates",
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
     ]
     assert list(draft.suggested_next_action_groups) == [
         "profile_map_updates",
@@ -28927,7 +28962,7 @@ def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
     assert [
         action.tool_name
         for action in draft.suggested_next_action_groups["profile_type_review"]
-    ] == ["describe_context_slice", "record_pattern"]
+    ] == ["describe_context_slice", "record_pattern", "stage_systematisation"]
 
     staged = db.stage_profile_map_updates(
         **draft.suggested_next_action_groups["profile_map_updates"][0].arguments
@@ -28955,6 +28990,7 @@ def test_unmapped_profile_type_advisory_points_to_column_shell_recommendation(
     ] == [
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "stage_map_assertion_change",
     ]
 
@@ -29026,9 +29062,10 @@ def test_profile_type_advisory_duplicate_actions_preserve_support(
     assert [action.tool_name for action in draft.suggested_next_actions] == [
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "stage_map_assertion_change",
     ]
-    top_stage_action = draft.suggested_next_actions[2]
+    top_stage_action = draft.suggested_next_actions[3]
     assert set(top_stage_action.arguments["supporting_observations"]) == (
         type_observations
     )
@@ -29116,10 +29153,11 @@ def test_profile_type_review_lane_is_representative_action_queue(
             ] == [
                 "describe_context_slice",
                 "record_pattern",
+                "stage_systematisation",
                 "stage_map_assertion_change",
             ]
             record_action = advisory.suggested_next_actions[1]
-            stage_action = advisory.suggested_next_actions[2]
+            stage_action = advisory.suggested_next_actions[3]
             assert set(record_action.arguments["supporting_observations"]) == (
                 group_observations
             )
@@ -29131,33 +29169,36 @@ def test_profile_type_review_lane_is_representative_action_queue(
     profile_type_labels = [action.action_label for action in profile_type_actions]
     assert profile_type_labels.count("Inspect profile type context") == 2
     assert profile_type_labels.count("Record type-finding pattern") == 2
+    assert profile_type_labels.count("Stage type-finding fallback") == 2
     assert profile_type_labels.count("Stage physical type assertion") == 2
     assert [
         action.tool_name for action in profile_type_actions
     ] == [
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "stage_map_assertion_change",
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "stage_map_assertion_change",
     ]
     assert [
         action.source_profile_advisory["advisory_kind"]
         for action in profile_type_actions
-    ] == ["profile_type_review"] * 6
+    ] == ["profile_type_review"] * 8
     assert [
         action.source_profile_advisory["index_field"]
         for action in profile_type_actions
-    ] == ["type_advisory_index"] * 6
+    ] == ["type_advisory_index"] * 8
     assert [
         action.source_profile_advisory["advisory_indexes"]
         for action in profile_type_actions
-    ] == [[0, 2], [0, 2], [0, 2], [1, 3], [1, 3], [1, 3]]
+    ] == [[0, 2], [0, 2], [0, 2], [0, 2], [1, 3], [1, 3], [1, 3], [1, 3]]
     assert [
         action.source_profile_advisory["duplicate_advisory_indexes"]
         for action in profile_type_actions
-    ] == [[0, 2], [0, 2], [0, 2], [1, 3], [1, 3], [1, 3]]
+    ] == [[0, 2], [0, 2], [0, 2], [0, 2], [1, 3], [1, 3], [1, 3], [1, 3]]
 
 
 def test_profile_map_update_duplicate_groups_preserve_representative_support(
@@ -30053,13 +30094,26 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert [action.tool_name for action in advisory.suggested_next_actions] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "stage_pattern_promotion",
     ]
-    assert advisory.suggested_next_actions[2].arguments == {
+    fallback_action = advisory.suggested_next_actions[2]
+    assert fallback_action.arguments["profile_route_sources"] == [
+        fallback_action.source_profile_advisory
+    ]
+    assert fallback_action.arguments["supporting_observations"] == [
+        advisory.profile_observation_iri
+    ]
+    assert fallback_action.arguments["evidence"] == [evidence]
+    assert fallback_action.arguments["framings"][0]["graph"] == "patterns"
+    assert "rc:supportingObservation" in (
+        fallback_action.arguments["framings"][0]["content"]
+    )
+    assert advisory.suggested_next_actions[3].arguments == {
         "iri": pattern.pattern_iri
     }
-    promotion_action = advisory.suggested_next_actions[3]
+    promotion_action = advisory.suggested_next_actions[4]
     promotion_args = promotion_action.arguments
     assert promotion_action.mcp_tool_name == "doxabase.stage_pattern_promotion"
     assert promotion_args["patterns"] == [pattern.pattern_iri]
@@ -30073,11 +30127,15 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert [action.tool_name for action in draft.suggested_next_actions] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "stage_pattern_promotion",
     ]
-    assert len(draft.advisory_followthrough_plan) == 1
-    metric_plan = draft.advisory_followthrough_plan[0]
+    plan_by_move = {
+        item.semantic_move: item for item in draft.advisory_followthrough_plan
+    }
+    assert set(plan_by_move) == {"caveat_fallback", "define_metric"}
+    metric_plan = plan_by_move["define_metric"]
     assert metric_plan.semantic_move == "define_metric"
     assert metric_plan.review_lane == "metric_vocabulary_review"
     assert metric_plan.primary_tool_name == "stage_pattern_promotion"
@@ -30090,6 +30148,12 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert metric_plan.route_pattern_iris == [pattern.pattern_iri]
     assert metric_plan.source_profile_advisories[0]["route_group_key"].startswith(
         "metric_vocabulary_review:"
+    )
+    assert plan_by_move["caveat_fallback"].primary_tool_name == (
+        "stage_systematisation"
+    )
+    assert plan_by_move["caveat_fallback"].primary_action_kind == (
+        "stage_reviewable_change"
     )
     metric_route_source = promotion_args["profile_route_sources"][0]
     assert metric_route_source["route_group_key"] == metric_plan.route_group_key
@@ -30131,6 +30195,7 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
     assert [action.tool_name for action in rerun_advisory.suggested_next_actions] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "describe_staged_revision",
         "export_staged_revisions",
@@ -30139,12 +30204,12 @@ def test_draft_profile_map_updates_routes_metric_promotion_pattern(
         action.tool_name == "stage_pattern_promotion"
         for action in rerun_advisory.suggested_next_actions
     )
-    inspect_action = rerun_advisory.suggested_next_actions[3]
+    inspect_action = rerun_advisory.suggested_next_actions[4]
     assert inspect_action.arguments == {
         "iri": staged.iri,
         "include_current_apply_check": True,
     }
-    export_action = rerun_advisory.suggested_next_actions[4]
+    export_action = rerun_advisory.suggested_next_actions[5]
     assert export_action.arguments["revision_iris"] == [staged.iri]
     grouped_export_action = next(
         action
@@ -30636,6 +30701,7 @@ def test_draft_profile_map_updates_routes_ambiguous_project_metric_advisory(
         "describe_context_slice",
         "describe_resource",
         "list_entities",
+        "stage_systematisation",
     ]
     assert advisory.suggested_next_actions[1].arguments == {
         "iri": project_metric,
@@ -30698,6 +30764,7 @@ def test_draft_profile_map_updates_surfaces_prose_metric_context_pattern(
     assert [action.tool_name for action in advisory.suggested_next_actions] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
     ]
     assert advisory.suggested_next_actions[-1].action_label == (
@@ -30781,6 +30848,7 @@ def test_draft_profile_map_updates_promotes_ambiguous_metric_with_pattern(
         "describe_context_slice",
         "describe_resource",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "stage_pattern_promotion",
     ]
@@ -30800,6 +30868,7 @@ def test_draft_profile_map_updates_promotes_ambiguous_metric_with_pattern(
         "describe_context_slice",
         "describe_resource",
         "list_entities",
+        "stage_systematisation",
         "describe_pattern",
         "stage_pattern_promotion",
     ]
@@ -30999,6 +31068,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     ] == [
         "describe_context_slice",
         "list_entities",
+        "stage_systematisation",
     ]
     assert staged.metric_advisory_suggested_next_actions[0].arguments == {
         "seed_iris": [staged.metric_advisories[0].observed_metric_iri],
@@ -31025,6 +31095,7 @@ def test_stage_profile_map_updates_groups_accepted_reviewable_changes(
     ] == [
         "describe_context_slice",
         "record_pattern",
+        "stage_systematisation",
         "stage_map_assertion_change",
     ]
     assert staged.type_advisory_suggested_next_calls == [

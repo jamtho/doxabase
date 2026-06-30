@@ -14481,6 +14481,8 @@ class DoxaBase:
     ) -> str | None:
         review_lane = source_profile_advisory.get("review_lane")
         action_label = action.action_label.lower()
+        if action.tool_name == "stage_systematisation":
+            return "caveat_fallback"
         if review_lane == "metric_vocabulary_review":
             return "define_metric"
         if review_lane != "profile_type_review":
@@ -14639,13 +14641,14 @@ class DoxaBase:
         priority = {
             "stage_pattern_promotion": 0,
             "stage_map_assertion_change": 1,
-            "record_pattern": 2,
-            "export_staged_revisions": 3,
-            "describe_staged_revision": 4,
-            "describe_pattern": 5,
-            "describe_resource": 6,
-            "list_entities": 7,
-            "describe_context_slice": 8,
+            "stage_systematisation": 2,
+            "record_pattern": 3,
+            "export_staged_revisions": 4,
+            "describe_staged_revision": 5,
+            "describe_pattern": 6,
+            "describe_resource": 7,
+            "list_entities": 8,
+            "describe_context_slice": 9,
         }
         if not tool_names or not suggested_next_calls:
             return None, None
@@ -23875,10 +23878,34 @@ class DoxaBase:
             elif action.tool_name in {
                 "record_pattern",
                 "stage_map_assertion_change",
+                "stage_systematisation",
             }:
                 arguments["supporting_observations"] = (
                     duplicate_profile_observation_iris
                 )
+                if action.tool_name == "stage_systematisation":
+                    anchors = list(arguments.get("anchors") or [])
+                    arguments["anchors"] = list(
+                        dict.fromkeys(
+                            [*duplicate_profile_observation_iris, *anchors]
+                        )
+                    )
+                    framings = []
+                    for framing in arguments.get("framings") or []:
+                        if not isinstance(framing, MappingABC):
+                            framings.append(framing)
+                            continue
+                        updated_framing = dict(framing)
+                        content = updated_framing.get("content")
+                        if isinstance(content, str):
+                            updated_framing["content"] = (
+                                self._profile_fallback_pattern_turtle_with_supporting_observations(
+                                    content,
+                                    duplicate_profile_observation_iris,
+                                )
+                            )
+                        framings.append(updated_framing)
+                    arguments["framings"] = framings
                 if (
                     action.tool_name == "stage_map_assertion_change"
                     and len(duplicate_profile_observation_iris) > 1
@@ -24065,6 +24092,20 @@ class DoxaBase:
             ),
             action_label="Record type-finding pattern",
         )
+        add_action(
+            "stage_systematisation",
+            self._profile_type_fallback_systematisation_arguments(
+                profile=profile,
+                evidence_iri=evidence_iri,
+                type_implication_iris=type_implication_iris,
+                column_label=column_label,
+            ),
+            (
+                "Stage a reviewable pattern fallback if this type finding "
+                "needs semantic review before any current map assertion."
+            ),
+            action_label="Stage type-finding fallback",
+        )
         pattern_carry_forward_note = (
             " If you used the suggested record_pattern action, add its returned "
             "pattern_iri to supporting_patterns on this staging call."
@@ -24145,6 +24186,90 @@ class DoxaBase:
                     action_label="Stage value type assertion",
                 )
         return actions
+
+    def _profile_type_fallback_systematisation_arguments(
+        self,
+        *,
+        profile: ProfileObservationSummary,
+        evidence_iri: str,
+        type_implication_iris: list[str],
+        column_label: str,
+    ) -> dict[str, Any]:
+        assert profile.observed_column is not None
+        pattern_iri = self._profile_fallback_pattern_iri(
+            "profile-type-fallback-pattern",
+            {
+                "observed_column_iri": profile.observed_column.iri,
+                "observed_physical_type_iri": (
+                    profile.observed_physical_type.iri
+                    if profile.observed_physical_type is not None
+                    else None
+                ),
+                "observed_value_type_iri": (
+                    profile.observed_value_type.iri
+                    if profile.observed_value_type is not None
+                    else None
+                ),
+                "evidence_iri": evidence_iri,
+            },
+        )
+        pattern_text = (
+            f"Profile evidence observed type information for {column_label}. "
+            "Keep this as a reviewable interpretation pattern until current "
+            "map context and value-type semantics justify a durable assertion."
+        )
+        rationale = (
+            "Profile type findings are evidence, not automatic map updates. "
+            "A staged pattern fallback preserves the judgement without applying "
+            "physical or value type map facts."
+        )
+        content = self._profile_fallback_pattern_turtle(
+            pattern_iri=pattern_iri,
+            summary=f"Review profiled type for {column_label}",
+            pattern_text=pattern_text,
+            rationale=rationale,
+            pattern_targets=[profile.observed_column.iri],
+            supporting_observations=[profile.iri],
+            evidence_iri=evidence_iri,
+            map_implications=list(dict.fromkeys(type_implication_iris)),
+        )
+        return {
+            "summary": f"Review profiled type fallback for {column_label}",
+            "intent": (
+                "Stage a pattern-only fallback for profile type evidence that "
+                "is not ready to become current map type assertions."
+            ),
+            "rationale": rationale,
+            "framings": [
+                {
+                    "label": "Pattern fallback",
+                    "graph": "patterns",
+                    "content": content,
+                    "review_note": (
+                        "Generated from a profile type-finding advisory; review "
+                        "whether this fallback should stay as pattern lore or "
+                        "be followed by a map assertion."
+                    ),
+                    "review_recommendation": (
+                        "Prefer this fallback when the profile type finding is "
+                        "ambiguous or needs value-type/domain review before "
+                        "map mutation."
+                    ),
+                }
+            ],
+            "anchors": list(
+                dict.fromkeys(
+                    [
+                        profile.iri,
+                        profile.observed_column.iri,
+                        *type_implication_iris,
+                    ]
+                )
+            ),
+            "supporting_observations": [profile.iri],
+            "evidence": [evidence_iri],
+            "validation_scope": "all",
+        }
 
     def _profile_value_type_needs_ontology_skeleton(
         self,
@@ -24698,6 +24823,8 @@ class DoxaBase:
                 should_note = True
             elif action.tool_name == "stage_map_assertion_change":
                 should_note = True
+            elif action.tool_name == "stage_systematisation":
+                should_note = True
 
             if not should_note:
                 updated_actions.append(action)
@@ -24707,6 +24834,7 @@ class DoxaBase:
             if action.tool_name in {
                 "stage_pattern_promotion",
                 "stage_map_assertion_change",
+                "stage_systematisation",
             }:
                 self._add_mixed_support_review_note(
                     updated_arguments,
@@ -25164,6 +25292,22 @@ class DoxaBase:
                 ),
                 action_label="List nearby metric vocabulary",
             )
+            if profile_observation_iri is not None and evidence_iri is not None:
+                add_action(
+                    "stage_systematisation",
+                    self._profile_metric_fallback_systematisation_arguments(
+                        metric_iri=metric_iri,
+                        observed_metric_iri=observed_metric_iri,
+                        profile_observation_iri=profile_observation_iri,
+                        evidence_iri=evidence_iri,
+                    ),
+                    (
+                        "Stage a reviewable pattern fallback if this metric "
+                        "needs semantic review before becoming project "
+                        "ontology vocabulary."
+                    ),
+                    action_label="Stage metric fallback",
+                )
 
         def add_context_pattern_actions() -> None:
             for pattern_iri in context_pattern_values[:3]:
@@ -25251,6 +25395,163 @@ class DoxaBase:
         else:
             add_context_pattern_actions()
         return actions
+
+    def _profile_metric_fallback_systematisation_arguments(
+        self,
+        *,
+        metric_iri: str,
+        observed_metric_iri: str | None,
+        profile_observation_iri: str,
+        evidence_iri: str,
+    ) -> dict[str, Any]:
+        metric_label = self._local_name(metric_iri) or metric_iri
+        pattern_iri = self._profile_fallback_pattern_iri(
+            "profile-metric-fallback-pattern",
+            {
+                "metric_iri": metric_iri,
+                "observed_metric_iri": observed_metric_iri,
+                "profile_observation_iri": profile_observation_iri,
+                "evidence_iri": evidence_iri,
+            },
+        )
+        pattern_text = (
+            f"Profile evidence used the project metric {metric_label}. Keep "
+            "the metric as reviewable interpretation lore until calculation, "
+            "unit, denominator, and comparison semantics are explicit enough "
+            "for reusable ontology vocabulary."
+        )
+        rationale = (
+            "Project-specific profile metric IRIs are valid observation lore, "
+            "but reusable comparison or map policy needs reviewed semantics. "
+            "A staged pattern fallback preserves the finding without minting "
+            "an ontology definition."
+        )
+        content = self._profile_fallback_pattern_turtle(
+            pattern_iri=pattern_iri,
+            summary=f"Review {metric_label} profile metric",
+            pattern_text=pattern_text,
+            rationale=rationale,
+            pattern_targets=[metric_iri],
+            supporting_observations=[profile_observation_iri],
+            evidence_iri=evidence_iri,
+            map_implications=[metric_iri],
+        )
+        anchors = [profile_observation_iri, metric_iri]
+        if observed_metric_iri is not None:
+            anchors.append(observed_metric_iri)
+        return {
+            "summary": f"Review {metric_label} metric fallback",
+            "intent": (
+                "Stage a pattern-only fallback for profile metric evidence "
+                "that is not ready to become project ontology vocabulary."
+            ),
+            "rationale": rationale,
+            "framings": [
+                {
+                    "label": "Pattern fallback",
+                    "graph": "patterns",
+                    "content": content,
+                    "review_note": (
+                        "Generated from a profile metric advisory; review "
+                        "whether this fallback should stay as pattern lore or "
+                        "be followed by a metric vocabulary definition."
+                    ),
+                    "review_recommendation": (
+                        "Prefer this fallback when metric semantics are too "
+                        "thin for reusable ontology vocabulary."
+                    ),
+                }
+            ],
+            "anchors": list(dict.fromkeys(anchors)),
+            "supporting_observations": [profile_observation_iri],
+            "evidence": [evidence_iri],
+            "validation_scope": "all",
+        }
+
+    @staticmethod
+    def _profile_fallback_pattern_iri(
+        kind: str,
+        payload: Mapping[str, Any],
+    ) -> str:
+        digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:16]
+        return f"https://richcanopy.org/doxabase/generated/{kind}/{digest}"
+
+    @staticmethod
+    def _profile_fallback_pattern_turtle(
+        *,
+        pattern_iri: str,
+        summary: str,
+        pattern_text: str,
+        rationale: str,
+        pattern_targets: list[str],
+        supporting_observations: list[str],
+        evidence_iri: str,
+        map_implications: list[str],
+    ) -> str:
+        lines = [
+            "@prefix rc: <https://richcanopy.org/ns/rc#> .",
+            "",
+            f"<{pattern_iri}> a rc:Pattern ;",
+            f"    rc:summary {Literal(summary).n3()} ;",
+            f"    rc:patternText {Literal(pattern_text).n3()} ;",
+            f"    rc:rationale {Literal(rationale).n3()} ;",
+            *DoxaBase._profile_fallback_turtle_iri_lines(
+                "rc:patternTarget",
+                pattern_targets,
+            ),
+            *DoxaBase._profile_fallback_turtle_iri_lines(
+                "rc:supportingObservation",
+                supporting_observations,
+            ),
+            f"    rc:evidence <{evidence_iri}> ;",
+        ]
+        implication_lines = DoxaBase._profile_fallback_turtle_iri_lines(
+            "rc:mapImplication",
+            map_implications,
+        )
+        if implication_lines:
+            lines.extend(implication_lines)
+        lines.append("    rc:patternStability rc:EmergingPattern .")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _profile_fallback_pattern_turtle_with_supporting_observations(
+        content: str,
+        supporting_observations: list[str],
+    ) -> str:
+        replacement_lines = DoxaBase._profile_fallback_turtle_iri_lines(
+            "rc:supportingObservation",
+            supporting_observations,
+        )
+        if not replacement_lines:
+            return content
+        replacement = replacement_lines[0]
+        lines = content.splitlines()
+        for index, line in enumerate(lines):
+            if line.strip().startswith("rc:supportingObservation "):
+                lines[index] = replacement
+                return "\n".join(lines)
+        for index, line in enumerate(lines):
+            if line.strip().startswith("rc:evidence "):
+                lines.insert(index, replacement)
+                return "\n".join(lines)
+        if lines:
+            lines.insert(max(len(lines) - 1, 0), replacement)
+            return "\n".join(lines)
+        return replacement
+
+    @staticmethod
+    def _profile_fallback_turtle_iri_lines(
+        predicate: str,
+        values: list[str],
+    ) -> list[str]:
+        unique_values = list(dict.fromkeys(values))
+        if not unique_values:
+            return []
+        objects = ", ".join(f"<{value}>" for value in unique_values)
+        return [f"    {predicate} {objects} ;"]
 
     def _pending_staged_metric_promotion_iris(
         self,

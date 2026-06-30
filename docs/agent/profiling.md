@@ -250,7 +250,10 @@ pass the matching `source_profile_advisories` entry through
 `profile_route_sources` so profile insight review can close that advisory lane
 as a direct action. A profile insight review bundle now reserves `direct_action`
 for persisted route sources; live draft overlap is support context and should
-not be treated as a closed lane.
+not be treated as a closed lane. Metric and type-review lanes also generate
+pattern-only `stage_systematisation` fallback actions when profile evidence is
+not ready for project vocabulary or map assertions; use those calls before
+falling back to ad hoc pattern recording.
 
 When `stage_profile_map_updates` creates a staged revision, its
 `suggested_next_actions` includes an `export_profile_insight_review_bundle`
