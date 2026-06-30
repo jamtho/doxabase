@@ -4343,6 +4343,10 @@ class DoxaBase:
                 dataset.iri,
                 evidence_iri,
             )
+            suggested_next_actions = [
+                self._privacy_redacted_suggested_next_action(action)
+                for action in draft.suggested_next_actions[:3]
+            ]
             drafts.append(
                 ProjectBriefProfileDraftSummary(
                     evidence_iri=evidence_iri,
@@ -4356,8 +4360,10 @@ class DoxaBase:
                     type_advisory_count=draft.type_advisory_count,
                     type_advisory_status_counts=draft.type_advisory_status_counts,
                     action_group_names=list(draft.suggested_next_action_groups),
-                    suggested_next_actions=draft.suggested_next_actions[:3],
-                    suggested_next_calls=draft.suggested_next_calls[:3],
+                    suggested_next_actions=suggested_next_actions,
+                    suggested_next_calls=[
+                        action.call for action in suggested_next_actions
+                    ],
                 )
             )
         return ProjectBriefDatasetProfileSummary(
@@ -49056,6 +49062,45 @@ class DoxaBase:
             query_engine=self._redact_sensitive_optional_text(evidence.query_engine),
             query_hash=self._redact_sensitive_optional_text(evidence.query_hash),
         )
+
+    def _privacy_redacted_jsonable(self, value: Any) -> Any:
+        if isinstance(value, str):
+            return self._redact_sensitive_context_value(value)
+        if isinstance(value, MappingABC):
+            return {
+                str(key): self._privacy_redacted_jsonable(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, tuple):
+            return [
+                self._privacy_redacted_jsonable(item)
+                for item in value
+            ]
+        if isinstance(value, list):
+            return [
+                self._privacy_redacted_jsonable(item)
+                for item in value
+            ]
+        if is_dataclass(value) and not isinstance(value, type):
+            return {
+                field.name: self._privacy_redacted_jsonable(
+                    getattr(value, field.name)
+                )
+                for field in fields(value)
+            }
+        return value
+
+    def _privacy_redacted_suggested_next_action(
+        self,
+        action: SuggestedNextAction,
+    ) -> SuggestedNextAction:
+        updates = {
+            field.name: self._privacy_redacted_jsonable(
+                getattr(action, field.name)
+            )
+            for field in fields(action)
+        }
+        return replace(action, **updates)
 
     def _redact_sensitive_optional_text(
         self,

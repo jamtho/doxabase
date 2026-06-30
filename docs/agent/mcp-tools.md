@@ -117,6 +117,10 @@ non-empty, rerun with a larger `limit` or inspect `queue_counts` and
 Dataset/task resource summary display text and profile/evidence orientation
 summaries are redacted when they match the sensitive-term scanner, but the brief
 remains an orientation payload, not a shareability proof.
+Profile draft actions embedded in `project_brief` are also recursively redacted
+in their `arguments`, `call`, and `source_*` route metadata. Call
+`draft_profile_map_updates` directly when you need the executable raw action
+payload for a local mutation decision.
 Check `next_best_expansion` before repeating visible recommended tasks; if it is
 non-null, follow or evaluate that rerun before trusting a tight brief's frontier.
 In unattended loops, run `full_frontier_expansion` when it is non-null before

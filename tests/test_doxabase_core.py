@@ -2259,7 +2259,7 @@ def test_profile_privacy_orientation_payloads_redact_sensitive_evidence_summarie
         "ordinary",
         redacted,
     ]
-    assert profile.profile_metrics[0].value == redacted
+    assert redacted in {metric.value for metric in profile.profile_metrics}
     profile_run_payload = json.dumps(to_jsonable(profile_run), sort_keys=True)
     assert fake_secret not in profile_run_payload
     assert redacted in profile_run_payload
@@ -2281,8 +2281,41 @@ def test_profile_privacy_orientation_payloads_redact_sensitive_evidence_summarie
     assert fake_secret not in review_payload
     assert redacted in review_payload
 
-    brief = db.project_brief(limit=5, profile_candidate_limit=5)
-    assert fake_secret not in json.dumps(to_jsonable(brief), sort_keys=True)
+    route_dataset = "https://example.test/project#OrdersProfileRoutePrivacy"
+    route_evidence = (
+        "https://example.test/project#OrdersProfileRoutePrivacyEvidence"
+    )
+    project_metric = f"https://example.test/project#{fake_secret}"
+    db.record_dataset_profile(
+        route_dataset,
+        summary="Orders profile route privacy.",
+        evidence_summary="Orders profile route evidence.",
+        evidence_sources=["test://profile/orders-route.json"],
+        evidence_iri=route_evidence,
+        row_count=10,
+        update_map_snapshot=False,
+        profile_metrics=[
+            {
+                "metric": project_metric,
+                "value": "0.99",
+                "datatype": "xsd:decimal",
+            }
+        ],
+        map_label="Orders profile route privacy",
+        is_table=True,
+    )
+
+    draft = db.draft_profile_map_updates(route_dataset, route_evidence)
+    draft_payload = json.dumps(
+        to_jsonable(draft.suggested_next_actions),
+        sort_keys=True,
+    )
+    assert fake_secret in draft_payload
+
+    brief = db.project_brief(limit=10, profile_candidate_limit=5)
+    brief_payload = json.dumps(to_jsonable(brief), sort_keys=True)
+    assert fake_secret not in brief_payload
+    assert redacted in brief_payload
 
 
 def test_export_preflight_returns_scanner_clean_export_action(
@@ -19402,6 +19435,7 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
 ) -> None:
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     dataset = "https://example.test/project#Events"
+    evidence = "https://example.test/project#EventsProfileEvidence"
     local_storage = db.record_map_storage_access(
         "https://example.test/project#events_local_storage",
         label="Events local storage",
@@ -19440,6 +19474,18 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
         physical_layouts=[csv_layout.iri, table_layout.iri],
         layout_verification_status="rc:VerifiedByQueryLayout",
     )
+    db.record_dataset_profile(
+        dataset,
+        summary="Events were profiled before physical planning review.",
+        evidence_summary="Synthetic profile evidence for mixed storage routes.",
+        evidence_sources=["test://events-profile"],
+        evidence_iri=evidence,
+        sample_size=12,
+        sample_scope="All Events rows.",
+        sample_method="Synthetic profile query.",
+        row_count=12,
+        update_map_snapshot=False,
+    )
 
     context = db.describe_query_context(dataset)
     local_index, local_candidate = next(
@@ -19466,6 +19512,17 @@ def test_describe_query_context_suggests_peer_layout_selection_actions(
         for action in context.suggested_next_actions
         if action.action_label == "Select physical layout for draft"
     ]
+    profile_actions = [
+        action
+        for action in context.suggested_next_actions
+        if action.tool_name == "describe_profile_run"
+    ]
+
+    assert profile_actions
+    assert profile_actions[0].arguments == {
+        "dataset_iri": dataset,
+        "evidence_iri": evidence,
+    }
 
     assert {
         (

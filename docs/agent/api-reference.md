@@ -674,7 +674,11 @@ map-update actions carry `source_profile_map_update` with represented
 recommendation indexes, duplicate group keys, duplicate profile-observation
 IRIs, route anchors, and route patterns. All grouped profile action source
 blocks carry stable `route_group_key` and `route_step_key` fields; use the group
-key to bridge draft lanes to profile insight bundle candidates. If
+key to bridge draft lanes to profile insight bundle candidates. When these
+actions are copied into `project_brief`, their nested arguments, calls, and
+source route blocks are scanner-redacted for orientation safety; use
+`draft_profile_map_updates` directly when you need the executable raw action
+payload. If
 `source_profile_advisory.mixed_support` is present on promotion or assertion
 actions in both metric and type lanes, review or export those generated drafts
 together before applying either lane independently.

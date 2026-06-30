@@ -3217,6 +3217,13 @@ few useful gaps:
   `profile_route_sources` / `profileRouteSources` so alternatives can carry
   route sources only for the semantic move they actually close. Keep top-level
   sources for common routes that genuinely apply to every framing.
+- A context-slicing/privacy frontier trial confirmed export preflights blocked
+  dirty graph and review artifacts correctly, but `project_brief` could still
+  leak scanner-matching metric terms through copied profile advisory action
+  arguments, call strings, and `source_profile_advisory` route metadata.
+  `project_brief` now recursively redacts embedded profile draft actions for
+  orientation safety. Direct `draft_profile_map_updates` responses still retain
+  raw executable action payloads for local mutation review.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
