@@ -3136,11 +3136,13 @@ class QueryResultRecord:
     observation_type: str
     evidence_iri: str
     source_span_iri: str | None
+    scanned_source_span_iris: list[str]
     execution_status: str
     engine: str | None
     query_source_path: str | None
     query_hash: str | None
     result_sources: list[str]
+    scanned_source_paths: list[str]
     observation_triples: int
     evidence_triples: int
     source_span_triples: int
@@ -17701,15 +17703,25 @@ class DoxaBase:
         result_sources = evidence.sources if evidence is not None else []
         source_spans = evidence.source_spans if evidence is not None else []
         query_source_kind = self.expand_iri("rc:QuerySource")
+        scanned_source_kind = self.expand_iri("rc:DataSampleSource")
         query_source_spans = [
             span for span in source_spans if span.source_kind == query_source_kind
         ]
-        preview_spans = query_source_spans or source_spans
+        scanned_source_spans = [
+            span for span in source_spans if span.source_kind == scanned_source_kind
+        ]
+        preview_span_by_iri = {
+            span.iri: span for span in [*query_source_spans, *scanned_source_spans]
+        }
+        preview_spans = list(preview_span_by_iri.values()) or source_spans
         result_source_limit = 5
         span_limit = 3
         profile_limit = 3
         query_source_paths = [
             span.source_path for span in query_source_spans if span.source_path
+        ]
+        scanned_source_paths = [
+            span.source_path for span in scanned_source_spans if span.source_path
         ]
         return {
             "evidence_iri": evidence_iri,
@@ -17730,12 +17742,17 @@ class DoxaBase:
                 0,
             ),
             "query_source_paths": query_source_paths[:span_limit],
+            "scanned_source_paths": scanned_source_paths[:result_source_limit],
             "query_source_spans": [
                 self._query_context_source_span_preview(span)
                 for span in preview_spans[:span_limit]
             ],
             "omitted_query_source_span_count": max(
                 len(preview_spans) - span_limit,
+                0,
+            ),
+            "omitted_scanned_source_path_count": max(
+                len(scanned_source_paths) - result_source_limit,
                 0,
             ),
             "handoff_note": (
@@ -25201,7 +25218,47 @@ class DoxaBase:
         semantic_move = DoxaBase._profile_advisory_semantic_move(action, source)
         if semantic_move is not None:
             source["semantic_move"] = semantic_move
-        return DoxaBase._with_profile_route_step_key(source, action)
+        source = DoxaBase._with_profile_route_step_key(source, action)
+        DoxaBase._add_profile_advisory_action_bindings(source, action)
+        return source
+
+    @staticmethod
+    def _add_profile_advisory_action_bindings(
+        source_profile_advisory: dict[str, Any],
+        action: SuggestedNextAction,
+    ) -> None:
+        if source_profile_advisory.get("review_lane") != "profile_type_review":
+            return
+        route_group_key = source_profile_advisory.get("route_group_key")
+        if not isinstance(route_group_key, str):
+            return
+        binding_key = f"{route_group_key}:profile-type-support-pattern"
+        if action.tool_name == "record_pattern":
+            source_profile_advisory["produces_result_bindings"] = [
+                {
+                    "binding_key": binding_key,
+                    "result_field": "pattern_iri",
+                    "target_tool_name": "stage_map_assertion_change",
+                    "target_argument": "supporting_patterns",
+                    "append": True,
+                    "review_lane": "profile_type_review",
+                    "route_group_key": route_group_key,
+                    "target_semantic_move": "assert_map_type",
+                }
+            ]
+        elif action.tool_name == "stage_map_assertion_change":
+            source_profile_advisory["consumes_result_bindings"] = [
+                {
+                    "binding_key": binding_key,
+                    "source_tool_name": "record_pattern",
+                    "source_result_field": "pattern_iri",
+                    "argument": "supporting_patterns",
+                    "append": True,
+                    "review_lane": "profile_type_review",
+                    "route_group_key": route_group_key,
+                    "source_semantic_move": "caveat_fallback",
+                }
+            ]
 
     @staticmethod
     def _append_unique(values: list[Any], value: Any) -> None:
@@ -26409,6 +26466,7 @@ class DoxaBase:
         end_line: int | None = None,
         query_hash: str | None = None,
         result_sources: Iterable[str] | str | None = None,
+        scanned_source_paths: Iterable[str] | str | None = None,
         evidence_summary: str | None = None,
         failure_summary: str | None = None,
         sample_size: int | None = None,
@@ -26445,9 +26503,19 @@ class DoxaBase:
             else None
         )
         result_source_values = self._string_values("result_sources", result_sources)
-        if not result_source_values and query_source_path_value is None:
+        scanned_source_path_values = list(
+            dict.fromkeys(
+                self._string_values("scanned_source_paths", scanned_source_paths)
+            )
+        )
+        if (
+            not result_source_values
+            and query_source_path_value is None
+            and not scanned_source_path_values
+        ):
             raise DoxaBaseError(
-                "record_query_result requires result_sources or query_source_path"
+                "record_query_result requires result_sources, query_source_path, "
+                "or scanned_source_paths"
             )
         for name, value in {"start_line": start_line, "end_line": end_line}.items():
             if value is not None and value < 1:
@@ -26516,18 +26584,27 @@ class DoxaBase:
         )
         source_span_triples = 0
         source_span_value: str | None = None
+        scanned_source_span_values: list[str] = []
         if query_source_path_value is not None:
-            source_span_value, source_span_triples = (
-                self._insert_evidence_source_span(
-                    evidence_iri=observation.evidence_iri,
-                    source_path=query_source_path_value,
-                    source_section=query_source_section_value,
-                    start_line=start_line,
-                    end_line=end_line,
-                    source_kind="rc:QuerySource",
-                    source_span_iri=source_span_iri,
-                )
+            span_iri, span_triples = self._insert_evidence_source_span(
+                evidence_iri=observation.evidence_iri,
+                source_path=query_source_path_value,
+                source_section=query_source_section_value,
+                start_line=start_line,
+                end_line=end_line,
+                source_kind="rc:QuerySource",
+                source_span_iri=source_span_iri,
             )
+            source_span_value = span_iri
+            source_span_triples += span_triples
+        for scanned_source_path in scanned_source_path_values:
+            span_iri, span_triples = self._insert_evidence_source_span(
+                evidence_iri=observation.evidence_iri,
+                source_path=scanned_source_path,
+                source_kind="rc:DataSampleSource",
+            )
+            scanned_source_span_values.append(span_iri)
+            source_span_triples += span_triples
 
         suggested_next_actions = self._query_result_suggested_next_actions(
             observed_asset=observed_asset,
@@ -26539,11 +26616,13 @@ class DoxaBase:
             observation_type=observation.observation_type,
             evidence_iri=observation.evidence_iri,
             source_span_iri=source_span_value,
+            scanned_source_span_iris=scanned_source_span_values,
             execution_status=status_value,
             engine=engine_value,
             query_source_path=query_source_path_value,
             query_hash=query_hash_value,
             result_sources=result_source_values,
+            scanned_source_paths=scanned_source_path_values,
             observation_triples=observation.observation_triples,
             evidence_triples=(
                 observation.evidence_triples

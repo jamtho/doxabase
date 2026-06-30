@@ -296,6 +296,11 @@ instead of leaving the reviewer to reconnect the two rows manually. Preserve the
 selected action's `arguments.profile_route_sources`; otherwise the staged
 assertion may appear as strong support but will not close the advisory lane as
 `direct_action`.
+Generated profile type-review actions now expose this handoff as route-scoped
+binding metadata. Read `produces_result_bindings[]` on the `record_pattern`
+action and `consumes_result_bindings[]` on paired `stage_map_assertion_change`
+actions; matching `binding_key` values tell an unattended script to append the
+returned `pattern_iri` to `supporting_patterns`.
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.

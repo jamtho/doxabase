@@ -1077,10 +1077,13 @@ logs. The caller supplies reviewed values such as `storage_protocol`,
 endpoint/credential hints, compression, and a layout verification note. The
 response echoes those reviewed values in `reviewed_overlay`, reports the source
 query context and source profile/query evidence, previews validation for the
-Turtle addition, and returns `stage_arguments` plus a
-`doxabase.stage_graph_revision` suggested action. Call that staged-revision
-helper, check/apply the staged row, then rerun `describe_query_context` before
-drafting a query plan. When the dataset already has a different
+Turtle addition, and returns `stage_arguments` plus a `stage_graph_revision`
+suggested action. Treat
+`source_profile_evidence.scanned_source_paths` as reviewed provenance context
+for choosing those values, not as an automatically accepted storage root.
+Call that staged-revision helper, check/apply the staged row, then rerun
+`describe_query_context` before drafting a query plan. When the dataset already
+has a different
 `rc:layoutVerificationStatus` or note, `stage_arguments` includes removal
 patches for those old dataset-level values alongside the reviewed overlay;
 those removals are part of making the staged preview validation-clean.
@@ -1202,6 +1205,9 @@ are supplied, an `rc:ProfileObservation`, linked evidence, and an optional
 Use it after `draft_query_plan` and an external runtime attempt. Supply
 `result_sources` for result files, logs, or output artifacts, and
 `query_source_path` when the query text has a durable non-secret location.
+Supply `scanned_source_paths` for non-secret source files, objects, or path-like
+inputs the external runtime actually scanned; later query-context and storage
+overlay handoffs expose them separately from query text and result artifacts.
 Failed, blocked, cancelled, or partial attempts are ordinary observations; do
 not pass profile count fields unless `execution_status="succeeded"`.
 When `observed_asset` is supplied, the returned payload includes

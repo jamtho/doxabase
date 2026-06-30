@@ -865,8 +865,10 @@ successful profile-like fields such as `row_count`, `sample_size`,
 `rc:ProfileObservation`; failed, blocked, cancelled, or partial attempts write
 ordinary observations and reject profile count fields. Use `query_source_path`
 for a non-secret query file or query artifact, which is stored as an
-`rc:SourceSpan` with `rc:QuerySource`, and `result_sources` for result files,
-logs, or output artifacts.
+`rc:SourceSpan` with `rc:QuerySource`; use `result_sources` for result files,
+logs, or output artifacts; and use `scanned_source_paths` for non-secret source
+files, objects, or path-like inputs the external runtime actually scanned,
+which are stored as `rc:DataSampleSource` spans.
 When `observed_asset` is supplied, the returned record includes
 `suggested_next_actions`: profile-like results start with
 `describe_profile_run(observed_asset, evidence_iri)`, and all observed-asset

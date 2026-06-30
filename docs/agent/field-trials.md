@@ -112,8 +112,9 @@ count or aggregate with an external runtime such as DuckDB. If DuckDB is not
 available, a small Python CSV reader is an acceptable fallback for the trial as
 long as `engine` and `sample_method` say what actually ran. Record successful
 and failed attempts with `record_query_result`; include `query_source_path`,
-`query_hash`, and `result_sources` or a failure log so later agents can inspect
-the evidence. Do not record profile count fields for failed attempts.
+`query_hash`, `scanned_source_paths`, and `result_sources` or a failure log so
+later agents can inspect the evidence. Do not record profile count fields for
+failed attempts.
 
 For a more adversarial staging trial, run:
 
@@ -3151,6 +3152,17 @@ few useful gaps:
   `shared_context_graphs`; use
   `draft_systematisation_shared_context_rerun` after semantic review selects
   which framings should keep the provisional ontology or shape context.
+- A storage-overlay handoff trial showed agents could execute a scratch query
+  and repair storage metadata, but had to infer the scanned input path from
+  prose or local runtime context. `record_query_result` now accepts
+  `scanned_source_paths`, stores them as `rc:DataSampleSource` spans, and
+  exposes them in singleton query-context and storage-overlay previews.
+- A profile-to-map promotion trial showed the type-review route was semantically
+  sound but still required hand glue between the suggested `record_pattern`
+  action and later `stage_map_assertion_change` calls. Profile type-review
+  actions now carry route-scoped result-binding metadata: match
+  `binding_key`, read the produced `pattern_iri`, and append it to
+  `supporting_patterns` on the paired staged assertion action.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

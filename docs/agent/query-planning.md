@@ -451,13 +451,16 @@ For downstream consumers, keep the routing order simple:
 
 If a reviewed plan is executed by an external runtime, record the result or
 failure with `record_query_result`. Use `result_sources` for arbitrary aggregate
-payloads such as grouped counts or JSON output; fill profile-shaped fields such
-as `row_count` only when `summary`, `sample_scope`, and `sample_method` make
-their meaning unambiguous. For local smoke tests, a Python CSV fallback is fine
-when DuckDB is unavailable as long as `engine` and `sample_method` say what
-actually ran. `record_query_result` stores execution status, engine, and query
-hash as structured evidence metadata, so custom evidence summaries still remain
-machine-readable in later query-context handoffs.
+payloads such as grouped counts or JSON output; use `scanned_source_paths` for
+the non-secret source files, objects, or path-like inputs the external runtime
+actually scanned. Fill profile-shaped fields such as `row_count` only when
+`summary`, `sample_scope`, and `sample_method` make their meaning unambiguous.
+For local smoke tests, a Python CSV fallback is fine when DuckDB is unavailable
+as long as `engine` and `sample_method` say what actually ran.
+`record_query_result` stores execution status, engine, query hash, query-source
+paths, and scanned source paths as structured evidence metadata, so custom
+evidence summaries still remain machine-readable in later query-context
+handoffs.
 When `observed_asset` is supplied, follow the returned
 `suggested_next_actions`: profile-shaped results start with
 `describe_profile_run(dataset_iri=observed_asset, evidence_iri=...)`, and all

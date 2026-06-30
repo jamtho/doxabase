@@ -1207,6 +1207,7 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
         engine="python-csv",
         query_source_path="queries/orders.sql",
         result_sources=["/tmp/orders-result.json"],
+        scanned_source_paths=["warehouse/orders.csv"],
         sample_size=3,
         sample_scope="All rows in the scratch Orders CSV.",
         sample_method="External read-only query.",
@@ -1222,6 +1223,8 @@ def test_record_query_result_tool_returns_json_like_payload(tmp_path: Path) -> N
     assert result["source_span_iri"].startswith(
         "https://richcanopy.org/doxabase/generated/source-span/"
     )
+    assert result["scanned_source_paths"] == ["warehouse/orders.csv"]
+    assert len(result["scanned_source_span_iris"]) == 1
     assert result["source_span_triples"] > 0
     assert [action["tool_name"] for action in result["suggested_next_actions"]] == [
         "describe_profile_run",
@@ -1284,6 +1287,7 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
         query_source_path="queries/orders_paid_aggregate.sql",
         query_hash="sha256:abc123",
         result_sources=[str(result_path)],
+        scanned_source_paths=[str(csv_path)],
         evidence_summary="Reviewed Python CSV aggregate over scratch Orders.",
         sample_size=1,
         sample_scope="All rows in the scratch Orders CSV.",
@@ -1314,6 +1318,7 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
     assert source_profile_evidence["query_source_paths"] == [
         "queries/orders_paid_aggregate.sql"
     ]
+    assert source_profile_evidence["scanned_source_paths"] == [str(csv_path)]
     assert source_profile_evidence["result_sources"] == [str(result_path)]
     assert source_profile_evidence["profile_summaries"][0]["summary"] == (
         "Orders paid aggregate scanned the scratch CSV."
@@ -1331,6 +1336,12 @@ def test_describe_query_context_tool_routes_singleton_query_result_evidence(
     assert profile_run["evidence"]["source_spans"][0]["source_path"] == (
         "queries/orders_paid_aggregate.sql"
     )
+    assert {
+        (span["source_path"], span["source_kind"])
+        for span in profile_run["evidence"]["source_spans"]
+    } >= {
+        (str(csv_path), RC + "DataSampleSource"),
+    }
 
 
 def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
@@ -1360,6 +1371,7 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
         query_source_path=str(query_path),
         query_hash="sha256:mcp-orders-status",
         result_sources=[str(result_path)],
+        scanned_source_paths=[str(csv_path)],
         sample_size=2,
         sample_scope="All rows in the reviewed Orders CSV.",
         sample_method="External read-only aggregate query.",
@@ -1388,6 +1400,9 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     assert overlay_action["source_profile_evidence"]["query_hash"] == (
         "sha256:mcp-orders-status"
     )
+    assert overlay_action["source_profile_evidence"]["scanned_source_paths"] == [
+        str(csv_path)
+    ]
 
     draft = draft_query_evidence_storage_overlay_tool(
         db,
@@ -1409,6 +1424,9 @@ def test_draft_query_evidence_storage_overlay_tool_returns_stage_payload(
     )
     assert draft["source_profile_evidence"]["query_source_paths"] == [
         str(query_path)
+    ]
+    assert draft["source_profile_evidence"]["scanned_source_paths"] == [
+        str(csv_path)
     ]
     assert draft["source_profile_evidence"]["result_sources"] == [str(result_path)]
     assert draft["reviewed_overlay"]["storage_root"] == str(warehouse)
@@ -8424,6 +8442,24 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert type_action_source["duplicate_advisory_indexes"] == [0]
     assert type_action_source["route_group_key"].startswith("profile_type_review:")
     assert type_action_source["route_step_key"].startswith("profile-route-step:")
+    assert type_action_source["consumes_result_bindings"][0]["source_tool_name"] == (
+        "record_pattern"
+    )
+    assert type_action_source["consumes_result_bindings"][0]["argument"] == (
+        "supporting_patterns"
+    )
+    pattern_action = result["suggested_next_action_groups"][
+        "profile_type_review"
+    ][1]
+    assert pattern_action["source_profile_advisory"]["produces_result_bindings"][0][
+        "result_field"
+    ] == "pattern_iri"
+    assert (
+        pattern_action["source_profile_advisory"]["produces_result_bindings"][0][
+            "binding_key"
+        ]
+        == type_action_source["consumes_result_bindings"][0]["binding_key"]
+    )
     plan_by_move = {
         item["semantic_move"]: item
         for item in result["advisory_followthrough_plan"]

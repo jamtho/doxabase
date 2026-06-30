@@ -1244,11 +1244,13 @@ result.observation_iri
 result.observation_type
 result.evidence_iri
 result.source_span_iri
+result.scanned_source_span_iris
 result.execution_status
 result.engine
 result.query_source_path
 result.query_hash
 result.result_sources
+result.scanned_source_paths
 result.observation_triples
 result.evidence_triples
 result.source_span_triples
@@ -1264,6 +1266,9 @@ or cancelled attempts stay ordinary observations and reject profile count
 fields. For filtered or grouped aggregate result payloads, prefer
 `result_sources` plus clear `summary`/`sample_scope`/`sample_method` text unless
 the count-like value is intentionally profile evidence.
+Use `scanned_source_paths` for the non-secret table/file/object paths that the
+external runtime actually scanned. These paths are stored as
+`rc:DataSampleSource` spans and surface later in query-context handoffs.
 The linked evidence stores `query_execution_status`, `query_engine`, and
 `query_hash` as structured metadata when those values are supplied, so later
 query-context handoffs do not depend on parsing evidence summary prose.
@@ -2053,6 +2058,8 @@ action.source_profile_advisory["route_anchor_iris"]
 action.source_profile_advisory["route_pattern_iris"]
 action.source_profile_advisory["observed_metric_iris"]
 action.source_profile_advisory["mixed_support"]
+action.source_profile_advisory["produces_result_bindings"]
+action.source_profile_advisory["consumes_result_bindings"]
 ```
 
 Use `route_group_key` to connect grouped draft actions to later profile insight
@@ -2063,6 +2070,11 @@ the same duplicate/advisory group. Scripts should inspect optional metric-only
 shared promotion pattern IRIs, the other review lane, and the review note. When
 both lanes generate staged promotion/assertion drafts from the same pattern,
 review or export those drafts together before applying either lane independently.
+For profile type-review actions, `record_pattern` may carry
+`produces_result_bindings[]` and paired `stage_map_assertion_change` actions may
+carry `consumes_result_bindings[]`. Match the shared `binding_key`, read the
+source result field such as `pattern_iri`, and append it to the target argument
+such as `supporting_patterns` before calling the staged assertion helper.
 Scripts that need per-metric or per-column follow-through can still iterate
 `metric_advisories[]` or `type_advisories[]` by the representative advisory
 indexes first, then use each representative advisory's row-local index,
@@ -2656,6 +2668,7 @@ action.source_profile_evidence["engine"]
 action.source_profile_evidence["query_hash"]
 action.source_profile_evidence["result_sources"]
 action.source_profile_evidence["query_source_paths"]
+action.source_profile_evidence["scanned_source_paths"]
 action.source_profile_evidence["query_source_spans"]
 action.source_profile_evidence["handoff_note"]
 ```

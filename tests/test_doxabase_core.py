@@ -18345,6 +18345,7 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
         query_source_path=str(query_path),
         query_hash="sha256:orders-status",
         result_sources=[str(result_path)],
+        scanned_source_paths=[str(csv_path)],
         sample_size=3,
         sample_scope="All rows in the reviewed Orders CSV.",
         sample_method="External read-only aggregate query.",
@@ -18377,6 +18378,9 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert getattr(overlay_action, "source_profile_evidence")[
         "query_hash"
     ] == "sha256:orders-status"
+    assert getattr(overlay_action, "source_profile_evidence")[
+        "scanned_source_paths"
+    ] == [str(csv_path)]
 
     draft = db.draft_query_evidence_storage_overlay(
         dataset,
@@ -18403,6 +18407,7 @@ def test_query_evidence_storage_overlay_drafts_reviewed_stage_args(
     assert draft.source_profile_evidence["query_hash"] == "sha256:orders-status"
     assert draft.source_profile_evidence["result_sources"] == [str(result_path)]
     assert draft.source_profile_evidence["query_source_paths"] == [str(query_path)]
+    assert draft.source_profile_evidence["scanned_source_paths"] == [str(csv_path)]
     assert draft.reviewed_overlay["storage_root"] == str(warehouse)
     assert draft.reviewed_overlay["path_templates"] == ["orders.csv"]
     assert draft.reviewed_overlay["file_format"] == RC + "CSV"
@@ -24078,6 +24083,7 @@ def test_record_query_result_writes_query_source_evidence(
         end_line=5,
         query_hash="sha256:abc123",
         result_sources=["/tmp/orders-paid-count.json"],
+        scanned_source_paths=["warehouse/orders.csv"],
         sample_size=3,
         sample_scope="All rows in the scratch Orders CSV.",
         sample_method="External read-only aggregate query.",
@@ -24096,6 +24102,8 @@ def test_record_query_result_writes_query_source_evidence(
     assert result.engine == "python-csv"
     assert result.query_hash == "sha256:abc123"
     assert result.source_span_iri is not None
+    assert result.scanned_source_paths == ["warehouse/orders.csv"]
+    assert len(result.scanned_source_span_iris) == 1
     assert result.evidence_triples > result.source_span_triples > 0
     assert [action.tool_name for action in result.suggested_next_actions] == [
         "describe_profile_run",
@@ -24121,6 +24129,11 @@ def test_record_query_result_writes_query_source_evidence(
         and triple.object == result.source_span_iri
         for triple in evidence.outgoing
     )
+    assert any(
+        triple.predicate == RC + "sourceSpan"
+        and triple.object == result.scanned_source_span_iris[0]
+        for triple in evidence.outgoing
+    )
     outgoing = {(triple.predicate, triple.object) for triple in evidence.outgoing}
     assert (RC + "queryExecutionStatus", "succeeded") in outgoing
     assert (RC + "queryEngine", "python-csv") in outgoing
@@ -24131,6 +24144,15 @@ def test_record_query_result_writes_query_source_evidence(
     }
     assert (RC + "sourcePath", "queries/orders_paid_count.sql") in span_outgoing
     assert (RC + "sourceKind", RC + "QuerySource") in span_outgoing
+    scanned_span = db.describe_resource(
+        result.scanned_source_span_iris[0],
+        graph="evidence",
+    )
+    scanned_span_outgoing = {
+        (triple.predicate, triple.object) for triple in scanned_span.outgoing
+    }
+    assert (RC + "sourcePath", "warehouse/orders.csv") in scanned_span_outgoing
+    assert (RC + "sourceKind", RC + "DataSampleSource") in scanned_span_outgoing
 
     matches = db.search("paid-count", graph="observations")
     assert result.observation_iri in {match.iri for match in matches.matches}
@@ -24271,7 +24293,10 @@ def test_record_query_result_rejects_unsourced_or_fake_failure_counts(
     db = DoxaBase.create(tmp_path / "capsule.sqlite")
     before_counts = _mutable_graph_counts(db)
 
-    with pytest.raises(DoxaBaseError, match="result_sources or query_source_path"):
+    with pytest.raises(
+        DoxaBaseError,
+        match="result_sources, query_source_path, or scanned_source_paths",
+    ):
         db.record_query_result(
             summary="Unsourced query result should not be recorded.",
         )
@@ -28190,9 +28215,55 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
         "add its pattern_iri to supporting_patterns" in action.arguments["review_note"]
         for action in staged_type_actions
     )
+    pattern_action = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "record_pattern"
+    ][0]
+    produced_bindings = pattern_action.source_profile_advisory[
+        "produces_result_bindings"
+    ]
+    assert produced_bindings == [
+        {
+            "binding_key": (
+                pattern_action.source_profile_advisory["route_group_key"]
+                + ":profile-type-support-pattern"
+            ),
+            "result_field": "pattern_iri",
+            "target_tool_name": "stage_map_assertion_change",
+            "target_argument": "supporting_patterns",
+            "append": True,
+            "review_lane": "profile_type_review",
+            "route_group_key": pattern_action.source_profile_advisory[
+                "route_group_key"
+            ],
+            "target_semantic_move": "assert_map_type",
+        }
+    ]
+    assert all(
+        action.source_profile_advisory["consumes_result_bindings"][0][
+            "binding_key"
+        ]
+        == produced_bindings[0]["binding_key"]
+        for action in staged_type_actions
+    )
+    assert all(
+        action.source_profile_advisory["consumes_result_bindings"][0][
+            "source_result_field"
+        ]
+        == "pattern_iri"
+        for action in staged_type_actions
+    )
+    assert all(
+        action.source_profile_advisory["consumes_result_bindings"][0][
+            "argument"
+        ]
+        == "supporting_patterns"
+        for action in staged_type_actions
+    )
 
     recorded_pattern = db.record_pattern(
-        **advisory.suggested_next_actions[1].arguments,
+        **pattern_action.arguments,
     )
     related_pattern = db.record_pattern(
         summary="Orders status type assertions already have nearby lore.",
