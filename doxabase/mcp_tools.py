@@ -592,7 +592,12 @@ def stage_profile_map_updates_tool(
             validation_scope=validation_scope,  # type: ignore[arg-type]
         )
     )
-    payload["revision_iri"] = payload["staged_revision"]["revision_iri"]
+    staged_revision = payload.get("staged_revision")
+    payload["revision_iri"] = (
+        staged_revision["revision_iri"]
+        if isinstance(staged_revision, dict)
+        else None
+    )
     return payload
 
 

@@ -913,6 +913,60 @@ def test_project_brief_tool_keeps_profile_advisories_visible_with_pending_map_up
     )
 
 
+def test_stage_profile_map_updates_tool_handles_all_skipped_recommendations(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#SampledOrders"
+    evidence = "https://example.test/project#SampledOrdersProfileEvidence"
+    record_map_dataset_tool(
+        db,
+        iri=dataset,
+        label="Sampled orders",
+        is_table=True,
+        row_count_snapshot=100,
+    )
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=dataset,
+        dataset_summary="Sampled orders were profiled from one partition.",
+        evidence_summary="Sampled orders profile evidence.",
+        evidence_sources=["test://sampled-orders-profile"],
+        shared_evidence_iri=evidence,
+        sample_size=40,
+        sample_scope="Sampled partition rows; not the full Sampled orders table.",
+        sample_method="DuckDB sampled partition profile.",
+        row_count=40,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+    )
+    draft = draft_profile_map_updates_tool(db, dataset, evidence)
+    assert draft["recommendations"][0]["kind"] == "dataset_row_count_snapshot"
+    assert draft["recommendations"][0]["default_stageable"] is False
+
+    result = stage_profile_map_updates_tool(
+        db,
+        dataset,
+        evidence,
+        accepted_recommendation_indexes=[0],
+    )
+
+    assert result["result_kind"] == "profile_map_update_staging"
+    assert result["staged_revision"] is None
+    assert result["revision_iri"] is None
+    assert result["staged_recommendation_indexes"] == []
+    assert result["skipped_recommendation_indexes"] == [0]
+    assert result["status_counts"] == {
+        "staged": 0,
+        "skipped": 1,
+        "not_selected": 0,
+    }
+    assert result["suggested_next_actions"] == []
+    assert "Sampled or unknown-scope row-count recommendations" in (
+        result["items"][0]["reason"]
+    )
+
+
 def test_project_brief_tool_does_not_gate_profile_on_unrelated_staged_work(
     tmp_path: Path,
 ) -> None:

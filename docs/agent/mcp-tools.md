@@ -706,6 +706,10 @@ accepted recommendation was staged. When a staged
 revision is created, `suggested_next_actions` starts with
 `check_staged_revision_apply` for the read-only pre-apply check, then an
 `export_profile_insight_review_bundle` action scoped to that staged revision.
+When every accepted recommendation is skipped, `staged_revision` is `null`,
+the wrapper's top-level `revision_iri` alias is also `null`, and
+`suggested_next_actions` is empty; inspect `items[]` and `status_counts` for the
+skip reasons.
 Run the export again after staging related metric vocabulary, type-review, or
 caveat/systematisation alternatives so the bundle can compare all lanes
 together. The helper uses
