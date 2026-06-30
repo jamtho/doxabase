@@ -32114,6 +32114,23 @@ def test_applied_metric_promotion_closes_profile_review_lane(
     ]
     staged_promotion = db.stage_pattern_promotion(**promotion_action.arguments)
     staged_iri = staged_promotion.staged_revisions[0].revision_iri
+    staged_review = db.export_profile_insight_review_bundle(
+        dataset,
+        evidence,
+        tmp_path / "orders-profile-metric-staged-review.md",
+    )
+    assert staged_review.candidate_revision_iris == [staged_iri]
+    assert staged_review.open_profile_review_lanes == []
+    assert staged_review.closed_semantic_moves == ["define_metric"]
+    assert staged_review.remaining_semantic_moves == []
+    assert any(
+        group["review_lane"] == "metric_vocabulary_review"
+        and group["match_strength"] == "direct_action"
+        and group["closed_semantic_moves"] == ["define_metric"]
+        and group["remaining_semantic_moves"] == ["caveat_fallback"]
+        for group in staged_review.candidates[0].profile_route_groups
+    )
+
     assert db.apply_staged_revision(staged_iri).patches_applied == 1
 
     rerun = db.draft_profile_map_updates(dataset, evidence)

@@ -40390,7 +40390,10 @@ class DoxaBase:
                 direct_satisfied_route_steps.update(direct_route_step_keys)
                 if not direct_semantic_moves:
                     legacy_direct_satisfied_route_keys.add(route_group_key)
-                if "assert_map_type" in direct_semantic_moves:
+                if (
+                    "assert_map_type" in direct_semantic_moves
+                    or "define_metric" in direct_semantic_moves
+                ):
                     fallback_satisfied_route_keys.add(route_group_key)
         candidate_iris_by_route_key: dict[str, list[str]] = {}
         for candidate in candidates:

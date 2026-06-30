@@ -3277,6 +3277,13 @@ few useful gaps:
   Use this for receiver-side staged review handoffs when the full profile
   insight bundle is unavailable or when a generic staged bundle mixes profile
   and non-profile rows.
+- A follow-up profile route bridge trial found staged direct metric promotion
+  could close `define_metric` while still leaving only `caveat_fallback` open,
+  even though applying the staged promotion cleared the lane. Profile insight
+  review now treats direct `define_metric` satisfaction like direct
+  `assert_map_type` satisfaction for same-route fallback closure: the fallback
+  remains visible in route-group metadata, but it no longer appears as an open
+  review lane when the direct metric move is staged.
 - A project-brief performance trial found `project_brief()` was recomputing
   staged apply checks inside each profile draft while also building the staged
   review frontier. `project_brief` now reuses its staged review summary for
