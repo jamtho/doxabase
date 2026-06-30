@@ -34,7 +34,8 @@ When arriving cold, use this route before reading every reference doc.
    profile draft counts, staged review queues, and bounded recommended next
    tasks.
    In unattended loops, follow `project_brief.first_unattended_action` first:
-   it resolves blocking safety review before frontier expansion or task review.
+   it resolves blocking privacy/export review or stale seed recovery before
+   frontier expansion or task review.
    Then read `project_brief.frontier_status`; if `must_rerun_call` is non-null,
    rerun the brief before repeating the same visible recommended tasks. Read
    `project_brief.health_tasks[]` for the underlying omitted queues, redacted

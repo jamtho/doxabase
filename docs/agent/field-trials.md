@@ -3067,6 +3067,36 @@ few useful gaps:
   `mixed_support_review_groups` so shared support patterns, review lanes,
   semantic moves, and suggested calls are visible together before applying any
   one lane.
+- A project-brief/query-repair frontier pass on an older local capsule found a
+  stale immutable seed graph could leave `query_repair_review` and
+  `profile_review` tasks visible even though staging-oriented follow-up helpers
+  would fail on missing staging vocabulary. `project_brief` now routes
+  `seed_recovery_review` through `safety_first_action` /
+  `first_unattended_action` before frontier expansion or mutation work, while
+  privacy/export review still takes precedence when both are present.
+- A privacy/handoff trial with fake sensitive-looking scratch data confirmed
+  cautious agents can avoid leaks by running `export_preflight` and keeping
+  `fail_on_sensitive=True`; structured responses stayed redacted while faithful
+  local Markdown, TriG, and snapshot JSON preserved the fake value. The
+  manifest handoff route was clear, but the export result still pointed generic
+  routers at the lower-level import sequence. Handoff exports that write a
+  manifest now set top-level `recommended_import_tool` to
+  `doxabase.import_handoff_bundle` while retaining the detailed
+  `recommended_import_sequence`.
+- A query-storage frontier trial confirmed clean local filesystem metadata can
+  reach `execution_attempt_ready`, object-store metadata produces a useful
+  runtime-gated DuckDB handoff, and database metadata should be consumed through
+  `relation_identifier` plus `connection_reference` rather than file-scan
+  fields. Future storage-aware planner work should turn that route into an
+  executable contract test covering `record_query_result` evidence,
+  `draft_query_evidence_storage_overlay`, local execution-ready planning, and
+  mixed file/database explicit candidate selection.
+- A profile-promotion trial confirmed the profile pipeline can carry row-count,
+  nullable-column, unmapped-column, metric vocabulary, and value-type ontology
+  work into staged review. The remaining semantic-judgement gap is ergonomic:
+  vocabulary promotion has concrete staged skeletons, while caveat or
+  systematisation fallbacks for awkward metric/value advisories still require
+  more caller-authored RDF.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

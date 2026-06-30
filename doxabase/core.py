@@ -4522,6 +4522,15 @@ class DoxaBase:
                     "health_tasks:privacy_export_review",
                     task.suggested_next_action,
                 )
+        for task in health_tasks:
+            if (
+                task.task_type == "seed_recovery_review"
+                and task.suggested_next_action is not None
+            ):
+                return (
+                    "health_tasks:seed_recovery_review",
+                    task.suggested_next_action,
+                )
         return None, None
 
     @staticmethod
@@ -46348,11 +46357,17 @@ class DoxaBase:
             sensitive_literal_count=snapshot_sensitive_count,
             privacy_warnings=snapshot_privacy_warnings,
         )
+        recommended_import_tool = (
+            "doxabase.import_handoff_bundle"
+            if manifest_path is not None
+            else "doxabase.import_trig then doxabase.import_revision_snapshots"
+        )
         manifest = self._handoff_bundle_manifest(
             trig=trig_record,
             revision_snapshots=snapshot_record,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+            recommended_import_tool=recommended_import_tool,
         )
         manifest_bytes_written = None
         if manifest_path is not None:
@@ -46382,6 +46397,7 @@ class DoxaBase:
             manifest_bytes_written=manifest_bytes_written,
             sensitive_literal_count=sensitive_literal_count,
             privacy_warnings=privacy_warnings,
+            recommended_import_tool=recommended_import_tool,
         )
 
     @staticmethod
@@ -46391,6 +46407,7 @@ class DoxaBase:
         revision_snapshots: RevisionSnapshotBundleExportRecord,
         sensitive_literal_count: int,
         privacy_warnings: list[str],
+        recommended_import_tool: str,
     ) -> dict[str, Any]:
         return {
             "format": "doxabase.handoff_bundle.v1",
@@ -46452,9 +46469,7 @@ class DoxaBase:
             ],
             "artifact_kind": "handoff_bundle",
             "importable": True,
-            "recommended_import_tool": (
-                "doxabase.import_trig then doxabase.import_revision_snapshots"
-            ),
+            "recommended_import_tool": recommended_import_tool,
             "recovery_complete": True,
             "json_first_status": "snapshot_rows_without_history",
             "final_snapshot_evidence_status": "history_plus_snapshot_rows",

@@ -1354,6 +1354,22 @@ def test_project_brief_surfaces_stale_seed_health_task(
         "section": "Create or Open a Capsule",
     }
     assert seed_task.current_staged_revision_count is None
+    assert brief.safety_first_action == seed_task.suggested_next_action
+    assert brief.safety_first_call == seed_task.suggested_next_call
+    assert brief.safety_first_source == "health_tasks:seed_recovery_review"
+    assert brief.first_unattended_action == seed_task.suggested_next_action
+    assert brief.first_unattended_call == seed_task.suggested_next_call
+    assert brief.first_unattended_source == "health_tasks:seed_recovery_review"
+    assert brief.frontier_status.safety_first_call == seed_task.suggested_next_call
+    assert brief.frontier_status.first_unattended_call == (
+        seed_task.suggested_next_call
+    )
+    assert brief.frontier_status.first_unattended_source == (
+        "health_tasks:seed_recovery_review"
+    )
+    assert brief.frontier_status.mutation_allowed_after == (
+        "safety_review_required_before_frontier_or_mutation"
+    )
 
 
 def test_project_brief_stale_seed_health_task_routes_staged_work_to_handoff(
@@ -1396,6 +1412,12 @@ def test_project_brief_stale_seed_health_task_routes_staged_work_to_handoff(
         "graphs": ["project"],
         "limit": 20,
     }
+    assert brief.safety_first_action == seed_task.suggested_next_action
+    assert brief.safety_first_call == seed_task.suggested_next_call
+    assert brief.safety_first_source == "health_tasks:seed_recovery_review"
+    assert brief.first_unattended_action == seed_task.suggested_next_action
+    assert brief.first_unattended_call == seed_task.suggested_next_call
+    assert brief.first_unattended_source == "health_tasks:seed_recovery_review"
 
 
 def test_project_brief_routes_non_tabular_assets_to_context_review(

@@ -124,14 +124,17 @@ repeating visible recommended tasks; it expands both `limit` and
 and hidden profile draft candidates together.
 For scripts, prefer `first_unattended_action` / `first_unattended_call` as the
 canonical first hop. It resolves the precedence rule directly: blocking
-privacy/export safety review first, otherwise frontier expansion or the first
-returned frontier task. `frontier_status` repeats the routing audit in compact
-form, including hidden task/profile counts, `must_rerun_call`, and
+privacy/export safety review or stale seed recovery first, otherwise frontier
+expansion or the first returned frontier task. `frontier_status` repeats the
+routing audit in compact form, including hidden task/profile counts,
+`must_rerun_call`, and
 `mutation_allowed_after`.
 Check `safety_first_action` / `safety_first_call` when you need to explain the
 safety branch separately; when a blocking privacy/export health task exists, it
 points to the redacted `export_preflight` review before any expansion or
-mutation-oriented work.
+mutation-oriented work. When immutable seed graphs are missing current staging
+vocabulary, it points to stale seed recovery guidance or handoff preflight
+before query/profile mutation helpers that would fail on the stale seed.
 `frontier_first_action` still chooses `full_frontier_expansion` first, then
 `next_best_expansion`, then the first returned recommended task, and
 `frontier_first_source` records which surface supplied it.
@@ -2226,11 +2229,12 @@ creating either file. Pass `fail_on_sensitive=true` for unattended or shareable
 handoffs; pass `revision_iris` or `snapshot_graph_roles` only when the snapshot
 JSON should be narrower than the default all-stored-snapshot export. Pass
 `manifest_path` to also write a small JSON manifest that pairs the two artifact
-paths, records redacted privacy warnings, and lists the recommended
-`import_trig` then `import_revision_snapshots` sequence with expected snapshot
-evidence statuses. The result contains nested `trig` and `revision_snapshots`
-export records, the manifest payload, optional manifest write metadata, plus
-combined `sensitive_literal_count` and `privacy_warnings`.
+paths, records redacted privacy warnings, sets top-level
+`recommended_import_tool="doxabase.import_handoff_bundle"`, and still lists the
+lower-level `import_trig` then `import_revision_snapshots` sequence with
+expected snapshot evidence statuses. The result contains nested `trig` and
+`revision_snapshots` export records, the manifest payload, optional manifest
+write metadata, plus combined `sensitive_literal_count` and `privacy_warnings`.
 Read `recovery_complete` at the paired handoff level for the bundle as a whole;
 the nested TriG and snapshot JSON records are components and are not
 recovery-complete by themselves.

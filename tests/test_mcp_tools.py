@@ -477,7 +477,8 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     if result["safety_first_action"] is not None:
         assert result["safety_first_call"] == result["safety_first_action"]["call"]
         assert result["safety_first_source"] in {
-            "health_tasks:privacy_export_review"
+            "health_tasks:privacy_export_review",
+            "health_tasks:seed_recovery_review",
         }
         assert result["first_unattended_action"] == result["safety_first_action"]
         assert result["first_unattended_call"] == result["safety_first_call"]
@@ -1799,9 +1800,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert result["privacy_warnings"] == []
     assert result["artifact_kind"] == "handoff_bundle"
     assert result["importable"] is True
-    assert result["recommended_import_tool"] == (
-        "doxabase.import_trig then doxabase.import_revision_snapshots"
-    )
+    assert result["recommended_import_tool"] == "doxabase.import_handoff_bundle"
     assert result["recovery_complete"] is True
     assert result["trig"]["artifact_kind"] == "handoff_trig"
     assert result["trig"]["recommended_import_tool"] == "doxabase.import_trig"
@@ -1821,6 +1820,7 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert manifest["format"] == "doxabase.handoff_bundle.v1"
     assert manifest["artifact_kind"] == "handoff_bundle"
     assert manifest["importable"] is True
+    assert manifest["recommended_import_tool"] == "doxabase.import_handoff_bundle"
     assert manifest["recovery_complete"] is True
     assert manifest["artifacts"]["trig"]["path"] == str(trig_path)
     assert manifest["artifacts"]["trig"]["artifact_kind"] == "handoff_trig"

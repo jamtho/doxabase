@@ -307,11 +307,11 @@ context = db.describe_resource(claim.claim_iri, graph="observations")
 ```
 
 For unattended project-frontier loops, prefer `brief.first_unattended_action` /
-`brief.first_unattended_call`. It resolves blocking privacy/export safety
-review before frontier expansion or task review. Use `brief.frontier_status` to
-audit hidden queue/profile counts, `must_rerun_call`, and the coarse
-`mutation_allowed_after` gate. `brief.frontier_first_action` remains the
-safety-cleared frontier hop over `full_frontier_expansion`,
+`brief.first_unattended_call`. It resolves blocking privacy/export safety review
+or stale seed recovery before frontier expansion or task review. Use
+`brief.frontier_status` to audit hidden queue/profile counts, `must_rerun_call`,
+and the coarse `mutation_allowed_after` gate. `brief.frontier_first_action`
+remains the safety-cleared frontier hop over `full_frontier_expansion`,
 `next_best_expansion`, and `recommended_next_tasks[0]`.
 
 `describe_dataset()` returns bounded context for one dataset/table: row

@@ -420,20 +420,25 @@ show all currently counted task payloads and hidden profile draft candidates.
 Use it when avoiding iterative frontier reruns matters more than preserving the
 smallest bounded display.
 `frontier_first_action` is the canonical first hop for unattended frontier
-loops after safety review. Check `safety_first_action` first; when the default
-handoff-bundle preflight finds potential sensitive terms, it points to
-`export_preflight` before expansion, export, or mutation-oriented work.
+loops after blocking health review. Check `safety_first_action` first; when the
+default handoff-bundle preflight finds potential sensitive terms, it points to
+`export_preflight` before expansion, export, or mutation-oriented work. When
+immutable seed graphs are missing current staging vocabulary, it points to stale
+seed recovery guidance or handoff preflight before mutation helpers that would
+fail on the stale seed.
 `frontier_first_action` then prefers `full_frontier_expansion`, then
 `next_best_expansion`, then the first returned `recommended_next_tasks[]`
 action. `frontier_first_call` is the display call for that action, and
 `frontier_first_source` records which queue or expansion supplied it.
 `first_unattended_action` / `first_unattended_call` resolves the precedence rule
-for scripts: safety review first when present, otherwise the frontier-first
-action. `frontier_status` is the compact audit object for unattended loops.
+for scripts: privacy/export safety or stale seed recovery first when present,
+otherwise the frontier-first action. `frontier_status` is the compact audit
+object for unattended loops.
 Use `frontier_status.mutation_allowed_after` as a coarse gate:
 `safety_review_required_before_frontier_or_mutation` means do not expand,
-export, or mutate before the safety call; `frontier_expansion_required_before_mutation`
-means rerun the suggested `project_brief` call before choosing a mutation; and
+export, or mutate before the safety or seed-recovery call;
+`frontier_expansion_required_before_mutation` means rerun the suggested
+`project_brief` call before choosing a mutation; and
 `current_frontier_task_available` means the brief exposes the current counted
 frontier and the next step is task review rather than blind mutation.
 For `expand_project_brief`, `suggested_limit` is the next bounded rerun and may
@@ -4724,8 +4729,10 @@ partial two-file handoff. The `manifest` field is always returned; when
 `manifest_path` is supplied, the same payload is written as
 `doxabase.handoff_bundle.v1` JSON. The manifest pairs artifact paths, records
 graph roles, revision IRIs, snapshot graph roles, redacted privacy warnings, and
-the recommended receiver sequence: `import_trig` should yield
-`history_only_count_digest`, then `import_revision_snapshots` should yield
+the receiver route. When `manifest_path` is supplied,
+`recommended_import_tool` is `doxabase.import_handoff_bundle`; the manifest also
+keeps the lower-level `recommended_import_sequence`, where `import_trig` should
+yield `history_only_count_digest`, then `import_revision_snapshots` should yield
 `history_plus_snapshot_rows`.
 
 `db.import_handoff_bundle(manifest, dry_run=False, replace=False)` returns
