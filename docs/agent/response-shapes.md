@@ -4096,6 +4096,8 @@ include_apply_checks=True)` returns `ResourceRevisionList`:
 ```python
 resource_revisions.resource
 resource_revisions.revisions
+resource_revisions.timeline
+resource_revisions.timeline_note
 resource_revisions.count
 resource_revisions.returned_count
 resource_revisions.total_count
@@ -4107,6 +4109,9 @@ resource_revisions.patch_mention_scan
 resource_revisions.include_apply_checks
 resource_revisions.drift_detail
 resource_revisions.next_action_queue
+resource_revisions.next_action_queue_items
+resource_revisions.next_action_queue_item_counts
+resource_revisions.semantic_review_required_queue_counts
 ```
 
 The row collection is `revisions`, not `items`. `count` and `total_count` are
@@ -4116,6 +4121,15 @@ Use `current_staged_work_only=True` when the resource route should return only
 live staged work before pagination. The filter auto-enables apply checks and
 still depends on `include_patch_mentions=True` to discover unanchored patch-only
 work.
+
+`timeline` is a page-scoped chronological summary over the returned
+`revisions`. Use it for a first human answer to "what happened to this
+resource?" before opening row details. It does not imply unseen paginated rows
+are absent; read `timeline_note`, `returned_count`, and `total_count` before
+treating it as complete history. Timeline events include `timeline_role`,
+`record_kind`, `summary`, `created_at`, `changed_graphs`, resource
+`match_types`, apply/restage links, and the same resolved-target route fields
+used by `next_action_queue_items`.
 
 Each `resource_revisions.revisions[]` item wraps a normal
 `GraphRevisionListItem` under `revision` and adds resource-match context:

@@ -3338,6 +3338,13 @@ few useful gaps:
   capsule the overlay draft succeeded; `reviewed_overlay` now echoes optional
   non-secret storage and orientation fields so agents can audit the reviewed S3
   route without parsing the Turtle patch.
+- A graph-version/resource-lineage trial confirmed stale -> restaged -> applied
+  recovery survives handoff when source, successor, applied events, and snapshot
+  rows are exported together. Existing resource revision queue items already
+  expose resolved action targets, so the remaining gap was answer shape rather
+  than correctness: `list_resource_revisions()` now includes a page-scoped
+  chronological `timeline` for first-pass resource-history answers before
+  opening lineage or diff cards.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

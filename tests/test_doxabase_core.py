@@ -7356,6 +7356,44 @@ def test_list_graph_revisions_routes_handled_stale_to_applied_successor(
     assert listing.next_action_queue_item_counts["inspect_already_applied"] >= 1
     assert listing.semantic_review_required_queue_counts == {}
 
+    resource_listing = db.list_resource_revisions(
+        "https://example.test/project#Messages",
+        include_apply_checks=True,
+    )
+    assert "returned page" in resource_listing.timeline_note
+    assert [
+        event.revision_iri for event in resource_listing.timeline
+    ] == [
+        source.revision_iri,
+        successor.revision_iri,
+        applied.applied_revision_iri,
+    ]
+    assert [
+        event.timeline_role for event in resource_listing.timeline
+    ] == [
+        "restaged_source",
+        "applied_source",
+        "applied_event",
+    ]
+    timeline_by_iri = {
+        event.revision_iri: event for event in resource_listing.timeline
+    }
+    source_event = timeline_by_iri[source.revision_iri]
+    assert source_event.next_action_call == (
+        "describe_graph_revision("
+        f"iri='{applied.applied_revision_iri}'"
+        ")"
+    )
+    assert source_event.resolved_target_iri == applied.applied_revision_iri
+    assert source_event.resolved_target_record_kind == "applied_event"
+    assert source_event.row_is_target is False
+    assert timeline_by_iri[successor.revision_iri].applied_revision_iri == (
+        applied.applied_revision_iri
+    )
+    assert timeline_by_iri[applied.applied_revision_iri].staged_revision_iri == (
+        successor.revision_iri
+    )
+
 
 def test_restage_staged_revision_preserves_patch_sequence(
     tmp_path: Path,

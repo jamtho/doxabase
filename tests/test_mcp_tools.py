@@ -4243,6 +4243,24 @@ def test_list_resource_revisions_tool_returns_json_like_payload(
     assert result["returned_count"] == 2
     assert result["total_count"] == 2
     assert len(result["revisions"]) == 2
+    assert result["timeline_note"].startswith("Timeline events summarize")
+    assert [
+        event["revision_iri"] for event in result["timeline"]
+    ] == [
+        staged["revision_iri"],
+        applied["applied_revision_iri"],
+    ]
+    assert [
+        event["timeline_role"] for event in result["timeline"]
+    ] == [
+        "applied_source",
+        "applied_event",
+    ]
+    assert result["timeline"][0]["resolved_target_iri"] == (
+        applied["applied_revision_iri"]
+    )
+    assert result["timeline"][0]["row_is_target"] is False
+    assert result["timeline"][1]["staged_revision_iri"] == staged["revision_iri"]
     by_iri = {item["revision"]["iri"]: item for item in result["revisions"]}
     assert {item["revision_iri"] for item in result["revisions"]} == set(by_iri)
     assert by_iri[staged["revision_iri"]]["match_types"] == ["patch_subject"]

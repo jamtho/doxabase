@@ -654,9 +654,11 @@ changed this resource, why, and what review action remains?":
    include_apply_checks=True, drift_detail="summary")`.
    Add `current_staged_work_only=True` when the first question is only "what
    live work still touches this resource?"
-2. Inspect `match_types`, patch mention flags, `revision.application_status`,
-   `revision.stale_resolution_state`, `revision.next_action`, and the top-level
-   `next_action_queue` before opening large payloads.
+2. Read the page-scoped `timeline` first when you need a human chronology for
+   the returned rows. Then inspect `match_types`, patch mention flags,
+   `revision.application_status`, `revision.stale_resolution_state`,
+   `revision.next_action`, and the top-level `next_action_queue` before opening
+   large payloads.
    Resource listings intentionally omit patch `content`, but they can still be
    verbose for a resource with many stale, applied, and current successor rows.
    Use row-local `revision_iri` and `next_action_queue_items` as the compact

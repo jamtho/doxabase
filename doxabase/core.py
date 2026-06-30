@@ -2182,9 +2182,38 @@ class ResourceRevisionListItem:
 
 
 @dataclass(frozen=True)
+class ResourceRevisionTimelineEvent:
+    event_index: int
+    revision_iri: str
+    record_kind: str
+    timeline_role: str
+    summary: str | None
+    created_at: str | None
+    changed_graphs: list[str]
+    match_types: list[str]
+    application_status: str | None
+    stale_resolution_state: str | None
+    not_current_staged_work_reason: str | None
+    applied_revision_iri: str | None
+    staged_revision_iri: str | None
+    applied_by: str | None
+    applied_source_revision_iri: str | None
+    restaged_from: str | None
+    current_restaged_by: str | None
+    queue: str | None
+    action_type: str | None
+    resolved_target_iri: str | None
+    resolved_target_record_kind: str | None
+    row_is_target: bool | None
+    next_action_call: str | None
+
+
+@dataclass(frozen=True)
 class ResourceRevisionList:
     resource: ResourceSummary
     revisions: list[ResourceRevisionListItem]
+    timeline: list[ResourceRevisionTimelineEvent]
+    timeline_note: str
     count: int
     returned_count: int
     total_count: int
@@ -9190,9 +9219,19 @@ class DoxaBase:
                 ),
             )
         )
+        timeline = self._resource_revision_timeline_events(
+            sliced,
+            next_action_queue_items=next_action_queue_items,
+        )
         return ResourceRevisionList(
             resource=self._resource_summary(lookup_graphs, resource_value),
             revisions=sliced,
+            timeline=timeline,
+            timeline_note=(
+                "Timeline events summarize the returned page in chronological "
+                "order. Increase limit or paginate when total_count is greater "
+                "than returned_count."
+            ),
             count=len(matched),
             returned_count=len(sliced),
             total_count=len(matched),
@@ -9235,6 +9274,87 @@ class DoxaBase:
                 )
             ),
         )
+
+    def _resource_revision_timeline_events(
+        self,
+        items: list[ResourceRevisionListItem],
+        *,
+        next_action_queue_items: list[RevisionNextActionQueueItem],
+    ) -> list[ResourceRevisionTimelineEvent]:
+        queue_by_row = {item.row_iri: item for item in next_action_queue_items}
+        ordered = sorted(
+            items,
+            key=lambda item: (
+                item.revision.created_at or "",
+                item.revision.summary or "",
+                item.revision.iri,
+            ),
+        )
+        events: list[ResourceRevisionTimelineEvent] = []
+        for event_index, item in enumerate(ordered, start=1):
+            applied_revision_iri, staged_revision_iri = (
+                self._resource_revision_applied_pair(item)
+            )
+            queue_item = queue_by_row.get(item.revision_iri)
+            next_action = item.revision.next_action
+            events.append(
+                ResourceRevisionTimelineEvent(
+                    event_index=event_index,
+                    revision_iri=item.revision_iri,
+                    record_kind=item.revision.record_kind,
+                    timeline_role=self._resource_revision_lineage_role(item),
+                    summary=item.revision.summary,
+                    created_at=item.revision.created_at,
+                    changed_graphs=item.revision.changed_graphs,
+                    match_types=item.match_types,
+                    application_status=item.revision.application_status,
+                    stale_resolution_state=item.revision.stale_resolution_state,
+                    not_current_staged_work_reason=(
+                        item.revision.not_current_staged_work_reason
+                    ),
+                    applied_revision_iri=applied_revision_iri,
+                    staged_revision_iri=staged_revision_iri,
+                    applied_by=item.revision.applied_by,
+                    applied_source_revision_iri=item.applied_source_revision_iri,
+                    restaged_from=item.revision.restaged_from,
+                    current_restaged_by=item.revision.current_restaged_by,
+                    queue=(
+                        queue_item.queue
+                        if queue_item is not None
+                        else next_action.queue
+                        if next_action is not None
+                        else None
+                    ),
+                    action_type=(
+                        queue_item.action_type
+                        if queue_item is not None
+                        else next_action.action_type
+                        if next_action is not None
+                        else None
+                    ),
+                    resolved_target_iri=(
+                        queue_item.resolved_target_iri
+                        if queue_item is not None
+                        else None
+                    ),
+                    resolved_target_record_kind=(
+                        queue_item.resolved_target_record_kind
+                        if queue_item is not None
+                        else None
+                    ),
+                    row_is_target=(
+                        queue_item.row_is_target if queue_item is not None else None
+                    ),
+                    next_action_call=(
+                        queue_item.call
+                        if queue_item is not None
+                        else next_action.call
+                        if next_action is not None
+                        else None
+                    ),
+                )
+            )
+        return events
 
     def describe_resource_revision_lineage(
         self,

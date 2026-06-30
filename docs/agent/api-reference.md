@@ -1344,6 +1344,11 @@ not patch content; call `describe_staged_revision()` for the full payload.
 The top-level collection is `revisions`; `count` and `total_count` are the
 filtered total before pagination, and `returned_count` is the returned page
 length.
+`timeline` is the compact chronological view of the returned page. It is useful
+for first-pass resource-history answers because each event carries the
+resource-match roles, apply/restage links, and resolved next-action target
+without opening a lineage card. It is still page-scoped; check `timeline_note`,
+`returned_count`, and `total_count` before treating it as complete history.
 Use `current_staged_work_only=True` for the resource-scoped live
 mutation-review queue. It filters before pagination and computes apply checks
 automatically, like the graph-level filter. Do not use
