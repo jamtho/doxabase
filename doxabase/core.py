@@ -1234,6 +1234,28 @@ class StagedGraphRevisionChooseOneGroup:
 
 
 @dataclass(frozen=True)
+class StagedGraphRevisionModellingChoiceRow:
+    row_index: int
+    revision_iri: str
+    summary: str | None
+    modelling_role: str
+    role_source: str
+    role_reason: str
+    queue: str | None
+    apply_status: str | None
+    apply_decision: str | None
+    current_validation: str
+    staged_validation: str
+    changed_graphs: list[str]
+    alternative_set_role: str | None
+    shared_context_applies: bool
+    shared_context_graphs: list[str]
+    support_counts: dict[str, int]
+    support_note: str
+    recommended_human_action: str
+
+
+@dataclass(frozen=True)
 class StagedGraphRevisionBundleSummary:
     total_revisions: int
     decision_headline: str
@@ -1241,6 +1263,8 @@ class StagedGraphRevisionBundleSummary:
     stale_resolution_state_counts: dict[str, int]
     changed_graph_counts: dict[str, int]
     choose_one_groups: list[StagedGraphRevisionChooseOneGroup]
+    modelling_choice_summary: str | None
+    modelling_choice_rows: list[StagedGraphRevisionModellingChoiceRow]
     unresolved_stale_revision_iris: list[str]
     stale_handled_by_restage_revision_iris: list[str]
     ready_restage_successor_revision_iris: list[str]
@@ -37875,6 +37899,16 @@ class DoxaBase:
             summaries
         )
         choose_one_groups = self._staged_revisions_choose_one_groups(summaries)
+        modelling_choice_rows = self._staged_revisions_modelling_choice_rows(
+            summaries=summaries,
+            descriptions=descriptions,
+            choose_one_groups=choose_one_groups,
+            next_action_queue_items=next_action_queue_items,
+        )
+        modelling_choice_summary = self._staged_revisions_modelling_choice_summary(
+            modelling_choice_rows,
+            choose_one_groups=choose_one_groups,
+        )
         next_action_queue_item_counts = (
             self._revision_next_action_queue_item_counts(
                 next_action_queue_items
@@ -37924,6 +37958,8 @@ class DoxaBase:
             stale_resolution_state_counts=state_counts,
             changed_graph_counts=changed_graph_counts,
             choose_one_groups=choose_one_groups,
+            modelling_choice_summary=modelling_choice_summary,
+            modelling_choice_rows=modelling_choice_rows,
             unresolved_stale_revision_iris=unresolved_stale,
             stale_handled_by_restage_revision_iris=handled_stale,
             ready_restage_successor_revision_iris=ready_successors,
@@ -38058,6 +38094,206 @@ class DoxaBase:
                 )
             )
         return groups
+
+    def _staged_revisions_modelling_choice_rows(
+        self,
+        *,
+        summaries: list[StagedGraphRevisionExportSummary],
+        descriptions: list[StagedGraphRevisionDescription],
+        choose_one_groups: list[StagedGraphRevisionChooseOneGroup],
+        next_action_queue_items: list[RevisionNextActionQueueItem],
+    ) -> list[StagedGraphRevisionModellingChoiceRow]:
+        if not summaries:
+            return []
+        queue_item_by_row_iri = {
+            item.row_iri: item for item in next_action_queue_items
+        }
+        row_index_by_iri = {
+            summary.revision_iri: index
+            for index, summary in enumerate(summaries, start=1)
+        }
+        alternative_role_by_row_index: dict[int, str | None] = {}
+        for group in choose_one_groups:
+            for revision_iri, role in zip(
+                group.revision_iris,
+                group.alternative_set_roles,
+                strict=True,
+            ):
+                row_index = row_index_by_iri.get(revision_iri)
+                if row_index is not None:
+                    alternative_role_by_row_index[row_index] = role
+
+        rows: list[StagedGraphRevisionModellingChoiceRow] = []
+        for row_index, (summary, description) in enumerate(
+            zip(summaries, descriptions, strict=True),
+            start=1,
+        ):
+            queue_item = queue_item_by_row_iri.get(summary.revision_iri)
+            alternative_set_role = (
+                queue_item.alternative_set_role
+                if queue_item is not None
+                else alternative_role_by_row_index.get(row_index)
+            ) or alternative_role_by_row_index.get(row_index)
+            included_alternative_row = row_index in alternative_role_by_row_index
+            modelling_role, role_source, role_reason = (
+                self._staged_revisions_modelling_role(
+                    summary,
+                    queue=queue_item.queue if queue_item is not None else None,
+                    alternative_set_role=alternative_set_role,
+                )
+            )
+            support_counts = {
+                "observations": len(description.supporting_observations),
+                "claims": len(description.supporting_claims),
+                "patterns": len(description.supporting_patterns),
+                "evidence": len(description.evidence),
+                "anchors": len(description.revision_anchors),
+            }
+            present_support_counts = {
+                key: count for key, count in support_counts.items() if count
+            }
+            support_note = (
+                "Support links: "
+                + self._staged_revisions_count_summary(present_support_counts)
+                if present_support_counts
+                else "No linked support or anchors."
+            )
+            rows.append(
+                StagedGraphRevisionModellingChoiceRow(
+                    row_index=row_index,
+                    revision_iri=summary.revision_iri,
+                    summary=summary.summary,
+                    modelling_role=modelling_role,
+                    role_source=role_source,
+                    role_reason=role_reason,
+                    queue=queue_item.queue if queue_item is not None else None,
+                    apply_status=summary.apply_status,
+                    apply_decision=summary.apply_decision,
+                    current_validation=summary.current_validation,
+                    staged_validation=summary.staged_validation,
+                    changed_graphs=summary.changed_graphs,
+                    alternative_set_role=alternative_set_role,
+                    shared_context_applies=bool(
+                        summary.shared_context_patch_count
+                        or summary.shared_context_graphs
+                    ),
+                    shared_context_graphs=summary.shared_context_graphs,
+                    support_counts=support_counts,
+                    support_note=support_note,
+                    recommended_human_action=self._staged_revisions_human_action(
+                        summary,
+                        included_alternative_row=included_alternative_row,
+                    ),
+                )
+            )
+        return rows
+
+    @staticmethod
+    def _staged_revisions_modelling_role(
+        summary: StagedGraphRevisionExportSummary,
+        *,
+        queue: str | None,
+        alternative_set_role: str | None,
+    ) -> tuple[str, str, str]:
+        changed_graphs = set(summary.changed_graphs)
+        if (
+            queue == "repair_or_replace"
+            or summary.staged_validation_conforms is False
+            or summary.apply_status == "validation_failed"
+        ):
+            return (
+                "repair_diagnostic",
+                "validation",
+                (
+                    "Validation failed or repair is queued; use this row as "
+                    "diagnostic input before applying a replacement."
+                ),
+            )
+        if "patterns" in changed_graphs and "map" not in changed_graphs:
+            return (
+                "pattern_first_alternative",
+                "changed_graphs",
+                (
+                    "Touches patterns without map changes; keep the hunch "
+                    "tentative while comparing alternatives."
+                ),
+            )
+        if "map" in changed_graphs:
+            return (
+                "map_candidate",
+                "changed_graphs",
+                (
+                    "Touches the map graph; review as a candidate current "
+                    "project/data fact."
+                ),
+            )
+        if {"ontology", "shapes"} & changed_graphs:
+            return (
+                "vocabulary_or_shape_candidate",
+                "changed_graphs",
+                (
+                    "Touches ontology or shapes; review the modelling "
+                    "vocabulary or validation surface before promotion."
+                ),
+            )
+        if alternative_set_role is not None:
+            return (
+                "alternative_candidate",
+                "alternative_set",
+                "Competing alternative; compare with the choose-one set.",
+            )
+        if summary.stale_resolution_state in {
+            "already_applied",
+            "restaged_successor_already_applied",
+            "noop",
+            "restaged_successor_noop",
+        }:
+            return (
+                "reference_row",
+                "apply_status",
+                "Useful for inspection or provenance rather than direct apply.",
+            )
+        return (
+            "review_candidate",
+            "queue",
+            "Review the current queue and recommendation before acting.",
+        )
+
+    def _staged_revisions_modelling_choice_summary(
+        self,
+        rows: list[StagedGraphRevisionModellingChoiceRow],
+        *,
+        choose_one_groups: list[StagedGraphRevisionChooseOneGroup],
+    ) -> str | None:
+        if not rows:
+            return None
+        role_counts: dict[str, int] = {}
+        shared_context_row_count = 0
+        for row in rows:
+            role_counts[row.modelling_role] = (
+                role_counts.get(row.modelling_role, 0) + 1
+            )
+            if row.shared_context_applies:
+                shared_context_row_count += 1
+        parts = [
+            (
+                f"Review {len(rows)} staged row(s) as modelling choices: "
+                + self._staged_revisions_count_summary(role_counts)
+                + "."
+            )
+        ]
+        if choose_one_groups:
+            parts.append(
+                f"Compare {len(choose_one_groups)} choose-one group(s) before "
+                "applying candidates."
+            )
+        if shared_context_row_count:
+            parts.append(
+                "Shared ontology/shapes context applies to "
+                f"{shared_context_row_count} row(s); inspect whether fallback "
+                "framings should carry that context before applying."
+            )
+        return " ".join(parts)
 
     def _staged_revisions_decision_headline(
         self,
@@ -42398,6 +42634,13 @@ class DoxaBase:
             lines.extend(["## At A Glance", ""])
             lines.extend(at_a_glance)
             lines.append("")
+        modelling_choices = self._staged_revisions_modelling_choice_markdown(
+            bundle_summary
+        )
+        if modelling_choices:
+            lines.extend(["## Modelling Choice Summary", ""])
+            lines.extend(modelling_choices)
+            lines.append("")
         if bundle_summary.warnings:
             lines.extend(["## Bundle Warnings", ""])
             lines.extend(f"- {warning}" for warning in bundle_summary.warnings)
@@ -42565,6 +42808,53 @@ class DoxaBase:
                 ]
         )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revisions_modelling_choice_markdown(
+        self,
+        bundle_summary: StagedGraphRevisionBundleSummary,
+    ) -> list[str]:
+        if not bundle_summary.modelling_choice_rows:
+            return []
+        lines: list[str] = []
+        if bundle_summary.modelling_choice_summary is not None:
+            lines.extend([bundle_summary.modelling_choice_summary, ""])
+        lines.extend(
+            [
+                (
+                    "| Row | Role | Candidate | Queue | Validation | Support | "
+                    "Shared context | Recommended action | Why |"
+                ),
+                "|---:|---|---|---|---|---|---|---|---|",
+            ]
+        )
+        for row in bundle_summary.modelling_choice_rows:
+            validation = (
+                f"current: {row.apply_status or 'unknown'}; "
+                f"staged: {row.staged_validation}"
+            )
+            shared_context = (
+                ", ".join(row.shared_context_graphs)
+                if row.shared_context_applies
+                else "no"
+            )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(row.row_index),
+                        self._markdown_table_cell(row.modelling_role),
+                        self._markdown_table_cell(row.summary or row.revision_iri),
+                        self._markdown_table_cell(row.queue or "(none)"),
+                        self._markdown_table_cell(validation),
+                        self._markdown_table_cell(row.support_note),
+                        self._markdown_table_cell(shared_context),
+                        self._markdown_table_cell(row.recommended_human_action),
+                        self._markdown_table_cell(row.role_reason),
+                    ]
+                )
+                + " |"
+            )
+        return lines
 
     def _staged_revisions_at_a_glance_markdown(
         self,

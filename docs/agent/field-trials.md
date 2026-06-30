@@ -2979,7 +2979,9 @@ few useful gaps:
   `inspection_next_action` for `draft_profile_map_updates`. Grouped
   review-bundle trials showed awkward modelling choices need stronger
   top-level decision summaries, structured framing roles, and common support
-  rollups.
+  rollups; grouped staged exports now return modelling-choice summary rows for
+  repair diagnostics, map candidates, vocabulary/shape candidates, and
+  pattern-first alternatives.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -585,6 +585,20 @@ replay. Prefer the current apply status when deciding what to do next.
 Validation cells include their result count when available, for example
 `True (0 result(s))`.
 
+Grouped exports also include a `Modelling Choice Summary` section and matching
+`bundle_summary.modelling_choice_rows[]` fields. Read these before drilling
+into the full patch payload when the bundle contains competing framings. The
+rows classify each staged proposal by review role, such as
+`repair_diagnostic`, `map_candidate`, `vocabulary_or_shape_candidate`, or
+`pattern_first_alternative`, and carry queue, validation, support-count, shared
+context, and recommended-human-action fields. This is especially useful when a
+failed candidate is intentionally present as a SHACL diagnostic, a sibling row
+is the repaired map candidate, and another sibling keeps the broader hunch as a
+pattern-first fallback. The modelling-choice rows are derived from the same live
+apply checks, alternative-set routing, support links, and stored patch roles as
+the rest of the export; treat them as a handoff shortcut, not as a separate
+approval state.
+
 ## Systematisation Drafts
 
 Call `doxabase.stage_systematisation` when you have a modelling hunch and want

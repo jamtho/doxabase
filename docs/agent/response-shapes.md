@@ -5581,6 +5581,8 @@ bundle.apply_status_counts
 bundle.stale_resolution_state_counts
 bundle.changed_graph_counts
 bundle.choose_one_groups
+bundle.modelling_choice_summary
+bundle.modelling_choice_rows
 bundle.unresolved_stale_revision_iris
 bundle.stale_handled_by_restage_revision_iris
 bundle.ready_restage_successor_revision_iris
@@ -5714,6 +5716,39 @@ included staged rows touch each graph role. `choose_one_groups` lists competing
 alternative sets with row indexes, revision IRIs, labels, source row, and member
 roles so a reviewer or script can enforce "apply at most one" without parsing
 Markdown prose.
+`modelling_choice_summary` is the compact top-line interpretation used by the
+grouped Markdown's `Modelling Choice Summary` section. It summarizes the staged
+rows as modelling choices, not just apply mechanics, for example repair
+diagnostics, map candidates, vocabulary/shape candidates, and pattern-first
+alternatives. `modelling_choice_rows[]` gives the same interpretation in
+machine-readable form:
+
+```python
+bundle.modelling_choice_rows[].row_index
+bundle.modelling_choice_rows[].revision_iri
+bundle.modelling_choice_rows[].summary
+bundle.modelling_choice_rows[].modelling_role
+bundle.modelling_choice_rows[].role_source
+bundle.modelling_choice_rows[].role_reason
+bundle.modelling_choice_rows[].queue
+bundle.modelling_choice_rows[].apply_status
+bundle.modelling_choice_rows[].apply_decision
+bundle.modelling_choice_rows[].current_validation
+bundle.modelling_choice_rows[].staged_validation
+bundle.modelling_choice_rows[].changed_graphs
+bundle.modelling_choice_rows[].alternative_set_role
+bundle.modelling_choice_rows[].shared_context_applies
+bundle.modelling_choice_rows[].shared_context_graphs
+bundle.modelling_choice_rows[].support_counts
+bundle.modelling_choice_rows[].support_note
+bundle.modelling_choice_rows[].recommended_human_action
+```
+
+Use these rows when a grouped review bundle mixes a failed diagnostic framing, a
+repaired map candidate, and a pattern-first or vocabulary-first alternative.
+They are derived from the same live export summaries, queue items, support
+links, alternative-set roles, and shared-context patch roles as the rest of the
+bundle; they are a review shortcut, not a separate source of truth.
 `ready_restage_successor_alternative_to_applied_source_iris` lists ready
 refreshed successors whose `current_alternative_to` / `alternative_to` target is
 already applied. Treat these rows as semantic review targets, not automatic

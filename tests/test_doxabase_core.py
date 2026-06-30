@@ -13226,6 +13226,26 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert choose_one.alternative_set_source_iri == revision_iris[0]
     assert choose_one.source_row_index == 1
     assert choose_one.alternative_set_roles == ["source", "alternative"]
+    assert export.bundle_summary.modelling_choice_summary is not None
+    assert "choose-one group" in export.bundle_summary.modelling_choice_summary
+    assert [
+        row.modelling_role
+        for row in export.bundle_summary.modelling_choice_rows
+    ] == [
+        "vocabulary_or_shape_candidate",
+        "pattern_first_alternative",
+    ]
+    assert [
+        row.alternative_set_role
+        for row in export.bundle_summary.modelling_choice_rows
+    ] == ["source", "alternative"]
+    assert [
+        row.queue for row in export.bundle_summary.modelling_choice_rows
+    ] == ["apply_after_review", "apply_after_review"]
+    assert [
+        row.support_counts["anchors"]
+        for row in export.bundle_summary.modelling_choice_rows
+    ] == [2, 2]
     assert "choose-one group" in export.bundle_summary.decision_headline
     assert [item.apply_status for item in export.revision_summaries] == [
         "ready",
@@ -13267,6 +13287,15 @@ def test_stage_systematisation_preserves_alternative_rdf_framings(
     assert "## At A Glance" in exported
     assert "- Changed graphs: ontology: 1, patterns: 1" in exported
     assert "- Choose-one groups:" in exported
+    assert "## Modelling Choice Summary" in exported
+    assert "vocabulary_or_shape_candidate" in exported
+    assert "pattern_first_alternative" in exported
+    assert exported.index("## At A Glance") < exported.index(
+        "## Modelling Choice Summary"
+    )
+    assert exported.index("## Modelling Choice Summary") < exported.index(
+        "## Reviewer Decision Matrix"
+    )
     assert "## Reviewer Decision Matrix" in exported
     assert (
         "Rows 1 and 2 are competing alternatives. Apply at most one before "
@@ -13898,6 +13927,40 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
         revision_iris[1],
         revision_iris[2],
     ]
+    assert export.bundle_summary.modelling_choice_summary is not None
+    assert "repair_diagnostic: 1" in export.bundle_summary.modelling_choice_summary
+    assert "map_candidate: 1" in export.bundle_summary.modelling_choice_summary
+    assert (
+        "pattern_first_alternative: 1"
+        in export.bundle_summary.modelling_choice_summary
+    )
+    assert [
+        row.modelling_role
+        for row in export.bundle_summary.modelling_choice_rows
+    ] == [
+        "repair_diagnostic",
+        "map_candidate",
+        "pattern_first_alternative",
+    ]
+    assert [
+        row.queue for row in export.bundle_summary.modelling_choice_rows
+    ] == [
+        "repair_or_replace",
+        "apply_after_review",
+        "apply_after_review",
+    ]
+    assert [
+        row.shared_context_graphs
+        for row in export.bundle_summary.modelling_choice_rows
+    ] == [["ontology", "shapes"], ["ontology", "shapes"], ["ontology", "shapes"]]
+    assert all(
+        row.shared_context_applies
+        for row in export.bundle_summary.modelling_choice_rows
+    )
+    assert [
+        row.support_counts["patterns"]
+        for row in export.bundle_summary.modelling_choice_rows
+    ] == [1, 1, 1]
     assert [summary.apply_status for summary in export.revision_summaries] == [
         "validation_failed",
         "ready",
@@ -13927,6 +13990,10 @@ def test_stage_pattern_promotion_mixed_alternatives_group_review_queues(
     assert all(
         summary.semantic_risk_reasons for summary in export.revision_summaries
     )
+    assert "## Modelling Choice Summary" in exported
+    assert "repair_diagnostic" in exported
+    assert "pattern_first_alternative" in exported
+    assert "Shared ontology/shapes context applies to 3 row(s)" in exported
     assert "## Review Queues" in exported
     assert "Shared ontology or shapes context patches are present" in exported
     assert (
