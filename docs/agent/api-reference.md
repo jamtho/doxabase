@@ -17,8 +17,11 @@ db = DoxaBase.create(".doxabase.sqlite", overwrite=True)
 
 This initializes the SQLite schema, registers default graph roles, and seeds
 immutable `base_ontology` and `base_shapes`.
-Use `DoxaBase(path)` to open an existing capsule. There is no `DoxaBase.open()`
-helper in the current API.
+Use `DoxaBase(path)` to open an existing capsule with normal schema, graph-role,
+seed, and search-index maintenance. Use `DoxaBase.open_readonly(path)` when a
+field trial or safety preflight must inspect an existing capsule without any
+DoxaBase initialization writes; it opens SQLite with `mode=ro`, so mutating
+helpers fail at the database layer.
 `seed_base_graphs()` seeds only empty immutable seed graphs; it is not a seed
 refresh or migration helper for older non-empty capsules. If staging reports
 that immutable `base_ontology` is missing current staging vocabulary, follow

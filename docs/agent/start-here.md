@@ -242,8 +242,9 @@ PYTHONPATH="$(pwd)"
 ```
 
 In Python, use `DoxaBase.create(path, overwrite=True)` to create or replace a
-scratch capsule, and `DoxaBase(path)` to reopen an existing capsule. There is no
-`DoxaBase.open()` helper in the current API.
+scratch capsule, `DoxaBase(path)` to reopen an existing capsule with normal
+maintenance, and `DoxaBase.open_readonly(path)` when a live-capsule inspection
+must not write schema, seed, or search-index maintenance changes.
 
 MCP doc IDs use underscores, for example `staged_revisions` and
 `query_planning`; their on-disk files usually use hyphens, for example

@@ -3965,9 +3965,21 @@ class DoxaBase:
         *,
         initialize: bool = True,
         seed: bool = True,
+        read_only: bool = False,
     ) -> None:
         self.path = Path(path)
-        self._conn = sqlite3.connect(self.path)
+        self.read_only = read_only
+        if read_only:
+            if initialize:
+                raise DoxaBaseError(
+                    "Read-only DoxaBase connections cannot initialize or seed a "
+                    "capsule; use DoxaBase.open_readonly(path) for existing "
+                    "capsules."
+                )
+            uri = f"{self.path.resolve().as_uri()}?mode=ro"
+            self._conn = sqlite3.connect(uri, uri=True)
+        else:
+            self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
         self._search_index_error: str | None = None
         if initialize:
@@ -3988,6 +4000,12 @@ class DoxaBase:
         if overwrite and db_path.exists():
             db_path.unlink()
         return cls(db_path, initialize=True, seed=seed)
+
+    @classmethod
+    def open_readonly(cls, path: str | Path) -> "DoxaBase":
+        """Open an existing capsule through a SQLite read-only connection."""
+
+        return cls(path, initialize=False, seed=False, read_only=True)
 
     def close(self) -> None:
         self._conn.close()

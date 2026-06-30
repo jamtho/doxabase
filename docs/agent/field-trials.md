@@ -55,8 +55,11 @@ PYTHONPATH="$(pwd)"
 ```
 
 Create or replace a scratch capsule with `DoxaBase.create(path, overwrite=True)`.
-Reopen an existing capsule with `DoxaBase(path)`. There is no `DoxaBase.open()`
-helper in the current API.
+Reopen an existing capsule with `DoxaBase(path)` when normal schema, graph-role,
+seed, and search-index maintenance is acceptable. Use
+`DoxaBase.open_readonly(path)` for strict inspection of a live capsule; it skips
+initialization writes and opens SQLite with `mode=ro`, so mutating helpers fail
+at the database layer.
 
 When a trial changes MCP docs or tool registrations, remember that existing
 Codex-bound MCP server sessions are long-running Python processes. They may keep
@@ -3325,8 +3328,8 @@ few useful gaps:
   route works without user input when run on `/tmp` copies. The fresh receiver
   capsule had current seed graph counts, matching mutable project counts, no
   remaining `seed_recovery_review`, and conforming validation. For trials that
-  must be strictly non-mutating, use a copy or a SQLite read-only URI; normal
-  open paths can perform SQLite maintenance even when graph facts are not
+  must be strictly non-mutating, use `DoxaBase.open_readonly(path)` or a copy;
+  normal open paths can perform SQLite maintenance even when graph facts are not
   intentionally changed.
 - An AIS DailyIndex overlay trial showed `describe_query_context` and singleton
   evidence inspection were mostly self-guiding, but a stale-seed source capsule

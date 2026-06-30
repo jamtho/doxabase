@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import warnings
 from collections.abc import Callable
 from pathlib import Path
@@ -128,6 +129,33 @@ def test_capsule_creation_seeds_base_graphs(tmp_path: Path) -> None:
     assert graphs["base_shapes"].mutable is False
     assert graphs["map"].mutable is True
     assert graphs["patterns"].mutable is True
+
+
+def test_open_readonly_inspects_existing_capsule_without_writes(
+    tmp_path: Path,
+) -> None:
+    capsule = tmp_path / "capsule.sqlite"
+    db = DoxaBase.create(capsule)
+    dataset = "https://example.test/project#Orders"
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.close()
+    before_mtime = capsule.stat().st_mtime_ns
+
+    with DoxaBase.open_readonly(capsule) as readonly:
+        assert readonly.read_only is True
+        overview = readonly.graph_overview()
+        assert overview.key_counts["datasets"] == 1
+        assert readonly.describe_dataset(dataset).iri == dataset
+        assert readonly.search("Orders", graph="map").matches[0].iri == dataset
+
+        with pytest.raises(sqlite3.OperationalError, match="readonly"):
+            readonly.record_map_dataset(
+                "https://example.test/project#Customers",
+                label="Customers",
+                is_table=True,
+            )
+
+    assert capsule.stat().st_mtime_ns == before_mtime
 
 
 def test_stage_graph_revision_reports_stale_seed_patch_role_vocabulary(
