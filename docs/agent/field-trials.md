@@ -3124,6 +3124,18 @@ few useful gaps:
   `doxabase.list_docs` and `doxabase.get_doc` remain available before SQLite
   initialization; graph tools still surface capsule startup failures on first
   actual graph use.
+- A privacy/frontier retest confirmed redacted preflights and
+  `first_unattended_action` correctly put export safety before expansion or
+  mutation. The subtle state is after expanding a sensitive capsule:
+  `frontier_status.is_complete` can be true while
+  `mutation_allowed_after` still blocks frontier or mutation work for safety
+  review. Treat `first_unattended_action` and `mutation_allowed_after` as
+  authoritative.
+- A storage-metadata query trial confirmed the profile-like
+  `record_query_result` to `draft_query_evidence_storage_overlay` path works
+  from a cold capsule: record result, follow `describe_query_context`, fill the
+  reviewed overlay placeholders, stage/check/apply, rerun context, then draft a
+  plan. The weak spot was discoverability, not code behavior.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

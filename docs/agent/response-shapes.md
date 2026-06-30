@@ -433,7 +433,10 @@ action. `frontier_first_call` is the display call for that action, and
 `first_unattended_action` / `first_unattended_call` resolves the precedence rule
 for scripts: privacy/export safety or stale seed recovery first when present,
 otherwise the frontier-first action. `frontier_status` is the compact audit
-object for unattended loops.
+object for unattended loops. `frontier_status.is_complete` only means no hidden
+frontier work remains under the current queue/profile limits; it does not mean
+mutation is safe when `safety_first_action`, `first_unattended_action`, or
+`mutation_allowed_after` still routes to privacy/export or seed recovery.
 Use `frontier_status.mutation_allowed_after` as a coarse gate:
 `safety_review_required_before_frontier_or_mutation` means do not expand,
 export, or mutate before the safety or seed-recovery call;
@@ -5365,6 +5368,11 @@ the plan, including when `current_staged_work_only=False` scans all staged
 revision history. Explicit applied revision events are returned as
 `inspect_already_applied` / `applied_event_record` lanes with
 `describe_graph_revision` and `describe_applied_revision_diff` follow-ups.
+`lane_counts` and `next_action_queue_item_counts` are source-row counts. If an
+explicit handoff includes both a stale source and its restaged successor, both
+can count under `apply_after_review` even though they collapse to one resolved
+target. Use `resolved_target_group_counts`, `mutation_frontier_items`, or
+`mutation_frontier_iris` for the deduped mutation worklist.
 
 `db.start_staged_revision_recovery_session(...)` and
 `db.describe_staged_revision_recovery_session(session_iri)` return

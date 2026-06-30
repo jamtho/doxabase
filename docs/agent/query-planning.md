@@ -461,6 +461,19 @@ When `observed_asset` is supplied, follow the returned
 `describe_profile_run(dataset_iri=observed_asset, evidence_iri=...)`, and all
 observed-asset results include `describe_query_context(iri=observed_asset)`.
 
+For a cold profile-like query-result handoff where the map has no executable
+storage metadata yet, use this sequence:
+
+1. Record the external result with `record_query_result(..., observed_asset=...)`.
+2. Follow the returned `describe_query_context` action.
+3. If the context suggests `draft_query_evidence_storage_overlay`, copy that
+   action as a skeleton only. Replace every placeholder with reviewed
+   non-secret storage/layout values from the actual source.
+4. Call `draft_query_evidence_storage_overlay`, then stage its
+   `stage_arguments` with `stage_graph_revision`.
+5. Run `check_staged_revision_apply`, apply the ready row, rerun
+   `describe_query_context`, and only then call `draft_query_plan`.
+
 If that evidence identifies a reviewed source but the map still lacks physical
 query-planning metadata, call `draft_query_evidence_storage_overlay` with the
 dataset IRI, evidence IRI, and reviewed storage/path/layout values. The helper

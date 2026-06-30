@@ -40,6 +40,9 @@ When arriving cold, use this route before reading every reference doc.
    rerun the brief before repeating the same visible recommended tasks. Read
    `project_brief.health_tasks[]` for the underlying omitted queues, redacted
    export preflights, profile-candidate expansion, or stale seed recovery.
+   Treat `frontier_status.is_complete` as only the hidden-frontier audit: if
+   `first_unattended_action` or `mutation_allowed_after` still points to safety
+   review, do that before any mutation.
 4. If `project_brief.recommended_next_tasks[]` includes
    `staged_frontier_review`, call `doxabase.plan_staged_revision_recovery`
    before staging more profile or query repair work.

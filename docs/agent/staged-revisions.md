@@ -255,6 +255,10 @@ already-applied inspection targets, and repair helper calls that do not resolve
 to an existing IRI. Prefer `mutation_frontier_items` for unattended mutation
 loops: it combines existing revision targets with helper actions for repair
 lanes that create a successor and therefore have no current target IRI. Treat
+`lane_counts` and `next_action_queue_item_counts` as source-row counts, not a
+deduped apply/restage list; explicit inputs that include both a stale source and
+its restaged successor can count two `apply_after_review` lanes while the
+mutation frontier contains only the successor once. Treat
 `would_restage_revision_iris` as the post-review
 mechanical restage list, and treat `repair_first_revision_iris` /
 `repair_or_replace` lanes as repair or replacement work before any same-payload

@@ -1233,6 +1233,18 @@ def test_project_brief_reports_limit_crowded_queue_types(
         brief.frontier_status.must_rerun_call
         == brief.full_frontier_expansion.suggested_next_call
     )
+    expanded = db.project_brief(
+        **brief.full_frontier_expansion.suggested_next_action.arguments
+    )
+    assert expanded.frontier_status.is_complete is True
+    assert expanded.frontier_status.must_rerun_call is None
+    assert expanded.safety_first_action is not None
+    assert expanded.safety_first_source == "health_tasks:privacy_export_review"
+    assert expanded.first_unattended_action == expanded.safety_first_action
+    assert expanded.first_unattended_source == "health_tasks:privacy_export_review"
+    assert expanded.frontier_status.mutation_allowed_after == (
+        "safety_review_required_before_frontier_or_mutation"
+    )
     handoff_preflight = db.export_preflight(
         export_kind="handoff_bundle",
         graphs=["project"],
@@ -7887,6 +7899,10 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
             applied_source.revision_iri,
         ]
     )
+    assert alias_plan.lane_counts == {
+        "apply_after_review": 2,
+        "inspect_already_applied": 1,
+    }
     assert alias_plan.next_action_queue_item_counts == {
         "apply_after_review": 2,
         "inspect_already_applied": 1,
@@ -7894,6 +7910,7 @@ def test_plan_staged_revision_recovery_routes_mixed_staged_queue(
     assert alias_plan.next_action_queue["apply_after_review"] == [
         handled_successor.revision_iri
     ]
+    assert alias_plan.mutation_frontier_iris == [handled_successor.revision_iri]
     assert alias_plan.resolved_target_group_counts == {
         "apply_after_review": 1,
         "inspect_already_applied": 1,

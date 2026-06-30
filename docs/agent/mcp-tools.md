@@ -129,6 +129,10 @@ expansion or the first returned frontier task. `frontier_status` repeats the
 routing audit in compact form, including hidden task/profile counts,
 `must_rerun_call`, and
 `mutation_allowed_after`.
+Do not read `frontier_status.is_complete` as permission to mutate; it only says
+the hidden frontier is fully exposed. `first_unattended_action` and
+`mutation_allowed_after` remain authoritative when safety review is still
+blocking.
 Check `safety_first_action` / `safety_first_call` when you need to explain the
 safety branch separately; when a blocking privacy/export health task exists, it
 points to the redacted `export_preflight` review before any expansion or
