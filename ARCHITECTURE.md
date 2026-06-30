@@ -252,7 +252,7 @@ uv run python tools/validate_rdf.py
 
 Expected state at the time of writing:
 
-- `rc_core.ttl`: 1192 triples.
+- `rc_core.ttl`: 1242 triples.
 - `rc_shapes.ttl`: 1219 triples.
 - `ais.trig`: 325 quads.
 - `polymarket.trig`: 480 quads.

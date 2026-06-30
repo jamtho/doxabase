@@ -207,6 +207,38 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
     "frontier_first_action": {...},
     "frontier_first_call": "project_brief(...)",
     "frontier_first_source": "full_frontier_expansion",
+    "first_unattended_action": {...},
+    "first_unattended_call": "export_preflight(...)",
+    "first_unattended_source": "health_tasks:privacy_export_review",
+    "frontier_status": {
+        "is_complete": false,
+        "hidden_task_count": 1,
+        "hidden_profile_candidate_count": 1,
+        "hidden_queue_types": ["query_repair_review", "profile_review"],
+        "active_queue_types": [
+            "staged_frontier_review",
+            "query_repair_review",
+            "query_plan_handoff",
+            "profile_review",
+            "staged_review",
+        ],
+        "returned_queue_types": [
+            "staged_frontier_review",
+            "query_repair_review",
+            "query_plan_handoff",
+            "profile_review",
+            "staged_review",
+        ],
+        "must_rerun_call": "project_brief(...)",
+        "safety_first_call": "export_preflight(...)",
+        "frontier_first_call": "project_brief(...)",
+        "first_unattended_call": "export_preflight(...)",
+        "first_unattended_source": "health_tasks:privacy_export_review",
+        "mutation_allowed_after": (
+            "safety_review_required_before_frontier_or_mutation"
+        ),
+        "note": "...",
+    },
     "datasets": [
         {
             "dataset": {"iri": "https://...", "label": "...", "description": ...},
@@ -395,6 +427,15 @@ handoff-bundle preflight finds potential sensitive terms, it points to
 `next_best_expansion`, then the first returned `recommended_next_tasks[]`
 action. `frontier_first_call` is the display call for that action, and
 `frontier_first_source` records which queue or expansion supplied it.
+`first_unattended_action` / `first_unattended_call` resolves the precedence rule
+for scripts: safety review first when present, otherwise the frontier-first
+action. `frontier_status` is the compact audit object for unattended loops.
+Use `frontier_status.mutation_allowed_after` as a coarse gate:
+`safety_review_required_before_frontier_or_mutation` means do not expand,
+export, or mutate before the safety call; `frontier_expansion_required_before_mutation`
+means rerun the suggested `project_brief` call before choosing a mutation; and
+`current_frontier_task_available` means the brief exposes the current counted
+frontier and the next step is task review rather than blind mutation.
 For `expand_project_brief`, `suggested_limit` is the next bounded rerun and may
 still be iterative on large or skewed queues. `exhaustive_suggested_limit` is the
 one-shot bound for every task payload currently counted in `queue_counts`.

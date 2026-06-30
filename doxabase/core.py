@@ -429,6 +429,23 @@ class ProjectBriefHealthTask:
 
 
 @dataclass(frozen=True)
+class ProjectBriefFrontierStatus:
+    is_complete: bool
+    hidden_task_count: int
+    hidden_profile_candidate_count: int
+    hidden_queue_types: list[str]
+    active_queue_types: list[str]
+    returned_queue_types: list[str]
+    must_rerun_call: str | None
+    safety_first_call: str | None
+    frontier_first_call: str | None
+    first_unattended_call: str | None
+    first_unattended_source: str | None
+    mutation_allowed_after: str
+    note: str
+
+
+@dataclass(frozen=True)
 class ProjectBrief:
     key_counts: dict[str, int]
     dataset_count: int
@@ -451,6 +468,10 @@ class ProjectBrief:
     frontier_first_action: SuggestedNextAction | None
     frontier_first_call: str | None
     frontier_first_source: str | None
+    first_unattended_action: SuggestedNextAction | None
+    first_unattended_call: str | None
+    first_unattended_source: str | None
+    frontier_status: ProjectBriefFrontierStatus
     datasets: list[ProjectBriefDatasetSummary]
     staged_review: ProjectBriefStagedReviewSummary
     recommended_next_tasks: list[ProjectBriefRecommendedTask]
@@ -4033,6 +4054,29 @@ class DoxaBase:
                 recommended_tasks=selected_tasks,
             )
         )
+        first_unattended_source, first_unattended_action = (
+            self._project_brief_first_unattended_action(
+                safety_first_source=safety_first_source,
+                safety_first_action=safety_first_action,
+                frontier_first_source=frontier_first_source,
+                frontier_first_action=frontier_first_action,
+            )
+        )
+        frontier_status = self._project_brief_frontier_status(
+            queue_counts=queue_counts,
+            returned_queue_counts=returned_queue_counts,
+            omitted_queue_counts=omitted_queue_counts,
+            hidden_profile_candidate_count=profile_queue_counts.get(
+                "profile_candidate_omitted",
+                0,
+            ),
+            next_best_expansion=next_best_expansion,
+            full_frontier_expansion=full_frontier_expansion,
+            safety_first_action=safety_first_action,
+            frontier_first_action=frontier_first_action,
+            first_unattended_source=first_unattended_source,
+            first_unattended_action=first_unattended_action,
+        )
 
         return ProjectBrief(
             key_counts=overview.key_counts,
@@ -4068,6 +4112,14 @@ class DoxaBase:
                 else None
             ),
             frontier_first_source=frontier_first_source,
+            first_unattended_action=first_unattended_action,
+            first_unattended_call=(
+                first_unattended_action.call
+                if first_unattended_action is not None
+                else None
+            ),
+            first_unattended_source=first_unattended_source,
+            frontier_status=frontier_status,
             datasets=datasets,
             staged_review=staged_review,
             recommended_next_tasks=selected_tasks,
@@ -4444,6 +4496,108 @@ class DoxaBase:
                     task.suggested_next_action,
                 )
         return None, None
+
+    @staticmethod
+    def _project_brief_first_unattended_action(
+        *,
+        safety_first_source: str | None,
+        safety_first_action: SuggestedNextAction | None,
+        frontier_first_source: str | None,
+        frontier_first_action: SuggestedNextAction | None,
+    ) -> tuple[str | None, SuggestedNextAction | None]:
+        if safety_first_action is not None:
+            return safety_first_source, safety_first_action
+        return frontier_first_source, frontier_first_action
+
+    @staticmethod
+    def _project_brief_frontier_status(
+        *,
+        queue_counts: dict[str, int],
+        returned_queue_counts: dict[str, int],
+        omitted_queue_counts: dict[str, int],
+        hidden_profile_candidate_count: int,
+        next_best_expansion: ProjectBriefHealthTask | None,
+        full_frontier_expansion: ProjectBriefHealthTask | None,
+        safety_first_action: SuggestedNextAction | None,
+        frontier_first_action: SuggestedNextAction | None,
+        first_unattended_source: str | None,
+        first_unattended_action: SuggestedNextAction | None,
+    ) -> ProjectBriefFrontierStatus:
+        hidden_task_count = sum(omitted_queue_counts.values())
+        hidden_queue_types = list(omitted_queue_counts)
+        if (
+            hidden_profile_candidate_count > 0
+            and "profile_review" not in hidden_queue_types
+        ):
+            hidden_queue_types.append("profile_review")
+        must_rerun_action = (
+            full_frontier_expansion.suggested_next_action
+            if full_frontier_expansion is not None
+            and full_frontier_expansion.suggested_next_action is not None
+            else (
+                next_best_expansion.suggested_next_action
+                if next_best_expansion is not None
+                else None
+            )
+        )
+        is_complete = (
+            hidden_task_count == 0
+            and hidden_profile_candidate_count == 0
+            and must_rerun_action is None
+        )
+        if safety_first_action is not None:
+            mutation_allowed_after = (
+                "safety_review_required_before_frontier_or_mutation"
+            )
+            note = (
+                "Run the safety-first action before frontier expansion, export, "
+                "or graph mutation."
+            )
+        elif must_rerun_action is not None:
+            mutation_allowed_after = "frontier_expansion_required_before_mutation"
+            note = (
+                "Rerun project_brief with the suggested expanded bounds before "
+                "choosing a mutation-oriented task."
+            )
+        elif frontier_first_action is not None:
+            mutation_allowed_after = "current_frontier_task_available"
+            note = (
+                "The bounded brief has no hidden counted frontier; review the "
+                "frontier-first task before mutating."
+            )
+        else:
+            mutation_allowed_after = "no_current_recommended_task"
+            note = (
+                "No safety-first, expansion, or recommended frontier action is "
+                "currently exposed by the brief."
+            )
+        return ProjectBriefFrontierStatus(
+            is_complete=is_complete,
+            hidden_task_count=hidden_task_count,
+            hidden_profile_candidate_count=hidden_profile_candidate_count,
+            hidden_queue_types=hidden_queue_types,
+            active_queue_types=list(queue_counts),
+            returned_queue_types=list(returned_queue_counts),
+            must_rerun_call=(
+                must_rerun_action.call if must_rerun_action is not None else None
+            ),
+            safety_first_call=(
+                safety_first_action.call if safety_first_action is not None else None
+            ),
+            frontier_first_call=(
+                frontier_first_action.call
+                if frontier_first_action is not None
+                else None
+            ),
+            first_unattended_call=(
+                first_unattended_action.call
+                if first_unattended_action is not None
+                else None
+            ),
+            first_unattended_source=first_unattended_source,
+            mutation_allowed_after=mutation_allowed_after,
+            note=note,
+        )
 
     def _project_brief_profile_candidate_limit_health_task(
         self,

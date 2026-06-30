@@ -33,11 +33,12 @@ When arriving cold, use this route before reading every reference doc.
 3. Call `doxabase.project_brief` to see datasets, query-readiness buckets,
    profile draft counts, staged review queues, and bounded recommended next
    tasks.
-   Check `project_brief.next_best_expansion` before trusting a tight frontier,
-   and in unattended loops run `project_brief.full_frontier_expansion` when it
-   is non-null before repeating the same visible recommended tasks. Then read
-   `project_brief.health_tasks[]`; it can point to omitted queues, redacted
-   export preflights, or stale seed recovery.
+   In unattended loops, follow `project_brief.first_unattended_action` first:
+   it resolves blocking safety review before frontier expansion or task review.
+   Then read `project_brief.frontier_status`; if `must_rerun_call` is non-null,
+   rerun the brief before repeating the same visible recommended tasks. Read
+   `project_brief.health_tasks[]` for the underlying omitted queues, redacted
+   export preflights, profile-candidate expansion, or stale seed recovery.
 4. If `project_brief.recommended_next_tasks[]` includes
    `staged_frontier_review`, call `doxabase.plan_staged_revision_recovery`
    before staging more profile or query repair work.

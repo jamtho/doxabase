@@ -397,14 +397,36 @@ def test_project_brief_full_frontier_expansion_combines_limits(
     assert brief.frontier_first_source == "full_frontier_expansion"
     assert brief.frontier_first_action == full_expansion.suggested_next_action
     assert brief.frontier_first_call == full_expansion.suggested_next_call
+    assert brief.first_unattended_source == "full_frontier_expansion"
+    assert brief.first_unattended_action == brief.frontier_first_action
+    assert brief.first_unattended_call == brief.frontier_first_call
+    assert brief.frontier_status.is_complete is False
+    assert brief.frontier_status.hidden_task_count == sum(
+        brief.omitted_queue_counts.values()
+    )
+    assert brief.frontier_status.hidden_profile_candidate_count == 3
+    assert "profile_review" in brief.frontier_status.hidden_queue_types
+    assert brief.frontier_status.must_rerun_call == full_expansion.suggested_next_call
+    assert brief.frontier_status.safety_first_call is None
+    assert brief.frontier_status.first_unattended_call == brief.frontier_first_call
+    assert brief.frontier_status.first_unattended_source == "full_frontier_expansion"
+    assert (
+        brief.frontier_status.mutation_allowed_after
+        == "frontier_expansion_required_before_mutation"
+    )
 
     rerun = db.project_brief(**full_expansion.suggested_next_action.arguments)
 
     assert rerun.omitted_queue_counts == {}
     assert rerun.profile_queue_counts["profile_candidate_omitted"] == 0
     assert rerun.full_frontier_expansion is None
+    assert rerun.frontier_status.is_complete is True
+    assert rerun.frontier_status.hidden_task_count == 0
+    assert rerun.frontier_status.hidden_profile_candidate_count == 0
+    assert rerun.frontier_status.must_rerun_call is None
     assert rerun.frontier_first_action is not None
     assert rerun.frontier_first_source is not None
+    assert rerun.first_unattended_action == rerun.frontier_first_action
 
 
 def test_project_brief_profile_tasks_carry_evidence_scope_for_blocker_actions(
@@ -1190,9 +1212,26 @@ def test_project_brief_reports_limit_crowded_queue_types(
     assert brief.safety_first_action == privacy_task.suggested_next_action
     assert brief.safety_first_call == privacy_task.suggested_next_call
     assert brief.safety_first_source == "health_tasks:privacy_export_review"
+    assert brief.first_unattended_action == privacy_task.suggested_next_action
+    assert brief.first_unattended_call == privacy_task.suggested_next_call
+    assert brief.first_unattended_source == "health_tasks:privacy_export_review"
     assert (
         brief.frontier_first_action
         == brief.full_frontier_expansion.suggested_next_action
+    )
+    assert brief.frontier_status.is_complete is False
+    assert brief.frontier_status.safety_first_call == privacy_task.suggested_next_call
+    assert (
+        brief.frontier_status.first_unattended_call
+        == privacy_task.suggested_next_call
+    )
+    assert (
+        brief.frontier_status.mutation_allowed_after
+        == "safety_review_required_before_frontier_or_mutation"
+    )
+    assert (
+        brief.frontier_status.must_rerun_call
+        == brief.full_frontier_expansion.suggested_next_call
     )
     handoff_preflight = db.export_preflight(
         export_kind="handoff_bundle",

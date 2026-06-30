@@ -449,15 +449,47 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert "frontier_first_action" in result
     assert "frontier_first_call" in result
     assert "frontier_first_source" in result
+    assert "first_unattended_action" in result
+    assert "first_unattended_call" in result
+    assert "first_unattended_source" in result
+    assert "frontier_status" in result
+    frontier_status = result["frontier_status"]
+    assert isinstance(frontier_status["is_complete"], bool)
+    assert isinstance(frontier_status["hidden_task_count"], int)
+    assert isinstance(frontier_status["hidden_profile_candidate_count"], int)
+    assert isinstance(frontier_status["hidden_queue_types"], list)
+    assert isinstance(frontier_status["active_queue_types"], list)
+    assert isinstance(frontier_status["returned_queue_types"], list)
+    assert frontier_status["first_unattended_call"] == result[
+        "first_unattended_call"
+    ]
+    assert frontier_status["first_unattended_source"] == result[
+        "first_unattended_source"
+    ]
+    assert frontier_status["mutation_allowed_after"] in {
+        "safety_review_required_before_frontier_or_mutation",
+        "frontier_expansion_required_before_mutation",
+        "current_frontier_task_available",
+        "no_current_recommended_task",
+    }
     if result["safety_first_action"] is not None:
         assert result["safety_first_call"] == result["safety_first_action"]["call"]
         assert result["safety_first_source"] in {
             "health_tasks:privacy_export_review"
         }
+        assert result["first_unattended_action"] == result["safety_first_action"]
+        assert result["first_unattended_call"] == result["safety_first_call"]
     if result["frontier_first_action"] is not None:
         assert result["frontier_first_call"] == result["frontier_first_action"][
             "call"
         ]
+        if result["safety_first_action"] is None:
+            assert result["first_unattended_action"] == result[
+                "frontier_first_action"
+            ]
+            assert result["first_unattended_call"] == result[
+                "frontier_first_call"
+            ]
     if result["next_best_expansion"] is not None:
         assert result["next_best_expansion"]["task_type"] in {
             "expand_project_brief",

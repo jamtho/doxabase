@@ -309,6 +309,10 @@ few useful gaps:
   evidence. `project_brief` now returns `active_queue_type_count`,
   `returned_queue_type_count`, and `limit_crowded_queue_types`; when crowding is
   reported, rerun with a higher limit before deciding the next loop frontier.
+  A later frontier-routing trial showed the fields worked but distracted agents
+  could still act on the first visible task and skip expansion. Use
+  `first_unattended_action` for the canonical first hop and
+  `frontier_status` for the compact safety/frontier/mutation gate.
 - A profile/pattern frontier trial showed agents could stage profile map
   updates, metric vocabulary proposals, and caveat alternatives, but had to
   manually stitch the related staged revisions into one review bundle. Use

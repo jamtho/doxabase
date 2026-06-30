@@ -122,10 +122,16 @@ In unattended loops, run `full_frontier_expansion` when it is non-null before
 repeating visible recommended tasks; it expands both `limit` and
 `profile_candidate_limit` enough to expose the currently counted task frontier
 and hidden profile draft candidates together.
-For scripts, prefer `frontier_first_action` / `frontier_first_call` as the
-canonical frontier hop. Check `safety_first_action` / `safety_first_call` first;
-when a blocking privacy/export health task exists, it points to the redacted
-`export_preflight` review before any expansion or mutation-oriented work.
+For scripts, prefer `first_unattended_action` / `first_unattended_call` as the
+canonical first hop. It resolves the precedence rule directly: blocking
+privacy/export safety review first, otherwise frontier expansion or the first
+returned frontier task. `frontier_status` repeats the routing audit in compact
+form, including hidden task/profile counts, `must_rerun_call`, and
+`mutation_allowed_after`.
+Check `safety_first_action` / `safety_first_call` when you need to explain the
+safety branch separately; when a blocking privacy/export health task exists, it
+points to the redacted `export_preflight` review before any expansion or
+mutation-oriented work.
 `frontier_first_action` still chooses `full_frontier_expansion` first, then
 `next_best_expansion`, then the first returned recommended task, and
 `frontier_first_source` records which surface supplied it.
