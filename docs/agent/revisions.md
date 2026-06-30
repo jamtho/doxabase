@@ -213,6 +213,10 @@ before calling the import tools. Revision list, detail, and lineage responses
 promote these import actions to top-level `suggested_next_actions`; list and
 lineage `next_action_queue` / `next_action` route them as
 `complete_handoff_import` before diff or stale-drift inspection.
+For explicit handoff recovery, `plan_staged_revision_recovery(revision_iris=[...])`
+also routes `snapshot_rows_without_history` rows through
+`complete_handoff_import` with an `import_trig` action instead of trying to
+restage a revision whose history RDF has not arrived yet.
 `import_revision_snapshots()` also returns `post_import_snapshot_evidence` for
 the bundle's revision IRIs, so snapshot-before-history imports can be routed
 without making a separate evidence call first.

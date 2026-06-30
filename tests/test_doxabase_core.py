@@ -22970,6 +22970,37 @@ def test_history_snapshot_only_handoff_routes_to_import_before_mutation(
     db.export_trig(history_path, graphs="history")
     db.export_revision_snapshots(snapshot_path, revision_iris=[staged.revision_iri])
 
+    snapshot_first = DoxaBase.create(tmp_path / "snapshot-first.sqlite")
+    snapshot_first.import_revision_snapshots(snapshot_path)
+    snapshot_only_evidence = snapshot_first.describe_revision_snapshot_evidence(
+        staged.revision_iri
+    )
+    assert snapshot_only_evidence.status == "snapshot_rows_without_history"
+    assert [action.tool_name for action in snapshot_only_evidence.suggested_next_actions] == [
+        "import_trig"
+    ]
+    snapshot_first_plan = snapshot_first.plan_staged_revision_recovery(
+        [staged.revision_iri],
+        current_staged_work_only=False,
+    )
+    assert snapshot_first_plan.lane_counts == {"complete_handoff_import": 1}
+    assert snapshot_first_plan.next_action_queue == {
+        "complete_handoff_import": [staged.revision_iri]
+    }
+    assert snapshot_first_plan.not_restageable_revision_iris_by_reason == {
+        "missing_history_graph": [staged.revision_iri]
+    }
+    assert snapshot_first_plan.suggested_next_actions[0].tool_name == "import_trig"
+    snapshot_first_lane = snapshot_first_plan.lanes[0]
+    assert snapshot_first_lane.lane == "complete_handoff_import"
+    assert snapshot_first_lane.batch_action == "skipped_snapshot_rows_without_history"
+    assert snapshot_first_lane.not_restageable_reason == "missing_history_graph"
+    assert snapshot_first_lane.source_snapshot_evidence.status == (
+        "snapshot_rows_without_history"
+    )
+    assert snapshot_first_lane.next_action is not None
+    assert snapshot_first_lane.next_action.tool_name == "import_trig"
+
     partial = DoxaBase.create(tmp_path / "history-snapshots-only.sqlite")
     partial.import_trig(history_path)
     partial.import_revision_snapshots(snapshot_path)

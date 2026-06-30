@@ -4615,6 +4615,9 @@ Existing snapshot pairs are skipped unless `replace=True`.
 If snapshot JSON was imported before history RDF, rows report
 `status="snapshot_rows_without_history"` and include an `import_trig` suggested
 action.
+If an unattended recovery loop already has the affected revision IRIs, an
+explicit `plan_staged_revision_recovery(revision_iris=[...])` call returns the
+same `complete_handoff_import` route instead of raising or trying to restage.
 If history and snapshot JSON were imported without the current project graphs,
 rows can report `status="history_plus_snapshot_rows"` with
 `missing_current_graph_roles`; import the complete project RDF before using

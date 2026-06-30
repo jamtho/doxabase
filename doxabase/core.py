@@ -30826,6 +30826,7 @@ class DoxaBase:
         (
             restage_revision_iris,
             patchless_staged_history_iris,
+            snapshot_only_revision_iris,
             applied_event_iris,
         ) = self._staged_recovery_split_non_patch_inputs(
             selected_revision_iris,
@@ -30865,6 +30866,13 @@ class DoxaBase:
             )
             for revision_iri in patchless_staged_history_iris
         ]
+        snapshot_only_batch_items = [
+            self._snapshot_only_recovery_item(
+                revision_iri,
+                history_graphs=history_graphs,
+            )
+            for revision_iri in snapshot_only_revision_iris
+        ]
         applied_event_batch_items = [
             self._applied_event_recovery_item(
                 revision_iri,
@@ -30888,6 +30896,22 @@ class DoxaBase:
                 "It cannot be applied or restaged until a project/history RDF "
                 "bundle with patch entries is imported; valid staged patch rows "
                 "in the same request were still planned."
+            )
+        for item in snapshot_only_batch_items:
+            lane, warning = self._staged_recovery_lane_from_batch_item(
+                item,
+                summary_by_iri=summary_by_iri,
+                include_drafts=False,
+                validation_scope=validation_scope,
+            )
+            lanes.append(lane)
+            if warning is not None:
+                warnings.append(warning)
+            warnings.append(
+                "Recovery selection includes snapshot rows without RDF history "
+                f"metadata: {item.source_revision_iri}. Import the "
+                "project/history RDF bundle before applying, restaging, or "
+                "repairing this revision."
             )
         for item in applied_event_batch_items:
             lane, warning = self._staged_recovery_lane_from_batch_item(
@@ -30987,6 +31011,7 @@ class DoxaBase:
                 revision_iri: revision_iri
                 for revision_iri in [
                     *patchless_staged_history_iris,
+                    *snapshot_only_revision_iris,
                     *applied_event_iris,
                 ]
             },
@@ -30996,6 +31021,7 @@ class DoxaBase:
                 [
                     *batch.review_revision_iris,
                     *patchless_staged_history_iris,
+                    *snapshot_only_revision_iris,
                     *applied_event_iris,
                 ]
             )
@@ -31009,6 +31035,11 @@ class DoxaBase:
                 "missing_patch_payload",
                 [],
             ).extend(patchless_staged_history_iris)
+        if snapshot_only_revision_iris:
+            not_restageable_revision_iris_by_reason.setdefault(
+                "missing_history_graph",
+                [],
+            ).extend(snapshot_only_revision_iris)
         if applied_event_iris:
             not_restageable_revision_iris_by_reason.setdefault(
                 "applied_event_record",
@@ -31074,6 +31105,7 @@ class DoxaBase:
                     [
                         *batch.bundle_summary.recommended_review_iris,
                         *patchless_staged_history_iris,
+                        *snapshot_only_revision_iris,
                         *applied_event_iris,
                     ]
                 )
@@ -31116,9 +31148,10 @@ class DoxaBase:
         revision_iris: Iterable[str],
         *,
         history_graphs: list[str],
-    ) -> tuple[list[str], list[str], list[str]]:
+    ) -> tuple[list[str], list[str], list[str], list[str]]:
         restage_revision_iris: list[str] = []
         patchless_staged_history_iris: list[str] = []
+        snapshot_only_revision_iris: list[str] = []
         applied_event_iris: list[str] = []
         staged_revision_type = self.expand_iri("rc:StagedRevision")
         graph_revision_type = self.expand_iri("rc:GraphRevision")
@@ -31151,9 +31184,22 @@ class DoxaBase:
                 and applies_staged_revision is None
             ):
                 patchless_staged_history_iris.append(revision_value)
+            elif (
+                self._revision_snapshot_evidence_status(
+                    revision_value,
+                    history_graphs,
+                ).status
+                == "snapshot_rows_without_history"
+            ):
+                snapshot_only_revision_iris.append(revision_value)
             else:
                 restage_revision_iris.append(revision_iri)
-        return restage_revision_iris, patchless_staged_history_iris, applied_event_iris
+        return (
+            restage_revision_iris,
+            patchless_staged_history_iris,
+            snapshot_only_revision_iris,
+            applied_event_iris,
+        )
 
     def _empty_staged_recovery_batch(
         self,
@@ -31184,6 +31230,101 @@ class DoxaBase:
             requires_recheck_after_each_apply=False,
             sequential_apply_recheck_candidate_iris=[],
             export_record=None,
+        )
+
+    def _snapshot_only_recovery_item(
+        self,
+        revision_iri: str,
+        *,
+        history_graphs: list[str],
+    ) -> StagedGraphRevisionBatchRestageItem:
+        revision_value = self.expand_iri(revision_iri)
+        snapshot_evidence = self._revision_snapshot_evidence_status(
+            revision_value,
+            history_graphs,
+        )
+        snapshot_completeness = self._snapshot_evidence_completeness_label(
+            snapshot_evidence
+        )
+        next_action = self._snapshot_evidence_completion_next_action(
+            snapshot_evidence.suggested_next_actions
+        )
+        if next_action is None:
+            arguments = {"path": "/tmp/project.trig", "path_is_placeholder": True}
+            next_action = RevisionNextAction(
+                action_type="complete_handoff_import",
+                queue="complete_handoff_import",
+                action_label="Import project/history RDF bundle",
+                tool_name="import_trig",
+                mcp_tool_name="doxabase.import_trig",
+                arguments=arguments,
+                reason=(
+                    "Snapshot rows exist for this revision, but the RDF history "
+                    "record is missing. Import the project/history RDF bundle at "
+                    "its real handoff path before using normal revision helpers."
+                ),
+                call=self._suggested_call_string("import_trig", arguments),
+                source="snapshot_evidence",
+            )
+        suggested_next_actions = snapshot_evidence.suggested_next_actions or [
+            SuggestedNextAction(
+                action_label=next_action.action_label,
+                tool_name=next_action.tool_name or "import_trig",
+                mcp_tool_name=next_action.mcp_tool_name or "doxabase.import_trig",
+                arguments=next_action.arguments,
+                reason=next_action.reason,
+                call=next_action.call or "",
+            )
+        ]
+        queue_item = self._revision_next_action_queue_item(
+            row_iri=revision_value,
+            next_action=next_action,
+            record_kind=None,
+            application_status="history_missing",
+            application_decision="complete_handoff_import",
+            staged_validation_status="not_recorded",
+        )
+        return StagedGraphRevisionBatchRestageItem(
+            source_revision_iri=revision_value,
+            summary=None,
+            status_before="history_missing",
+            decision_before="complete_handoff_import",
+            routing_decision_before="complete_handoff_import",
+            stale_resolution_state_before=None,
+            blocking_reasons_before=["missing_history_graph"],
+            exact_drift_summary_before=[],
+            source_staged_validation_status="not_recorded",
+            source_validation_result_count=None,
+            source_snapshot_evidence=snapshot_evidence,
+            source_snapshot_evidence_completeness=snapshot_completeness,
+            status_after="history_missing",
+            decision_after="complete_handoff_import",
+            routing_decision_after="complete_handoff_import",
+            stale_resolution_state_after=None,
+            blocking_reasons_after=["missing_history_graph"],
+            exact_drift_summary_after=[],
+            current_staged_validation_status="not_recorded",
+            current_validation_result_count=None,
+            current_snapshot_evidence=snapshot_evidence,
+            current_snapshot_evidence_completeness=snapshot_completeness,
+            triples_to_add_after=0,
+            triples_to_remove_after=0,
+            action="skipped_snapshot_rows_without_history",
+            not_restageable_reason="missing_history_graph",
+            restaged_from=None,
+            restaged_revision_iri=None,
+            current_restaged_by=None,
+            current_revision_iri=revision_value,
+            next_action_after=next_action,
+            next_action_queue_item_after=queue_item,
+            suggested_next_actions_after=suggested_next_actions,
+            repair_first_warning=None,
+            note=(
+                "Skipped because exact snapshot rows exist for this revision IRI "
+                "but the RDF history record is missing. Import the matching "
+                "project/history RDF bundle before applying, restaging, or "
+                "repairing staged revisions."
+            ),
         )
 
     def _patchless_staged_history_recovery_item(

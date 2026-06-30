@@ -3001,6 +3001,12 @@ few useful gaps:
   selector ergonomics: `storage_access_iri` can still match several candidate
   paths, so the query-planning doc now gives the maintained
   `candidate_index` + `physical_layout_iri` selector route for mixed storage.
+- A cross-capsule staged handoff trial confirmed the TriG-first recovery path
+  can recover exact stale drift, batch restage successors, apply one row, and
+  replan siblings in a cold capsule. The remaining reversed-order gap was
+  snapshot JSON imported before project/history RDF: explicit recovery planning
+  now routes those `snapshot_rows_without_history` rows to
+  `complete_handoff_import` with an `import_trig` action instead of raising.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
