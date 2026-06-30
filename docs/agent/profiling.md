@@ -203,6 +203,13 @@ does not create a `profile_review` task.
 The bridge `Row` column uses the same row number as the grouped review bundle's
 `Revision N` sections and repeats the candidate summary, so a Markdown-only
 reviewer can map route lanes back to the detailed revision section directly.
+Generic staged inspection preserves the stored trail too:
+`describe_staged_revision()` exposes `profile_route_sources`,
+`profile_route_keys`, and `profile_route_groups`, and
+`export_staged_revisions()` adds a compact `Profile Route Bridge` when those
+stored sources exist. Use the full profile insight bundle when you need live
+open-lane analysis; use the generic bridge when a handoff only has a staged
+review bundle or one staged row.
 When several route groups map to the same lane, match strength, and support
 kind, the Markdown lane label is grouped with a route-group count; the returned
 `profile_route_keys` and `profile_route_groups` still preserve every route key

@@ -1289,6 +1289,8 @@ class StagedGraphRevisionExportSummary:
     stale_resolution_state: str | None
     shared_context_patch_count: int
     shared_context_graphs: list[str]
+    profile_route_keys: list[str]
+    profile_route_groups: list[dict[str, Any]]
     next_action: RevisionNextAction | None
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
@@ -2294,6 +2296,9 @@ class StagedGraphRevisionDescription:
     supporting_patterns: list[ResourceSummary]
     revision_anchors: list[ResourceSummary]
     evidence: list[ResourceSummary]
+    profile_route_sources: list[dict[str, Any]]
+    profile_route_keys: list[str]
+    profile_route_groups: list[dict[str, Any]]
     current_apply_check: StagedRevisionApplySummary | None = None
     judgement_panel: MapAssertionJudgementPanel | None = None
     stored_review_context: StagedRevisionStoredReviewContext | None = None
@@ -10232,6 +10237,9 @@ class DoxaBase:
             patches=patches,
             lookup_graphs=all_lookup_graphs,
         )
+        profile_route_sources = self._stored_profile_insight_route_sources(
+            revision_iri
+        )
 
         description = StagedGraphRevisionDescription(
             iri=revision_iri,
@@ -10322,7 +10330,24 @@ class DoxaBase:
                 all_lookup_graphs,
                 self._objects(data_graphs, revision_iri, "rc:evidence"),
             ),
+            profile_route_sources=profile_route_sources,
+            profile_route_keys=self._profile_route_keys_from_sources(
+                profile_route_sources
+            ),
+            profile_route_groups=[],
         )
+        if profile_route_sources:
+            description = replace(
+                description,
+                profile_route_groups=self._stored_profile_route_groups(
+                    profile_route_sources,
+                    direct_review_lane=(
+                        self._profile_insight_candidate_direct_review_lane(
+                            description
+                        )
+                    ),
+                ),
+            )
         judgement_panel = self._staged_revision_judgement_panel(description)
         if judgement_panel is not None:
             description = replace(description, judgement_panel=judgement_panel)
@@ -39866,6 +39891,74 @@ class DoxaBase:
             sources.append(source)
         return self._dedupe_profile_route_sources(sources)
 
+    @staticmethod
+    def _profile_route_keys_from_sources(
+        sources: Iterable[MappingABC[str, Any]],
+    ) -> list[str]:
+        route_keys: list[str] = []
+        for source in sources:
+            route_group_key = source.get("route_group_key")
+            if isinstance(route_group_key, str):
+                DoxaBase._append_unique(route_keys, route_group_key)
+        return route_keys
+
+    def _stored_profile_route_groups(
+        self,
+        profile_route_sources: list[dict[str, Any]],
+        *,
+        direct_review_lane: str | None,
+    ) -> list[dict[str, Any]]:
+        enriched_sources = [
+            self._profile_insight_candidate_route_source(
+                source,
+                source_origin="stored_revision",
+                direct_allowed=True,
+            )
+            for source in profile_route_sources
+        ]
+        observations, patterns, anchors = (
+            self._profile_route_source_support_iris(profile_route_sources)
+        )
+        return self._profile_insight_candidate_route_groups(
+            matched_profile_observation_iris=observations,
+            matched_supporting_pattern_iris=patterns,
+            matched_revision_anchor_iris=anchors,
+            profile_route_sources=enriched_sources,
+            direct_review_lane=direct_review_lane,
+        )
+
+    @staticmethod
+    def _profile_route_source_support_iris(
+        sources: Iterable[MappingABC[str, Any]],
+    ) -> tuple[list[str], list[str], list[str]]:
+        observations: list[str] = []
+        patterns: list[str] = []
+        anchors: list[str] = []
+
+        def append_strings(target: list[str], values: Any) -> None:
+            if not isinstance(values, list):
+                return
+            for value in values:
+                if isinstance(value, str):
+                    DoxaBase._append_unique(target, value)
+
+        for source in sources:
+            append_strings(
+                observations,
+                source.get("duplicate_profile_observation_iris"),
+            )
+            append_strings(observations, source.get("profile_observation_iris"))
+            append_strings(
+                observations,
+                source.get("supporting_profile_observation_iris"),
+            )
+            append_strings(patterns, source.get("route_pattern_iris"))
+            mixed_support = source.get("mixed_support")
+            if isinstance(mixed_support, MappingABC):
+                append_strings(patterns, mixed_support.get("pattern_iris"))
+            append_strings(anchors, source.get("route_anchor_iris"))
+        return observations, patterns, anchors
+
     def _profile_insight_review_candidate(
         self,
         description: StagedGraphRevisionDescription,
@@ -40976,6 +41069,8 @@ class DoxaBase:
                             for summary in shared_context_patch_summaries
                         }
                     ),
+                    profile_route_keys=description.profile_route_keys,
+                    profile_route_groups=description.profile_route_groups,
                     next_action=next_action,
                     suggested_next_actions=suggested_next_actions,
                     suggested_next_calls=(
@@ -46490,6 +46585,12 @@ class DoxaBase:
         if review_sequence:
             lines.extend(["", "## Review Sequence", ""])
             lines.extend(review_sequence)
+        profile_route_bridge = self._staged_revisions_profile_route_bridge_markdown(
+            revision_summaries
+        )
+        if profile_route_bridge:
+            lines.extend(["", "## Profile Route Bridge", ""])
+            lines.extend(profile_route_bridge)
         review_queues = self._staged_revisions_review_queues_markdown(bundle_summary)
         if review_queues:
             lines.extend(["", "## Review Queues", ""])
@@ -46572,6 +46673,86 @@ class DoxaBase:
                 ]
         )
         return "\n".join(lines).rstrip() + "\n"
+
+    def _staged_revisions_profile_route_bridge_markdown(
+        self,
+        summaries: list[StagedGraphRevisionExportSummary],
+    ) -> list[str]:
+        if not any(summary.profile_route_groups for summary in summaries):
+            return []
+        lines = [
+            (
+                "| Row | Candidate | Revision | Profile route keys | "
+                "Review lanes | Semantic moves |"
+            ),
+            "|---:|---|---|---|---|---|",
+        ]
+        for index, summary in enumerate(summaries, start=1):
+            if not summary.profile_route_groups:
+                continue
+            route_keys = ", ".join(
+                f"`{key}`" for key in summary.profile_route_keys
+            )
+            review_lanes = ", ".join(
+                self._profile_insight_route_bridge_lane_cells(
+                    summary.profile_route_groups
+                )
+            )
+            semantic_moves = self._staged_revisions_profile_route_move_cell(
+                summary.profile_route_groups
+            )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(index),
+                        self._markdown_table_cell(
+                            summary.summary or summary.revision_iri
+                        ),
+                        self._markdown_table_cell(
+                            f"`{summary.revision_iri}`"
+                        ),
+                        self._markdown_table_cell(route_keys),
+                        self._markdown_table_cell(review_lanes),
+                        self._markdown_table_cell(semantic_moves),
+                    ]
+                )
+                + " |"
+            )
+        return lines
+
+    @staticmethod
+    def _staged_revisions_profile_route_move_cell(
+        groups: Iterable[dict[str, Any]],
+    ) -> str:
+        cells: list[str] = []
+        for group in groups:
+            review_lane = str(group.get("review_lane") or "profile route")
+            closed = [
+                str(move)
+                for move in group.get("closed_semantic_moves") or []
+                if isinstance(move, str)
+            ]
+            remaining = [
+                str(move)
+                for move in group.get("remaining_semantic_moves") or []
+                if isinstance(move, str)
+            ]
+            all_moves = [
+                str(move)
+                for move in group.get("semantic_moves") or []
+                if isinstance(move, str)
+            ]
+            if closed or remaining:
+                cells.append(
+                    f"{review_lane}: closed {', '.join(closed) or 'none'}; "
+                    f"remaining {', '.join(remaining) or 'none'}"
+                )
+            else:
+                cells.append(
+                    f"{review_lane}: {', '.join(all_moves) or 'unspecified'}"
+                )
+        return "; ".join(cells)
 
     def _staged_revisions_modelling_choice_markdown(
         self,

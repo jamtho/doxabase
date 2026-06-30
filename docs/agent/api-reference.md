@@ -1437,7 +1437,10 @@ staged-time validation result. Bundles with restaged revisions include a
 `Restage Context` section near the top. When an alternative's stored target has
 itself been restaged, grouped Markdown also includes `Alternative Context` so
 reviewers can compare against the current successor without reconstructing that
-lineage by hand. Pass `executive_summary` when the comparison needs an
+lineage by hand. When staged rows carry profile route sources, grouped Markdown
+also includes a compact `Profile Route Bridge`; structured summaries expose the
+same `profile_route_keys` and `profile_route_groups` fields. Pass
+`executive_summary` when the comparison needs an
 agent-authored synthesis at the top of the artifact.
 The returned record also includes `revision_summaries`, a machine-readable copy
 of the grouped status rows with current apply status, blockers, validation

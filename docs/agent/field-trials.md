@@ -3268,6 +3268,15 @@ few useful gaps:
   `matching_recovery_session_iris`; when a matching session exists, its first
   suggested action is `describe_staged_revision_recovery_session`. Only start a
   receiver-local session when no matching imported source session is available.
+- A profile/review-bundle handoff trial showed that full profile insight
+  bundles preserved route keys well, but generic staged revision inspection and
+  grouped staged Markdown hid `rc:profileInsightRouteSource` details. Generic
+  `describe_staged_revision()` now exposes stored `profile_route_sources`,
+  `profile_route_keys`, and `profile_route_groups`; `export_staged_revisions()`
+  includes a compact `Profile Route Bridge` when any row carries those sources.
+  Use this for receiver-side staged review handoffs when the full profile
+  insight bundle is unavailable or when a generic staged bundle mixes profile
+  and non-profile rows.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

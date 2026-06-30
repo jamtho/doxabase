@@ -4964,6 +4964,9 @@ description.supporting_claims
 description.supporting_patterns
 description.revision_anchors
 description.evidence
+description.profile_route_sources
+description.profile_route_keys
+description.profile_route_groups
 description.current_apply_check
 description.judgement_panel
 description.stored_review_context
@@ -4976,6 +4979,11 @@ On `StagedGraphRevisionDescription`, relation fields such as
 `applied_by` are `ResourceSummary` objects when present. This differs from
 revision list rows and grouped export summaries, where the same relation names
 are IRI strings for script-friendly routing.
+When staged rows were created from profile-review actions,
+`profile_route_sources` exposes the stored `rc:profileInsightRouteSource`
+payloads directly. `profile_route_keys` is the deduped `route_group_key` list,
+and `profile_route_groups` is a compact grouping by lane, route step, and
+semantic move for generic staged-revision inspection.
 
 Each `description.graph_snapshots[]` item has:
 
@@ -5984,6 +5992,8 @@ item.current_restaged_by
 item.stale_resolution_state
 item.shared_context_patch_count
 item.shared_context_graphs
+item.profile_route_keys
+item.profile_route_groups
 item.next_action
 item.suggested_next_actions
 item.suggested_next_calls
@@ -5991,6 +6001,11 @@ item.suggested_next_calls
 
 Use these rows when a script needs the same grouped current-status information
 shown in the Markdown summary table without making separate apply-check calls.
+When stored profile route metadata is present, `item.profile_route_keys` and
+`item.profile_route_groups` mirror the generic staged Markdown `Profile Route
+Bridge`; use them to connect staged rows back to profile map-update, metric,
+type, query-context, or caveat review lanes without regenerating a full profile
+insight bundle.
 `item.review_recommendation` is author-supplied prose stored on the staged
 revision. `item.apply_recommended_resolution` is the live apply-check guidance
 for the row's current status, such as validation repair or restage advice.

@@ -9800,6 +9800,33 @@ def test_stage_profile_map_updates_tool_returns_json_like_payload(
         table,
         status_column,
     }
+    assert described["profile_route_sources"]
+    assert described["profile_route_keys"] == list(
+        dict.fromkeys(
+            source["route_group_key"]
+            for source in described["profile_route_sources"]
+        )
+    )
+    route_group_lanes = {
+        group["review_lane"] for group in described["profile_route_groups"]
+    }
+    assert "profile_map_updates" in route_group_lanes
+
+    generic_export_path = tmp_path / "generic-profile-staged-review.md"
+    generic_export = export_staged_revisions_tool(
+        db,
+        revision_iris=[result["staged_revision"]["revision_iri"]],
+        path=str(generic_export_path),
+    )
+    generic_summary = generic_export["revision_summaries"][0]
+    assert generic_summary["profile_route_keys"] == described["profile_route_keys"]
+    assert generic_summary["profile_route_groups"] == (
+        described["profile_route_groups"]
+    )
+    generic_markdown = generic_export_path.read_text(encoding="utf-8")
+    assert "## Profile Route Bridge" in generic_markdown
+    assert "profile_map_updates" in generic_markdown
+    assert described["profile_route_keys"][0] in generic_markdown
     assert db.describe_dataset(table).row_count_snapshot == 8
 
 

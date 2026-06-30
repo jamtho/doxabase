@@ -2142,7 +2142,13 @@ current successor instead of another restage. `current_restaged_by` follows
 deeper restage chains while `restaged_by` preserves the direct provenance edge.
 `current_alternative_to` follows refreshed successors while `alternative_to`
 preserves provenance. The payload also returns
-`bundle_summary` with status/state counts, unresolved stale sources, handled
+per-row `profile_route_keys` and `profile_route_groups` when staged rows store
+profile route sources, and grouped Markdown includes a compact `Profile Route
+Bridge` table for those rows. Use that bridge for profile-derived staged rows
+when you have only a generic staged review bundle rather than a full
+`export_profile_insight_review_bundle` artifact.
+The payload also returns `bundle_summary` with status/state counts, unresolved
+stale sources, handled
 stale sources, ready successors, all validation-failed revisions by current
 apply status, deduped
 `recommended_review_iris`, `recommended_mutation_review_iris`,
