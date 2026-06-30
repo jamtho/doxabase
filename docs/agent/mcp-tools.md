@@ -1004,6 +1004,12 @@ without recording graph-revision rationale. If
 known AIS or Polymarket fixture tables exist but the capsule has zero
 `rc:StorageAccess` resources; treat that as a stale/reduced fixture capsule and
 load fresh fixtures into scratch before judging query-target behavior.
+`project_brief.health_tasks[]` also surfaces this as
+`query_fixture_staleness_review` when the current frontier contains query repair
+work, with `fixture_names`, `known_fixture_table_iris`, `storage_access_count`,
+and a representative `describe_query_context` action. Use it as an advisory
+anti-loop cue before staging repeated missing-storage repairs; privacy/export
+and stale-seed safety gates still take precedence.
 
 ### doxabase.draft_query_plan
 

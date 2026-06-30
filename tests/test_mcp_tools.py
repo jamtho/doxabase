@@ -550,6 +550,37 @@ def test_project_brief_tool_returns_json_like_payload(tmp_path: Path) -> None:
     assert isinstance(result["recommended_next_tasks"], list)
 
 
+def test_project_brief_tool_serializes_fixture_storage_health_task(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    db.record_map_dataset(
+        dataset,
+        label="AIS Daily Broadcast Positions",
+        is_table=True,
+    )
+
+    result = project_brief_tool(db, limit=5)
+
+    fixture_task = next(
+        task
+        for task in result["health_tasks"]
+        if task["task_type"] == "query_fixture_staleness_review"
+    )
+    assert fixture_task["source"] == "fixture_storage_access_check"
+    assert fixture_task["queue_types"] == ["query_repair_review"]
+    assert fixture_task["fixture_names"] == ["AIS"]
+    assert fixture_task["known_fixture_table_iris"] == [dataset]
+    assert fixture_task["storage_access_count"] == 0
+    assert fixture_task["suggested_next_action"]["tool_name"] == (
+        "describe_query_context"
+    )
+    assert fixture_task["suggested_next_action"]["arguments"] == {
+        "iri": dataset
+    }
+
+
 def test_project_brief_tool_routes_query_repair_tasks_to_context(
     tmp_path: Path,
 ) -> None:

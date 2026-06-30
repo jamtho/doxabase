@@ -1432,6 +1432,48 @@ def test_project_brief_privacy_health_uses_handoff_preflight_scope(
     assert fake_secret not in json.dumps(to_dict(privacy_task))
 
 
+def test_project_brief_surfaces_fixture_storage_health_task(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://richcanopy.org/example/manifest/ais#DailyBroadcasts"
+    db.record_map_dataset(
+        dataset,
+        label="AIS Daily Broadcast Positions",
+        is_table=True,
+    )
+
+    brief = db.project_brief(limit=5)
+
+    fixture_task = next(
+        task
+        for task in brief.health_tasks
+        if task.task_type == "query_fixture_staleness_review"
+    )
+    assert fixture_task.source == "fixture_storage_access_check"
+    assert fixture_task.priority == 15
+    assert fixture_task.queue_types == ["query_repair_review"]
+    assert fixture_task.fixture_names == ["AIS"]
+    assert fixture_task.storage_access_count == 0
+    assert dataset in fixture_task.known_fixture_table_iris
+    assert fixture_task.suggested_next_action is not None
+    assert fixture_task.suggested_next_action.tool_name == "describe_query_context"
+    assert fixture_task.suggested_next_action.arguments == {"iri": dataset}
+    assert "zero rc:StorageAccess" in fixture_task.reason
+    assert brief.safety_first_action is not fixture_task.suggested_next_action
+
+    db.record_map_storage_access(
+        "https://example.test/project#ais_storage",
+        datasets=[dataset],
+        storage_protocol="rc:LocalFilesystemStorage",
+        storage_root="/tmp/ais-fixture",
+    )
+    repaired_brief = db.project_brief(limit=5)
+    assert "query_fixture_staleness_review" not in {
+        task.task_type for task in repaired_brief.health_tasks
+    }
+
+
 def test_project_brief_surfaces_stale_seed_health_task(
     tmp_path: Path,
 ) -> None:

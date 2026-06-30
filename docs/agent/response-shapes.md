@@ -153,6 +153,10 @@ serializes those pairs as dictionaries with `class`/`predicate` and `count`.
             "profile_candidate_omitted_count": null,
             "sensitive_literal_count": null,
             "missing_seed_terms": [],
+            "current_staged_revision_count": null,
+            "fixture_names": [],
+            "known_fixture_table_iris": [],
+            "storage_access_count": null,
         },
         {
             "priority": 10,
@@ -407,8 +411,10 @@ stable follow-ups such as `expand_project_brief` for omitted queues,
 `expand_profile_candidate_limit` for profile drafts hidden by
 `profile_candidate_limit`, `privacy_export_review` when the default
 handoff-bundle export preflight finds potential sensitive project-graph or
-revision-snapshot terms, and `seed_recovery_review` when immutable seed graphs
-are missing current staging vocabulary.
+revision-snapshot terms, `query_fixture_staleness_review` when known AIS or
+Polymarket fixture tables are present with zero `rc:StorageAccess` resources,
+and `seed_recovery_review` when immutable seed graphs are missing current
+staging vocabulary.
 `next_best_expansion` is
 either `null` or a copy of the highest-priority expansion health task, preferring
 `expand_project_brief` over `expand_profile_candidate_limit` when both are
@@ -419,6 +425,10 @@ synthesizes a one-shot `project_brief` rerun that expands both bounds enough to
 show all currently counted task payloads and hidden profile draft candidates.
 Use it when avoiding iterative frontier reruns matters more than preserving the
 smallest bounded display.
+For `query_fixture_staleness_review`, read `fixture_names`,
+`known_fixture_table_iris`, `storage_access_count`, and the suggested
+`describe_query_context` action before staging repeated missing-storage repairs;
+the task is advisory and does not replace privacy or stale-seed safety gates.
 `frontier_first_action` is the canonical first hop for unattended frontier
 loops after blocking health review. Check `safety_first_action` first; when the
 default handoff-bundle preflight finds potential sensitive terms, it points to

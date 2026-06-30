@@ -3477,6 +3477,20 @@ few useful gaps:
   evidence source spans, scanned relation handles, and scanner-clean context
   exports. The safe loop is two-stage when storage and layout are both missing:
   apply reviewed storage, rerun context, apply reviewed layout, then draft.
+- A frontier-routing trial on the active capsule found `project_brief` chose the
+  right immediate order: stale-seed export preflight, hidden-frontier expansion,
+  then query/profile inspection. The remaining trap was broad query-repair
+  looping in stale/reduced AIS or Polymarket capsules where fixture tables exist
+  but `storage_accesses` is zero. `project_brief.health_tasks[]` now surfaces
+  `query_fixture_staleness_review` with fixture names, table IRIs, storage
+  access count, and a representative `describe_query_context` action before
+  agents stage repeated missing-storage repairs.
+- MCP onboarding, privacy-scoped handoff, and awkward systematisation/pattern
+  promotion trials in the same wave found no core runtime gap. Exact dotted MCP
+  discovery worked for a cold subagent; broad handoff preflight blocked
+  snapshot-only fake-sensitive staged content while a clean context slice stayed
+  importable; grouped systematisation exports preserved shared-context warnings
+  and choose-one semantics.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.

@@ -120,6 +120,29 @@ MISSING_STORAGE_GENERIC_TOKENS = {
     "trial",
 }
 
+KNOWN_QUERY_FIXTURE_TABLE_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    (
+        "AIS",
+        "https://richcanopy.org/example/manifest/ais#",
+        ("DailyBroadcasts", "DailyIndex"),
+    ),
+    (
+        "Polymarket",
+        "https://richcanopy.org/example/manifest/polymarket#",
+        (
+            "MarketSnapshots",
+            "OrderbookSnapshots",
+            "Trades",
+            "HolderSnapshots",
+            "Markets",
+            "PriceSnapshots",
+            "TradeEvents",
+            "OrderBookSnapshots",
+            "MarketOutcomes",
+        ),
+    ),
+)
+
 SCHEMA_STABILITY_LEVELS = (
     "rc:FixedSchema",
     "rc:InferredSchema",
@@ -443,6 +466,9 @@ class ProjectBriefHealthTask:
     sensitive_literal_count: int | None = None
     missing_seed_terms: list[str] = field(default_factory=list)
     current_staged_revision_count: int | None = None
+    fixture_names: list[str] = field(default_factory=list)
+    known_fixture_table_iris: list[str] = field(default_factory=list)
+    storage_access_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -4321,6 +4347,8 @@ class DoxaBase:
             limit_crowded_queue_types=limit_crowded_queue_types,
             total_queue_count=sum(queue_counts.values()),
             current_staged_revision_count=staged_review.count,
+            queue_counts=queue_counts,
+            storage_access_count=overview.key_counts.get("storage_accesses", 0),
         )
         next_best_expansion = self._project_brief_next_best_expansion(
             health_tasks
@@ -4628,6 +4656,8 @@ class DoxaBase:
         limit_crowded_queue_types: list[str],
         total_queue_count: int,
         current_staged_revision_count: int,
+        queue_counts: dict[str, int],
+        storage_access_count: int,
     ) -> list[ProjectBriefHealthTask]:
         tasks: list[ProjectBriefHealthTask] = []
         expand_task = self._project_brief_expand_health_task(
@@ -4654,6 +4684,13 @@ class DoxaBase:
         )
         if profile_candidate_task is not None:
             tasks.append(profile_candidate_task)
+
+        fixture_storage_task = self._project_brief_fixture_storage_health_task(
+            queue_counts=queue_counts,
+            storage_access_count=storage_access_count,
+        )
+        if fixture_storage_task is not None:
+            tasks.append(fixture_storage_task)
 
         privacy_task = self._project_brief_privacy_health_task()
         if privacy_task is not None:
@@ -5018,6 +5055,54 @@ class DoxaBase:
             omitted_queue_counts=dict(omitted_queue_counts),
             suggested_limit=suggested_limit,
             exhaustive_suggested_limit=exhaustive_suggested_limit,
+        )
+
+    def _project_brief_fixture_storage_health_task(
+        self,
+        *,
+        queue_counts: dict[str, int],
+        storage_access_count: int,
+    ) -> ProjectBriefHealthTask | None:
+        if queue_counts.get("query_repair_review", 0) <= 0:
+            return None
+        hint = self._known_fixture_tables_without_storage_access_hint(
+            storage_access_count=storage_access_count
+        )
+        if hint is None:
+            return None
+        known_fixture_table_iris = list(hint["known_fixture_table_iris"])
+        representative_dataset_iri = known_fixture_table_iris[0]
+        arguments = {"iri": representative_dataset_iri}
+        action = SuggestedNextAction(
+            action_label="Inspect fixture storage frontier",
+            tool_name="describe_query_context",
+            mcp_tool_name="doxabase.describe_query_context",
+            arguments=arguments,
+            reason=(
+                "Known AIS or Polymarket fixture tables are present but the "
+                "capsule has no rc:StorageAccess resources; inspect one "
+                "representative query context before staging repeated "
+                "missing-storage repairs."
+            ),
+            call=self._suggested_call_string("describe_query_context", arguments),
+        )
+        return ProjectBriefHealthTask(
+            priority=15,
+            task_type="query_fixture_staleness_review",
+            source="fixture_storage_access_check",
+            reason=(
+                "Known query-planning fixture tables are present while the "
+                "capsule has zero rc:StorageAccess resources. Treat the capsule "
+                "as stale or intentionally reduced for storage-aware query "
+                "trials until a representative query context is reviewed or "
+                "fresh fixtures are loaded into scratch."
+            ),
+            suggested_next_action=action,
+            suggested_next_call=action.call,
+            queue_types=["query_repair_review"],
+            fixture_names=list(hint["fixture_names"]),
+            known_fixture_table_iris=known_fixture_table_iris,
+            storage_access_count=storage_access_count,
         )
 
     def _project_brief_privacy_health_task(
@@ -24614,34 +24699,38 @@ class DoxaBase:
         *,
         storage_access_count: int,
     ) -> dict[str, Any] | None:
+        fixture_hint = self._known_fixture_tables_without_storage_access_hint(
+            storage_access_count=storage_access_count
+        )
+        if fixture_hint is None:
+            return None
+        present_tables = fixture_hint["known_fixture_table_iris"]
+        dataset_matches_known_fixture = any(
+            dataset_resource.iri == table_iri for table_iri in present_tables
+        )
+        return {
+            **fixture_hint,
+            "dataset_matches_known_fixture": dataset_matches_known_fixture,
+            "message": (
+                "Known AIS or Polymarket fixture tables are present but no "
+                "rc:StorageAccess resources exist in the capsule. Treat this "
+                "capsule as stale or intentionally reduced for query-planning "
+                "trials; load current fixtures into a scratch capsule before "
+                "drawing conclusions about query-target behavior."
+            ),
+        }
+
+    def _known_fixture_tables_without_storage_access_hint(
+        self,
+        *,
+        storage_access_count: int,
+    ) -> dict[str, Any] | None:
         if storage_access_count != 0:
             return None
-        known_fixtures = [
-            (
-                "AIS",
-                "https://richcanopy.org/example/manifest/ais#",
-                ["DailyBroadcasts", "DailyIndex"],
-            ),
-            (
-                "Polymarket",
-                "https://richcanopy.org/example/manifest/polymarket#",
-                [
-                    "MarketSnapshots",
-                    "OrderbookSnapshots",
-                    "Trades",
-                    "HolderSnapshots",
-                    "Markets",
-                    "PriceSnapshots",
-                    "TradeEvents",
-                    "OrderBookSnapshots",
-                    "MarketOutcomes",
-                ],
-            ),
-        ]
         map_graphs = self._expand_graphs(["map"])
         present_tables: list[str] = []
         fixture_names: list[str] = []
-        for fixture_name, namespace, local_names in known_fixtures:
+        for fixture_name, namespace, local_names in KNOWN_QUERY_FIXTURE_TABLE_GROUPS:
             table_iris = [
                 f"{namespace}{local_name}"
                 for local_name in local_names
@@ -24652,22 +24741,11 @@ class DoxaBase:
                 present_tables.extend(table_iris)
         if not present_tables:
             return None
-        dataset_matches_known_fixture = any(
-            dataset_resource.iri == table_iri for table_iri in present_tables
-        )
         return {
             "hint_type": "known_fixture_tables_without_storage_accesses",
             "fixture_names": fixture_names,
             "global_storage_access_count": storage_access_count,
             "known_fixture_table_iris": present_tables[:10],
-            "dataset_matches_known_fixture": dataset_matches_known_fixture,
-            "message": (
-                "Known AIS or Polymarket fixture tables are present but no "
-                "rc:StorageAccess resources exist in the capsule. Treat this "
-                "capsule as stale or intentionally reduced for query-planning "
-                "trials; load current fixtures into a scratch capsule before "
-                "drawing conclusions about query-target behavior."
-            ),
         }
 
     def _ambiguous_physical_layout_issue(

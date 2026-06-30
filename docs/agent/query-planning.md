@@ -318,6 +318,12 @@ Start with `describe_query_context(dataset_iri)`:
    returned `staged_review` rows ahead of fresh query-repair staging tasks; use
    `health_tasks` / `omitted_queue_counts` to widen the brief if a fresh repair
    queue is omitted by a low limit.
+   If `project_brief.health_tasks[]` includes
+   `query_fixture_staleness_review`, known AIS or Polymarket fixture tables are
+   present while `storage_accesses` is zero. Treat that as an advisory
+   stale/reduced-capsule cue: inspect the representative query context or load
+   fresh fixtures into scratch before staging a series of missing-storage
+   repairs.
    Exact matching actions in `describe_query_context.suggested_repair_action_groups`
    are marked `already_pending`; unrelated same-dataset caveat/profile work
    remains only in the staged-review lanes.

@@ -239,6 +239,10 @@ Before a query-planning fixture trial against the active MCP capsule, check
 tables are present but `storage_accesses` is zero, treat that capsule as stale
 or intentionally reduced; use a fresh scratch fixture load before drawing
 product conclusions about query-target behavior.
+`project_brief.health_tasks[]` reports the same condition as
+`query_fixture_staleness_review` when query repair work is visible; inspect that
+representative `describe_query_context` action before staging repeated
+missing-storage repairs in the active capsule.
 
 For Codex sub-agent field trials, prefer the repo virtualenv directly:
 
