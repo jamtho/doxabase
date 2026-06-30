@@ -166,8 +166,11 @@ the receiving capsule, prefer
 `import_handoff_bundle(manifest_path, dry_run=True)` followed by
 `import_handoff_bundle(manifest_path)` when that manifest is available; the
 helper imports the paired TriG before snapshot JSON and returns snapshot
-evidence plus a staged recovery plan. Treat `scanner_clean=true` as scanner
-output only while `shareability_review_status="required_not_completed"`.
+evidence plus a staged recovery plan. If the imported history already contains
+a matching `rc:StagedRevisionRecoverySession`, follow the returned
+`describe_staged_revision_recovery_session` action before creating a
+receiver-local session. Treat `scanner_clean=true` as scanner output only while
+`shareability_review_status="required_not_completed"`.
 
 `export_revision_snapshots()` writes a faithful JSON handoff bundle for stored
 revision snapshot rows. Its result includes `sensitive_literal_count` and
@@ -1715,7 +1718,8 @@ still apply. `repair_inspection_required_before_mutation` means repair lanes
 exist, but their current route is diagnostic inspection or a read-only repair
 draft rather than an executable mutation. `no_mutation_frontier` means there is
 no mutation worklist.
-For multi-step or imported recovery work, call
+For multi-step or imported recovery work without a matching imported source
+session, call
 `start_staged_revision_recovery_session(revision_iris=plan.processed_revision_iris,
 handoff_manifest_path=...)` before mutating. The session stores the ordered
 source set and planning parameters in `history`; later

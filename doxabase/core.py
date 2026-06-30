@@ -725,6 +725,8 @@ class HandoffBundleImportRecord:
     revision_snapshots: RevisionSnapshotBundleImportRecord | None
     post_import_snapshot_evidence: list[RevisionSnapshotEvidenceStatus]
     recovery_plan: StagedRevisionRecoveryPlan | None
+    imported_recovery_session_iris: list[str]
+    matching_recovery_session_iris: list[str]
     suggested_next_actions: list[SuggestedNextAction]
     suggested_next_calls: list[str]
     warnings: list[str]
@@ -48656,6 +48658,9 @@ class DoxaBase:
             "revision_snapshots",
         )
         history_graphs = self._expand_graphs(["history"])
+        pre_import_recovery_session_iris = self._recovery_session_iris(
+            history_graphs
+        )
         pre_import_snapshot_evidence = [
             self._revision_snapshot_evidence_status(revision_iri, history_graphs)
             for revision_iri in revision_iris
@@ -48671,6 +48676,8 @@ class DoxaBase:
         snapshot_import: RevisionSnapshotBundleImportRecord | None = None
         post_import_snapshot_evidence = pre_import_snapshot_evidence
         recovery_plan: StagedRevisionRecoveryPlan | None = None
+        imported_recovery_session_iris: list[str] = []
+        matching_recovery_session_iris: list[str] = []
         if dry_run:
             suggested_next_actions = [
                 self._import_handoff_bundle_suggested_action(
@@ -48683,6 +48690,24 @@ class DoxaBase:
             ]
         else:
             trig_imported = self.import_trig(trig_path, replace=replace)
+            post_trig_recovery_session_iris = self._recovery_session_iris(
+                history_graphs
+            )
+            if replace and "history" in graph_roles:
+                imported_recovery_session_iris = post_trig_recovery_session_iris
+            else:
+                imported_recovery_session_iris = [
+                    session_iri
+                    for session_iri in post_trig_recovery_session_iris
+                    if session_iri not in pre_import_recovery_session_iris
+                ]
+            matching_recovery_session_iris = (
+                self._matching_recovery_session_iris(
+                    post_trig_recovery_session_iris,
+                    revision_iris=revision_iris,
+                    history_graphs=history_graphs,
+                )
+            )
             post_trig_snapshot_evidence = [
                 self._revision_snapshot_evidence_status(
                     revision_iri,
@@ -48721,7 +48746,21 @@ class DoxaBase:
                     offset=0,
                     total_count=0,
                 )
-            suggested_next_actions = recovery_plan.suggested_next_actions
+            suggested_next_actions = self._dedupe_suggested_next_actions(
+                [
+                    *self._import_handoff_bundle_recovery_session_actions(
+                        matching_recovery_session_iris=matching_recovery_session_iris,
+                        recovery_plan=recovery_plan,
+                        manifest_path=(
+                            source_label if manifest_path is not None else None
+                        ),
+                        include_drafts=include_drafts,
+                        validation_scope=validation_scope,
+                        drift_detail=drift_detail,
+                    ),
+                    *recovery_plan.suggested_next_actions,
+                ]
+            )
 
         return HandoffBundleImportRecord(
             path=source_label,
@@ -48744,11 +48783,143 @@ class DoxaBase:
             revision_snapshots=snapshot_import,
             post_import_snapshot_evidence=post_import_snapshot_evidence,
             recovery_plan=recovery_plan,
+            imported_recovery_session_iris=imported_recovery_session_iris,
+            matching_recovery_session_iris=matching_recovery_session_iris,
             suggested_next_actions=suggested_next_actions,
             suggested_next_calls=[
                 action.call for action in suggested_next_actions if action.call
             ],
             warnings=warnings,
+        )
+
+    def _recovery_session_iris(self, history_graphs: list[str]) -> list[str]:
+        return self._subjects(
+            history_graphs,
+            str(RDF.type),
+            self.expand_iri("rc:StagedRevisionRecoverySession"),
+        )
+
+    def _matching_recovery_session_iris(
+        self,
+        session_iris: list[str],
+        *,
+        revision_iris: list[str],
+        history_graphs: list[str],
+    ) -> list[str]:
+        requested = {self.expand_iri(iri) for iri in revision_iris}
+        if not requested:
+            return []
+        matching: list[str] = []
+        for session_iri in session_iris:
+            source_revision_iris = (
+                self._staged_recovery_session_source_revision_iris(
+                    session_iri,
+                    history_graphs=history_graphs,
+                )
+            )
+            if requested.intersection(source_revision_iris):
+                matching.append(session_iri)
+        return matching
+
+    def _import_handoff_bundle_recovery_session_actions(
+        self,
+        *,
+        matching_recovery_session_iris: list[str],
+        recovery_plan: StagedRevisionRecoveryPlan,
+        manifest_path: str | None,
+        include_drafts: bool,
+        validation_scope: str | None,
+        drift_detail: str,
+    ) -> list[SuggestedNextAction]:
+        if matching_recovery_session_iris:
+            return [
+                self._describe_imported_recovery_session_action(
+                    session_iri,
+                    include_drafts=include_drafts,
+                    validation_scope=validation_scope,
+                    drift_detail=drift_detail,
+                )
+                for session_iri in matching_recovery_session_iris
+            ]
+        if not recovery_plan.processed_revision_iris:
+            return []
+        return [
+            self._start_receiver_recovery_session_action(
+                recovery_plan.processed_revision_iris,
+                manifest_path=manifest_path,
+                include_drafts=include_drafts,
+                validation_scope=validation_scope,
+                drift_detail=drift_detail,
+            )
+        ]
+
+    def _describe_imported_recovery_session_action(
+        self,
+        session_iri: str,
+        *,
+        include_drafts: bool,
+        validation_scope: str | None,
+        drift_detail: str,
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {
+            "session_iri": session_iri,
+            "drift_detail": drift_detail,
+        }
+        if include_drafts is not True:
+            arguments["include_drafts"] = include_drafts
+        if validation_scope is not None:
+            arguments["validation_scope"] = validation_scope
+        return SuggestedNextAction(
+            action_label="Continue imported recovery session",
+            tool_name="describe_staged_revision_recovery_session",
+            mcp_tool_name="doxabase.describe_staged_revision_recovery_session",
+            arguments=arguments,
+            reason=(
+                "The handoff imported a persisted staged-revision recovery "
+                "session whose source revisions overlap the manifest revisions. "
+                "Describe it before starting a receiver-local session so source "
+                "session provenance and live recovery state stay connected."
+            ),
+            call=self._suggested_call_string(
+                "describe_staged_revision_recovery_session",
+                arguments,
+            ),
+        )
+
+    def _start_receiver_recovery_session_action(
+        self,
+        revision_iris: list[str],
+        *,
+        manifest_path: str | None,
+        include_drafts: bool,
+        validation_scope: str | None,
+        drift_detail: str,
+    ) -> SuggestedNextAction:
+        arguments: dict[str, Any] = {
+            "revision_iris": revision_iris,
+            "current_staged_work_only": False,
+            "include_drafts": include_drafts,
+            "drift_detail": drift_detail,
+        }
+        if manifest_path is not None:
+            arguments["handoff_manifest_path"] = manifest_path
+        if validation_scope is not None:
+            arguments["validation_scope"] = validation_scope
+        return SuggestedNextAction(
+            action_label="Start receiver-local recovery session",
+            tool_name="start_staged_revision_recovery_session",
+            mcp_tool_name="doxabase.start_staged_revision_recovery_session",
+            arguments=arguments,
+            reason=(
+                "No matching imported recovery session was found. Persist a "
+                "receiver-local session for the imported manifest revisions so "
+                "multi-step restage, repair, and apply work can be replanned "
+                "from one stable session IRI."
+            ),
+            call=self._suggested_call_string(
+                "start_staged_revision_recovery_session",
+                arguments,
+            ),
         )
 
     def _handoff_manifest_artifact_path(

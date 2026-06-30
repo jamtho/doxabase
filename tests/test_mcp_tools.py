@@ -1878,6 +1878,13 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     trig_path = tmp_path / "project-handoff.trig"
     snapshot_path = tmp_path / "revision-snapshots.json"
     manifest_path = tmp_path / "handoff-manifest.json"
+    session = source.start_staged_revision_recovery_session(
+        [staged["revision_iri"]],
+        summary="Handoff source recovery session",
+        handoff_manifest_path=str(manifest_path),
+        current_staged_work_only=False,
+        created_at="2026-06-01T12:00:00+00:00",
+    )
 
     result = export_handoff_bundle_tool(
         source,
@@ -1981,6 +1988,8 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     assert dry_run["trig_total_imported"] == 0
     assert dry_run["revision_snapshots"] is None
     assert dry_run["recovery_plan"] is None
+    assert dry_run["imported_recovery_session_iris"] == []
+    assert dry_run["matching_recovery_session_iris"] == []
     assert {
         item["revision_iri"]: item["status"]
         for item in dry_run["pre_import_snapshot_evidence"]
@@ -2016,6 +2025,29 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
         for item in manifest_import["post_import_snapshot_evidence"]
     } == {staged["revision_iri"]: "history_plus_snapshot_rows"}
     assert manifest_import["recovery_plan"]["lane_counts"] == {
+        "apply_after_review": 1
+    }
+    assert manifest_import["imported_recovery_session_iris"] == [
+        session.session_iri
+    ]
+    assert manifest_import["matching_recovery_session_iris"] == [
+        session.session_iri
+    ]
+    assert manifest_import["suggested_next_actions"][0]["tool_name"] == (
+        "describe_staged_revision_recovery_session"
+    )
+    assert manifest_import["suggested_next_actions"][0]["arguments"] == {
+        "session_iri": session.session_iri,
+        "drift_detail": "exact",
+    }
+    described_session = describe_staged_revision_recovery_session_tool(
+        manifest_receiver,
+        session_iri=session.session_iri,
+        drift_detail="exact",
+    )
+    assert described_session["handoff_manifest_path"] == str(manifest_path)
+    assert described_session["source_revision_iris"] == [staged["revision_iri"]]
+    assert described_session["current_plan"]["lane_counts"] == {
         "apply_after_review": 1
     }
     assert manifest_import["recovery_plan"]["next_action_queue"] == {
@@ -2067,6 +2099,55 @@ def test_export_handoff_bundle_tool_writes_importable_pair(tmp_path: Path) -> No
     )
     assert after_snapshots["status"] == "history_plus_snapshot_rows"
     assert after_snapshots["exact_snapshot_graph_roles"] == ["map"]
+
+
+def test_import_handoff_bundle_tool_suggests_receiver_session_without_source_session(
+    tmp_path: Path,
+) -> None:
+    source = DoxaBase.create(tmp_path / "source.sqlite")
+    staged = stage_graph_revision_tool(
+        source,
+        summary="Stage receiver-local recovery handoff",
+        rationale="Exercise import guidance when source has no persisted session.",
+        additions=[
+            {
+                "graph": "map",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+
+                    ex:ReceiverLocalOrders a rc:Dataset, rc:Table .
+                """,
+            }
+        ],
+    )
+    trig_path = tmp_path / "project-handoff.trig"
+    snapshot_path = tmp_path / "revision-snapshots.json"
+    manifest_path = tmp_path / "handoff-manifest.json"
+    export_handoff_bundle_tool(
+        source,
+        trig_path=str(trig_path),
+        revision_snapshot_path=str(snapshot_path),
+        manifest_path=str(manifest_path),
+        revision_iris=[staged["revision_iri"]],
+    )
+
+    receiver = DoxaBase.create(tmp_path / "receiver.sqlite")
+    imported = import_handoff_bundle_tool(
+        receiver,
+        manifest_path=str(manifest_path),
+    )
+
+    assert imported["imported_recovery_session_iris"] == []
+    assert imported["matching_recovery_session_iris"] == []
+    assert imported["recovery_plan"]["processed_revision_iris"] == [
+        staged["revision_iri"]
+    ]
+    action = imported["suggested_next_actions"][0]
+    assert action["tool_name"] == "start_staged_revision_recovery_session"
+    assert action["arguments"]["revision_iris"] == [staged["revision_iri"]]
+    assert action["arguments"]["handoff_manifest_path"] == str(manifest_path)
+    assert action["arguments"]["current_staged_work_only"] is False
 
 
 def test_import_handoff_bundle_tool_accepts_empty_revision_snapshot_bundle(

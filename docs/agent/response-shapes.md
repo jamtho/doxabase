@@ -4867,6 +4867,8 @@ handoff.post_trig_snapshot_evidence
 handoff.revision_snapshots
 handoff.post_import_snapshot_evidence
 handoff.recovery_plan
+handoff.imported_recovery_session_iris
+handoff.matching_recovery_session_iris
 handoff.suggested_next_actions
 handoff.suggested_next_calls
 handoff.warnings
@@ -4882,7 +4884,13 @@ project/history TriG first, imports revision snapshot rows second, then runs
 `plan_staged_revision_recovery` for the manifest revisions. The nested
 `revision_snapshots` field has the same shape as
 `RevisionSnapshotBundleImportRecord`; `recovery_plan` has the same shape as
-`plan_staged_revision_recovery()`.
+`plan_staged_revision_recovery()`. If the imported history contains
+`rc:StagedRevisionRecoverySession` resources, `imported_recovery_session_iris`
+lists sessions newly brought in by the TriG import, while
+`matching_recovery_session_iris` lists imported-or-already-present sessions whose
+source revisions overlap the manifest revisions. When a matching session exists,
+the first suggested action is `describe_staged_revision_recovery_session`; start
+a receiver-local session only when no matching imported session is available.
 
 `db.import_revision_snapshots(path, replace=False)` returns
 `RevisionSnapshotBundleImportRecord`:

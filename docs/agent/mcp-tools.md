@@ -2247,6 +2247,14 @@ import returns an empty recovery plan with `mutation_allowed_after` set to
 fresh capsule. Pass `dry_run=true` to inspect the manifest paths and expected
 receiver action without mutating the capsule. Pass `replace=true` only when
 overwriting existing graph roles and stored snapshot pairs is intentional.
+If the imported history already contains a staged-revision recovery session for
+the manifest revisions, the result exposes `imported_recovery_session_iris` and
+`matching_recovery_session_iris`, and the first suggested action is
+`doxabase.describe_staged_revision_recovery_session`. Prefer that imported
+session over starting a duplicate receiver-local one. When no matching imported
+session exists, the import prepends a
+`doxabase.start_staged_revision_recovery_session` action for the processed
+revision IRIs before the direct recovery-plan actions.
 
 `doxabase.export_graph`
 

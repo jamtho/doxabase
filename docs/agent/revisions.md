@@ -143,18 +143,23 @@ On the receiving capsule:
    not approval to reshare the artifacts.
 2. Then call `import_handoff_bundle(manifest_path)`. The helper imports the
    project/history TriG first, imports the companion snapshot JSON second, and
-   returns `post_trig_snapshot_evidence`, `post_import_snapshot_evidence`, and a
-   `plan_staged_revision_recovery` result for the manifest revisions.
+   returns `post_trig_snapshot_evidence`, `post_import_snapshot_evidence`,
+   imported recovery-session fields, and a `plan_staged_revision_recovery`
+   result for the manifest revisions. If `matching_recovery_session_iris` is
+   non-empty, follow the first
+   `describe_staged_revision_recovery_session(session_iri=...)` suggested action
+   before starting any receiver-local session.
 3. If no manifest arrived, import the project/history RDF with
    `import_trig(trig_path)`, then import the companion snapshot JSON with
    `import_revision_snapshots(revision_snapshot_path)`. If snapshot JSON arrived
    first and helpers report `snapshot_rows_without_history`, import the
    project/history TriG.
-4. For multi-step recovery, start
+4. For multi-step recovery with no matching imported source session, start
    `start_staged_revision_recovery_session(revision_iris=..., handoff_manifest_path=manifest_path)`
    from the imported revision set and continue by rereading
    `describe_staged_revision_recovery_session(session_iri)` after each restage,
-   repair, or apply.
+   repair, or apply. Treat this as a receiver-local fork of the handoff workflow,
+   not as a replacement for an imported source session when one exists.
 5. Call `describe_revision_snapshot_evidence(revision_iri)` until the relevant
    rows reach `history_plus_snapshot_rows`.
 6. Then call `check_staged_revision_apply()` for staged proposals,

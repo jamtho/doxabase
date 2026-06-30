@@ -3260,6 +3260,14 @@ few useful gaps:
   columns but no physical metadata, stages `missing_storage_access` repair,
   reruns context, stages `missing_physical_layout` repair, and drafts a ready
   local CSV handoff.
+- A staged-revision handoff ergonomics trial showed that source capsules can
+  already contain useful `rc:StagedRevisionRecoverySession` history. Receivers
+  could discover those sessions manually, but `import_handoff_bundle()` nudged
+  agents toward raw mutation actions or a duplicate receiver-local session. The
+  import result now exposes `imported_recovery_session_iris` and
+  `matching_recovery_session_iris`; when a matching session exists, its first
+  suggested action is `describe_staged_revision_recovery_session`. Only start a
+  receiver-local session when no matching imported source session is available.
 
 Use later trials to check whether these gaps still matter after each change.
 If a gap stops being useful, revise this section.
