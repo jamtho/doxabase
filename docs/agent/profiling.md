@@ -5,6 +5,10 @@ context without pretending every observed value is already a current-best map
 fact. Profile observations live in `observations`, optional profile evidence
 usually lives in `evidence`, synthesized profile lore can live in `patterns`,
 and accepted current-best facts should move through reviewed map/staged flows.
+Use `plan_profile_followthrough` after `draft_profile_map_updates` when a
+profile advisory needs a fresh, binding-aware next step, such as carrying a
+returned `record_pattern().pattern_iri` into a staged map type assertion or
+rechecking sibling staged rows after an apply.
 
 ## Record A Profile Run
 
@@ -353,6 +357,14 @@ binding metadata. Read `produces_result_bindings[]` on the `record_pattern`
 action and `consumes_result_bindings[]` on paired `stage_map_assertion_change`
 actions; matching `binding_key` values tell an unattended script to append the
 returned `pattern_iri` to `supporting_patterns`.
+`plan_profile_followthrough(dataset_iri, evidence_iri, result_bindings={...})`
+does that binding step from a fresh draft. Use it after recording the pattern
+so newly visible `stage_pattern_promotion` actions and resolved
+`stage_map_assertion_change` arguments are based on current graph state. Pass
+related `staged_revision_iris` when a previous apply may have made sibling
+staged rows stale; `restage_stale_revisions=True` can mechanically refresh
+rows whose next action is `restage_staged_revision`, but the helper does not
+apply profile-generated map or ontology changes.
 If a metric advisory already has matching current staged vocabulary work, it
 sets `pending_staged_promotion_iris` and routes to inspect/export that staged
 revision instead of proposing a duplicate `stage_pattern_promotion` skeleton.

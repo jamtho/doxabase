@@ -30870,6 +30870,220 @@ def test_draft_profile_map_updates_surfaces_profile_type_advisories(
     assert db.validate_graph(scope="all").conforms
 
 
+def test_plan_profile_followthrough_resolves_pattern_binding_and_reruns(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    status_column = "https://example.test/project#OrdersStatus"
+    status_value_type = "https://example.test/project#OrderStatusCode"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=dataset,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled without changing the map.",
+        evidence_summary="Synthetic type-finding profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+    initial_draft = db.draft_profile_map_updates(dataset, evidence)
+    advisory = initial_draft.type_advisories[0]
+    pattern_action = [
+        action
+        for action in advisory.suggested_next_actions
+        if action.tool_name == "record_pattern"
+    ][0]
+    produced_binding = pattern_action.source_profile_advisory[
+        "produces_result_bindings"
+    ][0]
+
+    recorded_pattern = db.record_pattern(**pattern_action.arguments)
+    plan = db.plan_profile_followthrough(
+        dataset,
+        evidence,
+        result_bindings={
+            produced_binding["binding_key"]: recorded_pattern.pattern_iri,
+        },
+    )
+
+    assert plan.result_kind == "profile_followthrough_plan"
+    assert plan.result_binding_keys == [produced_binding["binding_key"]]
+    assert plan.draft.type_advisory_count == 1
+    rerun_advisory = plan.draft.type_advisories[0]
+    assert rerun_advisory.promotion_pattern_count == 1
+    assert rerun_advisory.promotion_patterns[0].iri == recorded_pattern.pattern_iri
+    assert {
+        item.semantic_move for item in plan.draft.advisory_followthrough_plan
+    } == {"assert_map_type", "caveat_fallback", "define_value_type"}
+
+    assert plan.produced_binding_count >= 1
+    assert plan.binding_resolution_count == 2
+    assert plan.resolved_action_count == 2
+    assert plan.missing_binding_action_count == 0
+    assert {
+        resolution.status for resolution in plan.binding_resolutions
+    } == {"resolved"}
+    assert {
+        resolution.target_tool_name for resolution in plan.binding_resolutions
+    } == {"stage_map_assertion_change"}
+    assert {
+        resolution.target_argument for resolution in plan.binding_resolutions
+    } == {"supporting_patterns"}
+    value_type_action_resolution = [
+        resolution
+        for resolution in plan.action_resolutions
+        if resolution.tool_name == "stage_map_assertion_change"
+        and resolution.action.arguments["predicate"] == "rc:valueType"
+    ][0]
+    assert value_type_action_resolution.binding_status == "resolved"
+    assert value_type_action_resolution.applied_binding_keys == [
+        produced_binding["binding_key"]
+    ]
+    value_type_action = value_type_action_resolution.action
+    assert value_type_action.arguments["supporting_patterns"] == [
+        recorded_pattern.pattern_iri
+    ]
+    route_source = value_type_action.arguments["profile_route_sources"][0]
+    assert route_source["resolved_result_bindings"][0]["binding_key"] == (
+        produced_binding["binding_key"]
+    )
+    assert route_source["resolved_result_bindings"][0]["value"] == (
+        recorded_pattern.pattern_iri
+    )
+    assert f"'{recorded_pattern.pattern_iri}'" in value_type_action.call
+    assert any(
+        resolution.tool_name == "stage_pattern_promotion"
+        and resolution.semantic_move == "define_value_type"
+        for resolution in plan.action_resolutions
+    )
+
+    staged = db.stage_map_assertion_change(**value_type_action.arguments)
+    staged_description = db.describe_staged_revision(
+        staged.staged_revision.revision_iri,
+    )
+
+    assert recorded_pattern.pattern_iri in {
+        item.iri for item in staged_description.supporting_patterns
+    }
+    assert db.validate_graph(scope="all").conforms
+
+
+def test_plan_profile_followthrough_rechecks_and_restages_stale_sibling(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    dataset = "https://example.test/project#Orders"
+    evidence = "https://example.test/project#OrdersProfileRunEvidence"
+
+    db.record_map_dataset(dataset, label="Orders", is_table=True)
+    db.record_profile_bundle(
+        dataset,
+        dataset_summary="Orders were profiled for follow-through routing.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=evidence,
+        update_map_snapshot=False,
+        column_profiles=[],
+    )
+    first = db.stage_graph_revision(
+        summary="Define first profile value type",
+        rationale="Synthetic sibling revision for profile follow-through.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:FirstProfileValueType a rc:ValueType ;
+                        rdfs:label "First profile value type" .
+                """,
+            }
+        ],
+        revision_anchors=[dataset],
+        validation_scope="all",
+    )
+    second = db.stage_graph_revision(
+        summary="Define second profile value type",
+        rationale="Synthetic sibling revision for profile follow-through.",
+        additions=[
+            {
+                "graph": "ontology",
+                "content": """
+                    @prefix ex: <https://example.test/project#> .
+                    @prefix rc: <https://richcanopy.org/ns/rc#> .
+                    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+                    ex:SecondProfileValueType a rc:ValueType ;
+                        rdfs:label "Second profile value type" .
+                """,
+            }
+        ],
+        revision_anchors=[dataset],
+        validation_scope="all",
+    )
+
+    assert db.check_staged_revision_apply(second.revision_iri).status == "ready"
+    db.apply_staged_revision(first.revision_iri)
+    stale_check = db.check_staged_revision_apply(second.revision_iri)
+    assert stale_check.status == "conflict"
+    assert stale_check.next_action is not None
+    assert stale_check.next_action.tool_name == "restage_staged_revision"
+
+    dry_plan = db.plan_profile_followthrough(
+        dataset,
+        evidence,
+        staged_revision_iris=[second.revision_iri],
+    )
+
+    assert dry_plan.revision_check_count == 1
+    assert dry_plan.revision_checks[0].status_before == "conflict"
+    assert dry_plan.revision_checks[0].restage_performed is False
+    assert dry_plan.revision_checks[0].suggested_next_actions[-1].tool_name == (
+        "restage_staged_revision"
+    )
+
+    restage_plan = db.plan_profile_followthrough(
+        dataset,
+        evidence,
+        staged_revision_iris=[second.revision_iri],
+        restage_stale_revisions=True,
+    )
+
+    assert restage_plan.revision_check_count == 1
+    recheck = restage_plan.revision_checks[0]
+    assert recheck.status_before == "conflict"
+    assert recheck.restage_performed is True
+    assert recheck.restaged_revision_iri is not None
+    assert recheck.status_after == "ready"
+    assert recheck.next_action_after is not None
+    assert recheck.next_action_after.tool_name == "apply_staged_revision"
+    assert restage_plan.restaged_revision_iris == [recheck.restaged_revision_iri]
+    assert restage_plan.suggested_next_actions[-1].tool_name == (
+        "apply_staged_revision"
+    )
+    assert db.validate_graph(scope="all").conforms
+
+
 def test_profile_type_context_action_omits_undefined_value_type_seed(
     tmp_path: Path,
 ) -> None:

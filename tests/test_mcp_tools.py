@@ -53,6 +53,7 @@ from doxabase.mcp_tools import (
     list_graph_versions_tool,
     list_resource_revisions_tool,
     load_example_fixtures_tool,
+    plan_profile_followthrough_tool,
     plan_staged_revision_recovery_tool,
     preflight_context_slice_export_tool,
     project_brief_tool,
@@ -142,6 +143,7 @@ async def test_build_server_registers_expected_tools(tmp_path: Path) -> None:
     assert "doxabase.describe_dataset" in tool_names
     assert "doxabase.describe_profile_run" in tool_names
     assert "doxabase.draft_profile_map_updates" in tool_names
+    assert "doxabase.plan_profile_followthrough" in tool_names
     assert "doxabase.stage_profile_map_updates" in tool_names
     assert "doxabase.describe_query_context" in tool_names
     assert "doxabase.draft_query_plan" in tool_names
@@ -9435,6 +9437,85 @@ def test_draft_profile_map_updates_tool_returns_json_like_payload(
     assert result["type_advisories"][0]["suggested_next_actions"][0][
         "tool_name"
     ] == "describe_context_slice"
+
+
+def test_plan_profile_followthrough_tool_resolves_bindings_json_payload(
+    tmp_path: Path,
+) -> None:
+    db = DoxaBase.create(tmp_path / "capsule.sqlite")
+    table = "https://example.test/profile-followthrough#Orders"
+    status_column = f"{table}Status"
+    status_value_type = "https://example.test/profile-followthrough#StatusCode"
+    shared_evidence = f"{table}ProfileEvidence"
+
+    db.record_map_dataset(table, label="Orders", is_table=True)
+    db.record_map_column(
+        status_column,
+        table_iri=table,
+        column_name="status",
+        physical_type="rc:Varchar",
+    )
+    record_profile_bundle_tool(
+        db,
+        dataset_iri=table,
+        dataset_summary="Orders were profiled for follow-through routing.",
+        evidence_summary="Synthetic profile run.",
+        evidence_sources=["test://orders-profile"],
+        shared_evidence_iri=shared_evidence,
+        update_map_snapshot=False,
+        column_defaults={"update_map_column": False},
+        column_profiles=[
+            {
+                "column_iri": status_column,
+                "column_name": "status",
+                "summary": "Status looked integer-coded in the profile.",
+                "physical_type": "rc:Integer",
+                "value_type": status_value_type,
+            }
+        ],
+    )
+
+    draft = draft_profile_map_updates_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+    )
+    pattern_action = draft["suggested_next_action_groups"][
+        "profile_type_review"
+    ][1]
+    binding_key = pattern_action["source_profile_advisory"][
+        "produces_result_bindings"
+    ][0]["binding_key"]
+    pattern = record_pattern_tool(db, **pattern_action["arguments"])
+
+    result = plan_profile_followthrough_tool(
+        db,
+        dataset_iri=table,
+        evidence_iri=shared_evidence,
+        result_bindings={binding_key: pattern["pattern_iri"]},
+    )
+
+    assert result["result_kind"] == "profile_followthrough_plan"
+    assert result["result_binding_keys"] == [binding_key]
+    assert result["draft"]["type_advisory_count"] == 1
+    assert result["draft"]["type_advisories"][0]["promotion_pattern_count"] == 1
+    assert result["produced_binding_count"] >= 1
+    assert result["binding_resolution_count"] == 2
+    assert result["resolved_action_count"] == 2
+    value_type_resolution = [
+        resolution
+        for resolution in result["action_resolutions"]
+        if resolution["tool_name"] == "stage_map_assertion_change"
+        and resolution["action"]["arguments"]["predicate"] == "rc:valueType"
+    ][0]
+    assert value_type_resolution["binding_status"] == "resolved"
+    assert value_type_resolution["applied_binding_keys"] == [binding_key]
+    assert value_type_resolution["action"]["arguments"]["supporting_patterns"] == [
+        pattern["pattern_iri"]
+    ]
+    assert value_type_resolution["action"]["arguments"]["profile_route_sources"][0][
+        "resolved_result_bindings"
+    ][0]["value"] == pattern["pattern_iri"]
 
 
 def test_draft_profile_map_updates_tool_surfaces_scalar_conflict_review_lane(

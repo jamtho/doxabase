@@ -3225,6 +3225,81 @@ class ProfileMixedSupportReviewGroup:
 
 
 @dataclass(frozen=True)
+class ProfileFollowthroughBindingResolution:
+    binding_key: str
+    status: str
+    value: Any | None
+    source_tool_name: str | None
+    source_result_field: str | None
+    target_tool_name: str | None
+    target_argument: str | None
+    append: bool
+    review_lane: str | None
+    route_group_key: str | None
+    action_group: str
+    action_index: int
+    action_label: str
+    note: str
+
+
+@dataclass(frozen=True)
+class ProfileFollowthroughActionResolution:
+    action_group: str
+    action_index: int
+    action_label: str
+    tool_name: str
+    semantic_move: str | None
+    binding_status: str
+    applied_binding_keys: list[str]
+    missing_binding_keys: list[str]
+    action: SuggestedNextAction
+
+
+@dataclass(frozen=True)
+class ProfileFollowthroughRevisionCheck:
+    staged_revision_iri: str
+    status_before: str
+    decision_before: str
+    routing_decision_before: str
+    blocking_reasons_before: list[str]
+    next_action_before: RevisionNextAction | None
+    restage_performed: bool
+    restaged_revision_iri: str | None
+    status_after: str | None
+    decision_after: str | None
+    routing_decision_after: str | None
+    next_action_after: RevisionNextAction | None
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    note: str
+
+
+@dataclass(frozen=True)
+class ProfileFollowthroughPlan:
+    result_kind: str
+    dataset: ResourceSummary
+    evidence: EvidenceDescription
+    evidence_iri: str
+    graph: str | None
+    draft: ProfileMapUpdateDraft
+    result_binding_keys: list[str]
+    binding_resolution_count: int
+    binding_resolutions: list[ProfileFollowthroughBindingResolution]
+    action_resolutions: list[ProfileFollowthroughActionResolution]
+    resolved_action_count: int
+    missing_binding_action_count: int
+    produced_bindings: list[dict[str, Any]]
+    produced_binding_count: int
+    revision_checks: list[ProfileFollowthroughRevisionCheck]
+    revision_check_count: int
+    restage_stale_revisions: bool
+    restaged_revision_iris: list[str]
+    suggested_next_actions: list[SuggestedNextAction]
+    suggested_next_calls: list[str]
+    review_note: str
+
+
+@dataclass(frozen=True)
 class ProfileMapUpdateDraft:
     dataset: ResourceSummary
     evidence: EvidenceDescription
@@ -15305,6 +15380,441 @@ class DoxaBase:
                 )
             ),
         )
+
+    def plan_profile_followthrough(
+        self,
+        dataset_iri: str,
+        evidence_iri: str,
+        *,
+        graph: str | None = "map",
+        result_bindings: Mapping[str, Any] | None = None,
+        staged_revision_iris: Iterable[str] | str | None = None,
+        restage_stale_revisions: bool = False,
+    ) -> ProfileFollowthroughPlan:
+        draft = self.draft_profile_map_updates(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            graph=graph,
+        )
+        binding_values = {
+            str(key): value for key, value in dict(result_bindings or {}).items()
+        }
+        action_resolutions: list[ProfileFollowthroughActionResolution] = []
+        binding_resolutions: list[ProfileFollowthroughBindingResolution] = []
+        produced_bindings: list[dict[str, Any]] = []
+
+        for group_name, actions in draft.suggested_next_action_groups.items():
+            for action_index, action in enumerate(actions):
+                (
+                    resolved_action,
+                    action_binding_resolutions,
+                    action_produced_bindings,
+                ) = self._profile_followthrough_resolve_action_bindings(
+                    action,
+                    result_bindings=binding_values,
+                    action_group=group_name,
+                    action_index=action_index,
+                )
+                binding_resolutions.extend(action_binding_resolutions)
+                produced_bindings.extend(action_produced_bindings)
+                applied_binding_keys = [
+                    resolution.binding_key
+                    for resolution in action_binding_resolutions
+                    if resolution.status == "resolved"
+                ]
+                missing_binding_keys = [
+                    resolution.binding_key
+                    for resolution in action_binding_resolutions
+                    if resolution.status == "missing"
+                ]
+                if missing_binding_keys:
+                    binding_status = "missing_bindings"
+                elif applied_binding_keys:
+                    binding_status = "resolved"
+                elif action_produced_bindings:
+                    binding_status = "produces_bindings"
+                else:
+                    binding_status = "not_applicable"
+                source = getattr(action, "source_profile_advisory", None)
+                semantic_move = (
+                    source.get("semantic_move")
+                    if isinstance(source, MappingABC)
+                    and isinstance(source.get("semantic_move"), str)
+                    else None
+                )
+                action_resolutions.append(
+                    ProfileFollowthroughActionResolution(
+                        action_group=group_name,
+                        action_index=action_index,
+                        action_label=resolved_action.action_label,
+                        tool_name=resolved_action.tool_name,
+                        semantic_move=semantic_move,
+                        binding_status=binding_status,
+                        applied_binding_keys=applied_binding_keys,
+                        missing_binding_keys=missing_binding_keys,
+                        action=resolved_action,
+                    )
+                )
+
+        revision_checks = self._profile_followthrough_revision_checks(
+            staged_revision_iris,
+            restage_stale_revisions=restage_stale_revisions,
+        )
+        restaged_revision_iris = [
+            check.restaged_revision_iri
+            for check in revision_checks
+            if check.restaged_revision_iri is not None
+        ]
+        suggested_next_actions = [
+            resolution.action
+            for resolution in action_resolutions
+            if resolution.binding_status != "missing_bindings"
+        ]
+        for check in revision_checks:
+            suggested_next_actions.extend(check.suggested_next_actions)
+        suggested_next_calls = [action.call for action in suggested_next_actions]
+        return ProfileFollowthroughPlan(
+            result_kind="profile_followthrough_plan",
+            dataset=draft.dataset,
+            evidence=draft.evidence,
+            evidence_iri=draft.evidence_iri,
+            graph=graph,
+            draft=draft,
+            result_binding_keys=sorted(binding_values),
+            binding_resolution_count=len(binding_resolutions),
+            binding_resolutions=binding_resolutions,
+            action_resolutions=action_resolutions,
+            resolved_action_count=sum(
+                1
+                for resolution in action_resolutions
+                if resolution.binding_status == "resolved"
+            ),
+            missing_binding_action_count=sum(
+                1
+                for resolution in action_resolutions
+                if resolution.binding_status == "missing_bindings"
+            ),
+            produced_bindings=produced_bindings,
+            produced_binding_count=len(produced_bindings),
+            revision_checks=revision_checks,
+            revision_check_count=len(revision_checks),
+            restage_stale_revisions=restage_stale_revisions,
+            restaged_revision_iris=restaged_revision_iris,
+            suggested_next_actions=suggested_next_actions,
+            suggested_next_calls=suggested_next_calls,
+            review_note=(
+                "Rerun draft_profile_map_updates through this coordinator after "
+                "recording profile-support patterns or applying related staged "
+                "revisions. It resolves route-scoped result bindings into "
+                "structured action arguments and can recheck/restage supplied "
+                "sibling staged revisions, but it does not apply reviewable "
+                "graph changes."
+            ),
+        )
+
+    def _profile_followthrough_resolve_action_bindings(
+        self,
+        action: SuggestedNextAction,
+        *,
+        result_bindings: Mapping[str, Any],
+        action_group: str,
+        action_index: int,
+    ) -> tuple[
+        SuggestedNextAction,
+        list[ProfileFollowthroughBindingResolution],
+        list[dict[str, Any]],
+    ]:
+        source = getattr(action, "source_profile_advisory", None)
+        if not isinstance(source, MappingABC):
+            return action, [], []
+
+        produced_bindings: list[dict[str, Any]] = []
+        for binding in source.get("produces_result_bindings", []) or []:
+            if not isinstance(binding, MappingABC):
+                continue
+            produced = copy.deepcopy(dict(binding))
+            produced["action_group"] = action_group
+            produced["action_index"] = action_index
+            produced["action_label"] = action.action_label
+            produced["tool_name"] = action.tool_name
+            produced_bindings.append(produced)
+
+        bindings = [
+            binding
+            for binding in source.get("consumes_result_bindings", []) or []
+            if isinstance(binding, MappingABC)
+        ]
+        if not bindings:
+            return action, [], produced_bindings
+
+        arguments = copy.deepcopy(action.arguments)
+        route_sources = arguments.get("profile_route_sources")
+        resolved_sources = (
+            copy.deepcopy(route_sources)
+            if isinstance(route_sources, list)
+            else route_sources
+        )
+        resolutions: list[ProfileFollowthroughBindingResolution] = []
+
+        for binding in bindings:
+            binding_key = binding.get("binding_key")
+            target_argument = binding.get("argument")
+            if not isinstance(binding_key, str) or not isinstance(
+                target_argument,
+                str,
+            ):
+                continue
+            supplied = result_bindings.get(binding_key)
+            if supplied is None:
+                resolutions.append(
+                    self._profile_followthrough_binding_resolution(
+                        binding,
+                        action=action,
+                        action_group=action_group,
+                        action_index=action_index,
+                        status="missing",
+                        value=None,
+                        note=(
+                            "No value was supplied for this route-scoped "
+                            "binding key."
+                        ),
+                    )
+                )
+                continue
+            value = self._profile_followthrough_binding_value(binding, supplied)
+            if value is None:
+                resolutions.append(
+                    self._profile_followthrough_binding_resolution(
+                        binding,
+                        action=action,
+                        action_group=action_group,
+                        action_index=action_index,
+                        status="missing",
+                        value=None,
+                        note=(
+                            "The supplied binding value did not contain the "
+                            "expected result field."
+                        ),
+                    )
+                )
+                continue
+            self._profile_followthrough_apply_binding_value(
+                arguments,
+                target_argument=target_argument,
+                value=value,
+                append=bool(binding.get("append", False)),
+            )
+            resolved_record = self._profile_followthrough_binding_resolution(
+                binding,
+                action=action,
+                action_group=action_group,
+                action_index=action_index,
+                status="resolved",
+                value=value,
+                note=(
+                    "Applied the supplied binding value to the action's "
+                    "structured arguments."
+                ),
+            )
+            resolutions.append(resolved_record)
+            if isinstance(resolved_sources, list):
+                self._profile_followthrough_annotate_route_sources(
+                    resolved_sources,
+                    binding_key=binding_key,
+                    resolved_binding=resolved_record,
+                )
+
+        if isinstance(resolved_sources, list):
+            arguments["profile_route_sources"] = resolved_sources
+        resolved_action = replace(
+            action,
+            arguments=arguments,
+            call=self._suggested_call_string_for_arguments(
+                action.tool_name,
+                arguments,
+            ),
+        )
+        return resolved_action, resolutions, produced_bindings
+
+    @staticmethod
+    def _profile_followthrough_binding_value(
+        binding: MappingABC[str, Any],
+        supplied: Any,
+    ) -> Any | None:
+        if isinstance(supplied, MappingABC):
+            source_field = binding.get("source_result_field")
+            if isinstance(source_field, str) and source_field in supplied:
+                return supplied[source_field]
+            result_field = binding.get("result_field")
+            if isinstance(result_field, str) and result_field in supplied:
+                return supplied[result_field]
+            if "value" in supplied:
+                return supplied["value"]
+            return None
+        return supplied
+
+    @staticmethod
+    def _profile_followthrough_apply_binding_value(
+        arguments: dict[str, Any],
+        *,
+        target_argument: str,
+        value: Any,
+        append: bool,
+    ) -> None:
+        if not append:
+            arguments[target_argument] = value
+            return
+        existing = arguments.get(target_argument)
+        if isinstance(existing, list):
+            values = list(existing)
+        elif existing is None:
+            values = []
+        else:
+            values = [existing]
+        incoming_values = value if isinstance(value, list) else [value]
+        for item in incoming_values:
+            if item not in values:
+                values.append(item)
+        arguments[target_argument] = values
+
+    @staticmethod
+    def _profile_followthrough_annotate_route_sources(
+        route_sources: list[Any],
+        *,
+        binding_key: str,
+        resolved_binding: ProfileFollowthroughBindingResolution,
+    ) -> None:
+        resolved_json = to_jsonable(resolved_binding)
+        for source in route_sources:
+            if not isinstance(source, dict):
+                continue
+            consumes = source.get("consumes_result_bindings")
+            if not isinstance(consumes, list):
+                continue
+            if not any(
+                isinstance(item, MappingABC)
+                and item.get("binding_key") == binding_key
+                for item in consumes
+            ):
+                continue
+            resolved = source.setdefault("resolved_result_bindings", [])
+            if isinstance(resolved, list) and resolved_json not in resolved:
+                resolved.append(resolved_json)
+
+    @staticmethod
+    def _profile_followthrough_binding_resolution(
+        binding: MappingABC[str, Any],
+        *,
+        action: SuggestedNextAction,
+        action_group: str,
+        action_index: int,
+        status: str,
+        value: Any | None,
+        note: str,
+    ) -> ProfileFollowthroughBindingResolution:
+        return ProfileFollowthroughBindingResolution(
+            binding_key=str(binding.get("binding_key", "")),
+            status=status,
+            value=value,
+            source_tool_name=(
+                str(binding["source_tool_name"])
+                if isinstance(binding.get("source_tool_name"), str)
+                else None
+            ),
+            source_result_field=(
+                str(binding["source_result_field"])
+                if isinstance(binding.get("source_result_field"), str)
+                else None
+            ),
+            target_tool_name=(
+                str(binding["target_tool_name"])
+                if isinstance(binding.get("target_tool_name"), str)
+                else action.tool_name
+            ),
+            target_argument=(
+                str(binding["argument"])
+                if isinstance(binding.get("argument"), str)
+                else (
+                    str(binding["target_argument"])
+                    if isinstance(binding.get("target_argument"), str)
+                    else None
+                )
+            ),
+            append=bool(binding.get("append", False)),
+            review_lane=(
+                str(binding["review_lane"])
+                if isinstance(binding.get("review_lane"), str)
+                else None
+            ),
+            route_group_key=(
+                str(binding["route_group_key"])
+                if isinstance(binding.get("route_group_key"), str)
+                else None
+            ),
+            action_group=action_group,
+            action_index=action_index,
+            action_label=action.action_label,
+            note=note,
+        )
+
+    def _profile_followthrough_revision_checks(
+        self,
+        staged_revision_iris: Iterable[str] | str | None,
+        *,
+        restage_stale_revisions: bool,
+    ) -> list[ProfileFollowthroughRevisionCheck]:
+        revision_values = self._string_values(
+            "staged_revision_iris",
+            staged_revision_iris,
+        )
+        checks: list[ProfileFollowthroughRevisionCheck] = []
+        for revision_iri in dict.fromkeys(revision_values):
+            before = self.check_staged_revision_apply(revision_iri)
+            restaged_revision_iri: str | None = None
+            after: StagedRevisionApplyCheck | None = None
+            restage_performed = False
+            if (
+                restage_stale_revisions
+                and before.next_action is not None
+                and before.next_action.tool_name == "restage_staged_revision"
+            ):
+                restaged = self.restage_staged_revision(revision_iri)
+                restaged_revision_iri = restaged.revision_iri
+                restage_performed = True
+                after = self.check_staged_revision_apply(restaged_revision_iri)
+            terminal = after if after is not None else before
+            note = (
+                "Restaged this stale sibling revision and rechecked the "
+                "successor."
+                if restage_performed
+                else (
+                    "Rechecked this supplied staged revision. Pass "
+                    "restage_stale_revisions=True to restage stale rows whose "
+                    "next action is restage_staged_revision."
+                )
+            )
+            checks.append(
+                ProfileFollowthroughRevisionCheck(
+                    staged_revision_iri=revision_iri,
+                    status_before=before.status,
+                    decision_before=before.decision,
+                    routing_decision_before=before.routing_decision,
+                    blocking_reasons_before=list(before.blocking_reasons),
+                    next_action_before=before.next_action,
+                    restage_performed=restage_performed,
+                    restaged_revision_iri=restaged_revision_iri,
+                    status_after=after.status if after is not None else None,
+                    decision_after=after.decision if after is not None else None,
+                    routing_decision_after=(
+                        after.routing_decision if after is not None else None
+                    ),
+                    next_action_after=after.next_action if after is not None else None,
+                    suggested_next_actions=list(terminal.suggested_next_actions),
+                    suggested_next_calls=list(terminal.suggested_next_calls),
+                    note=note,
+                )
+            )
+        return checks
 
     def _profile_mixed_support_review_groups(
         self,

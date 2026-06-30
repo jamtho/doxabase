@@ -777,6 +777,22 @@ map-update recommendations. When recommendations and advisories coexist, stage
 accepted map facts from `profile_map_updates`, then continue
 `metric_vocabulary_review` and `profile_type_review` separately.
 
+`plan_profile_followthrough(dataset_iri, evidence_iri, result_bindings=None,
+staged_revision_iris=None, restage_stale_revisions=False)` reruns the profile
+draft and materializes advisory follow-through actions from the fresh grouped
+lanes. Use it after executing a generated `record_pattern` action: pass the
+route-scoped `binding_key` and returned `pattern_iri` in `result_bindings`, and
+the paired `stage_map_assertion_change` actions come back with
+`arguments.supporting_patterns` and `arguments.profile_route_sources`
+updated. The helper also returns `produced_bindings`,
+`binding_resolutions`, `action_resolutions`, and fresh
+`suggested_next_actions` / `suggested_next_calls`.
+When `staged_revision_iris` are supplied, the helper rechecks those rows with
+`check_staged_revision_apply`. It restages only when
+`restage_stale_revisions=True` and the staged row's next action is
+`restage_staged_revision`; it never applies the generated profile follow-up
+changes.
+
 `stage_profile_map_updates(dataset_iri, evidence_iri, accepted_recommendation_indexes=[...])`
 reruns the draft, stages the accepted recommendation indexes as one grouped
 reviewable `map` revision, and returns explicit staged/skipped/not-selected

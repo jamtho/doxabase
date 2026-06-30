@@ -730,6 +730,31 @@ do not call `doxabase.stage_profile_map_updates`. When recommendations and
 advisories coexist, follow `profile_map_updates` for map staging and keep metric
 or type review lanes separate.
 
+### doxabase.plan_profile_followthrough
+
+Reruns `draft_profile_map_updates(dataset_iri, evidence_iri)` and returns a
+route-aware follow-through plan for advisory lanes. Use it after a profile type
+advisory first led you through `record_pattern`, or after applying one related
+staged revision made sibling readiness uncertain. The helper resolves
+`source_profile_advisory.produces_result_bindings` /
+`consumes_result_bindings` metadata into refreshed structured action
+arguments; do not parse `action.call`.
+
+Pass `result_bindings` as a mapping from `binding_key` to the returned value,
+for example `{binding_key: pattern_iri}` after `record_pattern`. The result
+includes `binding_resolutions`, `action_resolutions`, `produced_bindings`, and
+fresh `suggested_next_actions`. A resolved paired
+`stage_map_assertion_change` action has the bound `pattern_iri` appended to
+`arguments.supporting_patterns` and annotated under
+`arguments.profile_route_sources[].resolved_result_bindings`, preserving the
+route source that profile insight review bundles use as `direct_action`.
+
+Pass `staged_revision_iris` to recheck related staged rows. By default this is
+read-only and echoes the existing `check_staged_revision_apply` next actions.
+Set `restage_stale_revisions=true` only after review when stale siblings should
+be mechanically refreshed with `restage_staged_revision`; the helper still does
+not apply profile-generated map or ontology changes.
+
 ### doxabase.stage_profile_map_updates
 
 Stages accepted `draft_profile_map_updates` recommendation indexes as one

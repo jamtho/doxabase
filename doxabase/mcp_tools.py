@@ -565,6 +565,27 @@ def draft_profile_map_updates_tool(
     )
 
 
+def plan_profile_followthrough_tool(
+    db: DoxaBase,
+    dataset_iri: str,
+    evidence_iri: str,
+    graph: str | None = "map",
+    result_bindings: dict[str, Any] | None = None,
+    staged_revision_iris: list[str] | None = None,
+    restage_stale_revisions: bool = False,
+) -> dict[str, Any]:
+    return to_dict(
+        db.plan_profile_followthrough(
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            graph=graph,
+            result_bindings=result_bindings,
+            staged_revision_iris=staged_revision_iris,
+            restage_stale_revisions=restage_stale_revisions,
+        )
+    )
+
+
 def stage_profile_map_updates_tool(
     db: DoxaBase,
     dataset_iri: str,

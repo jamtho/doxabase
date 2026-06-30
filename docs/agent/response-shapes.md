@@ -1766,6 +1766,40 @@ draft.mixed_support_review_group_count
 draft.review_note
 ```
 
+`db.plan_profile_followthrough(dataset_iri, evidence_iri, ...)` returns a
+`ProfileFollowthroughPlan`:
+
+```python
+plan.result_kind
+plan.dataset
+plan.evidence
+plan.evidence_iri
+plan.graph
+plan.draft
+plan.result_binding_keys
+plan.binding_resolution_count
+plan.binding_resolutions
+plan.action_resolutions
+plan.resolved_action_count
+plan.missing_binding_action_count
+plan.produced_bindings
+plan.produced_binding_count
+plan.revision_checks
+plan.revision_check_count
+plan.restage_stale_revisions
+plan.restaged_revision_iris
+plan.suggested_next_actions
+plan.suggested_next_calls
+plan.review_note
+```
+
+Use `result_bindings={binding_key: pattern_iri}` to bridge a prior
+`record_pattern` result into paired `stage_map_assertion_change` actions.
+Resolved action rows keep the structured `action.arguments` updated; prefer
+those arguments over `action.call`. `revision_checks[]` mirrors
+`check_staged_revision_apply` routing for supplied staged rows and records any
+explicit `restage_stale_revisions=True` refresh.
+
 Each `draft.recommendations[]` row is read-only review context, not an applied
 or staged change:
 

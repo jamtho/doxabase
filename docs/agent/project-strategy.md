@@ -73,6 +73,7 @@ Touchpoints:
 - `record_profile_bundle`
 - `describe_profile_run`
 - `draft_profile_map_updates`
+- `plan_profile_followthrough`
 - `stage_profile_map_updates`
 - `stage_pattern_promotion`
 - `stage_systematisation`

@@ -31,7 +31,10 @@ compaction, read `start_here` first.
    `stage_pattern_promotion` skeleton, while type advisories may include
    context, pattern, related column shell, or focused
    `stage_map_assertion_change` routes. Use `advisory_followthrough_plan` for
-   the compact semantic-move summary across those metric/type lanes.
+   the compact semantic-move summary across those metric/type lanes. After a
+   `record_pattern` step, use `plan_profile_followthrough` with the returned
+   route binding so the next staged assertion or value-type promotion comes
+   from a fresh draft with structured arguments.
 9. Call `doxabase.describe_query_context` when the task is physical query planning and you need storage/layout/path/caveat readiness without the full handoff.
 10. Call `doxabase.describe_context_slice` when you need a route-explained subgraph around a dataset, pattern, or lore thread.
    Use `profile="dataset_brief"` for dataset/table/profile/metric handoffs,

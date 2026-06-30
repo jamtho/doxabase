@@ -52,6 +52,7 @@ from doxabase.mcp_tools import (
     list_graph_versions_tool,
     list_resource_revisions_tool,
     load_example_fixtures_tool,
+    plan_profile_followthrough_tool,
     plan_staged_revision_recovery_tool,
     preflight_context_slice_export_tool,
     project_brief_tool,
@@ -91,8 +92,8 @@ from doxabase.mcp_tools import (
 
 SERVER_INSTRUCTIONS = """DoxaBase is a local RDF memory capsule for data projects.
 Start with doxabase.list_docs, then read start_here. Use overview, graph_roles, and agent_workflow when you need fuller context.
-Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_dataset, doxabase.describe_profile_run, doxabase.draft_profile_map_updates, doxabase.describe_query_context, doxabase.describe_context_slice, and doxabase.describe_pattern before asking for broader graph context.
-Current V1 tools support inspection, profile-to-map update drafting and staging, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, staged review-decision recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
+Use doxabase.project_brief, doxabase.export_preflight, doxabase.graph_overview, doxabase.search, doxabase.list_entities, doxabase.describe_dataset, doxabase.describe_profile_run, doxabase.draft_profile_map_updates, doxabase.plan_profile_followthrough, doxabase.describe_query_context, doxabase.describe_context_slice, and doxabase.describe_pattern before asking for broader graph context.
+Current V1 tools support inspection, profile-to-map update drafting/staging and profile advisory follow-through planning, profile insight review bundle export, query-planning context, query-result capture, query-evidence storage overlay drafting, storage-access and physical-layout query repair staging, context slicing and context-slice export, type-aware resource/pattern/revision retrieval, revision listing, resource-centric revision discovery, staged patch-payload lexical discovery, revision snapshot evidence and graph-snapshot inspection, lexical search, privacy/export hygiene preflight and scanning, bounded dataset/storage description, map authoring, observation/profile/profile-bundle/claim/pattern/claim-reconsideration/history recording, staged review-decision recording, assertion-aware map-change drafting and staging, systematisation and pattern-promotion staging, shared-context systematisation rerun drafting, staged graph revision recovery planning/session/apply checks/restage/batch-restage/apply/review, controlled graph replacement, handoff-manifest import/export, fixture loading, and validation."""
 
 
 class _LazyDoxaBase:
@@ -237,6 +238,27 @@ def build_server(capsule_path: str | Path = ".doxabase.sqlite") -> FastMCP:
             dataset_iri=dataset_iri,
             evidence_iri=evidence_iri,
             graph=graph,
+        )
+
+    @server.tool(name="doxabase.plan_profile_followthrough")
+    def plan_profile_followthrough(
+        dataset_iri: str,
+        evidence_iri: str,
+        graph: str | None = "map",
+        result_bindings: dict[str, Any] | None = None,
+        staged_revision_iris: list[str] | None = None,
+        restage_stale_revisions: bool = False,
+    ) -> dict[str, Any]:
+        """Resolve profile advisory bindings and recheck related staged revisions."""
+
+        return plan_profile_followthrough_tool(
+            db,
+            dataset_iri=dataset_iri,
+            evidence_iri=evidence_iri,
+            graph=graph,
+            result_bindings=result_bindings,
+            staged_revision_iris=staged_revision_iris,
+            restage_stale_revisions=restage_stale_revisions,
         )
 
     @server.tool(name="doxabase.stage_profile_map_updates")

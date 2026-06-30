@@ -248,6 +248,7 @@ def test_profiling_doc_names_core_workflow_tools() -> None:
     assert "record_profile_bundle" in content
     assert "describe_profile_run" in content
     assert "draft_profile_map_updates" in content
+    assert "plan_profile_followthrough" in content
     assert "stage_profile_map_updates" in content
     assert "profile_type_review" in content
     assert "profile_scalar_conflict_review" in content
